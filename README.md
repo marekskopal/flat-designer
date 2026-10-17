@@ -79,7 +79,8 @@ The viewer builds all geometry from these parameters; there are no 3D model file
 - **Bathroom and WC**: layout from the top-view renders in `source_files/bathroom` and `source_files/wc`,
   heights from the perspectives, standard product sizes (see `SeedBathroomAndWc`).
 - **Textures** in `frontend/src/assets/textures/` are cut from the source files: the laminate from the
-  photo of the "Dub Erica" plank (straightened), the wall and floor tiles from the bathroom/WC renders.
+  photo of the "Dub Erica" plank (straightened), the wall (600 × 300) and floor (600 × 600) tiles from
+  the bathroom/WC renders. The hallway has the same laminate as the rooms.
   The plank size (265 × 1220 mm) is estimated from the sample's aspect ratio; check the datasheet.
   Planks run north–south, towards the windows.
 
