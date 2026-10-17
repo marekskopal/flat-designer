@@ -57,6 +57,11 @@ API (all but health and authentication need a Bearer token):
 - `/api/projects` (list, create), `/api/projects/{id}` (get, put, delete)
 - `/api/projects/{id}/floors` (create), `/api/projects/{id}/floors/{floorId}` (put, delete),
   `…/floors/{floorId}/scene` (everything the viewer needs)
+- `/api/projects/{id}/floors/{floorId}/{items|walls|openings|rooms}` (create), `…/{type}/{elementId}`
+  (patch only the given fields, delete), `…/{type}/{elementId}/duplicate`. Send the scene's `revision`
+  as `If-Match` to get 409 instead of overwriting a newer change. Answers `{revision, change, element}`.
+- `/api/projects/{id}/changes` (activity), `/api/projects/{id}/undo`, `/api/projects/{id}/redo` (own
+  changes only), `/api/materials`
 - `/api/projects/{id}/versions` (list, save), `…/versions/{versionId}` (detail with its floors),
   `…/versions/{versionId}/floors/{floorId}/scene`, `…/versions/{versionId}/restore`
 - `/api/projects/{id}/files` (list, upload as multipart `file`), `…/files/{fileId}` (delete),
@@ -74,6 +79,9 @@ floor (for flat 50: the living room by the south façade), x east, y north.
   floor. A project keeps at least one.
 - `project_files` — uploaded files of a project (name, detected MIME type, size, uploader); the content
   is in object storage under `storage_key`. Files are not part of versions.
+- `project_changes` — the edit log: actor (person, or agent with its MCP client name), operation,
+  element and its state before/after. Undo/redo work from it per actor; elements are soft-deleted
+  (`deleted_at`) so undo restores the same row. `projects.revision` counts every change.
 - `project_versions` — numbered, immutable JSON snapshots of all floors of a project (with the material
   catalogue). The floors are the working copy; restoring a version replaces them, after auto-saving the
   current state as a new version.

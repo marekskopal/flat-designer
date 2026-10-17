@@ -18,7 +18,7 @@ final readonly class FloorProvider
 	private const int MinLevel = -10;
 	private const int MaxLevel = 100;
 
-	public function __construct(private FloorRepository $floorRepository, private ProjectProvider $projectProvider)
+	public function __construct(private FloorRepository $floorRepository, private ProjectRevisionService $revisionService)
 	{
 	}
 
@@ -28,7 +28,7 @@ final readonly class FloorProvider
 		$floor->createdAt = new DateTimeImmutable();
 		$floor->updatedAt = $floor->createdAt;
 		$this->floorRepository->persist($floor);
-		$this->projectProvider->touch($project);
+		$this->revisionService->bump($project);
 
 		return $floor;
 	}
@@ -39,7 +39,7 @@ final readonly class FloorProvider
 		$floor->level = self::level($input->level);
 		$floor->updatedAt = new DateTimeImmutable();
 		$this->floorRepository->persist($floor);
-		$this->projectProvider->touch($floor->project);
+		$this->revisionService->bump($floor->project);
 
 		return $floor;
 	}
@@ -54,7 +54,7 @@ final readonly class FloorProvider
 		}
 
 		$this->floorRepository->delete($floor);
-		$this->projectProvider->touch($floor->project);
+		$this->revisionService->bump($floor->project);
 	}
 
 	private static function name(string $name): string

@@ -19,6 +19,7 @@ final readonly class ProjectDto
 		public ?string $ownerName,
 		public array $floors,
 		public ?int $latestVersion,
+		public int $revision,
 		public string $createdAt,
 		public string $updatedAt,
 	) {
@@ -36,6 +37,7 @@ final readonly class ProjectDto
 			ownerName: $project->owner?->name,
 			floors: $floors,
 			latestVersion: $latestVersion,
+			revision: $project->revision,
 			createdAt: $project->createdAt->format(DATE_ATOM),
 			updatedAt: $project->updatedAt->format(DATE_ATOM),
 		);

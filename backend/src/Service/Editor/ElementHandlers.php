@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace FlatDesigner\Service\Editor;
+
+use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Service\Editor\Element\ElementHandler;
+use FlatDesigner\Service\Editor\Element\ItemHandler;
+use FlatDesigner\Service\Editor\Element\OpeningHandler;
+use FlatDesigner\Service\Editor\Element\RoomHandler;
+use FlatDesigner\Service\Editor\Element\WallHandler;
+
+final readonly class ElementHandlers
+{
+	public function __construct(
+		private ItemHandler $itemHandler,
+		private WallHandler $wallHandler,
+		private OpeningHandler $openingHandler,
+		private RoomHandler $roomHandler,
+	) {
+	}
+
+	public function get(ElementTypeEnum $type): ElementHandler
+	{
+		return match ($type) {
+			ElementTypeEnum::Item => $this->itemHandler,
+			ElementTypeEnum::Wall => $this->wallHandler,
+			ElementTypeEnum::Opening => $this->openingHandler,
+			ElementTypeEnum::Room => $this->roomHandler,
+		};
+	}
+}

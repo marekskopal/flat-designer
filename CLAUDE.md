@@ -34,6 +34,13 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   working copy, `ProjectVersion::$snapshot` is JSON from `ProjectSnapshotService` (format documented
   there); a new floor/room/wall/item field must be added to the snapshot restore too. Foreign keys cascade
   on delete (project → floors → content), so deletes go through the parent row.
+- Editing: every change of a floor element goes through `Service\Editor\SceneEditor` (REST controllers
+  and MCP tools alike), which bumps `projects.revision` (optimistic lock via `If-Match`), validates via
+  the type's `ElementHandler` and logs a `ProjectChange` (before/after = the element's scene JSON).
+  `UndoService` reverts the current actor's (`ActorContext`: person or MCP client) own changes only
+  while the element is unchanged since. Items, walls, openings and rooms are soft-deleted (`deletedAt`);
+  repositories' `findByFloor`/`findByWalls` skip deleted rows. A new element field must be added to its
+  handler's `fields()`/`normalize()`/`apply()` and to the snapshot restore.
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs

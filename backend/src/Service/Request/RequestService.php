@@ -36,10 +36,29 @@ final readonly class RequestService
 		return $dtoClass::fromArray($this->getRequestBody($request));
 	}
 
-	/** @return array<string, mixed> */
-	private function getRequestBody(ServerRequestInterface $request): array
+	/**
+	 * The revision the client based its edit on, from `If-Match: 12` (or `"12"`); null when absent.
+	 */
+	public function getBaseRevision(ServerRequestInterface $request): ?int
 	{
-		$contents = $request->getBody()->getContents();
+		$header = trim($request->getHeaderLine('If-Match'), " \t\"");
+		if ($header === '') {
+			return null;
+		}
+		if (!ctype_digit($header)) {
+			throw new InvalidRequestException('If-Match must be the project revision number.');
+		}
+
+		return (int) $header;
+	}
+
+	/** @return array<string, mixed> the JSON object; an empty body counts as `{}` */
+	public function getRequestBody(ServerRequestInterface $request): array
+	{
+		$contents = (string) $request->getBody();
+		if (trim($contents) === '') {
+			return [];
+		}
 		if (strlen($contents) > self::MaxJsonBodyBytes) {
 			throw new InvalidRequestException('Request body is too large.', 413);
 		}

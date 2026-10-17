@@ -44,11 +44,11 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		$floor = Fixture::firstFloor($project);
 		Fixture::furnishFloor($floor);
 
-		$working = (string) $this->request(
-			'GET',
-			self::path(Routes::ProjectFloorScene, $project->id, null, $floor->id),
-			authenticatedAs: $user,
-		)->getBody();
+		$working = $this->jsonBody(
+			$this->request('GET', self::path(Routes::ProjectFloorScene, $project->id, null, $floor->id), authenticatedAs: $user),
+		);
+		// The working copy also reports the project revision; a stored version has none.
+		unset($working['revision']);
 		$versionId = $this->saveVersion($user, $project->id);
 
 		$detail = $this->jsonBody(
@@ -62,7 +62,7 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 
 		self::assertSame([['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0]], $detail['floors']);
 		self::assertSame(200, $stored->getStatusCode());
-		self::assertJsonStringEqualsJsonString($working, (string) $stored->getBody());
+		self::assertEquals($working, $this->jsonBody($stored));
 		// Empty item params stay a JSON object.
 		self::assertStringContainsString('"params":{}', (string) $stored->getBody());
 	}
@@ -148,7 +148,7 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 	{
 		$stripped = [];
 		foreach ($data as $key => $value) {
-			if ($key === 'id' || $key === 'roomId') {
+			if ($key === 'id' || $key === 'roomId' || $key === 'revision') {
 				continue;
 			}
 			$stripped[$key] = is_array($value) ? self::stripIds($value) : $value;

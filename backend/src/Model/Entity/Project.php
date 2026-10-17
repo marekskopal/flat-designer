@@ -17,6 +17,10 @@ use MarekSkopal\ORM\Enum\Type;
 #[Entity(repositoryClass: ProjectRepository::class)]
 class Project extends AEntity
 {
+	/** Bumped by every change of the floors; clients send it back to detect concurrent edits. */
+	#[Column(type: Type::Int, default: 0)]
+	public int $revision = 0;
+
 	public function __construct(
 		#[ManyToOne(entityClass: User::class, nullable: true)]
 		public ?User $owner,

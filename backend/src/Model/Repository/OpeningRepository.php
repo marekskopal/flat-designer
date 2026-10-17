@@ -11,7 +11,7 @@ final class OpeningRepository extends ARepository
 {
 	/**
 	 * @param list<int> $wallIds
-	 * @return list<Opening>
+	 * @return list<Opening> not deleted
 	 */
 	public function findByWalls(array $wallIds): array
 	{
@@ -21,7 +21,14 @@ final class OpeningRepository extends ARepository
 
 		return $this->select()
 			->where(['wall_id', 'IN', $wallIds])
+			->where(['deleted_at' => null])
 			->orderBy('offset', 'ASC')
 			->fetchAll();
+	}
+
+	/** Including a deleted one, for undo and redo; the caller checks the wall's floor. */
+	public function findById(int $openingId): ?Opening
+	{
+		return $this->findOne(['id' => $openingId]);
 	}
 }

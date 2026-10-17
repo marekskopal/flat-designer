@@ -132,6 +132,8 @@ export interface Item {
 
 export interface Scene {
     floor: Floor;
+    /** Project revision the scene was read at (absent for saved versions); edits send it as `If-Match`. */
+    revision?: number;
     materials: Material[];
     rooms: Room[];
     walls: Wall[];

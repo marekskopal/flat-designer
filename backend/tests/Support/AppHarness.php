@@ -6,6 +6,7 @@ namespace FlatDesigner\Tests\Support;
 
 use FlatDesigner\App\Application;
 use FlatDesigner\App\ApplicationFactory;
+use FlatDesigner\Service\Actor\ActorContext;
 use FlatDesigner\Service\Storage\FileStorageInterface;
 use League\Container\Container;
 use PDO;
@@ -74,6 +75,10 @@ final class AppHarness
 
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
+
+		$actorContext = self::container()->get(ActorContext::class);
+		assert($actorContext instanceof ActorContext);
+		$actorContext->setHuman();
 	}
 
 	/** @return list<string> */

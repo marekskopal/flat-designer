@@ -35,7 +35,8 @@ final readonly class ItemDto
 
 		return new self(
 			id: $item->id,
-			roomId: $item->room?->id,
+			// A deleted room is not shown, so neither is the item's link to it (undo brings both back).
+			roomId: $item->room !== null && $item->room->deletedAt === null ? $item->room->id : null,
 			kind: $item->kind,
 			name: $item->name,
 			x: $item->x,

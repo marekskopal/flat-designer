@@ -45,6 +45,7 @@ final readonly class SceneProvider
 
 		return new SceneDto(
 			floor: FloorDto::fromEntity($floor),
+			revision: $floor->project->revision,
 			materials: $this->getMaterials(),
 			rooms: array_map(fn (Room $room): RoomDto => RoomDto::fromEntity($room), $this->roomRepository->findByFloor($floor->id)),
 			walls: array_map(fn (Wall $wall): WallDto => WallDto::fromEntity($wall, $openingsByWall[$wall->id] ?? []), $walls),

@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\ProjectChangeRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
@@ -15,7 +16,7 @@ use MarekSkopal\ORM\ORM;
 /**
  * Saved versions of a project. The floors are the editable working copy; saving a version freezes a
  * snapshot of them, restoring one replaces the working copy (after auto-saving it as a version first,
- * so a restore can always be undone).
+ * so a restore can always be undone) and ends undo/redo of the edits before it.
  */
 final readonly class ProjectVersionProvider
 {
@@ -24,7 +25,8 @@ final readonly class ProjectVersionProvider
 	public function __construct(
 		private ProjectVersionRepository $projectVersionRepository,
 		private ProjectSnapshotService $snapshotService,
-		private ProjectProvider $projectProvider,
+		private ProjectRevisionService $revisionService,
+		private ProjectChangeRepository $changeRepository,
 		private ORM $orm,
 	) {
 	}
@@ -67,7 +69,9 @@ final readonly class ProjectVersionProvider
 		return $this->orm->getTransactionProvider()->transaction(function () use ($author, $project, $version): ProjectVersion {
 			$backup = $this->create($author, $project, sprintf('Before restoring version %d', $version->number));
 			$this->snapshotService->restore($project, $version->snapshot);
-			$this->projectProvider->touch($project);
+			// The logged changes refer to elements that are gone now.
+			$this->changeRepository->closeAll($project->id);
+			$this->revisionService->bump($project);
 
 			return $backup;
 		});

@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace FlatDesigner\Service\Editor\Element;
+
+use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Model\Entity\Floor;
+
+/**
+ * What the editor needs to know about one kind of floor element. The element's *state* is the JSON
+ * object the scene serves for it (so the change log, undo and the viewer share one format); the editable
+ * fields are a subset of it.
+ */
+interface ElementHandler
+{
+	public function type(): ElementTypeEnum;
+
+	/** @return list<string> keys of the state a client may set */
+	public function fields(): array;
+
+	/** @return array<string, mixed> state of a new element before the client's fields are applied */
+	public function defaults(): array;
+
+	/** The element on the floor, deleted or not. */
+	public function find(Floor $floor, int $id): ?AEntity;
+
+	public function isDeleted(AEntity $element): bool;
+
+	/** @return array<string, mixed> */
+	public function state(AEntity $element): array;
+
+	/**
+	 * Checks the editable fields and returns them normalised (e.g. rotation into 0..359).
+	 *
+	 * @param array<string, mixed> $state
+	 * @param AEntity|null $current the element being changed, null when creating
+	 * @return array<string, mixed>
+	 */
+	public function normalize(Floor $floor, array $state, ?AEntity $current): array;
+
+	/** @param array<string, mixed> $state normalised */
+	public function create(Floor $floor, array $state): AEntity;
+
+	/** @param array<string, mixed> $state normalised */
+	public function update(AEntity $element, array $state): void;
+
+	public function setDeleted(AEntity $element, bool $deleted): void;
+
+	/** @param array<string, mixed> $state */
+	public function label(array $state): string;
+}

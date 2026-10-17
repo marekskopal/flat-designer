@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Model\Entity;
 
+use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Repository\WallRepository;
 use MarekSkopal\ORM\Attribute\Column;
@@ -16,6 +17,10 @@ use MarekSkopal\ORM\Enum\Type;
 #[Entity(repositoryClass: WallRepository::class)]
 class Wall extends AEntity
 {
+	/** Set when deleted in the editor; the row stays so undo can bring it back with the same id. */
+	#[Column(type: Type::Timestamp, nullable: true)]
+	public ?DateTimeImmutable $deletedAt = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

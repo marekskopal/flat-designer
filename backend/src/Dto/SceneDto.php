@@ -15,6 +15,8 @@ final readonly class SceneDto
 	 */
 	public function __construct(
 		public FloorDto $floor,
+		/** The project's revision this scene was read at; edits send it back as their base. */
+		public int $revision,
 		public array $materials,
 		public array $rooms,
 		public array $walls,

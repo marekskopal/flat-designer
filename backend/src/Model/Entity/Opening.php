@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Model\Entity;
 
+use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
@@ -23,6 +24,10 @@ use MarekSkopal\ORM\Enum\Type;
 #[Entity(repositoryClass: OpeningRepository::class)]
 class Opening extends AEntity
 {
+	/** Set when deleted in the editor; the row stays so undo can bring it back with the same id. */
+	#[Column(type: Type::Timestamp, nullable: true)]
+	public ?DateTimeImmutable $deletedAt = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]
 		public readonly Wall $wall,

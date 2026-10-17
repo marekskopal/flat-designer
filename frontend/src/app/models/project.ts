@@ -13,6 +13,8 @@ export interface Project {
     floors: Floor[];
     /** Number of the newest saved version, null when none was saved yet. */
     latestVersion: number | null;
+    /** Bumped by every change of the floors. */
+    revision: number;
     createdAt: string;
     updatedAt: string;
 }

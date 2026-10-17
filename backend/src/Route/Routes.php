@@ -15,6 +15,8 @@ enum Routes: string
 	case CurrentUser = '/api/current-user';
 	case CurrentUserPassword = '/api/current-user/password';
 
+	case Materials = '/api/materials';
+
 	case AdminUsers = '/api/admin/users';
 	case AdminUser = '/api/admin/users/{userId:number}';
 
@@ -23,6 +25,12 @@ enum Routes: string
 	case ProjectFloors = '/api/projects/{projectId:number}/floors';
 	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
 	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
+	case ProjectFloorElements = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms}';
+	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms}/{elementId:number}';
+	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms}/{elementId:number}/duplicate';
+	case ProjectChanges = '/api/projects/{projectId:number}/changes';
+	case ProjectUndo = '/api/projects/{projectId:number}/undo';
+	case ProjectRedo = '/api/projects/{projectId:number}/redo';
 	case ProjectVersions = '/api/projects/{projectId:number}/versions';
 	case ProjectVersion = '/api/projects/{projectId:number}/versions/{versionId:number}';
 	case ProjectVersionFloorScene = '/api/projects/{projectId:number}/versions/{versionId:number}/floors/{floorId:number}/scene';
