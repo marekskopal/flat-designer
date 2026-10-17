@@ -9,12 +9,14 @@ use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FlatRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Dbal\DbContext;
 use League\Container\Container;
@@ -40,6 +42,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			WallRepository::class,
 			OpeningRepository::class,
 			ItemRepository::class,
+			UserRepository::class,
 		], true);
 	}
 
@@ -59,6 +62,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);
 		$this->addRepository($container, $orm, OpeningRepository::class, Opening::class);
 		$this->addRepository($container, $orm, ItemRepository::class, Item::class);
+		$this->addRepository($container, $orm, UserRepository::class, User::class);
 	}
 
 	/**

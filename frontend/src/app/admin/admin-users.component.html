@@ -1,0 +1,48 @@
+<div class="page">
+    <h1 class="page__title">Users</h1>
+
+    <div class="card card--table">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Last sign-in</th>
+                    <th>Joined</th>
+                    <th><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (user of users(); track user.id) {
+                    @let isSelf = user.id === currentUser.currentUser()?.id;
+                    <tr>
+                        <td class="table__strong">
+                            {{ user.name }}
+                            @if (isSelf) {
+                                <span class="badge">you</span>
+                            }
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <select class="input input--compact" [value]="user.role" [attr.aria-label]="'Role of ' + user.name" (change)="changeRole(user, $event)">
+                                @for (role of roles; track role) {
+                                    <option [value]="role" [selected]="role === user.role">{{ role }}</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="table__muted">{{ user.lastLoginAt ? (user.lastLoginAt | date: 'd MMM y, HH:mm') : 'never' }}</td>
+                        <td class="table__muted">{{ user.createdAt | date: 'd MMM y' }}</td>
+                        <td class="table__actions">
+                            <button type="button" class="btn btn--ghost btn--danger" [disabled]="isSelf" (click)="delete(user)">Delete</button>
+                        </td>
+                    </tr>
+                } @empty {
+                    <tr>
+                        <td colspan="6" class="table__empty">{{ loading() ? 'Loading…' : 'No users.' }}</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

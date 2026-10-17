@@ -1,12 +1,15 @@
+import angular from '@analogjs/vite-plugin-angular';
 import {defineConfig} from 'vitest/config';
 
-// Unit tests cover the framework-free geometry code (src/app/viewer/engine), so no Angular plugin
-// or DOM is needed.
+// The Angular plugin compiles components and services for TestBed specs (interceptors, guards); the
+// framework-free engine specs (src/app/viewer/engine) run unchanged under it.
 export default defineConfig({
+    plugins: [angular()],
     resolve: {tsconfigPaths: true},
     test: {
         globals: true,
-        environment: 'node',
+        environment: 'jsdom',
+        setupFiles: ['src/test-setup.ts'],
         include: ['src/**/*.spec.ts'],
     },
 });

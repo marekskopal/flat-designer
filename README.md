@@ -2,14 +2,18 @@
 
 3D viewer of flat no. 50 (H1B), Example Residences, Example City, with the planned kitchen,
 bathroom and WC, the chosen floor and tiles, and both gardens.
-Proof of concept: view only, data seeded by migrations, no accounts.
+Proof of concept: view only, data seeded by migrations. Users sign up and sign in; admins manage users.
 
 ## Run
 
 ```sh
-cp .env.example .env   # once
-make up                # http://localhost:4400
+make up                # http://localhost:4400 (creates .env and a token key on first run)
+make admin             # create the first admin account (prompts for email and password)
 ```
+
+Anyone can sign up at `/sign-up` and gets the `User` role. Admins see **Users** in the top bar, where
+they change roles and delete accounts. Auth is JWT (access token 1 h, refresh token 7 d, signed with
+`AUTHORIZATION_TOKEN_KEY`); a password change signs out every other session.
 
 The backend applies pending migrations on start, so a fresh database comes up with the flat and the
 kitchen already in it. After changing a seed migration run `make reset-db`.
@@ -94,5 +98,5 @@ The viewer builds all geometry from these parameters; there are no 3D model file
 
 ```sh
 make lint   # phpcs + phpstan (max level), eslint
-make test   # phpunit, vitest (geometry helpers)
+make test   # phpunit (in a backend container, database flat_designer_test), vitest
 ```

@@ -1,0 +1,31 @@
+<div class="auth">
+    <div class="auth__brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 28V12L16 4l12 8v16H19v-9h-6v9z" /></svg>
+        Flat Designer
+    </div>
+    <h1 class="auth__title">Create an account</h1>
+
+    <form class="auth__form" [formGroup]="form" (ngSubmit)="onSubmit()">
+        <label class="field">
+            <span class="field__label">Name</span>
+            <input class="input" type="text" formControlName="name" autocomplete="name" />
+        </label>
+        <label class="field">
+            <span class="field__label">Email</span>
+            <input class="input" type="email" formControlName="email" autocomplete="email" />
+        </label>
+        <label class="field">
+            <span class="field__label">Password</span>
+            <input class="input" type="password" formControlName="password" autocomplete="new-password" />
+            <span class="field__hint">{{ passwordHint }}</span>
+        </label>
+        @if (error(); as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+        }
+        <button type="submit" class="btn btn--primary auth__submit" [disabled]="form.invalid || saving()">
+            {{ saving() ? 'Creating account…' : 'Sign up' }}
+        </button>
+    </form>
+
+    <p class="auth__footer">Already have an account? <a routerLink="/login">Sign in</a></p>
+</div>

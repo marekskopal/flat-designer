@@ -1,0 +1,43 @@
+import {Routes} from '@angular/router';
+import {adminGuard, authGuard, guestGuard} from '@app/core/guards/auth.guards';
+import {LayoutComponent} from '@app/shared/layout/layout.component';
+
+export const appRoutes: Routes = [
+    {
+        path: 'login',
+        canActivate: [guestGuard],
+        title: 'Sign in · Flat Designer',
+        loadComponent: async () => (await import('@app/authentication/login.component')).LoginComponent,
+    },
+    {
+        path: 'sign-up',
+        canActivate: [guestGuard],
+        title: 'Sign up · Flat Designer',
+        loadComponent: async () => (await import('@app/authentication/sign-up.component')).SignUpComponent,
+    },
+    {
+        path: '',
+        component: LayoutComponent,
+        canActivate: [authGuard],
+        children: [
+            {
+                path: '',
+                pathMatch: 'full',
+                title: 'Flat Designer',
+                loadComponent: async () => (await import('@app/viewer-page/viewer-page.component')).ViewerPageComponent,
+            },
+            {
+                path: 'account',
+                title: 'Account · Flat Designer',
+                loadComponent: async () => (await import('@app/account/account.component')).AccountComponent,
+            },
+            {
+                path: 'admin/users',
+                canActivate: [adminGuard],
+                title: 'Users · Flat Designer',
+                loadComponent: async () => (await import('@app/admin/admin-users.component')).AdminUsersComponent,
+            },
+        ],
+    },
+    {path: '**', redirectTo: ''},
+];

@@ -1,7 +1,11 @@
-import {provideHttpClient, withFetch} from '@angular/common/http';
+import {provideHttpClient, withFetch, withInterceptors} from '@angular/common/http';
 import {enableProdMode, provideZonelessChangeDetection} from '@angular/core';
 import {bootstrapApplication} from '@angular/platform-browser';
+import {provideRouter, withComponentInputBinding} from '@angular/router';
 import {AppComponent} from '@app/app.component';
+import {appRoutes} from '@app/app.routes';
+import {errorInterceptor} from '@app/core/interceptors/error.interceptor';
+import {jwtInterceptor} from '@app/core/interceptors/jwt.interceptor';
 import {environment} from '@environments/environment';
 
 if (environment.production) {
@@ -9,5 +13,9 @@ if (environment.production) {
 }
 
 bootstrapApplication(AppComponent, {
-    providers: [provideHttpClient(withFetch()), provideZonelessChangeDetection()],
+    providers: [
+        provideHttpClient(withFetch(), withInterceptors([jwtInterceptor, errorInterceptor])),
+        provideRouter(appRoutes, withComponentInputBinding()),
+        provideZonelessChangeDetection(),
+    ],
 }).catch((err: unknown) => console.error(err));

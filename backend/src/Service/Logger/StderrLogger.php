@@ -9,12 +9,17 @@ use Psr\Log\LogLevel;
 use Stringable;
 use Throwable;
 use const DATE_ATOM;
-use const STDERR;
 
-/** Writes one line per record to stderr, which FrankenPHP forwards to the container log. */
+/**
+ * Writes one line per record to stderr, which FrankenPHP forwards to the container log. The `STDERR`
+ * constant only exists in the CLI SAPI, so the stream is opened explicitly for the worker.
+ */
 final class StderrLogger extends AbstractLogger
 {
 	private const array VerboseLevels = [LogLevel::INFO, LogLevel::DEBUG, LogLevel::NOTICE];
+
+	/** @var resource|null */
+	private $stream = null;
 
 	public function __construct(private readonly bool $debug)
 	{
@@ -35,6 +40,14 @@ final class StderrLogger extends AbstractLogger
 			$line .= ' ' . $exception::class . ' in ' . $exception->getFile() . ':' . $exception->getLine();
 		}
 
-		fwrite(STDERR, $line . "\n");
+		if ($this->stream === null) {
+			$stream = fopen('php://stderr', 'w');
+			if ($stream === false) {
+				return;
+			}
+			$this->stream = $stream;
+		}
+
+		fwrite($this->stream, $line . "\n");
 	}
 }

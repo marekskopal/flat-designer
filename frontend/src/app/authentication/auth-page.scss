@@ -1,0 +1,63 @@
+@use 'variables' as *;
+
+:host {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: $space-16;
+    overflow: auto;
+}
+
+.auth {
+    width: 100%;
+    max-width: 380px;
+    padding: 28px;
+    border: 1px solid $color-border;
+    border-radius: $radius-14;
+    background: $color-surface-solid;
+    box-shadow: $shadow-panel;
+}
+
+.auth__brand {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-accent;
+
+    svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+    }
+}
+
+.auth__title {
+    margin: $space-12 0 $space-20;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.auth__form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.auth__submit {
+    margin-top: $space-4;
+    padding: 10px;
+    font-size: $font-size-14;
+}
+
+.auth__footer {
+    margin: $space-20 0 0;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+    text-align: center;
+}

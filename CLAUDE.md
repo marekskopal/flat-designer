@@ -1,17 +1,23 @@
 # Flat Designer
 
-3D viewer of one flat (flat no. 50, H1B) with a parametric kitchen. PoC: view only, no accounts, data
-seeded by migrations. Architecture mirrors `../ukolio` (same author), trimmed to what a viewer needs.
+3D viewer of one flat (flat no. 50, H1B) with a parametric kitchen. PoC: view only, data seeded by
+migrations. Accounts (roles Admin/User) with JWT auth. Architecture mirrors `../ukolio` (same author), trimmed to what a viewer needs.
 
 ## Services
 
 - `proxy/` — nginx, `/api/*` → backend, `/` → frontend (http only, port `PROXY_PORT`, default 4400).
 - `backend/` — FrankenPHP worker + PHP 8.5 + `marekskopal/orm` + `marekskopal/router` + MariaDB.
   Namespace `FlatDesigner\`. Routes in `FlatDesigner\Route\Routes`. The entrypoint runs
-  `migration:run` before serving (unlike ukolio, where migrations are manual).
+  `migration:run` before serving (unlike ukolio, where migrations are manual). Every route needs a
+  Bearer access token except `AuthorizationMiddleware::OpenRoutes`; controllers get the user from
+  `RequestService::getUser()` and answer 403 (not 401, which makes the frontend refresh/sign out) for
+  missing permissions. Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
+  `bin/console admin:create` (`make admin`) creates an admin.
 - `frontend/` — Angular 22 (standalone, signals, zoneless), prefix `fd`, SCSS tokens in
   `src/styles/_variables.scss`. three.js code lives in `src/app/viewer/engine/` and must stay
-  framework-free (no Angular imports) so it can be unit-tested with plain vitest.
+  framework-free (no Angular imports). Routes in `app.routes.ts` (lazy pages under `LayoutComponent`,
+  `authGuard`/`guestGuard`/`adminGuard`); `jwtInterceptor` adds the token and refreshes on 401,
+  `errorInterceptor` toasts API errors (skip with the `SkipErrorToast` context token).
 
 ## Conventions
 
@@ -34,5 +40,6 @@ seeded by migrations. Architecture mirrors `../ukolio` (same author), trimmed to
 
 ## Commands
 
-`make up`, `make dev` (ng serve on 4200 against the running stack), `make lint`, `make test`,
-`make reset-db`.
+`make up`, `make admin`, `make dev` (ng serve on 4200 against the running stack), `make lint`,
+`make test` (phpunit runs in a one-off backend container against the stack's MariaDB, database
+`flat_designer_test`; integration tests extend `Tests\Support\IntegrationTestCase`), `make reset-db`.

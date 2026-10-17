@@ -1,0 +1,79 @@
+@use 'variables' as *;
+
+:host {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: $space-20;
+    height: $topbar-height;
+    padding: 0 $space-16;
+    background: $color-surface-solid;
+    border-bottom: 1px solid $color-border;
+    flex: none;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    font-weight: 650;
+    color: $color-text;
+    text-decoration: none;
+}
+
+.brand__mark {
+    width: 20px;
+    height: 20px;
+    fill: $color-accent;
+}
+
+.nav,
+.user {
+    display: flex;
+    align-items: center;
+    gap: $space-4;
+}
+
+.user {
+    margin-left: auto;
+}
+
+.nav a,
+.user__name {
+    padding: 6px 10px;
+    border-radius: $radius-6;
+    font-size: $font-size-13;
+    font-weight: 500;
+    color: $color-text-muted;
+    text-decoration: none;
+
+    &:hover {
+        color: $color-text;
+        background: $color-surface-muted;
+    }
+
+    &.active {
+        color: $color-text;
+        background: $color-accent-soft;
+    }
+}
+
+.user__name {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.content {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}

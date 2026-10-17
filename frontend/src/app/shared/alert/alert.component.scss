@@ -1,0 +1,40 @@
+@use 'variables' as *;
+
+.alerts {
+    position: fixed;
+    right: $space-16;
+    bottom: $space-16;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    max-width: min(380px, calc(100vw - #{2 * $space-16}));
+}
+
+.alert {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-12;
+    padding: $space-12 $space-16;
+    border: 1px solid $color-border;
+    border-left: 3px solid $color-accent;
+    border-radius: $radius-10;
+    background: $color-surface-solid;
+    box-shadow: $shadow-panel;
+    font-size: $font-size-13;
+}
+
+.alert--error {
+    border-left-color: $color-danger;
+}
+
+.alert__close {
+    margin-left: auto;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    font-size: $font-size-18;
+    line-height: 1;
+    color: $color-text-subtle;
+    cursor: pointer;
+}

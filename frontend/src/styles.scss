@@ -62,3 +62,143 @@ button, input {
     color: $color-text-muted;
     font-variant-numeric: tabular-nums;
 }
+
+// Shared form and page primitives.
+a {
+    color: $color-accent;
+}
+
+select {
+    font: inherit;
+    color: inherit;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-8;
+    padding: 7px 14px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-6;
+    background: $color-surface-solid;
+    font-size: $font-size-13;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: default;
+    }
+}
+
+.btn--primary {
+    border-color: $color-accent;
+    background: $color-accent;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+        background: color-mix(in srgb, $color-accent 85%, black);
+    }
+}
+
+.btn--ghost {
+    border-color: transparent;
+    background: transparent;
+    color: $color-text-muted;
+}
+
+.btn--danger {
+    color: $color-danger;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+}
+
+.field__label {
+    font-size: $font-size-12;
+    font-weight: 600;
+    color: $color-text-muted;
+}
+
+.field__hint {
+    font-size: $font-size-12;
+    color: $color-text-subtle;
+}
+
+.input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-6;
+    background: #fff;
+    font-size: $font-size-14;
+
+    &:focus {
+        outline: 2px solid color-mix(in srgb, $color-accent 35%, transparent);
+        border-color: $color-accent;
+    }
+}
+
+.form-error {
+    margin: 0;
+    padding: $space-8 $space-12;
+    border-radius: $radius-6;
+    background: color-mix(in srgb, $color-danger 8%, white);
+    font-size: $font-size-13;
+    color: $color-danger;
+}
+
+.page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px $space-16 48px;
+}
+
+.page__title {
+    margin: 0 0 $space-20;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.card {
+    padding: $space-20;
+    border: 1px solid $color-border;
+    border-radius: $radius-14;
+    background: $color-surface-solid;
+
+    & + & {
+        margin-top: $space-16;
+    }
+}
+
+.card__title {
+    margin: 0 0 $space-16;
+    font-size: $font-size-14;
+    font-weight: 650;
+}
+
+.page--narrow {
+    max-width: 520px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.form__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-8;
+}

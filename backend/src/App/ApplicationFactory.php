@@ -6,6 +6,7 @@ namespace FlatDesigner\App;
 
 use FlatDesigner\App\ServiceProvider\InfrastructureServiceProvider;
 use FlatDesigner\App\ServiceProvider\OrmServiceProvider;
+use FlatDesigner\Middleware\AuthorizationMiddleware;
 use FlatDesigner\Middleware\CorsMiddleware;
 use FlatDesigner\Route\Strategy\JsonStrategy;
 use FlatDesigner\Service\Dbal\DbContext;
@@ -57,6 +58,12 @@ final readonly class ApplicationFactory
 			throw new \RuntimeException('CorsMiddleware not found in container.');
 		}
 		$router->middleware($corsMiddleware);
+
+		$authorizationMiddleware = $container->get(AuthorizationMiddleware::class);
+		if (!$authorizationMiddleware instanceof AuthorizationMiddleware) {
+			throw new \RuntimeException('AuthorizationMiddleware not found in container.');
+		}
+		$router->middleware($authorizationMiddleware);
 
 		return $router;
 	}

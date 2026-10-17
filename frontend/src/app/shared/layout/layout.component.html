@@ -1,0 +1,24 @@
+<header class="topbar">
+    <a routerLink="/" class="brand">
+        <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 28V12L16 4l12 8v16H19v-9h-6v9z" /></svg>
+        Flat Designer
+    </a>
+
+    <nav class="nav">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Viewer</a>
+        @if (currentUser.isAdmin()) {
+            <a routerLink="/admin/users" routerLinkActive="active">Users</a>
+        }
+    </nav>
+
+    <div class="user">
+        @if (currentUser.currentUser(); as user) {
+            <a routerLink="/account" routerLinkActive="active" class="user__name" [title]="user.email">{{ user.name }}</a>
+        }
+        <button type="button" class="btn btn--ghost" (click)="logout()">Sign out</button>
+    </div>
+</header>
+
+<main class="content">
+    <router-outlet />
+</main>

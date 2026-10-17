@@ -1,7 +1,7 @@
 @use 'variables' as *;
 
 :host {
-    position: fixed;
+    position: absolute;
     inset: 0;
     display: block;
 }

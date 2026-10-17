@@ -1,0 +1,45 @@
+<div class="page page--narrow">
+    <h1 class="page__title">Account</h1>
+
+    <section class="card">
+        <h2 class="card__title">Profile</h2>
+        <form class="form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+            <label class="field">
+                <span class="field__label">Email</span>
+                <input class="input" type="email" [value]="currentUser.currentUser()?.email ?? ''" disabled />
+            </label>
+            <label class="field">
+                <span class="field__label">Name</span>
+                <input class="input" type="text" formControlName="name" autocomplete="name" />
+            </label>
+            <div class="form__actions">
+                <button type="submit" class="btn btn--primary" [disabled]="profileForm.invalid || profileForm.pristine || savingProfile()">
+                    Save
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2 class="card__title">Password</h2>
+        <form class="form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+            <label class="field">
+                <span class="field__label">Current password</span>
+                <input class="input" type="password" formControlName="currentPassword" autocomplete="current-password" />
+            </label>
+            <label class="field">
+                <span class="field__label">New password</span>
+                <input class="input" type="password" formControlName="newPassword" autocomplete="new-password" />
+                <span class="field__hint">{{ passwordHint }}</span>
+            </label>
+            @if (passwordError(); as message) {
+                <p class="form-error" role="alert">{{ message }}</p>
+            }
+            <div class="form__actions">
+                <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || savingPassword()">
+                    Change password
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
