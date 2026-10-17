@@ -29,6 +29,16 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 		Routes::AuthenticationLogin->value,
 		Routes::AuthenticationSignUp->value,
 		Routes::AuthenticationRefreshToken->value,
+		// MCP authenticates with its own OAuth tokens (McpController); discovery, registration and token
+		// exchange are public by design, the consent page looks the client up before sign-in.
+		Routes::Mcp->value,
+		Routes::OAuthServerMetadata->value,
+		Routes::OAuthServerMetadataRoot->value,
+		Routes::OAuthResourceMetadata->value,
+		Routes::OAuthResourceMetadataRoot->value,
+		Routes::OAuthToken->value,
+		Routes::OAuthRegister->value,
+		Routes::OAuthClientInfo->value,
 	];
 
 	public function __construct(private TokenService $tokenService, private UserProvider $userProvider)

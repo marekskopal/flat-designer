@@ -7,6 +7,7 @@ namespace FlatDesigner;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use FlatDesigner\App\ApplicationFactory;
+use FlatDesigner\Mcp\McpUserContext;
 use FlatDesigner\Response\ErrorResponse;
 use FlatDesigner\Service\Actor\ActorContext;
 use Laminas\Diactoros\ServerRequestFactory;
@@ -20,11 +21,15 @@ assert($logger instanceof LoggerInterface);
 
 $actorContext = $application->container->get(ActorContext::class);
 assert($actorContext instanceof ActorContext);
+$mcpUserContext = $application->container->get(McpUserContext::class);
+assert($mcpUserContext instanceof McpUserContext);
 
 $emitter = new SapiEmitter();
 
-$handler = static function () use ($application, $logger, $emitter, $actorContext): void {
+$handler = static function () use ($application, $logger, $emitter, $actorContext, $mcpUserContext): void {
+	// Per-request contexts in this long-lived worker.
 	$actorContext->setHuman();
+	$mcpUserContext->clear();
 
 	try {
 		$request = ServerRequestFactory::fromGlobals();

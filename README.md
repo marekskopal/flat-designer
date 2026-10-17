@@ -31,6 +31,23 @@ make install
 make dev               # http://localhost:4200, /api proxied to :4400
 ```
 
+## AI agents (MCP)
+
+The backend is an MCP server at `http://localhost:4400/mcp` (Streamable HTTP, OAuth 2.1 with dynamic
+client registration and PKCE). Agents read projects and add, change, delete and undo rooms, walls,
+doors/windows and items with the same validation as the app; their changes are logged under the
+client's name. Connect Claude Code with
+
+```sh
+claude mcp add --transport http flat-designer http://localhost:4400/mcp
+```
+
+and approve the connection in the browser (`/oauth/authorize`). In claude.ai, add the URL as a custom
+connector (needs the app on a public https host: set `PROXY_HOST`). Connected agents are listed, and can be
+disconnected, on the Account page. Tools: `list_projects`, `get_project`, `get_floor`, `list_materials`,
+`list_item_kinds`, `add_/update_/delete_item|wall|opening|room`, `duplicate_item`, `add_floor`,
+`save_version`, `list_versions`, `list_changes`, `undo`, `redo`.
+
 ## Using the viewer
 
 - **3D** — dollhouse view from the south-west; drag to orbit, right-drag to pan, scroll to zoom.

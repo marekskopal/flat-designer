@@ -16,6 +16,19 @@ enum Routes: string
 	case CurrentUserPassword = '/api/current-user/password';
 
 	case Materials = '/api/materials';
+	case ItemKinds = '/api/item-kinds';
+
+	case Mcp = '/mcp';
+	case OAuthServerMetadata = '/.well-known/oauth-authorization-server/mcp';
+	case OAuthServerMetadataRoot = '/.well-known/oauth-authorization-server';
+	case OAuthResourceMetadata = '/.well-known/oauth-protected-resource/mcp';
+	case OAuthResourceMetadataRoot = '/.well-known/oauth-protected-resource';
+	case OAuthToken = '/mcp/oauth/token';
+	case OAuthRegister = '/mcp/oauth/register';
+	case OAuthClientInfo = '/api/oauth/client-info';
+	case OAuthAuthorize = '/api/oauth/authorize';
+	case CurrentUserMcpClients = '/api/current-user/mcp-clients';
+	case CurrentUserMcpClientRevoke = '/api/current-user/mcp-clients/{clientId:[a-f0-9]+}/revoke';
 
 	case AdminUsers = '/api/admin/users';
 	case AdminUser = '/api/admin/users/{userId:number}';

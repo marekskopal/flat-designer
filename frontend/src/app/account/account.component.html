@@ -21,6 +21,38 @@
     </section>
 
     <section class="card">
+        <h2 class="card__title">AI agents (MCP)</h2>
+        <p class="hint">
+            Agents such as Claude can read and edit your projects through the MCP server at <code>{{ mcpUrl }}</code>.
+            In Claude Code run the command below, then approve the connection in the browser window it opens. In claude.ai,
+            add the same URL as a custom connector.
+        </p>
+        <code class="command">claude mcp add --transport http flat-designer {{ mcpUrl }}</code>
+        @if (mcpClients().length > 0) {
+            <ul class="clients">
+                @for (client of mcpClients(); track client.clientId) {
+                    <li class="client">
+                        <span class="client__main">
+                            <span class="client__name">{{ client.clientName }}</span>
+                            <span class="client__meta">
+                                connected {{ client.connectedAt | date: 'd MMM y' }} · last token {{ client.lastTokenAt | date: 'd MMM y, HH:mm' }}
+                                @if (!client.active) {
+                                    · disconnected
+                                }
+                            </span>
+                        </span>
+                        @if (client.active) {
+                            <button type="button" class="btn btn--ghost btn--danger" (click)="disconnect(client)">Disconnect</button>
+                        }
+                    </li>
+                }
+            </ul>
+        } @else {
+            <p class="hint">No agent is connected.</p>
+        }
+    </section>
+
+    <section class="card">
         <h2 class="card__title">Password</h2>
         <form class="form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
             <label class="field">

@@ -41,6 +41,13 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   while the element is unchanged since. Items, walls, openings and rooms are soft-deleted (`deletedAt`);
   repositories' `findByFloor`/`findByWalls` skip deleted rows. A new element field must be added to its
   handler's `fields()`/`normalize()`/`apply()` and to the snapshot restore.
+- MCP: `McpController` (`/mcp`, `mcp/sdk` Streamable HTTP, sessions in `mcp_sessions`) authenticates the
+  OAuth access token (`OAuth\AuthorizationService`, ported from ukolio), sets `McpUserContext` and the
+  agent `ActorContext`. Tools live in `src/Mcp/Tool` (discovered by `#[McpTool]`, needs symfony/finder);
+  keep them thin wrappers over `SceneEditor`/providers with typed, documented parameters (the docblock
+  becomes the schema; JSON objects need `#[Schema(definition: …)]`). Domain `RuntimeException`s reach the
+  agent as tool errors (`ToolErrorTranslatingReferenceHandler`). `tests/Mcp/McpServerTest` drives the
+  server over JSON-RPC.
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs

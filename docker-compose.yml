@@ -59,6 +59,8 @@ services:
             S3_SECRET_KEY: ${S3_SECRET_KEY}
             S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE}
             FILE_MAX_SIZE_MB: ${FILE_MAX_SIZE_MB:-25}
+            PROXY_HOST: ${PROXY_HOST:-}
+            MCP_SESSION_TTL: ${MCP_SESSION_TTL:-86400}
         depends_on:
             db:
                 condition: service_healthy

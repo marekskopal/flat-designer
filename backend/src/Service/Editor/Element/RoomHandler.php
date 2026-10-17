@@ -41,7 +41,7 @@ final readonly class RoomHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(): array
+	public function defaults(array $fields): array
 	{
 		return [
 			'code' => 'R',

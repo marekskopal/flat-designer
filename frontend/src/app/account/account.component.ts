@@ -1,23 +1,32 @@
+import {DatePipe} from '@angular/common';
 import {HttpErrorResponse} from '@angular/common/http';
-import {ChangeDetectionStrategy, Component, effect, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, inject, OnInit, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
+import {McpClient} from '@app/models/mcp-client';
 import {AlertService} from '@app/services/alert.service';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
+import {OAuthService} from '@app/services/oauth.service';
 
 @Component({
     selector: 'fd-account',
-    imports: [ReactiveFormsModule],
+    imports: [DatePipe, ReactiveFormsModule],
     templateUrl: './account.component.html',
+    styleUrl: './account.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountComponent {
+export class AccountComponent implements OnInit {
     protected readonly currentUser = inject(CurrentUserService);
     private readonly auth = inject(AuthenticationService);
     private readonly alerts = inject(AlertService);
     private readonly fb = inject(FormBuilder).nonNullable;
+    private readonly oauth = inject(OAuthService);
+
+    /** Address MCP clients connect to. */
+    protected readonly mcpUrl = `${window.location.origin}/mcp`;
+    protected readonly mcpClients = signal<McpClient[]>([]);
 
     protected readonly passwordHint = PasswordHint;
     protected readonly savingProfile = signal(false);
@@ -40,6 +49,23 @@ export class AccountComponent {
                 this.profileForm.setValue({name: user.name});
             }
         });
+    }
+
+    public async ngOnInit(): Promise<void> {
+        await this.loadClients();
+    }
+
+    protected async disconnect(client: McpClient): Promise<void> {
+        if (!confirm(`Disconnect ${client.clientName}? It will need to be authorized again.`)) {
+            return;
+        }
+        try {
+            await this.oauth.revokeClient(client.clientId);
+            this.alerts.success(`${client.clientName} was disconnected.`);
+            await this.loadClients();
+        } catch {
+            // The error interceptor shows the toast.
+        }
     }
 
     protected async saveProfile(): Promise<void> {
@@ -73,6 +99,14 @@ export class AccountComponent {
             this.passwordError.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not change the password.');
         } finally {
             this.savingPassword.set(false);
+        }
+    }
+
+    private async loadClients(): Promise<void> {
+        try {
+            this.mcpClients.set(await this.oauth.listClients());
+        } catch {
+            // The error interceptor shows the toast.
         }
     }
 }

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ProjectChangeController;
+use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Service\Actor\ActorContext;
+use FlatDesigner\Service\Editor\SceneEditor;
 use FlatDesigner\Service\Editor\UndoService;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
@@ -76,11 +78,10 @@ final class ProjectChangeControllerTest extends EditorTestCase
 
 	public function testAgentChangesAreSeparateFromTheUsersOwn(): void
 	{
-		$actor = Fixture::service(ActorContext::class);
 		$this->create('items', ['name' => 'By hand']);
-		$actor->setAgent('client-1', 'Claude');
-		$this->create('items', ['name' => 'By agent']);
-		$actor->setHuman();
+		// What McpController does for a request carrying the client's token.
+		Fixture::service(ActorContext::class)->setAgent('client-1', 'Claude');
+		Fixture::service(SceneEditor::class)->create($this->user, $this->floor, ElementTypeEnum::Item, ['name' => 'By agent']);
 
 		$changes = $this->jsonList(
 			$this->request('GET', sprintf('/api/projects/%d/changes', $this->project->id), authenticatedAs: $this->user),

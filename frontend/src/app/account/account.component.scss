@@ -1,0 +1,55 @@
+@use 'variables' as *;
+
+.hint {
+    margin: 0 0 $space-12;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+
+    code {
+        padding: 1px 4px;
+        border-radius: 4px;
+        background: $color-surface-muted;
+        font-size: $font-size-12;
+        color: $color-text;
+    }
+}
+
+.command {
+    display: block;
+    margin: 0 0 $space-16;
+    padding: $space-8 $space-12;
+    border-radius: $radius-6;
+    background: $color-surface-muted;
+    font-size: $font-size-12;
+    white-space: nowrap;
+    overflow-x: auto;
+}
+
+.clients {
+    margin: 0 (-$space-8);
+    padding: 0;
+    list-style: none;
+}
+
+.client {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    padding: 6px $space-8;
+}
+
+.client__main {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.client__name {
+    font-weight: 600;
+}
+
+.client__meta {
+    font-size: $font-size-12;
+    color: $color-text-subtle;
+}

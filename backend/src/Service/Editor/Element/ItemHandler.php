@@ -14,6 +14,7 @@ use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 use const JSON_THROW_ON_ERROR;
@@ -26,6 +27,7 @@ final readonly class ItemHandler implements ElementHandler
 		private ItemRepository $itemRepository,
 		private RoomRepository $roomRepository,
 		private MaterialResolver $materialResolver,
+		private ItemKindCatalog $catalog,
 	) {
 	}
 
@@ -41,18 +43,21 @@ final readonly class ItemHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(): array
+	public function defaults(array $fields): array
 	{
+		$kind = is_string($fields['kind'] ?? null) ? ItemKindEnum::tryFrom($fields['kind']) : null;
+		$size = $this->catalog->get($kind ?? ItemKindEnum::Box);
+
 		return [
 			'roomId' => null,
 			'kind' => ItemKindEnum::Box->value,
-			'name' => 'Item',
+			'name' => ($kind ?? ItemKindEnum::Box)->value,
 			'x' => 0,
 			'y' => 0,
-			'z' => 0,
-			'width' => 600,
-			'depth' => 600,
-			'height' => 720,
+			'z' => $size['z'],
+			'width' => $size['width'],
+			'depth' => $size['depth'],
+			'height' => $size['height'],
 			'rotation' => 0,
 			'materialId' => null,
 			'params' => [],

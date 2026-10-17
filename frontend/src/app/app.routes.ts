@@ -16,6 +16,12 @@ export const appRoutes: Routes = [
         loadComponent: async () => (await import('@app/authentication/sign-up.component')).SignUpComponent,
     },
     {
+        // OAuth consent for MCP clients; signs in inline, so no guard.
+        path: 'oauth/authorize',
+        title: 'Connect · Flat Designer',
+        loadComponent: async () => (await import('@app/oauth/oauth-authorize.component')).OAuthAuthorizeComponent,
+    },
+    {
         path: '',
         component: LayoutComponent,
         canActivate: [authGuard],

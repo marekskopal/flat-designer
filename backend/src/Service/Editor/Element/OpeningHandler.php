@@ -41,8 +41,23 @@ final readonly class OpeningHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(): array
+	public function defaults(array $fields): array
 	{
+		if (($fields['type'] ?? null) === OpeningTypeEnum::Window->value) {
+			return [
+				'wallId' => null,
+				'name' => 'Window',
+				'type' => OpeningTypeEnum::Window->value,
+				'offset' => 100,
+				'width' => 1200,
+				'height' => 1200,
+				'sillHeight' => 900,
+				'leafWidth' => null,
+				'hinge' => null,
+				'side' => null,
+			];
+		}
+
 		return [
 			'wallId' => null,
 			'name' => 'Door',

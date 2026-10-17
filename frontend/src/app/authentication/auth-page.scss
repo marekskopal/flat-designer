@@ -61,3 +61,16 @@
     color: $color-text-muted;
     text-align: center;
 }
+
+.consent__text,
+.consent__user {
+    margin: 0 0 $space-16;
+    font-size: $font-size-14;
+    color: $color-text-muted;
+}
+
+.consent__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-8;
+}

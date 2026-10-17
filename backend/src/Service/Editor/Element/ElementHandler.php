@@ -20,8 +20,13 @@ interface ElementHandler
 	/** @return list<string> keys of the state a client may set */
 	public function fields(): array;
 
-	/** @return array<string, mixed> state of a new element before the client's fields are applied */
-	public function defaults(): array;
+	/**
+	 * State of a new element before the client's fields are applied.
+	 *
+	 * @param array<string, mixed> $fields the client's fields (e.g. an item's kind picks its default size)
+	 * @return array<string, mixed>
+	 */
+	public function defaults(array $fields): array;
 
 	/** The element on the floor, deleted or not. */
 	public function find(Floor $floor, int $id): ?AEntity;

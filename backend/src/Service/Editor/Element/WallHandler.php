@@ -43,7 +43,7 @@ final readonly class WallHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(): array
+	public function defaults(array $fields): array
 	{
 		return [
 			'name' => 'Wall',

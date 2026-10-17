@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\App\ServiceProvider;
 
 use AsyncAws\S3\S3Client;
+use FlatDesigner\Mcp\Server\FlatDesignerServer;
 use FlatDesigner\Service\Authentication\RateLimitConfig;
 use FlatDesigner\Service\Authentication\TokenService;
 use FlatDesigner\Service\Cors\CorsPolicy;
@@ -30,6 +31,7 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			S3Config::class,
 			S3Client::class,
 			FileStorageInterface::class,
+			FlatDesignerServer::class,
 		], true);
 	}
 
@@ -72,6 +74,13 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			}
 
 			return new S3Client($options);
+		});
+
+		$container->add(FlatDesignerServer::class, static function () use ($container): FlatDesignerServer {
+			$logger = $container->get(LoggerInterface::class);
+			assert($logger instanceof LoggerInterface);
+
+			return new FlatDesignerServer($container, $logger);
 		});
 
 		$container->add(FileStorageInterface::class, static function () use ($container): FileStorageInterface {

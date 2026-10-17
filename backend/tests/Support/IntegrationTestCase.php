@@ -32,10 +32,7 @@ abstract class IntegrationTestCase extends TestCase
 			->withUploadedFiles(['file' => new UploadedFile($stream, strlen($content), UPLOAD_ERR_OK, $filename, 'text/html')])
 			->withHeader('Authorization', 'Bearer ' . Fixture::accessTokenFor($authenticatedAs));
 
-		$response = AppHarness::app()->handler->handle($request);
-		AppHarness::app()->dbContext->resetOrmState();
-
-		return $response;
+		return AppHarness::handle($request);
 	}
 
 	/** @param array<string, mixed>|null $body */
@@ -59,12 +56,7 @@ abstract class IntegrationTestCase extends TestCase
 			$request = $request->withHeader('Authorization', 'Bearer ' . $bearerToken);
 		}
 
-		$response = AppHarness::app()->handler->handle($request);
-		// Production clears the ORM state between requests (frankenphp-worker.php); do the same so a
-		// test sees what the database holds, not the identity map.
-		AppHarness::app()->dbContext->resetOrmState();
-
-		return $response;
+		return AppHarness::handle($request);
 	}
 
 	/** @return array<string, mixed> */

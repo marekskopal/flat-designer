@@ -1,6 +1,8 @@
 # Sign-in, sign-up and token refresh per client IP; the backend also locks accounts after repeated
 # failed sign-ins.
 limit_req_zone $binary_remote_addr zone=auth:10m rate=10r/m;
+# OAuth for MCP clients: registration and token exchange.
+limit_req_zone $binary_remote_addr zone=oauth:10m rate=20r/m;
 limit_req_status 429;
 
 upstream http_frontend {
@@ -46,6 +48,54 @@ server {
     location ~ ^/api/projects/\d+/files$ {
         client_max_body_size 100m;
 
+        proxy_pass http://http_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    # MCP endpoint (Streamable HTTP): answers may be streamed as server-sent events.
+    location = /mcp {
+        client_max_body_size 10m;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 300s;
+
+        proxy_pass http://http_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location ~ ^/mcp/oauth/(register|token)$ {
+        limit_req zone=oauth burst=20 nodelay;
+
+        proxy_pass http://http_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    # OAuth discovery documents for MCP clients (RFC 8414, RFC 9728).
+    location ~ ^/\.well-known/oauth- {
         proxy_pass http://http_backend;
         proxy_http_version 1.1;
         proxy_set_header Connection "";

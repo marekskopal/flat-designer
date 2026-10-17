@@ -1,0 +1,51 @@
+<div class="auth">
+    <div class="auth__brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 28V12L16 4l12 8v16H19v-9h-6v9z" /></svg>
+        Flat Designer
+    </div>
+
+    @if (done() === 'approved') {
+        <h1 class="auth__title">Connected</h1>
+        <p class="consent__text">Returning to {{ clientName() }}… You can close this window.</p>
+    } @else if (done() === 'denied') {
+        <h1 class="auth__title">Not connected</h1>
+        <p class="consent__text">{{ clientName() }} did not get access. You can close this window.</p>
+    } @else if (clientName(); as name) {
+        <h1 class="auth__title">Connect {{ name }}</h1>
+        <p class="consent__text">
+            <strong>{{ name }}</strong> wants to read and edit your projects (floors, rooms, walls, items and versions) on your
+            behalf. Its changes show up under its name and can be undone.
+        </p>
+
+        @if (auth.isLoggedIn()) {
+            <p class="consent__user">Signed in as <strong>{{ currentUser.currentUser()?.email }}</strong></p>
+            @if (error(); as message) {
+                <p class="form-error" role="alert">{{ message }}</p>
+            }
+            <div class="consent__actions">
+                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="deny()">Deny</button>
+                <button type="button" class="btn btn--primary auth__submit" [disabled]="busy()" (click)="approve()">Allow access</button>
+            </div>
+        } @else {
+            <form class="auth__form" [formGroup]="loginForm" (ngSubmit)="signIn()">
+                <label class="field">
+                    <span class="field__label">Email</span>
+                    <input class="input" type="email" formControlName="email" autocomplete="email" />
+                </label>
+                <label class="field">
+                    <span class="field__label">Password</span>
+                    <input class="input" type="password" formControlName="password" autocomplete="current-password" />
+                </label>
+                @if (error(); as message) {
+                    <p class="form-error" role="alert">{{ message }}</p>
+                }
+                <button type="submit" class="btn btn--primary auth__submit" [disabled]="loginForm.invalid || busy()">Sign in to continue</button>
+            </form>
+        }
+    } @else if (error(); as message) {
+        <h1 class="auth__title">Cannot connect</h1>
+        <p class="form-error" role="alert">{{ message }}</p>
+    } @else {
+        <h1 class="auth__title">Loading…</h1>
+    }
+</div>

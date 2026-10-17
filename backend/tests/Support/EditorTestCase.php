@@ -54,10 +54,7 @@ abstract class EditorTestCase extends IntegrationTestCase
 			$request = $request->withHeader('If-Match', (string) $baseRevision);
 		}
 
-		$response = AppHarness::app()->handler->handle($request);
-		AppHarness::app()->dbContext->resetOrmState();
-
-		return $response;
+		return AppHarness::handle($request);
 	}
 
 	/**

@@ -6,12 +6,15 @@ namespace FlatDesigner\Tests\Support;
 
 use FlatDesigner\App\Application;
 use FlatDesigner\App\ApplicationFactory;
+use FlatDesigner\Mcp\McpUserContext;
 use FlatDesigner\Service\Actor\ActorContext;
 use FlatDesigner\Service\Storage\FileStorageInterface;
 use League\Container\Container;
 use PDO;
 use PDOException;
 use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * Per-suite singleton for integration tests: on first use it recreates the test database, runs all
@@ -42,6 +45,19 @@ final class AppHarness
 		}
 
 		return self::$application;
+	}
+
+	/**
+	 * Handles a request like the FrankenPHP worker: per-request contexts are reset before and the ORM state
+	 * after, so each request sees the database rather than the identity map.
+	 */
+	public static function handle(ServerRequestInterface $request): ResponseInterface
+	{
+		self::resetRequestContexts();
+		$response = self::app()->handler->handle($request);
+		self::app()->dbContext->resetOrmState();
+
+		return $response;
 	}
 
 	/** Replaces S3 for the whole suite. */
@@ -76,9 +92,18 @@ final class AppHarness
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
 
+		self::resetRequestContexts();
+	}
+
+	private static function resetRequestContexts(): void
+	{
 		$actorContext = self::container()->get(ActorContext::class);
 		assert($actorContext instanceof ActorContext);
 		$actorContext->setHuman();
+
+		$mcpUserContext = self::container()->get(McpUserContext::class);
+		assert($mcpUserContext instanceof McpUserContext);
+		$mcpUserContext->clear();
 	}
 
 	/** @return list<string> */
