@@ -1,0 +1,39 @@
+includes:
+	- phar://phpstan.phar/conf/bleedingEdge.neon
+
+parameters:
+	level: max
+	phpVersion: 80500
+	paths:
+		- src
+		- migrations
+		- tests
+	tmpDir: .phpstan
+
+	cognitive_complexity:
+		function: 15
+
+	checkImplicitMixed: true
+	checkBenevolentUnionTypes: true
+	checkUninitializedProperties: true
+	checkMissingCallableSignature: true
+	checkTooWideReturnTypesInProtectedAndPublicMethods: true
+	reportAnyTypeWideningInVarTag: true
+
+	shipmonkRules:
+		allowComparingOnlyComparableTypes:
+			enabled: false
+		forbidCheckedExceptionInCallable:
+			enabled: false
+		uselessPrivatePropertyDefaultValue:
+			enabled: false
+		forbidUnusedMatchResult:
+			enabled: false
+		enforceReadonlyPublicProperty:
+			enabled: false
+
+services:
+	-
+		class: FlatDesigner\PhpStan\OrmReadWritePropertiesExtension
+		tags:
+			- phpstan.properties.readWriteExtension

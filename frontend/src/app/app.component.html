@@ -1,0 +1,96 @@
+<fd-viewer
+    class="viewer"
+    [scene]="scene()"
+    [ceilingsVisible]="ceilingsVisible()"
+    [labelsVisible]="labelsVisible()"
+    [sectionHeight]="sectionHeight()"
+    [selectedRoomId]="selectedRoomId()"
+    [insetLeft]="panelInset"
+    (roomSelected)="onRoomPicked($event)"
+/>
+
+<aside class="panel">
+    <header class="panel__header">
+        <span class="eyebrow">Flat Designer</span>
+        @if (scene(); as s) {
+            <h1 class="title">{{ s.flat.name }}</h1>
+            @if (s.flat.address) {
+                <p class="subtitle">{{ s.flat.address }}</p>
+            }
+        } @else if (error()) {
+            <h1 class="title">Not available</h1>
+            <p class="error">{{ error() }}</p>
+        } @else {
+            <h1 class="title">Loading…</h1>
+        }
+    </header>
+
+    <section class="panel__section">
+        <h2 class="section-title">View</h2>
+        <div class="segmented" role="group" aria-label="Camera view">
+            @for (view of views; track view.preset) {
+                <button type="button" [class.active]="activeView() === view.preset" (click)="setView(view.preset)">
+                    {{ view.label }}
+                </button>
+            }
+        </div>
+    </section>
+
+    <section class="panel__section">
+        <h2 class="section-title">Display</h2>
+        <label class="toggle">
+            <input type="checkbox" [checked]="ceilingsVisible()" (change)="ceilingsVisible.set(!ceilingsVisible())" />
+            <span>Ceilings</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="labelsVisible()" (change)="labelsVisible.set(!labelsVisible())" />
+            <span>Room labels</span>
+        </label>
+        <label class="slider">
+            <span class="slider__label">
+                Wall cut
+                <span class="slider__value">
+                    @if (sectionHeight(); as h) {
+                        {{ h / 1000 | number: '1.2-2' }} m
+                    } @else {
+                        off
+                    }
+                </span>
+            </span>
+            <input
+                type="range"
+                [min]="sectionMin"
+                [max]="sectionMax"
+                step="50"
+                [value]="sectionSlider()"
+                (input)="onSectionInput($event)"
+                aria-label="Wall cut height"
+            />
+        </label>
+    </section>
+
+    @if (rooms().length > 0) {
+        <section class="panel__section panel__section--rooms">
+            <h2 class="section-title">Rooms</h2>
+            <ul class="rooms">
+                @for (room of rooms(); track room.id) {
+                    <li>
+                        <button type="button" class="room" [class.selected]="selectedRoomId() === room.id" (click)="selectRoom(room)">
+                            <span class="room__code">{{ room.code.replace('H1/', '') }}</span>
+                            <span class="room__name">{{ room.name }}</span>
+                            <span class="room__area">{{ room.area | number: '1.1-1' }} m²</span>
+                        </button>
+                    </li>
+                }
+            </ul>
+            <dl class="totals">
+                <dt>Indoor</dt>
+                <dd>{{ indoorArea() | number: '1.1-1' }} m²</dd>
+                <dt>Incl. terrace</dt>
+                <dd>{{ totalArea() | number: '1.1-1' }} m²</dd>
+            </dl>
+        </section>
+    }
+
+    <footer class="panel__footer">Drag to orbit · right-drag to pan · scroll to zoom · click a floor to select</footer>
+</aside>

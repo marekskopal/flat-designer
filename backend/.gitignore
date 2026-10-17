@@ -1,0 +1,4 @@
+/vendor/
+/var/
+/.phpstan/
+/.phpunit.cache/

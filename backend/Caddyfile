@@ -1,0 +1,19 @@
+{
+	auto_https off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	php {
+		root /app/src
+		worker {
+			file frankenphp-worker.php
+			num {$BACKEND_FRANKENPHP_WORKERS:2}
+			match *
+		}
+	}
+}

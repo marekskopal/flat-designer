@@ -1,0 +1,248 @@
+@use 'variables' as *;
+
+:host {
+    position: fixed;
+    inset: 0;
+    display: block;
+}
+
+.viewer {
+    position: absolute;
+    inset: 0;
+}
+
+.panel {
+    position: absolute;
+    top: $space-16;
+    left: $space-16;
+    bottom: $space-16;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    padding: $space-16 0;
+    background: $color-surface;
+    backdrop-filter: blur(14px);
+    border: 1px solid $color-border;
+    border-radius: $radius-14;
+    box-shadow: $shadow-panel;
+    overflow: hidden;
+}
+
+.panel__header,
+.panel__section,
+.panel__footer {
+    padding: 0 $space-16;
+}
+
+.panel__header {
+    padding-bottom: $space-12;
+    border-bottom: 1px solid $color-border;
+}
+
+.eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-accent;
+}
+
+.title {
+    margin: $space-4 0 0;
+    font-size: $font-size-18;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.subtitle {
+    margin: 2px 0 0;
+    font-size: $font-size-12;
+    color: $color-text-muted;
+}
+
+.error {
+    margin: $space-4 0 0;
+    font-size: $font-size-13;
+    color: #b3261e;
+}
+
+.panel__section {
+    padding-top: $space-12;
+    padding-bottom: $space-4;
+}
+
+.panel__section--rooms {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    margin: 0 0 $space-8;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-text-subtle;
+}
+
+.segmented {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 3px;
+    background: $color-surface-muted;
+    border-radius: $radius-10;
+
+    button {
+        padding: 6px 0;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        font-size: $font-size-13;
+        font-weight: 500;
+        color: $color-text-muted;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+
+        &:hover {
+            color: $color-text;
+        }
+
+        &.active {
+            background: $color-surface-solid;
+            color: $color-text;
+            box-shadow: 0 1px 2px rgba(35, 33, 30, 0.12);
+        }
+    }
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    padding: 3px 0;
+    font-size: $font-size-13;
+    cursor: pointer;
+
+    input {
+        accent-color: $color-accent;
+    }
+}
+
+.slider {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    margin-top: $space-8;
+    font-size: $font-size-13;
+
+    input {
+        width: 100%;
+        accent-color: $color-accent;
+    }
+}
+
+.slider__label {
+    display: flex;
+    justify-content: space-between;
+}
+
+.slider__value {
+    color: $color-text-muted;
+    font-variant-numeric: tabular-nums;
+}
+
+.rooms {
+    flex: 1;
+    min-height: 0;
+    margin: 0 (-$space-8);
+    padding: 0;
+    list-style: none;
+    overflow-y: auto;
+}
+
+.room {
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    align-items: baseline;
+    gap: $space-8;
+    width: 100%;
+    padding: 7px $space-8;
+    border: 0;
+    border-radius: $radius-6;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+
+    &.selected {
+        background: $color-accent-soft;
+
+        .room__code {
+            color: $color-highlight;
+        }
+    }
+}
+
+.room__code {
+    font-size: $font-size-12;
+    font-weight: 600;
+    color: $color-text-subtle;
+    font-variant-numeric: tabular-nums;
+}
+
+.room__name {
+    font-size: $font-size-13;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room__area {
+    font-size: $font-size-13;
+    color: $color-text-muted;
+    font-variant-numeric: tabular-nums;
+}
+
+.totals {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px $space-8;
+    margin: $space-8 0 0;
+    padding-top: $space-8;
+    border-top: 1px solid $color-border;
+    font-size: $font-size-13;
+
+    dt {
+        color: $color-text-muted;
+    }
+
+    dd {
+        margin: 0;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.panel__footer {
+    padding-top: $space-12;
+    border-top: 1px solid $color-border;
+    font-size: 11px;
+    color: $color-text-subtle;
+}
+
+@media (max-width: 640px) {
+    .panel {
+        top: auto;
+        left: $space-8;
+        right: $space-8;
+        bottom: $space-8;
+        width: auto;
+        max-height: 45vh;
+    }
+}

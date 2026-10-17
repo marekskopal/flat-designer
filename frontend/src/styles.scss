@@ -1,0 +1,64 @@
+@use 'styles/variables' as *;
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background: $color-bg;
+    color: $color-text;
+    font-family: $font-sans;
+    font-size: $font-size-14;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+}
+
+button, input {
+    font: inherit;
+    color: inherit;
+}
+
+// CSS2D room labels are created by the three.js engine outside Angular's view encapsulation.
+.viewer-labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.room-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: $radius-6;
+    background: rgba(252, 251, 248, 0.82);
+    box-shadow: 0 1px 3px rgba(35, 33, 30, 0.18);
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.15s ease;
+
+    &.selected {
+        background: $color-highlight;
+        color: #fff;
+
+        .room-label__meta {
+            color: rgba(255, 255, 255, 0.85);
+        }
+    }
+}
+
+.room-label__name {
+    font-size: $font-size-12;
+    font-weight: 600;
+}
+
+.room-label__meta {
+    font-size: 11px;
+    color: $color-text-muted;
+    font-variant-numeric: tabular-nums;
+}

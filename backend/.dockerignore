@@ -1,0 +1,5 @@
+vendor
+var
+.phpstan
+.phpunit.cache
+tests

@@ -1,0 +1,74 @@
+<?php
+
+declare(strict_types=1);
+
+namespace FlatDesigner\App\ServiceProvider;
+
+use FlatDesigner\Model\Entity\Flat;
+use FlatDesigner\Model\Entity\Item;
+use FlatDesigner\Model\Entity\Material;
+use FlatDesigner\Model\Entity\Opening;
+use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\Wall;
+use FlatDesigner\Model\Repository\FlatRepository;
+use FlatDesigner\Model\Repository\ItemRepository;
+use FlatDesigner\Model\Repository\MaterialRepository;
+use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\WallRepository;
+use FlatDesigner\Service\Dbal\DbContext;
+use League\Container\Container;
+use League\Container\ServiceProvider\AbstractServiceProvider;
+use MarekSkopal\ORM\Database\DatabaseInterface;
+use MarekSkopal\ORM\ORM;
+use MarekSkopal\ORM\Repository\RepositoryInterface;
+
+final class OrmServiceProvider extends AbstractServiceProvider
+{
+	public function __construct(private readonly DbContext $dbContext)
+	{
+	}
+
+	public function provides(string $id): bool
+	{
+		return in_array($id, [
+			DatabaseInterface::class,
+			ORM::class,
+			FlatRepository::class,
+			MaterialRepository::class,
+			RoomRepository::class,
+			WallRepository::class,
+			OpeningRepository::class,
+			ItemRepository::class,
+		], true);
+	}
+
+	public function register(): void
+	{
+		$container = $this->getContainer();
+		assert($container instanceof Container);
+
+		$container->add(DatabaseInterface::class, fn () => $this->dbContext->getDatabase());
+		$container->add(ORM::class, $this->dbContext->getOrm());
+
+		$orm = $this->dbContext->getOrm();
+
+		$this->addRepository($container, $orm, FlatRepository::class, Flat::class);
+		$this->addRepository($container, $orm, MaterialRepository::class, Material::class);
+		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
+		$this->addRepository($container, $orm, WallRepository::class, Wall::class);
+		$this->addRepository($container, $orm, OpeningRepository::class, Opening::class);
+		$this->addRepository($container, $orm, ItemRepository::class, Item::class);
+	}
+
+	/**
+	 * @param class-string<RepositoryInterface<TEntity>> $repositoryClass
+	 * @param class-string<TEntity> $entityClass
+	 * @template TEntity of object
+	 */
+	private function addRepository(Container $container, ORM $orm, string $repositoryClass, string $entityClass): void
+	{
+		$repository = $orm->getRepository($entityClass);
+		$container->add($repositoryClass, fn () => $repository);
+	}
+}

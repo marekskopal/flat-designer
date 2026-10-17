@@ -1,0 +1,89 @@
+name: flat-designer
+
+services:
+    proxy:
+        build:
+            context: ./proxy
+            dockerfile: Dockerfile
+        ports:
+            - "${PROXY_PORT}:80"
+        restart: unless-stopped
+        depends_on:
+            frontend:
+                condition: service_healthy
+            backend:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD", "nc", "-z", "127.0.0.1", "80"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        networks:
+            - frontend
+            - backend
+
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+        networks:
+            - frontend
+
+    backend:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        environment:
+            MYSQL_HOST: ${MYSQL_HOST}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+            BACKEND_FRANKENPHP_WORKERS: ${BACKEND_FRANKENPHP_WORKERS}
+            BACKEND_CORS_ALLOWED_ORIGIN: ${BACKEND_CORS_ALLOWED_ORIGIN}
+            BACKEND_LOG_LEVEL: ${BACKEND_LOG_LEVEL}
+        depends_on:
+            db:
+                condition: service_healthy
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-fsS", "http://127.0.0.1/api/health"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+        networks:
+            - backend
+
+    db:
+        image: mariadb:11.8
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        healthcheck:
+            test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+            start_period: 20s
+        networks:
+            - backend
+        volumes:
+            - flat_designer_data:/var/lib/mysql
+
+networks:
+    frontend:
+    backend:
+
+volumes:
+    flat_designer_data:
