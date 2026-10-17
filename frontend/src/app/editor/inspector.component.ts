@@ -4,6 +4,7 @@ import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CabinetParamsComponent} from './cabinet-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
+import {WardrobeParamsComponent} from './wardrobe-params.component';
 
 export interface FieldChange {
     key: string;
@@ -16,7 +17,7 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
-    imports: [CabinetParamsComponent],
+    imports: [CabinetParamsComponent, WardrobeParamsComponent],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,7 +38,13 @@ export class InspectorComponent {
         return formatFieldValue(def, this.element()[def.key]);
     }
 
-    /** Current params of the element for the cabinet form. */
+    /** The element's width (mm), which sets the wardrobe's default door count. */
+    protected width(): number {
+        const value = this.element()['width'];
+        return typeof value === 'number' ? value : 0;
+    }
+
+    /** Current params of the element for the cabinet and wardrobe forms. */
     protected params(def: FieldDef): Record<string, unknown> {
         const value = this.element()[def.key];
         return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};

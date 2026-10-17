@@ -1,6 +1,7 @@
 import {Item} from '@app/models/scene';
 import * as THREE from 'three';
 
+import {buildFurnitureItemBody} from './furniture';
 import {buildKitchenItemBody} from './kitchen';
 import {MaterialLibrary} from './materials';
 import {buildOutdoorItemBody} from './outdoor';
@@ -14,7 +15,11 @@ import {buildSanitaryItemBody} from './sanitary';
  */
 export function buildItem(item: Item, materials: MaterialLibrary): THREE.Object3D {
     const object =
-        buildKitchenItemBody(item, materials) ?? buildSanitaryItemBody(item, materials) ?? buildOutdoorItemBody(item, materials) ?? new THREE.Group();
+        buildKitchenItemBody(item, materials) ??
+        buildSanitaryItemBody(item, materials) ??
+        buildOutdoorItemBody(item, materials) ??
+        buildFurnitureItemBody(item, materials) ??
+        new THREE.Group();
     object.name = `item:${item.name}`;
     object.position.set(item.x * MM, item.z * MM, -item.y * MM);
     object.rotation.y = THREE.MathUtils.degToRad(item.rotation);

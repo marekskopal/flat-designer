@@ -17,6 +17,10 @@ final readonly class ItemKindCatalog
 		. 'count?: leaves side by side} — fronts without height share the rest; blindRight: mm of the front hidden behind the '
 		. 'adjoining run in a corner.';
 
+	private const string WardrobeParams = 'doors: sliding leaves, 2 to 6 (default: one per ~900 mm of width); mirrorDoors: list of door numbers '
+		. 'counted from the left as seen from the front, e.g. [3], faced with mirror; profileMaterialId: material of the frames and '
+		. 'tracks (default aluminium); plinth: mm under the doors (default 60).';
+
 	private const array Kinds = [
 		'BaseCabinet' => ['description' => 'Kitchen base cabinet standing on the floor, front facing the rotation direction.', 'width' => 600, 'depth' => 580, 'height' => 860, 'z' => 0, 'params' => self::CabinetParams],
 		'WallCabinet' => ['description' => 'Kitchen wall cabinet hung on the wall; z is its bottom edge.', 'width' => 600, 'depth' => 350, 'height' => 720, 'z' => 1450, 'params' => self::CabinetParams],
@@ -36,6 +40,7 @@ final readonly class ItemKindCatalog
 		'FlushPlate' => ['description' => 'Toilet flush plate on the pre-wall.', 'width' => 250, 'depth' => 10, 'height' => 165, 'z' => 1000, 'params' => 'none'],
 		'Fixture' => ['description' => 'Chrome bathroom fixture on a wall.', 'width' => 60, 'depth' => 70, 'height' => 60, 'z' => 600, 'params' => 'type: "bathMixer" | "showerHead" | "bidetSpray".'],
 		'Fence' => ['description' => 'Garden panel fence along x with posts.', 'width' => 2500, 'depth' => 60, 'height' => 1530, 'z' => 0, 'params' => 'panelLength: mm between posts (default 2500); baseBoard: mm of concrete base board.'],
+		'Wardrobe' => ['description' => 'Built-in wardrobe with sliding doors on two tracks in aluminium frames; the item material is the carcass and door panels.', 'width' => 2400, 'depth' => 600, 'height' => 2400, 'z' => 0, 'params' => self::WardrobeParams],
 	];
 
 	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string}> */

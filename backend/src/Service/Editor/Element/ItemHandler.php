@@ -18,6 +18,7 @@ use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
+use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use const JSON_THROW_ON_ERROR;
 
 final readonly class ItemHandler implements ElementHandler
@@ -103,6 +104,10 @@ final readonly class ItemHandler implements ElementHandler
 		$height = $fields->int('height', 1, State::MaxSize);
 		$params = self::params($fields->raw('params'));
 		CabinetParamsValidator::validate($kind, $params, $width, $height);
+		WardrobeParamsValidator::validate($kind, $params, $height);
+		if ($kind === ItemKindEnum::Wardrobe && is_int($params['profileMaterialId'] ?? null)) {
+			$this->materialResolver->resolve($params['profileMaterialId']);
+		}
 
 		return [
 			'roomId' => $roomId,

@@ -60,7 +60,7 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   the scene revision as `If-Match`; the result's element is patched into the scene by `scene-patch.ts`,
   falling back to a reload), `EditorPanelComponent` (toolbar, Add menu, shortcuts), `InspectorComponent`
   driven by `ElementFields` (add a field there to make it editable; `when` limits a field by element, e.g.
-  the `cabinet` form for cabinet params). Engine picking: builders tag objects with
+  the `cabinet` / `wardrobe` forms for cabinet and wardrobe params). Engine picking: builders tag objects with
   `itemId`/`openingId`/`wallId`/`roomId` in `userData` (`selection.ts`). In edit mode with the camera
   looking down, items, walls and openings drag, and the selected wall's ends / room's corners get handles
   (overlay scene, drawn above the section cut); one drag = one `onEdit` = one change. `ViewerEngine.load()`
@@ -75,7 +75,7 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs
   `make reset-db` (drops the DB volume).
-- Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts` and `outdoor.ts`; each builds the
+- Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`; each builds the
   item body in its local frame. A new item kind needs the PHP enum, a migration extending the
   `items.kind` column enum, the TS `ItemKind` union and a builder.
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through

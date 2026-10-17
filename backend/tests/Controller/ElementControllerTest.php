@@ -12,6 +12,7 @@ use FlatDesigner\Service\Editor\Element\RoomHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
+use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -24,6 +25,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(RoomHandler::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
+#[CoversClass(WardrobeParamsValidator::class)]
 final class ElementControllerTest extends EditorTestCase
 {
 	public function testCreateItemFillsDefaultsLogsAndBumpsRevision(): void
@@ -121,6 +123,33 @@ final class ElementControllerTest extends EditorTestCase
 		// Other kinds keep free-form params.
 		$box = $this->create('items', ['kind' => 'Box', 'params' => ['handle' => 'knob']]);
 		self::assertSame(['handle' => 'knob'], $box['params']);
+	}
+
+	public function testWardrobeParamsAreValidated(): void
+	{
+		$wardrobe = $this->create('items', ['kind' => 'Wardrobe', 'name' => 'Wardrobe']);
+		self::assertSame([2400, 600, 2400], [$wardrobe['width'], $wardrobe['depth'], $wardrobe['height']]);
+
+		$params = ['doors' => 4, 'mirrorDoors' => [3], 'plinth' => 60, 'custom' => 'kept'];
+		$changed = $this->jsonBody($this->edit('PATCH', 'items', self::id($wardrobe), ['params' => $params]));
+		self::assertIsArray($changed['element']);
+		self::assertSame($params, $changed['element']['params']);
+
+		foreach ([
+			['doors' => 1],
+			['doors' => 7],
+			['doors' => '4'],
+			['plinth' => 2400],
+			['mirrorDoors' => 3],
+			['mirrorDoors' => [0]],
+			['doors' => 3, 'mirrorDoors' => [4]],
+			['mirrorDoors' => [2, 2]],
+			['profileMaterialId' => 'aluminium'],
+			['profileMaterialId' => 999999],
+		] as $invalid) {
+			$response = $this->edit('PATCH', 'items', self::id($wardrobe), ['params' => $invalid]);
+			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
+		}
 	}
 
 	public function testStaleRevisionIsRejected(): void

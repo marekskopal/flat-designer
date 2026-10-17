@@ -23,7 +23,8 @@ export type ItemKind =
     | 'TowelRadiator'
     | 'FlushPlate'
     | 'Fixture'
-    | 'Fence';
+    | 'Fence'
+    | 'Wardrobe';
 
 export type PlanPoint = [number, number];
 
@@ -114,6 +115,17 @@ export interface CabinetParams {
     fronts?: FrontSpec[];
     /** Width (mm) of the front hidden behind the adjoining run in a corner. */
     blindRight?: number;
+}
+
+export interface WardrobeParams {
+    /** Sliding leaves, 2–6; by default one per ~900 mm of width. */
+    doors?: number;
+    /** Doors faced with mirror, numbered from 1 at the left as seen from the front. */
+    mirrorDoors?: number[];
+    /** Material of the door frames and tracks; aluminium by default. */
+    profileMaterialId?: number;
+    /** Height (mm) under the doors; 60 by default. */
+    plinth?: number;
 }
 
 export interface Item {

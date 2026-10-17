@@ -1,9 +1,13 @@
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {isCabinet} from './cabinet-params';
+import {isWardrobe} from './wardrobe-params';
 
-/** `cabinet`: the structured form for a cabinet's params (plinth, handle, fronts, blindRight). */
-export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json' | 'bool' | 'cabinet';
+/**
+ * `cabinet`: the structured form for a cabinet's params (plinth, handle, fronts, blindRight); `wardrobe`: the same for
+ * a sliding-door wardrobe (doors, plinth, profile material, mirror doors).
+ */
+export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json' | 'bool' | 'cabinet' | 'wardrobe';
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -22,7 +26,7 @@ export interface FieldDef {
 
 const ItemKinds = [
     'BaseCabinet', 'WallCabinet', 'TallCabinet', 'Worktop', 'Backsplash', 'Sink', 'Hob', 'LedStrip', 'Box',
-    'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence',
+    'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence', 'Wardrobe',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
@@ -42,7 +46,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
         {key: 'params', label: 'Cabinet', type: 'cabinet', when: isCabinet},
-        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCabinet(element)},
+        {key: 'params', label: 'Wardrobe', type: 'wardrobe', when: isWardrobe},
+        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCabinet(element) && !isWardrobe(element)},
     ],
     wall: [
         {key: 'name', label: 'Name', type: 'text'},

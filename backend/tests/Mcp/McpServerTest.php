@@ -257,6 +257,38 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertMatchesRegularExpression('/[^\\\\]"params":\\s*\\{\\}/', $body);
 	}
 
+	public function testAddsAWardrobe(): void
+	{
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$isError = false;
+		$wardrobe = $this->client->call('add_item', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'kind' => 'Wardrobe',
+			'x' => 1200,
+			'y' => 300,
+			'width' => 2468,
+			'params' => ['doors' => 4, 'mirrorDoors' => [3]],
+		], $isError);
+		self::assertFalse($isError);
+		self::assertIsArray($wardrobe);
+		self::assertIsArray($wardrobe['element']);
+		self::assertSame('Wardrobe', $wardrobe['element']['kind']);
+		self::assertSame(['doors' => 4, 'mirrorDoors' => [3]], $wardrobe['element']['params']);
+
+		$message = $this->client->call('add_item', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'kind' => 'Wardrobe',
+			'x' => 0,
+			'y' => 0,
+			'params' => ['doors' => 3, 'mirrorDoors' => [4]],
+		], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('mirrorDoors', $message);
+	}
+
 	public function testRequestsWithoutAValidTokenAreRejected(): void
 	{
 		$response = $this->request('POST', Routes::Mcp->value, ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list']);

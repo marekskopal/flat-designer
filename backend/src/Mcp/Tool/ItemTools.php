@@ -8,6 +8,7 @@ use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
+use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
@@ -21,9 +22,9 @@ final readonly class ItemTools
 	private const array ParamsSchema = [
 		'type' => ['object', 'null'],
 		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params); '
-			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet)',
+			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet) and of Wardrobe',
 		'properties' => [
-			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts'],
+			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts / doors'],
 			'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles],
 			'fronts' => [
 				'type' => 'array',
@@ -39,6 +40,18 @@ final readonly class ItemTools
 				],
 			],
 			'blindRight' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run'],
+			'doors' => [
+				'type' => 'integer',
+				'minimum' => WardrobeParamsValidator::MinDoors,
+				'maximum' => WardrobeParamsValidator::MaxDoors,
+				'description' => 'Wardrobe: sliding leaves (default: one per ~900 mm of width)',
+			],
+			'mirrorDoors' => [
+				'type' => 'array',
+				'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => WardrobeParamsValidator::MaxDoors],
+				'description' => 'Wardrobe: door numbers faced with mirror, counted from the left as seen from the front',
+			],
+			'profileMaterialId' => ['type' => 'integer', 'description' => 'Wardrobe: material of the door frames and tracks (default aluminium)'],
 		],
 		'additionalProperties' => true,
 		'default' => null,

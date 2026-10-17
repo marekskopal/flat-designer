@@ -47,6 +47,15 @@
                 @case ('cabinet') {
                     <fd-cabinet-params [params]="params(def)" [disabled]="disabled()" (paramsChange)="commitValue(def, $event)" />
                 }
+                @case ('wardrobe') {
+                    <fd-wardrobe-params
+                        [params]="params(def)"
+                        [width]="width()"
+                        [materials]="materials()"
+                        [disabled]="disabled()"
+                        (paramsChange)="commitValue(def, $event)"
+                    />
+                }
                 @case ('json') {
                     <textarea [id]="'field-' + def.key" class="input input--compact input--code" rows="3" [value]="value(def)" [disabled]="disabled()" (change)="commit(def, $event)"></textarea>
                 }
