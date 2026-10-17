@@ -1,0 +1,75 @@
+name: Backend
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+
+jobs:
+    audit:
+        name: Composer audit
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  coverage: none
+                  tools: composer
+
+            - name: Run composer audit
+              working-directory: backend
+              run: composer audit --locked --no-dev --abandoned=report
+
+    backend:
+        name: Backend
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  coverage: none
+                  tools: composer
+
+            - name: Cache composer dependencies
+              uses: actions/cache@v4
+              with:
+                  path: backend/vendor
+                  key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
+                  restore-keys: ${{ runner.os }}-composer-
+
+            - name: Install composer dependencies
+              working-directory: backend
+              run: composer install --prefer-dist --no-progress --no-interaction
+
+            - name: Prepare .env with generated secrets
+              run: make env
+
+            - name: Run PHPStan
+              if: always()
+              working-directory: backend
+              run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+            - name: Run PHPCS
+              if: always()
+              working-directory: backend
+              run: vendor/bin/phpcs
+
+            - name: Boot the database
+              run: docker compose up -d --wait db
+
+            # One-off backend container with the host vendor/ bind-mounted, database flat_designer_test.
+            - name: Run PHPUnit
+              run: make test-backend
+
+            - name: Dump docker logs on failure
+              if: failure()
+              run: docker compose logs --no-color
