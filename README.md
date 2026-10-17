@@ -2,7 +2,8 @@
 
 3D viewer of flat no. 50 (H1B), Example Residences, Example City, with the planned kitchen,
 bathroom and WC, the chosen floor and tiles, and both gardens.
-Proof of concept: view only, data seeded by migrations. Users sign up and sign in; admins manage users.
+Proof of concept: view only, data seeded by migrations. Users sign up and sign in and own projects
+(1..N floors, saved versions); admins see all projects and manage users.
 
 ## Run
 
@@ -45,14 +46,28 @@ make dev               # http://localhost:4200, /api proxied to :4400
 | `docs/analysis.md` | inputs and analysis of open-source projects |
 | `source_files/` | floor plan PDF, kitchen render, bathroom/WC/floor references |
 
-API: `GET /api/health`, `GET /api/flats`, `GET /api/flats/{id}/scene` (everything the viewer needs).
+API (all but health and authentication need a Bearer token):
+
+- `/api/authentication/{login,sign-up,refresh-token}`, `/api/current-user`, `/api/current-user/password`
+- `/api/projects` (list, create), `/api/projects/{id}` (get, put, delete)
+- `/api/projects/{id}/floors` (create), `/api/projects/{id}/floors/{floorId}` (put, delete),
+  `…/floors/{floorId}/scene` (everything the viewer needs)
+- `/api/projects/{id}/versions` (list, save), `…/versions/{versionId}` (detail with its floors),
+  `…/versions/{versionId}/floors/{floorId}/scene`, `…/versions/{versionId}/restore`
+- `/api/admin/users`, `/api/admin/users/{id}` (admins only)
 
 ## Data model
 
 All lengths are integer millimetres in plan coordinates: origin at the inner south-west corner of the
-flat (living room by the south façade), x east, y north.
+floor (for flat 50: the living room by the south façade), x east, y north.
 
-- `flats` — the flat.
+- `users` — email, bcrypt password, role (Admin/User), token version and sign-in lockout state.
+- `projects` — owner, name, address, description. Flat 50 is the seeded project "Byt č. 50 (H1B)".
+- `floors` — the storeys of a project (name, level; 0 = ground floor); rooms, walls and items belong to a
+  floor. A project keeps at least one.
+- `project_versions` — numbered, immutable JSON snapshots of all floors of a project (with the material
+  catalogue). The floors are the working copy; restoring a version replaces them, after auto-saving the
+  current state as a new version.
 - `materials` — colour, roughness, metalness and a `pattern` (Plain/Wood/Planks/Tiles/Glass). Planks and
   tiles can reference a photo of one real plank/tile (`texture`, under `frontend/src/assets/`) with its
   size (`tile_width` × `tile_height`); the viewer lays the floor or wall out from it. Otherwise the

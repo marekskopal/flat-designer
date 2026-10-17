@@ -1,7 +1,8 @@
 # Flat Designer
 
-3D viewer of one flat (flat no. 50, H1B) with a parametric kitchen. PoC: view only, data seeded by
-migrations. Accounts (roles Admin/User) with JWT auth. Architecture mirrors `../ukolio` (same author), trimmed to what a viewer needs.
+3D viewer of projects (1..N floors each) with a parametric kitchen; the seeded project is flat no. 50
+(H1B). PoC: view only, data seeded by migrations. Accounts (roles Admin/User) with JWT auth; users own
+projects, admins see all. Architecture mirrors `../ukolio` (same author), trimmed to what a viewer needs.
 
 ## Services
 
@@ -22,13 +23,19 @@ migrations. Accounts (roles Admin/User) with JWT auth. Architecture mirrors `../
 ## Conventions
 
 - All stored lengths are integer **millimetres** in plan coordinates: origin at the inner south-west
-  corner of the flat, x east, y north. The viewer converts with `MM` (0.001) and maps plan y → scene −z.
+  corner of the floor, x east, y north. The viewer converts with `MM` (0.001) and maps plan y → scene −z.
 - Item rotation is degrees counter-clockwise; 0 = front facing south (−y). Cabinet-local frame: x along
   width, y up, +z out of the front.
 - Walls are centre lines + thickness; openings are offsets along the centre line from the wall start.
   Door `hinge` = Start/End of the opening, `side` = Left/Right of the wall direction.
+- `Project` → `Floor` (was `Flat`) → rooms/walls/items. Access goes through
+  `ProjectProvider::findAccessible()` (owner or admin, otherwise 404). Versions: the floors are the
+  working copy, `ProjectVersion::$snapshot` is JSON from `ProjectSnapshotService` (format documented
+  there); a new floor/room/wall/item field must be added to the snapshot restore too. Foreign keys cascade
+  on delete (project → floors → content), so deletes go through the parent row.
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
-  `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`). Data changes go into a new migration; editing an applied one needs
+  `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
+  say `flat_id`). Data changes go into a new migration; editing an applied one needs
   `make reset-db` (drops the DB volume).
 - Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts` and `outdoor.ts`; each builds the
   item body in its local frame. A new item kind needs the PHP enum, a migration extending the

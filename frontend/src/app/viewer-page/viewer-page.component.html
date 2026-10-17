@@ -11,17 +11,49 @@
 
 <aside class="panel">
     <header class="panel__header">
-        <span class="eyebrow">Flat Designer</span>
+        @if (project(); as p) {
+            <a class="eyebrow eyebrow--link" [routerLink]="['/projects', p.id]">{{ p.name }}</a>
+        } @else {
+            <span class="eyebrow">Flat Designer</span>
+        }
         @if (scene(); as s) {
-            <h1 class="title">{{ s.flat.name }}</h1>
-            @if (s.flat.address) {
-                <p class="subtitle">{{ s.flat.address }}</p>
+            <h1 class="title">{{ s.floor.name }}</h1>
+            @if (project()?.address; as address) {
+                <p class="subtitle">{{ address }}</p>
             }
         } @else if (error()) {
             <h1 class="title">Not available</h1>
             <p class="error">{{ error() }}</p>
         } @else {
             <h1 class="title">Loading…</h1>
+        }
+
+        @if (viewedVersion(); as v) {
+            <div class="version-banner">
+                <span>
+                    <strong>Version {{ v.version.number }}</strong> · read-only
+                    @if (v.version.note) {
+                        <span class="version-banner__note">{{ v.version.note }}</span>
+                    }
+                </span>
+                @if (currentLink(); as link) {
+                    <a [routerLink]="link">Back to current</a>
+                }
+            </div>
+        }
+
+        @if (floors().length > 1) {
+            <nav class="floors" aria-label="Floors">
+                @for (floor of floors(); track floor.id) {
+                    <a
+                        [routerLink]="['/projects', projectId(), 'floors', floor.id]"
+                        queryParamsHandling="preserve"
+                        [class.active]="floor.id === floorId()"
+                    >
+                        {{ floor.name }}
+                    </a>
+                }
+            </nav>
         }
     </header>
 

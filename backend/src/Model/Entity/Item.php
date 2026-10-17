@@ -13,7 +13,7 @@ use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * Parametric object placed in the flat (kitchen cabinets, worktops, appliances…). The box is given by
+ * Parametric object placed on a floor (kitchen cabinets, worktops, appliances…). The box is given by
  * its footprint centre (x, y), bottom elevation z, size (width × depth × height, mm) and rotation in
  * degrees counter-clockwise; at rotation 0 the front faces south (−y). Kind-specific options
  * (front layout, handles, appliances) live in the JSON `params` and are interpreted by the viewer.
@@ -22,8 +22,8 @@ use MarekSkopal\ORM\Enum\Type;
 class Item extends AEntity
 {
 	public function __construct(
-		#[ManyToOne(entityClass: Flat::class)]
-		public readonly Flat $flat,
+		#[ManyToOne(entityClass: Floor::class)]
+		public readonly Floor $floor,
 		#[ManyToOne(entityClass: Room::class, nullable: true)]
 		public ?Room $room,
 		#[ColumnEnum(enum: ItemKindEnum::class)]

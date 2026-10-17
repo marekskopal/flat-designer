@@ -24,13 +24,15 @@ interface CameraTween {
 const BackgroundColor = '#e8e4dd';
 const HighlightColor = '#d9822b';
 const TweenDuration = 900;
+/** Framing of a floor with nothing on it yet (plan mm). */
+const EmptyFloorBounds: Bounds = {minX: 0, minY: 0, maxX: 10000, maxY: 10000};
 
 /** Eye-level viewpoint of the kitchen render, in plan millimetres: standing in the living room, looking north-east. */
 const KitchenEye = {x: 1500, y: 1900, z: 1600};
 const KitchenTarget = {x: 5300, y: 5800, z: 1150};
 
 /**
- * Framework-free three.js viewer for one flat: owns the renderer, camera, controls and the scene graph
+ * Framework-free three.js viewer for one floor: owns the renderer, camera, controls and the scene graph
  * built from a `Scene`. The Angular component only forwards options and events.
  */
 export class ViewerEngine {
@@ -103,7 +105,7 @@ export class ViewerEngine {
         this.materials = new MaterialLibrary(scene.materials, anisotropy);
 
         const content = new THREE.Group();
-        content.name = `flat:${scene.flat.name}`;
+        content.name = `floor:${scene.floor.name}`;
 
         const building = buildBuilding(scene, this.materials);
         content.add(building.root);
@@ -124,7 +126,8 @@ export class ViewerEngine {
         this.scene.add(content);
 
         const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
-        this.bounds = polygonBounds([...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)]);
+        const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
+        this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
         this.setView('overview', false);
     }

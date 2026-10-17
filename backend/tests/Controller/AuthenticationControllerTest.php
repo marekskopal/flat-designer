@@ -177,7 +177,7 @@ final class AuthenticationControllerTest extends IntegrationTestCase
 	public function testProtectedRoutesRequireToken(): void
 	{
 		self::assertSame(401, $this->request('GET', Routes::CurrentUser->value)->getStatusCode());
-		self::assertSame(401, $this->request('GET', Routes::Flats->value)->getStatusCode());
+		self::assertSame(401, $this->request('GET', Routes::Projects->value)->getStatusCode());
 		self::assertSame(401, $this->request('GET', Routes::CurrentUser->value, bearerToken: 'garbage')->getStatusCode());
 	}
 

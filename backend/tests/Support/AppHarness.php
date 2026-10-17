@@ -17,7 +17,7 @@ use Psr\Container\ContainerInterface;
 final class AppHarness
 {
 	/** Tables keeping their migrated content between tests: the migration log and the seeded catalog. */
-	private const array PreservedTables = ['migrations', 'materials'];
+	private const array PreservedTables = ['__migrations', 'materials'];
 
 	private static ?Application $application = null;
 

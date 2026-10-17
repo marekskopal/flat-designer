@@ -1,5 +1,5 @@
 // Mirrors the backend DTOs (FlatDesigner\Dto). All lengths are millimetres in plan coordinates:
-// origin at the inner south-west corner of the flat, x east, y north.
+// origin at the inner south-west corner of the floor, x east, y north.
 
 export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
@@ -27,11 +27,11 @@ export type ItemKind =
 
 export type PlanPoint = [number, number];
 
-export interface Flat {
+export interface Floor {
     id: number;
     name: string;
-    address: string | null;
-    description: string | null;
+    /** 0 = ground floor, negative below ground. */
+    level: number;
 }
 
 export interface Material {
@@ -131,7 +131,7 @@ export interface Item {
 }
 
 export interface Scene {
-    flat: Flat;
+    floor: Floor;
     materials: Material[];
     rooms: Room[];
     walls: Wall[];

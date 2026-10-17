@@ -18,6 +18,13 @@ enum Routes: string
 	case AdminUsers = '/api/admin/users';
 	case AdminUser = '/api/admin/users/{userId:number}';
 
-	case Flats = '/api/flats';
-	case FlatScene = '/api/flats/{flatId:number}/scene';
+	case Projects = '/api/projects';
+	case Project = '/api/projects/{projectId:number}';
+	case ProjectFloors = '/api/projects/{projectId:number}/floors';
+	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
+	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
+	case ProjectVersions = '/api/projects/{projectId:number}/versions';
+	case ProjectVersion = '/api/projects/{projectId:number}/versions/{versionId:number}';
+	case ProjectVersionFloorScene = '/api/projects/{projectId:number}/versions/{versionId:number}/floors/{floorId:number}/scene';
+	case ProjectVersionRestore = '/api/projects/{projectId:number}/versions/{versionId:number}/restore';
 }

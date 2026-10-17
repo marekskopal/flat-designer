@@ -83,6 +83,15 @@ final class AdminUserControllerTest extends IntegrationTestCase
 		self::assertSame(404, $this->request('DELETE', self::userPath($user->id), authenticatedAs: $admin)->getStatusCode());
 	}
 
+	public function testUserOwningProjectsCannotBeDeleted(): void
+	{
+		$admin = Fixture::createAdmin();
+		$user = Fixture::createUser();
+		Fixture::createProject($user);
+
+		self::assertSame(409, $this->request('DELETE', self::userPath($user->id), authenticatedAs: $admin)->getStatusCode());
+	}
+
 	private static function userPath(int $userId): string
 	{
 		return str_replace('{userId:number}', (string) $userId, Routes::AdminUser->value);

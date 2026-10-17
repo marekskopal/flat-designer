@@ -17,8 +17,8 @@ use MarekSkopal\ORM\Enum\Type;
 class Wall extends AEntity
 {
 	public function __construct(
-		#[ManyToOne(entityClass: Flat::class)]
-		public readonly Flat $flat,
+		#[ManyToOne(entityClass: Floor::class)]
+		public readonly Floor $floor,
 		#[Column(type: Type::String)]
 		public string $name,
 		#[ColumnEnum(enum: WallTypeEnum::class)]

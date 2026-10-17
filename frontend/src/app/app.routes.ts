@@ -20,9 +20,19 @@ export const appRoutes: Routes = [
         component: LayoutComponent,
         canActivate: [authGuard],
         children: [
+            {path: '', pathMatch: 'full', redirectTo: 'projects'},
             {
-                path: '',
-                pathMatch: 'full',
+                path: 'projects',
+                title: 'Projects · Flat Designer',
+                loadComponent: async () => (await import('@app/projects/projects.component')).ProjectsComponent,
+            },
+            {
+                path: 'projects/:projectId',
+                title: 'Project · Flat Designer',
+                loadComponent: async () => (await import('@app/projects/project-detail.component')).ProjectDetailComponent,
+            },
+            {
+                path: 'projects/:projectId/floors/:floorId',
                 title: 'Flat Designer',
                 loadComponent: async () => (await import('@app/viewer-page/viewer-page.component')).ViewerPageComponent,
             },

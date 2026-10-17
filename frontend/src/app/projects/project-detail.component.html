@@ -1,0 +1,136 @@
+<div class="page">
+    <a routerLink="/projects" class="back">← Projects</a>
+
+    @if (project(); as project) {
+        @if (editingDetails()) {
+            <form class="card form" [formGroup]="detailsForm" (ngSubmit)="saveDetails(project)">
+                <label class="field">
+                    <span class="field__label">Name</span>
+                    <input class="input" type="text" formControlName="name" />
+                </label>
+                <label class="field">
+                    <span class="field__label">Address</span>
+                    <input class="input" type="text" formControlName="address" />
+                </label>
+                <label class="field">
+                    <span class="field__label">Description</span>
+                    <textarea class="input" rows="3" formControlName="description"></textarea>
+                </label>
+                <div class="form__actions">
+                    <button type="button" class="btn btn--ghost" (click)="editingDetails.set(false)">Cancel</button>
+                    <button type="submit" class="btn btn--primary" [disabled]="detailsForm.invalid || busy()">Save</button>
+                </div>
+            </form>
+        } @else {
+            <header class="head">
+                <div class="head__text">
+                    <h1 class="page__title">{{ project.name }}</h1>
+                    @if (project.address) {
+                        <p class="head__address">{{ project.address }}</p>
+                    }
+                    @if (project.description) {
+                        <p class="head__description">{{ project.description }}</p>
+                    }
+                    @if (project.ownerName) {
+                        <p class="head__owner">Owner: {{ project.ownerName }}</p>
+                    }
+                </div>
+                <div class="head__actions">
+                    @if (firstFloor(); as floor) {
+                        <a class="btn btn--primary" [routerLink]="['/projects', project.id, 'floors', floor.id]">Open 3D view</a>
+                    }
+                    <button type="button" class="btn" (click)="editDetails(project)">Edit</button>
+                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteProject(project)">Delete</button>
+                </div>
+            </header>
+        }
+
+        <div class="columns">
+            <section class="card">
+                <div class="card__header">
+                    <h2 class="card__title">Floors</h2>
+                    @if (editingFloor() === null) {
+                        <button type="button" class="btn btn--ghost" (click)="startFloor(null)">+ Add floor</button>
+                    }
+                </div>
+
+                <ul class="list">
+                    @for (floor of project.floors; track floor.id) {
+                        <li class="list__row">
+                            @if (editingFloor() === floor.id) {
+                                <ng-container *ngTemplateOutlet="floorEditor" />
+                            } @else {
+                                <a class="list__main" [routerLink]="['/projects', project.id, 'floors', floor.id]">
+                                    <span class="list__title">{{ floor.name }}</span>
+                                    <span class="list__meta">level {{ floor.level }}</span>
+                                </a>
+                                <span class="list__actions">
+                                    <button type="button" class="btn btn--ghost" (click)="startFloor(floor)">Rename</button>
+                                    <button
+                                        type="button"
+                                        class="btn btn--ghost btn--danger"
+                                        [disabled]="busy() || project.floors.length === 1"
+                                        [title]="project.floors.length === 1 ? 'A project needs at least one floor' : ''"
+                                        (click)="deleteFloor(project, floor)"
+                                    >
+                                        Delete
+                                    </button>
+                                </span>
+                            }
+                        </li>
+                    }
+                    @if (editingFloor() === 'new') {
+                        <li class="list__row">
+                            <ng-container *ngTemplateOutlet="floorEditor" />
+                        </li>
+                    }
+                </ul>
+
+                <ng-template #floorEditor>
+                    <form class="inline-form" [formGroup]="floorForm" (ngSubmit)="saveFloor(project)">
+                        <input class="input" type="text" formControlName="name" placeholder="Floor name" aria-label="Floor name" />
+                        <input class="input input--level" type="number" formControlName="level" aria-label="Level" title="Level (0 = ground floor)" />
+                        <button type="submit" class="btn btn--primary" [disabled]="floorForm.invalid || busy()">Save</button>
+                        <button type="button" class="btn btn--ghost" (click)="editingFloor.set(null)">Cancel</button>
+                    </form>
+                </ng-template>
+            </section>
+
+            <section class="card">
+                <div class="card__header">
+                    <h2 class="card__title">Versions</h2>
+                </div>
+
+                <form class="inline-form" [formGroup]="versionForm" (ngSubmit)="saveVersion(project)">
+                    <input class="input" type="text" formControlName="note" placeholder="Note (optional)" aria-label="Version note" maxlength="255" />
+                    <button type="submit" class="btn btn--primary" [disabled]="busy()">Save version</button>
+                </form>
+
+                <ul class="list">
+                    @for (version of versions(); track version.id) {
+                        <li class="list__row">
+                            <span class="list__main">
+                                <span class="list__title">
+                                    <span class="version-number">v{{ version.number }}</span>
+                                    {{ version.note ?? '' }}
+                                </span>
+                                <span class="list__meta">
+                                    {{ version.createdAt | date: 'd MMM y, HH:mm' }}
+                                    @if (version.createdByName) {
+                                        · {{ version.createdByName }}
+                                    }
+                                </span>
+                            </span>
+                            <span class="list__actions">
+                                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="viewVersion(project, version)">View</button>
+                                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="restoreVersion(project, version)">Restore</button>
+                            </span>
+                        </li>
+                    } @empty {
+                        <li class="list__empty">No saved versions yet. Save one to keep the current state of all floors.</li>
+                    }
+                </ul>
+            </section>
+        </div>
+    }
+</div>

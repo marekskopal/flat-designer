@@ -29,4 +29,25 @@ final readonly class BodyReader
 
 		return self::string($data, $key);
 	}
+
+	/** @param array<string, mixed> $data */
+	public static function int(array $data, string $key): int
+	{
+		$value = $data[$key] ?? null;
+		if (!is_int($value)) {
+			throw new InvalidRequestException(sprintf('Field "%s" must be an integer.', $key));
+		}
+
+		return $value;
+	}
+
+	/** @param array<string, mixed> $data */
+	public static function optionalInt(array $data, string $key): ?int
+	{
+		if (($data[$key] ?? null) === null) {
+			return null;
+		}
+
+		return self::int($data, $key);
+	}
 }

@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace FlatDesigner\App\ServiceProvider;
 
-use FlatDesigner\Model\Entity\Flat;
+use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Opening;
+use FlatDesigner\Model\Entity\Project;
+use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\FlatRepository;
+use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\ProjectRepository;
+use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -36,7 +40,9 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		return in_array($id, [
 			DatabaseInterface::class,
 			ORM::class,
-			FlatRepository::class,
+			ProjectRepository::class,
+			ProjectVersionRepository::class,
+			FloorRepository::class,
 			MaterialRepository::class,
 			RoomRepository::class,
 			WallRepository::class,
@@ -56,7 +62,9 @@ final class OrmServiceProvider extends AbstractServiceProvider
 
 		$orm = $this->dbContext->getOrm();
 
-		$this->addRepository($container, $orm, FlatRepository::class, Flat::class);
+		$this->addRepository($container, $orm, ProjectRepository::class, Project::class);
+		$this->addRepository($container, $orm, ProjectVersionRepository::class, ProjectVersion::class);
+		$this->addRepository($container, $orm, FloorRepository::class, Floor::class);
 		$this->addRepository($container, $orm, MaterialRepository::class, Material::class);
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);

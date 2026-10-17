@@ -14,7 +14,7 @@ use MarekSkopal\ORM\Enum\Type;
 
 /**
  * Floor area of one room. `polygon` is a JSON list of [x, y] points in millimetres (plan coordinates,
- * origin at the inner south-west corner of the flat, y pointing north). `ceilingHeight` is null for
+ * origin at the inner south-west corner of the floor, y pointing north). `ceilingHeight` is null for
  * open-air areas (terrace). `wallFinishes` is an optional JSON list of horizontal bands
  * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left
  * free. Above the bands the walls keep their own material.
@@ -23,8 +23,8 @@ use MarekSkopal\ORM\Enum\Type;
 class Room extends AEntity
 {
 	public function __construct(
-		#[ManyToOne(entityClass: Flat::class)]
-		public readonly Flat $flat,
+		#[ManyToOne(entityClass: Floor::class)]
+		public readonly Floor $floor,
 		#[Column(type: Type::String, size: 32)]
 		public string $code,
 		#[Column(type: Type::String)]

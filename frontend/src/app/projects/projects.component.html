@@ -1,0 +1,54 @@
+<div class="page">
+    <div class="page__header">
+        <h1 class="page__title">Projects</h1>
+        @if (!creating()) {
+            <button type="button" class="btn btn--primary" (click)="creating.set(true)">New project</button>
+        }
+    </div>
+
+    @if (creating()) {
+        <form class="card form new-project" [formGroup]="form" (ngSubmit)="create()">
+            <h2 class="card__title">New project</h2>
+            <label class="field">
+                <span class="field__label">Name</span>
+                <input class="input" type="text" formControlName="name" placeholder="e.g. Flat 12, 2nd floor" />
+            </label>
+            <label class="field">
+                <span class="field__label">Address <span class="field__hint">optional</span></span>
+                <input class="input" type="text" formControlName="address" />
+            </label>
+            <div class="form__actions">
+                <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+                <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving()">Create</button>
+            </div>
+        </form>
+    }
+
+    <div class="grid">
+        @for (project of projects(); track project.id) {
+            <a class="project" [routerLink]="['/projects', project.id]">
+                <span class="project__name">{{ project.name }}</span>
+                @if (project.address) {
+                    <span class="project__address">{{ project.address }}</span>
+                }
+                <span class="project__meta">
+                    {{ project.floors.length }} {{ project.floors.length === 1 ? 'floor' : 'floors' }}
+                    @if (project.latestVersion) {
+                        · v{{ project.latestVersion }}
+                    }
+                    · {{ project.updatedAt | date: 'd MMM y' }}
+                </span>
+                @if (currentUser.isAdmin() && project.ownerId !== currentUser.currentUser()?.id) {
+                    <span class="project__owner">{{ project.ownerName ?? 'No owner' }}</span>
+                }
+            </a>
+        } @empty {
+            @if (!loading() && !creating()) {
+                <div class="empty card">
+                    <p>No projects yet.</p>
+                    <button type="button" class="btn btn--primary" (click)="creating.set(true)">Create your first project</button>
+                </div>
+            }
+        }
+    </div>
+</div>

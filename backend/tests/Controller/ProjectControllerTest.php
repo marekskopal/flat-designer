@@ -1,0 +1,114 @@
+<?php
+
+declare(strict_types=1);
+
+namespace FlatDesigner\Tests\Controller;
+
+use FlatDesigner\Controller\ProjectController;
+use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Project\ProjectProvider;
+use FlatDesigner\Tests\Support\Fixture;
+use FlatDesigner\Tests\Support\IntegrationTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+
+#[CoversClass(ProjectController::class)]
+#[CoversClass(ProjectProvider::class)]
+final class ProjectControllerTest extends IntegrationTestCase
+{
+	public function testCreateMakesProjectWithOneFloor(): void
+	{
+		$user = Fixture::createUser();
+
+		$response = $this->request(
+			'POST',
+			Routes::Projects->value,
+			['name' => ' Flat 12 ', 'address' => '', 'description' => 'Plan'],
+			$user,
+		);
+
+		self::assertSame(201, $response->getStatusCode());
+		$body = $this->jsonBody($response);
+		self::assertSame('Flat 12', $body['name']);
+		self::assertNull($body['address']);
+		self::assertSame('Plan', $body['description']);
+		self::assertSame($user->id, $body['ownerId']);
+		self::assertSame([['id' => self::firstFloorId($body), 'name' => 'Ground floor', 'level' => 0]], $body['floors']);
+		self::assertNull($body['latestVersion']);
+	}
+
+	public function testCreateRequiresName(): void
+	{
+		$response = $this->request('POST', Routes::Projects->value, ['name' => '  '], Fixture::createUser());
+
+		self::assertSame(422, $response->getStatusCode());
+	}
+
+	public function testUsersSeeOnlyTheirProjectsAdminsSeeAll(): void
+	{
+		$jane = Fixture::createUser();
+		$joe = Fixture::createUser();
+		$admin = Fixture::createAdmin();
+		$janes = Fixture::createProject($jane, 'Jane');
+		Fixture::createProject($joe, 'Joe');
+
+		$forJane = $this->jsonList($this->request('GET', Routes::Projects->value, authenticatedAs: $jane));
+		$forAdmin = $this->jsonList($this->request('GET', Routes::Projects->value, authenticatedAs: $admin));
+
+		self::assertSame(['Jane'], array_column($forJane, 'name'));
+		self::assertEqualsCanonicalizing(['Jane', 'Joe'], array_column($forAdmin, 'name'));
+		self::assertSame(404, $this->request('GET', self::path($janes->id), authenticatedAs: $joe)->getStatusCode());
+		self::assertSame(200, $this->request('GET', self::path($janes->id), authenticatedAs: $admin)->getStatusCode());
+	}
+
+	public function testUpdateReplacesDetails(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+
+		$response = $this->request(
+			'PUT',
+			self::path($project->id),
+			['name' => 'Renamed', 'address' => 'Praha', 'description' => null],
+			$user,
+		);
+
+		self::assertSame(200, $response->getStatusCode());
+		$body = $this->jsonBody($response);
+		self::assertSame('Renamed', $body['name']);
+		self::assertSame('Praha', $body['address']);
+	}
+
+	public function testOthersCannotUpdateOrDelete(): void
+	{
+		$project = Fixture::createProject(Fixture::createUser());
+		$other = Fixture::createUser();
+
+		self::assertSame(404, $this->request('PUT', self::path($project->id), ['name' => 'Mine now'], $other)->getStatusCode());
+		self::assertSame(404, $this->request('DELETE', self::path($project->id), authenticatedAs: $other)->getStatusCode());
+	}
+
+	public function testDeleteRemovesProjectWithContent(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		Fixture::furnishFloor(Fixture::firstFloor($project));
+
+		self::assertSame(200, $this->request('DELETE', self::path($project->id), authenticatedAs: $user)->getStatusCode());
+		self::assertSame(404, $this->request('GET', self::path($project->id), authenticatedAs: $user)->getStatusCode());
+	}
+
+	/** @param array<string, mixed> $project */
+	private static function firstFloorId(array $project): int
+	{
+		self::assertIsList($project['floors']);
+		self::assertIsArray($project['floors'][0]);
+		self::assertIsInt($project['floors'][0]['id']);
+
+		return $project['floors'][0]['id'];
+	}
+
+	private static function path(int $projectId): string
+	{
+		return str_replace('{projectId:number}', (string) $projectId, Routes::Project->value);
+	}
+}

@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\AdminUserUpdateDto;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Service\Admin\Exception\AdminUserException;
 use FlatDesigner\Validator\UserFieldValidator;
@@ -15,7 +16,7 @@ use FlatDesigner\Validator\UserFieldValidator;
 /** User management for admins. Guards against locking everyone out (last admin, self-delete). */
 final readonly class AdminUserService
 {
-	public function __construct(private UserRepository $userRepository)
+	public function __construct(private UserRepository $userRepository, private ProjectRepository $projectRepository)
 	{
 	}
 
@@ -56,6 +57,11 @@ final readonly class AdminUserService
 
 		if ($target->role === UserRoleEnum::Admin && $this->userRepository->countAdmins() <= 1) {
 			throw new AdminUserException('Cannot delete the last administrator.');
+		}
+
+		$projects = $this->projectRepository->countByOwner($target->id);
+		if ($projects > 0) {
+			throw new AdminUserException(sprintf('%s owns %d project(s); delete them first.', $target->name, $projects));
 		}
 
 		$this->userRepository->delete($target);

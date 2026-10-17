@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Dto;
 
-/** Everything the viewer needs to build one flat. All lengths are millimetres. */
+/** Everything the viewer needs to build one floor. All lengths are millimetres. */
 final readonly class SceneDto
 {
 	/**
@@ -14,7 +14,7 @@ final readonly class SceneDto
 	 * @param list<ItemDto> $items
 	 */
 	public function __construct(
-		public FlatDto $flat,
+		public FloorDto $floor,
 		public array $materials,
 		public array $rooms,
 		public array $walls,

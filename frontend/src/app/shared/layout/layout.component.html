@@ -5,7 +5,7 @@
     </a>
 
     <nav class="nav">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Viewer</a>
+        <a routerLink="/projects" routerLinkActive="active">Projects</a>
         @if (currentUser.isAdmin()) {
             <a routerLink="/admin/users" routerLinkActive="active">Users</a>
         }

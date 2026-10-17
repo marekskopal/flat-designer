@@ -6,6 +6,7 @@ namespace FlatDesigner\Command;
 
 use FlatDesigner\App\ApplicationFactory;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
+use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Service\Provider\UserProvider;
 use FlatDesigner\Validator\UserFieldValidator;
 use Symfony\Component\Console\Helper\QuestionHelper;
@@ -15,7 +16,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-/** Creates an admin account. Prompts for the email and password when they are not given as options. */
+/**
+ * Creates an admin account. Prompts for the email and password when they are not given as options.
+ * Projects without an owner (seeded by migrations) are given to the new admin.
+ */
 final class AdminCreateCommand extends AbstractCommand
 {
 	private const int MinPasswordLength = 12;
@@ -33,8 +37,11 @@ final class AdminCreateCommand extends AbstractCommand
 	{
 		$io = new SymfonyStyle($input, $output);
 
-		$userProvider = ApplicationFactory::create()->container->get(UserProvider::class);
+		$container = ApplicationFactory::create()->container;
+		$userProvider = $container->get(UserProvider::class);
 		assert($userProvider instanceof UserProvider);
+		$projectRepository = $container->get(ProjectRepository::class);
+		assert($projectRepository instanceof ProjectRepository);
 
 		$email = $this->resolveEmail($input, $io);
 		if ($email === null) {
@@ -55,9 +62,18 @@ final class AdminCreateCommand extends AbstractCommand
 		$nameOption = $input->getOption('name');
 		$name = UserFieldValidator::normalizeName(is_string($nameOption) ? $nameOption : '') ?? 'Administrator';
 
-		$userProvider->createUser($email, $password, $name, UserRoleEnum::Admin);
+		$admin = $userProvider->createUser($email, $password, $name, UserRoleEnum::Admin);
+
+		$ownerless = $projectRepository->findWithoutOwner();
+		foreach ($ownerless as $project) {
+			$project->owner = $admin;
+			$projectRepository->persist($project);
+		}
 
 		$io->success(sprintf('Created admin %s.', $email));
+		if ($ownerless !== []) {
+			$io->writeln(sprintf('Assigned %d project(s) without an owner to %s.', count($ownerless), $email));
+		}
 
 		return self::SUCCESS;
 	}

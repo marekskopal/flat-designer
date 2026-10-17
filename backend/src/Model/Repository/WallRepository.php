@@ -10,10 +10,10 @@ use FlatDesigner\Model\Entity\Wall;
 final class WallRepository extends ARepository
 {
 	/** @return list<Wall> */
-	public function findByFlat(int $flatId): array
+	public function findByFloor(int $floorId): array
 	{
 		return $this->select()
-			->where(['flat_id' => $flatId])
+			->where(['floor_id' => $floorId])
 			->orderBy('id', 'ASC')
 			->fetchAll();
 	}
