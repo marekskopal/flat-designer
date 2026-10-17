@@ -10,7 +10,12 @@ Proof of concept: view only, data seeded by migrations. Users sign up and sign i
 ```sh
 make up                # http://localhost:4400 (creates .env and a token key on first run)
 make admin             # create the first admin account (prompts for email and password)
+make import-files DIR=source_files PROJECT=1   # optional: upload the flat 50 reference files
 ```
+
+Uploaded files go to the bundled MinIO (S3 API; console on http://localhost:4401, log in with
+`S3_ACCESS_KEY` / `S3_SECRET_KEY`). Point the `S3_*` variables at real S3 to use that instead.
+`make reset-db` drops the files together with the database.
 
 Anyone can sign up at `/sign-up` and gets the `User` role. Admins see **Users** in the top bar, where
 they change roles and delete accounts. Auth is JWT (access token 1 h, refresh token 7 d, signed with
@@ -44,7 +49,7 @@ make dev               # http://localhost:4200, /api proxied to :4400
 | `frontend/` | Angular 22 (standalone, signals, zoneless) |
 | `frontend/src/app/viewer/engine/` | framework-free three.js code: walls, doors/windows, floors, kitchen generator, materials |
 | `docs/analysis.md` | inputs and analysis of open-source projects |
-| `source_files/` | floor plan PDF, kitchen render, bathroom/WC/floor references |
+| `source_files/` | (not in git) local copy of the floor plan PDF, kitchen render and bathroom/WC/floor references, uploaded as files of the flat 50 project |
 
 API (all but health and authentication need a Bearer token):
 
@@ -54,6 +59,8 @@ API (all but health and authentication need a Bearer token):
   `…/floors/{floorId}/scene` (everything the viewer needs)
 - `/api/projects/{id}/versions` (list, save), `…/versions/{versionId}` (detail with its floors),
   `…/versions/{versionId}/floors/{floorId}/scene`, `…/versions/{versionId}/restore`
+- `/api/projects/{id}/files` (list, upload as multipart `file`), `…/files/{fileId}` (delete),
+  `…/files/{fileId}/content` (download)
 - `/api/admin/users`, `/api/admin/users/{id}` (admins only)
 
 ## Data model
@@ -65,6 +72,8 @@ floor (for flat 50: the living room by the south façade), x east, y north.
 - `projects` — owner, name, address, description. Flat 50 is the seeded project "Byt č. 50 (H1B)".
 - `floors` — the storeys of a project (name, level; 0 = ground floor); rooms, walls and items belong to a
   floor. A project keeps at least one.
+- `project_files` — uploaded files of a project (name, detected MIME type, size, uploader); the content
+  is in object storage under `storage_key`. Files are not part of versions.
 - `project_versions` — numbered, immutable JSON snapshots of all floors of a project (with the material
   catalogue). The floors are the working copy; restoring a version replaces them, after auto-saving the
   current state as a new version.

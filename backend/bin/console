@@ -6,6 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use FlatDesigner\Command\AdminCreateCommand;
+use FlatDesigner\Command\FilesImportCommand;
 use FlatDesigner\Command\MigrationRunCommand;
 use FlatDesigner\Command\OrmSchemaDumpCommand;
 use Symfony\Component\Console\Application;
@@ -13,6 +14,7 @@ use Symfony\Component\Console\Application;
 $application = new Application();
 
 $application->addCommand(new AdminCreateCommand());
+$application->addCommand(new FilesImportCommand());
 $application->addCommand(new MigrationRunCommand());
 $application->addCommand(new OrmSchemaDumpCommand());
 

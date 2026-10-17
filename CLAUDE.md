@@ -7,6 +7,7 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
 ## Services
 
 - `proxy/` — nginx, `/api/*` → backend, `/` → frontend (http only, port `PROXY_PORT`, default 4400).
+- `minio/` (compose service only) — S3-compatible storage for uploaded files.
 - `backend/` — FrankenPHP worker + PHP 8.5 + `marekskopal/orm` + `marekskopal/router` + MariaDB.
   Namespace `FlatDesigner\`. Routes in `FlatDesigner\Route\Routes`. The entrypoint runs
   `migration:run` before serving (unlike ukolio, where migrations are manual). Every route needs a
@@ -40,13 +41,17 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
 - Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts` and `outdoor.ts`; each builds the
   item body in its local frame. A new item kind needs the PHP enum, a migration extending the
   `items.kind` column enum, the TS `ItemKind` union and a builder.
-- Textures for real products are cut from `source_files/` into `frontend/src/assets/textures/` (one
+- Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
+  `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
+  The flat 50 references are no longer in git: keep a local `source_files/` and run
+  `make import-files DIR=source_files PROJECT=1`.
+- Textures for real products are cut from the reference photos into `frontend/src/assets/textures/` (one
   plank or tile per image); the material's `tile_width`/`tile_height` give its real size.
 - PHP style: tabs, slevomat ruleset copied from ukolio, phpstan at max level. TS: eslint config from
   ukolio, explicit member accessibility and return types, max line length 150.
 
 ## Commands
 
-`make up`, `make admin`, `make dev` (ng serve on 4200 against the running stack), `make lint`,
+`make up`, `make admin`, `make import-files DIR=… PROJECT=…`, `make dev` (ng serve on 4200 against the running stack), `make lint`,
 `make test` (phpunit runs in a one-off backend container against the stack's MariaDB, database
 `flat_designer_test`; integration tests extend `Tests\Support\IntegrationTestCase`), `make reset-db`.

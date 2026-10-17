@@ -21,6 +21,8 @@ $testEnv = [
 	'RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS' => '3600',
 	'BACKEND_CORS_ALLOWED_ORIGIN' => '*',
 	'BACKEND_LOG_LEVEL' => 'production',
+	'S3_BUCKET' => 'test-bucket',
+	'FILE_MAX_SIZE_MB' => '1',
 ];
 foreach ($testEnv as $name => $value) {
 	putenv($name . '=' . $value);

@@ -7,9 +7,11 @@ namespace FlatDesigner\Tests\Support;
 use FlatDesigner\Model\Entity\User;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\StreamFactory;
+use Laminas\Diactoros\UploadedFile;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use const JSON_THROW_ON_ERROR;
+use const UPLOAD_ERR_OK;
 
 /** Dispatches requests through the production router and middleware stack against the test database. */
 abstract class IntegrationTestCase extends TestCase
@@ -20,6 +22,20 @@ abstract class IntegrationTestCase extends TestCase
 
 		AppHarness::resetState();
 		Fixture::reset();
+	}
+
+	/** Multipart POST with one `file` field, like a browser upload. */
+	protected function upload(string $path, string $filename, string $content, User $authenticatedAs): ResponseInterface
+	{
+		$stream = (new StreamFactory())->createStream($content);
+		$request = (new ServerRequest([], [], $path, 'POST'))
+			->withUploadedFiles(['file' => new UploadedFile($stream, strlen($content), UPLOAD_ERR_OK, $filename, 'text/html')])
+			->withHeader('Authorization', 'Bearer ' . Fixture::accessTokenFor($authenticatedAs));
+
+		$response = AppHarness::app()->handler->handle($request);
+		AppHarness::app()->dbContext->resetOrmState();
+
+		return $response;
 	}
 
 	/** @param array<string, mixed>|null $body */

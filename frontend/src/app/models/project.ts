@@ -41,3 +41,14 @@ export interface ProjectVersionDetail {
     version: ProjectVersion;
     floors: Floor[];
 }
+
+export interface ProjectFile {
+    id: number;
+    filename: string;
+    /** Detected from the content by the server. */
+    mimeType: string;
+    /** Bytes. */
+    size: number;
+    uploadedByName: string | null;
+    createdAt: string;
+}

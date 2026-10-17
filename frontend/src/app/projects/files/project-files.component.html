@@ -1,0 +1,69 @@
+<section class="card">
+    <div class="card__header">
+        <h2 class="card__title">Files</h2>
+        <label class="btn btn--ghost">
+            + Upload
+            <input type="file" multiple class="picker" (change)="onPick($event)" />
+        </label>
+    </div>
+
+    <div
+        class="dropzone"
+        [class.dropzone--active]="dragOver()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="dragOver.set(false)"
+        (drop)="onDrop($event)"
+    >
+        @if (uploading() > 0) {
+            Uploading {{ uploading() }} {{ uploading() === 1 ? 'file' : 'files' }}…
+        } @else {
+            Drop floor plans, renders or photos here
+        }
+    </div>
+
+    <ul class="files">
+        @for (file of files(); track file.id) {
+            <li class="file">
+                <span class="file__kind">{{ kind(file) }}</span>
+                <span class="file__main">
+                    @if (canPreview(file)) {
+                        <button type="button" class="file__name file__name--link" [title]="file.filename" (click)="open(file)">{{ file.filename }}</button>
+                    } @else {
+                        <span class="file__name" [title]="file.filename">{{ file.filename }}</span>
+                    }
+                    <span class="file__meta">
+                        {{ formatSize(file.size) }} · {{ file.createdAt | date: 'd MMM y' }}
+                        @if (file.uploadedByName) {
+                            · {{ file.uploadedByName }}
+                        }
+                    </span>
+                </span>
+                <span class="file__actions">
+                    <button type="button" class="btn btn--ghost" (click)="download(file)">Download</button>
+                    <button type="button" class="btn btn--ghost btn--danger" (click)="delete(file)">Delete</button>
+                </span>
+            </li>
+        } @empty {
+            <li class="files__empty">No files yet.</li>
+        }
+    </ul>
+</section>
+
+@if (preview(); as p) {
+    <div class="preview" role="dialog" aria-modal="true" [attr.aria-label]="p.file.filename">
+        <button type="button" class="preview__backdrop" aria-label="Close preview" (click)="closePreview()"></button>
+        <div class="preview__bar">
+            <span class="preview__name">{{ p.file.filename }}</span>
+            <button type="button" class="btn" (click)="download(p.file)">Download</button>
+            <button type="button" class="btn" (click)="closePreview()">Close</button>
+        </div>
+        <div class="preview__body">
+            @if (p.file.mimeType === 'application/pdf') {
+                <iframe class="preview__pdf" [src]="p.resourceUrl" [title]="p.file.filename"></iframe>
+            } @else {
+                <!-- eslint-disable-next-line @angular-eslint/template/prefer-ngsrc -- a blob: URL of unknown size, nothing for NgOptimizedImage to optimise -->
+                <img class="preview__image" [src]="p.url" [alt]="p.file.filename" />
+            }
+        </div>
+    </div>
+}

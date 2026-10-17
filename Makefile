@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db env admin install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db env admin import-files install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -19,7 +19,7 @@ logs:
 build:
 	docker compose build --no-cache
 
-## Drop the database volume and start again; migrations re-seed the flat on boot
+## Drop the database and file volumes and start again; migrations re-seed the flat on boot
 reset-db: env
 	docker compose down -v
 	docker compose up -d --build
@@ -37,6 +37,10 @@ env:
 ## Create an admin account in the running stack (prompts for email and password)
 admin:
 	docker compose exec backend php bin/console admin:create
+
+## Upload a directory to a project as its files: make import-files DIR=source_files PROJECT=1
+import-files:
+	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console files:import /import --project=$(PROJECT)
 
 ## Install backend + frontend dependencies on the host (for linting, tests, ng serve)
 install:

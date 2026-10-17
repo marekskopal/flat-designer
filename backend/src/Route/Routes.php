@@ -26,5 +26,8 @@ enum Routes: string
 	case ProjectVersions = '/api/projects/{projectId:number}/versions';
 	case ProjectVersion = '/api/projects/{projectId:number}/versions/{versionId:number}';
 	case ProjectVersionFloorScene = '/api/projects/{projectId:number}/versions/{versionId:number}/floors/{floorId:number}/scene';
+	case ProjectFiles = '/api/projects/{projectId:number}/files';
+	case ProjectFile = '/api/projects/{projectId:number}/files/{fileId:number}';
+	case ProjectFileContent = '/api/projects/{projectId:number}/files/{fileId:number}/content';
 	case ProjectVersionRestore = '/api/projects/{projectId:number}/versions/{versionId:number}/restore';
 }

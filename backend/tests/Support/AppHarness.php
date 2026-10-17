@@ -6,6 +6,8 @@ namespace FlatDesigner\Tests\Support;
 
 use FlatDesigner\App\Application;
 use FlatDesigner\App\ApplicationFactory;
+use FlatDesigner\Service\Storage\FileStorageInterface;
+use League\Container\Container;
 use PDO;
 use PDOException;
 use Psr\Container\ContainerInterface;
@@ -21,6 +23,8 @@ final class AppHarness
 
 	private static ?Application $application = null;
 
+	private static ?InMemoryFileStorage $fileStorage = null;
+
 	/** @var list<string>|null */
 	private static ?array $tables = null;
 
@@ -30,9 +34,19 @@ final class AppHarness
 			self::recreateDatabase();
 			self::$application = ApplicationFactory::create();
 			self::$application->dbContext->getMigrator()->migrate();
+
+			$container = self::$application->container;
+			assert($container instanceof Container);
+			$container->extend(FileStorageInterface::class)->setConcrete(self::fileStorage());
 		}
 
 		return self::$application;
+	}
+
+	/** Replaces S3 for the whole suite. */
+	public static function fileStorage(): InMemoryFileStorage
+	{
+		return self::$fileStorage ??= new InMemoryFileStorage();
 	}
 
 	public static function container(): ContainerInterface
@@ -59,6 +73,7 @@ final class AppHarness
 		$pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
 		self::app()->dbContext->resetOrmState();
+		self::fileStorage()->reset();
 	}
 
 	/** @return list<string> */

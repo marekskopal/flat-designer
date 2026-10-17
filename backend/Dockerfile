@@ -16,6 +16,7 @@ COPY ./bin /app/bin
 COPY ./migrations /app/migrations
 COPY ./src /app/src
 COPY ./Caddyfile /etc/frankenphp/Caddyfile
+COPY ./docker/php-uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 COPY ./docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod 0755 /usr/local/bin/docker-entrypoint.sh
 COPY ./composer.json ./composer.lock* /app/

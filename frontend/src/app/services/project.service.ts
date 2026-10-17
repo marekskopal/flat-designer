@@ -1,6 +1,6 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
-import {FloorInput, Project, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
+import {FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
 import {Floor, Scene} from '@app/models/scene';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
@@ -65,5 +65,24 @@ export class ProjectService {
     /** Replaces the working copy with the version; resolves to the version auto-saved just before. */
     public async restoreVersion(projectId: number, versionId: number): Promise<ProjectVersion> {
         return firstValueFrom(this.http.post<ProjectVersion>(`${projectsUrl}/${projectId}/versions/${versionId}/restore`, {}));
+    }
+
+    public async listFiles(projectId: number): Promise<ProjectFile[]> {
+        return firstValueFrom(this.http.get<ProjectFile[]>(`${projectsUrl}/${projectId}/files`));
+    }
+
+    public async uploadFile(projectId: number, file: File): Promise<ProjectFile> {
+        const body = new FormData();
+        body.append('file', file, file.name);
+        return firstValueFrom(this.http.post<ProjectFile>(`${projectsUrl}/${projectId}/files`, body));
+    }
+
+    /** Fetched with the auth header, so it can't be a plain link; use an object URL to show or save it. */
+    public async downloadFile(projectId: number, fileId: number): Promise<Blob> {
+        return firstValueFrom(this.http.get(`${projectsUrl}/${projectId}/files/${fileId}/content`, {responseType: 'blob'}));
+    }
+
+    public async deleteFile(projectId: number, fileId: number): Promise<void> {
+        await firstValueFrom(this.http.delete<void>(`${projectsUrl}/${projectId}/files/${fileId}`));
     }
 }

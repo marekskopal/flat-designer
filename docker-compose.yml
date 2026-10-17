@@ -52,9 +52,18 @@ services:
             AUTHORIZATION_TOKEN_KEY: ${AUTHORIZATION_TOKEN_KEY}
             RATE_LIMIT_LOGIN_ATTEMPTS: ${RATE_LIMIT_LOGIN_ATTEMPTS:-5}
             RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS: ${RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS:-3600}
+            S3_ENDPOINT: ${S3_ENDPOINT}
+            S3_REGION: ${S3_REGION}
+            S3_BUCKET: ${S3_BUCKET}
+            S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+            S3_SECRET_KEY: ${S3_SECRET_KEY}
+            S3_USE_PATH_STYLE: ${S3_USE_PATH_STYLE}
+            FILE_MAX_SIZE_MB: ${FILE_MAX_SIZE_MB:-25}
         depends_on:
             db:
                 condition: service_healthy
+            minio:
+                condition: service_started
         restart: unless-stopped
         healthcheck:
             test: ["CMD", "curl", "-fsS", "http://127.0.0.1/api/health"]
@@ -84,9 +93,26 @@ services:
         volumes:
             - flat_designer_data:/var/lib/mysql
 
+    # S3-compatible storage for uploaded project files. Point S3_* at real S3 in production instead.
+    minio:
+        image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+        command: server /data --console-address ":9001"
+        environment:
+            MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+            MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+        restart: unless-stopped
+        networks:
+            - backend
+        ports:
+            # Admin console (log in with S3_ACCESS_KEY / S3_SECRET_KEY), loopback only.
+            - "127.0.0.1:${MINIO_CONSOLE_PORT:-4401}:9001"
+        volumes:
+            - flat_designer_files:/data
+
 networks:
     frontend:
     backend:
 
 volumes:
     flat_designer_data:
+    flat_designer_files:

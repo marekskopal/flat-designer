@@ -9,6 +9,7 @@ use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Project;
+use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\User;
@@ -17,6 +18,7 @@ use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
@@ -42,6 +44,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ORM::class,
 			ProjectRepository::class,
 			ProjectVersionRepository::class,
+			ProjectFileRepository::class,
 			FloorRepository::class,
 			MaterialRepository::class,
 			RoomRepository::class,
@@ -64,6 +67,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 
 		$this->addRepository($container, $orm, ProjectRepository::class, Project::class);
 		$this->addRepository($container, $orm, ProjectVersionRepository::class, ProjectVersion::class);
+		$this->addRepository($container, $orm, ProjectFileRepository::class, ProjectFile::class);
 		$this->addRepository($container, $orm, FloorRepository::class, Floor::class);
 		$this->addRepository($container, $orm, MaterialRepository::class, Material::class);
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);

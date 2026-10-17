@@ -4,13 +4,14 @@ import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor} from '@app/models/scene';
+import {ProjectFilesComponent} from '@app/projects/files/project-files.component';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
 
-/** One project: its details, floors (the working copy) and saved versions. */
+/** One project: its details, floors (the working copy), saved versions and files. */
 @Component({
     selector: 'fd-project-detail',
-    imports: [DatePipe, NgTemplateOutlet, ReactiveFormsModule, RouterLink],
+    imports: [DatePipe, NgTemplateOutlet, ProjectFilesComponent, ReactiveFormsModule, RouterLink],
     templateUrl: './project-detail.component.html',
     styleUrl: './project-detail.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

@@ -26,6 +26,7 @@ final readonly class ProjectProvider
 		private ProjectRepository $projectRepository,
 		private FloorRepository $floorRepository,
 		private ProjectVersionRepository $projectVersionRepository,
+		private ProjectFileProvider $projectFileProvider,
 		private ORM $orm,
 	) {
 	}
@@ -72,10 +73,12 @@ final readonly class ProjectProvider
 		return $project;
 	}
 
-	/** Floors with their content and all versions go with it (ON DELETE CASCADE). */
+	/** Floors with their content, versions and file rows go with it (ON DELETE CASCADE); then the stored files. */
 	public function delete(Project $project): void
 	{
+		$storageKeys = $this->projectFileProvider->storageKeys($project);
 		$this->projectRepository->delete($project);
+		$this->projectFileProvider->deleteStoredObjects($storageKeys);
 	}
 
 	/** Marks the project as changed, e.g. after its floors were edited. */

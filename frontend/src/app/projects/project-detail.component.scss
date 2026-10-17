@@ -141,3 +141,7 @@ form.card {
 .input--level {
     flex: 0 0 72px !important;
 }
+
+fd-project-files {
+    grid-column: 1 / -1;
+}
