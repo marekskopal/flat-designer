@@ -143,7 +143,8 @@ export class ViewerPageComponent {
         this.editor.connect({
             projectId: () => this.projectId(),
             floorId: () => this.floorId(),
-            revision: () => this.scene()?.revision,
+            scene: () => this.scene(),
+            setScene: (scene) => this.data.update((value) => (value === undefined ? value : {...value, scene})),
             reload: () => this.data.reload(),
         });
         // A saved version is read-only.
@@ -227,9 +228,9 @@ export class ViewerPageComponent {
         this.editor.selection.set(selection);
     }
 
-    protected onItemMoved(move: {itemId: number; x: number; y: number}): void {
-        void this.editor.update('item', move.itemId, {x: move.x, y: move.y});
-    }
+    /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
+    protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>
+        this.editor.update(selection.kind, selection.id, fields);
 
     protected selectRoom(room: Room): void {
         this.editor.selection.set({kind: 'room', id: room.id});

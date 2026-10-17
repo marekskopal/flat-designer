@@ -1,6 +1,9 @@
 import {ElementKind} from '@app/viewer/engine/selection';
 
-export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json' | 'bool';
+import {isCabinet} from './cabinet-params';
+
+/** `cabinet`: the structured form for a cabinet's params (plinth, handle, fronts, blindRight). */
+export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json' | 'bool' | 'cabinet';
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -13,6 +16,8 @@ export interface FieldDef {
     unit?: string;
     /** Shown in pairs on one row. */
     half?: boolean;
+    /** Shown only for elements it applies to (e.g. by item kind). */
+    when?: (element: Record<string, unknown>) => boolean;
 }
 
 const ItemKinds = [
@@ -36,7 +41,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'rotation', label: 'Rotation', type: 'int', unit: '°'},
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
-        {key: 'params', label: 'Params (JSON)', type: 'json'},
+        {key: 'params', label: 'Cabinet', type: 'cabinet', when: isCabinet},
+        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCabinet(element)},
     ],
     wall: [
         {key: 'name', label: 'Name', type: 'text'},

@@ -1,23 +1,29 @@
 import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
+import {Scene} from '@app/models/scene';
 import {EditorApiService} from '@app/services/editor-api.service';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
+
+import {patchScene} from './scene-patch';
 
 /** What the store needs from the page hosting the viewer. */
 export interface EditorContext {
     projectId: () => number;
     floorId: () => number;
-    /** Revision of the scene on screen, sent as the base of every edit. */
-    revision: () => number | undefined;
-    /** Loads the floor again after a change. */
+    /** The scene on screen; its revision is sent as the base of every edit. */
+    scene: () => Scene | null;
+    /** Shows the scene with an edit applied. */
+    setScene: (scene: Scene) => void;
+    /** Loads the floor again (when an edit cannot be applied locally, or after a conflict). */
     reload: () => void;
 }
 
 /**
  * Editing state of one viewer: selection, edit mode, running request and the project's recent changes.
- * Every edit goes to the API with the scene's revision; afterwards the floor is reloaded. Errors are shown
- * by the error interceptor; a 409 (someone changed the project meanwhile) also reloads.
+ * Every edit goes to the API with the scene's revision; the answer's element state is then patched into
+ * the scene (the viewer rebuilds just that element), or the floor reloads when that is not safe. Errors are
+ * shown by the error interceptor; a 409 (someone changed the project meanwhile) also reloads.
  */
 @Injectable()
 export class EditorStore {
@@ -43,15 +49,17 @@ export class EditorStore {
 
     /** Adds an element and selects it. */
     public async create(kind: ElementKind, fields: Record<string, unknown>): Promise<void> {
-        const result = await this.run((c) => this.api.create(c.projectId(), c.floorId(), kind, fields, c.revision()));
+        const result = await this.run((c) => this.api.create(c.projectId(), c.floorId(), kind, fields, revisionOf(c)));
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
             this.selection.set({kind, id});
         }
     }
 
-    public async update(kind: ElementKind, id: number, fields: Record<string, unknown>): Promise<void> {
-        await this.run((c) => this.api.update(c.projectId(), c.floorId(), kind, id, fields, c.revision()));
+    /** Resolves true when the element changed. */
+    public async update(kind: ElementKind, id: number, fields: Record<string, unknown>): Promise<boolean> {
+        const result = await this.run((c) => this.api.update(c.projectId(), c.floorId(), kind, id, fields, revisionOf(c)));
+        return result?.change != null;
     }
 
     public async deleteSelected(): Promise<void> {
@@ -59,7 +67,7 @@ export class EditorStore {
         if (selection === null) {
             return;
         }
-        const result = await this.run((c) => this.api.delete(c.projectId(), c.floorId(), selection.kind, selection.id, c.revision()));
+        const result = await this.run((c) => this.api.delete(c.projectId(), c.floorId(), selection.kind, selection.id, revisionOf(c)));
         if (result !== null) {
             this.selection.set(null);
         }
@@ -70,7 +78,7 @@ export class EditorStore {
         if (selection === null) {
             return;
         }
-        const result = await this.run((c) => this.api.duplicate(c.projectId(), c.floorId(), selection.kind, selection.id, c.revision()));
+        const result = await this.run((c) => this.api.duplicate(c.projectId(), c.floorId(), selection.kind, selection.id, revisionOf(c)));
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
             this.selection.set({kind: selection.kind, id});
@@ -104,7 +112,7 @@ export class EditorStore {
         }
     }
 
-    /** One request at a time; reloads the floor after success, and after a conflict to show the newer state. */
+    /** One request at a time; applies the result to the scene, and reloads after a conflict to show the newer state. */
     private async run(request: (context: EditorContext) => Promise<EditResult>): Promise<EditResult | null> {
         const context = this.context;
         if (context === null || this.busy()) {
@@ -114,7 +122,13 @@ export class EditorStore {
         try {
             const result = await request(context);
             if (result.change !== null) {
-                context.reload();
+                const scene = context.scene();
+                const patched = scene === null ? null : patchScene(scene, result);
+                if (patched === null) {
+                    context.reload();
+                } else {
+                    context.setScene(patched);
+                }
                 void this.loadChanges();
             }
             return result;
@@ -128,4 +142,8 @@ export class EditorStore {
             this.busy.set(false);
         }
     }
+}
+
+function revisionOf(context: EditorContext): number | undefined {
+    return context.scene()?.revision;
 }

@@ -2,8 +2,20 @@ import {Opening, Room, Scene, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
-import {boxAt, worldUvBox} from './meshes';
-import {MM, polygonBounds, polygonSignedArea, wallFrame, WallGap, wallGapsAlongEdge, wallPieces} from './plan-geometry';
+import {boxAt, prismAt, worldUvBox} from './meshes';
+import {
+    MM,
+    polygonBounds,
+    polygonSignedArea,
+    SquareEnds,
+    WallEnds,
+    wallFrame,
+    WallGap,
+    wallGapsAlongEdge,
+    wallJoints,
+    WallPiece,
+    wallPieces,
+} from './plan-geometry';
 
 const SlabThickness = 300;
 const FrameWidth = 50;
@@ -17,50 +29,82 @@ export interface BuildingParts {
     root: THREE.Group;
     /** Ceilings, toggled separately so the dollhouse view can look in from above. */
     ceilings: THREE.Group;
-    /** Room floor meshes keyed by room id, for picking and highlighting. */
-    floors: Map<number, THREE.Mesh>;
+    slab: THREE.Mesh;
+    /** Per room: its floor mesh (for picking and highlighting), ceiling and wall finishes, keyed by room id. */
+    rooms: Map<number, RoomParts>;
+    /** Wall groups (with their doors and windows) keyed by wall id. */
+    walls: Map<number, THREE.Group>;
+    /** Fill of wall cores revealed by the section plane, shared by all walls. */
+    sectionMaterial: THREE.Material;
 }
 
-/** Builds the static architecture: slab, floors, ceilings, walls with their doors and windows. */
+export interface RoomParts {
+    floor: THREE.Mesh;
+    ceiling: THREE.Mesh | null;
+    finishes: THREE.Group | null;
+}
+
+/**
+ * Builds the static architecture: slab, floors, ceilings, walls with their doors and windows. The parts are
+ * kept apart so a changed room or wall can be rebuilt on its own (`buildRoom`, `buildWall`).
+ */
 export function buildBuilding(scene: Scene, materials: MaterialLibrary): BuildingParts {
     const root = new THREE.Group();
     root.name = 'building';
     const ceilings = new THREE.Group();
     ceilings.name = 'ceilings';
-    const floors = new Map<number, THREE.Mesh>();
-
-    root.add(buildSlab(scene, materials));
-
-    for (const room of scene.rooms) {
-        const floor = buildFloor(room, materials);
-        floors.set(room.id, floor);
-        root.add(floor);
-        if (room.ceilingHeight !== null) {
-            ceilings.add(buildCeiling(room, materials));
-        }
-    }
+    const parts: BuildingParts = {
+        root,
+        ceilings,
+        slab: buildSlab(scene.walls, materials),
+        rooms: new Map(),
+        walls: new Map(),
+        sectionMaterial: new THREE.MeshBasicMaterial({color: SectionColor, side: THREE.BackSide}),
+    };
+    root.add(parts.slab);
 
     for (const room of scene.rooms) {
-        if (room.wallFinishes.length > 0) {
-            root.add(buildWallFinishes(room, scene.walls, materials));
-        }
+        addRoom(parts, buildRoom(room, scene.walls, materials), room.id);
     }
 
-    const sectionMaterial = new THREE.MeshBasicMaterial({color: SectionColor, side: THREE.BackSide});
+    const joints = wallJoints(scene.walls);
     for (const wall of scene.walls) {
-        root.add(buildWall(wall, materials, sectionMaterial));
+        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id));
+        parts.walls.set(wall.id, group);
+        root.add(group);
     }
 
     root.add(ceilings);
-    return {root, ceilings, floors};
+    return parts;
 }
 
-function buildSlab(scene: Scene, materials: MaterialLibrary): THREE.Mesh {
-    const points = scene.walls.flatMap((w) => [
+/** Floor, ceiling and wall finishes of one room (the finishes leave the walls' door openings free). */
+export function buildRoom(room: Room, walls: readonly Wall[], materials: MaterialLibrary): RoomParts {
+    return {
+        floor: buildFloor(room, materials),
+        ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials),
+        finishes: room.wallFinishes.length > 0 ? buildWallFinishes(room, walls, materials) : null,
+    };
+}
+
+/** Puts a room's parts into the building (ceilings into their own group). */
+export function addRoom(parts: BuildingParts, room: RoomParts, roomId: number): void {
+    parts.rooms.set(roomId, room);
+    parts.root.add(room.floor);
+    if (room.ceiling !== null) {
+        parts.ceilings.add(room.ceiling);
+    }
+    if (room.finishes !== null) {
+        parts.root.add(room.finishes);
+    }
+}
+
+export function buildSlab(walls: readonly Wall[], materials: MaterialLibrary): THREE.Mesh {
+    const points = walls.flatMap((w) => [
         [w.startX, w.startY] as [number, number],
         [w.endX, w.endY] as [number, number],
     ]);
-    const maxThickness = Math.max(...scene.walls.map((w) => w.thickness), 0) / 2;
+    const maxThickness = Math.max(...walls.map((w) => w.thickness), 0) / 2;
     const b = polygonBounds(points);
     const minX = b.minX - maxThickness;
     const maxX = b.maxX + maxThickness;
@@ -85,7 +129,7 @@ function roomShape(room: Room): THREE.Shape {
     return new THREE.Shape(room.polygon.map(([x, y]) => new THREE.Vector2(x * MM, y * MM)));
 }
 
-function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
+export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
     // Shape in plan (x, y); rotating −90° about x lays it flat with plan y → scene −z. UVs stay in metres.
     const geometry = new THREE.ShapeGeometry(roomShape(room));
     geometry.rotateX(-Math.PI / 2);
@@ -111,9 +155,9 @@ function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Mesh {
 /**
  * Wall group in wall-local coordinates: x along the centre line from the start, y up, z across with
  * −z on the left of the wall direction. Solid pieces leave the openings empty; doors and windows are
- * added into them.
+ * added into them. `ends` mitres the end pieces where the wall meets another one in a corner.
  */
-function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THREE.Material): THREE.Group {
+export function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THREE.Material, ends: WallEnds = SquareEnds): THREE.Group {
     const frame = wallFrame(wall);
     const group = new THREE.Group();
     group.name = `wall:${wall.name}`;
@@ -122,10 +166,9 @@ function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THRE
     group.rotation.y = frame.angle;
 
     const material = materials.get(wall.materialId);
-    const t = wall.thickness * MM;
 
     for (const piece of wallPieces(frame.length, wall.height, wall.openings)) {
-        const mesh = boxAt(material, piece.from * MM, piece.bottom * MM, -t / 2, (piece.to - piece.from) * MM, (piece.top - piece.bottom) * MM, t);
+        const mesh = wallPieceMesh(material, piece, frame.length, wall.thickness, ends);
         group.add(mesh);
 
         // Same box drawn inside-out in a flat dark colour: invisible normally, it fills the cut once the
@@ -142,6 +185,29 @@ function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THRE
     return group;
 }
 
+/** A box, or for a piece at a mitred wall end a prism whose faces run on to the corner. */
+function wallPieceMesh(material: THREE.Material, piece: WallPiece, length: number, thickness: number, ends: WallEnds): THREE.Mesh {
+    const t = thickness * MM;
+    const atStart = piece.from <= 0;
+    const atEnd = piece.to >= length;
+    const leftFrom = atStart ? -ends.startLeft : piece.from;
+    const rightFrom = atStart ? -ends.startRight : piece.from;
+    const leftTo = atEnd ? length + ends.endLeft : piece.to;
+    const rightTo = atEnd ? length + ends.endRight : piece.to;
+    const square = leftFrom === piece.from && rightFrom === piece.from && leftTo === piece.to && rightTo === piece.to;
+
+    if (square || leftTo <= leftFrom || rightTo <= rightFrom) {
+        return boxAt(material, piece.from * MM, piece.bottom * MM, -t / 2, (piece.to - piece.from) * MM, (piece.top - piece.bottom) * MM, t);
+    }
+    const footprint = [
+        {x: leftFrom * MM, z: -t / 2},
+        {x: leftTo * MM, z: -t / 2},
+        {x: rightTo * MM, z: t / 2},
+        {x: rightFrom * MM, z: t / 2},
+    ];
+    return prismAt(material, footprint, piece.bottom * MM, piece.top * MM);
+}
+
 const LiningThickness = 8;
 
 /**
@@ -149,7 +215,7 @@ const LiningThickness = 8;
  * openings on the edge stay free; UVs continue across pieces so the tile grid runs from the room
  * corner and from the floor.
  */
-function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
+export function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
     // Clicking a tiled wall selects the room the tiling belongs to.
     group.userData = {roomId: room.id};

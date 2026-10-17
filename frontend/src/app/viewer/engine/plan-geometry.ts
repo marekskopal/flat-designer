@@ -328,3 +328,250 @@ export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]
 
     return {position: inside.position, direction: {x: frame.normal.x * inside.sign, y: frame.normal.y * inside.sign}};
 }
+
+/** Where a dragged point ended up and what it snapped to (for feedback). */
+export interface SnapResult {
+    point: Vec2;
+    /** `point`: onto one of the candidate points; `axis`: x and/or y aligned with an anchor; `grid`: grid only. */
+    kind: 'point' | 'axis' | 'grid';
+}
+
+export interface SnapOptions {
+    /** Grid step, mm (≤ 1: whole mm). */
+    grid: number;
+    /** Snap distance, mm; 0 turns point and axis snapping off. */
+    radius: number;
+    /** Points to snap onto (other wall ends, room corners). */
+    points?: readonly Vec2[];
+    /** Points to align with horizontally or vertically (the other end of the wall, neighbouring corners). */
+    anchors?: readonly Vec2[];
+}
+
+/**
+ * Snaps a dragged plan point: onto the nearest candidate point within `radius`; otherwise each coordinate
+ * separately onto the nearest anchor's x / y within `radius` (keeping edges orthogonal), else onto the grid.
+ */
+export function snapPoint(point: Vec2, options: SnapOptions): SnapResult {
+    const {grid, radius} = options;
+    if (radius > 0) {
+        let best: Vec2 | null = null;
+        let bestDistance = radius;
+        for (const candidate of options.points ?? []) {
+            const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
+            if (distance <= bestDistance) {
+                best = candidate;
+                bestDistance = distance;
+            }
+        }
+        if (best !== null) {
+            return {point: {x: best.x, y: best.y}, kind: 'point'};
+        }
+    }
+
+    const align = (value: number, coordinate: 'x' | 'y'): number | null => {
+        let best: number | null = null;
+        let bestDistance = radius;
+        for (const anchor of options.anchors ?? []) {
+            const distance = Math.abs(anchor[coordinate] - value);
+            if (radius > 0 && distance <= bestDistance) {
+                best = anchor[coordinate];
+                bestDistance = distance;
+            }
+        }
+        return best;
+    };
+    const x = align(point.x, 'x');
+    const y = align(point.y, 'y');
+    return {
+        point: {x: x ?? snapToGrid(point.x, grid), y: y ?? snapToGrid(point.y, grid)},
+        kind: x !== null || y !== null ? 'axis' : 'grid',
+    };
+}
+
+/** Distance along the wall's centre line of the point's projection onto it, mm from the start. */
+export function alongWall(frame: WallFrame, point: Vec2): number {
+    return (point.x - frame.start.x) * frame.dir.x + (point.y - frame.start.y) * frame.dir.y;
+}
+
+/** Centre-line length in whole mm, rounded down like the backend does (openings that fit it fit the wall). */
+export function wallLength(wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY'>): number {
+    return Math.floor(Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY));
+}
+
+/**
+ * The wall with new end points and its openings' offsets as the backend derives them: a moved start shifts
+ * the offsets so the openings keep their place on the plan. `fits` tells whether they all still fit
+ * (otherwise the edit would be refused).
+ */
+export function moveWallEnds(wall: Wall, start: Vec2, end: Vec2): {wall: Wall; fits: boolean} {
+    const moved = {...wall, startX: start.x, startY: start.y, endX: end.x, endY: end.y};
+    const length = wallLength(moved);
+    const oldLength = Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY);
+    const newLength = Math.hypot(end.x - start.x, end.y - start.y);
+    const startMoved = start.x !== wall.startX || start.y !== wall.startY;
+
+    const openings = wall.openings.map((opening) => {
+        if (!startMoved || newLength === 0) {
+            return opening;
+        }
+        const t = oldLength > 0 ? opening.offset / oldLength : 0;
+        const x = wall.startX + (wall.endX - wall.startX) * t - start.x;
+        const y = wall.startY + (wall.endY - wall.startY) * t - start.y;
+        return {...opening, offset: Math.round((x * (end.x - start.x) + y * (end.y - start.y)) / newLength)};
+    });
+    const fits = length >= 100 && openings.every((o) => o.offset >= 0 && o.offset + o.width <= length);
+
+    return {wall: {...moved, openings}, fits};
+}
+
+/** Where a door or window dragged along its wall goes: `offset` kept on the wall, `fits` false when it overlaps another opening. */
+export function slideOpening(wall: Wall, openingId: number, offset: number): {offset: number; fits: boolean} {
+    const opening = wall.openings.find((o) => o.id === openingId);
+    if (opening === undefined) {
+        return {offset, fits: false};
+    }
+    const clamped = Math.min(Math.max(Math.round(offset), 0), Math.max(wallLength(wall) - opening.width, 0));
+    const fits =
+        clamped + opening.width <= wallLength(wall) &&
+        wall.openings.every((o) => o.id === openingId || clamped >= o.offset + o.width || o.offset >= clamped + opening.width);
+    return {offset: clamped, fits};
+}
+
+/** The polygon with a new vertex after `edgeIndex` (on the edge from vertex `edgeIndex` to the next one). */
+export function insertVertex(polygon: readonly PlanPoint[], edgeIndex: number, point: Vec2): PlanPoint[] {
+    const result = [...polygon];
+    result.splice(edgeIndex + 1, 0, [Math.round(point.x), Math.round(point.y)]);
+    return result;
+}
+
+/** The polygon without vertex `index`; null when it would have fewer than three. */
+export function removeVertex(polygon: readonly PlanPoint[], index: number): PlanPoint[] | null {
+    return polygon.length <= 3 ? null : polygon.filter((_, i) => i !== index);
+}
+
+/** Midpoint of every edge (edge i runs from vertex i to i + 1): where new vertices are pulled out. */
+export function edgeMidpoints(polygon: readonly PlanPoint[]): Vec2[] {
+    return polygon.map(([ax, ay], i) => {
+        const [bx, by] = polygon[(i + 1) % polygon.length];
+        return {x: (ax + bx) / 2, y: (ay + by) / 2};
+    });
+}
+
+/** Whether the backend would accept the outline: ≥ 3 points, no repeated neighbours, an area, no crossing edges. */
+export function isSimplePolygon(polygon: readonly PlanPoint[]): boolean {
+    const n = polygon.length;
+    if (n < 3 || polygon.some(([x, y], i) => x === polygon[(i + 1) % n][0] && y === polygon[(i + 1) % n][1])) {
+        return false;
+    }
+    if (polygonSignedArea(polygon) === 0) {
+        return false;
+    }
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 2; j < n; j++) {
+            if (i === 0 && j === n - 1) {
+                continue;
+            }
+            if (segmentsIntersect(polygon[i], polygon[(i + 1) % n], polygon[j], polygon[(j + 1) % n])) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function segmentsIntersect(a: PlanPoint, b: PlanPoint, c: PlanPoint, d: PlanPoint): boolean {
+    const orientation = (p: PlanPoint, q: PlanPoint, r: PlanPoint): number =>
+        Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    const onSegment = (p: PlanPoint, q: PlanPoint, r: PlanPoint): boolean =>
+        r[0] >= Math.min(p[0], q[0]) && r[0] <= Math.max(p[0], q[0]) && r[1] >= Math.min(p[1], q[1]) && r[1] <= Math.max(p[1], q[1]);
+    const d1 = orientation(c, d, a);
+    const d2 = orientation(c, d, b);
+    const d3 = orientation(a, b, c);
+    const d4 = orientation(a, b, d);
+    if (d1 * d2 < 0 && d3 * d4 < 0) {
+        return true;
+    }
+    return (
+        (d1 === 0 && onSegment(c, d, a)) ||
+        (d2 === 0 && onSegment(c, d, b)) ||
+        (d3 === 0 && onSegment(a, b, c)) ||
+        (d4 === 0 && onSegment(a, b, d))
+    );
+}
+
+/**
+ * How far each face of a wall reaches past its end points (mm; negative = cut short), so that two walls
+ * whose ends meet join in a mitred corner instead of overlapping with a notch. Left / right are as seen
+ * along the wall's direction (left = `WallFrame.normal`).
+ */
+export interface WallEnds {
+    startLeft: number;
+    startRight: number;
+    endLeft: number;
+    endRight: number;
+}
+
+export const SquareEnds: WallEnds = {startLeft: 0, startRight: 0, endLeft: 0, endRight: 0};
+
+/** End points closer than this (mm) count as one corner. */
+const JointTolerance = 1;
+
+/**
+ * Mitres for walls whose end points meet in pairs: at such a corner each face runs on until it meets the
+ * corresponding face of the other wall. Ends shared by three or more walls, straight continuations and
+ * very sharp angles stay square. Walls without a joint are left out of the map.
+ */
+export function wallJoints(walls: readonly Wall[]): Map<number, WallEnds> {
+    interface End {
+        wall: Wall;
+        atStart: boolean;
+        point: Vec2;
+    }
+    const ends: End[] = walls.flatMap((wall) => [
+        {wall, atStart: true, point: {x: wall.startX, y: wall.startY}},
+        {wall, atStart: false, point: {x: wall.endX, y: wall.endY}},
+    ]);
+    const result = new Map<number, WallEnds>();
+
+    for (const end of ends) {
+        const others = ends.filter(
+            (o) => o.wall.id !== end.wall.id && Math.hypot(o.point.x - end.point.x, o.point.y - end.point.y) <= JointTolerance,
+        );
+        if (others.length !== 1 || wallFrame(end.wall).length === 0 || wallFrame(others[0].wall).length === 0) {
+            continue;
+        }
+        const other = others[0];
+        // Unit vectors from the corner into each wall.
+        const a = intoWall(end);
+        const b = intoWall(other);
+        const cross = a.x * b.y - a.y * b.x;
+        const ha = end.wall.thickness / 2;
+        const hb = other.wall.thickness / 2;
+        const limit = 4 * Math.max(ha, hb);
+        if (Math.abs(cross) < 1e-3) {
+            continue;
+        }
+        // Distance from the corner along `a` where the face on the left of `a` meets the other wall's face
+        // (the right face is its mirror image).
+        const k = (hb + ha * (a.x * b.x + a.y * b.y)) / cross;
+        if (Math.abs(k) > limit) {
+            continue;
+        }
+        const faces = result.get(end.wall.id) ?? {...SquareEnds};
+        if (end.atStart) {
+            faces.startLeft = -k;
+            faces.startRight = k;
+        } else {
+            // Seen from the end, the left of `a` is the wall's right.
+            faces.endRight = -k;
+            faces.endLeft = k;
+        }
+        result.set(end.wall.id, faces);
+    }
+    return result;
+
+    function intoWall(end: End): Vec2 {
+        const frame = wallFrame(end.wall);
+        return end.atStart ? frame.dir : {x: -frame.dir.x, y: -frame.dir.y};
+    }
+}

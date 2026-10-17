@@ -1,15 +1,37 @@
-import {Room, Scene} from '@app/models/scene';
+import {Item, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import {buildBuilding} from './building';
+import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
-import {Bounds, entranceWalkStart, MM, polygonBounds, polygonCentroid, snapToGrid, WalkStart, wallColliders} from './plan-geometry';
-import {Selection, selectionOf} from './selection';
+import {
+    alongWall,
+    Bounds,
+    edgeMidpoints,
+    entranceWalkStart,
+    insertVertex,
+    isSimplePolygon,
+    MM,
+    moveWallEnds,
+    polygonBounds,
+    polygonCentroid,
+    removeVertex,
+    slideOpening,
+    snapPoint,
+    SnapResult,
+    snapToGrid,
+    Vec2,
+    WalkStart,
+    wallColliders,
+    WallEnds,
+    wallFrame,
+    wallJoints,
+} from './plan-geometry';
+import {sameSelection, Selection, selectionOf} from './selection';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
 
 export type ViewPreset = 'overview' | 'top';
@@ -30,20 +52,52 @@ const TweenDuration = 900;
 const EmptyFloorBounds: Bounds = {minX: 0, minY: 0, maxX: 10000, maxY: 10000};
 const OrbitFov = 45;
 
-/** Snap grid for dragged items, mm (Shift: whole mm). */
+/** Snap grid for dragged elements, mm (Shift: whole mm, no snapping). */
 const DragSnap = 10;
 /** Dragging works only while the camera looks down steeply (Plan view), where plan moves are unambiguous. */
 const DragMaxCameraTilt = -0.9;
+/** The pointer has to travel this far (px) before a press becomes a drag. */
+const DragThreshold = 4;
+/** Snapping onto points and axes reaches this far (px on screen). */
+const SnapPixels = 12;
+/** On-screen diameters of the handles, px. */
+const HandlePixels = 14;
+const MidpointPixels = 10;
 
-interface ItemDrag {
-    itemId: number;
-    object: THREE.Object3D;
+const HandleColors = {
+    normal: HighlightColor,
+    snapped: '#2f9e6b',
+    invalid: '#d64545',
+    midpoint: '#f3c08f',
+} as const;
+type HandleState = keyof typeof HandleColors;
+
+/** Commits an edit made by dragging; resolves true when it was applied (the scene then reloads). */
+export type EditHandler = (selection: Selection, fields: Record<string, unknown>) => Promise<boolean>;
+
+/** What a handle of the selected wall or room stands for. */
+type HandleRole = {role: 'wallStart' | 'wallEnd'} | {role: 'vertex'; index: number} | {role: 'midpoint'; index: number};
+
+interface DragBase {
     plane: THREE.Plane;
-    startPoint: THREE.Vector3;
-    startX: number;
-    startY: number;
-    x: number;
-    y: number;
+    /** Plan point (mm) under the pointer when the drag started. */
+    grab: Vec2;
+    /** Past the drag threshold. */
+    moved: boolean;
+}
+
+type Drag = DragBase &
+    (
+        | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
+        | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
+        | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
+        | {kind: 'vertex'; room: Room; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
+    );
+
+/** Objects shown instead of the originals while a drag (or its commit) is in progress. */
+interface Preview {
+    hidden: THREE.Object3D[];
+    added: THREE.Object3D[];
 }
 
 /**
@@ -53,8 +107,11 @@ interface ItemDrag {
 export class ViewerEngine {
     /** A click selected an element (or empty space: null). */
     public onSelect: (selection: Selection | null) => void = () => undefined;
-    /** An item was dragged to a new footprint centre (plan mm), in edit mode. */
-    public onItemMoved: (itemId: number, x: number, y: number) => void = () => undefined;
+    /**
+     * Commits a drag in edit mode: an item or wall moved, a wall end, door / window or room corner dragged.
+     * Until it resolves the dragged state stays on screen; when it was not applied the element snaps back.
+     */
+    public onEdit: EditHandler = () => Promise.resolve(false);
     /** The walkthrough ended (Esc); the camera is on its way back to the overview. */
     public onWalkthroughEnd: () => void = () => undefined;
     /** The walkthrough captured the mouse, or lost it / was refused it (the walker has to click the view). */
@@ -71,10 +128,16 @@ export class ViewerEngine {
     private readonly raycaster = new THREE.Raycaster();
     private readonly pointerDown = new THREE.Vector2();
 
+    /** Rendered after the scene without the section plane: handles stay visible above the cut. */
+    private readonly overlay = new THREE.Scene();
+    private readonly handles = new THREE.Group();
+    private readonly handleGeometry = new THREE.CircleGeometry(0.5, 24).rotateX(-Math.PI / 2);
+    private readonly handleCoreGeometry = new THREE.CircleGeometry(0.28, 24).rotateX(-Math.PI / 2);
+    private readonly handleMaterials = new Map<string, THREE.MeshBasicMaterial>();
+
     private content: THREE.Group | null = null;
     private materials: MaterialLibrary | null = null;
-    private ceilings: THREE.Group | null = null;
-    private floors = new Map<number, THREE.Mesh>();
+    private parts: BuildingParts | null = null;
     private labels = new Map<number, CSS2DObject>();
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall or opening; follows it while dragged. */
@@ -85,7 +148,13 @@ export class ViewerEngine {
     private openings = new Map<number, THREE.Object3D>();
     private selection: Selection | null = null;
     private editMode = false;
-    private drag: ItemDrag | null = null;
+    private drag: Drag | null = null;
+    private preview: Preview | null = null;
+    /** Bumped by every load; a commit whose load never comes (refused, no-op) restores its preview. */
+    private loads = 0;
+    private sectionHeight: number | null = null;
+    private ceilingsVisible = true;
+    private joints = new Map<number, WallEnds>();
     private bounds: Bounds = {minX: 0, minY: 0, maxX: 1, maxY: 1};
     private insetLeft = 0;
     private tween: CameraTween | null = null;
@@ -123,10 +192,15 @@ export class ViewerEngine {
         });
 
         this.setupEnvironment();
+        this.handles.name = 'handles';
+        this.overlay.add(this.handles);
 
         this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.addEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.addEventListener('pointerup', this.handlePointerUp);
+        this.renderer.domElement.addEventListener('dblclick', this.handleDoubleClick);
+        // Capturing, so Esc cancels a drag before the editor's shortcut clears the selection.
+        window.addEventListener('keydown', this.handleKeyDown, true);
 
         this.resizeObserver = new ResizeObserver(() => this.resize());
         this.resizeObserver.observe(container);
@@ -135,43 +209,20 @@ export class ViewerEngine {
         this.renderer.setAnimationLoop(() => this.frame());
     }
 
+    /**
+     * Shows a scene. Another state of the floor already shown (an edit, a live update) only rebuilds the
+     * elements that changed; a different floor, or changed materials, builds everything anew.
+     */
     public load(scene: Scene): void {
-        this.clearContent();
-
-        const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-        this.materials = new MaterialLibrary(scene.materials, anisotropy);
-
-        const content = new THREE.Group();
-        content.name = `floor:${scene.floor.name}`;
-
-        const building = buildBuilding(scene, this.materials);
-        content.add(building.root);
-        this.ceilings = building.ceilings;
-        this.floors = building.floors;
-
-        for (const item of scene.items) {
-            const object = buildItem(item, this.materials);
-            this.items.set(item.id, object);
-            content.add(object);
+        this.cancelDrag();
+        this.clearPreview();
+        this.loads++;
+        const previous = this.sceneData;
+        if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
+            this.applyChanges(previous, scene);
+        } else {
+            this.build(scene);
         }
-        content.traverse((object) => {
-            const data = object.userData as Record<string, unknown>;
-            if (typeof data['wallId'] === 'number') {
-                this.walls.set(data['wallId'], object);
-            }
-            if (typeof data['openingId'] === 'number') {
-                this.openings.set(data['openingId'], object);
-            }
-        });
-
-        for (const room of scene.rooms) {
-            const label = this.createLabel(room);
-            this.labels.set(room.id, label);
-            content.add(label);
-        }
-
-        this.content = content;
-        this.scene.add(content);
         this.sceneData = scene;
 
         const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
@@ -190,6 +241,167 @@ export class ViewerEngine {
         this.setSelection(this.selection);
     }
 
+    private build(scene: Scene): void {
+        this.clearContent();
+
+        const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+        this.materials = new MaterialLibrary(scene.materials, anisotropy);
+
+        const content = new THREE.Group();
+        content.name = `floor:${scene.floor.name}`;
+
+        this.parts = buildBuilding(scene, this.materials);
+        this.parts.ceilings.visible = this.ceilingsVisible;
+        content.add(this.parts.root);
+        this.joints = wallJoints(scene.walls);
+
+        for (const item of scene.items) {
+            const object = buildItem(item, this.materials);
+            this.items.set(item.id, object);
+            content.add(object);
+        }
+        for (const room of scene.rooms) {
+            const label = this.createLabel(room);
+            this.labels.set(room.id, label);
+            content.add(label);
+        }
+
+        this.content = content;
+        this.scene.add(content);
+        this.indexWalls();
+    }
+
+    /** Rebuilds what differs between two states of the shown floor. */
+    private applyChanges(previous: Scene, scene: Scene): void {
+        const parts = this.parts;
+        const materials = this.materials;
+        const content = this.content;
+        if (parts === null || materials === null || content === null) {
+            return;
+        }
+
+        const items = diffById(previous.items, scene.items);
+        for (const id of [...items.removed, ...items.changed.map((i) => i.id)]) {
+            const object = this.items.get(id);
+            if (object !== undefined) {
+                this.disposeObject(object);
+            }
+            this.items.delete(id);
+        }
+        for (const item of items.changed) {
+            const object = buildItem(item, materials);
+            this.items.set(item.id, object);
+            content.add(object);
+        }
+
+        const walls = diffById(previous.walls, scene.walls);
+        const wallsChanged = walls.removed.length > 0 || walls.changed.length > 0;
+        if (wallsChanged) {
+            const joints = wallJoints(scene.walls);
+            const changedIds = new Set(walls.changed.map((w) => w.id));
+            for (const id of walls.removed) {
+                this.removeWall(id);
+            }
+            for (const wall of scene.walls) {
+                // A moved wall also changes the mitres of the walls it meets.
+                if (changedIds.has(wall.id) || !sameJson(this.joints.get(wall.id), joints.get(wall.id))) {
+                    this.removeWall(wall.id);
+                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id));
+                    parts.walls.set(wall.id, group);
+                    parts.root.add(group);
+                }
+            }
+            this.joints = joints;
+            this.disposeObject(parts.slab);
+            parts.slab = buildSlab(scene.walls, materials);
+            parts.root.add(parts.slab);
+            this.indexWalls();
+        }
+
+        const rooms = diffById(previous.rooms, scene.rooms);
+        for (const id of [...rooms.removed, ...rooms.changed.map((r) => r.id)]) {
+            this.removeRoom(id);
+        }
+        for (const room of rooms.changed) {
+            addRoom(parts, buildRoom(room, scene.walls, materials), room.id);
+            const label = this.createLabel(room);
+            this.labels.set(room.id, label);
+            content.add(label);
+        }
+        if (wallsChanged) {
+            // Wall finishes leave the doors free, so they follow the walls of unchanged rooms too.
+            const changedRooms = new Set(rooms.changed.map((r) => r.id));
+            for (const room of scene.rooms) {
+                const roomParts = parts.rooms.get(room.id);
+                if (roomParts === undefined || changedRooms.has(room.id) || roomParts.finishes === null) {
+                    continue;
+                }
+                this.disposeObject(roomParts.finishes);
+                roomParts.finishes = buildWallFinishes(room, scene.walls, materials);
+                parts.root.add(roomParts.finishes);
+            }
+        }
+    }
+
+    private removeWall(id: number): void {
+        const group = this.parts?.walls.get(id);
+        if (group !== undefined) {
+            this.disposeObject(group);
+            this.parts?.walls.delete(id);
+        }
+    }
+
+    private removeRoom(id: number): void {
+        const roomParts = this.parts?.rooms.get(id);
+        if (roomParts !== undefined) {
+            for (const object of [roomParts.floor, roomParts.ceiling, roomParts.finishes]) {
+                if (object !== null) {
+                    this.disposeObject(object);
+                }
+            }
+            this.parts?.rooms.delete(id);
+        }
+        const label = this.labels.get(id);
+        if (label !== undefined) {
+            label.element.remove();
+            label.removeFromParent();
+            this.labels.delete(id);
+        }
+    }
+
+    /** Wall and opening objects by id, for the selection outline. */
+    private indexWalls(): void {
+        this.walls.clear();
+        this.openings.clear();
+        this.parts?.walls.forEach((group, id) => {
+            this.walls.set(id, group);
+            group.traverse((object) => {
+                const openingId = (object.userData as Record<string, unknown>)['openingId'];
+                if (typeof openingId === 'number') {
+                    this.openings.set(openingId, object);
+                }
+            });
+        });
+    }
+
+    /** Takes an object out of the scene and frees its geometry (and materials the library does not share). */
+    private disposeObject(object: THREE.Object3D): void {
+        object.removeFromParent();
+        object.traverse((o) => {
+            if (o instanceof THREE.Mesh) {
+                (o.geometry as THREE.BufferGeometry).dispose();
+                for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+                    if (this.materials?.owns(material) !== true && material !== this.parts?.sectionMaterial) {
+                        material.dispose();
+                    }
+                }
+            }
+            if (o instanceof CSS2DObject) {
+                o.element.remove();
+            }
+        });
+    }
+
     /** Highlights the selected element: a room's floor is tinted, other elements get an outline box. */
     public setSelection(selection: Selection | null): void {
         this.selection = selection;
@@ -203,14 +415,19 @@ export class ViewerEngine {
             this.scene.add(this.outline);
             this.updateOutline();
         }
+        this.updateHandles();
     }
 
-    /** In edit mode items can be dragged in a top-down view. */
+    /**
+     * In edit mode, in a top-down view, items, walls and doors / windows can be dragged, and the selected
+     * wall's ends and the selected room's corners get handles.
+     */
     public setEditMode(enabled: boolean): void {
         this.editMode = enabled;
         if (!enabled) {
             this.cancelDrag();
         }
+        this.updateHandles();
     }
 
     /** The point the camera looks at, in plan mm: where new elements are placed. */
@@ -219,8 +436,9 @@ export class ViewerEngine {
     }
 
     public setCeilingsVisible(visible: boolean): void {
-        if (this.ceilings !== null) {
-            this.ceilings.visible = visible;
+        this.ceilingsVisible = visible;
+        if (this.parts !== null) {
+            this.parts.ceilings.visible = visible;
         }
     }
 
@@ -230,6 +448,8 @@ export class ViewerEngine {
 
     /** Cuts everything above `height` (mm) away; `null` shows the full height. */
     public setSectionHeight(height: number | null): void {
+        this.sectionHeight = height;
+        this.updateHandles();
         if (height === null) {
             this.renderer.clippingPlanes = [];
             return;
@@ -331,7 +551,8 @@ export class ViewerEngine {
         this.moveCamera(target.clone().add(offset), target, true);
     }
 
-    private setSelectedRoom(roomId: number | null): void {
+    /** Tints the room's floor; `floor` overrides the room's own mesh (the preview while a corner is dragged). */
+    private setSelectedRoom(roomId: number | null, floor?: THREE.Mesh): void {
         this.labels.forEach((label, id) => label.element.classList.toggle('selected', id === roomId));
 
         if (this.highlight !== null) {
@@ -340,15 +561,15 @@ export class ViewerEngine {
             this.highlight = null;
         }
 
-        const floor = roomId === null ? undefined : this.floors.get(roomId);
-        if (floor === undefined) {
+        const target = floor ?? (roomId === null ? undefined : this.parts?.rooms.get(roomId)?.floor);
+        if (target === undefined) {
             return;
         }
         const material = new THREE.MeshBasicMaterial({color: HighlightColor, transparent: true, opacity: 0.22, depthWrite: false});
-        this.highlight = new THREE.Mesh(floor.geometry, material);
-        this.highlight.position.y = floor.position.y + 0.002;
+        this.highlight = new THREE.Mesh(target.geometry, material);
+        this.highlight.position.y = target.position.y + 0.002;
         this.highlight.renderOrder = 1;
-        floor.parent?.add(this.highlight);
+        target.parent?.add(this.highlight);
     }
 
     public dispose(): void {
@@ -357,9 +578,15 @@ export class ViewerEngine {
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.removeEventListener('pointerup', this.handlePointerUp);
+        this.renderer.domElement.removeEventListener('dblclick', this.handleDoubleClick);
+        window.removeEventListener('keydown', this.handleKeyDown, true);
         this.walkthrough?.dispose();
         this.walkthrough = null;
         this.clearContent();
+        this.handles.clear();
+        this.handleGeometry.dispose();
+        this.handleCoreGeometry.dispose();
+        this.handleMaterials.forEach((m) => m.dispose());
         this.scene.environment?.dispose();
         this.controls.dispose();
         this.renderer.dispose();
@@ -480,7 +707,38 @@ export class ViewerEngine {
         this.controls.update();
         this.updateOutline();
         this.renderer.render(this.scene, this.camera);
+        this.renderOverlay();
         this.labelRenderer.render(this.scene, this.camera);
+    }
+
+    /** Handles on top of everything, at a constant size on screen and only where they can be dragged. */
+    private renderOverlay(): void {
+        this.handles.visible = this.editMode && this.isTopDown();
+        if (!this.handles.visible || this.handles.children.length === 0) {
+            return;
+        }
+        const perPixel = this.metresPerPixel();
+        for (const handle of this.handles.children) {
+            const pixels = (handle.userData as {pixels?: number}).pixels ?? HandlePixels;
+            handle.scale.setScalar(pixels * perPixel);
+        }
+        const planes = this.renderer.clippingPlanes;
+        this.renderer.autoClear = false;
+        this.renderer.clippingPlanes = [];
+        this.renderer.render(this.overlay, this.camera);
+        this.renderer.clippingPlanes = planes;
+        this.renderer.autoClear = true;
+    }
+
+    /** Size of a screen pixel at the orbit target, metres. */
+    private metresPerPixel(): number {
+        const distance = this.camera.position.distanceTo(this.controls.target);
+        const height = Math.max(this.container.clientHeight, 1);
+        return (2 * distance * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))) / height;
+    }
+
+    private isTopDown(): boolean {
+        return this.walkthrough === null && this.camera.getWorldDirection(new THREE.Vector3()).y <= DragMaxCameraTilt;
     }
 
     private resize(): void {
@@ -505,80 +763,474 @@ export class ViewerEngine {
             this.walkthrough.lock();
             return;
         }
-        if (!this.editMode || event.button !== 0 || this.camera.getWorldDirection(new THREE.Vector3()).y > DragMaxCameraTilt) {
+        if (!this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null) {
             return;
         }
 
-        const hit = this.pick(event);
-        const selection = selectionOf(hit?.object ?? null);
-        const object = selection?.kind === 'item' ? this.items.get(selection.id) : undefined;
-        if (hit === undefined || selection === null || object === undefined) {
+        const drag = this.handleDrag(event) ?? this.elementDrag(event);
+        if (drag === null) {
             return;
         }
-
-        // Drag in the horizontal plane through the grabbed point; the item keeps its elevation.
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -hit.point.y);
-        this.drag = {
-            itemId: selection.id,
-            object,
-            plane,
-            startPoint: hit.point.clone(),
-            startX: Math.round(object.position.x / MM),
-            startY: Math.round(-object.position.z / MM),
-            x: Math.round(object.position.x / MM),
-            y: Math.round(-object.position.z / MM),
-        };
+        this.drag = drag;
         this.controls.enabled = false;
         this.renderer.domElement.setPointerCapture(event.pointerId);
-        this.onSelect(selection);
+        if (drag.kind === 'vertex' && drag.inserted) {
+            // A new corner pulled out of an edge shows up right away.
+            drag.moved = true;
+            this.previewRoom(drag);
+        }
     };
 
+    /** A drag of one of the selected element's handles. */
+    private handleDrag(event: PointerEvent): Drag | null {
+        const hit = this.pickHandle(event);
+        const role = hit === null ? null : (hit.object.userData as {handle: HandleRole}).handle;
+        const scene = this.sceneData;
+        if (hit === null || role === null || scene === null || this.selection === null) {
+            return null;
+        }
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -hit.object.position.y);
+        const grab = this.planPointOn(event, plane);
+        if (grab === null) {
+            return null;
+        }
+
+        if (this.selection.kind === 'wall' && (role.role === 'wallStart' || role.role === 'wallEnd')) {
+            const wall = scene.walls.find((w) => w.id === this.selection?.id);
+            const mode = role.role === 'wallStart' ? 'start' : 'end';
+            return wall === undefined ? null : {kind: 'wall', plane, grab, moved: false, wall, mode, current: wall, fits: true, snap: null};
+        }
+        const room = this.selection.kind === 'room' ? scene.rooms.find((r) => r.id === this.selection?.id) : undefined;
+        if (room === undefined) {
+            return null;
+        }
+        if (role.role === 'vertex') {
+            const polygon = room.polygon;
+            return {kind: 'vertex', plane, grab, moved: false, room, index: role.index, inserted: false, polygon, valid: true, snap: null};
+        }
+        if (role.role === 'midpoint') {
+            const midpoint = edgeMidpoints(room.polygon)[role.index];
+            const polygon = insertVertex(room.polygon, role.index, midpoint);
+            const at = {x: polygon[role.index + 1][0], y: polygon[role.index + 1][1]};
+            const valid = isSimplePolygon(polygon);
+            return {kind: 'vertex', plane, grab: at, moved: false, room, index: role.index + 1, inserted: true, polygon, valid, snap: null};
+        }
+        return null;
+    }
+
+    /** A drag of the item, wall or door / window under the pointer, which also gets selected. */
+    private elementDrag(event: PointerEvent): Drag | null {
+        const hit = this.pick(event);
+        const selection = selectionOf(hit?.object ?? null);
+        const scene = this.sceneData;
+        if (hit === undefined || selection === null || scene === null || selection.kind === 'room') {
+            return null;
+        }
+        // Drag in the horizontal plane through the grabbed point; the element keeps its elevation.
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -hit.point.y);
+        const grab = {x: hit.point.x / MM, y: -hit.point.z / MM};
+        let drag: Drag | null = null;
+
+        if (selection.kind === 'item') {
+            const item = scene.items.find((i) => i.id === selection.id);
+            const object = this.items.get(selection.id);
+            if (item !== undefined && object !== undefined) {
+                drag = {kind: 'item', plane, grab, moved: false, item, object, x: item.x, y: item.y};
+            }
+        } else if (selection.kind === 'wall') {
+            const wall = scene.walls.find((w) => w.id === selection.id);
+            if (wall !== undefined) {
+                drag = {kind: 'wall', plane, grab, moved: false, wall, mode: 'move', current: wall, fits: true, snap: null};
+            }
+        } else {
+            const wall = scene.walls.find((w) => w.openings.some((o) => o.id === selection.id));
+            const opening = wall?.openings.find((o) => o.id === selection.id);
+            if (wall !== undefined && opening !== undefined) {
+                const grabAlong = alongWall(wallFrame(wall), grab) - opening.offset;
+                drag = {kind: 'opening', plane, grab, moved: false, wall, openingId: opening.id, grabAlong, offset: opening.offset, fits: true};
+            }
+        }
+        if (drag !== null && !sameSelection(selection, this.selection)) {
+            this.onSelect(selection);
+        }
+        return drag;
+    }
+
     private readonly handlePointerMove = (event: PointerEvent): void => {
-        if (this.drag === null) {
+        const drag = this.drag;
+        if (drag === null) {
+            this.updateCursor(event);
             return;
         }
-        this.raycaster.setFromCamera(this.toNdc(event), this.camera);
-        const point = this.raycaster.ray.intersectPlane(this.drag.plane, new THREE.Vector3());
+        if (!drag.moved && this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) <= DragThreshold) {
+            return;
+        }
+        const point = this.planPointOn(event, drag.plane);
         if (point === null) {
             return;
         }
-        const step = event.shiftKey ? 1 : DragSnap;
-        this.drag.x = snapToGrid(this.drag.startX + (point.x - this.drag.startPoint.x) / MM, step);
-        this.drag.y = snapToGrid(this.drag.startY - (point.z - this.drag.startPoint.z) / MM, step);
-        this.drag.object.position.x = this.drag.x * MM;
-        this.drag.object.position.z = -this.drag.y * MM;
+        drag.moved = true;
+        const free = event.shiftKey;
+        const delta = {x: point.x - drag.grab.x, y: point.y - drag.grab.y};
+
+        switch (drag.kind) {
+            case 'item': {
+                const step = free ? 1 : DragSnap;
+                drag.x = snapToGrid(drag.item.x + delta.x, step);
+                drag.y = snapToGrid(drag.item.y + delta.y, step);
+                drag.object.position.x = drag.x * MM;
+                drag.object.position.z = -drag.y * MM;
+                break;
+            }
+            case 'wall':
+                this.dragWall(drag, delta, free);
+                break;
+            case 'opening': {
+                const along = alongWall(wallFrame(drag.wall), point) - drag.grabAlong;
+                const slid = slideOpening(drag.wall, drag.openingId, snapToGrid(along, free ? 1 : DragSnap));
+                drag.offset = slid.offset;
+                drag.fits = slid.fits;
+                const wall = {...drag.wall, openings: drag.wall.openings.map((o) => (o.id === drag.openingId ? {...o, offset: slid.offset} : o))};
+                this.previewWall(wall, slid.fits);
+                break;
+            }
+            case 'vertex': {
+                const [x0, y0] = drag.inserted ? [drag.grab.x, drag.grab.y] : drag.room.polygon[drag.index];
+                const snapped = this.snapVertex(drag, {x: x0 + delta.x, y: y0 + delta.y}, free);
+                drag.polygon = drag.polygon.map((p, i): PlanPoint => (i === drag.index ? [snapped.point.x, snapped.point.y] : p));
+                drag.valid = isSimplePolygon(drag.polygon);
+                drag.snap = snapped.kind;
+                this.previewRoom(drag);
+                break;
+            }
+        }
     };
 
-    /** A click (not a drag) selects the element under the pointer; a click on empty space clears it. */
-    private readonly handlePointerUp = (event: PointerEvent): void => {
-        if (this.drag !== null) {
-            const drag = this.drag;
-            this.cancelDrag(false);
-            if (drag.x !== drag.startX || drag.y !== drag.startY) {
-                this.onItemMoved(drag.itemId, drag.x, drag.y);
+    /** Moves a wall end (snapping onto other wall ends, or into line with them) or the whole wall. */
+    private dragWall(drag: Extract<Drag, {kind: 'wall'}>, delta: Vec2, free: boolean): void {
+        const wall = drag.wall;
+        const others = (this.sceneData?.walls ?? [])
+            .filter((w) => w.id !== wall.id)
+            .flatMap((w) => [
+                {x: w.startX, y: w.startY},
+                {x: w.endX, y: w.endY},
+            ]);
+        const start = {x: wall.startX, y: wall.startY};
+        const end = {x: wall.endX, y: wall.endY};
+        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        const grid = free ? 1 : DragSnap;
+        let next: {start: Vec2; end: Vec2};
+
+        if (drag.mode === 'move') {
+            let shift = {x: snapToGrid(delta.x, grid), y: snapToGrid(delta.y, grid)};
+            drag.snap = 'grid';
+            // Either end landing near another wall's end joins it there.
+            for (const own of [start, end]) {
+                const target = snapPoint({x: own.x + delta.x, y: own.y + delta.y}, {grid, radius, points: others});
+                if (target.kind === 'point') {
+                    shift = {x: target.point.x - own.x, y: target.point.y - own.y};
+                    drag.snap = 'point';
+                    break;
+                }
             }
+            next = {start: {x: start.x + shift.x, y: start.y + shift.y}, end: {x: end.x + shift.x, y: end.y + shift.y}};
+        } else {
+            const [moving, fixed] = drag.mode === 'start' ? [start, end] : [end, start];
+            const snapped = snapPoint({x: moving.x + delta.x, y: moving.y + delta.y}, {grid, radius, points: others, anchors: [fixed, ...others]});
+            drag.snap = snapped.kind;
+            next = drag.mode === 'start' ? {start: snapped.point, end} : {start, end: snapped.point};
+        }
+
+        const moved = moveWallEnds(wall, next.start, next.end);
+        drag.current = moved.wall;
+        drag.fits = moved.fits;
+        this.previewWall(moved.wall, moved.fits);
+    }
+
+    /** A room corner snaps onto other rooms' corners and wall corners, or into line with its neighbours. */
+    private snapVertex(drag: Extract<Drag, {kind: 'vertex'}>, point: Vec2, free: boolean): SnapResult {
+        const scene = this.sceneData;
+        if (free || scene === null) {
+            return snapPoint(point, {grid: 1, radius: 0});
+        }
+        const n = drag.polygon.length;
+        const neighbours = [drag.polygon[(drag.index + n - 1) % n], drag.polygon[(drag.index + 1) % n]].map(([x, y]) => ({x, y}));
+        const corners = [
+            ...scene.rooms.filter((r) => r.id !== drag.room.id).flatMap((r) => r.polygon.map(([x, y]) => ({x, y}))),
+            ...scene.walls.flatMap(wallCorners),
+        ];
+        return snapPoint(point, {grid: DragSnap, radius: (SnapPixels * this.metresPerPixel()) / MM, points: corners, anchors: neighbours});
+    }
+
+    /** Commits a drag that moved something; a click (no drag) selects the element under the pointer. */
+    private readonly handlePointerUp = (event: PointerEvent): void => {
+        const drag = this.drag;
+        if (drag !== null) {
+            this.drag = null;
+            this.controls.enabled = true;
+            this.commit(drag);
             return;
         }
-        if (this.walkthrough !== null || this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 4) {
+        if (this.walkthrough !== null || this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > DragThreshold) {
+            return;
+        }
+        if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
             return;
         }
         this.onSelect(selectionOf(this.pick(event)?.object ?? null));
     };
 
-    /** Ends a drag; unless the move is being committed, the item goes back to where it was. */
-    private cancelDrag(restore = true): void {
-        if (this.drag === null) {
+    /** Sends the dragged change; the preview stays until the scene reloads, or snaps back when it was refused. */
+    private commit(drag: Drag): void {
+        let edit: {selection: Selection; fields: Record<string, unknown>} | null = null;
+        switch (drag.kind) {
+            case 'item':
+                if (drag.x !== drag.item.x || drag.y !== drag.item.y) {
+                    edit = {selection: {kind: 'item', id: drag.item.id}, fields: {x: drag.x, y: drag.y}};
+                }
+                break;
+            case 'wall': {
+                const {startX, startY, endX, endY} = drag.current;
+                const changed = startX !== drag.wall.startX || startY !== drag.wall.startY || endX !== drag.wall.endX || endY !== drag.wall.endY;
+                if (changed && drag.fits) {
+                    edit = {selection: {kind: 'wall', id: drag.wall.id}, fields: {startX, startY, endX, endY}};
+                }
+                break;
+            }
+            case 'opening': {
+                const original = drag.wall.openings.find((o) => o.id === drag.openingId);
+                if (drag.fits && original !== undefined && original.offset !== drag.offset) {
+                    edit = {selection: {kind: 'opening', id: drag.openingId}, fields: {offset: drag.offset}};
+                }
+                break;
+            }
+            case 'vertex':
+                if (drag.valid && (drag.inserted || !sameJson(drag.polygon, drag.room.polygon))) {
+                    edit = {selection: {kind: 'room', id: drag.room.id}, fields: {polygon: drag.polygon}};
+                }
+                break;
+        }
+
+        if (edit === null) {
+            this.restore(drag);
             return;
         }
-        if (restore) {
-            this.drag.object.position.x = this.drag.startX * MM;
-            this.drag.object.position.z = -this.drag.startY * MM;
+        const loads = this.loads;
+        void this.onEdit(edit.selection, edit.fields).then(
+            (applied) => {
+                // Applied edits reload the scene, which replaces the preview; otherwise put things back.
+                if (!applied && this.loads === loads) {
+                    this.restore(drag);
+                }
+            },
+            () => this.loads === loads && this.restore(drag),
+        );
+    }
+
+    /** Puts a dragged element back where the scene has it. */
+    private restore(drag: Drag): void {
+        if (drag.kind === 'item') {
+            drag.object.position.x = drag.item.x * MM;
+            drag.object.position.z = -drag.item.y * MM;
+        }
+        this.clearPreview();
+        this.setSelection(this.selection);
+    }
+
+    /** Ends a drag without committing it. */
+    private cancelDrag(): void {
+        const drag = this.drag;
+        if (drag === null) {
+            return;
         }
         this.drag = null;
         this.controls.enabled = true;
+        this.restore(drag);
     }
 
-    private pick(event: PointerEvent): THREE.Intersection | undefined {
+    /** Double-clicking a room corner removes it (a room keeps at least three). */
+    private readonly handleDoubleClick = (event: MouseEvent): void => {
+        if (!this.editMode || !this.isTopDown() || this.selection?.kind !== 'room') {
+            return;
+        }
+        const role = (this.pickHandle(event)?.object.userData as {handle?: HandleRole} | undefined)?.handle;
+        const room = this.sceneData?.rooms.find((r) => r.id === this.selection?.id);
+        if (role?.role !== 'vertex' || room === undefined) {
+            return;
+        }
+        const polygon = removeVertex(room.polygon, role.index);
+        if (polygon !== null && isSimplePolygon(polygon)) {
+            void this.onEdit({kind: 'room', id: room.id}, {polygon});
+        }
+    };
+
+    private readonly handleKeyDown = (event: KeyboardEvent): void => {
+        if (event.key === 'Escape' && this.drag !== null) {
+            event.stopPropagation();
+            this.cancelDrag();
+        }
+    };
+
+    private updateCursor(event: PointerEvent): void {
+        const overHandle = this.editMode && this.isTopDown() && this.handles.children.length > 0 && this.pickHandle(event) !== null;
+        this.renderer.domElement.style.cursor = overHandle ? 'grab' : '';
+    }
+
+    /** Shows `wall` (a dragged state) in place of the wall's own group; `fits` false tints it as refused. */
+    private previewWall(wall: Wall, fits: boolean): void {
+        const scene = this.sceneData;
+        const parts = this.parts;
+        const materials = this.materials;
+        if (scene === null || parts === null || materials === null) {
+            return;
+        }
+        const walls = scene.walls.map((w) => (w.id === wall.id ? wall : w));
+        const group = buildWall(wall, materials, parts.sectionMaterial, wallJoints(walls).get(wall.id));
+        const original = parts.walls.get(wall.id);
+        this.setPreview(original === undefined ? [] : [original], [group]);
+
+        if (this.selection?.kind === 'wall' && this.selection.id === wall.id) {
+            this.outlinedObject = group;
+        } else if (this.selection?.kind === 'opening') {
+            const openingId = this.selection.id;
+            group.traverse((o) => {
+                if ((o.userData as Record<string, unknown>)['openingId'] === openingId) {
+                    this.outlinedObject = o;
+                }
+            });
+        }
+        this.setOutlineValid(fits);
+        this.updateHandles();
+    }
+
+    /** Shows the dragged outline of a room: its floor, highlight, label and handles. */
+    private previewRoom(drag: Extract<Drag, {kind: 'vertex'}>): void {
+        const parts = this.parts;
+        const materials = this.materials;
+        if (parts === null || materials === null) {
+            return;
+        }
+        const room = {...drag.room, polygon: drag.polygon};
+        const floor = buildFloor(room, materials);
+        const original = parts.rooms.get(room.id);
+        this.setPreview(original === undefined ? [] : [original.floor], [floor]);
+        this.setSelectedRoom(room.id, floor);
+        const label = this.labels.get(room.id);
+        if (label !== undefined) {
+            const c = polygonCentroid(room.polygon);
+            label.position.set(c.x * MM, 0.05, -c.y * MM);
+        }
+        this.updateHandles();
+    }
+
+    private setPreview(hidden: THREE.Object3D[], added: THREE.Object3D[]): void {
+        const previous = this.preview;
+        if (previous !== null) {
+            previous.added.forEach((o) => this.disposeObject(o));
+        }
+        const all = [...new Set([...(previous?.hidden ?? []), ...hidden])];
+        all.forEach((o) => (o.visible = false));
+        added.forEach((o) => this.parts?.root.add(o));
+        this.preview = {hidden: all, added};
+    }
+
+    private clearPreview(): void {
+        const preview = this.preview;
+        if (preview === null) {
+            return;
+        }
+        this.preview = null;
+        preview.added.forEach((o) => this.disposeObject(o));
+        preview.hidden.forEach((o) => (o.visible = true));
+        // Labels moved with a dragged room go back to their room.
+        this.sceneData?.rooms.forEach((room) => {
+            const label = this.labels.get(room.id);
+            const c = polygonCentroid(room.polygon);
+            label?.position.set(c.x * MM, 0.05, -c.y * MM);
+        });
+    }
+
+    /** Recreates the handles of the selected wall (its ends) or room (corners, plus edge midpoints to pull new corners out). */
+    private updateHandles(): void {
+        this.handles.clear();
+        const scene = this.sceneData;
+        if (!this.editMode || scene === null || this.selection === null) {
+            return;
+        }
+        const drag = this.drag;
+        if (this.selection.kind === 'wall') {
+            const id = this.selection.id;
+            const wall = drag?.kind === 'wall' && drag.wall.id === id ? drag.current : scene.walls.find((w) => w.id === id);
+            if (wall === undefined) {
+                return;
+            }
+            const y = Math.min(this.sectionHeight ?? wall.height, wall.height) * MM + 0.01;
+            const state = drag?.kind === 'wall' && drag.mode !== 'move' ? handleState(drag.fits, drag.snap) : 'normal';
+            const active = drag?.kind === 'wall' ? drag.mode : null;
+            this.addHandle({x: wall.startX, y: wall.startY}, y, {role: 'wallStart'}, active === 'start' ? state : 'normal');
+            this.addHandle({x: wall.endX, y: wall.endY}, y, {role: 'wallEnd'}, active === 'end' ? state : 'normal');
+        } else if (this.selection.kind === 'room') {
+            const id = this.selection.id;
+            const room = scene.rooms.find((r) => r.id === id);
+            const vertexDrag = drag?.kind === 'vertex' && drag.room.id === id ? drag : null;
+            const polygon = vertexDrag?.polygon ?? room?.polygon;
+            if (polygon === undefined) {
+                return;
+            }
+            polygon.forEach(([x, y], index) => {
+                let state: HandleState = 'normal';
+                if (vertexDrag?.index === index) {
+                    state = handleState(vertexDrag.valid, vertexDrag.snap);
+                }
+                this.addHandle({x, y}, 0.02, {role: 'vertex', index}, state);
+            });
+            if (vertexDrag === null) {
+                edgeMidpoints(polygon).forEach((p, index) => this.addHandle(p, 0.02, {role: 'midpoint', index}, 'midpoint'));
+            }
+        }
+    }
+
+    private addHandle(at: Vec2, y: number, handle: HandleRole, state: HandleState): void {
+        const disc = new THREE.Mesh(this.handleGeometry, this.handleMaterial(HandleColors[state]));
+        disc.position.set(at.x * MM, y, -at.y * MM);
+        disc.renderOrder = 10;
+        disc.userData = {handle, pixels: handle.role === 'midpoint' ? MidpointPixels : HandlePixels};
+        const core = new THREE.Mesh(this.handleCoreGeometry, this.handleMaterial('#ffffff'));
+        core.renderOrder = 11;
+        core.raycast = (): void => undefined;
+        disc.add(core);
+        this.handles.add(disc);
+    }
+
+    private handleMaterial(color: string): THREE.MeshBasicMaterial {
+        let material = this.handleMaterials.get(color);
+        if (material === undefined) {
+            material = new THREE.MeshBasicMaterial({color, depthTest: false, depthWrite: false, side: THREE.DoubleSide, transparent: true});
+            this.handleMaterials.set(color, material);
+        }
+        return material;
+    }
+
+    private pickHandle(event: MouseEvent): THREE.Intersection | null {
+        if (this.handles.children.length === 0) {
+            return null;
+        }
+        // Scaled for the current view, as the next frame will draw them.
+        const perPixel = this.metresPerPixel();
+        this.handles.children.forEach((h) => h.scale.setScalar(((h.userData as {pixels?: number}).pixels ?? HandlePixels) * perPixel));
+        this.handles.updateMatrixWorld(true);
+        this.raycaster.setFromCamera(this.toNdc(event), this.camera);
+        return this.raycaster.intersectObjects(this.handles.children, false)[0] ?? null;
+    }
+
+    /** Plan point (mm) under the pointer on a horizontal plane. */
+    private planPointOn(event: MouseEvent, plane: THREE.Plane): Vec2 | null {
+        this.raycaster.setFromCamera(this.toNdc(event), this.camera);
+        const point = this.raycaster.ray.intersectPlane(plane, new THREE.Vector3());
+        return point === null ? null : {x: point.x / MM, y: -point.z / MM};
+    }
+
+    private pick(event: MouseEvent): THREE.Intersection | undefined {
         this.raycaster.setFromCamera(this.toNdc(event), this.camera);
         const hits = this.content === null ? [] : this.raycaster.intersectObject(this.content, true);
         const clip = this.renderer.clippingPlanes[0];
@@ -586,7 +1238,7 @@ export class ViewerEngine {
         return hits.find((h) => isVisible(h.object) && (clip === undefined || clip.distanceToPoint(h.point) >= 0));
     }
 
-    private toNdc(event: PointerEvent): THREE.Vector2 {
+    private toNdc(event: MouseEvent): THREE.Vector2 {
         const rect = this.renderer.domElement.getBoundingClientRect();
         return new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
     }
@@ -619,6 +1271,16 @@ export class ViewerEngine {
         this.outline.scale.copy(size);
     }
 
+    /** Tints the outline red while a dragged state would be refused. */
+    private setOutlineValid(valid: boolean): void {
+        const color = valid ? HighlightColor : HandleColors.invalid;
+        this.outline?.traverse((o) => {
+            if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
+                (o.material as THREE.MeshBasicMaterial | THREE.LineBasicMaterial).color.set(color);
+            }
+        });
+    }
+
     private removeOutline(): void {
         if (this.outline !== null) {
             this.outline.removeFromParent();
@@ -635,8 +1297,10 @@ export class ViewerEngine {
 
     private clearContent(): void {
         this.cancelDrag();
+        this.clearPreview();
         this.setSelectedRoom(null);
         this.removeOutline();
+        this.handles.clear();
         if (this.content !== null) {
             const geometries = new Set<THREE.BufferGeometry>();
             const materials = new Set<THREE.Material>();
@@ -656,12 +1320,12 @@ export class ViewerEngine {
         }
         this.materials?.dispose();
         this.materials = null;
+        this.parts = null;
         this.labels.clear();
-        this.floors.clear();
         this.items.clear();
         this.walls.clear();
         this.openings.clear();
-        this.ceilings = null;
+        this.joints.clear();
     }
 }
 
@@ -690,4 +1354,39 @@ function isVisible(object: THREE.Object3D): boolean {
         }
     }
     return true;
+}
+
+/** Elements added or changed (by content) and ids removed between two lists. */
+function diffById<T extends {id: number}>(previous: readonly T[], next: readonly T[]): {changed: T[]; removed: number[]} {
+    const before = new Map(previous.map((e) => [e.id, e]));
+    const changed = next.filter((e) => {
+        const old = before.get(e.id);
+        return old === undefined || (old !== e && !sameJson(old, e));
+    });
+    const ids = new Set(next.map((e) => e.id));
+    return {changed, removed: previous.filter((e) => !ids.has(e.id)).map((e) => e.id)};
+}
+
+/** A dragged handle: red when the result would be refused, green when snapped onto a point or axis. */
+function handleState(valid: boolean, snap: SnapResult['kind'] | null): HandleState {
+    if (!valid) {
+        return 'invalid';
+    }
+    return snap === 'point' || snap === 'axis' ? 'snapped' : 'normal';
+}
+
+function sameJson(a: unknown, b: unknown): boolean {
+    return a === b || JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** The four corners of a wall's footprint, where room outlines usually meet it. */
+function wallCorners(wall: Wall): Vec2[] {
+    const frame = wallFrame(wall);
+    const h = wall.thickness / 2;
+    return [
+        {x: wall.startX + frame.normal.x * h, y: wall.startY + frame.normal.y * h},
+        {x: wall.startX - frame.normal.x * h, y: wall.startY - frame.normal.y * h},
+        {x: wall.endX + frame.normal.x * h, y: wall.endY + frame.normal.y * h},
+        {x: wall.endX - frame.normal.x * h, y: wall.endY - frame.normal.y * h},
+    ].map((p) => ({x: Math.round(p.x), y: Math.round(p.y)}));
 }

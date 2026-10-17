@@ -17,8 +17,10 @@ use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 
 /**
- * Walls. The state leaves out the openings (they are elements of their own); a deleted wall hides its
- * openings until undo brings it back.
+ * Walls. The state leaves out the openings (they are elements of their own) but keeps their offsets as
+ * `openingOffsets` ([{id, offset}] by id): moving the start point shifts the offsets so the openings stay
+ * where they are on the plan, and undo restores them exactly. A deleted wall hides its openings until undo
+ * brings it back.
  */
 final readonly class WallHandler implements ElementHandler
 {
@@ -40,6 +42,12 @@ final readonly class WallHandler implements ElementHandler
 	public function fields(): array
 	{
 		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'thickness', 'height', 'materialId'];
+	}
+
+	/** @return list<string> */
+	public function restorableFields(): array
+	{
+		return [...$this->fields(), 'openingOffsets'];
 	}
 
 	/** @return array<string, mixed> */
@@ -75,6 +83,11 @@ final readonly class WallHandler implements ElementHandler
 		$wall = self::cast($element);
 		$state = State::of(WallDto::fromEntity($wall, []));
 		unset($state['openings']);
+		$offsets = [];
+		foreach ($this->openingRepository->findByWalls([$wall->id]) as $opening) {
+			$offsets[$opening->id] = $opening->offset;
+		}
+		$state['openingOffsets'] = self::offsetList($offsets);
 
 		return $state;
 	}
@@ -104,13 +117,9 @@ final readonly class WallHandler implements ElementHandler
 			throw EditException::invalid(sprintf('A wall must be at least %d mm long.', self::MinLength));
 		}
 
-		if ($currentWall !== null) {
-			foreach ($this->openingRepository->findByWalls([$currentWall->id]) as $opening) {
-				if ($opening->offset + $opening->width > $length || $opening->sillHeight + $opening->height > $normalized['height']) {
-					throw EditException::invalid(sprintf('Opening "%s" would no longer fit the wall.', $opening->name));
-				}
-			}
-		}
+		$normalized['openingOffsets'] = $currentWall === null ? [] : self::offsetList(
+			$this->openingOffsets($currentWall, $normalized, $length, $fields->raw('openingOffsets')),
+		);
 
 		return $normalized;
 	}
@@ -160,6 +169,84 @@ final readonly class WallHandler implements ElementHandler
 		return (int) floor(hypot($endX - $startX, $endY - $startY));
 	}
 
+	/**
+	 * Offsets of the wall's openings after the change, checked to still fit. `$requested` (undo, redo) is
+	 * taken as it is when it differs from the current offsets; otherwise a moved start point shifts them so
+	 * every opening keeps its place on the plan.
+	 *
+	 * @param array{startX: int, startY: int, endX: int, endY: int, height: int, ...} $next
+	 * @return array<int, int> offset by opening id
+	 */
+	private function openingOffsets(Wall $wall, array $next, int $length, mixed $requested): array
+	{
+		$openings = $this->openingRepository->findByWalls([$wall->id]);
+		$current = [];
+		foreach ($openings as $opening) {
+			$current[$opening->id] = $opening->offset;
+		}
+
+		$offsets = self::parseOffsets($requested, $current) ?? $current;
+		if ($offsets === $current && ($next['startX'] !== $wall->startX || $next['startY'] !== $wall->startY)) {
+			$oldLength = hypot($wall->endX - $wall->startX, $wall->endY - $wall->startY);
+			$newLength = hypot($next['endX'] - $next['startX'], $next['endY'] - $next['startY']);
+			foreach ($openings as $opening) {
+				// Start of the opening on the plan, projected onto the new centre line.
+				$t = $oldLength > 0 ? $opening->offset / $oldLength : 0.0;
+				$x = $wall->startX + ($wall->endX - $wall->startX) * $t - $next['startX'];
+				$y = $wall->startY + ($wall->endY - $wall->startY) * $t - $next['startY'];
+				$offsets[$opening->id] = (int) round(
+					($x * ($next['endX'] - $next['startX']) + $y * ($next['endY'] - $next['startY'])) / $newLength,
+				);
+			}
+		}
+
+		foreach ($openings as $opening) {
+			$offset = $offsets[$opening->id];
+			if ($offset < 0 || $offset + $opening->width > $length || $opening->sillHeight + $opening->height > $next['height']) {
+				throw EditException::invalid(sprintf('Opening "%s" would no longer fit the wall.', $opening->name));
+			}
+		}
+
+		return $offsets;
+	}
+
+	/**
+	 * Requested offsets when they name exactly the wall's openings, otherwise null (ignored).
+	 *
+	 * @param array<int, int> $current
+	 * @return array<int, int>|null
+	 */
+	private static function parseOffsets(mixed $requested, array $current): ?array
+	{
+		if (!is_array($requested) || count($requested) !== count($current)) {
+			return null;
+		}
+		$offsets = [];
+		foreach ($requested as $entry) {
+			if (!is_array($entry) || !is_int($entry['id'] ?? null) || !is_int($entry['offset'] ?? null) || !isset($current[$entry['id']])) {
+				return null;
+			}
+			$offsets[$entry['id']] = $entry['offset'];
+		}
+
+		return count($offsets) === count($current) ? $offsets : null;
+	}
+
+	/**
+	 * @param array<int, int> $offsets
+	 * @return list<array{id: int, offset: int}>
+	 */
+	private static function offsetList(array $offsets): array
+	{
+		ksort($offsets);
+		$list = [];
+		foreach ($offsets as $id => $offset) {
+			$list[] = ['id' => $id, 'offset' => $offset];
+		}
+
+		return $list;
+	}
+
 	/** @param array<string, mixed> $state normalised */
 	private function apply(Wall $wall, array $state): void
 	{
@@ -174,6 +261,22 @@ final readonly class WallHandler implements ElementHandler
 		$wall->height = $fields->int('height', 100, State::MaxSize);
 		$wall->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$this->wallRepository->persist($wall);
+
+		$offsets = $fields->raw('openingOffsets');
+		if (!is_array($offsets) || $offsets === []) {
+			return;
+		}
+		$byId = array_column($offsets, 'offset', 'id');
+		foreach ($this->openingRepository->findByWalls([$wall->id]) as $opening) {
+			$offset = $byId[$opening->id] ?? $opening->offset;
+			if (!is_int($offset) || $offset === $opening->offset) {
+				continue;
+			}
+
+			$opening->offset = $offset;
+			$opening->updatedAt = new DateTimeImmutable();
+			$this->openingRepository->persist($opening);
+		}
 	}
 
 	private static function cast(AEntity $element): Wall

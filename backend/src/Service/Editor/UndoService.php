@@ -103,7 +103,7 @@ final readonly class UndoService
 		}
 
 		try {
-			$state = $handler->normalize($floor, array_intersect_key($target, array_flip($handler->fields())), $element);
+			$state = $handler->normalize($floor, array_intersect_key($target, array_flip($handler->restorableFields())), $element);
 		} catch (EditException $e) {
 			throw new UndoConflictException($change, sprintf('Cannot %s "%s": %s', $action, $change->summary, $e->getMessage()), $e);
 		}

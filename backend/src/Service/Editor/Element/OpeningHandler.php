@@ -40,6 +40,12 @@ final readonly class OpeningHandler implements ElementHandler
 		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance'];
 	}
 
+	/** @return list<string> */
+	public function restorableFields(): array
+	{
+		return $this->fields();
+	}
+
 	/** @return array<string, mixed> */
 	public function defaults(array $fields): array
 	{

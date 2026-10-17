@@ -46,3 +46,53 @@ export function boxAt(
     mesh.receiveShadow = shadows;
     return mesh;
 }
+
+/**
+ * Upright prism over a convex footprint (x, z in the parent's frame, metres) from `bottom` to `top`: a wall
+ * piece with a mitred end. UVs are in metres like `worldUvBox` (sides along x or z, top and bottom in x/z).
+ */
+export function prismAt(material: THREE.Material, footprint: readonly {x: number; z: number}[], bottom: number, top: number): THREE.Mesh {
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const center = footprint.reduce((c, p) => ({x: c.x + p.x / footprint.length, z: c.z + p.z / footprint.length}), {x: 0, z: 0});
+    const centroid = new THREE.Vector3(center.x, (bottom + top) / 2, center.z);
+
+    const triangle = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, uv: (p: THREE.Vector3) => [number, number]): void => {
+        // Wind every face counter-clockwise seen from outside.
+        const normal = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+        const outward = new THREE.Vector3().addVectors(a, b).add(c).divideScalar(3).sub(centroid);
+        const vertices = normal.dot(outward) >= 0 ? [a, b, c] : [a, c, b];
+        for (const v of vertices) {
+            positions.push(v.x, v.y, v.z);
+            uvs.push(...uv(v));
+        }
+    };
+
+    footprint.forEach((p, i) => {
+        const q = footprint[(i + 1) % footprint.length];
+        const alongX = Math.abs(q.x - p.x) >= Math.abs(q.z - p.z);
+        const uv = (v: THREE.Vector3): [number, number] => [alongX ? v.x : v.z, v.y];
+        const p0 = new THREE.Vector3(p.x, bottom, p.z);
+        const q0 = new THREE.Vector3(q.x, bottom, q.z);
+        const q1 = new THREE.Vector3(q.x, top, q.z);
+        const p1 = new THREE.Vector3(p.x, top, p.z);
+        triangle(p0, q0, q1, uv);
+        triangle(p0, q1, p1, uv);
+    });
+    const flat = (v: THREE.Vector3): [number, number] => [v.x, v.z];
+    for (const y of [bottom, top]) {
+        const first = new THREE.Vector3(footprint[0].x, y, footprint[0].z);
+        for (let i = 1; i < footprint.length - 1; i++) {
+            triangle(first, new THREE.Vector3(footprint[i].x, y, footprint[i].z), new THREE.Vector3(footprint[i + 1].x, y, footprint[i + 1].z), flat);
+        }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}

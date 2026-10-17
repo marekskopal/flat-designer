@@ -61,6 +61,16 @@ export class MaterialLibrary {
         return material as THREE.MeshStandardMaterial;
     }
 
+    /** Whether the material is one of the library's (shared, disposed with the library rather than with a mesh). */
+    public owns(material: THREE.Material): boolean {
+        for (const cached of this.cache.values()) {
+            if (cached === material) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public dispose(): void {
         this.cache.forEach((m) => m.dispose());
         this.textures.forEach((t) => t.dispose());

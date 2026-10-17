@@ -21,6 +21,14 @@ interface ElementHandler
 	public function fields(): array;
 
 	/**
+	 * Keys of the state undo and redo write back: the editable fields plus any derived state the handler
+	 * keeps consistent itself (e.g. a wall's opening offsets).
+	 *
+	 * @return list<string>
+	 */
+	public function restorableFields(): array;
+
+	/**
 	 * State of a new element before the client's fields are applied.
 	 *
 	 * @param array<string, mixed> $fields the client's fields (e.g. an item's kind picks its default size)

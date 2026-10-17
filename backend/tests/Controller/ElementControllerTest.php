@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
+use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
@@ -22,6 +23,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(OpeningHandler::class)]
 #[CoversClass(RoomHandler::class)]
 #[CoversClass(PolygonValidator::class)]
+#[CoversClass(CabinetParamsValidator::class)]
 final class ElementControllerTest extends EditorTestCase
 {
 	public function testCreateItemFillsDefaultsLogsAndBumpsRevision(): void
@@ -96,6 +98,31 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertStringContainsString('Unknown field(s): colour', (string) $unknown->getBody());
 	}
 
+	public function testCabinetParamsAreValidated(): void
+	{
+		$params = ['plinth' => 100, 'handle' => 'vertical', 'fronts' => [['type' => 'drawer', 'height' => 180], ['type' => 'door', 'count' => 2]]];
+		$cabinet = $this->create('items', ['kind' => 'BaseCabinet', 'params' => $params + ['custom' => 'kept']]);
+		self::assertSame($params + ['custom' => 'kept'], $cabinet['params']);
+
+		foreach ([
+			['plinth' => -1],
+			['plinth' => 860],
+			['handle' => 'knob'],
+			['fronts' => ['type' => 'door']],
+			['fronts' => [['type' => 'shelf']]],
+			['fronts' => [['type' => 'door', 'height' => 0]]],
+			['fronts' => [['type' => 'door', 'count' => 5]]],
+			['blindRight' => 600],
+		] as $invalid) {
+			$response = $this->edit('PATCH', 'items', self::id($cabinet), ['params' => $invalid]);
+			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
+		}
+
+		// Other kinds keep free-form params.
+		$box = $this->create('items', ['kind' => 'Box', 'params' => ['handle' => 'knob']]);
+		self::assertSame(['handle' => 'knob'], $box['params']);
+	}
+
 	public function testStaleRevisionIsRejected(): void
 	{
 		$item = $this->create('items', ['name' => 'Base']);
@@ -149,6 +176,38 @@ final class ElementControllerTest extends EditorTestCase
 		$walls = $this->sceneList('walls');
 		self::assertIsList($walls[0]['openings']);
 		self::assertCount(2, $walls[0]['openings']);
+	}
+
+	public function testMovingWallStartKeepsOpeningsInPlace(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0]);
+		$door = $this->create('openings', ['wallId' => self::id($wall), 'offset' => 1000, 'width' => 900]);
+		self::assertSame([], $wall['openingOffsets']);
+
+		// Shortened from the start by 500 mm: the door stays at x = 1000.
+		$moved = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => 500]))['element'];
+		self::assertIsArray($moved);
+		self::assertSame([['id' => self::id($door), 'offset' => 500]], $moved['openingOffsets']);
+		self::assertSame(500, $this->openingOffset(self::id($door)));
+
+		// Lengthened at the start too.
+		$this->edit('PATCH', 'walls', self::id($wall), ['startX' => -1000]);
+		self::assertSame(2000, $this->openingOffset(self::id($door)));
+
+		// Past the door the wall cannot be shortened, from either end.
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['startX' => 1500])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['endX' => 1500])->getStatusCode());
+
+		// Moving the end leaves the offsets alone; undo puts both the wall and the door back exactly.
+		$this->edit('PATCH', 'walls', self::id($wall), ['endX' => 3000]);
+		self::assertSame(2000, $this->openingOffset(self::id($door)));
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame(500, $this->openingOffset(self::id($door)));
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame(1000, $this->openingOffset(self::id($door)));
+		self::assertSame(200, $this->redo()->getStatusCode());
+		self::assertSame(500, $this->openingOffset(self::id($door)));
 	}
 
 	public function testEntranceFlag(): void
@@ -247,5 +306,21 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertIsList($scene['items']);
 		self::assertSame(['Keep'], array_column($scene['items'], 'name'));
 		self::assertSame(self::id($keep), self::id($scene['items'][0]));
+	}
+
+	private function openingOffset(int $openingId): int
+	{
+		foreach ($this->sceneList('walls') as $wall) {
+			self::assertIsArray($wall['openings']);
+			foreach ($wall['openings'] as $opening) {
+				self::assertIsArray($opening);
+				if ($opening['id'] === $openingId) {
+					self::assertIsInt($opening['offset']);
+
+					return $opening['offset'];
+				}
+			}
+		}
+		self::fail(sprintf('Opening %d not in the scene.', $openingId));
 	}
 }

@@ -8,7 +8,7 @@
     [editMode]="editor.enabled()"
     [insetLeft]="walking() ? 0 : panelInset"
     (selected)="onSelected($event)"
-    (itemMoved)="onItemMoved($event)"
+    [editHandler]="applyDrag"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
 />

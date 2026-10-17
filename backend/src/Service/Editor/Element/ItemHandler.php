@@ -14,6 +14,7 @@ use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
@@ -40,6 +41,12 @@ final readonly class ItemHandler implements ElementHandler
 	public function fields(): array
 	{
 		return ['roomId', 'kind', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+	}
+
+	/** @return list<string> */
+	public function restorableFields(): array
+	{
+		return $this->fields();
 	}
 
 	/** @return array<string, mixed> */
@@ -91,19 +98,25 @@ final readonly class ItemHandler implements ElementHandler
 		$materialId = $fields->nullableId('materialId');
 		$this->materialResolver->resolve($materialId);
 
+		$kind = $fields->enum('kind', ItemKindEnum::class);
+		$width = $fields->int('width', 1, State::MaxSize);
+		$height = $fields->int('height', 1, State::MaxSize);
+		$params = self::params($fields->raw('params'));
+		CabinetParamsValidator::validate($kind, $params, $width, $height);
+
 		return [
 			'roomId' => $roomId,
-			'kind' => $fields->enum('kind', ItemKindEnum::class)->value,
+			'kind' => $kind->value,
 			'name' => $fields->string('name', 255),
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
 			'y' => $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit),
 			'z' => $fields->int('z', -State::MaxSize, State::MaxSize),
-			'width' => $fields->int('width', 1, State::MaxSize),
+			'width' => $width,
 			'depth' => $fields->int('depth', 1, State::MaxSize),
-			'height' => $fields->int('height', 1, State::MaxSize),
+			'height' => $height,
 			'rotation' => (($fields->int('rotation', -3600, 3600) % 360) + 360) % 360,
 			'materialId' => $materialId,
-			'params' => self::params($fields->raw('params')),
+			'params' => $params,
 		];
 	}
 

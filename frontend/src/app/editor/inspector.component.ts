@@ -2,6 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, input, output, signal} fro
 import {Material, Room} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
+import {CabinetParamsComponent} from './cabinet-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
 
 export interface FieldChange {
@@ -15,6 +16,7 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
+    imports: [CabinetParamsComponent],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,11 +30,23 @@ export class InspectorComponent {
 
     public readonly fieldChange = output<FieldChange>();
 
-    protected readonly fields = computed(() => ElementFields[this.kind()]);
+    protected readonly fields = computed(() => ElementFields[this.kind()].filter((def) => def.when?.(this.element()) ?? true));
     protected readonly errors = signal<Record<string, string>>({});
 
     protected value(def: FieldDef): string {
         return formatFieldValue(def, this.element()[def.key]);
+    }
+
+    /** Current params of the element for the cabinet form. */
+    protected params(def: FieldDef): Record<string, unknown> {
+        const value = this.element()[def.key];
+        return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+    }
+
+    protected commitValue(def: FieldDef, value: unknown): void {
+        if (isChanged(this.element()[def.key], value)) {
+            this.fieldChange.emit({key: def.key, value});
+        }
     }
 
     protected commit(def: FieldDef, event: Event): void {
@@ -47,8 +61,6 @@ export class InspectorComponent {
             const {[def.key]: _removed, ...rest} = all;
             return rest;
         });
-        if (isChanged(this.element()[def.key], parsed.value)) {
-            this.fieldChange.emit({key: def.key, value: parsed.value});
-        }
+        this.commitValue(def, parsed.value);
     }
 }

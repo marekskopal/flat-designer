@@ -40,6 +40,12 @@ final readonly class RoomHandler implements ElementHandler
 		return ['code', 'name', 'type', 'polygon', 'ceilingHeight', 'floorMaterialId', 'wallFinishes'];
 	}
 
+	/** @return list<string> */
+	public function restorableFields(): array
+	{
+		return $this->fields();
+	}
+
 	/** @return array<string, mixed> */
 	public function defaults(array $fields): array
 	{

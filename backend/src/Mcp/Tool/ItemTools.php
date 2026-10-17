@@ -6,6 +6,7 @@ namespace FlatDesigner\Mcp\Tool;
 
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
@@ -19,7 +20,27 @@ final readonly class ItemTools
 	/** A JSON object (PHP arrays would otherwise be advertised as JSON arrays). */
 	private const array ParamsSchema = [
 		'type' => ['object', 'null'],
-		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params)',
+		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params); '
+			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet)',
+		'properties' => [
+			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts'],
+			'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles],
+			'fronts' => [
+				'type' => 'array',
+				'description' => 'fronts from the bottom up; fronts without height share the rest',
+				'items' => [
+					'type' => 'object',
+					'properties' => [
+						'type' => ['type' => 'string', 'enum' => CabinetParamsValidator::FrontTypes],
+						'height' => ['type' => 'integer', 'minimum' => 1, 'description' => 'mm'],
+						'count' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 4, 'description' => 'leaves side by side'],
+					],
+					'required' => ['type'],
+				],
+			],
+			'blindRight' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run'],
+		],
+		'additionalProperties' => true,
 		'default' => null,
 	];
 

@@ -38,7 +38,9 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   and MCP tools alike), which bumps `projects.revision` (optimistic lock via `If-Match`), validates via
   the type's `ElementHandler` and logs a `ProjectChange` (before/after = the element's scene JSON).
   `UndoService` reverts the current actor's (`ActorContext`: person or MCP client) own changes only
-  while the element is unchanged since. Items, walls, openings and rooms are soft-deleted (`deletedAt`);
+  while the element is unchanged since; it writes back the handler's `restorableFields()` (fields plus
+  derived state: a wall's `openingOffsets`, which moving its start shifts so doors/windows stay put on the
+  plan). Items, walls, openings and rooms are soft-deleted (`deletedAt`);
   repositories' `findByFloor`/`findByWalls` skip deleted rows. A new element field must be added to its
   handler's `fields()`/`normalize()`/`apply()` and to the snapshot restore.
 - MCP: `McpController` (`/mcp`, `mcp/sdk` Streamable HTTP, sessions in `mcp_sessions`) authenticates the
@@ -55,10 +57,15 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   Each tab sends `X-Origin-Client-Id` so it can skip its own echoes. Tests record updates in
   `RecordingMercureHub`.
 - Editor UI: `app/editor` — `EditorStore` (provided per viewer page: selection, edit mode, API calls with
-  the scene revision as `If-Match`, reload after a change), `EditorPanelComponent` (toolbar, Add menu,
-  shortcuts), `InspectorComponent` driven by `ElementFields` (add a field there to make it editable).
-  Engine picking: builders tag objects with `itemId`/`openingId`/`wallId`/`roomId` in `userData`
-  (`selection.ts`); item drag works in edit mode when the camera looks down.
+  the scene revision as `If-Match`; the result's element is patched into the scene by `scene-patch.ts`,
+  falling back to a reload), `EditorPanelComponent` (toolbar, Add menu, shortcuts), `InspectorComponent`
+  driven by `ElementFields` (add a field there to make it editable; `when` limits a field by element, e.g.
+  the `cabinet` form for cabinet params). Engine picking: builders tag objects with
+  `itemId`/`openingId`/`wallId`/`roomId` in `userData` (`selection.ts`). In edit mode with the camera
+  looking down, items, walls and openings drag, and the selected wall's ends / room's corners get handles
+  (overlay scene, drawn above the section cut); one drag = one `onEdit` = one change. `ViewerEngine.load()`
+  of the same floor diffs the scene and rebuilds only changed items/walls/rooms (and neighbouring wall
+  mitres, `wallJoints()`).
 - Walkthrough (View → Walk): `viewer/engine/walkthrough.ts`, first person at 1630 mm eye height with pointer
   lock (WASD/arrows, Shift runs, Esc — i.e. losing the lock — returns to the 3D overview). It collides in plan mm
   against `wallColliders()` (wall pieces at floor level; doors are gaps, windows solid), items do not block.

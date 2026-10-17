@@ -1,0 +1,87 @@
+<div class="cabinet">
+    <div class="row">
+        <label class="cell">
+            <span class="cell__label">Plinth <span class="cell__unit">mm</span></span>
+            <input
+                class="input input--compact"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                [value]="cabinet().plinth ?? ''"
+                [disabled]="disabled()"
+                (change)="setNumber('plinth', $event)"
+            />
+        </label>
+        <label class="cell">
+            <span class="cell__label">Handle</span>
+            <select class="input input--compact" [disabled]="disabled()" (change)="setHandle($event)">
+                <option value="" [selected]="cabinet().handle === undefined">—</option>
+                @for (handle of handles; track handle) {
+                    <option [value]="handle" [selected]="handle === cabinet().handle">{{ handle }}</option>
+                }
+            </select>
+        </label>
+    </div>
+    <label class="cell">
+        <span class="cell__label">Blind right (hidden in a corner) <span class="cell__unit">mm</span></span>
+        <input
+            class="input input--compact"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            [value]="cabinet().blindRight ?? ''"
+            [disabled]="disabled()"
+            (change)="setNumber('blindRight', $event)"
+        />
+    </label>
+
+    <div class="fronts">
+        <span class="cell__label">Fronts, top to bottom <span class="cell__unit">height mm (blank: share the rest) · leaves</span></span>
+        @if (fronts().length === 0) {
+            <p class="hint">One door by default.</p>
+        }
+        @for (row of frontsTopDown(); track row.index) {
+            @let index = row.index;
+            @let shown = row.front;
+            <div class="front">
+                <select class="input input--compact front__type" [attr.aria-label]="'Front ' + (index + 1) + ' type'" [disabled]="disabled()" (change)="setFrontType(index, $event)">
+                    @for (type of frontTypes; track type) {
+                        <option [value]="type" [selected]="type === shown.type">{{ type }}</option>
+                    }
+                </select>
+                <input
+                    class="input input--compact front__height"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="auto"
+                    [attr.aria-label]="'Front ' + (index + 1) + ' height'"
+                    [value]="shown.height ?? ''"
+                    [disabled]="disabled()"
+                    (change)="setFrontNumber(index, 'height', $event)"
+                />
+                <input
+                    class="input input--compact front__count"
+                    type="number"
+                    min="1"
+                    max="4"
+                    step="1"
+                    placeholder="1"
+                    [attr.aria-label]="'Front ' + (index + 1) + ' leaves'"
+                    [value]="shown.count ?? ''"
+                    [disabled]="disabled()"
+                    (change)="setFrontNumber(index, 'count', $event)"
+                />
+                <button type="button" class="icon" title="Move up" [disabled]="disabled() || index === fronts().length - 1" (click)="move(index, 1)">↑</button>
+                <button type="button" class="icon" title="Move down" [disabled]="disabled() || index === 0" (click)="move(index, -1)">↓</button>
+                <button type="button" class="icon icon--danger" title="Remove" [disabled]="disabled()" (click)="remove(index)">×</button>
+            </div>
+        }
+        <button type="button" class="add" [disabled]="disabled()" (click)="add()">+ Front on top</button>
+    </div>
+    @if (error(); as message) {
+        <span class="error">{{ message }}</span>
+    }
+</div>

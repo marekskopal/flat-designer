@@ -63,7 +63,11 @@ final readonly class WallTools
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft"
 	 * @param list<string>|null $clear fields to set to none: "materialId"
 	 */
-	#[McpTool(name: 'update_wall', description: 'Change a wall. Only the given fields change. Its openings must still fit.')]
+	#[McpTool(
+		name: 'update_wall',
+		description: 'Change a wall. Only the given fields change. Moving the start point shifts the offsets of its doors and windows so they '
+			. 'stay in place on the plan; they must still fit the wall.',
+	)]
 	public function updateWall(
 		int $projectId,
 		int $floorId,

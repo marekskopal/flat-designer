@@ -16,7 +16,7 @@ import {Room, Scene} from '@app/models/scene';
 import {environment} from '@environments/environment';
 
 import {Selection} from './engine/selection';
-import {ViewerEngine, ViewPreset} from './engine/viewer-engine';
+import {EditHandler, ViewerEngine, ViewPreset} from './engine/viewer-engine';
 
 /** Hosts the three.js canvas. Persistent display options are inputs; one-off camera moves are methods. */
 @Component({
@@ -43,13 +43,14 @@ export class ViewerComponent {
     /** Section plane height in mm; null shows everything. */
     public readonly sectionHeight = input<number | null>(null);
     public readonly selection = input<Selection | null>(null);
-    /** Enables dragging items in the top view. */
+    /** Enables dragging items, walls, wall ends, doors / windows and room corners in the top view. */
     public readonly editMode = input(false);
+    /** Commits a drag; resolves true when the edit was applied (the scene input then changes). */
+    public readonly editHandler = input<EditHandler>(() => Promise.resolve(false));
     /** Width (px) of UI overlapping the canvas on the left. */
     public readonly insetLeft = input(0);
 
     public readonly selected = output<Selection | null>();
-    public readonly itemMoved = output<{itemId: number; x: number; y: number}>();
     /** The walkthrough ended (Esc); the camera returns to the overview. */
     public readonly walkthroughEnded = output();
     /** Whether the walkthrough has the mouse captured. */
@@ -63,7 +64,7 @@ export class ViewerComponent {
         afterNextRender(() => {
             const engine = new ViewerEngine(this.host().nativeElement);
             engine.onSelect = (selection): void => this.selected.emit(selection);
-            engine.onItemMoved = (itemId, x, y): void => this.itemMoved.emit({itemId, x, y});
+            engine.onEdit = (selection, fields): Promise<boolean> => this.editHandler()(selection, fields);
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             this.engine.set(engine);

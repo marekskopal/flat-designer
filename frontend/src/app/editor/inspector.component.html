@@ -1,5 +1,5 @@
 <div class="fields">
-    @for (def of fields(); track def.key) {
+    @for (def of fields(); track def.key + ':' + def.type) {
         <div class="field" [class.field--half]="def.half">
             <label class="field__label" [for]="'field-' + def.key">
                 {{ def.label }}
@@ -43,6 +43,9 @@
                         [disabled]="disabled()"
                         (change)="commit(def, $event)"
                     />
+                }
+                @case ('cabinet') {
+                    <fd-cabinet-params [params]="params(def)" [disabled]="disabled()" (paramsChange)="commitValue(def, $event)" />
                 }
                 @case ('json') {
                     <textarea [id]="'field-' + def.key" class="input input--compact input--code" rows="3" [value]="value(def)" [disabled]="disabled()" (change)="commit(def, $event)"></textarea>

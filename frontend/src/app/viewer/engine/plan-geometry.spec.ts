@@ -2,15 +2,23 @@ import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 import {
     collideCircle,
+    edgeMidpoints,
     entranceWalkStart,
+    insertVertex,
+    isSimplePolygon,
+    moveWallEnds,
     pointInPolygon,
     polygonCentroid,
     polygonSignedArea,
+    removeVertex,
+    slideOpening,
+    snapPoint,
     snapToGrid,
     stackFronts,
     wallColliders,
     wallFrame,
     wallGapsAlongEdge,
+    wallJoints,
     wallPieces,
 } from './plan-geometry';
 
@@ -197,5 +205,126 @@ describe('entranceWalkStart', () => {
     it('needs a door: French windows and interior doors alone give no entrance', () => {
         expect(entranceWalkStart([wall([{...opening(1000, 1800, 2200), type: 'Window'}])], [flat])).toBeNull();
         expect(entranceWalkStart([wall([opening(1000, 900, 2000)], 'Interior')], [flat])).toBeNull();
+    });
+});
+
+function straightWall(id: number, start: [number, number], end: [number, number], openings: Opening[] = [], thickness = 200): Wall {
+    return {
+        id,
+        name: `W${id}`,
+        type: 'Interior',
+        startX: start[0],
+        startY: start[1],
+        endX: end[0],
+        endY: end[1],
+        thickness,
+        height: 2600,
+        materialId: null,
+        openings,
+    };
+}
+
+describe('snapPoint', () => {
+    const points = [{x: 1000, y: 1000}];
+
+    it('snaps onto a nearby point first', () => {
+        expect(snapPoint({x: 1040, y: 970}, {grid: 10, radius: 100, points, anchors: [{x: 1042, y: 0}]})).toEqual({
+            point: {x: 1000, y: 1000},
+            kind: 'point',
+        });
+    });
+
+    it('aligns each coordinate with an anchor, the other one on the grid', () => {
+        expect(snapPoint({x: 3043, y: 2017}, {grid: 10, radius: 100, points, anchors: [{x: 0, y: 2000}]})).toEqual({
+            point: {x: 3040, y: 2000},
+            kind: 'axis',
+        });
+    });
+
+    it('falls back to the grid, or to whole mm without snapping', () => {
+        expect(snapPoint({x: 3043, y: 2517}, {grid: 10, radius: 100, points})).toEqual({point: {x: 3040, y: 2520}, kind: 'grid'});
+        expect(snapPoint({x: 1040.4, y: 970.6}, {grid: 1, radius: 0, points})).toEqual({point: {x: 1040, y: 971}, kind: 'grid'});
+    });
+});
+
+describe('moveWallEnds', () => {
+    const door = {...opening(1000, 900, 2000), id: 7};
+    const wall = straightWall(1, [0, 0], [4000, 0], [door]);
+
+    it('keeps the openings in place on the plan when the start moves', () => {
+        const moved = moveWallEnds(wall, {x: 500, y: 0}, {x: 4000, y: 0});
+        expect(moved.fits).toBe(true);
+        expect(moved.wall.openings[0].offset).toBe(500);
+        expect(moveWallEnds(wall, {x: -1000, y: 0}, {x: 4000, y: 0}).wall.openings[0].offset).toBe(2000);
+    });
+
+    it('leaves the offsets when only the end moves', () => {
+        expect(moveWallEnds(wall, {x: 0, y: 0}, {x: 3000, y: 500}).wall.openings[0].offset).toBe(1000);
+    });
+
+    it('reports when an opening would fall off the wall', () => {
+        expect(moveWallEnds(wall, {x: 1500, y: 0}, {x: 4000, y: 0}).fits).toBe(false);
+        expect(moveWallEnds(wall, {x: 0, y: 0}, {x: 1800, y: 0}).fits).toBe(false);
+        expect(moveWallEnds(wall, {x: 0, y: 0}, {x: 1900, y: 0}).fits).toBe(true);
+    });
+});
+
+describe('slideOpening', () => {
+    const wall = straightWall(1, [0, 0], [5000, 0], [{...opening(500, 900, 2000), id: 1}, {...opening(3000, 1200, 1200, 900), id: 2}]);
+
+    it('keeps the opening on the wall', () => {
+        expect(slideOpening(wall, 1, -300)).toEqual({offset: 0, fits: true});
+        expect(slideOpening(wall, 2, 4500)).toEqual({offset: 3800, fits: true});
+    });
+
+    it('flags an overlap with another opening', () => {
+        expect(slideOpening(wall, 1, 2200)).toEqual({offset: 2200, fits: false});
+        expect(slideOpening(wall, 1, 2100)).toEqual({offset: 2100, fits: true});
+    });
+});
+
+describe('room vertices', () => {
+    const square: PlanPoint[] = [[0, 0], [1000, 0], [1000, 1000], [0, 1000]];
+
+    it('inserts after the edge start and removes down to a triangle', () => {
+        expect(insertVertex(square, 1, {x: 1200.4, y: 500})).toEqual([[0, 0], [1000, 0], [1200, 500], [1000, 1000], [0, 1000]]);
+        expect(removeVertex(square, 2)).toEqual([[0, 0], [1000, 0], [0, 1000]]);
+        expect(removeVertex([[0, 0], [1000, 0], [0, 1000]], 0)).toBeNull();
+    });
+
+    it('finds edge midpoints', () => {
+        expect(edgeMidpoints(square)[3]).toEqual({x: 0, y: 500});
+    });
+
+    it('tells simple polygons from crossing or degenerate ones', () => {
+        expect(isSimplePolygon(square)).toBe(true);
+        expect(isSimplePolygon([[0, 0], [1000, 1000], [1000, 0], [0, 1000]])).toBe(false);
+        expect(isSimplePolygon([[0, 0], [1000, 0], [2000, 0]])).toBe(false);
+        expect(isSimplePolygon([[0, 0], [0, 0], [1000, 0], [0, 1000]])).toBe(false);
+    });
+});
+
+describe('wallJoints', () => {
+    it('mitres an L corner: inner faces cut short, outer faces extended', () => {
+        const joints = wallJoints([straightWall(1, [0, 0], [3000, 0]), straightWall(2, [0, 0], [0, 3000])]);
+        // Wall 1 runs east, its left (north) face is the inner one.
+        expect(joints.get(1)).toEqual({startLeft: -100, startRight: 100, endLeft: 0, endRight: 0});
+        // Wall 2 runs north, its left (west) face is the outer one.
+        expect(joints.get(2)).toEqual({startLeft: 100, startRight: -100, endLeft: 0, endRight: 0});
+    });
+
+    it('handles corners at wall ends and different thicknesses', () => {
+        const joints = wallJoints([straightWall(1, [0, 0], [3000, 0], [], 300), straightWall(2, [3000, 3000], [3000, 0], [], 100)]);
+        // Wall 1's end: its north (left) face stops at wall 2's west face, its south face reaches its east face.
+        expect(joints.get(1)).toEqual({startLeft: 0, startRight: 0, endLeft: -50, endRight: 50});
+        // Wall 2 runs south and ends at the corner: its left is east (outer).
+        expect(joints.get(2)).toEqual({startLeft: 0, startRight: 0, endLeft: 150, endRight: -150});
+    });
+
+    it('leaves straight continuations, T joints and free ends square', () => {
+        expect(wallJoints([straightWall(1, [0, 0], [3000, 0]), straightWall(2, [3000, 0], [6000, 0])]).size).toBe(0);
+        const tee = [straightWall(1, [0, 0], [3000, 0]), straightWall(2, [3000, 0], [6000, 0]), straightWall(3, [3000, 0], [3000, 2000])];
+        expect(wallJoints(tee).size).toBe(0);
+        expect(wallJoints([straightWall(1, [0, 0], [3000, 0])]).size).toBe(0);
     });
 });
