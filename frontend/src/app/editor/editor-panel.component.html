@@ -24,19 +24,45 @@
 </section>
 
 <section class="panel__section panel__section--inspector">
-    @if (selected(); as s) {
+    @if (editor.picked().length > 0) {
+        <h2 class="section-title">{{ editor.picked().length }} {{ editor.picked().length === 1 ? 'item' : 'items' }} picked</h2>
+        <div class="group-form">
+            <input #groupName class="input input--compact" aria-label="Group name" value="Group" (keydown.enter)="groupPicked(groupName.value)" />
+            <button type="button" class="tool" [disabled]="editor.busy()" (click)="groupPicked(groupName.value)">Group</button>
+        </div>
+        <p class="hint">Shift+click more items (a grouped one adds its whole group); Shift+click a picked one to drop it, Esc to stop.</p>
+    } @else if (selected(); as s) {
         <h2 class="section-title">{{ s.label }} <span class="section-title__id">#{{ s.element['id'] }}</span></h2>
         <fd-inspector
             [kind]="s.kind"
             [element]="s.element"
             [materials]="scene().materials"
             [rooms]="scene().rooms"
+            [groups]="groups()"
             [disabled]="editor.busy()"
             (fieldChange)="onFieldChange($event)"
         />
+        @if (s.kind === 'group') {
+            <ul class="members">
+                @for (item of groupMembers(); track item.id) {
+                    <li>
+                        <button type="button" class="members__item" (click)="selectItem(item)">{{ item.name }}</button>
+                    </li>
+                } @empty {
+                    <li class="hint">No items (add some with an item's Group field).</li>
+                }
+            </ul>
+            <div class="toolbar">
+                <button type="button" class="tool" title="Keep the items, drop the group" [disabled]="editor.busy()" (click)="editor.ungroupSelected()">
+                    Ungroup
+                </button>
+            </div>
+            <p class="hint">Arrows nudge the group, R / Shift+R turn it; Delete removes it with its items. Double-click (or Alt+click) one of its items to edit just that one.</p>
+        }
     } @else {
         <p class="hint">
-            Click an item, wall, door, window or room to edit it. In the Plan view drag items, walls and doors / windows; a selected
+            Click an item, wall, door, window or room to edit it; an item of a group selects the whole group (Alt+click or double-click
+            for just the item), Shift+click picks items to group them. In the Plan view drag items, groups, walls and doors / windows; a selected
             wall's ends and a selected room's corners get handles (drag a midpoint for a new corner, double-click a corner to remove
             it). Drags snap to the grid and to nearby corners; Shift moves in 1 mm steps without snapping, Esc cancels.
         </p>

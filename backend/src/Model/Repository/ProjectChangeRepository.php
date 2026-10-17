@@ -48,6 +48,12 @@ final class ProjectChangeRepository extends ARepository
 		return $this->actorChanges($projectId, $userId, $mcpClientId)->where(['undone_at', '!=', null])->fetchAll();
 	}
 
+	/** @return list<ProjectChange> the changes of one batch, in the order they were made */
+	public function findBatch(int $projectId, string $batch): array
+	{
+		return $this->select()->where(['project_id' => $projectId, 'batch' => $batch])->orderBy('id', 'ASC')->fetchAll();
+	}
+
 	/** Ends undo and redo for the whole project, e.g. after its floors were replaced by a version. */
 	public function closeAll(int $projectId): void
 	{

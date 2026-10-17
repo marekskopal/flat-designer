@@ -75,6 +75,7 @@ function result(
         revision,
         undone: false,
         createdAt: '',
+        batch: null,
     };
     return {revision, change, element};
 }
@@ -116,5 +117,29 @@ describe('patchScene', () => {
         const patched = patchScene(scene, result('Room', 2, null));
         expect(patched?.rooms).toEqual([]);
         expect(patched?.items[0].roomId).toBeNull();
+    });
+
+    it('applies every change of a batch', () => {
+        const grouped = result('Group', 4, {id: 4, name: 'Pair'});
+        const member = result('Item', 9, {...item, groupId: 4});
+        if (grouped.change === null || member.change === null) {
+            throw new Error('changes expected');
+        }
+        const patched = patchScene(scene, {
+            ...grouped,
+            batch: [
+                {change: grouped.change, element: grouped.element},
+                {change: member.change, element: member.element},
+            ],
+        });
+        expect(patched?.groups).toEqual([{id: 4, name: 'Pair'}]);
+        expect(patched?.items[0].groupId).toBe(4);
+        expect(patched?.revision).toBe(8);
+    });
+
+    it('unlinks the items of a deleted group', () => {
+        const patched = patchScene({...scene, groups: [{id: 4, name: 'Pair'}], items: [{...item, groupId: 4}]}, result('Group', 4, null));
+        expect(patched?.groups).toEqual([]);
+        expect(patched?.items[0].groupId).toBeNull();
     });
 });

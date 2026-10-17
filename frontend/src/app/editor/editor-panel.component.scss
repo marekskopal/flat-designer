@@ -54,6 +54,37 @@
     color: $color-danger;
 }
 
+.group-form {
+    display: flex;
+    gap: $space-4;
+    margin-bottom: $space-8;
+
+    .input {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.members {
+    margin: $space-8 0;
+    padding: 0;
+    list-style: none;
+}
+
+.members__item {
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    font-size: $font-size-12;
+    color: $color-accent;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
 .hint {
     margin: 0;
     font-size: $font-size-12;

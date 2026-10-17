@@ -20,8 +20,8 @@ final readonly class FloorTools
 		name: 'get_floor',
 		description: 'Everything on one floor: rooms (polygon outline, area m², ceiling height, floor material, wall finishes), '
 			. 'walls (centre line, thickness, height, type) with their openings (doors/windows: offset from wall start, width, '
-			. 'height, sill), and items (kind, footprint centre x/y, elevation z, size, rotation, room, material, params). '
-			. 'All in mm. Material ids refer to list_materials.',
+			. 'height, sill), items (kind, footprint centre x/y, elevation z, size, rotation, room, group, material, params) and '
+			. 'groups (items forming one piece of furniture, see create_group). All in mm. Material ids refer to list_materials.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function getFloor(int $projectId, int $floorId): array
@@ -34,6 +34,7 @@ final readonly class FloorTools
 			'rooms' => $scene->rooms,
 			'walls' => $scene->walls,
 			'items' => $scene->items,
+			'groups' => $scene->groups,
 		];
 	}
 

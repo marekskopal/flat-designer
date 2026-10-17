@@ -18,6 +18,12 @@ import {environment} from '@environments/environment';
 import {Selection} from './engine/selection';
 import {EditHandler, ViewerEngine, ViewPreset} from './engine/viewer-engine';
 
+/** A click on the view: the element (or group) under the pointer, `additive` for Shift+click. */
+export interface SelectEvent {
+    selection: Selection | null;
+    additive: boolean;
+}
+
 /** Hosts the three.js canvas. Persistent display options are inputs; one-off camera moves are methods. */
 @Component({
     selector: 'fd-viewer',
@@ -43,6 +49,8 @@ export class ViewerComponent {
     /** Section plane height in mm; null shows everything. */
     public readonly sectionHeight = input<number | null>(null);
     public readonly selection = input<Selection | null>(null);
+    /** Items picked with Shift+click, outlined each. */
+    public readonly picked = input<number[]>([]);
     /** Enables dragging items, walls, wall ends, doors / windows and room corners in the top view. */
     public readonly editMode = input(false);
     /** Commits a drag; resolves true when the edit was applied (the scene input then changes). */
@@ -50,7 +58,7 @@ export class ViewerComponent {
     /** Width (px) of UI overlapping the canvas on the left. */
     public readonly insetLeft = input(0);
 
-    public readonly selected = output<Selection | null>();
+    public readonly selected = output<SelectEvent>();
     /** The walkthrough ended (Esc); the camera returns to the overview. */
     public readonly walkthroughEnded = output();
     /** Whether the walkthrough has the mouse captured. */
@@ -63,7 +71,7 @@ export class ViewerComponent {
     public constructor() {
         afterNextRender(() => {
             const engine = new ViewerEngine(this.host().nativeElement);
-            engine.onSelect = (selection): void => this.selected.emit(selection);
+            engine.onSelect = (selection, additive): void => this.selected.emit({selection, additive});
             engine.onEdit = (selection, fields): Promise<boolean> => this.editHandler()(selection, fields);
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
@@ -90,6 +98,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
+        effect(() => this.engine()?.setPicked(this.picked()));
         effect(() => this.engine()?.setEditMode(this.editMode()));
         effect(() => this.engine()?.setInsetLeft(this.insetLeft()));
 

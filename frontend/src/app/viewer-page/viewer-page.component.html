@@ -5,6 +5,7 @@
     [labelsVisible]="labelsVisible()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
+    [picked]="editor.picked()"
     [editMode]="editor.enabled()"
     [insetLeft]="walking() ? 0 : panelInset"
     (selected)="onSelected($event)"

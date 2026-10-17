@@ -20,6 +20,7 @@ const change = {
     revision: 8,
     undone: false,
     createdAt: '2026-10-17T10:00:00+00:00',
+    batch: null,
 };
 
 describe('EditorStore', () => {
@@ -100,5 +101,28 @@ describe('EditorStore', () => {
 
         expect(api['delete']).toHaveBeenCalledWith(1, 3, 'item', 42, 7);
         expect(store.selection()).toBeNull();
+    });
+
+    it('picks items with Shift, a group as all its items, and groups them', async () => {
+        scene = {
+            ...scene,
+            items: [{id: 1, groupId: null}, {id: 2, groupId: 5}, {id: 3, groupId: 5}] as Scene['items'],
+            groups: [{id: 5, name: 'Pair'}],
+        };
+        api['createGroup'] = vi.fn(async (): Promise<EditResult> => ({revision: 8, change: null, element: {id: 6, name: 'Bench'}}));
+        store.select({kind: 'item', id: 1});
+
+        store.togglePicked({kind: 'group', id: 5});
+        expect(store.picked()).toEqual([1, 2, 3]);
+        expect(store.selection()).toBeNull();
+
+        store.togglePicked({kind: 'group', id: 5});
+        expect(store.picked()).toEqual([1]);
+
+        store.togglePicked({kind: 'item', id: 3});
+        await store.groupPicked('Bench');
+        expect(api['createGroup']).toHaveBeenCalledWith(1, 3, 'Bench', [1, 3], 7);
+        expect(store.selection()).toEqual({kind: 'group', id: 6});
+        expect(store.picked()).toEqual([]);
     });
 });

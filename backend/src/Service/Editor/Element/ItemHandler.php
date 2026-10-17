@@ -11,7 +11,9 @@ use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
+use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
@@ -28,6 +30,7 @@ final readonly class ItemHandler implements ElementHandler
 	public function __construct(
 		private ItemRepository $itemRepository,
 		private RoomRepository $roomRepository,
+		private ItemGroupRepository $groupRepository,
 		private MaterialResolver $materialResolver,
 		private ItemKindCatalog $catalog,
 	) {
@@ -41,7 +44,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'kind', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+		return ['roomId', 'groupId', 'kind', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
 	}
 
 	/** @return list<string> */
@@ -58,6 +61,7 @@ final readonly class ItemHandler implements ElementHandler
 
 		return [
 			'roomId' => null,
+			'groupId' => null,
 			'kind' => ItemKindEnum::Box->value,
 			'name' => ($kind ?? ItemKindEnum::Box)->value,
 			'x' => 0,
@@ -96,6 +100,8 @@ final readonly class ItemHandler implements ElementHandler
 		$fields = new FieldReader($state);
 		$roomId = $fields->nullableId('roomId');
 		$this->room($floor, $roomId);
+		$groupId = $fields->nullableId('groupId');
+		$this->group($floor, $groupId);
 		$materialId = $fields->nullableId('materialId');
 		$this->materialResolver->resolve($materialId);
 
@@ -111,6 +117,7 @@ final readonly class ItemHandler implements ElementHandler
 
 		return [
 			'roomId' => $roomId,
+			'groupId' => $groupId,
 			'kind' => $kind->value,
 			'name' => $fields->string('name', 255),
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
@@ -172,6 +179,7 @@ final readonly class ItemHandler implements ElementHandler
 	{
 		$fields = new FieldReader($state);
 		$item->room = $this->room($item->floor, $fields->nullableId('roomId'));
+		$item->group = $this->group($item->floor, $fields->nullableId('groupId'));
 		$item->kind = $fields->enum('kind', ItemKindEnum::class);
 		$item->name = $fields->string('name', 255);
 		$item->x = $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit);
@@ -199,6 +207,20 @@ final readonly class ItemHandler implements ElementHandler
 		}
 
 		return $room;
+	}
+
+	private function group(Floor $floor, ?int $groupId): ?ItemGroup
+	{
+		if ($groupId === null) {
+			return null;
+		}
+
+		$group = $this->groupRepository->findOnFloor($floor->id, $groupId);
+		if ($group === null || $group->deletedAt !== null) {
+			throw EditException::invalid(sprintf('Group %d is not on this floor.', $groupId));
+		}
+
+		return $group;
 	}
 
 	/** @return array<string, mixed> */

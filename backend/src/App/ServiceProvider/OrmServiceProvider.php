@@ -6,6 +6,7 @@ namespace FlatDesigner\App\ServiceProvider;
 
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
+use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\OAuthAuthorization;
 use FlatDesigner\Model\Entity\OAuthClient;
@@ -18,6 +19,7 @@ use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OAuthAuthorizationRepository;
@@ -60,6 +62,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			WallRepository::class,
 			OpeningRepository::class,
 			ItemRepository::class,
+			ItemGroupRepository::class,
 			UserRepository::class,
 		], true);
 	}
@@ -86,6 +89,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);
 		$this->addRepository($container, $orm, OpeningRepository::class, Opening::class);
 		$this->addRepository($container, $orm, ItemRepository::class, Item::class);
+		$this->addRepository($container, $orm, ItemGroupRepository::class, ItemGroup::class);
 		$this->addRepository($container, $orm, UserRepository::class, User::class);
 	}
 

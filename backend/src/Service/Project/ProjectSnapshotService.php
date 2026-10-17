@@ -15,12 +15,14 @@ use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
+use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
@@ -37,7 +39,8 @@ use const JSON_THROW_ON_ERROR;
  * JSON stored in `ProjectVersion::$snapshot`, serves floor scenes straight from it and restores it.
  *
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
- * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto]}]}` — each floor entry plus
+ * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto]}]}` (`groups`
+ * missing in snapshots taken before item groups existed) — each floor entry plus
  * the materials is exactly the viewer's `SceneDto`, so a version is rendered without touching the
  * working copy. Ids inside are those of the working copy at the time and only link entries together.
  */
@@ -53,6 +56,7 @@ final readonly class ProjectSnapshotService
 		private WallRepository $wallRepository,
 		private OpeningRepository $openingRepository,
 		private ItemRepository $itemRepository,
+		private ItemGroupRepository $groupRepository,
 	) {
 	}
 
@@ -61,7 +65,7 @@ final readonly class ProjectSnapshotService
 		$floors = [];
 		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
 			$scene = $this->sceneProvider->getScene($floor);
-			$floors[] = ['floor' => $scene->floor, 'rooms' => $scene->rooms, 'walls' => $scene->walls, 'items' => $scene->items];
+			$floors[] = ['floor' => $scene->floor, 'rooms' => $scene->rooms, 'walls' => $scene->walls, 'items' => $scene->items, 'groups' => $scene->groups];
 		}
 
 		return json_encode(
@@ -120,7 +124,7 @@ final readonly class ProjectSnapshotService
 		$data = $this->read($snapshot);
 
 		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
-			// Rooms, walls, openings and items go with it (ON DELETE CASCADE).
+			// Rooms, walls, openings, items and groups go with it (ON DELETE CASCADE).
 			$this->floorRepository->delete($floor);
 		}
 
@@ -136,7 +140,8 @@ final readonly class ProjectSnapshotService
 
 			$roomIds = $this->restoreRooms($floor, $entry->objects('rooms'), $materials);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
-			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds);
+			$groupIds = $this->restoreGroups($floor, $entry->raw('groups') === null ? [] : $entry->objects('groups'));
+			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds, $groupIds);
 		}
 	}
 
@@ -211,15 +216,32 @@ final readonly class ProjectSnapshotService
 	}
 
 	/**
+	 * @param list<SnapshotReader> $groups
+	 * @return array<int, ItemGroup> new groups by their id in the snapshot
+	 */
+	private function restoreGroups(Floor $floor, array $groups): array
+	{
+		$restored = [];
+		foreach ($groups as $data) {
+			$group = $this->stamp(new ItemGroup(floor: $floor, name: $data->string('name')));
+			$this->groupRepository->persist($group);
+			$restored[$data->int('id')] = $group;
+		}
+
+		return $restored;
+	}
+
+	/**
 	 * @param list<SnapshotReader> $items
 	 * @param array<int, Material> $materials
 	 * @param array<int, Room> $roomIds
+	 * @param array<int, ItemGroup> $groupIds
 	 */
-	private function restoreItems(Floor $floor, array $items, array $materials, array $roomIds): void
+	private function restoreItems(Floor $floor, array $items, array $materials, array $roomIds, array $groupIds): void
 	{
 		foreach ($items as $data) {
 			$params = $data->raw('params');
-			$this->itemRepository->persist($this->stamp(new Item(
+			$item = $this->stamp(new Item(
 				floor: $floor,
 				room: $roomIds[$data->nullableInt('roomId') ?? 0] ?? null,
 				kind: ItemKindEnum::from($data->string('kind')),
@@ -233,7 +255,9 @@ final readonly class ProjectSnapshotService
 				rotation: $data->int('rotation'),
 				material: $materials[$data->nullableInt('materialId') ?? 0] ?? null,
 				params: $params === null || $params === [] ? null : json_encode($params, JSON_THROW_ON_ERROR),
-			)));
+			));
+			$item->group = $groupIds[$data->nullableInt('groupId') ?? 0] ?? null;
+			$this->itemRepository->persist($item);
 		}
 	}
 

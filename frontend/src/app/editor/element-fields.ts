@@ -7,7 +7,7 @@ import {isWardrobe} from './wardrobe-params';
  * `cabinet`: the structured form for a cabinet's params (plinth, handle, fronts, blindRight); `wardrobe`: the same for
  * a sliding-door wardrobe (doors, plinth, profile material, mirror doors).
  */
-export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json' | 'bool' | 'cabinet' | 'wardrobe';
+export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'group' | 'json' | 'bool' | 'cabinet' | 'wardrobe';
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -44,6 +44,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'z', label: 'Elevation', type: 'int', unit: 'mm', half: true},
         {key: 'rotation', label: 'Rotation', type: 'int', unit: '°'},
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
+        {key: 'groupId', label: 'Group', type: 'group', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
         {key: 'params', label: 'Cabinet', type: 'cabinet', when: isCabinet},
         {key: 'params', label: 'Wardrobe', type: 'wardrobe', when: isWardrobe},
@@ -81,6 +82,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
         {key: 'wallFinishes', label: 'Wall finishes [{materialId, bottom, top}] (JSON)', type: 'json'},
     ],
+    group: [{key: 'name', label: 'Name', type: 'text'}],
 };
 
 export type ParsedValue = {ok: true; value: unknown} | {ok: false; error: string};
@@ -120,6 +122,7 @@ export function parseFieldValue(def: FieldDef, raw: string): ParsedValue {
         }
         case 'material':
         case 'room':
+        case 'group':
             return {ok: true, value: Number(text)};
         case 'json':
             try {

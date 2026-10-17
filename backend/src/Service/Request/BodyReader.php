@@ -50,4 +50,22 @@ final readonly class BodyReader
 
 		return self::int($data, $key);
 	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @return list<int>
+	 */
+	public static function intList(array $data, string $key): array
+	{
+		$value = $data[$key] ?? null;
+		$list = [];
+		foreach (is_array($value) && array_is_list($value) ? $value : [null] as $item) {
+			if (!is_int($item)) {
+				throw new InvalidRequestException(sprintf('Field "%s" must be a list of integers.', $key));
+			}
+			$list[] = $item;
+		}
+
+		return $list;
+	}
 }

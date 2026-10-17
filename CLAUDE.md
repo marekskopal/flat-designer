@@ -43,6 +43,12 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   plan). Items, walls, openings and rooms are soft-deleted (`deletedAt`);
   repositories' `findByFloor`/`findByWalls` skip deleted rows. A new element field must be added to its
   handler's `fields()`/`normalize()`/`apply()` and to the snapshot restore.
+- Item groups (`ItemGroup`, `items.group_id`, one level, may be empty): membership is the item field
+  `groupId`; `SceneEditor::createGroup/moveGroup/duplicateGroup/ungroup/deleteGroup` change several elements
+  under one revision as a `ChangeBatch` (`project_changes.batch`; the first change carries the operation's
+  summary). `UndoService` reverts a batch as a whole (backwards for undo) and closes all of it on a conflict;
+  `EditResultDto::$batch` lists every change, which `scene-patch.ts` applies in order. In the viewer, clicking
+  a grouped item selects the group (Alt/double-click: the item), Shift+click picks items to group.
 - MCP: `McpController` (`/mcp`, `mcp/sdk` Streamable HTTP, sessions in `mcp_sessions`) authenticates the
   OAuth access token (`OAuth\AuthorizationService`, ported from ukolio), sets `McpUserContext` and the
   agent `ActorContext`. Tools live in `src/Mcp/Tool` (discovered by `#[McpTool]`, needs symfony/finder);

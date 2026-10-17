@@ -1,6 +1,13 @@
 import {DatePipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input} from '@angular/core';
 import {Change} from '@app/models/editor';
+
+/** One row of the list: a change, or a batch shown as its first change (which names the operation). */
+interface ActivityRow {
+    change: Change;
+    /** Further changes of the batch (e.g. the items of a moved group). */
+    more: number;
+}
 
 /** Recent changes of the project: who (a person or an agent) changed what. */
 @Component({
@@ -8,9 +15,15 @@ import {Change} from '@app/models/editor';
     imports: [DatePipe],
     template: `
         <ul class="activity">
-            @for (change of changes(); track change.id) {
+            @for (row of rows(); track row.change.id) {
+                @let change = row.change;
                 <li class="activity__row" [class.activity__row--undone]="change.undone">
-                    <span class="activity__summary">{{ change.summary }}</span>
+                    <span class="activity__summary">
+                        {{ change.summary }}
+                        @if (row.more > 0) {
+                            <span class="activity__more">+{{ row.more }}</span>
+                        }
+                    </span>
                     <span class="activity__meta">
                         @if (change.actorType === 'Agent') {
                             <span class="activity__agent">{{ change.actorName }}</span>
@@ -57,6 +70,10 @@ import {Change} from '@app/models/editor';
             font-size: $font-size-12;
         }
 
+        .activity__more {
+            color: $color-text-subtle;
+        }
+
         .activity__meta,
         .activity__empty {
             font-size: 11px;
@@ -75,4 +92,27 @@ import {Change} from '@app/models/editor';
 })
 export class ActivityComponent {
     public readonly changes = input<Change[]>([]);
+
+    /** The changes newest first, each batch collapsed into one row at its newest position. */
+    protected readonly rows = computed((): ActivityRow[] => {
+        const rows: ActivityRow[] = [];
+        const batches = new Map<string, ActivityRow>();
+        for (const change of this.changes()) {
+            const row = change.batch === null ? undefined : batches.get(change.batch);
+            if (row === undefined) {
+                const added = {change, more: 0};
+                rows.push(added);
+                if (change.batch !== null) {
+                    batches.set(change.batch, added);
+                }
+                continue;
+            }
+            row.more++;
+            // The batch's first change (lowest id) carries the operation's summary.
+            if (change.id < row.change.id) {
+                row.change = change;
+            }
+        }
+        return rows;
+    });
 }

@@ -16,7 +16,7 @@ use Mcp\Schema\ToolAnnotations;
 /** Items: cabinets, appliances, sanitary ware, fences, … (see list_item_kinds). */
 final readonly class ItemTools
 {
-	private const array Clearable = ['roomId', 'materialId'];
+	private const array Clearable = ['roomId', 'groupId', 'materialId'];
 
 	/** A JSON object (PHP arrays would otherwise be advertised as JSON arrays). */
 	private const array ParamsSchema = [
@@ -72,6 +72,7 @@ final readonly class ItemTools
 	 * @param int|null $z bottom elevation above the floor, mm
 	 * @param int|null $rotation degrees counter-clockwise; 0 = front facing south, 90 east, 180 north, 270 west
 	 * @param int|null $roomId room the item belongs to (from get_floor)
+	 * @param int|null $groupId group (piece of furniture) the item is part of (from get_floor)
 	 * @param int|null $materialId body/front material (from list_materials)
 	 * @param array<string, mixed>|null $params kind-specific options (see list_item_kinds)
 	 */
@@ -89,6 +90,7 @@ final readonly class ItemTools
 		?int $z = null,
 		?int $rotation = null,
 		?int $roomId = null,
+		?int $groupId = null,
 		?int $materialId = null,
 		#[Schema(definition: self::ParamsSchema)]
 		?array $params = null,
@@ -108,6 +110,7 @@ final readonly class ItemTools
 				'z' => $z,
 				'rotation' => $rotation,
 				'roomId' => $roomId,
+				'groupId' => $groupId,
 				'materialId' => $materialId,
 				'params' => $params,
 			]),
@@ -120,10 +123,14 @@ final readonly class ItemTools
 	 * @param int|null $y footprint centre, mm north
 	 * @param int|null $z bottom elevation, mm
 	 * @param int|null $rotation degrees counter-clockwise, 0 = front facing south
+	 * @param int|null $groupId group to move the item into (from get_floor)
 	 * @param array<string, mixed>|null $params replaces all params of the item
-	 * @param list<string>|null $clear fields to set to none: "roomId", "materialId"
+	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId"
 	 */
-	#[McpTool(name: 'update_item', description: 'Change an item. Only the given fields change; use clear to unset roomId or materialId.')]
+	#[McpTool(
+		name: 'update_item',
+		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId or materialId.',
+	)]
 	public function updateItem(
 		int $projectId,
 		int $floorId,
@@ -138,6 +145,7 @@ final readonly class ItemTools
 		?int $height = null,
 		?int $rotation = null,
 		?int $roomId = null,
+		?int $groupId = null,
 		?int $materialId = null,
 		#[Schema(definition: self::ParamsSchema)]
 		?array $params = null,
@@ -159,6 +167,7 @@ final readonly class ItemTools
 				'height' => $height,
 				'rotation' => $rotation,
 				'roomId' => $roomId,
+				'groupId' => $groupId,
 				'materialId' => $materialId,
 				'params' => $params,
 			], $clear, self::Clearable),

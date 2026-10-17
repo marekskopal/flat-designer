@@ -24,6 +24,8 @@ final readonly class ChangeDto
 		public int $revision,
 		public bool $undone,
 		public string $createdAt,
+		/** Changes of one operation on several elements share it; they undo together and list as one. */
+		public ?string $batch,
 	) {
 	}
 
@@ -43,6 +45,7 @@ final readonly class ChangeDto
 			revision: $change->revision,
 			undone: $change->undoneAt !== null,
 			createdAt: $change->createdAt->format(DATE_ATOM),
+			batch: $change->batch,
 		);
 	}
 }

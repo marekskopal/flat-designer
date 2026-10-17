@@ -5,7 +5,14 @@ import {ElementKind} from '@app/viewer/engine/selection';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
 
-const Segments: Record<ElementKind, string> = {item: 'items', wall: 'walls', opening: 'openings', room: 'rooms'};
+const Segments: Record<ElementKind, string> = {item: 'items', wall: 'walls', opening: 'openings', room: 'rooms', group: 'groups'};
+
+/** Shift (mm) and counter-clockwise turn (degrees, about the group's footprint centre) of a group. */
+export interface GroupMove {
+    dx?: number;
+    dy?: number;
+    rotation?: number;
+}
 
 /** The editing endpoints. `baseRevision` goes out as `If-Match`, so a stale edit fails with 409. */
 @Injectable({providedIn: 'root'})
@@ -40,6 +47,24 @@ export class EditorApiService {
     public async duplicate(projectId: number, floorId: number, kind: ElementKind, id: number, baseRevision?: number): Promise<EditResult> {
         return firstValueFrom(
             this.http.post<EditResult>(`${this.url(projectId, floorId, kind)}/${id}/duplicate`, {}, {headers: ifMatch(baseRevision)}),
+        );
+    }
+
+    public async createGroup(projectId: number, floorId: number, name: string, itemIds: number[], baseRevision?: number): Promise<EditResult> {
+        return firstValueFrom(
+            this.http.post<EditResult>(this.url(projectId, floorId, 'group'), {name, itemIds}, {headers: ifMatch(baseRevision)}),
+        );
+    }
+
+    public async moveGroup(projectId: number, floorId: number, id: number, move: GroupMove, baseRevision?: number): Promise<EditResult> {
+        return firstValueFrom(
+            this.http.post<EditResult>(`${this.url(projectId, floorId, 'group')}/${id}/move`, move, {headers: ifMatch(baseRevision)}),
+        );
+    }
+
+    public async ungroup(projectId: number, floorId: number, id: number, baseRevision?: number): Promise<EditResult> {
+        return firstValueFrom(
+            this.http.post<EditResult>(`${this.url(projectId, floorId, 'group')}/${id}/ungroup`, {}, {headers: ifMatch(baseRevision)}),
         );
     }
 

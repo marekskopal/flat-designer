@@ -28,6 +28,8 @@ final readonly class ChangeRecorder
 	 * @param ElementHandler $handler
 	 * @param array<string, mixed>|null $before
 	 * @param array<string, mixed>|null $after
+	 * @param string|null $batch shared by the changes of one operation, see `ChangeBatch`
+	 * @param string|null $summary instead of the one derived from the states (the first change of a batch names the operation)
 	 */
 	public function record(
 		User $user,
@@ -38,6 +40,8 @@ final readonly class ChangeRecorder
 		?array $before,
 		?array $after,
 		int $revision,
+		?string $batch = null,
+		?string $summary = null,
 	): ProjectChange {
 		foreach ($this->changeRepository->findRedoables(
 			$floor->project->id,
@@ -58,11 +62,12 @@ final readonly class ChangeRecorder
 			operation: $operation,
 			elementType: $handler->type(),
 			elementId: $elementId,
-			summary: self::summary($handler, $operation, $before, $after),
+			summary: mb_substr($summary ?? self::summary($handler, $operation, $before, $after), 0, 255),
 			before: $before === null ? null : json_encode($before, JSON_THROW_ON_ERROR),
 			after: $after === null ? null : json_encode($after, JSON_THROW_ON_ERROR),
 			revision: $revision,
 		));
+		$change->batch = $batch;
 		$this->changeRepository->persist($change);
 
 		return $change;

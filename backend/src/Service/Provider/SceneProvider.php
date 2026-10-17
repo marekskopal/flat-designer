@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Provider;
 
 use FlatDesigner\Dto\FloorDto;
+use FlatDesigner\Dto\GroupDto;
 use FlatDesigner\Dto\ItemDto;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
@@ -13,9 +14,11 @@ use FlatDesigner\Dto\SceneDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
+use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\Wall;
+use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
@@ -31,6 +34,7 @@ final readonly class SceneProvider
 		private WallRepository $wallRepository,
 		private OpeningRepository $openingRepository,
 		private ItemRepository $itemRepository,
+		private ItemGroupRepository $groupRepository,
 	) {
 	}
 
@@ -50,6 +54,10 @@ final readonly class SceneProvider
 			rooms: array_map(fn (Room $room): RoomDto => RoomDto::fromEntity($room), $this->roomRepository->findByFloor($floor->id)),
 			walls: array_map(fn (Wall $wall): WallDto => WallDto::fromEntity($wall, $openingsByWall[$wall->id] ?? []), $walls),
 			items: array_map(fn (Item $item): ItemDto => ItemDto::fromEntity($item), $this->itemRepository->findByFloor($floor->id)),
+			groups: array_map(
+				fn (ItemGroup $group): GroupDto => GroupDto::fromEntity($group),
+				$this->groupRepository->findByFloor($floor->id),
+			),
 		);
 	}
 

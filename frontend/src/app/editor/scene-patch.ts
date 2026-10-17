@@ -1,10 +1,11 @@
 import {Change, EditResult} from '@app/models/editor';
-import {Item, Opening, Room, Scene, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Room, Scene, Wall} from '@app/models/scene';
 
 /**
  * The scene after an edit, undo or redo, built from the result's element state instead of loading the
- * floor again. Null when the result cannot be applied safely: the project moved on by more than this one
- * change (someone else edited meanwhile), or a wall came back with openings the result does not carry.
+ * floor again; a batch (a group operation) applies each of its changes in order. Null when the result
+ * cannot be applied safely: the project moved on by more than this one change (someone else edited
+ * meanwhile), or a wall came back with openings the result does not carry.
  */
 export function patchScene(scene: Scene, result: EditResult): Scene | null {
     const change = result.change;
@@ -14,11 +15,16 @@ export function patchScene(scene: Scene, result: EditResult): Scene | null {
     if (scene.revision === undefined || result.revision !== scene.revision + 1) {
         return null;
     }
-    const next = {...scene, revision: result.revision};
-    if (change.floorId !== scene.floor.id) {
-        return next;
+    let next: Scene | null = {...scene, revision: result.revision};
+    for (const entry of result.batch ?? [{change, element: result.element}]) {
+        if (next === null) {
+            return null;
+        }
+        if (entry.change.floorId === scene.floor.id) {
+            next = patchElements(next, entry.change, entry.element);
+        }
     }
-    return patchElements(next, change, result.element);
+    return next;
 }
 
 function patchElements(scene: Scene, change: Change, element: Record<string, unknown> | null): Scene | null {
@@ -36,6 +42,12 @@ function patchElements(scene: Scene, change: Change, element: Record<string, unk
             return patchWall(scene, id, element);
         case 'Opening':
             return patchOpening(scene, id, element);
+        case 'Group': {
+            const group = element as unknown as Group | null;
+            // Items of a deleted group no longer belong to it.
+            const items = group === null ? scene.items.map((i) => (i.groupId === id ? {...i, groupId: null} : i)) : scene.items;
+            return {...scene, groups: upsert(scene.groups ?? [], id, group), items};
+        }
     }
 }
 

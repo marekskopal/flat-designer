@@ -34,6 +34,14 @@
                         }
                     </select>
                 }
+                @case ('group') {
+                    <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
+                        <option value="" [selected]="value(def) === ''">—</option>
+                        @for (group of groups(); track group.id) {
+                            <option [value]="group.id" [selected]="'' + group.id === value(def)">{{ group.name }}</option>
+                        }
+                    </select>
+                }
                 @case ('bool') {
                     <input
                         [id]="'field-' + def.key"

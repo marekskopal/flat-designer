@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
-import {Item, Opening, Room, Scene, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Room, Scene, Wall} from '@app/models/scene';
 import {polygonCentroid} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
@@ -7,7 +7,7 @@ import {ActivityComponent} from './activity.component';
 import {EditorStore} from './editor.store';
 import {FieldChange, InspectorComponent} from './inspector.component';
 
-const KindLabels: Record<ElementKind, string> = {item: 'Item', wall: 'Wall', opening: 'Door / window', room: 'Room'};
+const KindLabels: Record<ElementKind, string> = {item: 'Item', wall: 'Wall', opening: 'Door / window', room: 'Room', group: 'Group'};
 
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
@@ -19,7 +19,7 @@ const NudgeStepCoarse = 100;
 
 /**
  * Editing tools of the viewer panel: undo/redo, add, duplicate, delete, the inspector of the selected
- * element and the activity list, plus the keyboard shortcuts while editing.
+ * element (or grouping of the Shift-picked items) and the activity list, plus the keyboard shortcuts while editing.
  */
 @Component({
     selector: 'fd-editor-panel',
@@ -46,6 +46,12 @@ export class EditorPanelComponent {
         const element = findElement(scene, selection.kind, selection.id);
         return element === null ? null : {kind: selection.kind, label: KindLabels[selection.kind], element};
     });
+    /** Items of the selected group. */
+    protected readonly groupMembers = computed((): Item[] => {
+        const selection = this.editor.selection();
+        return selection?.kind === 'group' ? this.scene().items.filter((i) => i.groupId === selection.id) : [];
+    });
+    protected readonly groups = computed((): Group[] => this.scene().groups ?? []);
     protected readonly selectedWall = computed(() => {
         const selected = this.selected();
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
@@ -56,6 +62,14 @@ export class EditorPanelComponent {
         if (selection !== null) {
             void this.editor.update(selection.kind, selection.id, {[change.key]: change.value});
         }
+    }
+
+    protected groupPicked(name: string): void {
+        void this.editor.groupPicked(name.trim() === '' ? 'Group' : name.trim());
+    }
+
+    protected selectItem(item: Item): void {
+        this.editor.select({kind: 'item', id: item.id});
     }
 
     protected add(event: Event): void {
@@ -121,9 +135,32 @@ export class EditorPanelComponent {
             event.preventDefault();
             void this.editor.deleteSelected();
         } else if (event.key === 'Escape') {
-            this.editor.selection.set(null);
+            this.editor.select(null);
         } else if (!mod) {
             this.moveItem(event);
+            this.moveGroup(event);
+        }
+    }
+
+    /** Arrow keys nudge the selected group, R turns it by 90° about its centre. */
+    private moveGroup(event: KeyboardEvent): void {
+        const selection = this.editor.selection();
+        if (selection?.kind !== 'group') {
+            return;
+        }
+        const step = event.shiftKey ? NudgeStepCoarse : NudgeStep;
+        const moves: Record<string, {dx?: number; dy?: number; rotation?: number}> = {
+            ArrowLeft: {dx: -step},
+            ArrowRight: {dx: step},
+            ArrowUp: {dy: step},
+            ArrowDown: {dy: -step},
+            r: {rotation: 90},
+            R: {rotation: -90},
+        };
+        const move = moves[event.key];
+        if (move !== undefined) {
+            event.preventDefault();
+            void this.editor.moveGroup(selection.id, move);
         }
     }
 
@@ -168,6 +205,8 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             return find(scene.rooms);
         case 'opening':
             return find(scene.walls.flatMap((w): Opening[] => w.openings));
+        case 'group':
+            return find(scene.groups ?? []);
     }
 }
 

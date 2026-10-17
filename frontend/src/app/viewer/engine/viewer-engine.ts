@@ -89,6 +89,7 @@ interface DragBase {
 type Drag = DragBase &
     (
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
+        | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
         | {kind: 'vertex'; room: Room; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
@@ -105,10 +106,14 @@ interface Preview {
  * built from a `Scene`. The Angular component only forwards options and events.
  */
 export class ViewerEngine {
-    /** A click selected an element (or empty space: null). */
-    public onSelect: (selection: Selection | null) => void = () => undefined;
     /**
-     * Commits a drag in edit mode: an item or wall moved, a wall end, door / window or room corner dragged.
+     * A click selected an element (or empty space: null); `additive` for Shift+click, which picks items to group.
+     * Clicking an item of a group selects the group, unless Alt is held, the item is double-clicked or another
+     * item of the same group is selected.
+     */
+    public onSelect: (selection: Selection | null, additive: boolean) => void = () => undefined;
+    /**
+     * Commits a drag in edit mode: an item, group or wall moved, a wall end, door / window or room corner dragged.
      * Until it resolves the dragged state stays on screen; when it was not applied the element snaps back.
      */
     public onEdit: EditHandler = () => Promise.resolve(false);
@@ -140,9 +145,12 @@ export class ViewerEngine {
     private parts: BuildingParts | null = null;
     private labels = new Map<number, CSS2DObject>();
     private highlight: THREE.Mesh | null = null;
-    /** Translucent box with edges around the selected item, wall or opening; follows it while dragged. */
+    /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
-    private outlinedObject: THREE.Object3D | null = null;
+    private outlinedObjects: THREE.Object3D[] = [];
+    /** Items picked with Shift+click, each with its own outline box. */
+    private picked: number[] = [];
+    private pickedOutlines: {mesh: THREE.Mesh; object: THREE.Object3D}[] = [];
     private items = new Map<number, THREE.Object3D>();
     private walls = new Map<number, THREE.Object3D>();
     private openings = new Map<number, THREE.Object3D>();
@@ -239,6 +247,7 @@ export class ViewerEngine {
         this.walkthrough?.setColliders(wallColliders(scene.walls));
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
+        this.setPicked(this.picked);
     }
 
     private build(scene: Scene): void {
@@ -408,14 +417,29 @@ export class ViewerEngine {
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
 
         this.removeOutline();
-        const object = this.objectOf(selection);
-        if (object !== null) {
+        const objects = this.objectsOf(selection);
+        if (objects.length > 0) {
             this.outline = createOutline();
-            this.outlinedObject = object;
+            this.outlinedObjects = objects;
             this.scene.add(this.outline);
             this.updateOutline();
         }
         this.updateHandles();
+    }
+
+    /** Outlines the items picked with Shift+click. */
+    public setPicked(itemIds: number[]): void {
+        this.picked = itemIds;
+        this.removePickedOutlines();
+        for (const id of itemIds) {
+            const object = this.items.get(id);
+            if (object !== undefined) {
+                const mesh = createOutline();
+                this.scene.add(mesh);
+                this.pickedOutlines.push({mesh, object});
+            }
+        }
+        this.updateOutline();
     }
 
     /**
@@ -818,10 +842,14 @@ export class ViewerEngine {
         return null;
     }
 
-    /** A drag of the item, wall or door / window under the pointer, which also gets selected. */
+    /** A drag of the item, group, wall or door / window under the pointer, which also gets selected. */
     private elementDrag(event: PointerEvent): Drag | null {
+        if (event.shiftKey) {
+            // Shift+click picks items; Shift while dragging only switches off snapping.
+            return null;
+        }
         const hit = this.pick(event);
-        const selection = selectionOf(hit?.object ?? null);
+        const selection = this.groupOf(selectionOf(hit?.object ?? null), event);
         const scene = this.sceneData;
         if (hit === undefined || selection === null || scene === null || selection.kind === 'room') {
             return null;
@@ -837,6 +865,12 @@ export class ViewerEngine {
             if (item !== undefined && object !== undefined) {
                 drag = {kind: 'item', plane, grab, moved: false, item, object, x: item.x, y: item.y};
             }
+        } else if (selection.kind === 'group') {
+            const members = scene.items
+                .filter((i) => i.groupId === selection.id)
+                .map((item) => ({item, object: this.items.get(item.id)}))
+                .filter((m): m is {item: Item; object: THREE.Object3D} => m.object !== undefined);
+            drag = {kind: 'group', plane, grab, moved: false, groupId: selection.id, members, dx: 0, dy: 0};
         } else if (selection.kind === 'wall') {
             const wall = scene.walls.find((w) => w.id === selection.id);
             if (wall !== undefined) {
@@ -851,7 +885,7 @@ export class ViewerEngine {
             }
         }
         if (drag !== null && !sameSelection(selection, this.selection)) {
-            this.onSelect(selection);
+            this.onSelect(selection, false);
         }
         return drag;
     }
@@ -880,6 +914,17 @@ export class ViewerEngine {
                 drag.y = snapToGrid(drag.item.y + delta.y, step);
                 drag.object.position.x = drag.x * MM;
                 drag.object.position.z = -drag.y * MM;
+                break;
+            }
+            case 'group': {
+                // The members keep their positions relative to each other (they need not be on the grid).
+                const step = free ? 1 : DragSnap;
+                drag.dx = snapToGrid(delta.x, step);
+                drag.dy = snapToGrid(delta.y, step);
+                for (const {item, object} of drag.members) {
+                    object.position.x = (item.x + drag.dx) * MM;
+                    object.position.z = -(item.y + drag.dy) * MM;
+                }
                 break;
             }
             case 'wall':
@@ -977,8 +1022,23 @@ export class ViewerEngine {
         if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
             return;
         }
-        this.onSelect(selectionOf(this.pick(event)?.object ?? null));
+        this.onSelect(this.groupOf(selectionOf(this.pick(event)?.object ?? null), event), event.shiftKey);
     };
+
+    /**
+     * The group of a clicked item: an item that is part of a group stands for the whole group, unless Alt is
+     * held or an item of the same group is selected already (then its items are picked one by one).
+     */
+    private groupOf(selection: Selection | null, event: MouseEvent): Selection | null {
+        const items = this.sceneData?.items ?? [];
+        const groupId = selection?.kind === 'item' ? (items.find((i) => i.id === selection.id)?.groupId ?? null) : null;
+        if (groupId === null || event.altKey) {
+            return selection;
+        }
+        const current = this.selection;
+        const inside = current?.kind === 'item' && items.find((i) => i.id === current.id)?.groupId === groupId;
+        return inside ? selection : {kind: 'group', id: groupId};
+    }
 
     /** Sends the dragged change; the preview stays until the scene reloads, or snaps back when it was refused. */
     private commit(drag: Drag): void {
@@ -987,6 +1047,11 @@ export class ViewerEngine {
             case 'item':
                 if (drag.x !== drag.item.x || drag.y !== drag.item.y) {
                     edit = {selection: {kind: 'item', id: drag.item.id}, fields: {x: drag.x, y: drag.y}};
+                }
+                break;
+            case 'group':
+                if (drag.dx !== 0 || drag.dy !== 0) {
+                    edit = {selection: {kind: 'group', id: drag.groupId}, fields: {dx: drag.dx, dy: drag.dy}};
                 }
                 break;
             case 'wall': {
@@ -1029,9 +1094,10 @@ export class ViewerEngine {
 
     /** Puts a dragged element back where the scene has it. */
     private restore(drag: Drag): void {
-        if (drag.kind === 'item') {
-            drag.object.position.x = drag.item.x * MM;
-            drag.object.position.z = -drag.item.y * MM;
+        const members = drag.kind === 'item' ? [drag] : drag.kind === 'group' ? drag.members : [];
+        for (const {item, object} of members) {
+            object.position.x = item.x * MM;
+            object.position.z = -item.y * MM;
         }
         this.clearPreview();
         this.setSelection(this.selection);
@@ -1048,8 +1114,14 @@ export class ViewerEngine {
         this.restore(drag);
     }
 
-    /** Double-clicking a room corner removes it (a room keeps at least three). */
+    /** Double-clicking an item of a group selects just that item; double-clicking a room corner removes it (a room keeps at least three). */
     private readonly handleDoubleClick = (event: MouseEvent): void => {
+        const clicked = selectionOf(this.pick(event)?.object ?? null);
+        const grouped = clicked?.kind === 'item' && (this.sceneData?.items.find((i) => i.id === clicked.id)?.groupId ?? null) !== null;
+        if (clicked !== null && grouped && this.walkthrough === null) {
+            this.onSelect(clicked, false);
+            return;
+        }
         if (!this.editMode || !this.isTopDown() || this.selection?.kind !== 'room') {
             return;
         }
@@ -1090,12 +1162,12 @@ export class ViewerEngine {
         this.setPreview(original === undefined ? [] : [original], [group]);
 
         if (this.selection?.kind === 'wall' && this.selection.id === wall.id) {
-            this.outlinedObject = group;
+            this.outlinedObjects = [group];
         } else if (this.selection?.kind === 'opening') {
             const openingId = this.selection.id;
             group.traverse((o) => {
                 if ((o.userData as Record<string, unknown>)['openingId'] === openingId) {
-                    this.outlinedObject = o;
+                    this.outlinedObjects = [o];
                 }
             });
         }
@@ -1243,32 +1315,37 @@ export class ViewerEngine {
         return new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
     }
 
-    private objectOf(selection: Selection | null): THREE.Object3D | null {
+    private objectsOf(selection: Selection | null): THREE.Object3D[] {
+        const objects = (ids: number[], map: Map<number, THREE.Object3D>): THREE.Object3D[] =>
+            ids.map((id) => map.get(id)).filter((o): o is THREE.Object3D => o !== undefined);
         switch (selection?.kind) {
             case 'item':
-                return this.items.get(selection.id) ?? null;
+                return objects([selection.id], this.items);
+            case 'group':
+                return objects(
+                    (this.sceneData?.items ?? []).filter((i) => i.groupId === selection.id).map((i) => i.id),
+                    this.items,
+                );
             case 'wall':
-                return this.walls.get(selection.id) ?? null;
+                return objects([selection.id], this.walls);
             case 'opening':
-                return this.openings.get(selection.id) ?? null;
+                return objects([selection.id], this.openings);
             default:
-                return null;
+                return [];
         }
     }
 
-    /** Fits the outline box to the selected object's current bounds (cheap: a few small objects). */
+    /** Fits the outline boxes to the selected and picked objects' current bounds (cheap: a few small objects). */
     private updateOutline(): void {
-        if (this.outline === null || this.outlinedObject === null) {
-            return;
+        if (this.outline !== null) {
+            fitOutline(this.outline, this.outlinedObjects);
         }
-        const bounds = new THREE.Box3().setFromObject(this.outlinedObject);
-        if (bounds.isEmpty()) {
-            return;
-        }
-        // A few mm larger, so the box does not z-fight with the faces it wraps.
-        const size = bounds.getSize(new THREE.Vector3()).addScalar(0.01);
-        bounds.getCenter(this.outline.position);
-        this.outline.scale.copy(size);
+        this.pickedOutlines.forEach(({mesh, object}) => fitOutline(mesh, [object]));
+    }
+
+    private removePickedOutlines(): void {
+        this.pickedOutlines.forEach(({mesh}) => disposeOutline(mesh));
+        this.pickedOutlines = [];
     }
 
     /** Tints the outline red while a dragged state would be refused. */
@@ -1283,16 +1360,10 @@ export class ViewerEngine {
 
     private removeOutline(): void {
         if (this.outline !== null) {
-            this.outline.removeFromParent();
-            this.outline.traverse((o) => {
-                if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
-                    o.geometry.dispose();
-                    (o.material as THREE.Material).dispose();
-                }
-            });
+            disposeOutline(this.outline);
             this.outline = null;
         }
-        this.outlinedObject = null;
+        this.outlinedObjects = [];
     }
 
     private clearContent(): void {
@@ -1300,6 +1371,7 @@ export class ViewerEngine {
         this.clearPreview();
         this.setSelectedRoom(null);
         this.removeOutline();
+        this.removePickedOutlines();
         this.handles.clear();
         if (this.content !== null) {
             const geometries = new Set<THREE.BufferGeometry>();
@@ -1327,6 +1399,28 @@ export class ViewerEngine {
         this.openings.clear();
         this.joints.clear();
     }
+}
+
+/** Scales an outline box to the joint bounds of the objects, a few mm larger so it does not z-fight with their faces. */
+function fitOutline(outline: THREE.Mesh, objects: THREE.Object3D[]): void {
+    const bounds = new THREE.Box3();
+    objects.forEach((object) => bounds.expandByObject(object));
+    if (bounds.isEmpty()) {
+        return;
+    }
+    const size = bounds.getSize(new THREE.Vector3()).addScalar(0.01);
+    bounds.getCenter(outline.position);
+    outline.scale.copy(size);
+}
+
+function disposeOutline(outline: THREE.Mesh): void {
+    outline.removeFromParent();
+    outline.traverse((o) => {
+        if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
+            o.geometry.dispose();
+            (o.material as THREE.Material).dispose();
+        }
+    });
 }
 
 /** Unit box (scaled to the selection's bounds each frame): translucent faces plus edges, drawn on top. */

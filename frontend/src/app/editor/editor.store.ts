@@ -2,7 +2,7 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {Scene} from '@app/models/scene';
-import {EditorApiService} from '@app/services/editor-api.service';
+import {EditorApiService, GroupMove} from '@app/services/editor-api.service';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
 
 import {patchScene} from './scene-patch';
@@ -20,7 +20,8 @@ export interface EditorContext {
 }
 
 /**
- * Editing state of one viewer: selection, edit mode, running request and the project's recent changes.
+ * Editing state of one viewer: selection (one element, or several items picked with Shift to group them),
+ * edit mode, running request and the project's recent changes.
  * Every edit goes to the API with the scene's revision; the answer's element state is then patched into
  * the scene (the viewer rebuilds just that element), or the floor reloads when that is not safe. Errors are
  * shown by the error interceptor; a 409 (someone changed the project meanwhile) also reloads.
@@ -29,6 +30,8 @@ export interface EditorContext {
 export class EditorStore {
     public readonly enabled = signal(false);
     public readonly selection = signal<Selection | null>(null);
+    /** Items picked with Shift+click, e.g. to group them; while any are picked there is no single selection. */
+    public readonly picked = signal<number[]>([]);
     public readonly busy = signal(false);
     public readonly changes = signal<Change[]>([]);
     public readonly itemKinds = signal<ItemKindInfo[]>([]);
@@ -52,7 +55,7 @@ export class EditorStore {
         const result = await this.run((c) => this.api.create(c.projectId(), c.floorId(), kind, fields, revisionOf(c)));
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
-            this.selection.set({kind, id});
+            this.select({kind, id});
         }
     }
 
@@ -62,6 +65,58 @@ export class EditorStore {
         return result?.change != null;
     }
 
+    /** A click: selects the element (or nothing) and drops the Shift-picked items. */
+    public select(selection: Selection | null): void {
+        this.picked.set([]);
+        this.selection.set(selection);
+    }
+
+    /**
+     * A Shift+click: adds the clicked item (or all items of a group) to the picked items, or takes them out
+     * when they are all picked already. The single selection so far is picked first.
+     */
+    public togglePicked(selection: Selection | null): void {
+        const clicked = this.itemsOf(selection);
+        if (clicked.length === 0) {
+            return;
+        }
+        const picking = this.picked().length > 0;
+        const picked = new Set(picking ? this.picked() : this.itemsOf(this.selection()));
+        // Shift+clicking the selected element itself starts picking with it rather than dropping it.
+        const remove = picking && clicked.every((id) => picked.has(id));
+        clicked.forEach((id) => (remove ? picked.delete(id) : picked.add(id)));
+        this.selection.set(null);
+        this.picked.set([...picked]);
+    }
+
+    /** Groups the picked items and selects the new group. */
+    public async groupPicked(name: string): Promise<void> {
+        const itemIds = this.picked();
+        const result = await this.run((c) => this.api.createGroup(c.projectId(), c.floorId(), name, itemIds, revisionOf(c)));
+        const id = result?.element?.['id'];
+        if (typeof id === 'number') {
+            this.select({kind: 'group', id});
+        }
+    }
+
+    /** Resolves true when the group moved. */
+    public async moveGroup(id: number, move: GroupMove): Promise<boolean> {
+        const result = await this.run((c) => this.api.moveGroup(c.projectId(), c.floorId(), id, move, revisionOf(c)));
+        return result?.change != null;
+    }
+
+    /** Dissolves the selected group; its items stay. */
+    public async ungroupSelected(): Promise<void> {
+        const selection = this.selection();
+        if (selection?.kind !== 'group') {
+            return;
+        }
+        const result = await this.run((c) => this.api.ungroup(c.projectId(), c.floorId(), selection.id, revisionOf(c)));
+        if (result !== null) {
+            this.select(null);
+        }
+    }
+
     public async deleteSelected(): Promise<void> {
         const selection = this.selection();
         if (selection === null) {
@@ -69,7 +124,7 @@ export class EditorStore {
         }
         const result = await this.run((c) => this.api.delete(c.projectId(), c.floorId(), selection.kind, selection.id, revisionOf(c)));
         if (result !== null) {
-            this.selection.set(null);
+            this.select(null);
         }
     }
 
@@ -81,7 +136,7 @@ export class EditorStore {
         const result = await this.run((c) => this.api.duplicate(c.projectId(), c.floorId(), selection.kind, selection.id, revisionOf(c)));
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
-            this.selection.set({kind: selection.kind, id});
+            this.select({kind: selection.kind, id});
         }
     }
 
@@ -102,6 +157,17 @@ export class EditorStore {
         } catch {
             // The error interceptor shows the toast.
         }
+    }
+
+    /** The item ids a selection stands for: the item, or the members of a group. */
+    private itemsOf(selection: Selection | null): number[] {
+        if (selection?.kind === 'item') {
+            return [selection.id];
+        }
+        if (selection?.kind === 'group') {
+            return (this.context?.scene()?.items ?? []).filter((i) => i.groupId === selection.id).map((i) => i.id);
+        }
+        return [];
     }
 
     private async loadItemKinds(): Promise<void> {

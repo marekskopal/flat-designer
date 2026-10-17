@@ -20,7 +20,8 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Editing floor elements (items, walls, openings, rooms). Bodies are JSON objects of the element's
+ * Editing floor elements (items, walls, openings, rooms; groups are created, moved and dissolved through
+ * `GroupController`, renamed, copied and deleted — with their items — here). Bodies are JSON objects of the element's
  * fields as the scene serves them; PATCH changes only the given ones. Send the scene's `revision` as
  * `If-Match` to get 409 instead of overwriting someone else's change. Every answer is an
  * `EditResultDto`; rejected edits answer 404/409/422 with a message (see `EditException`).
@@ -32,6 +33,7 @@ final readonly class ElementController
 		'walls' => ElementTypeEnum::Wall,
 		'openings' => ElementTypeEnum::Opening,
 		'rooms' => ElementTypeEnum::Room,
+		'groups' => ElementTypeEnum::Group,
 	];
 
 	public function __construct(

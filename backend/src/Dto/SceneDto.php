@@ -12,6 +12,7 @@ final readonly class SceneDto
 	 * @param list<RoomDto> $rooms
 	 * @param list<WallDto> $walls
 	 * @param list<ItemDto> $items
+	 * @param list<GroupDto> $groups
 	 */
 	public function __construct(
 		public FloorDto $floor,
@@ -21,6 +22,7 @@ final readonly class SceneDto
 		public array $rooms,
 		public array $walls,
 		public array $items,
+		public array $groups,
 	)
 	{
 	}

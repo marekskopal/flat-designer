@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Editor;
 
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Service\Editor\Element\ElementHandler;
+use FlatDesigner\Service\Editor\Element\GroupHandler;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
@@ -18,6 +19,7 @@ final readonly class ElementHandlers
 		private WallHandler $wallHandler,
 		private OpeningHandler $openingHandler,
 		private RoomHandler $roomHandler,
+		private GroupHandler $groupHandler,
 	) {
 	}
 
@@ -28,6 +30,7 @@ final readonly class ElementHandlers
 			ElementTypeEnum::Wall => $this->wallHandler,
 			ElementTypeEnum::Opening => $this->openingHandler,
 			ElementTypeEnum::Room => $this->roomHandler,
+			ElementTypeEnum::Group => $this->groupHandler,
 		};
 	}
 }

@@ -8,6 +8,7 @@ use FlatDesigner\Controller\McpController;
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
+use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
@@ -29,6 +30,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(ToolErrorTranslatingReferenceHandler::class)]
 #[CoversClass(ProjectTools::class)]
 #[CoversClass(ItemTools::class)]
+#[CoversClass(GroupTools::class)]
 #[CoversClass(WallTools::class)]
 #[CoversClass(OpeningTools::class)]
 final class McpServerTest extends IntegrationTestCase
@@ -62,10 +64,13 @@ final class McpServerTest extends IntegrationTestCase
 			'add_opening',
 			'add_room',
 			'add_wall',
+			'create_group',
+			'delete_group',
 			'delete_item',
 			'delete_opening',
 			'delete_room',
 			'delete_wall',
+			'duplicate_group',
 			'duplicate_item',
 			'get_floor',
 			'get_project',
@@ -74,9 +79,12 @@ final class McpServerTest extends IntegrationTestCase
 			'list_materials',
 			'list_projects',
 			'list_versions',
+			'move_group',
 			'redo',
+			'rename_group',
 			'save_version',
 			'undo',
+			'ungroup',
 			'update_item',
 			'update_opening',
 			'update_room',
@@ -206,6 +214,41 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame([], $scene['items']);
 		self::assertIsList($scene['rooms']);
 		self::assertCount(1, $scene['rooms']);
+	}
+
+	public function testGroupsMoveTheirItemsAsOneUndoStep(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$itemIds = [];
+		foreach ([0, 1000] as $x) {
+			$item = $this->client->call('add_item', $ids + ['kind' => 'Box', 'x' => $x, 'y' => 0]);
+			self::assertIsArray($item);
+			self::assertIsArray($item['element']);
+			$itemIds[] = $item['element']['id'];
+		}
+
+		$group = $this->client->call('create_group', $ids + ['name' => 'Bench', 'itemIds' => $itemIds]);
+		self::assertIsArray($group);
+		self::assertIsArray($group['element']);
+		$groupId = $group['element']['id'];
+
+		$moved = $this->client->call('move_group', $ids + ['groupId' => $groupId, 'dy' => 250]);
+		self::assertIsArray($moved);
+		self::assertIsList($moved['batch']);
+		self::assertCount(2, $moved['batch']);
+
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertSame([['id' => $groupId, 'name' => 'Bench']], $floor['groups']);
+		self::assertIsList($floor['items']);
+		self::assertSame([250, 250], array_column($floor['items'], 'y'));
+		self::assertSame([$groupId, $groupId], array_column($floor['items'], 'groupId'));
+
+		$this->client->call('undo', ['projectId' => $this->project->id]);
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertIsList($floor['items']);
+		self::assertSame([0, 0], array_column($floor['items'], 'y'));
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void

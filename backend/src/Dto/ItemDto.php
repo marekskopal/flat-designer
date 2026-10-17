@@ -15,6 +15,7 @@ final readonly class ItemDto
 	public function __construct(
 		public int $id,
 		public ?int $roomId,
+		public ?int $groupId,
 		public ItemKindEnum $kind,
 		public string $name,
 		public int $x,
@@ -37,6 +38,7 @@ final readonly class ItemDto
 			id: $item->id,
 			// A deleted room is not shown, so neither is the item's link to it (undo brings both back).
 			roomId: $item->room !== null && $item->room->deletedAt === null ? $item->room->id : null,
+			groupId: $item->group !== null && $item->group->deletedAt === null ? $item->group->id : null,
 			kind: $item->kind,
 			name: $item->name,
 			x: $item->x,

@@ -10,4 +10,5 @@ enum ElementTypeEnum: string
 	case Wall = 'Wall';
 	case Opening = 'Opening';
 	case Room = 'Room';
+	case Group = 'Group';
 }

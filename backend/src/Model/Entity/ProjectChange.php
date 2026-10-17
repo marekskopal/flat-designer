@@ -30,6 +30,10 @@ class ProjectChange extends AEntity
 	#[Column(type: Type::Boolean, default: false)]
 	public bool $closed = false;
 
+	/** Shared by the changes of one operation on several elements (e.g. moving a group); they undo and redo together. */
+	#[Column(type: Type::String, size: 32, nullable: true)]
+	public ?string $batch = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Project::class)]
 		public readonly Project $project,

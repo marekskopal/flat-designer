@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
-import {Material, Room} from '@app/models/scene';
+import {Group, Material, Room} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CabinetParamsComponent} from './cabinet-params.component';
@@ -27,6 +27,7 @@ export class InspectorComponent {
     public readonly element = input.required<Record<string, unknown>>();
     public readonly materials = input<Material[]>([]);
     public readonly rooms = input<Room[]>([]);
+    public readonly groups = input<Group[]>([]);
     public readonly disabled = input(false);
 
     public readonly fieldChange = output<FieldChange>();

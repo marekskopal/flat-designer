@@ -26,7 +26,8 @@ use const JSON_THROW_ON_ERROR;
 /**
  * Undo and redo of the current actor's own changes (a person's in the app, or one MCP client's), newest
  * first. A change is only reverted while its element is still exactly as the change left it; if someone
- * changed it since, the change is closed (skipped from then on) and the call answers 409.
+ * changed it since, the change is closed (skipped from then on) and the call answers 409. The changes of
+ * a batch (e.g. a group move) are reverted together, and a conflict on any of them stops and closes all.
  */
 final readonly class UndoService
 {
@@ -46,10 +47,16 @@ final readonly class UndoService
 				$change = $this->changeRepository->findUndoable($project->id, $user->id, $this->actorContext->getMcpClientId())
 					?? throw EditException::conflict('Nothing to undo.');
 
-				$element = $this->revert($change, $change->after, $change->before, 'undo');
-				$change->undoneAt = new DateTimeImmutable();
+				// A batch is undone backwards, so e.g. a group is back before its items need it.
+				$batch = $this->batchOf($change);
+				$reverted = [];
+				$now = new DateTimeImmutable();
+				foreach (array_reverse($batch) as $member) {
+					$reverted[] = [$member, $this->revert($member, $member->after, $member->before, 'undo', $batch[0]->summary)];
+					$member->undoneAt = $now;
+				}
 
-				return $this->finish($project, $change, $element);
+				return $this->finish($project, $reverted);
 			}),
 		);
 	}
@@ -61,21 +68,38 @@ final readonly class UndoService
 				$change = $this->changeRepository->findRedoable($project->id, $user->id, $this->actorContext->getMcpClientId())
 					?? throw EditException::conflict('Nothing to redo.');
 
-				$element = $this->revert($change, $change->before, $change->after, 'redo');
-				$change->undoneAt = null;
+				$batch = $this->batchOf($change);
+				$reverted = [];
+				foreach ($batch as $member) {
+					$reverted[] = [$member, $this->revert($member, $member->before, $member->after, 'redo', $batch[0]->summary)];
+					$member->undoneAt = null;
+				}
 
-				return $this->finish($project, $change, $element);
+				return $this->finish($project, $reverted);
 			}),
 		);
+	}
+
+	/** @return non-empty-list<ProjectChange> the change, or all changes of its batch in the order they were made */
+	private function batchOf(ProjectChange $change): array
+	{
+		if ($change->batch === null) {
+			return [$change];
+		}
+
+		$batch = $this->changeRepository->findBatch($change->project->id, $change->batch);
+
+		return $batch === [] ? [$change] : $batch;
 	}
 
 	/**
 	 * Moves the element from state `$from` (where the change left it, or before it) to state `$to`; a
 	 * null state means "deleted".
 	 *
+	 * @param string $summary of the change, or of the operation for a change in a batch
 	 * @return array<string, mixed>|null the element's state afterwards
 	 */
-	private function revert(ProjectChange $change, ?string $from, ?string $to, string $action): ?array
+	private function revert(ProjectChange $change, ?string $from, ?string $to, string $action, string $summary): ?array
 	{
 		$handler = $this->handlers->get($change->elementType);
 		$floor = $change->floor;
@@ -86,7 +110,7 @@ final readonly class UndoService
 			throw new UndoConflictException($change, sprintf(
 				'Cannot %s "%s": %s was changed by someone else since.',
 				$action,
-				$change->summary,
+				$summary,
 				$handler->label($expected ?? self::decode($to) ?? []),
 			));
 		}
@@ -102,10 +126,17 @@ final readonly class UndoService
 			$handler->setDeleted($element, false);
 		}
 
+		// States logged before a field existed lack it; the element keeps its current value.
+		$restorable = array_flip($handler->restorableFields());
+
 		try {
-			$state = $handler->normalize($floor, array_intersect_key($target, array_flip($handler->restorableFields())), $element);
+			$state = $handler->normalize(
+				$floor,
+				array_intersect_key($target, $restorable) + array_intersect_key($handler->state($element), $restorable),
+				$element,
+			);
 		} catch (EditException $e) {
-			throw new UndoConflictException($change, sprintf('Cannot %s "%s": %s', $action, $change->summary, $e->getMessage()), $e);
+			throw new UndoConflictException($change, sprintf('Cannot %s "%s": %s', $action, $summary, $e->getMessage()), $e);
 		}
 
 		$handler->update($element, $state);
@@ -123,18 +154,35 @@ final readonly class UndoService
 			return $handler->isDeleted($element);
 		}
 
-		return !$handler->isDeleted($element) && State::equals($handler->state($element), $expected);
+		// Fields added since the change was logged are not compared.
+		return !$handler->isDeleted($element) && State::equals(array_intersect_key($handler->state($element), $expected), $expected);
 	}
 
-	/** @param array<string, mixed>|null $element */
-	private function finish(Project $project, ProjectChange $change, ?array $element): EditResultDto
+	/**
+	 * One revision for the change or the whole batch.
+	 *
+	 * @param non-empty-list<array{ProjectChange, array<string, mixed>|null}> $reverted in the order applied
+	 */
+	private function finish(Project $project, array $reverted): EditResultDto
 	{
 		$revision = $this->revisionService->bump($project);
-		$change->revision = $revision;
-		$change->updatedAt = new DateTimeImmutable();
-		$this->changeRepository->persist($change);
+		$batch = [];
+		foreach ($reverted as [$change, $element]) {
+			$change->revision = $revision;
+			$change->updatedAt = new DateTimeImmutable();
+			$this->changeRepository->persist($change);
+			$batch[$change->id] = ['change' => ChangeDto::fromEntity($change), 'element' => $element];
+		}
 
-		return new EditResultDto($revision, ChangeDto::fromEntity($change), $element);
+		[$first, $element] = $reverted[0];
+		if ($first->batch === null) {
+			return new EditResultDto($revision, $batch[$first->id]['change'], $element);
+		}
+
+		// The batch's first change names the operation, whichever end it was reverted from.
+		$head = $batch[min(array_keys($batch))];
+
+		return new EditResultDto($revision, $head['change'], $head['element'], array_values($batch));
 	}
 
 	/**
@@ -150,8 +198,10 @@ final readonly class UndoService
 		} catch (UndoConflictException $e) {
 			$change = $this->changeRepository->findById($e->change->id);
 			if ($change !== null) {
-				$change->closed = true;
-				$this->changeRepository->persist($change);
+				foreach ($this->batchOf($change) as $member) {
+					$member->closed = true;
+					$this->changeRepository->persist($member);
+				}
 			}
 
 			throw new EditException($e->getMessage(), 409, $e);

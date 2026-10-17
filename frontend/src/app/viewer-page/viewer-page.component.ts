@@ -25,7 +25,7 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {Selection} from '@app/viewer/engine/selection';
 import {ViewPreset} from '@app/viewer/engine/viewer-engine';
-import {ViewerComponent} from '@app/viewer/viewer.component';
+import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {switchMap} from 'rxjs';
 
 /** Section heights offered by the slider (mm); the top value means "no cut". */
@@ -166,7 +166,7 @@ export class ViewerPageComponent {
         // A different floor has different rooms (a live reload of the same floor keeps the selection).
         effect(() => {
             this.floorId();
-            this.editor.selection.set(null);
+            this.editor.select(null);
         });
     }
 
@@ -199,7 +199,7 @@ export class ViewerPageComponent {
 
     private startWalkthrough(): void {
         // Eye level: closed rooms, without labels floating through the walls or a selection outline.
-        this.editor.selection.set(null);
+        this.editor.select(null);
         this.ceilingsVisible.set(true);
         this.labelsVisible.set(false);
         this.sectionSlider.set(SectionMax);
@@ -224,16 +224,21 @@ export class ViewerPageComponent {
         void this.editor.enable(!this.editor.enabled());
     }
 
-    protected onSelected(selection: Selection | null): void {
-        this.editor.selection.set(selection);
+    /** Shift+click picks items to group while editing; any other click selects. */
+    protected onSelected(event: SelectEvent): void {
+        if (event.additive && this.editor.enabled()) {
+            this.editor.togglePicked(event.selection);
+        } else {
+            this.editor.select(event.selection);
+        }
     }
 
     /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
     protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>
-        this.editor.update(selection.kind, selection.id, fields);
+        selection.kind === 'group' ? this.editor.moveGroup(selection.id, fields) : this.editor.update(selection.kind, selection.id, fields);
 
     protected selectRoom(room: Room): void {
-        this.editor.selection.set({kind: 'room', id: room.id});
+        this.editor.select({kind: 'room', id: room.id});
         this.ceilingsVisible.set(false);
         this.labelsVisible.set(true);
         this.activeView.set('overview');

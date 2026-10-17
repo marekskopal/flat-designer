@@ -131,6 +131,8 @@ export interface WardrobeParams {
 export interface Item {
     id: number;
     roomId: number | null;
+    /** The group (piece of furniture) the item is part of. */
+    groupId: number | null;
     kind: ItemKind;
     name: string;
     x: number;
@@ -144,6 +146,12 @@ export interface Item {
     params: Record<string, unknown>;
 }
 
+/** Items forming one piece of furniture (they share its `groupId`); they move, copy and delete together. */
+export interface Group {
+    id: number;
+    name: string;
+}
+
 export interface Scene {
     floor: Floor;
     /** Project revision the scene was read at (absent for saved versions); edits send it as `If-Match`. */
@@ -152,4 +160,6 @@ export interface Scene {
     rooms: Room[];
     walls: Wall[];
     items: Item[];
+    /** Absent in versions saved before groups existed. */
+    groups?: Group[];
 }

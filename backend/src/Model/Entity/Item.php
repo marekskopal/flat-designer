@@ -17,7 +17,8 @@ use MarekSkopal\ORM\Enum\Type;
  * Parametric object placed on a floor (kitchen cabinets, worktops, appliances…). The box is given by
  * its footprint centre (x, y), bottom elevation z, size (width × depth × height, mm) and rotation in
  * degrees counter-clockwise; at rotation 0 the front faces south (−y). Kind-specific options
- * (front layout, handles, appliances) live in the JSON `params` and are interpreted by the viewer.
+ * (front layout, handles, appliances) live in the JSON `params` and are interpreted by the viewer. Items
+ * that form one piece of furniture share a `group`.
  */
 #[Entity(repositoryClass: ItemRepository::class)]
 class Item extends AEntity
@@ -25,6 +26,10 @@ class Item extends AEntity
 	/** Set when deleted in the editor; the row stays so undo can bring it back with the same id. */
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
+
+	/** The piece of furniture the item is part of; a deleted group is not shown (undo brings it back). */
+	#[ManyToOne(entityClass: ItemGroup::class, nullable: true)]
+	public ?ItemGroup $group = null;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

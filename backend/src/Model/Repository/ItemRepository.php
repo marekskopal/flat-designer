@@ -18,6 +18,15 @@ final class ItemRepository extends ARepository
 			->fetchAll();
 	}
 
+	/** @return list<Item> the group's members, not deleted */
+	public function findByGroup(int $groupId): array
+	{
+		return $this->select()
+			->where(['group_id' => $groupId, 'deleted_at' => null])
+			->orderBy('id', 'ASC')
+			->fetchAll();
+	}
+
 	/** Including a deleted one, for undo and redo. */
 	public function findOnFloor(int $floorId, int $itemId): ?Item
 	{
