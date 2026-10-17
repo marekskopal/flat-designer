@@ -117,6 +117,7 @@ function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THRE
     const frame = wallFrame(wall);
     const group = new THREE.Group();
     group.name = `wall:${wall.name}`;
+    group.userData = {wallId: wall.id};
     group.position.set(frame.start.x * MM, 0, -frame.start.y * MM);
     group.rotation.y = frame.angle;
 
@@ -150,6 +151,8 @@ const LiningThickness = 8;
  */
 function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
+    // Clicking a tiled wall selects the room the tiling belongs to.
+    group.userData = {roomId: room.id};
     group.name = `finishes:${room.code}`;
     // Counter-clockwise, so the room interior is on the left of every edge.
     const polygon = polygonSignedArea(room.polygon) >= 0 ? room.polygon : [...room.polygon].reverse();
@@ -209,6 +212,7 @@ function clipGap(gap: WallGap, bandBottom: number, bandTop: number): Opening[] {
 function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
     group.name = `door:${opening.name}`;
+    group.userData = {openingId: opening.id};
     const frameMaterial = materials.byCode('door-white');
     const t = wall.thickness * MM;
     const from = opening.offset * MM;
@@ -257,6 +261,7 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
 function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
     group.name = `window:${opening.name}`;
+    group.userData = {openingId: opening.id};
     const frameMaterial = materials.byCode('window-frame-anthracite');
     const glassMaterial = materials.byCode('glass');
     const from = opening.offset * MM;

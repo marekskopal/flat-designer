@@ -1,0 +1,42 @@
+@use 'variables' as *;
+
+.fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-8;
+}
+
+.field {
+    flex: 1 1 100%;
+    min-width: 0;
+    gap: 2px;
+}
+
+.field--half {
+    flex-basis: calc(50% - #{$space-4});
+}
+
+.field__label {
+    font-size: 11px;
+}
+
+.field__unit {
+    font-weight: 400;
+    color: $color-text-subtle;
+}
+
+.field__error {
+    font-size: 11px;
+    color: $color-danger;
+}
+
+.input--compact {
+    padding: 5px 8px;
+    font-size: $font-size-13;
+}
+
+.input--code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: $font-size-12;
+    resize: vertical;
+}

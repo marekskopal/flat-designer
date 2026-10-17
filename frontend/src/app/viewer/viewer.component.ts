@@ -15,6 +15,7 @@ import {
 import {Room, Scene} from '@app/models/scene';
 import {environment} from '@environments/environment';
 
+import {Selection} from './engine/selection';
 import {ViewerEngine, ViewPreset} from './engine/viewer-engine';
 
 /** Hosts the three.js canvas. Persistent display options are inputs; one-off camera moves are methods. */
@@ -41,11 +42,14 @@ export class ViewerComponent {
     public readonly labelsVisible = input(true);
     /** Section plane height in mm; null shows everything. */
     public readonly sectionHeight = input<number | null>(null);
-    public readonly selectedRoomId = input<number | null>(null);
+    public readonly selection = input<Selection | null>(null);
+    /** Enables dragging items in the top view. */
+    public readonly editMode = input(false);
     /** Width (px) of UI overlapping the canvas on the left. */
     public readonly insetLeft = input(0);
 
-    public readonly roomSelected = output<number | null>();
+    public readonly selected = output<Selection | null>();
+    public readonly itemMoved = output<{itemId: number; x: number; y: number}>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Created after the first render, once the host element has its size. */
@@ -54,7 +58,8 @@ export class ViewerComponent {
     public constructor() {
         afterNextRender(() => {
             const engine = new ViewerEngine(this.host().nativeElement);
-            engine.onRoomSelected = (roomId): void => this.roomSelected.emit(roomId);
+            engine.onSelect = (selection): void => this.selected.emit(selection);
+            engine.onItemMoved = (itemId, x, y): void => this.itemMoved.emit({itemId, x, y});
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -71,13 +76,14 @@ export class ViewerComponent {
             engine.load(scene);
             // Re-apply the display state onto the freshly built scene graph.
             engine.setCeilingsVisible(untracked(this.ceilingsVisible));
-            engine.setSelectedRoom(untracked(this.selectedRoomId));
+            engine.setSelection(untracked(this.selection));
             engine.setInsetLeft(untracked(this.insetLeft));
         });
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
-        effect(() => this.engine()?.setSelectedRoom(this.selectedRoomId()));
+        effect(() => this.engine()?.setSelection(this.selection()));
+        effect(() => this.engine()?.setEditMode(this.editMode()));
         effect(() => this.engine()?.setInsetLeft(this.insetLeft()));
 
         inject(DestroyRef).onDestroy(() => this.engine()?.dispose());
@@ -85,6 +91,11 @@ export class ViewerComponent {
 
     public setView(preset: ViewPreset): void {
         this.engine()?.setView(preset);
+    }
+
+    /** Where the camera looks, in plan mm (placement of new elements). */
+    public viewCenter(): {x: number; y: number} {
+        return this.engine()?.viewCenter() ?? {x: 0, y: 0};
     }
 
     public focusRoom(room: Room): void {

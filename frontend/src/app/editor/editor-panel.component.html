@@ -1,0 +1,47 @@
+<section class="panel__section">
+    <div class="toolbar" role="toolbar" aria-label="Edit">
+        <button type="button" class="tool" title="Undo (Ctrl+Z)" aria-label="Undo" [disabled]="editor.busy()" (click)="editor.undo()">↶</button>
+        <button type="button" class="tool" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" [disabled]="editor.busy()" (click)="editor.redo()">↷</button>
+        <select class="tool tool--add" aria-label="Add" [disabled]="editor.busy()" (change)="add($event)">
+            <option value="" selected disabled>+ Add…</option>
+            <optgroup label="Item">
+                @for (kind of editor.itemKinds(); track kind.kind) {
+                    <option [value]="'item:' + kind.kind" [title]="kind.description">{{ kindLabel(kind.kind) }}</option>
+                }
+            </optgroup>
+            <optgroup label="Building">
+                <option value="wall">Wall</option>
+                <option value="Door" [disabled]="selectedWall() === null">Door in selected wall</option>
+                <option value="Window" [disabled]="selectedWall() === null">Window in selected wall</option>
+                <option value="room">Room</option>
+            </optgroup>
+        </select>
+        <button type="button" class="tool" title="Duplicate (Ctrl+D)" [disabled]="selected() === null || editor.busy()" (click)="editor.duplicateSelected()">Copy</button>
+        <button type="button" class="tool tool--danger" title="Delete (Del)" [disabled]="selected() === null || editor.busy()" (click)="editor.deleteSelected()">
+            Delete
+        </button>
+    </div>
+</section>
+
+<section class="panel__section panel__section--inspector">
+    @if (selected(); as s) {
+        <h2 class="section-title">{{ s.label }} <span class="section-title__id">#{{ s.element['id'] }}</span></h2>
+        <fd-inspector
+            [kind]="s.kind"
+            [element]="s.element"
+            [materials]="scene().materials"
+            [rooms]="scene().rooms"
+            [disabled]="editor.busy()"
+            (fieldChange)="onFieldChange($event)"
+        />
+    } @else {
+        <p class="hint">
+            Click an item, wall, door, window or room to edit it. In the Plan view drag items to move them (Shift: 1 mm steps).
+        </p>
+    }
+</section>
+
+<section class="panel__section">
+    <h2 class="section-title">Activity</h2>
+    <fd-activity [changes]="editor.changes()" />
+</section>

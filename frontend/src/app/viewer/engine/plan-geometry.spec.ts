@@ -1,6 +1,6 @@
 import {Opening, PlanPoint, Wall} from '@app/models/scene';
 
-import {polygonCentroid, polygonSignedArea, stackFronts, wallFrame, wallGapsAlongEdge, wallPieces} from './plan-geometry';
+import {polygonCentroid, polygonSignedArea, snapToGrid, stackFronts, wallFrame, wallGapsAlongEdge, wallPieces} from './plan-geometry';
 
 function opening(offset: number, width: number, height: number, sillHeight = 0): Opening {
     return {id: 0, name: '', type: 'Door', offset, width, height, sillHeight, leafWidth: null, hinge: null, side: null};
@@ -89,5 +89,14 @@ describe('wallGapsAlongEdge', () => {
 
     it('ignores walls that are not on the edge', () => {
         expect(wallGapsAlongEdge({x: 6151, y: 8045}, {x: 6151, y: 9906}, [wall])).toEqual([]);
+    });
+});
+
+describe('snapToGrid', () => {
+    it('rounds to the step, or to whole mm', () => {
+        expect(snapToGrid(1234, 10)).toBe(1230);
+        expect(snapToGrid(1235, 10)).toBe(1240);
+        expect(snapToGrid(-14, 10)).toBe(-10);
+        expect(snapToGrid(12.6, 1)).toBe(13);
     });
 });

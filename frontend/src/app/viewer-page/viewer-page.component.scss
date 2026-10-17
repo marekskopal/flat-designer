@@ -306,3 +306,39 @@
         }
     }
 }
+
+.panel--editing {
+    overflow-y: auto;
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-8;
+}
+
+.edit-toggle {
+    flex: none;
+    padding: 4px 12px;
+    border: 1px solid $color-accent;
+    border-radius: 999px;
+    background: transparent;
+    font-size: $font-size-12;
+    font-weight: 600;
+    color: $color-accent;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-accent-soft;
+    }
+}
+
+.edit-toggle--on {
+    background: $color-accent;
+    color: #fff;
+
+    &:hover {
+        background: $color-accent;
+    }
+}

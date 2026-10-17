@@ -54,6 +54,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   and listen on `/.well-known/mercure?match=<topic>` (Mercure protocol 1.0 uses `match`, not `topic`).
   Each tab sends `X-Origin-Client-Id` so it can skip its own echoes. Tests record updates in
   `RecordingMercureHub`.
+- Editor UI: `app/editor` — `EditorStore` (provided per viewer page: selection, edit mode, API calls with
+  the scene revision as `If-Match`, reload after a change), `EditorPanelComponent` (toolbar, Add menu,
+  shortcuts), `InspectorComponent` driven by `ElementFields` (add a field there to make it editable).
+  Engine picking: builders tag objects with `itemId`/`openingId`/`wallId`/`roomId` in `userData`
+  (`selection.ts`); item drag works in edit mode when the camera looks down.
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs

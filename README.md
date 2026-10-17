@@ -58,6 +58,11 @@ change; the browser listens with an EventSource authorized by an HttpOnly cookie
 
 ## Using the viewer
 
+- **Edit** (top of the panel) switches to the editor: click an item, wall, door/window or room to edit
+  its fields in the inspector; **+ Add…** adds an item (into the selected room), a wall, a door or window
+  (into the selected wall) or a room. In the **Plan** view drag items to move them (10 mm snap, Shift 1 mm).
+  Keys: arrows nudge (Shift ×10), R turns 90°, Ctrl+D copies, Del deletes, Ctrl+Z / Ctrl+Shift+Z undo
+  and redo your own changes, Esc deselects. The activity list shows who changed what (people and agents).
 - **3D** — dollhouse view from the south-west; drag to orbit, right-drag to pan, scroll to zoom.
 - **Plan** — top view with the walls cut at 1.3 m, like an architectural floor plan.
 - **Kitchen** — eye-level view from the living room, close to the studio render.

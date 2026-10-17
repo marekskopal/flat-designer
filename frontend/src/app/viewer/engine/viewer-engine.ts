@@ -8,7 +8,8 @@ import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRend
 import {buildBuilding} from './building';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
-import {Bounds, MM, polygonBounds, polygonCentroid} from './plan-geometry';
+import {Bounds, MM, polygonBounds, polygonCentroid, snapToGrid} from './plan-geometry';
+import {Selection, selectionOf} from './selection';
 
 export type ViewPreset = 'overview' | 'top' | 'kitchen';
 
@@ -31,12 +32,31 @@ const EmptyFloorBounds: Bounds = {minX: 0, minY: 0, maxX: 10000, maxY: 10000};
 const KitchenEye = {x: 1500, y: 1900, z: 1600};
 const KitchenTarget = {x: 5300, y: 5800, z: 1150};
 
+/** Snap grid for dragged items, mm (Shift: whole mm). */
+const DragSnap = 10;
+/** Dragging works only while the camera looks down steeply (Plan view), where plan moves are unambiguous. */
+const DragMaxCameraTilt = -0.9;
+
+interface ItemDrag {
+    itemId: number;
+    object: THREE.Object3D;
+    plane: THREE.Plane;
+    startPoint: THREE.Vector3;
+    startX: number;
+    startY: number;
+    x: number;
+    y: number;
+}
+
 /**
  * Framework-free three.js viewer for one floor: owns the renderer, camera, controls and the scene graph
  * built from a `Scene`. The Angular component only forwards options and events.
  */
 export class ViewerEngine {
-    public onRoomSelected: (roomId: number | null) => void = () => undefined;
+    /** A click selected an element (or empty space: null). */
+    public onSelect: (selection: Selection | null) => void = () => undefined;
+    /** An item was dragged to a new footprint centre (plan mm), in edit mode. */
+    public onItemMoved: (itemId: number, x: number, y: number) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -55,6 +75,15 @@ export class ViewerEngine {
     private floors = new Map<number, THREE.Mesh>();
     private labels = new Map<number, CSS2DObject>();
     private highlight: THREE.Mesh | null = null;
+    /** Translucent box with edges around the selected item, wall or opening; follows it while dragged. */
+    private outline: THREE.Mesh | null = null;
+    private outlinedObject: THREE.Object3D | null = null;
+    private items = new Map<number, THREE.Object3D>();
+    private walls = new Map<number, THREE.Object3D>();
+    private openings = new Map<number, THREE.Object3D>();
+    private selection: Selection | null = null;
+    private editMode = false;
+    private drag: ItemDrag | null = null;
     private bounds: Bounds = {minX: 0, minY: 0, maxX: 1, maxY: 1};
     private insetLeft = 0;
     private tween: CameraTween | null = null;
@@ -91,6 +120,7 @@ export class ViewerEngine {
         this.setupEnvironment();
 
         this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
+        this.renderer.domElement.addEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.addEventListener('pointerup', this.handlePointerUp);
 
         this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -115,8 +145,19 @@ export class ViewerEngine {
         this.floors = building.floors;
 
         for (const item of scene.items) {
-            content.add(buildItem(item, this.materials));
+            const object = buildItem(item, this.materials);
+            this.items.set(item.id, object);
+            content.add(object);
         }
+        content.traverse((object) => {
+            const data = object.userData as Record<string, unknown>;
+            if (typeof data['wallId'] === 'number') {
+                this.walls.set(data['wallId'], object);
+            }
+            if (typeof data['openingId'] === 'number') {
+                this.openings.set(data['openingId'], object);
+            }
+        });
 
         for (const room of scene.rooms) {
             const label = this.createLabel(room);
@@ -135,6 +176,35 @@ export class ViewerEngine {
             this.setView('overview', false);
         }
         this.loadedFloorId = scene.floor.id;
+        this.setSelection(this.selection);
+    }
+
+    /** Highlights the selected element: a room's floor is tinted, other elements get an outline box. */
+    public setSelection(selection: Selection | null): void {
+        this.selection = selection;
+        this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
+
+        this.removeOutline();
+        const object = this.objectOf(selection);
+        if (object !== null) {
+            this.outline = createOutline();
+            this.outlinedObject = object;
+            this.scene.add(this.outline);
+            this.updateOutline();
+        }
+    }
+
+    /** In edit mode items can be dragged in a top-down view. */
+    public setEditMode(enabled: boolean): void {
+        this.editMode = enabled;
+        if (!enabled) {
+            this.cancelDrag();
+        }
+    }
+
+    /** The point the camera looks at, in plan mm: where new elements are placed. */
+    public viewCenter(): {x: number; y: number} {
+        return {x: Math.round(this.controls.target.x / MM), y: Math.round(-this.controls.target.z / MM)};
     }
 
     public setCeilingsVisible(visible: boolean): void {
@@ -194,7 +264,7 @@ export class ViewerEngine {
         this.moveCamera(target.clone().add(offset), target, true);
     }
 
-    public setSelectedRoom(roomId: number | null): void {
+    private setSelectedRoom(roomId: number | null): void {
         this.labels.forEach((label, id) => label.element.classList.toggle('selected', id === roomId));
 
         if (this.highlight !== null) {
@@ -218,6 +288,7 @@ export class ViewerEngine {
         this.renderer.setAnimationLoop(null);
         this.resizeObserver.disconnect();
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
+        this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.removeEventListener('pointerup', this.handlePointerUp);
         this.clearContent();
         this.scene.environment?.dispose();
@@ -329,6 +400,7 @@ export class ViewerEngine {
             }
         }
         this.controls.update();
+        this.updateOutline();
         this.renderer.render(this.scene, this.camera);
         this.labelRenderer.render(this.scene, this.camera);
     }
@@ -350,28 +422,138 @@ export class ViewerEngine {
 
     private readonly handlePointerDown = (event: PointerEvent): void => {
         this.pointerDown.set(event.clientX, event.clientY);
+        if (!this.editMode || event.button !== 0 || this.camera.getWorldDirection(new THREE.Vector3()).y > DragMaxCameraTilt) {
+            return;
+        }
+
+        const hit = this.pick(event);
+        const selection = selectionOf(hit?.object ?? null);
+        const object = selection?.kind === 'item' ? this.items.get(selection.id) : undefined;
+        if (hit === undefined || selection === null || object === undefined) {
+            return;
+        }
+
+        // Drag in the horizontal plane through the grabbed point; the item keeps its elevation.
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -hit.point.y);
+        this.drag = {
+            itemId: selection.id,
+            object,
+            plane,
+            startPoint: hit.point.clone(),
+            startX: Math.round(object.position.x / MM),
+            startY: Math.round(-object.position.z / MM),
+            x: Math.round(object.position.x / MM),
+            y: Math.round(-object.position.z / MM),
+        };
+        this.controls.enabled = false;
+        this.renderer.domElement.setPointerCapture(event.pointerId);
+        this.onSelect(selection);
     };
 
-    /** A click (not a drag) on a floor selects that room; a click elsewhere clears the selection. */
+    private readonly handlePointerMove = (event: PointerEvent): void => {
+        if (this.drag === null) {
+            return;
+        }
+        this.raycaster.setFromCamera(this.toNdc(event), this.camera);
+        const point = this.raycaster.ray.intersectPlane(this.drag.plane, new THREE.Vector3());
+        if (point === null) {
+            return;
+        }
+        const step = event.shiftKey ? 1 : DragSnap;
+        this.drag.x = snapToGrid(this.drag.startX + (point.x - this.drag.startPoint.x) / MM, step);
+        this.drag.y = snapToGrid(this.drag.startY - (point.z - this.drag.startPoint.z) / MM, step);
+        this.drag.object.position.x = this.drag.x * MM;
+        this.drag.object.position.z = -this.drag.y * MM;
+    };
+
+    /** A click (not a drag) selects the element under the pointer; a click on empty space clears it. */
     private readonly handlePointerUp = (event: PointerEvent): void => {
+        if (this.drag !== null) {
+            const drag = this.drag;
+            this.cancelDrag(false);
+            if (drag.x !== drag.startX || drag.y !== drag.startY) {
+                this.onItemMoved(drag.itemId, drag.x, drag.y);
+            }
+            return;
+        }
         if (this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 4) {
             return;
         }
-        const rect = this.renderer.domElement.getBoundingClientRect();
-        const ndc = new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
-        this.raycaster.setFromCamera(ndc, this.camera);
-
-        const hits = this.content === null ? [] : this.raycaster.intersectObject(this.content, true);
-        const clip = this.renderer.clippingPlanes[0];
-        const isPickable = (h: THREE.Intersection): boolean =>
-            h.object.visible && h.object.parent?.visible !== false && (clip === undefined || clip.distanceToPoint(h.point) >= 0);
-        const hit = hits.find(isPickable);
-        const roomId = hit?.object.userData['roomId'];
-        this.onRoomSelected(typeof roomId === 'number' ? roomId : null);
+        this.onSelect(selectionOf(this.pick(event)?.object ?? null));
     };
 
+    /** Ends a drag; unless the move is being committed, the item goes back to where it was. */
+    private cancelDrag(restore = true): void {
+        if (this.drag === null) {
+            return;
+        }
+        if (restore) {
+            this.drag.object.position.x = this.drag.startX * MM;
+            this.drag.object.position.z = -this.drag.startY * MM;
+        }
+        this.drag = null;
+        this.controls.enabled = true;
+    }
+
+    private pick(event: PointerEvent): THREE.Intersection | undefined {
+        this.raycaster.setFromCamera(this.toNdc(event), this.camera);
+        const hits = this.content === null ? [] : this.raycaster.intersectObject(this.content, true);
+        const clip = this.renderer.clippingPlanes[0];
+
+        return hits.find((h) => isVisible(h.object) && (clip === undefined || clip.distanceToPoint(h.point) >= 0));
+    }
+
+    private toNdc(event: PointerEvent): THREE.Vector2 {
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        return new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+    }
+
+    private objectOf(selection: Selection | null): THREE.Object3D | null {
+        switch (selection?.kind) {
+            case 'item':
+                return this.items.get(selection.id) ?? null;
+            case 'wall':
+                return this.walls.get(selection.id) ?? null;
+            case 'opening':
+                return this.openings.get(selection.id) ?? null;
+            default:
+                return null;
+        }
+    }
+
+    /** Fits the outline box to the selected object's current bounds (cheap: a few small objects). */
+    private updateOutline(): void {
+        if (this.outline === null || this.outlinedObject === null) {
+            return;
+        }
+        const bounds = new THREE.Box3().setFromObject(this.outlinedObject);
+        if (bounds.isEmpty()) {
+            return;
+        }
+        // A few mm larger, so the box does not z-fight with the faces it wraps.
+        const size = bounds.getSize(new THREE.Vector3()).addScalar(0.01);
+        bounds.getCenter(this.outline.position);
+        this.outline.scale.copy(size);
+    }
+
+    private removeOutline(): void {
+        if (this.outline !== null) {
+            this.outline.removeFromParent();
+            this.outline.traverse((o) => {
+                if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
+                    o.geometry.dispose();
+                    (o.material as THREE.Material).dispose();
+                }
+            });
+            this.outline = null;
+        }
+        this.outlinedObject = null;
+    }
+
     private clearContent(): void {
+        this.cancelDrag();
         this.setSelectedRoom(null);
+        this.removeOutline();
         if (this.content !== null) {
             const geometries = new Set<THREE.BufferGeometry>();
             const materials = new Set<THREE.Material>();
@@ -393,10 +575,40 @@ export class ViewerEngine {
         this.materials = null;
         this.labels.clear();
         this.floors.clear();
+        this.items.clear();
+        this.walls.clear();
+        this.openings.clear();
         this.ceilings = null;
     }
 }
 
 function planToScene(p: {x: number; y: number; z: number}): THREE.Vector3 {
     return new THREE.Vector3(p.x * MM, p.z * MM, -p.y * MM);
+}
+
+/** Unit box (scaled to the selection's bounds each frame): translucent faces plus edges, drawn on top. */
+function createOutline(): THREE.Mesh {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const box = new THREE.Mesh(
+        geometry,
+        new THREE.MeshBasicMaterial({color: HighlightColor, transparent: true, opacity: 0.18, depthTest: false, depthWrite: false}),
+    );
+    box.renderOrder = 2;
+    const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geometry),
+        new THREE.LineBasicMaterial({color: HighlightColor, depthTest: false, transparent: true}),
+    );
+    edges.renderOrder = 3;
+    box.add(edges);
+    return box;
+}
+
+/** Visible itself and in every ancestor (hidden ceilings must not catch clicks). */
+function isVisible(object: THREE.Object3D): boolean {
+    for (let o: THREE.Object3D | null = object; o !== null; o = o.parent) {
+        if (!o.visible) {
+            return false;
+        }
+    }
+    return true;
 }

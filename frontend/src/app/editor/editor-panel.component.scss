@@ -1,0 +1,61 @@
+@use 'variables' as *;
+
+:host {
+    display: block;
+}
+
+.panel__section {
+    padding: $space-12 $space-16 $space-4;
+}
+
+.section-title {
+    margin: 0 0 $space-8;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-text-subtle;
+}
+
+.section-title__id {
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+.toolbar {
+    display: flex;
+    gap: $space-4;
+}
+
+.tool {
+    padding: 5px 8px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-6;
+    background: $color-surface-solid;
+    font-size: $font-size-13;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+}
+
+.tool--add {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool--danger {
+    color: $color-danger;
+}
+
+.hint {
+    margin: 0;
+    font-size: $font-size-12;
+    color: $color-text-muted;
+}

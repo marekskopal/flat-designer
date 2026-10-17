@@ -202,3 +202,8 @@ export function stackFronts(fronts: readonly {type: string; height?: number}[], 
         return slot;
     });
 }
+
+/** Rounds a length in mm to the nearest multiple of `step` (the editor's snap grid). */
+export function snapToGrid(value: number, step: number): number {
+    return step <= 1 ? Math.round(value) : Math.round(value / step) * step;
+}

@@ -1,0 +1,57 @@
+<div class="fields">
+    @for (def of fields(); track def.key) {
+        <div class="field" [class.field--half]="def.half">
+            <label class="field__label" [for]="'field-' + def.key">
+                {{ def.label }}
+                @if (def.unit) {
+                    <span class="field__unit">{{ def.unit }}</span>
+                }
+            </label>
+            @switch (def.type) {
+                @case ('select') {
+                    <select [id]="'field-' + def.key" class="input input--compact" [value]="value(def)" [disabled]="disabled()" (change)="commit(def, $event)">
+                        @if (def.nullable) {
+                            <option value="">—</option>
+                        }
+                        @for (option of def.options ?? []; track option) {
+                            <option [value]="option" [selected]="option === value(def)">{{ option }}</option>
+                        }
+                    </select>
+                }
+                @case ('material') {
+                    <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
+                        <option value="" [selected]="value(def) === ''">—</option>
+                        @for (material of materials(); track material.id) {
+                            <option [value]="material.id" [selected]="'' + material.id === value(def)">{{ material.name }}</option>
+                        }
+                    </select>
+                }
+                @case ('room') {
+                    <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
+                        <option value="" [selected]="value(def) === ''">—</option>
+                        @for (room of rooms(); track room.id) {
+                            <option [value]="room.id" [selected]="'' + room.id === value(def)">{{ room.name }}</option>
+                        }
+                    </select>
+                }
+                @case ('json') {
+                    <textarea [id]="'field-' + def.key" class="input input--compact input--code" rows="3" [value]="value(def)" [disabled]="disabled()" (change)="commit(def, $event)"></textarea>
+                }
+                @default {
+                    <input
+                        [id]="'field-' + def.key"
+                        class="input input--compact"
+                        [type]="def.type === 'int' ? 'number' : 'text'"
+                        [step]="def.type === 'int' ? 1 : null"
+                        [value]="value(def)"
+                        [disabled]="disabled()"
+                        (change)="commit(def, $event)"
+                    />
+                }
+            }
+            @if (errors()[def.key]; as error) {
+                <span class="field__error">{{ error }}</span>
+            }
+        </div>
+    }
+</div>

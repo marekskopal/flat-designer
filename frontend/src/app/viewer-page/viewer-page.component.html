@@ -4,12 +4,14 @@
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
     [sectionHeight]="sectionHeight()"
-    [selectedRoomId]="selectedRoomId()"
+    [selection]="editor.selection()"
+    [editMode]="editor.enabled()"
     [insetLeft]="panelInset"
-    (roomSelected)="onRoomPicked($event)"
+    (selected)="onSelected($event)"
+    (itemMoved)="onItemMoved($event)"
 />
 
-<aside class="panel">
+<aside class="panel" [class.panel--editing]="editor.enabled()">
     <header class="panel__header">
         @if (project(); as p) {
             <a class="eyebrow eyebrow--link" [routerLink]="['/projects', p.id]">{{ p.name }}</a>
@@ -17,7 +19,14 @@
             <span class="eyebrow">Flat Designer</span>
         }
         @if (scene(); as s) {
-            <h1 class="title">{{ s.floor.name }}</h1>
+            <div class="title-row">
+                <h1 class="title">{{ s.floor.name }}</h1>
+                @if (canEdit()) {
+                    <button type="button" class="edit-toggle" [class.edit-toggle--on]="editor.enabled()" (click)="toggleEdit()">
+                        {{ editor.enabled() ? 'Done' : 'Edit' }}
+                    </button>
+                }
+            </div>
             @if (project()?.address; as address) {
                 <p class="subtitle">{{ address }}</p>
             }
@@ -57,6 +66,10 @@
         }
     </header>
 
+    @if (editor.enabled() && scene(); as s) {
+        <fd-editor-panel [scene]="s" [viewCenter]="viewCenter" />
+    }
+
     <section class="panel__section">
         <h2 class="section-title">View</h2>
         <div class="segmented" role="group" aria-label="Camera view">
@@ -68,7 +81,7 @@
         </div>
     </section>
 
-    <section class="panel__section">
+    <section class="panel__section" [hidden]="editor.enabled()">
         <h2 class="section-title">Display</h2>
         <label class="toggle">
             <input type="checkbox" [checked]="ceilingsVisible()" (change)="ceilingsVisible.set(!ceilingsVisible())" />
@@ -101,7 +114,7 @@
         </label>
     </section>
 
-    @if (rooms().length > 0) {
+    @if (rooms().length > 0 && !editor.enabled()) {
         <section class="panel__section panel__section--rooms">
             <h2 class="section-title">Rooms</h2>
             <ul class="rooms">
@@ -126,5 +139,11 @@
         </section>
     }
 
-    <footer class="panel__footer">Drag to orbit · right-drag to pan · scroll to zoom · click a floor to select</footer>
+    <footer class="panel__footer">
+        @if (editor.enabled()) {
+            Arrows nudge · R turns 90° · Ctrl+D copies · Del deletes · Ctrl+Z undoes · Esc deselects
+        } @else {
+            Drag to orbit · right-drag to pan · scroll to zoom · click a floor to select
+        }
+    </footer>
 </aside>
