@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** What can be selected in the viewer: an element of the floor, or a group of items (picked through one of them). */
-export type ElementKind = 'item' | 'wall' | 'opening' | 'room' | 'group';
+export type ElementKind = 'item' | 'wall' | 'opening' | 'room' | 'group' | 'variantSet';
 
 export interface Selection {
     kind: ElementKind;

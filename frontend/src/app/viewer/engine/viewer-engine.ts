@@ -32,6 +32,7 @@ import {
     wallJoints,
 } from './plan-geometry';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {hiddenItemIds} from './variants';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
 
 export type ViewPreset = 'overview' | 'top';
@@ -232,6 +233,7 @@ export class ViewerEngine {
             this.build(scene);
         }
         this.sceneData = scene;
+        this.showVariants(scene);
 
         const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
@@ -248,6 +250,12 @@ export class ViewerEngine {
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
         this.setPicked(this.picked);
+    }
+
+    /** Hides the items of variants that are not shown; switching a variant rebuilds nothing. */
+    private showVariants(scene: Scene): void {
+        const hidden = hiddenItemIds(scene);
+        this.items.forEach((object, id) => (object.visible = !hidden.has(id)));
     }
 
     private build(scene: Scene): void {
@@ -1316,8 +1324,9 @@ export class ViewerEngine {
     }
 
     private objectsOf(selection: Selection | null): THREE.Object3D[] {
+        // Hidden objects (items of variants not shown) get no outline.
         const objects = (ids: number[], map: Map<number, THREE.Object3D>): THREE.Object3D[] =>
-            ids.map((id) => map.get(id)).filter((o): o is THREE.Object3D => o !== undefined);
+            ids.map((id) => map.get(id)).filter((o): o is THREE.Object3D => o !== undefined && o.visible);
         switch (selection?.kind) {
             case 'item':
                 return objects([selection.id], this.items);

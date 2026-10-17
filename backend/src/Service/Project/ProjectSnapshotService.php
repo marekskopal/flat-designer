@@ -20,6 +20,7 @@ use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
@@ -27,6 +28,7 @@ use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
 use FlatDesigner\Service\Provider\SceneProvider;
@@ -39,8 +41,8 @@ use const JSON_THROW_ON_ERROR;
  * JSON stored in `ProjectVersion::$snapshot`, serves floor scenes straight from it and restores it.
  *
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
- * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto]}]}` (`groups`
- * missing in snapshots taken before item groups existed) — each floor entry plus
+ * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
+ * [VariantSetDto]}]}` (`groups` / `variantSets` missing in snapshots taken before they existed) — each floor entry plus
  * the materials is exactly the viewer's `SceneDto`, so a version is rendered without touching the
  * working copy. Ids inside are those of the working copy at the time and only link entries together.
  */
@@ -57,6 +59,7 @@ final readonly class ProjectSnapshotService
 		private OpeningRepository $openingRepository,
 		private ItemRepository $itemRepository,
 		private ItemGroupRepository $groupRepository,
+		private VariantSetRepository $variantSetRepository,
 	) {
 	}
 
@@ -65,7 +68,14 @@ final readonly class ProjectSnapshotService
 		$floors = [];
 		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
 			$scene = $this->sceneProvider->getScene($floor);
-			$floors[] = ['floor' => $scene->floor, 'rooms' => $scene->rooms, 'walls' => $scene->walls, 'items' => $scene->items, 'groups' => $scene->groups];
+			$floors[] = [
+				'floor' => $scene->floor,
+				'rooms' => $scene->rooms,
+				'walls' => $scene->walls,
+				'items' => $scene->items,
+				'groups' => $scene->groups,
+				'variantSets' => $scene->variantSets,
+			];
 		}
 
 		return json_encode(
@@ -124,7 +134,7 @@ final readonly class ProjectSnapshotService
 		$data = $this->read($snapshot);
 
 		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
-			// Rooms, walls, openings, items and groups go with it (ON DELETE CASCADE).
+			// Rooms, walls, openings, items, groups and variant sets go with it (ON DELETE CASCADE).
 			$this->floorRepository->delete($floor);
 		}
 
@@ -140,8 +150,16 @@ final readonly class ProjectSnapshotService
 
 			$roomIds = $this->restoreRooms($floor, $entry->objects('rooms'), $materials);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
-			$groupIds = $this->restoreGroups($floor, $entry->raw('groups') === null ? [] : $entry->objects('groups'));
+			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
+			$setIds = $this->restoreVariantSets($floor, $sets);
+			$groupIds = $this->restoreGroups($floor, $entry->raw('groups') === null ? [] : $entry->objects('groups'), $setIds);
 			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds, $groupIds);
+			// The active variants, once the groups have their new ids.
+			foreach ($sets as $data) {
+				$set = $setIds[$data->int('id')];
+				$set->activeGroupId = ($groupIds[$data->nullableInt('activeGroupId') ?? 0] ?? null)?->id;
+				$this->variantSetRepository->persist($set);
+			}
 		}
 	}
 
@@ -216,14 +234,32 @@ final readonly class ProjectSnapshotService
 	}
 
 	/**
+	 * @param list<SnapshotReader> $sets
+	 * @return array<int, VariantSet> new variant sets by their id in the snapshot (no active variant yet)
+	 */
+	private function restoreVariantSets(Floor $floor, array $sets): array
+	{
+		$restored = [];
+		foreach ($sets as $data) {
+			$set = $this->stamp(new VariantSet(floor: $floor, name: $data->string('name')));
+			$this->variantSetRepository->persist($set);
+			$restored[$data->int('id')] = $set;
+		}
+
+		return $restored;
+	}
+
+	/**
 	 * @param list<SnapshotReader> $groups
+	 * @param array<int, VariantSet> $setIds
 	 * @return array<int, ItemGroup> new groups by their id in the snapshot
 	 */
-	private function restoreGroups(Floor $floor, array $groups): array
+	private function restoreGroups(Floor $floor, array $groups, array $setIds): array
 	{
 		$restored = [];
 		foreach ($groups as $data) {
 			$group = $this->stamp(new ItemGroup(floor: $floor, name: $data->string('name')));
+			$group->variantSet = $setIds[$data->nullableInt('variantSetId') ?? 0] ?? null;
 			$this->groupRepository->persist($group);
 			$restored[$data->int('id')] = $group;
 		}

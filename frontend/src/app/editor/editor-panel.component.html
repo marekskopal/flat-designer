@@ -16,7 +16,15 @@
                 <option value="room">Room</option>
             </optgroup>
         </select>
-        <button type="button" class="tool" title="Duplicate (Ctrl+D)" [disabled]="selected() === null || editor.busy()" (click)="editor.duplicateSelected()">Copy</button>
+        <button
+            type="button"
+            class="tool"
+            title="Duplicate (Ctrl+D)"
+            [disabled]="selected() === null || selected()?.kind === 'variantSet' || editor.busy()"
+            (click)="editor.duplicateSelected()"
+        >
+            Copy
+        </button>
         <button type="button" class="tool tool--danger" title="Delete (Del)" [disabled]="selected() === null || editor.busy()" (click)="editor.deleteSelected()">
             Delete
         </button>
@@ -56,8 +64,30 @@
                 <button type="button" class="tool" title="Keep the items, drop the group" [disabled]="editor.busy()" (click)="editor.ungroupSelected()">
                     Ungroup
                 </button>
+                @if (groupSet(); as set) {
+                    <span class="hint hint--inline">Variant of <button type="button" class="link" (click)="selectSet(set.id)">{{ set.name }}</button></span>
+                } @else {
+                    <button
+                        type="button"
+                        class="tool"
+                        title="Make this group the first of several alternatives (e.g. with / without an island)"
+                        [disabled]="editor.busy()"
+                        (click)="makeVariants(s.element)"
+                    >
+                        Make variants
+                    </button>
+                }
             </div>
             <p class="hint">Arrows nudge the group, R / Shift+R turn it; Delete removes it with its items. Double-click (or Alt+click) one of its items to edit just that one.</p>
+        }
+        @if (s.kind === 'variantSet') {
+            <p class="hint">
+                Switch and add variants under Variants. To decide for the shown variant, press Delete: the other variants go with their items
+                (can be undone).
+            </p>
+            <div class="toolbar">
+                <button type="button" class="tool tool--danger" [disabled]="editor.busy()" (click)="editor.deleteSelected()">Keep shown, drop others</button>
+            </div>
         }
     } @else {
         <p class="hint">

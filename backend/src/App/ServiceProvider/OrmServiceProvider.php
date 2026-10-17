@@ -17,6 +17,7 @@ use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
@@ -31,6 +32,7 @@ use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\UserRepository;
+use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Dbal\DbContext;
 use League\Container\Container;
@@ -63,6 +65,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			OpeningRepository::class,
 			ItemRepository::class,
 			ItemGroupRepository::class,
+			VariantSetRepository::class,
 			UserRepository::class,
 		], true);
 	}
@@ -90,6 +93,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, OpeningRepository::class, Opening::class);
 		$this->addRepository($container, $orm, ItemRepository::class, Item::class);
 		$this->addRepository($container, $orm, ItemGroupRepository::class, ItemGroup::class);
+		$this->addRepository($container, $orm, VariantSetRepository::class, VariantSet::class);
 		$this->addRepository($container, $orm, UserRepository::class, User::class);
 	}
 

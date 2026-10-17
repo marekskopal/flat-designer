@@ -18,6 +18,7 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
+import {VariantsComponent} from '@app/editor/variants.component';
 import {ProjectUpdate} from '@app/models/realtime';
 import {Room, RoomType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
@@ -54,7 +55,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
  */
 @Component({
     selector: 'fd-viewer-page',
-    imports: [ViewerComponent, DecimalPipe, RouterLink, EditorPanelComponent],
+    imports: [ViewerComponent, DecimalPipe, RouterLink, EditorPanelComponent, VariantsComponent],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
@@ -133,6 +134,7 @@ export class ViewerPageComponent {
 
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
     protected readonly rooms = computed(() => this.scene()?.rooms ?? []);
+    protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
     protected readonly indoorArea = computed(() => this.areaOf((type) => type !== 'Terrace' && type !== 'Garden'));
     protected readonly terraceArea = computed(() => this.areaOf((type) => type === 'Terrace'));
     protected readonly gardenArea = computed(() => this.areaOf((type) => type === 'Garden'));

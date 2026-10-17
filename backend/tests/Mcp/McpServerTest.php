@@ -12,6 +12,7 @@ use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
+use FlatDesigner\Mcp\Tool\VariantTools;
 use FlatDesigner\Mcp\Tool\WallTools;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
@@ -31,6 +32,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(ProjectTools::class)]
 #[CoversClass(ItemTools::class)]
 #[CoversClass(GroupTools::class)]
+#[CoversClass(VariantTools::class)]
 #[CoversClass(WallTools::class)]
 #[CoversClass(OpeningTools::class)]
 final class McpServerTest extends IntegrationTestCase
@@ -63,12 +65,15 @@ final class McpServerTest extends IntegrationTestCase
 			'add_item',
 			'add_opening',
 			'add_room',
+			'add_variant',
 			'add_wall',
 			'create_group',
+			'create_variant_set',
 			'delete_group',
 			'delete_item',
 			'delete_opening',
 			'delete_room',
+			'delete_variant_set',
 			'delete_wall',
 			'duplicate_group',
 			'duplicate_item',
@@ -82,7 +87,9 @@ final class McpServerTest extends IntegrationTestCase
 			'move_group',
 			'redo',
 			'rename_group',
+			'rename_variant_set',
 			'save_version',
+			'switch_variant',
 			'undo',
 			'ungroup',
 			'update_item',
@@ -239,7 +246,7 @@ final class McpServerTest extends IntegrationTestCase
 
 		$floor = $this->client->call('get_floor', $ids);
 		self::assertIsArray($floor);
-		self::assertSame([['id' => $groupId, 'name' => 'Bench']], $floor['groups']);
+		self::assertSame([['id' => $groupId, 'name' => 'Bench', 'variantSetId' => null]], $floor['groups']);
 		self::assertIsList($floor['items']);
 		self::assertSame([250, 250], array_column($floor['items'], 'y'));
 		self::assertSame([$groupId, $groupId], array_column($floor['items'], 'groupId'));
@@ -249,6 +256,38 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($floor);
 		self::assertIsList($floor['items']);
 		self::assertSame([0, 0], array_column($floor['items'], 'y'));
+	}
+
+	public function testVariantsHideTheItemsOfTheOtherVariants(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$island = $this->client->call('add_item', $ids + ['kind' => 'BaseCabinet', 'name' => 'Island', 'x' => 2000, 'y' => 2000]);
+		self::assertIsArray($island);
+		self::assertIsArray($island['element']);
+		$group = $this->client->call('create_group', $ids + ['name' => 'Island', 'itemIds' => [$island['element']['id']]]);
+		self::assertIsArray($group);
+		self::assertIsArray($group['element']);
+		$islandGroupId = $group['element']['id'];
+
+		$set = $this->client->call('create_variant_set', $ids + ['name' => 'Kitchen layout', 'groupIds' => [$islandGroupId]]);
+		self::assertIsArray($set);
+		self::assertIsArray($set['element']);
+		$setId = $set['element']['id'];
+		self::assertSame($islandGroupId, $set['element']['activeGroupId']);
+
+		$empty = $this->client->call('add_variant', $ids + ['variantSetId' => $setId, 'name' => 'Without island']);
+		self::assertIsArray($empty);
+		self::assertIsArray($empty['element']);
+
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertSame([['id' => $setId, 'name' => 'Kitchen layout', 'activeGroupId' => $empty['element']['id']]], $floor['variantSets']);
+		self::assertSame([$island['element']['id']], $floor['hiddenItemIds']);
+
+		$this->client->call('switch_variant', $ids + ['variantSetId' => $setId, 'groupId' => $islandGroupId]);
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertSame([], $floor['hiddenItemIds']);
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void

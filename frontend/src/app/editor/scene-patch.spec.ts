@@ -120,7 +120,7 @@ describe('patchScene', () => {
     });
 
     it('applies every change of a batch', () => {
-        const grouped = result('Group', 4, {id: 4, name: 'Pair'});
+        const grouped = result('Group', 4, {id: 4, name: 'Pair', variantSetId: null});
         const member = result('Item', 9, {...item, groupId: 4});
         if (grouped.change === null || member.change === null) {
             throw new Error('changes expected');
@@ -132,14 +132,29 @@ describe('patchScene', () => {
                 {change: member.change, element: member.element},
             ],
         });
-        expect(patched?.groups).toEqual([{id: 4, name: 'Pair'}]);
+        expect(patched?.groups).toEqual([{id: 4, name: 'Pair', variantSetId: null}]);
         expect(patched?.items[0].groupId).toBe(4);
         expect(patched?.revision).toBe(8);
     });
 
     it('unlinks the items of a deleted group', () => {
-        const patched = patchScene({...scene, groups: [{id: 4, name: 'Pair'}], items: [{...item, groupId: 4}]}, result('Group', 4, null));
+        const grouped: Scene = {...scene, groups: [{id: 4, name: 'Pair', variantSetId: null}], items: [{...item, groupId: 4}]};
+        const patched = patchScene(grouped, result('Group', 4, null));
         expect(patched?.groups).toEqual([]);
         expect(patched?.items[0].groupId).toBeNull();
+    });
+
+    it('switches a variant set and frees the variants of a deleted one', () => {
+        const withSet: Scene = {
+            ...scene,
+            groups: [{id: 4, name: 'Island', variantSetId: 6}],
+            variantSets: [{id: 6, name: 'Layout', activeGroupId: 4}],
+        };
+        expect(patchScene(withSet, result('VariantSet', 6, {id: 6, name: 'Layout', activeGroupId: null}))?.variantSets).toEqual([
+            {id: 6, name: 'Layout', activeGroupId: null},
+        ]);
+        const deleted = patchScene(withSet, result('VariantSet', 6, null));
+        expect(deleted?.variantSets).toEqual([]);
+        expect(deleted?.groups).toEqual([{id: 4, name: 'Island', variantSetId: null}]);
     });
 });

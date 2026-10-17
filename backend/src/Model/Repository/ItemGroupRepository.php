@@ -18,6 +18,15 @@ final class ItemGroupRepository extends ARepository
 			->fetchAll();
 	}
 
+	/** @return list<ItemGroup> the variants of a set, not deleted */
+	public function findBySet(int $setId): array
+	{
+		return $this->select()
+			->where(['variant_set_id' => $setId, 'deleted_at' => null])
+			->orderBy('id', 'ASC')
+			->fetchAll();
+	}
+
 	/** Including a deleted one, for undo and redo. */
 	public function findOnFloor(int $floorId, int $groupId): ?ItemGroup
 	{

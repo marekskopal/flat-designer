@@ -11,18 +11,21 @@ use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDto;
+use FlatDesigner\Dto\VariantSetDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 
 /** Builds the viewer's scene of one floor of the working copy. */
@@ -35,6 +38,7 @@ final readonly class SceneProvider
 		private OpeningRepository $openingRepository,
 		private ItemRepository $itemRepository,
 		private ItemGroupRepository $groupRepository,
+		private VariantSetRepository $variantSetRepository,
 	) {
 	}
 
@@ -47,6 +51,12 @@ final readonly class SceneProvider
 			$openingsByWall[$opening->wall->id][] = OpeningDto::fromEntity($opening);
 		}
 
+		$groups = $this->groupRepository->findByFloor($floor->id);
+		$groupsById = [];
+		foreach ($groups as $group) {
+			$groupsById[$group->id] = $group;
+		}
+
 		return new SceneDto(
 			floor: FloorDto::fromEntity($floor),
 			revision: $floor->project->revision,
@@ -54,9 +64,10 @@ final readonly class SceneProvider
 			rooms: array_map(fn (Room $room): RoomDto => RoomDto::fromEntity($room), $this->roomRepository->findByFloor($floor->id)),
 			walls: array_map(fn (Wall $wall): WallDto => WallDto::fromEntity($wall, $openingsByWall[$wall->id] ?? []), $walls),
 			items: array_map(fn (Item $item): ItemDto => ItemDto::fromEntity($item), $this->itemRepository->findByFloor($floor->id)),
-			groups: array_map(
-				fn (ItemGroup $group): GroupDto => GroupDto::fromEntity($group),
-				$this->groupRepository->findByFloor($floor->id),
+			groups: array_map(fn (ItemGroup $group): GroupDto => GroupDto::fromEntity($group), $groups),
+			variantSets: array_map(
+				fn (VariantSet $set): VariantSetDto => VariantSetDto::fromEntity($set, $groupsById[$set->activeGroupId ?? 0] ?? null),
+				$this->variantSetRepository->findByFloor($floor->id),
 			),
 		);
 	}

@@ -44,11 +44,17 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   repositories' `findByFloor`/`findByWalls` skip deleted rows. A new element field must be added to its
   handler's `fields()`/`normalize()`/`apply()` and to the snapshot restore.
 - Item groups (`ItemGroup`, `items.group_id`, one level, may be empty): membership is the item field
-  `groupId`; `SceneEditor::createGroup/moveGroup/duplicateGroup/ungroup/deleteGroup` change several elements
-  under one revision as a `ChangeBatch` (`project_changes.batch`; the first change carries the operation's
+  `groupId`; `GroupEditor` (group, move, copy, ungroup, delete) changes several elements under one revision as
+  a `ChangeBatch` built with `BatchWriter` (`project_changes.batch`; the first change carries the operation's
   summary). `UndoService` reverts a batch as a whole (backwards for undo) and closes all of it on a conflict;
   `EditResultDto::$batch` lists every change, which `scene-patch.ts` applies in order. In the viewer, clicking
   a grouped item selects the group (Alt/double-click: the item), Shift+click picks items to group.
+- Variants (`VariantSet`, `item_groups.variant_set_id`): alternatives of a piece of furniture are groups of a
+  set; only `activeGroupId` is shown (items only, shared items stay outside). `VariantEditor` makes a set,
+  adds a variant (copy in place or empty), switches (a logged change, also outside edit mode) and decides it
+  (delete keeps the active variant). The active variant cannot leave its set; deleting it activates another.
+  The client hides the other variants' items (`hiddenItemIds()` in `viewer/engine/variants.ts`, PHP twin
+  `SceneDto::hiddenItemIds()` for MCP); the sidebar's `VariantsComponent` switches them.
 - MCP: `McpController` (`/mcp`, `mcp/sdk` Streamable HTTP, sessions in `mcp_sessions`) authenticates the
   OAuth access token (`OAuth\AuthorizationService`, ported from ukolio), sets `McpUserContext` and the
   agent `ActorContext`. Tools live in `src/Mcp/Tool` (discovered by `#[McpTool]`, needs symfony/finder);

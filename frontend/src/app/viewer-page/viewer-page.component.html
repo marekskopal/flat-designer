@@ -96,6 +96,13 @@
         </div>
     </section>
 
+    @if (hasVariants() && scene(); as s) {
+        <section class="panel__section">
+            <h2 class="section-title">Variants</h2>
+            <fd-variants [scene]="s" [readonly]="!canEdit()" [editing]="editor.enabled()" />
+        </section>
+    }
+
     <section class="panel__section" [hidden]="editor.enabled()">
         <h2 class="section-title">Display</h2>
         <label class="toggle">

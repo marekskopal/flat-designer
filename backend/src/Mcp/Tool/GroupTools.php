@@ -6,6 +6,7 @@ namespace FlatDesigner\Mcp\Tool;
 
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Service\Editor\GroupEditor;
 use FlatDesigner\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
@@ -16,7 +17,7 @@ use Mcp\Schema\ToolAnnotations;
  */
 final readonly class GroupTools
 {
-	public function __construct(private ToolContext $context, private SceneEditor $editor)
+	public function __construct(private ToolContext $context, private GroupEditor $groupEditor, private SceneEditor $editor)
 	{
 	}
 
@@ -27,7 +28,7 @@ final readonly class GroupTools
 	#[McpTool(name: 'create_group', description: 'Group items into one piece of furniture that moves, copies and deletes together.')]
 	public function createGroup(int $projectId, int $floorId, string $name, array $itemIds): EditResultDto
 	{
-		return $this->editor->createGroup($this->context->user(), $this->context->floor($projectId, $floorId), $name, $itemIds);
+		return $this->groupEditor->createGroup($this->context->user(), $this->context->floor($projectId, $floorId), $name, $itemIds);
 	}
 
 	#[McpTool(name: 'rename_group', description: 'Rename a group.')]
@@ -60,7 +61,7 @@ final readonly class GroupTools
 		?int $rotation = null,
 	): EditResultDto
 	{
-		return $this->editor->moveGroup(
+		return $this->groupEditor->moveGroup(
 			$this->context->user(),
 			$this->context->floor($projectId, $floorId),
 			$groupId,
@@ -84,7 +85,7 @@ final readonly class GroupTools
 		?int $dy = null,
 		?string $name = null,
 	): EditResultDto {
-		return $this->editor->duplicateGroup(
+		return $this->groupEditor->duplicateGroup(
 			$this->context->user(),
 			$this->context->floor($projectId, $floorId),
 			$groupId,
@@ -97,7 +98,7 @@ final readonly class GroupTools
 	#[McpTool(name: 'ungroup', description: 'Dissolve a group; its items stay where they are.')]
 	public function ungroup(int $projectId, int $floorId, int $groupId): EditResultDto
 	{
-		return $this->editor->ungroup($this->context->user(), $this->context->floor($projectId, $floorId), $groupId);
+		return $this->groupEditor->ungroup($this->context->user(), $this->context->floor($projectId, $floorId), $groupId);
 	}
 
 	#[McpTool(
@@ -107,6 +108,6 @@ final readonly class GroupTools
 	)]
 	public function deleteGroup(int $projectId, int $floorId, int $groupId): EditResultDto
 	{
-		return $this->editor->deleteGroup($this->context->user(), $this->context->floor($projectId, $floorId), $groupId);
+		return $this->groupEditor->deleteGroup($this->context->user(), $this->context->floor($projectId, $floorId), $groupId);
 	}
 }

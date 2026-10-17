@@ -1,5 +1,5 @@
 import {Change, EditResult} from '@app/models/editor';
-import {Group, Item, Opening, Room, Scene, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Room, Scene, VariantSet, Wall} from '@app/models/scene';
 
 /**
  * The scene after an edit, undo or redo, built from the result's element state instead of loading the
@@ -47,6 +47,12 @@ function patchElements(scene: Scene, change: Change, element: Record<string, unk
             // Items of a deleted group no longer belong to it.
             const items = group === null ? scene.items.map((i) => (i.groupId === id ? {...i, groupId: null} : i)) : scene.items;
             return {...scene, groups: upsert(scene.groups ?? [], id, group), items};
+        }
+        case 'VariantSet': {
+            const set = element as unknown as VariantSet | null;
+            // Variants of a deleted set are plain groups.
+            const groups = set === null ? (scene.groups ?? []).map((g) => (g.variantSetId === id ? {...g, variantSetId: null} : g)) : scene.groups;
+            return {...scene, variantSets: upsert(scene.variantSets ?? [], id, set), groups};
         }
     }
 }

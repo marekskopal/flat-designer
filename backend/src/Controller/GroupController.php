@@ -10,7 +10,7 @@ use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Response\NotFoundResponse;
 use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\SceneEditor;
+use FlatDesigner\Service\Editor\GroupEditor;
 use FlatDesigner\Service\Project\ProjectProvider;
 use FlatDesigner\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -26,7 +26,7 @@ use Psr\Http\Message\ServerRequestInterface;
 final readonly class GroupController
 {
 	public function __construct(
-		private SceneEditor $sceneEditor,
+		private GroupEditor $groupEditor,
 		private ProjectProvider $projectProvider,
 		private FloorRepository $floorRepository,
 		private RequestService $requestService,
@@ -44,7 +44,7 @@ final readonly class GroupController
 
 		$input = $this->requestService->getRequestBodyDto($request, GroupInputDto::class);
 
-		return new JsonResponse($this->sceneEditor->createGroup(
+		return new JsonResponse($this->groupEditor->createGroup(
 			$this->requestService->getUser($request),
 			$floor,
 			$input->name,
@@ -64,7 +64,7 @@ final readonly class GroupController
 
 		$move = $this->requestService->getRequestBodyDto($request, GroupMoveDto::class);
 
-		return new JsonResponse($this->sceneEditor->moveGroup(
+		return new JsonResponse($this->groupEditor->moveGroup(
 			$this->requestService->getUser($request),
 			$floor,
 			$groupId,
@@ -83,7 +83,7 @@ final readonly class GroupController
 			return new NotFoundResponse('Floor not found.');
 		}
 
-		return new JsonResponse($this->sceneEditor->ungroup(
+		return new JsonResponse($this->groupEditor->ungroup(
 			$this->requestService->getUser($request),
 			$floor,
 			$groupId,

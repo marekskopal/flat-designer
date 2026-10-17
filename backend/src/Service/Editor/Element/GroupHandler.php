@@ -10,16 +10,19 @@ use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\ItemGroup;
+use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
+use FlatDesigner\Model\Repository\VariantSetRepository;
+use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 
 /**
- * Item groups. The group itself has a name only; membership is the items' `groupId`, and moving,
- * duplicating or deleting a group with its items are batches in `SceneEditor`.
+ * Item groups: a name and, for a variant, its variant set. Membership is the items' `groupId`; moving,
+ * duplicating or deleting a group with its items are batches in `GroupEditor`.
  */
 final readonly class GroupHandler implements ElementHandler
 {
-	public function __construct(private ItemGroupRepository $groupRepository)
+	public function __construct(private ItemGroupRepository $groupRepository, private VariantSetRepository $variantSetRepository)
 	{
 	}
 
@@ -31,7 +34,7 @@ final readonly class GroupHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name'];
+		return ['name', 'variantSetId'];
 	}
 
 	/** @return list<string> */
@@ -43,7 +46,7 @@ final readonly class GroupHandler implements ElementHandler
 	/** @return array<string, mixed> */
 	public function defaults(array $fields): array
 	{
-		return ['name' => 'Group'];
+		return ['name' => 'Group', 'variantSetId' => null];
 	}
 
 	public function find(Floor $floor, int $id): ?ItemGroup
@@ -67,7 +70,24 @@ final readonly class GroupHandler implements ElementHandler
 	/** @return array<string, mixed> */
 	public function normalize(Floor $floor, array $state, ?AEntity $current): array
 	{
-		return ['name' => new FieldReader($state)->string('name', 255)];
+		$fields = new FieldReader($state);
+		$variantSetId = $fields->nullableId('variantSetId');
+		$this->variantSet($floor, $variantSetId);
+		$group = $current === null ? null : self::cast($current);
+		$set = $group?->variantSet;
+		if (
+			$group !== null
+			&& $set !== null
+			&& $set->deletedAt === null
+			&& $set->activeGroupId === $group->id
+			&& $variantSetId !== $set->id
+		) {
+			throw EditException::invalid(
+				sprintf('The active variant of "%s" cannot leave it; switch to another variant first.', $set->name),
+			);
+		}
+
+		return ['name' => $fields->string('name', 255), 'variantSetId' => $variantSetId];
 	}
 
 	public function create(Floor $floor, array $state): ItemGroup
@@ -101,8 +121,24 @@ final readonly class GroupHandler implements ElementHandler
 	/** @param array<string, mixed> $state normalised */
 	private function apply(ItemGroup $group, array $state): void
 	{
-		$group->name = new FieldReader($state)->string('name', 255);
+		$fields = new FieldReader($state);
+		$group->name = $fields->string('name', 255);
+		$group->variantSet = $this->variantSet($group->floor, $fields->nullableId('variantSetId'));
 		$this->groupRepository->persist($group);
+	}
+
+	private function variantSet(Floor $floor, ?int $setId): ?VariantSet
+	{
+		if ($setId === null) {
+			return null;
+		}
+
+		$set = $this->variantSetRepository->findOnFloor($floor->id, $setId);
+		if ($set === null || $set->deletedAt !== null) {
+			throw EditException::invalid(sprintf('Variant set %d is not on this floor.', $setId));
+		}
+
+		return $set;
 	}
 
 	private static function cast(AEntity $element): ItemGroup

@@ -5,7 +5,14 @@ import {ElementKind} from '@app/viewer/engine/selection';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
 
-const Segments: Record<ElementKind, string> = {item: 'items', wall: 'walls', opening: 'openings', room: 'rooms', group: 'groups'};
+const Segments: Record<ElementKind, string> = {
+    item: 'items',
+    wall: 'walls',
+    opening: 'openings',
+    room: 'rooms',
+    group: 'groups',
+    variantSet: 'variant-sets',
+};
 
 /** Shift (mm) and counter-clockwise turn (degrees, about the group's footprint centre) of a group. */
 export interface GroupMove {
@@ -65,6 +72,30 @@ export class EditorApiService {
     public async ungroup(projectId: number, floorId: number, id: number, baseRevision?: number): Promise<EditResult> {
         return firstValueFrom(
             this.http.post<EditResult>(`${this.url(projectId, floorId, 'group')}/${id}/ungroup`, {}, {headers: ifMatch(baseRevision)}),
+        );
+    }
+
+    public async createVariantSet(projectId: number, floorId: number, name: string, groupIds: number[], baseRevision?: number): Promise<EditResult> {
+        return firstValueFrom(
+            this.http.post<EditResult>(this.url(projectId, floorId, 'variantSet'), {name, groupIds}, {headers: ifMatch(baseRevision)}),
+        );
+    }
+
+    /** A copy of the variant `fromGroupId` (null: an empty variant), shown from then on. */
+    public async addVariant(
+        projectId: number,
+        floorId: number,
+        setId: number,
+        fromGroupId: number | null,
+        baseRevision?: number,
+    ): Promise<EditResult> {
+        const url = `${this.url(projectId, floorId, 'variantSet')}/${setId}/variants`;
+        return firstValueFrom(this.http.post<EditResult>(url, {fromGroupId}, {headers: ifMatch(baseRevision)}));
+    }
+
+    public async switchVariant(projectId: number, floorId: number, setId: number, groupId: number, baseRevision?: number): Promise<EditResult> {
+        return firstValueFrom(
+            this.http.post<EditResult>(`${this.url(projectId, floorId, 'variantSet')}/${setId}/switch`, {groupId}, {headers: ifMatch(baseRevision)}),
         );
     }
 

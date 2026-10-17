@@ -105,6 +105,25 @@ export class EditorStore {
         return result?.change != null;
     }
 
+    /** Makes the group the first variant of a new variant set, and selects the set. */
+    public async createVariantSet(name: string, groupId: number): Promise<void> {
+        const result = await this.run((c) => this.api.createVariantSet(c.projectId(), c.floorId(), name, [groupId], revisionOf(c)));
+        const id = result?.element?.['id'];
+        if (typeof id === 'number') {
+            this.select({kind: 'variantSet', id});
+        }
+    }
+
+    /** Adds a copy of the variant `fromGroupId` (null: an empty one) to the set; it is shown from then on. */
+    public async addVariant(setId: number, fromGroupId: number | null): Promise<void> {
+        await this.run((c) => this.api.addVariant(c.projectId(), c.floorId(), setId, fromGroupId, revisionOf(c)));
+    }
+
+    /** Shows another variant; a shared change like any edit (it also works outside edit mode). */
+    public async switchVariant(setId: number, groupId: number): Promise<void> {
+        await this.run((c) => this.api.switchVariant(c.projectId(), c.floorId(), setId, groupId, revisionOf(c)));
+    }
+
     /** Dissolves the selected group; its items stay. */
     public async ungroupSelected(): Promise<void> {
         const selection = this.selection();

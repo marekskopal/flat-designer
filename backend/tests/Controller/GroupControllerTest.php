@@ -6,8 +6,10 @@ namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\GroupController;
 use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Editor\BatchWriter;
 use FlatDesigner\Service\Editor\ChangeBatch;
 use FlatDesigner\Service\Editor\Element\GroupHandler;
+use FlatDesigner\Service\Editor\GroupEditor;
 use FlatDesigner\Service\Editor\SceneEditor;
 use FlatDesigner\Service\Editor\UndoService;
 use FlatDesigner\Service\Project\ProjectSnapshotService;
@@ -18,6 +20,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(GroupController::class)]
 #[CoversClass(GroupHandler::class)]
 #[CoversClass(SceneEditor::class)]
+#[CoversClass(GroupEditor::class)]
+#[CoversClass(BatchWriter::class)]
 #[CoversClass(ChangeBatch::class)]
 #[CoversClass(UndoService::class)]
 #[CoversClass(ProjectSnapshotService::class)]
@@ -36,7 +40,7 @@ final class GroupControllerTest extends EditorTestCase
 		self::assertIsList($result['batch']);
 		self::assertCount(3, $result['batch']);
 		$groupId = self::id($result['element']);
-		self::assertSame([['id' => $groupId, 'name' => 'Hall stand']], $this->sceneList('groups'));
+		self::assertSame([['id' => $groupId, 'name' => 'Hall stand', 'variantSetId' => null]], $this->sceneList('groups'));
 		self::assertSame([$groupId, $groupId], array_column($this->sceneList('items'), 'groupId'));
 		// One revision for the whole batch.
 		self::assertSame($revision + 1, $this->revision());

@@ -10,6 +10,7 @@ use FlatDesigner\Service\Editor\Element\GroupHandler;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
+use FlatDesigner\Service\Editor\Element\VariantSetHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 
 final readonly class ElementHandlers
@@ -20,6 +21,7 @@ final readonly class ElementHandlers
 		private OpeningHandler $openingHandler,
 		private RoomHandler $roomHandler,
 		private GroupHandler $groupHandler,
+		private VariantSetHandler $variantSetHandler,
 	) {
 	}
 
@@ -31,6 +33,7 @@ final readonly class ElementHandlers
 			ElementTypeEnum::Opening => $this->openingHandler,
 			ElementTypeEnum::Room => $this->roomHandler,
 			ElementTypeEnum::Group => $this->groupHandler,
+			ElementTypeEnum::VariantSet => $this->variantSetHandler,
 		};
 	}
 }

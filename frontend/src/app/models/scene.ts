@@ -150,6 +150,16 @@ export interface Item {
 export interface Group {
     id: number;
     name: string;
+    /** Set for a variant: only the set's active group is shown. */
+    variantSetId: number | null;
+}
+
+/** Alternatives of one piece of furniture (e.g. with or without a kitchen island): groups of which one is shown. */
+export interface VariantSet {
+    id: number;
+    name: string;
+    /** The variant shown; null shows none. */
+    activeGroupId: number | null;
 }
 
 export interface Scene {
@@ -162,4 +172,6 @@ export interface Scene {
     items: Item[];
     /** Absent in versions saved before groups existed. */
     groups?: Group[];
+    /** Absent in versions saved before variant sets existed. */
+    variantSets?: VariantSet[];
 }

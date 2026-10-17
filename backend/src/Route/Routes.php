@@ -40,11 +40,14 @@ enum Routes: string
 	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
 	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
 	case ProjectFloorElements = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms}';
-	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups}/{elementId:number}';
-	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups}/{elementId:number}/duplicate';
+	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups|variant-sets}/{elementId:number}';
+	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups|variant-sets}/{elementId:number}/duplicate';
 	case ProjectFloorGroups = '/api/projects/{projectId:number}/floors/{floorId:number}/groups';
 	case ProjectFloorGroupMove = '/api/projects/{projectId:number}/floors/{floorId:number}/groups/{groupId:number}/move';
 	case ProjectFloorGroupUngroup = '/api/projects/{projectId:number}/floors/{floorId:number}/groups/{groupId:number}/ungroup';
+	case ProjectFloorVariantSets = '/api/projects/{projectId:number}/floors/{floorId:number}/variant-sets';
+	case ProjectFloorVariantSetVariants = '/api/projects/{projectId:number}/floors/{floorId:number}/variant-sets/{setId:number}/variants';
+	case ProjectFloorVariantSetSwitch = '/api/projects/{projectId:number}/floors/{floorId:number}/variant-sets/{setId:number}/switch';
 	case ProjectChanges = '/api/projects/{projectId:number}/changes';
 	case ProjectUndo = '/api/projects/{projectId:number}/undo';
 	case ProjectRedo = '/api/projects/{projectId:number}/redo';

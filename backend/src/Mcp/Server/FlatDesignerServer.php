@@ -24,6 +24,8 @@ final readonly class FlatDesignerServer
 		0 = front facing south (−y), 90 = east, 180 = north, 270 = west. Openings sit on a wall at `offset` mm
 		from the wall's start point. Items forming one piece of furniture (a kitchen run, a hall stand) share a
 		group (`groupId`): move_group, duplicate_group and delete_group act on all of them as one change.
+		Alternatives of a piece of furniture (e.g. with or without a kitchen island) are groups in a variant
+		set; only its active variant is shown (switch_variant), get_floor lists the hidden items.
 
 		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.

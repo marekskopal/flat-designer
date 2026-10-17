@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
-import {Group, Item, Opening, Room, Scene, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Room, Scene, VariantSet, Wall} from '@app/models/scene';
 import {polygonCentroid} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
@@ -7,7 +7,14 @@ import {ActivityComponent} from './activity.component';
 import {EditorStore} from './editor.store';
 import {FieldChange, InspectorComponent} from './inspector.component';
 
-const KindLabels: Record<ElementKind, string> = {item: 'Item', wall: 'Wall', opening: 'Door / window', room: 'Room', group: 'Group'};
+const KindLabels: Record<ElementKind, string> = {
+    item: 'Item',
+    wall: 'Wall',
+    opening: 'Door / window',
+    room: 'Room',
+    group: 'Group',
+    variantSet: 'Variant set',
+};
 
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
@@ -52,6 +59,12 @@ export class EditorPanelComponent {
         return selection?.kind === 'group' ? this.scene().items.filter((i) => i.groupId === selection.id) : [];
     });
     protected readonly groups = computed((): Group[] => this.scene().groups ?? []);
+    /** The variant set the selected group is a variant of. */
+    protected readonly groupSet = computed((): VariantSet | null => {
+        const selected = this.selected();
+        const setId = selected?.kind === 'group' ? (selected.element as unknown as Group).variantSetId : null;
+        return (this.scene().variantSets ?? []).find((set) => set.id === setId) ?? null;
+    });
     protected readonly selectedWall = computed(() => {
         const selected = this.selected();
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
@@ -66,6 +79,15 @@ export class EditorPanelComponent {
 
     protected groupPicked(name: string): void {
         void this.editor.groupPicked(name.trim() === '' ? 'Group' : name.trim());
+    }
+
+    protected makeVariants(element: Record<string, unknown>): void {
+        const group = element as unknown as Group;
+        void this.editor.createVariantSet(`${group.name} variants`, group.id);
+    }
+
+    protected selectSet(id: number): void {
+        this.editor.select({kind: 'variantSet', id});
     }
 
     protected selectItem(item: Item): void {
@@ -207,6 +229,8 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             return find(scene.walls.flatMap((w): Opening[] => w.openings));
         case 'group':
             return find(scene.groups ?? []);
+        case 'variantSet':
+            return find(scene.variantSets ?? []);
     }
 }
 
