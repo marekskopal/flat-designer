@@ -18,6 +18,7 @@ describe('cabinet params', () => {
     it('edits one front', () => {
         expect(frontsOf(withFront(params, 1, {height: 500, count: undefined}))).toEqual([{type: 'drawer', height: 180}, {type: 'door', height: 500}]);
         expect(frontsOf(withFront(params, 0, {type: 'oven'}))[0]).toEqual({type: 'oven', height: 180});
+        expect(frontsOf(withFront(params, 1, {handle: 'none'}))[1]).toEqual({type: 'door', count: 2, handle: 'none'});
     });
 
     it('adds, removes and reorders fronts', () => {

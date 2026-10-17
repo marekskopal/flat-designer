@@ -102,7 +102,13 @@ final class ElementControllerTest extends EditorTestCase
 
 	public function testCabinetParamsAreValidated(): void
 	{
-		$params = ['plinth' => 100, 'handle' => 'vertical', 'fronts' => [['type' => 'drawer', 'height' => 180], ['type' => 'door', 'count' => 2]]];
+		$params = [
+			'plinth' => 100,
+			'handle' => 'vertical',
+			'handleSide' => 'left',
+			'blindLeft' => 300,
+			'fronts' => [['type' => 'drawer', 'height' => 180], ['type' => 'door', 'count' => 2, 'handle' => 'none']],
+		];
 		$cabinet = $this->create('items', ['kind' => 'BaseCabinet', 'params' => $params + ['custom' => 'kept']]);
 		self::assertSame($params + ['custom' => 'kept'], $cabinet['params']);
 
@@ -115,6 +121,9 @@ final class ElementControllerTest extends EditorTestCase
 			['fronts' => [['type' => 'door', 'height' => 0]]],
 			['fronts' => [['type' => 'door', 'count' => 5]]],
 			['blindRight' => 600],
+			['blindLeft' => 300, 'blindRight' => 300],
+			['handleSide' => 'top'],
+			['fronts' => [['type' => 'door', 'handle' => 'knob']]],
 		] as $invalid) {
 			$response = $this->edit('PATCH', 'items', self::id($cabinet), ['params' => $invalid]);
 			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));

@@ -26,6 +26,11 @@ final readonly class ItemTools
 		'properties' => [
 			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts / doors'],
 			'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles],
+			'handleSide' => [
+				'type' => 'string',
+				'enum' => CabinetParamsValidator::HandleSides,
+				'description' => 'edge of a single door with a vertical handle, as seen from the front (default right)',
+			],
 			'fronts' => [
 				'type' => 'array',
 				'description' => 'fronts from the bottom up; fronts without height share the rest',
@@ -35,11 +40,13 @@ final readonly class ItemTools
 						'type' => ['type' => 'string', 'enum' => CabinetParamsValidator::FrontTypes],
 						'height' => ['type' => 'integer', 'minimum' => 1, 'description' => 'mm'],
 						'count' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 4, 'description' => 'leaves side by side'],
+						'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles, 'description' => "overrides the cabinet's handle"],
 					],
 					'required' => ['type'],
 				],
 			],
-			'blindRight' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run'],
+			'blindRight' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run (right end)'],
+			'blindLeft' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run (left end)'],
 			'doors' => [
 				'type' => 'integer',
 				'minimum' => WardrobeParamsValidator::MinDoors,

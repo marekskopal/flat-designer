@@ -52,8 +52,10 @@ function cabinetParams(item: Item): Required<CabinetParams> {
     return {
         plinth: typeof p.plinth === 'number' ? p.plinth : 0,
         handle: p.handle ?? 'none',
+        handleSide: p.handleSide === 'left' ? 'left' : 'right',
         fronts,
         blindRight: typeof p.blindRight === 'number' ? p.blindRight : 0,
+        blindLeft: typeof p.blindLeft === 'number' ? p.blindLeft : 0,
     };
 }
 
@@ -83,7 +85,7 @@ function buildCabinet(item: Item, materials: MaterialLibrary): THREE.Group {
         group.add(plinth);
     }
 
-    const frontLeft = -halfW;
+    const frontLeft = -halfW + params.blindLeft;
     const frontRight = halfW - params.blindRight;
     const slots = stackFronts(params.fronts, item.height - params.plinth);
 
@@ -105,10 +107,11 @@ function buildCabinet(item: Item, materials: MaterialLibrary): THREE.Group {
 
             group.add(boxAt(body, mm(front.left), mm(front.bottom), mm(front.z), mm(front.width), mm(front.height), mm(FrontThickness)));
 
-            if (params.handle !== 'none') {
+            const handle = spec.handle ?? params.handle;
+            if (handle !== 'none') {
                 // Double doors get their handles at the meeting edges.
-                const edge = leaves === 2 ? (leaf === 0 ? 'right' : 'left') : 'right';
-                group.add(buildHandle(params.handle, front, item.z, edge, materials));
+                const edge = leaves === 2 ? (leaf === 0 ? 'right' : 'left') : params.handleSide;
+                group.add(buildHandle(handle, front, item.z, edge, materials));
             }
         }
     });

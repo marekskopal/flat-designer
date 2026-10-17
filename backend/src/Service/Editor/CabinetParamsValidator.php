@@ -15,6 +15,7 @@ final readonly class CabinetParamsValidator
 {
 	public const array Kinds = [ItemKindEnum::BaseCabinet, ItemKindEnum::WallCabinet, ItemKindEnum::TallCabinet];
 	public const array Handles = ['horizontal', 'vertical', 'none'];
+	public const array HandleSides = ['left', 'right'];
 	public const array FrontTypes = ['door', 'drawer', 'oven', 'microwave'];
 
 	private const int MaxFronts = 12;
@@ -35,8 +36,22 @@ final readonly class CabinetParamsValidator
 		if (array_key_exists('handle', $params) && !in_array($params['handle'], self::Handles, true)) {
 			throw EditException::invalid(sprintf('Cabinet "handle" must be one of: %s.', implode(', ', self::Handles)));
 		}
-		if (array_key_exists('blindRight', $params) && !self::isIntBetween($params['blindRight'], 0, $width - 1)) {
-			throw EditException::invalid(sprintf('Cabinet "blindRight" must be whole mm from 0 to %d (below the width).', $width - 1));
+		if (array_key_exists('handleSide', $params) && !in_array($params['handleSide'], self::HandleSides, true)) {
+			throw EditException::invalid(sprintf('Cabinet "handleSide" must be one of: %s.', implode(', ', self::HandleSides)));
+		}
+		$blind = 0;
+		foreach (['blindLeft', 'blindRight'] as $key) {
+			if (!array_key_exists($key, $params)) {
+				continue;
+			}
+			$value = $params[$key];
+			$max = $width - 1 - $blind;
+			if (!is_int($value) || $value < 0 || $value > $max) {
+				throw EditException::invalid(
+					sprintf('Cabinet "%s" must be whole mm from 0 to %d (blind widths below the width).', $key, $max),
+				);
+			}
+			$blind += $value;
 		}
 		if (array_key_exists('fronts', $params)) {
 			self::validateFronts($params['fronts'], $height);
@@ -60,6 +75,9 @@ final readonly class CabinetParamsValidator
 			}
 			if (array_key_exists('count', $front) && !self::isIntBetween($front['count'], 1, self::MaxLeaves)) {
 				throw EditException::invalid(sprintf('Front %d: "count" must be 1 to %d leaves.', $position, self::MaxLeaves));
+			}
+			if (array_key_exists('handle', $front) && !in_array($front['handle'], self::Handles, true)) {
+				throw EditException::invalid(sprintf('Front %d: "handle" must be one of: %s.', $position, implode(', ', self::Handles)));
 			}
 		}
 	}

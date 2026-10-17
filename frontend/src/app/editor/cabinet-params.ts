@@ -1,9 +1,10 @@
-import {CabinetParams, FrontSpec, FrontType, ItemKind} from '@app/models/scene';
+import {CabinetHandle, CabinetParams, FrontSpec, FrontType, ItemKind} from '@app/models/scene';
 
 /** Item kinds whose params are edited with the cabinet form instead of raw JSON. */
 export const CabinetKinds: readonly ItemKind[] = ['BaseCabinet', 'WallCabinet', 'TallCabinet'];
 export const FrontTypes: readonly FrontType[] = ['door', 'drawer', 'oven', 'microwave'];
-export const Handles: readonly NonNullable<CabinetParams['handle']>[] = ['horizontal', 'vertical', 'none'];
+export const Handles: readonly CabinetHandle[] = ['horizontal', 'vertical', 'none'];
+export const HandleSides: readonly NonNullable<CabinetParams['handleSide']>[] = ['right', 'left'];
 
 export type Params = Record<string, unknown>;
 

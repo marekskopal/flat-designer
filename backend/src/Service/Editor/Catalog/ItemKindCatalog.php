@@ -13,9 +13,10 @@ use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 final readonly class ItemKindCatalog
 {
 	private const string CabinetParams = 'plinth: mm of recessed plinth under the fronts (base/tall, e.g. 100); handle: "horizontal" | '
-		. '"vertical" | "none"; fronts: list from the bottom up of {type: "door" | "drawer" | "oven" | "microwave", height?: mm, '
-		. 'count?: leaves side by side} — fronts without height share the rest; blindRight: mm of the front hidden behind the '
-		. 'adjoining run in a corner.';
+		. '"vertical" | "none"; handleSide: "left" | "right" (default) edge of a single door with a vertical handle, as seen from the '
+		. 'front; fronts: list from the bottom up of {type: "door" | "drawer" | "oven" | "microwave", height?: mm, count?: leaves '
+		. 'side by side, handle?: overrides the cabinet\'s} — fronts without height share the rest; blindLeft / blindRight: mm of '
+		. 'the front hidden behind the adjoining run in a corner, at the left / right end as seen from the front.';
 
 	private const string WardrobeParams = 'doors: sliding leaves, 2 to 6 (default: one per ~900 mm of width); mirrorDoors: list of door numbers '
 		. 'counted from the left as seen from the front, e.g. [3], faced with mirror; profileMaterialId: material of the frames and '

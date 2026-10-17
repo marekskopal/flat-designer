@@ -1,10 +1,23 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {CabinetParams} from '@app/models/scene';
 
-import {addFront, frontsOf, FrontTypes, Handles, moveFront, Params, parseMillimetres, removeFront, withFront, withParam} from './cabinet-params';
+import {
+    addFront,
+    frontsOf,
+    FrontTypes,
+    Handles,
+    HandleSides,
+    moveFront,
+    Params,
+    parseMillimetres,
+    removeFront,
+    withFront,
+    withParam,
+} from './cabinet-params';
 
 /**
- * Form for a cabinet's `params`: plinth, handle, the corner blind width and the fronts from the bottom up.
+ * Form for a cabinet's `params`: plinth, handle (and the side of a single door's vertical one), the corner blind widths and
+ * the fronts from the bottom up, each optionally with its own handle.
  * Every change emits the whole new params object (keys the form does not know are kept).
  */
 @Component({
@@ -21,22 +34,28 @@ export class CabinetParamsComponent {
 
     protected readonly frontTypes = FrontTypes;
     protected readonly handles = Handles;
+    protected readonly handleSides = HandleSides;
     protected readonly fronts = computed(() => frontsOf(this.params()));
     /** Listed top first like the cabinet itself; `index` is the position in the bottom-up list. */
     protected readonly frontsTopDown = computed(() => this.fronts().map((front, index) => ({front, index})).reverse());
     protected readonly cabinet = computed(() => this.params() as CabinetParams);
     protected readonly error = signal<string | null>(null);
 
-    protected setNumber(key: 'plinth' | 'blindRight', event: Event): void {
+    protected setNumber(key: 'plinth' | 'blindRight' | 'blindLeft', event: Event): void {
         const parsed = this.parse(event);
         if (parsed !== null) {
             this.emit(withParam(this.params(), key, parsed.value));
         }
     }
 
-    protected setHandle(event: Event): void {
+    protected setChoice(key: 'handle' | 'handleSide', event: Event): void {
         const value = (event.target as HTMLSelectElement).value;
-        this.emit(withParam(this.params(), 'handle', value === '' ? undefined : value));
+        this.emit(withParam(this.params(), key, value === '' ? undefined : value));
+    }
+
+    protected setFrontHandle(index: number, event: Event): void {
+        const value = (event.target as HTMLSelectElement).value;
+        this.emit(withFront(this.params(), index, {handle: value === '' ? undefined : value}));
     }
 
     protected setFrontType(index: number, event: Event): void {

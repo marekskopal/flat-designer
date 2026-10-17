@@ -15,30 +15,54 @@
         </label>
         <label class="cell">
             <span class="cell__label">Handle</span>
-            <select class="input input--compact" [disabled]="disabled()" (change)="setHandle($event)">
+            <select class="input input--compact" [disabled]="disabled()" (change)="setChoice('handle', $event)">
                 <option value="" [selected]="cabinet().handle === undefined">—</option>
                 @for (handle of handles; track handle) {
                     <option [value]="handle" [selected]="handle === cabinet().handle">{{ handle }}</option>
                 }
             </select>
         </label>
+        <label class="cell">
+            <span class="cell__label">Handle side</span>
+            <select class="input input--compact" [disabled]="disabled()" (change)="setChoice('handleSide', $event)">
+                <option value="" [selected]="cabinet().handleSide === undefined">—</option>
+                @for (side of handleSides; track side) {
+                    <option [value]="side" [selected]="side === cabinet().handleSide">{{ side }}</option>
+                }
+            </select>
+        </label>
     </div>
-    <label class="cell">
-        <span class="cell__label">Blind right (hidden in a corner) <span class="cell__unit">mm</span></span>
-        <input
-            class="input input--compact"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            [value]="cabinet().blindRight ?? ''"
-            [disabled]="disabled()"
-            (change)="setNumber('blindRight', $event)"
-        />
-    </label>
+    <div class="row">
+        <label class="cell">
+            <span class="cell__label">Blind left <span class="cell__unit">mm</span></span>
+            <input
+                class="input input--compact"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                [value]="cabinet().blindLeft ?? ''"
+                [disabled]="disabled()"
+                (change)="setNumber('blindLeft', $event)"
+            />
+        </label>
+        <label class="cell">
+            <span class="cell__label">Blind right <span class="cell__unit">mm</span></span>
+            <input
+                class="input input--compact"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                [value]="cabinet().blindRight ?? ''"
+                [disabled]="disabled()"
+                (change)="setNumber('blindRight', $event)"
+            />
+        </label>
+    </div>
 
     <div class="fronts">
-        <span class="cell__label">Fronts, top to bottom <span class="cell__unit">height mm (blank: share the rest) · leaves</span></span>
+        <span class="cell__label">Fronts, top to bottom <span class="cell__unit">height mm (blank: share the rest) · leaves · handle</span></span>
         @if (fronts().length === 0) {
             <p class="hint">One door by default.</p>
         }
@@ -74,6 +98,18 @@
                     [disabled]="disabled()"
                     (change)="setFrontNumber(index, 'count', $event)"
                 />
+                <select
+                    class="input input--compact front__handle"
+                    title="Handle of this front (—: the cabinet's)"
+                    [attr.aria-label]="'Front ' + (index + 1) + ' handle'"
+                    [disabled]="disabled()"
+                    (change)="setFrontHandle(index, $event)"
+                >
+                    <option value="" [selected]="shown.handle === undefined">—</option>
+                    @for (handle of handles; track handle) {
+                        <option [value]="handle" [selected]="handle === shown.handle">{{ handle }}</option>
+                    }
+                </select>
                 <button type="button" class="icon" title="Move up" [disabled]="disabled() || index === fronts().length - 1" (click)="move(index, 1)">↑</button>
                 <button type="button" class="icon" title="Move down" [disabled]="disabled() || index === 0" (click)="move(index, -1)">↓</button>
                 <button type="button" class="icon icon--danger" title="Remove" [disabled]="disabled()" (click)="remove(index)">×</button>

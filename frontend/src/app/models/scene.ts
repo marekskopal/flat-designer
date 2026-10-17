@@ -106,15 +106,22 @@ export interface FrontSpec {
     height?: number;
     /** Side-by-side leaves (double door). */
     count?: number;
+    /** Overrides the cabinet's handle for this front (e.g. 'none' for the top door of a tall column). */
+    handle?: CabinetHandle;
 }
+
+export type CabinetHandle = 'horizontal' | 'vertical' | 'none';
 
 export interface CabinetParams {
     plinth?: number;
-    handle?: 'horizontal' | 'vertical' | 'none';
+    handle?: CabinetHandle;
+    /** Edge of a single door that carries a vertical handle, as seen from the front; 'right' by default. */
+    handleSide?: 'left' | 'right';
     /** Fronts from the bottom up. */
     fronts?: FrontSpec[];
-    /** Width (mm) of the front hidden behind the adjoining run in a corner. */
+    /** Width (mm) of the front hidden behind the adjoining run in a corner, at the right or left end as seen from the front. */
     blindRight?: number;
+    blindLeft?: number;
 }
 
 export interface WardrobeParams {
