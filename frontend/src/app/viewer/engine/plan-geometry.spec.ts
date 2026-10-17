@@ -1,6 +1,6 @@
 import {Opening, PlanPoint, Wall} from '@app/models/scene';
 
-import {polygonCentroid, polygonSignedArea, stackFronts, wallFrame, wallPieces} from './plan-geometry';
+import {polygonCentroid, polygonSignedArea, stackFronts, wallFrame, wallGapsAlongEdge, wallPieces} from './plan-geometry';
 
 function opening(offset: number, width: number, height: number, sillHeight = 0): Opening {
     return {id: 0, name: '', type: 'Door', offset, width, height, sillHeight, leafWidth: null, hinge: null, side: null};
@@ -72,5 +72,22 @@ describe('stackFronts', () => {
     it('scales fixed fronts that do not fit', () => {
         const slots = stackFronts([{type: 'door', height: 600}, {type: 'door', height: 600}], 600);
         expect(slots.map((s) => s.height)).toEqual([300, 300]);
+    });
+});
+
+describe('wallGapsAlongEdge', () => {
+    // Hallway / bathroom wall of flat 50: centre x = 3814, 114 mm thick, bathroom door at y 8955–9755.
+    const wall = {
+        id: 6, name: '', type: 'Interior', startX: 3814, startY: 5935, endX: 3814, endY: 9906, thickness: 114, height: 2600,
+        materialId: null, openings: [opening(3020, 800, 2020)],
+    } as Wall;
+
+    it('finds the door on the bathroom edge that runs along the wall face', () => {
+        // Bathroom west edge, walked north → south as in a counter-clockwise polygon.
+        expect(wallGapsAlongEdge({x: 3871, y: 9906}, {x: 3871, y: 8045}, [wall])).toEqual([{from: 151, to: 951, bottom: 0, top: 2020}]);
+    });
+
+    it('ignores walls that are not on the edge', () => {
+        expect(wallGapsAlongEdge({x: 6151, y: 8045}, {x: 6151, y: 9906}, [wall])).toEqual([]);
     });
 });

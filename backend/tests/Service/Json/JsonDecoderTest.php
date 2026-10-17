@@ -34,4 +34,18 @@ final class JsonDecoderTest extends TestCase
 		$this->expectException(RuntimeException::class);
 		JsonDecoder::decodeObject('[1,2]');
 	}
+
+	public function testDecodeWallFinishes(): void
+	{
+		self::assertSame(
+			[['materialId' => 15, 'bottom' => 0, 'top' => 1200]],
+			JsonDecoder::decodeWallFinishes('[{"materialId":15,"bottom":0,"top":1200}]'),
+		);
+	}
+
+	public function testDecodeWallFinishesRejectsEmptyBand(): void
+	{
+		$this->expectException(RuntimeException::class);
+		JsonDecoder::decodeWallFinishes('[{"materialId":15,"bottom":1200,"top":1200}]');
+	}
 }

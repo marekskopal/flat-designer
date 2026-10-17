@@ -6,7 +6,7 @@ import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightU
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import {buildBuilding} from './building';
-import {buildItem} from './kitchen';
+import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
 import {Bounds, MM, polygonBounds, polygonCentroid} from './plan-geometry';
 

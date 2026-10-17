@@ -10,7 +10,10 @@ use FlatDesigner\Service\Json\JsonDecoder;
 
 final readonly class RoomDto
 {
-	/** @param list<array{int, int}> $polygon */
+	/**
+	 * @param list<array{int, int}> $polygon
+	 * @param list<WallFinishDto> $wallFinishes
+	 */
 	public function __construct(
 		public int $id,
 		public string $code,
@@ -20,6 +23,7 @@ final readonly class RoomDto
 		public float $area,
 		public ?int $ceilingHeight,
 		public ?int $floorMaterialId,
+		public array $wallFinishes,
 	) {
 	}
 
@@ -36,6 +40,10 @@ final readonly class RoomDto
 			area: round(self::polygonArea($polygon) / 1000000, 2),
 			ceilingHeight: $room->ceilingHeight,
 			floorMaterialId: $room->floorMaterial?->id,
+			wallFinishes: $room->wallFinishes === null ? [] : array_map(
+				fn (array $band): WallFinishDto => new WallFinishDto($band['materialId'], $band['bottom'], $band['top']),
+				JsonDecoder::decodeWallFinishes($room->wallFinishes),
+			),
 		);
 	}
 

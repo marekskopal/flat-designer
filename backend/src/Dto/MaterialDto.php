@@ -17,6 +17,9 @@ final readonly class MaterialDto
 		public string $color,
 		public float $roughness,
 		public float $metalness,
+		public ?string $texture,
+		public ?int $tileWidth,
+		public ?int $tileHeight,
 	) {
 	}
 
@@ -30,6 +33,9 @@ final readonly class MaterialDto
 			color: $material->color,
 			roughness: $material->roughness,
 			metalness: $material->metalness,
+			texture: $material->texture,
+			tileWidth: $material->tileWidth,
+			tileHeight: $material->tileHeight,
 		);
 	}
 }

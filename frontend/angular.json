@@ -22,10 +22,20 @@
                         "index": "src/index.html",
                         "browser": "src/main.ts",
                         "tsConfig": "tsconfig.app.json",
-                        "assets": [],
-                        "styles": ["src/styles.scss"],
+                        "assets": [
+                            {
+                                "glob": "**/*",
+                                "input": "src/assets",
+                                "output": "assets"
+                            }
+                        ],
+                        "styles": [
+                            "src/styles.scss"
+                        ],
                         "stylePreprocessorOptions": {
-                            "includePaths": ["src/styles"]
+                            "includePaths": [
+                                "src/styles"
+                            ]
                         },
                         "scripts": []
                     },
@@ -37,11 +47,22 @@
                             "namedChunks": false,
                             "extractLicenses": true,
                             "fileReplacements": [
-                                {"replace": "src/environments/environment.ts", "with": "src/environments/environment.prod.ts"}
+                                {
+                                    "replace": "src/environments/environment.ts",
+                                    "with": "src/environments/environment.prod.ts"
+                                }
                             ],
                             "budgets": [
-                                {"type": "initial", "maximumWarning": "1.5mb", "maximumError": "3mb"},
-                                {"type": "anyComponentStyle", "maximumWarning": "20kb", "maximumError": "40kb"}
+                                {
+                                    "type": "initial",
+                                    "maximumWarning": "1.5mb",
+                                    "maximumError": "3mb"
+                                },
+                                {
+                                    "type": "anyComponentStyle",
+                                    "maximumWarning": "20kb",
+                                    "maximumError": "40kb"
+                                }
                             ]
                         },
                         "development": {
@@ -55,8 +76,12 @@
                 "serve": {
                     "builder": "@angular/build:dev-server",
                     "configurations": {
-                        "production": {"buildTarget": "flat-designer:build:production"},
-                        "development": {"buildTarget": "flat-designer:build:development"}
+                        "production": {
+                            "buildTarget": "flat-designer:build:production"
+                        },
+                        "development": {
+                            "buildTarget": "flat-designer:build:development"
+                        }
                     },
                     "defaultConfiguration": "development"
                 },

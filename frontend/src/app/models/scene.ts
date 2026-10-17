@@ -5,7 +5,24 @@ export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
 export type OpeningType = 'Door' | 'Window';
-export type ItemKind = 'BaseCabinet' | 'WallCabinet' | 'TallCabinet' | 'Worktop' | 'Backsplash' | 'Sink' | 'Hob' | 'LedStrip';
+export type ItemKind =
+    | 'BaseCabinet'
+    | 'WallCabinet'
+    | 'TallCabinet'
+    | 'Worktop'
+    | 'Backsplash'
+    | 'Sink'
+    | 'Hob'
+    | 'LedStrip'
+    | 'Box'
+    | 'Bathtub'
+    | 'Washbasin'
+    | 'Toilet'
+    | 'WashingMachine'
+    | 'Mirror'
+    | 'TowelRadiator'
+    | 'FlushPlate'
+    | 'Fixture';
 
 export type PlanPoint = [number, number];
 
@@ -24,6 +41,18 @@ export interface Material {
     color: string;
     roughness: number;
     metalness: number;
+    /** Image of one plank or tile, relative to the app's assets/ folder. */
+    texture: string | null;
+    /** Real size (mm) of one plank or tile: width across, height along the plank / up the wall. */
+    tileWidth: number | null;
+    tileHeight: number | null;
+}
+
+/** Horizontal band of tiling (or other finish) around a room's walls, mm above the floor. */
+export interface WallFinish {
+    materialId: number;
+    bottom: number;
+    top: number;
 }
 
 export interface Room {
@@ -35,6 +64,7 @@ export interface Room {
     area: number;
     ceilingHeight: number | null;
     floorMaterialId: number | null;
+    wallFinishes: WallFinish[];
 }
 
 export interface Opening {

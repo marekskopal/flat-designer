@@ -11,9 +11,10 @@ const PatternTileSize: Record<string, number> = {
 export type GrainDirection = 'vertical' | 'horizontal';
 
 /**
- * Builds three.js materials from the backend material catalogue. Wood, plank and tile surfaces get
- * procedural canvas textures, so no image assets are needed. Geometry is expected to carry UVs in
- * metres (see `worldUvBox`), textures repeat at their real-world size.
+ * Builds three.js materials from the backend material catalogue. Planks and tiles with a `texture`
+ * are composed from the photo of one real plank/tile; other wood, plank and tile surfaces get
+ * procedural canvas textures. Geometry is expected to carry UVs in metres (see `worldUvBox`), so
+ * textures repeat at their real-world size.
  */
 export class MaterialLibrary {
     private readonly byId = new Map<number, MaterialDto>();
@@ -111,24 +112,169 @@ export class MaterialLibrary {
             return texture;
         }
 
-        const canvas = drawPattern(dto);
-        texture = new THREE.CanvasTexture(canvas);
+        const layout = imageLayout(dto);
+        if (layout !== null) {
+            texture = this.imageTexture(dto, layout);
+        } else {
+            texture = new THREE.CanvasTexture(drawPattern(dto));
+            const repeat = 1 / (PatternTileSize[dto.pattern] ?? 1);
+            texture.repeat.set(repeat, repeat);
+            // Procedural planks are drawn along the canvas width; turn them to run along v like the photo-based ones.
+            if (grain === 'horizontal' || dto.pattern === 'Planks') {
+                texture.rotation = Math.PI / 2;
+            }
+        }
+
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         texture.anisotropy = this.maxAnisotropy;
-        const repeat = 1 / (PatternTileSize[dto.pattern] ?? 1);
-        texture.repeat.set(repeat, repeat);
-        if (grain === 'horizontal') {
-            texture.rotation = Math.PI / 2;
-        }
         this.textures.set(key, texture);
+        return texture;
+    }
+
+    /**
+     * Texture composed from the photo of a single plank or tile: the canvas holds a small patch of the
+     * real layout and is redrawn once the image has loaded (until then it shows the base colour).
+     */
+    private imageTexture(dto: MaterialDto, layout: ImageLayout): THREE.CanvasTexture {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(layout.width / LayoutMmPerPixel);
+        canvas.height = Math.round(layout.height / LayoutMmPerPixel);
+        const ctx = canvas.getContext('2d');
+        if (ctx !== null) {
+            ctx.fillStyle = dto.color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.repeat.set(1000 / layout.width, 1000 / layout.height);
+
+        const image = new Image();
+        image.onload = (): void => {
+            if (ctx !== null) {
+                layout.draw(ctx, image, seededRandom(dto.id * 7919));
+                texture.needsUpdate = true;
+            }
+        };
+        image.src = new URL(`assets/${dto.texture}`, document.baseURI).href;
         return texture;
     }
 
     private fallback(): THREE.Material {
         return this.plain('#d8d4cc', 0.9);
     }
+}
+
+/** Resolution of composed plank/tile canvases. */
+const LayoutMmPerPixel = 2;
+
+interface ImageLayout {
+    /** Physical size (mm) of the patch the canvas represents; it tiles seamlessly. */
+    width: number;
+    height: number;
+    draw(ctx: CanvasRenderingContext2D, image: HTMLImageElement, rng: () => number): void;
+}
+
+function imageLayout(dto: MaterialDto): ImageLayout | null {
+    if (dto.texture === null || dto.tileWidth === null || dto.tileHeight === null) {
+        return null;
+    }
+    const tileWidth = dto.tileWidth;
+    const tileHeight = dto.tileHeight;
+
+    if (dto.pattern === 'Planks') {
+        // Planks run along the texture v axis (plan y on floors) in a random staggered bond. The patch
+        // is large enough (≈ 3.2 × 3.7 m) that its repetition does not read in a room.
+        const columns = 12;
+        const rows = 3;
+        return {
+            width: columns * tileWidth,
+            height: rows * tileHeight,
+            draw: (ctx, image, rng): void => drawPlankLayout(ctx, image, rng, columns, rows, tileWidth, tileHeight),
+        };
+    }
+    if (dto.pattern === 'Tiles') {
+        return {
+            width: 2 * tileWidth,
+            height: 2 * tileHeight,
+            draw: (ctx, image, rng): void => drawTileLayout(ctx, image, rng, tileWidth, tileHeight),
+        };
+    }
+    return null;
+}
+
+/**
+ * Columns of planks, each column shifted by a random offset. The canvas is `rows` planks tall and the
+ * plank cut by the bottom edge reappears at the top, so the patch tiles seamlessly.
+ */
+function drawPlankLayout(
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement,
+    rng: () => number,
+    columns: number,
+    rows: number,
+    plankWidth: number,
+    plankLength: number,
+): void {
+    const w = plankWidth / LayoutMmPerPixel;
+    const l = plankLength / LayoutMmPerPixel;
+
+    for (let column = 0; column < columns; column++) {
+        const offset = rng() * l;
+        const variants = Array.from({length: rows}, () => ({flipX: rng() < 0.5, flipY: rng() < 0.5, tone: (rng() - 0.5) * 0.14}));
+        for (let k = -1; k < rows; k++) {
+            const variant = variants[(k + rows) % rows];
+            drawPiece(ctx, image, column * w, offset + k * l, w, l, variant);
+        }
+    }
+
+    // Bevelled joints: long edges between columns, short edges at plank ends.
+    ctx.fillStyle = 'rgba(40, 28, 16, 0.45)';
+    for (let column = 0; column < columns; column++) {
+        ctx.fillRect(column * w, 0, 1, ctx.canvas.height);
+    }
+}
+
+/** 2 × 2 tiles from the photo, randomly mirrored, with light grout joints. */
+function drawTileLayout(ctx: CanvasRenderingContext2D, image: HTMLImageElement, rng: () => number, tileWidth: number, tileHeight: number): void {
+    const w = tileWidth / LayoutMmPerPixel;
+    const h = tileHeight / LayoutMmPerPixel;
+    for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 2; j++) {
+            drawPiece(ctx, image, i * w, j * h, w, h, {flipX: rng() < 0.5, flipY: rng() < 0.5, tone: (rng() - 0.5) * 0.06});
+        }
+    }
+
+    const grout = Math.max(1, Math.round(2 / LayoutMmPerPixel));
+    ctx.fillStyle = '#d9d4cb';
+    for (let i = 0; i < 2; i++) {
+        ctx.fillRect(i * w, 0, grout, ctx.canvas.height);
+        ctx.fillRect(0, i * h, ctx.canvas.width, grout);
+    }
+}
+
+function drawPiece(
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    variant: {flipX: boolean; flipY: boolean; tone: number},
+): void {
+    ctx.save();
+    ctx.translate(x + (variant.flipX ? w : 0), y + (variant.flipY ? h : 0));
+    ctx.scale(variant.flipX ? -1 : 1, variant.flipY ? -1 : 1);
+    ctx.drawImage(image, 0, 0, w, h);
+    ctx.fillStyle = variant.tone >= 0 ? `rgba(255,255,255,${variant.tone})` : `rgba(0,0,0,${-variant.tone})`;
+    ctx.fillRect(0, 0, w, h);
+    if (h > w * 2) {
+        // Plank end joint.
+        ctx.fillStyle = 'rgba(40, 28, 16, 0.45)';
+        ctx.fillRect(0, 0, w, 1);
+    }
+    ctx.restore();
 }
 
 function drawPattern(dto: MaterialDto): HTMLCanvasElement {

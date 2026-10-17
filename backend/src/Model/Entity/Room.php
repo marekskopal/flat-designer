@@ -15,7 +15,9 @@ use MarekSkopal\ORM\Enum\Type;
 /**
  * Floor area of one room. `polygon` is a JSON list of [x, y] points in millimetres (plan coordinates,
  * origin at the inner south-west corner of the flat, y pointing north). `ceilingHeight` is null for
- * open-air areas (terrace).
+ * open-air areas (terrace). `wallFinishes` is an optional JSON list of horizontal bands
+ * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left
+ * free. Above the bands the walls keep their own material.
  */
 #[Entity(repositoryClass: RoomRepository::class)]
 class Room extends AEntity
@@ -35,6 +37,8 @@ class Room extends AEntity
 		public ?int $ceilingHeight,
 		#[ManyToOne(entityClass: Material::class, nullable: true)]
 		public ?Material $floorMaterial,
+		#[Column(type: Type::Text, nullable: true)]
+		public ?string $wallFinishes,
 	) {
 	}
 }

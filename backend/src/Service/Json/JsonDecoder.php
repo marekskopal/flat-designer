@@ -43,6 +43,31 @@ final class JsonDecoder
 		return $points;
 	}
 
+	/** @return list<array{materialId: int, bottom: int, top: int}> */
+	public static function decodeWallFinishes(string $json): array
+	{
+		$data = self::decode($json);
+		if (!is_array($data) || !array_is_list($data)) {
+			throw new RuntimeException('Expected a JSON list of wall finishes.');
+		}
+
+		$bands = [];
+		foreach ($data as $band) {
+			if (!is_array($band)) {
+				throw new RuntimeException('Wall finish must be an object.');
+			}
+			$materialId = $band['materialId'] ?? null;
+			$bottom = $band['bottom'] ?? null;
+			$top = $band['top'] ?? null;
+			if (!is_int($materialId) || !is_int($bottom) || !is_int($top) || $top <= $bottom) {
+				throw new RuntimeException('Wall finish needs integer materialId, bottom and top (top > bottom).');
+			}
+			$bands[] = ['materialId' => $materialId, 'bottom' => $bottom, 'top' => $top];
+		}
+
+		return $bands;
+	}
+
 	private static function decode(string $json): mixed
 	{
 		try {

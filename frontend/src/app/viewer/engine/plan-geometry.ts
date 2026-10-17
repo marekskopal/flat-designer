@@ -86,6 +86,50 @@ export function wallPieces(length: number, height: number, openings: readonly Op
     return pieces;
 }
 
+/** Interval along a room edge (mm from its start) blocked by an opening, with its vertical extent. */
+export interface WallGap {
+    from: number;
+    to: number;
+    bottom: number;
+    top: number;
+}
+
+/**
+ * Openings of walls whose face lies on the edge a → b: the wall runs parallel to the edge and its
+ * centre line is half a thickness (± tolerance) away. Returns their extents projected onto the edge.
+ */
+export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance = 30): WallGap[] {
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length === 0) {
+        return [];
+    }
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const gaps: WallGap[] = [];
+
+    for (const wall of walls) {
+        const frame = wallFrame(wall);
+        const parallel = Math.abs(dir.x * frame.dir.y - dir.y * frame.dir.x) < 1e-3;
+        const distance = Math.abs((a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y);
+        if (!parallel || Math.abs(distance - wall.thickness / 2) > tolerance) {
+            continue;
+        }
+
+        for (const opening of wall.openings) {
+            const p0 = pointOnWall(frame, opening.offset);
+            const p1 = pointOnWall(frame, opening.offset + opening.width);
+            const t0 = (p0.x - a.x) * dir.x + (p0.y - a.y) * dir.y;
+            const t1 = (p1.x - a.x) * dir.x + (p1.y - a.y) * dir.y;
+            const from = Math.max(Math.min(t0, t1), 0);
+            const to = Math.min(Math.max(t0, t1), length);
+            if (to > from) {
+                gaps.push({from, to, bottom: opening.sillHeight, top: opening.sillHeight + opening.height});
+            }
+        }
+    }
+
+    return gaps;
+}
+
 /** Signed area by the shoelace formula, mm²; positive for counter-clockwise polygons. */
 export function polygonSignedArea(polygon: readonly PlanPoint[]): number {
     let sum = 0;

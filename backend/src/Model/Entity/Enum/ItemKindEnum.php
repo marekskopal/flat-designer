@@ -14,4 +14,13 @@ enum ItemKindEnum: string
 	case Sink = 'Sink';
 	case Hob = 'Hob';
 	case LedStrip = 'LedStrip';
+	case Box = 'Box';
+	case Bathtub = 'Bathtub';
+	case Washbasin = 'Washbasin';
+	case Toilet = 'Toilet';
+	case WashingMachine = 'WashingMachine';
+	case Mirror = 'Mirror';
+	case TowelRadiator = 'TowelRadiator';
+	case FlushPlate = 'FlushPlate';
+	case Fixture = 'Fixture';
 }

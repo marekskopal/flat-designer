@@ -1,6 +1,7 @@
 # Flat Designer
 
-3D viewer of flat no. 50 (H1B), Example Residences, Example City, with the planned kitchen.
+3D viewer of flat no. 50 (H1B), Example Residences, Example City, with the planned kitchen,
+bathroom and WC, and the chosen floor and tiles.
 Proof of concept: view only, data seeded by migrations, no accounts.
 
 ## Run
@@ -48,12 +49,19 @@ All lengths are integer millimetres in plan coordinates: origin at the inner sou
 flat (living room by the south façade), x east, y north.
 
 - `flats` — the flat.
-- `materials` — colour, roughness, metalness and a procedural `pattern` (Plain/Wood/Planks/Tiles/Glass).
-- `rooms` — code, name, type, floor polygon (JSON), ceiling height, floor material.
+- `materials` — colour, roughness, metalness and a `pattern` (Plain/Wood/Planks/Tiles/Glass). Planks and
+  tiles can reference a photo of one real plank/tile (`texture`, under `frontend/src/assets/`) with its
+  size (`tile_width` × `tile_height`); the viewer lays the floor or wall out from it. Otherwise the
+  pattern is drawn procedurally.
+- `rooms` — code, name, type, floor polygon (JSON), ceiling height, floor material and optional
+  `wall_finishes` (JSON bands `{materialId, bottom, top}`, e.g. tiling up to 1200 mm), applied around the
+  room's walls with door openings left free.
 - `walls` — centre line start/end, thickness, height, type (Exterior/Interior/Shaft).
 - `openings` — doors and windows on a wall: offset along the wall, width, height, sill, leaf width,
   hinge end and swing side.
-- `items` — parametric objects (cabinets, worktops, sink, hob, LED strip): footprint centre, elevation,
+- `items` — parametric objects (kitchen cabinets, worktops, sink, hob, LED strip; bathtub, washbasins,
+  wall-hung toilet, washing machine, mirror, towel radiator, flush plate, chrome fixtures, tiled boxes
+  such as the WC pre-wall): footprint centre, elevation,
   size, rotation (0 = front facing south) and kind-specific `params` JSON (fronts from the bottom up,
   handles, plinth, …).
 
@@ -63,12 +71,17 @@ The viewer builds all geometry from these parameters; there are no 3D model file
 
 - **Walls, openings, rooms**: read from the vector paths of the AutoCAD PDF
   (`source_files/floor-plan.pdf`, 1:100), about 2 mm resolution, and checked against the
-  dimension labels. Room areas match the PDF legend except **H1/B_06 Pokoj: 13.7 m²** from the geometry
-  (2540 × 5405 mm, both dimensions printed on the plan) against 16.5 m² in the legend, which was
-  probably not updated for the client changes.
+  dimension labels. All room areas match the PDF legend, including the L-shaped H1/B_06 Pokoj (16.5 m²,
+  with its 1050 mm niche at the north façade).
 - **Terrace** outline is approximated (12.0 m², 6000 mm paving width).
 - **Kitchen**: the render has no dimensions, so the modules use standard sizes fitted to the real niche
   (see `SeedKitchen`). Replace them once the kitchen studio sends a dimensioned plan.
+- **Bathroom and WC**: layout from the top-view renders in `source_files/bathroom` and `source_files/wc`,
+  heights from the perspectives, standard product sizes (see `SeedBathroomAndWc`).
+- **Textures** in `frontend/src/assets/textures/` are cut from the source files: the laminate from the
+  photo of the "Dub Erica" plank (straightened), the wall and floor tiles from the bathroom/WC renders.
+  The plank size (265 × 1220 mm) is estimated from the sample's aspect ratio; check the datasheet.
+  Planks run north–south, towards the windows.
 
 ## Checks
 

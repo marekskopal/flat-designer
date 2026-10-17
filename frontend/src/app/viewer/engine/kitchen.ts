@@ -15,19 +15,10 @@ const HandleStandoff = 25;
 const HandleReachHeight = 1100;
 
 /**
- * Builds a parametric kitchen item. The group's origin is the bottom centre of the item's box, x runs
- * along the width, y up and +z out of the front; the group is placed and rotated in plan coordinates.
+ * Kitchen items in the item-local frame: origin at the bottom centre of the item's box, x along the
+ * width, y up and +z out of the front. Returns null for kinds handled elsewhere.
  */
-export function buildItem(item: Item, materials: MaterialLibrary): THREE.Object3D {
-    const object = buildItemBody(item, materials);
-    object.name = `item:${item.name}`;
-    object.position.set(item.x * MM, item.z * MM, -item.y * MM);
-    object.rotation.y = THREE.MathUtils.degToRad(item.rotation);
-    object.userData = {itemId: item.id};
-    return object;
-}
-
-function buildItemBody(item: Item, materials: MaterialLibrary): THREE.Group {
+export function buildKitchenItemBody(item: Item, materials: MaterialLibrary): THREE.Group | null {
     switch (item.kind) {
         case 'BaseCabinet':
         case 'WallCabinet':
@@ -42,10 +33,12 @@ function buildItemBody(item: Item, materials: MaterialLibrary): THREE.Group {
             return buildHob(item, materials);
         case 'LedStrip':
             return buildLedStrip(item, materials);
+        default:
+            return null;
     }
 }
 
-function buildSlab(item: Item, materials: MaterialLibrary, grain: GrainDirection): THREE.Group {
+export function buildSlab(item: Item, materials: MaterialLibrary, grain: GrainDirection): THREE.Group {
     const group = new THREE.Group();
     const w = item.width * MM;
     const d = item.depth * MM;

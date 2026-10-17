@@ -2,8 +2,8 @@ import {Opening, Room, Scene, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
-import {boxAt} from './meshes';
-import {MM, polygonBounds, wallFrame, wallPieces} from './plan-geometry';
+import {boxAt, worldUvBox} from './meshes';
+import {MM, polygonBounds, polygonSignedArea, wallFrame, WallGap, wallGapsAlongEdge, wallPieces} from './plan-geometry';
 
 const SlabThickness = 300;
 const FrameWidth = 50;
@@ -37,6 +37,12 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root.add(floor);
         if (room.ceilingHeight !== null) {
             ceilings.add(buildCeiling(room, materials));
+        }
+    }
+
+    for (const room of scene.rooms) {
+        if (room.wallFinishes.length > 0) {
+            root.add(buildWallFinishes(room, scene.walls, materials));
         }
     }
 
@@ -133,6 +139,71 @@ function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THRE
     }
 
     return group;
+}
+
+const LiningThickness = 8;
+
+/**
+ * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band. Door
+ * openings on the edge stay free; UVs continue across pieces so the tile grid runs from the room
+ * corner and from the floor.
+ */
+function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
+    const group = new THREE.Group();
+    group.name = `finishes:${room.code}`;
+    // Counter-clockwise, so the room interior is on the left of every edge.
+    const polygon = polygonSignedArea(room.polygon) >= 0 ? room.polygon : [...room.polygon].reverse();
+
+    polygon.forEach(([ax, ay], i) => {
+        const [bx, by] = polygon[(i + 1) % polygon.length];
+        const length = Math.hypot(bx - ax, by - ay);
+        const gaps = wallGapsAlongEdge({x: ax, y: ay}, {x: bx, y: by}, walls);
+
+        const edge = new THREE.Group();
+        edge.position.set(ax * MM, 0, -ay * MM);
+        edge.rotation.y = Math.atan2(by - ay, bx - ax);
+        // Mirror local z so +z points into the room and the box's +z face (u along +x) is the visible one.
+        edge.scale.z = -1;
+
+        for (const band of room.wallFinishes) {
+            const bandGaps = gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top));
+            const material = materials.get(band.materialId);
+            for (const piece of wallPieces(length, band.top - band.bottom, bandGaps)) {
+                const bottom = band.bottom + piece.bottom;
+                const width = (piece.to - piece.from) * MM;
+                const height = (piece.top - piece.bottom) * MM;
+                const geometry = worldUvBox(width, height, LiningThickness * MM, {u: piece.from * MM, v: bottom * MM});
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(piece.from * MM + width / 2, bottom * MM + height / 2, (LiningThickness * MM) / 2);
+                mesh.receiveShadow = true;
+                edge.add(mesh);
+            }
+        }
+        group.add(edge);
+    });
+
+    return group;
+}
+
+/** Opening relative to a finish band, as `wallPieces` expects; nothing when the gap misses the band. */
+function clipGap(gap: WallGap, bandBottom: number, bandTop: number): Opening[] {
+    if (gap.top <= bandBottom || gap.bottom >= bandTop) {
+        return [];
+    }
+    const sill = Math.max(gap.bottom - bandBottom, 0);
+    const head = Math.min(gap.top, bandTop) - bandBottom;
+    return [{
+        id: 0,
+        name: '',
+        type: 'Door',
+        offset: gap.from,
+        width: gap.to - gap.from,
+        height: head - sill,
+        sillHeight: sill,
+        leafWidth: null,
+        hinge: null,
+        side: null,
+    }];
 }
 
 function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
