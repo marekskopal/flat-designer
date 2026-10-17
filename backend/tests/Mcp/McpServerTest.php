@@ -241,14 +241,20 @@ final class McpServerTest extends IntegrationTestCase
 	public function testEmptyItemParamsAreAJsonObject(): void
 	{
 		$floorId = Fixture::firstFloor($this->project)->id;
-		$result = $this->client->request('tools/call', [
-			'name' => 'add_item',
-			'arguments' => ['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'Box', 'x' => 0, 'y' => 0],
+		$response = $this->client->post([
+			'jsonrpc' => '2.0',
+			'id' => 99,
+			'method' => 'tools/call',
+			'params' => [
+				'name' => 'add_item',
+				'arguments' => ['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'Box', 'x' => 0, 'y' => 0],
+			],
 		]);
-		self::assertIsList($result['content']);
-		self::assertIsArray($result['content'][0]);
-		self::assertIsString($result['content'][0]['text']);
-		self::assertMatchesRegularExpression('/"params":\s*\{\}/', $result['content'][0]['text']);
+		$body = (string) $response->getBody();
+
+		// Both in the text content (escaped JSON inside a string) and in structuredContent.
+		self::assertMatchesRegularExpression('/\\\\"params\\\\":\\s*\\{\\}/', $body);
+		self::assertMatchesRegularExpression('/[^\\\\]"params":\\s*\\{\\}/', $body);
 	}
 
 	public function testRequestsWithoutAValidTokenAreRejected(): void
