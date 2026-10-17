@@ -1,8 +1,8 @@
 // Mirrors the backend DTOs (FlatDesigner\Dto). All lengths are millimetres in plan coordinates:
 // origin at the inner south-west corner of the flat, x east, y north.
 
-export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass';
-export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace';
+export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel';
+export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
 export type OpeningType = 'Door' | 'Window';
 export type ItemKind =
@@ -22,7 +22,8 @@ export type ItemKind =
     | 'Mirror'
     | 'TowelRadiator'
     | 'FlushPlate'
-    | 'Fixture';
+    | 'Fixture'
+    | 'Fence';
 
 export type PlanPoint = [number, number];
 

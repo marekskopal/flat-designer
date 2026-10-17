@@ -22,9 +22,9 @@ seeded by migrations. Architecture mirrors `../ukolio` (same author), trimmed to
 - Walls are centre lines + thickness; openings are offsets along the centre line from the wall start.
   Door `hinge` = Start/End of the opening, `side` = Left/Right of the wall direction.
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
-  `SeedBathroomAndWc`). Data changes go into a new migration; editing an applied one needs
+  `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`). Data changes go into a new migration; editing an applied one needs
   `make reset-db` (drops the DB volume).
-- Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts` and `sanitary.ts`; each builds the
+- Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts` and `outdoor.ts`; each builds the
   item body in its local frame. A new item kind needs the PHP enum, a migration extending the
   `items.kind` column enum, the TS `ItemKind` union and a builder.
 - Textures for real products are cut from `source_files/` into `frontend/src/assets/textures/` (one

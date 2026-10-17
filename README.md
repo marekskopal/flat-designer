@@ -1,7 +1,7 @@
 # Flat Designer
 
 3D viewer of flat no. 50 (H1B), Example Residences, Example City, with the planned kitchen,
-bathroom and WC, and the chosen floor and tiles.
+bathroom and WC, the chosen floor and tiles, and both gardens.
 Proof of concept: view only, data seeded by migrations, no accounts.
 
 ## Run
@@ -61,7 +61,7 @@ flat (living room by the south façade), x east, y north.
   hinge end and swing side.
 - `items` — parametric objects (kitchen cabinets, worktops, sink, hob, LED strip; bathtub, washbasins,
   wall-hung toilet, washing machine, mirror, towel radiator, flush plate, chrome fixtures, tiled boxes
-  such as the WC pre-wall): footprint centre, elevation,
+  such as the WC pre-wall; garden fences): footprint centre, elevation,
   size, rotation (0 = front facing south) and kind-specific `params` JSON (fronts from the bottom up,
   handles, plinth, …).
 
@@ -73,7 +73,13 @@ The viewer builds all geometry from these parameters; there are no 3D model file
   (`source_files/floor-plan.pdf`, 1:100), about 2 mm resolution, and checked against the
   dimension labels. All room areas match the PDF legend, including the L-shaped H1/B_06 Pokoj (16.5 m²,
   with its 1050 mm niche at the north façade).
-- **Terrace** outline is approximated (12.0 m², 6000 mm paving width).
+- **Terrace** H1/B_10: the 6000 × 2000 paving (400 × 400 slabs) drawn on the plan, 12.0 m².
+- **North garden** H1/B_12: 7200 mm between the boundary walls and 58.28 m² as labelled on the plan;
+  the sheet ends before the garden does, so its depth (9.9 m from the façade) is derived from the
+  area. Panel fence with base boards (SO14) on three sides, gravel eaves strip (SO07) by the façade.
+- **South garden**: not dimensioned on the sheet; modelled 3.0 m deep between the boundary axes with
+  the 430 mm gravel strip along the façade. **An assumption** — change `SouthEnd` in
+  `SeedGardens` (or add a migration) once the real size is known.
 - **Kitchen**: the render has no dimensions, so the modules use standard sizes fitted to the real niche
   (see `SeedKitchen`). Replace them once the kitchen studio sends a dimensioned plan.
 - **Bathroom and WC**: layout from the top-view renders in `source_files/bathroom` and `source_files/wc`,

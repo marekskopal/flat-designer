@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 import {buildKitchenItemBody} from './kitchen';
 import {MaterialLibrary} from './materials';
+import {buildOutdoorItemBody} from './outdoor';
 import {MM} from './plan-geometry';
 import {buildSanitaryItemBody} from './sanitary';
 
@@ -12,7 +13,8 @@ import {buildSanitaryItemBody} from './sanitary';
  * rotated counter-clockwise by `rotation` degrees.
  */
 export function buildItem(item: Item, materials: MaterialLibrary): THREE.Object3D {
-    const object = buildKitchenItemBody(item, materials) ?? buildSanitaryItemBody(item, materials) ?? new THREE.Group();
+    const object =
+        buildKitchenItemBody(item, materials) ?? buildSanitaryItemBody(item, materials) ?? buildOutdoorItemBody(item, materials) ?? new THREE.Group();
     object.name = `item:${item.name}`;
     object.position.set(item.x * MM, item.z * MM, -item.y * MM);
     object.rotation.y = THREE.MathUtils.degToRad(item.rotation);

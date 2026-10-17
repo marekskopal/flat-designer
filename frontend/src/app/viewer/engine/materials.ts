@@ -6,6 +6,8 @@ const PatternTileSize: Record<string, number> = {
     Wood: 1.2,
     Planks: 2.4,
     Tiles: 1.2,
+    Grass: 2.0,
+    Gravel: 1.0,
 };
 
 export type GrainDirection = 'vertical' | 'horizontal';
@@ -112,9 +114,11 @@ export class MaterialLibrary {
             return texture;
         }
 
-        const layout = imageLayout(dto);
-        if (layout !== null) {
+        const layout = tileLayout(dto);
+        if (layout !== null && dto.texture !== null) {
             texture = this.imageTexture(dto, layout);
+        } else if (layout !== null) {
+            texture = proceduralLayoutTexture(dto, layout);
         } else {
             texture = new THREE.CanvasTexture(drawPattern(dto));
             const repeat = 1 / (PatternTileSize[dto.pattern] ?? 1);
@@ -173,17 +177,19 @@ interface ImageLayout {
     /** Physical size (mm) of the patch the canvas represents; it tiles seamlessly. */
     width: number;
     height: number;
-    draw(ctx: CanvasRenderingContext2D, image: HTMLImageElement, rng: () => number): void;
+    /** Draws the layout; `image` is the photo of one piece, or null to draw the pieces from the base colour. */
+    draw(ctx: CanvasRenderingContext2D, image: HTMLImageElement | null, rng: () => number): void;
 }
 
-function imageLayout(dto: MaterialDto): ImageLayout | null {
-    if (dto.texture === null || dto.tileWidth === null || dto.tileHeight === null) {
+/** Layout of planks or tiles of a known size; planks need the photo, tiles can be drawn without it. */
+function tileLayout(dto: MaterialDto): ImageLayout | null {
+    if (dto.tileWidth === null || dto.tileHeight === null) {
         return null;
     }
     const tileWidth = dto.tileWidth;
     const tileHeight = dto.tileHeight;
 
-    if (dto.pattern === 'Planks') {
+    if (dto.pattern === 'Planks' && dto.texture !== null) {
         // Planks run along the texture v axis (plan y on floors) in a random staggered bond. The patch
         // is large enough (≈ 3.2 × 3.7 m) that its repetition does not read in a room.
         const columns = 12;
@@ -191,14 +197,18 @@ function imageLayout(dto: MaterialDto): ImageLayout | null {
         return {
             width: columns * tileWidth,
             height: rows * tileHeight,
-            draw: (ctx, image, rng): void => drawPlankLayout(ctx, image, rng, columns, rows, tileWidth, tileHeight),
+            draw: (ctx, image, rng): void => {
+                if (image !== null) {
+                    drawPlankLayout(ctx, image, rng, columns, rows, tileWidth, tileHeight);
+                }
+            },
         };
     }
     if (dto.pattern === 'Tiles') {
         return {
             width: 2 * tileWidth,
             height: 2 * tileHeight,
-            draw: (ctx, image, rng): void => drawTileLayout(ctx, image, rng, tileWidth, tileHeight),
+            draw: (ctx, image, rng): void => drawTileLayout(ctx, image, rng, tileWidth, tileHeight, dto.color),
         };
     }
     return null;
@@ -236,18 +246,31 @@ function drawPlankLayout(
     }
 }
 
-/** 2 × 2 tiles from the photo, randomly mirrored, with light grout joints. */
-function drawTileLayout(ctx: CanvasRenderingContext2D, image: HTMLImageElement, rng: () => number, tileWidth: number, tileHeight: number): void {
+/** 2 × 2 tiles from the photo (randomly mirrored) or from the base colour, with light grout joints. */
+function drawTileLayout(
+    ctx: CanvasRenderingContext2D,
+    image: HTMLImageElement | null,
+    rng: () => number,
+    tileWidth: number,
+    tileHeight: number,
+    color: string,
+): void {
     const w = tileWidth / LayoutMmPerPixel;
     const h = tileHeight / LayoutMmPerPixel;
     for (let i = 0; i < 2; i++) {
         for (let j = 0; j < 2; j++) {
-            drawPiece(ctx, image, i * w, j * h, w, h, {flipX: rng() < 0.5, flipY: rng() < 0.5, tone: (rng() - 0.5) * 0.06});
+            const variant = {flipX: rng() < 0.5, flipY: rng() < 0.5, tone: (rng() - 0.5) * 0.06};
+            if (image !== null) {
+                drawPiece(ctx, image, i * w, j * h, w, h, variant);
+            } else {
+                drawSpeckled(ctx, i * w, j * h, w, h, shade(new THREE.Color(color), variant.tone), rng, 0.08);
+            }
         }
     }
 
-    const grout = Math.max(1, Math.round(2 / LayoutMmPerPixel));
-    ctx.fillStyle = '#d9d4cb';
+    // Light grout between ceramic tiles; outdoor paving has darker, wider joints.
+    const grout = Math.max(1, Math.round((image !== null ? 2 : 5) / LayoutMmPerPixel));
+    ctx.fillStyle = image !== null ? '#d9d4cb' : `#${shade(new THREE.Color(color), -0.3).getHexString()}`;
     for (let i = 0; i < 2; i++) {
         ctx.fillRect(i * w, 0, grout, ctx.canvas.height);
         ctx.fillRect(0, i * h, ctx.canvas.width, grout);
@@ -277,6 +300,80 @@ function drawPiece(
     ctx.restore();
 }
 
+function proceduralLayoutTexture(dto: MaterialDto, layout: ImageLayout): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(layout.width / LayoutMmPerPixel);
+    canvas.height = Math.round(layout.height / LayoutMmPerPixel);
+    const ctx = canvas.getContext('2d');
+    if (ctx !== null) {
+        layout.draw(ctx, null, seededRandom(dto.id * 7919));
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.repeat.set(1000 / layout.width, 1000 / layout.height);
+    return texture;
+}
+
+/** Base colour with fine random speckle (concrete, stone). */
+function drawSpeckled(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    base: THREE.Color,
+    rng: () => number,
+    contrast: number,
+): void {
+    ctx.fillStyle = `#${base.getHexString()}`;
+    ctx.fillRect(x, y, w, h);
+    const dots = Math.round((w * h) / 20);
+    for (let k = 0; k < dots; k++) {
+        ctx.fillStyle = `#${shade(base, (rng() - 0.5) * 2 * contrast).getHexString()}`;
+        ctx.fillRect(x + rng() * w, y + rng() * h, 2, 2);
+    }
+}
+
+/** Lawn: mottled green base with short blades in lighter and darker greens. Canvas covers 2 × 2 m. */
+function drawGrass(ctx: CanvasRenderingContext2D, size: number, color: string, rng: () => number): void {
+    const base = new THREE.Color(color);
+    ctx.fillStyle = `#${base.getHexString()}`;
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 60; i++) {
+        ctx.fillStyle = `#${shade(base, (rng() - 0.5) * 0.16).getHexString()}`;
+        ctx.globalAlpha = 0.15;
+        ctx.beginPath();
+        ctx.arc(rng() * size, rng() * size, 30 + rng() * 120, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 26000; i++) {
+        const x = rng() * size;
+        const y = rng() * size;
+        ctx.strokeStyle = `#${shade(base, (rng() - 0.45) * 0.5).getHexString()}`;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + (rng() - 0.5) * 4, y - 4 - rng() * 6);
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+}
+
+/** Washed pebbles 8–32 mm. Canvas covers 1 × 1 m. */
+function drawGravel(ctx: CanvasRenderingContext2D, size: number, color: string, rng: () => number): void {
+    const base = new THREE.Color(color);
+    ctx.fillStyle = `#${shade(base, -0.35).getHexString()}`;
+    ctx.fillRect(0, 0, size, size);
+    const mmToPx = size / 1000;
+    for (let i = 0; i < 9000; i++) {
+        const r = (4 + rng() * 12) * mmToPx;
+        ctx.fillStyle = `#${shade(base, (rng() - 0.5) * 0.4).getHexString()}`;
+        ctx.beginPath();
+        ctx.ellipse(rng() * size, rng() * size, r, r * (0.6 + rng() * 0.4), rng() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
 function drawPattern(dto: MaterialDto): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -300,6 +397,14 @@ function drawPattern(dto: MaterialDto): HTMLCanvasElement {
             canvas.width = 1024;
             canvas.height = 1024;
             drawTiles(ctx, canvas.width, dto.color, rng);
+            break;
+        case 'Grass':
+            canvas.width = canvas.height = 1024;
+            drawGrass(ctx, canvas.width, dto.color, rng);
+            break;
+        case 'Gravel':
+            canvas.width = canvas.height = 1024;
+            drawGravel(ctx, canvas.width, dto.color, rng);
             break;
         default:
             canvas.width = canvas.height = 4;

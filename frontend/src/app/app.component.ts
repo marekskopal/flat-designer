@@ -1,7 +1,7 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal, viewChild} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {Room, Scene} from '@app/models/scene';
+import {Room, RoomType, Scene} from '@app/models/scene';
 import {SceneApiService} from '@app/services/scene-api.service';
 import {ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {ViewerComponent} from '@app/viewer/viewer.component';
@@ -46,8 +46,9 @@ export class AppComponent {
 
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
     protected readonly rooms = computed(() => this.scene()?.rooms ?? []);
-    protected readonly indoorArea = computed(() => this.rooms().filter((r) => r.type !== 'Terrace').reduce((sum, r) => sum + r.area, 0));
-    protected readonly totalArea = computed(() => this.rooms().reduce((sum, r) => sum + r.area, 0));
+    protected readonly indoorArea = computed(() => this.areaOf((type) => type !== 'Terrace' && type !== 'Garden'));
+    protected readonly terraceArea = computed(() => this.areaOf((type) => type === 'Terrace'));
+    protected readonly gardenArea = computed(() => this.areaOf((type) => type === 'Garden'));
 
     private readonly viewer = viewChild.required(ViewerComponent);
 
@@ -99,6 +100,10 @@ export class AppComponent {
 
     protected onRoomPicked(roomId: number | null): void {
         this.selectedRoomId.set(roomId);
+    }
+
+    private areaOf(matches: (type: RoomType) => boolean): number {
+        return this.rooms().filter((r) => matches(r.type)).reduce((sum, r) => sum + r.area, 0);
     }
 
     protected onSectionInput(event: Event): void {

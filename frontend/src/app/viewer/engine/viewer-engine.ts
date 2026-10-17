@@ -243,7 +243,8 @@ export class ViewerEngine {
             new THREE.MeshStandardMaterial({color: '#cfd2c4', roughness: 1}),
         );
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.3;
+        // Just below the floor level: the gardens and the terrace lie on it, the slab is buried.
+        ground.position.y = -0.02;
         ground.receiveShadow = true;
         ground.name = 'ground';
         this.scene.add(ground);

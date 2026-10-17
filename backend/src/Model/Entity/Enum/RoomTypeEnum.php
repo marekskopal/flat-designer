@@ -12,4 +12,5 @@ enum RoomTypeEnum: string
 	case Toilet = 'Toilet';
 	case Hallway = 'Hallway';
 	case Terrace = 'Terrace';
+	case Garden = 'Garden';
 }

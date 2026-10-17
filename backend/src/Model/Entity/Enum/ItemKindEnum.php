@@ -23,4 +23,5 @@ enum ItemKindEnum: string
 	case TowelRadiator = 'TowelRadiator';
 	case FlushPlate = 'FlushPlate';
 	case Fixture = 'Fixture';
+	case Fence = 'Fence';
 }
