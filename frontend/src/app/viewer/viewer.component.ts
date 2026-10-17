@@ -50,6 +50,10 @@ export class ViewerComponent {
 
     public readonly selected = output<Selection | null>();
     public readonly itemMoved = output<{itemId: number; x: number; y: number}>();
+    /** The walkthrough ended (Esc); the camera returns to the overview. */
+    public readonly walkthroughEnded = output();
+    /** Whether the walkthrough has the mouse captured. */
+    public readonly walkthroughLocked = output<boolean>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Created after the first render, once the host element has its size. */
@@ -60,6 +64,8 @@ export class ViewerComponent {
             const engine = new ViewerEngine(this.host().nativeElement);
             engine.onSelect = (selection): void => this.selected.emit(selection);
             engine.onItemMoved = (itemId, x, y): void => this.itemMoved.emit({itemId, x, y});
+            engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
+            engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -91,6 +97,11 @@ export class ViewerComponent {
 
     public setView(preset: ViewPreset): void {
         this.engine()?.setView(preset);
+    }
+
+    /** First-person walk; call it from a click handler, it captures the mouse. */
+    public startWalkthrough(): void {
+        this.engine()?.startWalkthrough();
     }
 
     /** Where the camera looks, in plan mm (placement of new elements). */

@@ -191,7 +191,7 @@ final readonly class ProjectSnapshotService
 			foreach ($data->objects('openings') as $opening) {
 				$hinge = $opening->nullableString('hinge');
 				$side = $opening->nullableString('side');
-				$this->openingRepository->persist($this->stamp(new Opening(
+				$restored = $this->stamp(new Opening(
 					wall: $wall,
 					name: $opening->string('name'),
 					type: OpeningTypeEnum::from($opening->string('type')),
@@ -202,7 +202,10 @@ final readonly class ProjectSnapshotService
 					leafWidth: $opening->nullableInt('leafWidth'),
 					hinge: $hinge === null ? null : OpeningHingeEnum::from($hinge),
 					side: $side === null ? null : OpeningSideEnum::from($side),
-				)));
+				));
+				// Snapshots taken before the flag existed have no entrance.
+				$restored->entrance = $opening->raw('entrance') === true;
+				$this->openingRepository->persist($restored);
 			}
 		}
 	}

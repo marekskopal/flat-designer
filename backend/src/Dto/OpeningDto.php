@@ -22,6 +22,7 @@ final readonly class OpeningDto
 		public ?int $leafWidth,
 		public ?OpeningHingeEnum $hinge,
 		public ?OpeningSideEnum $side,
+		public bool $entrance,
 	) {
 	}
 
@@ -38,6 +39,7 @@ final readonly class OpeningDto
 			leafWidth: $opening->leafWidth,
 			hinge: $opening->hinge,
 			side: $opening->side,
+			entrance: $opening->entrance,
 		);
 	}
 }

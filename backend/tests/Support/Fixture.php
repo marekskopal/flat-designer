@@ -121,7 +121,7 @@ final class Fixture
 			material: $material,
 		));
 		self::service(WallRepository::class)->persist($wall);
-		self::service(OpeningRepository::class)->persist(self::stamp(new Opening(
+		$door = self::stamp(new Opening(
 			wall: $wall,
 			name: 'Door',
 			type: OpeningTypeEnum::Door,
@@ -132,7 +132,9 @@ final class Fixture
 			leafWidth: 800,
 			hinge: OpeningHingeEnum::Start,
 			side: OpeningSideEnum::Left,
-		)));
+		));
+		$door->entrance = true;
+		self::service(OpeningRepository::class)->persist($door);
 
 		$items = self::service(ItemRepository::class);
 		$items->persist(self::stamp(new Item(

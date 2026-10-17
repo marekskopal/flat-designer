@@ -29,6 +29,7 @@ final readonly class OpeningTools
 	 * @param int|null $leafWidth door leaf width, mm
 	 * @param string|null $hinge door: which edge carries the leaf, "Start" (nearer the wall start) | "End"
 	 * @param string|null $side door: side the leaf swings to, "Left" | "Right" when walking from wall start to end
+	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 */
 	#[McpTool(
 		name: 'add_opening',
@@ -47,6 +48,7 @@ final readonly class OpeningTools
 		?int $leafWidth = null,
 		?string $hinge = null,
 		?string $side = null,
+		?bool $entrance = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -63,6 +65,7 @@ final readonly class OpeningTools
 				'leafWidth' => $leafWidth,
 				'hinge' => $hinge,
 				'side' => $side,
+				'entrance' => $entrance,
 			]),
 		);
 	}
@@ -72,6 +75,7 @@ final readonly class OpeningTools
 	 * @param int|null $offset mm from the wall's start point
 	 * @param string|null $hinge "Start" | "End"
 	 * @param string|null $side "Left" | "Right"
+	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side"
 	 */
 	#[McpTool(name: 'update_opening', description: 'Change a door or window (it stays on its wall). Only the given fields change.')]
@@ -88,6 +92,7 @@ final readonly class OpeningTools
 		?int $leafWidth = null,
 		?string $hinge = null,
 		?string $side = null,
+		?bool $entrance = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -105,6 +110,7 @@ final readonly class OpeningTools
 				'leafWidth' => $leafWidth,
 				'hinge' => $hinge,
 				'side' => $side,
+				'entrance' => $entrance,
 			], $clear, self::Clearable),
 		);
 	}

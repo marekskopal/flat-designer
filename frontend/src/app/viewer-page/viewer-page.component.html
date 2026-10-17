@@ -6,12 +6,26 @@
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [editMode]="editor.enabled()"
-    [insetLeft]="panelInset"
+    [insetLeft]="walking() ? 0 : panelInset"
     (selected)="onSelected($event)"
     (itemMoved)="onItemMoved($event)"
+    (walkthroughEnded)="onWalkthroughEnded()"
+    (walkthroughLocked)="walkLocked.set($event)"
 />
 
-<aside class="panel" [class.panel--editing]="editor.enabled()">
+@if (walking()) {
+    <div class="walk-hint" role="status">
+        @if (!walkLocked()) {
+            <strong class="walk-hint__prompt">Click the view to look around</strong>
+        }
+        <span>
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around ·
+            <kbd>Esc</kbd> back to 3D
+        </span>
+    </div>
+}
+
+<aside class="panel" [class.panel--editing]="editor.enabled()" [class.panel--hidden]="walking()">
     <header class="panel__header">
         @if (project(); as p) {
             <a class="eyebrow eyebrow--link" [routerLink]="['/projects', p.id]">{{ p.name }}</a>
@@ -66,15 +80,15 @@
         }
     </header>
 
-    @if (editor.enabled() && scene(); as s) {
+    @if (editor.enabled() && !walking() && scene(); as s) {
         <fd-editor-panel [scene]="s" [viewCenter]="viewCenter" />
     }
 
     <section class="panel__section">
         <h2 class="section-title">View</h2>
         <div class="segmented" role="group" aria-label="Camera view">
-            @for (view of views; track view.preset) {
-                <button type="button" [class.active]="activeView() === view.preset" (click)="setView(view.preset)">
+            @for (view of views; track view.mode) {
+                <button type="button" [class.active]="activeView() === view.mode" (click)="setView(view.mode)">
                     {{ view.label }}
                 </button>
             }

@@ -41,6 +41,17 @@ final readonly class FieldReader
 		return $value;
 	}
 
+	/** A flag; missing means false (states logged before the flag existed). */
+	public function bool(string $key): bool
+	{
+		$value = $this->data[$key] ?? false;
+		if (!is_bool($value)) {
+			throw EditException::invalid(sprintf('Field "%s" must be true or false.', $key));
+		}
+
+		return $value;
+	}
+
 	/** Trimmed, non-empty unless `$allowEmpty`. */
 	public function string(string $key, int $maxLength, bool $allowEmpty = false): string
 	{

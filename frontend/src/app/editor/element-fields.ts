@@ -1,6 +1,6 @@
 import {ElementKind} from '@app/viewer/engine/selection';
 
-export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json';
+export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'json' | 'bool';
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -59,6 +59,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'leafWidth', label: 'Leaf width', type: 'int', unit: 'mm', nullable: true, half: true},
         {key: 'hinge', label: 'Hinge', type: 'select', options: ['Start', 'End'], nullable: true, half: true},
         {key: 'side', label: 'Swing side', type: 'select', options: ['Left', 'Right'], nullable: true, half: true},
+        {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool'},
     ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},
@@ -98,6 +99,8 @@ export function parseFieldValue(def: FieldDef, raw: string): ParsedValue {
     }
 
     switch (def.type) {
+        case 'bool':
+            return {ok: true, value: text === 'true'};
         case 'int': {
             if (!/^-?\d+$/.test(text)) {
                 return {ok: false, error: 'Whole number expected.'};

@@ -34,10 +34,16 @@ const SectionMax = 2700;
 /** Plan view cuts walls at this height, like an architectural floor plan. */
 const PlanSectionHeight = 1300;
 
+/** Camera presets plus the first-person walkthrough. */
+type ViewMode = ViewPreset | 'walkthrough';
+
 interface ViewOption {
-    preset: ViewPreset;
+    mode: ViewMode;
     label: string;
 }
+
+/** Walking needs the pointer lock and a mouse. */
+const walkthroughSupported = (): boolean => 'exitPointerLock' in document && matchMedia('(pointer: fine)').matches;
 
 const optionalId = (value: string | number | null | undefined): number | null =>
     value === null || value === undefined || value === '' ? null : Number(value);
@@ -65,9 +71,9 @@ export class ViewerPageComponent {
     protected readonly sectionMin = SectionMin;
     protected readonly sectionMax = SectionMax;
     protected readonly views: ViewOption[] = [
-        {preset: 'overview', label: '3D'},
-        {preset: 'top', label: 'Plan'},
-        {preset: 'kitchen', label: 'Kitchen'},
+        {mode: 'overview', label: '3D'},
+        {mode: 'top', label: 'Plan'},
+        ...(walkthroughSupported() ? [{mode: 'walkthrough', label: 'Walk'} satisfies ViewOption] : []),
     ];
 
     protected readonly editor = inject(EditorStore);
@@ -108,7 +114,11 @@ export class ViewerPageComponent {
         }
         return error instanceof HttpErrorResponse ? errorMessage(error) : 'Could not load the floor.';
     });
-    protected readonly activeView = signal<ViewPreset>('overview');
+    protected readonly activeView = signal<ViewMode>('overview');
+    /** First-person walk in progress: the panel steps aside for the full view. */
+    protected readonly walking = signal(false);
+    /** The walk has the mouse captured; otherwise the walker is asked to click the view. */
+    protected readonly walkLocked = signal(false);
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly sectionSlider = signal(SectionMax);
@@ -174,24 +184,39 @@ export class ViewerPageComponent {
         }
     }
 
-    protected setView(preset: ViewPreset): void {
-        this.activeView.set(preset);
-        if (preset !== 'kitchen') {
-            this.labelsVisible.set(true);
+    protected setView(mode: ViewMode): void {
+        if (mode === 'walkthrough') {
+            this.startWalkthrough();
+            return;
         }
-        if (preset === 'top') {
-            this.ceilingsVisible.set(false);
-            this.sectionSlider.set(PlanSectionHeight);
-        } else if (preset === 'kitchen') {
-            // Eye level: a closed room, without labels floating through the walls.
-            this.ceilingsVisible.set(true);
-            this.labelsVisible.set(false);
-            this.sectionSlider.set(SectionMax);
-        } else {
-            this.ceilingsVisible.set(false);
-            this.sectionSlider.set(SectionMax);
-        }
-        this.viewer().setView(preset);
+        this.activeView.set(mode);
+        this.labelsVisible.set(true);
+        this.ceilingsVisible.set(false);
+        this.sectionSlider.set(mode === 'top' ? PlanSectionHeight : SectionMax);
+        this.viewer().setView(mode);
+    }
+
+    private startWalkthrough(): void {
+        // Eye level: closed rooms, without labels floating through the walls or a selection outline.
+        this.editor.selection.set(null);
+        this.ceilingsVisible.set(true);
+        this.labelsVisible.set(false);
+        this.sectionSlider.set(SectionMax);
+        this.activeView.set('walkthrough');
+        this.walkLocked.set(false);
+        this.walking.set(true);
+        // Synchronously within the click: the pointer lock needs the user gesture.
+        this.viewer().startWalkthrough();
+    }
+
+    /** Esc: the engine flies back to the overview, the panel returns with its settings. */
+    protected onWalkthroughEnded(): void {
+        this.walking.set(false);
+        this.walkLocked.set(false);
+        this.activeView.set('overview');
+        this.labelsVisible.set(true);
+        this.ceilingsVisible.set(false);
+        this.sectionSlider.set(SectionMax);
     }
 
     protected toggleEdit(): void {

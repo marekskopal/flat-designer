@@ -206,6 +206,7 @@ function clipGap(gap: WallGap, bandBottom: number, bandTop: number): Opening[] {
         leafWidth: null,
         hinge: null,
         side: null,
+        entrance: false,
     }];
 }
 

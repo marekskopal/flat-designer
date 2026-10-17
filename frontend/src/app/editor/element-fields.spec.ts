@@ -31,6 +31,12 @@ describe('element fields', () => {
         expect(parseFieldValue(def, '[[0,0]')).toEqual({ok: false, error: 'Invalid JSON.'});
     });
 
+    it('reads checkbox flags', () => {
+        const def = field('entrance', 'opening');
+        expect(parseFieldValue(def, formatFieldValue(def, true))).toEqual({ok: true, value: true});
+        expect(parseFieldValue(def, 'false')).toEqual({ok: true, value: false});
+    });
+
     it('detects changes by content', () => {
         expect(isChanged({plinth: 100}, {plinth: 100})).toBe(false);
         expect(isChanged(null, undefined)).toBe(false);

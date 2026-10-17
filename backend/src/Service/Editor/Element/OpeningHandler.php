@@ -37,7 +37,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side'];
+		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance'];
 	}
 
 	/** @return array<string, mixed> */
@@ -55,6 +55,7 @@ final readonly class OpeningHandler implements ElementHandler
 				'leafWidth' => null,
 				'hinge' => null,
 				'side' => null,
+				'entrance' => false,
 			];
 		}
 
@@ -69,6 +70,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'leafWidth' => 800,
 			'hinge' => OpeningHingeEnum::Start->value,
 			'side' => OpeningSideEnum::Left->value,
+			'entrance' => false,
 		];
 	}
 
@@ -135,6 +137,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'leafWidth' => $fields->nullableInt('leafWidth', 100, $width),
 			'hinge' => $fields->nullableEnum('hinge', OpeningHingeEnum::class)?->value,
 			'side' => $fields->nullableEnum('side', OpeningSideEnum::class)?->value,
+			'entrance' => $fields->bool('entrance'),
 		];
 	}
 
@@ -193,6 +196,7 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->leafWidth = $fields->nullableInt('leafWidth', 1, State::CoordinateLimit);
 		$opening->hinge = $fields->nullableEnum('hinge', OpeningHingeEnum::class);
 		$opening->side = $fields->nullableEnum('side', OpeningSideEnum::class);
+		$opening->entrance = $fields->bool('entrance');
 		$this->openingRepository->persist($opening);
 	}
 

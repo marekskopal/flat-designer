@@ -19,7 +19,8 @@ use MarekSkopal\ORM\Enum\Type;
  * Door or window cut into a wall. `offset` is the distance (mm) from the wall start to the near edge
  * of the opening, measured along the centre line. For doors, `hinge` says which edge (nearer the
  * wall start or end) carries the leaf and `side` which side of the wall (left/right when walking
- * from start to end) it swings into; `leafWidth` is the nominal door leaf width.
+ * from start to end) it swings into; `leafWidth` is the nominal door leaf width. `entrance` marks the
+ * main door of the floor (where a walkthrough starts).
  */
 #[Entity(repositoryClass: OpeningRepository::class)]
 class Opening extends AEntity
@@ -27,6 +28,9 @@ class Opening extends AEntity
 	/** Set when deleted in the editor; the row stays so undo can bring it back with the same id. */
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
+
+	#[Column(type: Type::Boolean)]
+	public bool $entrance = false;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]

@@ -79,6 +79,8 @@ export interface Opening {
     leafWidth: number | null;
     hinge: 'Start' | 'End' | null;
     side: 'Left' | 'Right' | null;
+    /** Main door of the floor: a walkthrough starts just inside it. */
+    entrance: boolean;
 }
 
 export interface Wall {

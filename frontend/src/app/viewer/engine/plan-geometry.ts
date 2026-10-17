@@ -1,4 +1,4 @@
-import {Opening, PlanPoint, Wall} from '@app/models/scene';
+import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 /** Plan millimetres → scene metres. Plan y (north) maps to scene −z, so a plan seen from above is not mirrored. */
 export const MM = 0.001;
@@ -206,4 +206,125 @@ export function stackFronts(fronts: readonly {type: string; height?: number}[], 
 /** Rounds a length in mm to the nearest multiple of `step` (the editor's snap grid). */
 export function snapToGrid(value: number, step: number): number {
     return step <= 1 ? Math.round(value) : Math.round(value / step) * step;
+}
+
+/** Even-odd test whether a point lies inside a polygon. */
+export function pointInPolygon(point: Vec2, polygon: readonly PlanPoint[]): boolean {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i];
+        const [xj, yj] = polygon[j];
+        if (yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+/** Wall pieces starting lower than this (mm) block walking; door lintels do not. */
+const WalkableStep = 300;
+
+/** Solid footprint of a wall piece at floor level: the rectangle `from`..`to` along the centre line, ± half the thickness across. */
+export interface WallCollider {
+    frame: WallFrame;
+    from: number;
+    to: number;
+    halfThickness: number;
+}
+
+/** Floor-level footprints of the walls; doors leave gaps, windows count as solid wall. */
+export function wallColliders(walls: readonly Wall[]): WallCollider[] {
+    const colliders: WallCollider[] = [];
+    for (const wall of walls) {
+        const frame = wallFrame(wall);
+        if (!(frame.length > 0)) {
+            continue;
+        }
+        const doors = wall.openings.filter((o) => o.type === 'Door');
+        for (const piece of wallPieces(frame.length, wall.height, doors)) {
+            if (piece.bottom < WalkableStep) {
+                colliders.push({frame, from: piece.from, to: piece.to, halfThickness: wall.thickness / 2});
+            }
+        }
+    }
+    return colliders;
+}
+
+/**
+ * Pushes a circle (centre `point`, plan mm) out of every collider it overlaps. Applied after each step of a
+ * move, the push along the wall normal makes a walker slide along walls instead of stopping at them.
+ */
+export function collideCircle(point: Vec2, radius: number, colliders: readonly WallCollider[]): Vec2 {
+    let {x, y} = point;
+    for (let pass = 0; pass < 4; pass++) {
+        let pushed = false;
+        for (const {frame, from, to, halfThickness} of colliders) {
+            const dx = x - frame.start.x;
+            const dy = y - frame.start.y;
+            let along = dx * frame.dir.x + dy * frame.dir.y;
+            let across = dx * frame.normal.x + dy * frame.normal.y;
+            const offAlong = along - Math.min(Math.max(along, from), to);
+            const offAcross = across - Math.min(Math.max(across, -halfThickness), halfThickness);
+            const distance = Math.hypot(offAlong, offAcross);
+            if (distance >= radius) {
+                continue;
+            }
+            if (distance > 1e-6) {
+                const scale = (radius - distance) / distance;
+                along += offAlong * scale;
+                across += offAcross * scale;
+            } else {
+                // Centre inside the wall: leave through the nearest face.
+                const exits = [from - radius - along, to + radius - along, -halfThickness - radius - across, halfThickness + radius - across];
+                const nearest = exits.reduce((best, e, i) => (Math.abs(e) < Math.abs(exits[best]) ? i : best), 0);
+                if (nearest < 2) {
+                    along += exits[nearest];
+                } else {
+                    across += exits[nearest];
+                }
+            }
+            const p = pointOnWall(frame, along, across);
+            x = p.x;
+            y = p.y;
+            pushed = true;
+        }
+        if (!pushed) {
+            break;
+        }
+    }
+    return {x, y};
+}
+
+/** Where a walk starts and the way it faces (unit vector), plan mm. */
+export interface WalkStart {
+    position: Vec2;
+    direction: Vec2;
+}
+
+/** How far inside the entrance a walk starts, measured from the wall face (mm). */
+const EntranceStep = 700;
+
+/**
+ * A step inside the main door, facing into the floor: the door flagged `entrance`, otherwise the first
+ * door in an exterior wall. Inside is the side lying in an indoor room (not a terrace or garden).
+ * Null when there is no such door.
+ */
+export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]): WalkStart | null {
+    const doors = walls.flatMap((wall) => wall.openings.filter((o) => o.type === 'Door').map((opening) => ({wall, opening})));
+    const door = doors.find((d) => d.opening.entrance) ?? doors.find((d) => d.wall.type === 'Exterior');
+    if (door === undefined) {
+        return null;
+    }
+
+    const frame = wallFrame(door.wall);
+    const along = door.opening.offset + door.opening.width / 2;
+    const across = door.wall.thickness / 2 + EntranceStep;
+    const indoor = rooms.filter((r) => r.type !== 'Terrace' && r.type !== 'Garden');
+    const sides = [1, -1].map((sign) => ({sign, position: pointOnWall(frame, along, sign * across)}));
+    const inside =
+        sides.find((s) => indoor.some((r) => pointInPolygon(s.position, r.polygon))) ??
+        sides.find((s) => rooms.some((r) => pointInPolygon(s.position, r.polygon))) ??
+        sides[0];
+
+    return {position: inside.position, direction: {x: frame.normal.x * inside.sign, y: frame.normal.y * inside.sign}};
 }

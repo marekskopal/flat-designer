@@ -34,6 +34,16 @@
                         }
                     </select>
                 }
+                @case ('bool') {
+                    <input
+                        [id]="'field-' + def.key"
+                        type="checkbox"
+                        class="field__check"
+                        [checked]="value(def) === 'true'"
+                        [disabled]="disabled()"
+                        (change)="commit(def, $event)"
+                    />
+                }
                 @case ('json') {
                     <textarea [id]="'field-' + def.key" class="input input--compact input--code" rows="3" [value]="value(def)" [disabled]="disabled()" (change)="commit(def, $event)"></textarea>
                 }

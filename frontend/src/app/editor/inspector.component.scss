@@ -20,6 +20,12 @@
     font-size: 11px;
 }
 
+.field__check {
+    align-self: flex-start;
+    margin: 2px 0;
+    accent-color: $color-accent;
+}
+
 .field__unit {
     font-weight: 400;
     color: $color-text-subtle;

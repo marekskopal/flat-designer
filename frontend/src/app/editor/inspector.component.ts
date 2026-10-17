@@ -37,7 +37,8 @@ export class InspectorComponent {
 
     protected commit(def: FieldDef, event: Event): void {
         const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-        const parsed = parseFieldValue(def, target.value);
+        const raw = target instanceof HTMLInputElement && target.type === 'checkbox' ? String(target.checked) : target.value;
+        const parsed = parseFieldValue(def, raw);
         if (!parsed.ok) {
             this.errors.update((all) => ({...all, [def.key]: parsed.error}));
             return;

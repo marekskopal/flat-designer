@@ -151,6 +151,21 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertCount(2, $walls[0]['openings']);
 	}
 
+	public function testEntranceFlag(): void
+	{
+		$wall = $this->create('walls', []);
+		$door = $this->create('openings', ['wallId' => self::id($wall)]);
+		self::assertFalse($door['entrance']);
+
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['entrance' => 'yes'])->getStatusCode());
+		$this->edit('PATCH', 'openings', self::id($door), ['entrance' => true]);
+
+		$walls = $this->sceneList('walls');
+		self::assertIsList($walls[0]['openings']);
+		self::assertIsArray($walls[0]['openings'][0]);
+		self::assertTrue($walls[0]['openings'][0]['entrance']);
+	}
+
 	public function testDeletingWallHidesItsOpenings(): void
 	{
 		$wall = $this->create('walls', []);

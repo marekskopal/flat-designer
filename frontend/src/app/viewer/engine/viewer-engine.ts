@@ -8,10 +8,11 @@ import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRend
 import {buildBuilding} from './building';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
-import {Bounds, MM, polygonBounds, polygonCentroid, snapToGrid} from './plan-geometry';
+import {Bounds, entranceWalkStart, MM, polygonBounds, polygonCentroid, snapToGrid, WalkStart, wallColliders} from './plan-geometry';
 import {Selection, selectionOf} from './selection';
+import {Walkthrough, WalkthroughFov} from './walkthrough';
 
-export type ViewPreset = 'overview' | 'top' | 'kitchen';
+export type ViewPreset = 'overview' | 'top';
 
 interface CameraTween {
     fromPosition: THREE.Vector3;
@@ -27,10 +28,7 @@ const HighlightColor = '#d9822b';
 const TweenDuration = 900;
 /** Framing of a floor with nothing on it yet (plan mm). */
 const EmptyFloorBounds: Bounds = {minX: 0, minY: 0, maxX: 10000, maxY: 10000};
-
-/** Eye-level viewpoint of the kitchen render, in plan millimetres: standing in the living room, looking north-east. */
-const KitchenEye = {x: 1500, y: 1900, z: 1600};
-const KitchenTarget = {x: 5300, y: 5800, z: 1150};
+const OrbitFov = 45;
 
 /** Snap grid for dragged items, mm (Shift: whole mm). */
 const DragSnap = 10;
@@ -57,11 +55,15 @@ export class ViewerEngine {
     public onSelect: (selection: Selection | null) => void = () => undefined;
     /** An item was dragged to a new footprint centre (plan mm), in edit mode. */
     public onItemMoved: (itemId: number, x: number, y: number) => void = () => undefined;
+    /** The walkthrough ended (Esc); the camera is on its way back to the overview. */
+    public onWalkthroughEnd: () => void = () => undefined;
+    /** The walkthrough captured the mouse, or lost it / was refused it (the walker has to click the view). */
+    public onWalkthroughLock: (locked: boolean) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
     private readonly scene = new THREE.Scene();
-    private readonly camera = new THREE.PerspectiveCamera(45, 1, 0.05, 300);
+    private readonly camera = new THREE.PerspectiveCamera(OrbitFov, 1, 0.05, 300);
     private readonly controls: OrbitControls;
     private readonly sun = new THREE.DirectionalLight('#fff3e0', 2.4);
     private readonly sectionPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 10);
@@ -89,6 +91,9 @@ export class ViewerEngine {
     private tween: CameraTween | null = null;
     /** Floor currently shown; reloading the same floor (a live update) keeps the camera where it is. */
     private loadedFloorId: number | null = null;
+    private sceneData: Scene | null = null;
+    private walkthrough: Walkthrough | null = null;
+    private lastFrame = performance.now();
 
     public constructor(private readonly container: HTMLElement) {
         RectAreaLightUniformsLib.init();
@@ -167,14 +172,20 @@ export class ViewerEngine {
 
         this.content = content;
         this.scene.add(content);
+        this.sceneData = scene;
 
         const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
         this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
         if (this.loadedFloorId !== scene.floor.id) {
+            if (this.walkthrough !== null) {
+                this.stopWalkthrough(false);
+                this.onWalkthroughEnd();
+            }
             this.setView('overview', false);
         }
+        this.walkthrough?.setColliders(wallColliders(scene.walls));
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
     }
@@ -249,10 +260,66 @@ export class ViewerEngine {
                 this.moveCamera(new THREE.Vector3(center.x, distance, center.z + 0.001), center, animate);
                 break;
             }
-            case 'kitchen':
-                this.moveCamera(planToScene(KitchenEye), planToScene(KitchenTarget), animate);
-                break;
         }
+    }
+
+    /**
+     * Switches to a first-person walk at eye level, starting just inside the main door (or in the largest
+     * indoor room, facing the way the camera does). Call it from a click: it captures the mouse.
+     */
+    public startWalkthrough(): void {
+        if (this.walkthrough !== null || this.sceneData === null) {
+            return;
+        }
+        this.cancelDrag();
+        this.tween = null;
+        this.controls.enabled = false;
+        this.camera.fov = WalkthroughFov;
+        this.camera.updateProjectionMatrix();
+
+        const start = this.walkStart(this.sceneData);
+        // The view looks along plan (−sin yaw, cos yaw).
+        const yaw = Math.atan2(-start.direction.x, start.direction.y);
+        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, wallColliders(this.sceneData.walls), start.position, yaw);
+        walkthrough.onExit = (): void => {
+            this.stopWalkthrough();
+            this.onWalkthroughEnd();
+        };
+        walkthrough.onLockChange = (locked): void => this.onWalkthroughLock(locked);
+        this.walkthrough = walkthrough;
+        walkthrough.lock();
+    }
+
+    /** Back to the orbit controls; with `animate` the camera flies from the walker's eye to the overview. */
+    public stopWalkthrough(animate = true): void {
+        if (this.walkthrough === null) {
+            return;
+        }
+        this.walkthrough.dispose();
+        this.walkthrough = null;
+        this.camera.fov = OrbitFov;
+        this.camera.updateProjectionMatrix();
+        // Orbit around a point ahead of the walker, so the hand-over does not jerk the view.
+        const ahead = this.camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize().multiplyScalar(2);
+        this.controls.target.copy(this.camera.position).add(ahead);
+        this.controls.enabled = true;
+        this.setView('overview', animate);
+    }
+
+    /** Start of a walk: inside the entrance; without one, the middle of the largest indoor room (or the view centre). */
+    private walkStart(scene: Scene): WalkStart {
+        const entrance = entranceWalkStart(scene.walls, scene.rooms);
+        if (entrance !== null) {
+            return entrance;
+        }
+        const view = this.camera.getWorldDirection(new THREE.Vector3());
+        const direction = Math.hypot(view.x, view.z) > 1e-3 ? {x: view.x, y: -view.z} : {x: 0, y: 1};
+        const indoor = scene.rooms.filter((r) => r.type !== 'Terrace' && r.type !== 'Garden');
+        if (indoor.length === 0) {
+            return {position: this.viewCenter(), direction};
+        }
+        const largest = indoor.reduce((a, b) => (b.area > a.area ? b : a));
+        return {position: polygonCentroid(largest.polygon), direction};
     }
 
     public focusRoom(room: Room): void {
@@ -290,6 +357,8 @@ export class ViewerEngine {
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.removeEventListener('pointerup', this.handlePointerUp);
+        this.walkthrough?.dispose();
+        this.walkthrough = null;
         this.clearContent();
         this.scene.environment?.dispose();
         this.controls.dispose();
@@ -388,6 +457,15 @@ export class ViewerEngine {
     }
 
     private frame(): void {
+        const now = performance.now();
+        const dt = (now - this.lastFrame) / 1000;
+        this.lastFrame = now;
+        if (this.walkthrough !== null) {
+            this.walkthrough.update(dt);
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
         if (this.tween !== null) {
             // performance.now() rather than the loop's timestamp: the two need not share a time origin.
             const t = THREE.MathUtils.clamp((performance.now() - this.tween.start) / this.tween.duration, 0, 1);
@@ -422,6 +500,11 @@ export class ViewerEngine {
 
     private readonly handlePointerDown = (event: PointerEvent): void => {
         this.pointerDown.set(event.clientX, event.clientY);
+        if (this.walkthrough !== null) {
+            // The lock was refused or lost without ending the walk: a click captures the mouse again.
+            this.walkthrough.lock();
+            return;
+        }
         if (!this.editMode || event.button !== 0 || this.camera.getWorldDirection(new THREE.Vector3()).y > DragMaxCameraTilt) {
             return;
         }
@@ -476,7 +559,7 @@ export class ViewerEngine {
             }
             return;
         }
-        if (this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 4) {
+        if (this.walkthrough !== null || this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 4) {
             return;
         }
         this.onSelect(selectionOf(this.pick(event)?.object ?? null));
@@ -580,10 +663,6 @@ export class ViewerEngine {
         this.openings.clear();
         this.ceilings = null;
     }
-}
-
-function planToScene(p: {x: number; y: number; z: number}): THREE.Vector3 {
-    return new THREE.Vector3(p.x * MM, p.z * MM, -p.y * MM);
 }
 
 /** Unit box (scaled to the selection's bounds each frame): translucent faces plus edges, drawn on top. */
