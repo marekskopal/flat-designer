@@ -24,6 +24,7 @@ use Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware;
 use Mcp\Server\Transport\StreamableHttpTransport;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Component\Uid\Uuid;
 
 /**
  * The MCP endpoint (Streamable HTTP). Requests carry an OAuth access token issued by `OAuthController`;
@@ -32,6 +33,8 @@ use Psr\Http\Message\ServerRequestInterface;
 final readonly class McpController
 {
 	private const int DefaultSessionTtl = 86400;
+
+	private const int DefaultSessionLockTimeout = 30;
 
 	public function __construct(
 		private AuthorizationService $authorizationService,
@@ -82,11 +85,45 @@ final readonly class McpController
 		$ttl = (int) getenv('MCP_SESSION_TTL');
 		$server = $this->server->build(new DatabaseSessionStore($this->database, $ttl > 0 ? $ttl : self::DefaultSessionTtl));
 
-		return $server->run(new StreamableHttpTransport($request, middleware: [
+		$transport = new StreamableHttpTransport($request, middleware: [
 			new CorsMiddleware(),
 			new DnsRebindingProtectionMiddleware($this->allowedHosts()),
 			new ProtocolVersionMiddleware(),
-		]));
+		]);
+
+		$lock = $this->sessionLockName($request);
+		if ($lock === null) {
+			return $server->run($transport);
+		}
+		if (!$this->acquireLock($lock)) {
+			return new ErrorResponse('The MCP session is busy with another request, try again.', 503, ['Retry-After' => '1']);
+		}
+
+		try {
+			return $server->run($transport);
+		} finally {
+			$this->database->execute('SELECT RELEASE_LOCK(?)', [$lock], cached: false);
+		}
+	}
+
+	/**
+	 * Requests of one session run one at a time: the SDK queues each response in the shared session data and
+	 * the request drains the whole queue, so parallel requests would take (or lose) each other's responses.
+	 * Requests without a valid session id (initialize, or ones the transport rejects) need no lock.
+	 */
+	private function sessionLockName(ServerRequestInterface $request): ?string
+	{
+		$sessionId = $request->getHeaderLine('Mcp-Session-Id');
+
+		return Uuid::isValid($sessionId) ? 'mcp:' . strtolower($sessionId) : null;
+	}
+
+	private function acquireLock(string $lock): bool
+	{
+		$configured = getenv('MCP_SESSION_LOCK_TIMEOUT');
+		$timeout = is_string($configured) && is_numeric($configured) ? (int) $configured : self::DefaultSessionLockTimeout;
+
+		return (int) $this->database->execute('SELECT GET_LOCK(?, ?)', [$lock, $timeout], cached: false)->fetchColumn() === 1;
 	}
 
 	/** Points the client at the resource metadata, which starts its OAuth flow (RFC 9728). */

@@ -37,6 +37,11 @@ final class McpClient
 		$this->post(['jsonrpc' => '2.0', 'method' => 'notifications/initialized']);
 	}
 
+	public function sessionId(): ?string
+	{
+		return $this->sessionId;
+	}
+
 	/**
 	 * @param array<string, mixed>|null $params
 	 * @return array<string, mixed> the JSON-RPC result

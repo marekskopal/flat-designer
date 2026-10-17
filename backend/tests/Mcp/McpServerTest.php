@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Mcp;
 
 use FlatDesigner\Controller\McpController;
+use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
 use FlatDesigner\Mcp\Tool\ItemTools;
@@ -18,10 +19,12 @@ use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
 use FlatDesigner\Tests\Support\McpClient;
 use FlatDesigner\Tests\Support\OAuthFlow;
+use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /** Drives the MCP server end to end over JSON-RPC, as Claude Code or claude.ai would. */
 #[CoversClass(McpController::class)]
+#[CoversClass(EditResultDto::class)]
 #[CoversClass(DatabaseSessionStore::class)]
 #[CoversClass(ToolErrorTranslatingReferenceHandler::class)]
 #[CoversClass(ProjectTools::class)]
@@ -203,6 +206,49 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame([], $scene['items']);
 		self::assertIsList($scene['rooms']);
 		self::assertCount(1, $scene['rooms']);
+	}
+
+	public function testRequestsOfOneSessionWaitForEachOther(): void
+	{
+		// Another connection (as another worker would) holds the session while a request of it is running.
+		$sessionId = $this->client->sessionId();
+		self::assertIsString($sessionId);
+		$other = new PDO(
+			'mysql:host=' . getenv('MYSQL_HOST') . ';dbname=' . getenv('MYSQL_DATABASE'),
+			(string) getenv('MYSQL_USER'),
+			(string) getenv('MYSQL_PASSWORD'),
+		);
+		$lock = $other->prepare('SELECT GET_LOCK(?, 0)');
+		self::assertNotFalse($lock);
+		$lock->execute(['mcp:' . $sessionId]);
+		self::assertSame(1, (int) $lock->fetchColumn());
+
+		putenv('MCP_SESSION_LOCK_TIMEOUT=0');
+
+		try {
+			$busy = $this->client->post(['jsonrpc' => '2.0', 'id' => 99, 'method' => 'tools/list']);
+			self::assertSame(503, $busy->getStatusCode());
+
+			$release = $other->prepare('SELECT RELEASE_LOCK(?)');
+			self::assertNotFalse($release);
+			$release->execute(['mcp:' . $sessionId]);
+			self::assertNotSame([], $this->client->request('tools/list')['tools']);
+		} finally {
+			putenv('MCP_SESSION_LOCK_TIMEOUT');
+		}
+	}
+
+	public function testEmptyItemParamsAreAJsonObject(): void
+	{
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$result = $this->client->request('tools/call', [
+			'name' => 'add_item',
+			'arguments' => ['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'Box', 'x' => 0, 'y' => 0],
+		]);
+		self::assertIsList($result['content']);
+		self::assertIsArray($result['content'][0]);
+		self::assertIsString($result['content'][0]['text']);
+		self::assertMatchesRegularExpression('/"params":\s*\{\}/', $result['content'][0]['text']);
 	}
 
 	public function testRequestsWithoutAValidTokenAreRejected(): void
