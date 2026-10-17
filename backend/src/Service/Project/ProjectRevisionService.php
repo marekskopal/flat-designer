@@ -7,15 +7,17 @@ namespace FlatDesigner\Service\Project;
 use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Service\Editor\Exception\EditException;
+use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 
 /**
  * The project's revision counter. Bumping it is an atomic UPDATE, which also locks the project row until
- * the surrounding transaction ends, so concurrent edits of one project run one after another.
+ * the surrounding transaction ends, so concurrent edits of one project run one after another. A bump also
+ * marks the project for the live update sent after the request.
  */
 final readonly class ProjectRevisionService
 {
-	public function __construct(private DatabaseInterface $database)
+	public function __construct(private DatabaseInterface $database, private ProjectUpdatePublisher $updatePublisher)
 	{
 	}
 
@@ -40,6 +42,7 @@ final readonly class ProjectRevisionService
 		$revision = $this->database->execute('SELECT revision FROM projects WHERE id = ?', [$project->id], cached: false)->fetchColumn();
 		$project->revision = is_numeric($revision) ? (int) $revision : $project->revision + 1;
 		$project->updatedAt = $now;
+		$this->updatePublisher->markChanged($project->id, $project->revision);
 
 		return $project->revision;
 	}

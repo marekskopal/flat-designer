@@ -12,12 +12,18 @@ import {
     signal,
     viewChild,
 } from '@angular/core';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
+import {originClientId} from '@app/core/interceptors/origin.interceptor';
+import {ProjectUpdate} from '@app/models/realtime';
 import {Room, RoomType} from '@app/models/scene';
+import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
+import {RealtimeService} from '@app/services/realtime.service';
 import {ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {ViewerComponent} from '@app/viewer/viewer.component';
+import {switchMap} from 'rxjs';
 
 /** Section heights offered by the slider (mm); the top value means "no cut". */
 const SectionMin = 900;
@@ -61,6 +67,7 @@ export class ViewerPageComponent {
     ];
 
     private readonly projects = inject(ProjectService);
+    private readonly alerts = inject(AlertService);
 
     /** Kept while another floor loads, so the switch does not flash an empty view. */
     private readonly data = resource({
@@ -111,11 +118,34 @@ export class ViewerPageComponent {
     private readonly viewer = viewChild.required(ViewerComponent);
 
     public constructor() {
-        // A different floor has different rooms.
+        const realtime = inject(RealtimeService);
+        // Live updates: reload when someone else (another tab, a person, an agent) changed the project.
+        toObservable(this.projectId)
+            .pipe(
+                switchMap((projectId) => realtime.projectUpdates(projectId)),
+                takeUntilDestroyed(),
+            )
+            .subscribe((update) => this.onProjectUpdate(update));
+
+        // A different floor has different rooms (a live reload of the same floor keeps the selection).
         effect(() => {
-            this.scene();
+            this.floorId();
             this.selectedRoomId.set(null);
         });
+    }
+
+    private onProjectUpdate(update: ProjectUpdate): void {
+        // Own edits are applied already; a saved version does not change.
+        if (update.originClientId === originClientId || this.version() !== null) {
+            return;
+        }
+        if (update.revision > (this.scene()?.revision ?? -1)) {
+            this.data.reload();
+            if (update.summary !== null && update.actorName !== null) {
+                const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
+                this.alerts.success(`${update.actorName}: ${summary}`);
+            }
+        }
     }
 
     protected setView(preset: ViewPreset): void {

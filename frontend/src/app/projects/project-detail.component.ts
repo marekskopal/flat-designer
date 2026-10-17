@@ -1,12 +1,16 @@
 import {DatePipe, NgTemplateOutlet} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, numberAttribute, signal} from '@angular/core';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
+import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor} from '@app/models/scene';
 import {ProjectFilesComponent} from '@app/projects/files/project-files.component';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
+import {RealtimeService} from '@app/services/realtime.service';
+import {filter, switchMap} from 'rxjs';
 
 /** One project: its details, floors (the working copy), saved versions and files. */
 @Component({
@@ -48,6 +52,16 @@ export class ProjectDetailComponent {
 
     public constructor() {
         effect(() => void this.load(this.projectId()));
+
+        // Floors and versions changed elsewhere (another tab, an agent) show up without a reload.
+        const realtime = inject(RealtimeService);
+        toObservable(this.projectId)
+            .pipe(
+                switchMap((projectId) => realtime.projectUpdates(projectId)),
+                filter((update) => update.originClientId !== originClientId && update.revision > (this.project()?.revision ?? -1)),
+                takeUntilDestroyed(),
+            )
+            .subscribe((update) => void this.load(update.projectId));
     }
 
     protected editDetails(project: Project): void {

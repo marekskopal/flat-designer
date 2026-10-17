@@ -48,6 +48,14 @@ disconnected, on the Account page. Tools: `list_projects`, `get_project`, `get_f
 `list_item_kinds`, `add_/update_/delete_item|wall|opening|room`, `duplicate_item`, `add_floor`,
 `save_version`, `list_versions`, `list_changes`, `undo`, `redo`.
 
+## Live updates
+
+Open viewers and project pages update by themselves when the project changes elsewhere (another tab, a
+teammate, an agent over MCP), with a toast saying who changed what; the camera stays where it is. The
+backend publishes to the Mercure hub built into FrankenPHP (`/.well-known/mercure`) after each committed
+change; the browser listens with an EventSource authorized by an HttpOnly cookie
+(`POST /api/realtime/subscription`) that covers the projects the user may see.
+
 ## Using the viewer
 
 - **3D** — dollhouse view from the south-west; drag to orbit, right-drag to pan, scroll to zoom.

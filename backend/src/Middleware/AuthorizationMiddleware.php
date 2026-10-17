@@ -9,6 +9,7 @@ use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Authentication\Exception\InvalidTokenException;
 use FlatDesigner\Service\Authentication\TokenService;
 use FlatDesigner\Service\Provider\UserProvider;
+use FlatDesigner\Service\Realtime\RealtimeOriginContext;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -41,12 +42,18 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 		Routes::OAuthClientInfo->value,
 	];
 
-	public function __construct(private TokenService $tokenService, private UserProvider $userProvider)
-	{
+	public function __construct(
+		private TokenService $tokenService,
+		private UserProvider $userProvider,
+		private RealtimeOriginContext $originContext,
+	) {
 	}
 
 	public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
 	{
+		// Which browser tab made the request, echoed in live updates (any route, also open ones).
+		$this->originContext->set($request->getHeaderLine(RealtimeOriginContext::Header));
+
 		if ($request->getMethod() === 'OPTIONS' || in_array($request->getUri()->getPath(), self::OpenRoutes, true)) {
 			return $handler->handle($request);
 		}

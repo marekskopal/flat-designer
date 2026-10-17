@@ -17,6 +17,7 @@ enum Routes: string
 
 	case Materials = '/api/materials';
 	case ItemKinds = '/api/item-kinds';
+	case RealtimeSubscription = '/api/realtime/subscription';
 
 	case Mcp = '/mcp';
 	case OAuthServerMetadata = '/.well-known/oauth-authorization-server/mcp';

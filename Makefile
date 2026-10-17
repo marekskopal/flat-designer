@@ -24,15 +24,17 @@ reset-db: env
 	docker compose down -v
 	docker compose up -d --build
 
-## Create .env from .env.example and fill in a random AUTHORIZATION_TOKEN_KEY when it is empty
+## Create .env from .env.example and fill in random secrets (token and Mercure keys) that are empty
 env:
 	@if [ ! -f .env ]; then cp .env.example .env; fi
-	@if ! grep -q '^AUTHORIZATION_TOKEN_KEY=.\{32,\}' .env; then \
-		grep -v '^AUTHORIZATION_TOKEN_KEY=' .env > .env.tmp; \
-		echo "AUTHORIZATION_TOKEN_KEY=$$(openssl rand -hex 32)" >> .env.tmp; \
-		mv .env.tmp .env; \
-		echo "Generated AUTHORIZATION_TOKEN_KEY in .env"; \
-	fi
+	@for key in AUTHORIZATION_TOKEN_KEY MERCURE_PUBLISHER_JWT_KEY MERCURE_SUBSCRIBER_JWT_KEY; do \
+		if ! grep -q "^$$key=.\{32,\}" .env; then \
+			grep -v "^$$key=" .env > .env.tmp; \
+			echo "$$key=$$(openssl rand -hex 32)" >> .env.tmp; \
+			mv .env.tmp .env; \
+			echo "Generated $$key in .env"; \
+		fi; \
+	done
 
 ## Create an admin account in the running stack (prompts for email and password)
 admin:

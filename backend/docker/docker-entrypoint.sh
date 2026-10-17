@@ -4,6 +4,11 @@
 # own start-up even after its healthcheck passed, so retry for a while.
 set -e
 
+# The Mercure hub (Caddyfile) and the backend's tokens must agree on the resource identifier.
+if [ -z "${MERCURE_RESOURCE_IDENTIFIER:-}" ]; then
+	export MERCURE_RESOURCE_IDENTIFIER="${MERCURE_PUBLISH_URL:-http://localhost/.well-known/mercure}"
+fi
+
 attempt=1
 until php /app/bin/console migration:run; do
 	if [ "$attempt" -ge 30 ]; then

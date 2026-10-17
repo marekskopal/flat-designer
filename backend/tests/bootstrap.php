@@ -13,6 +13,8 @@ $env = static fn (string $name, string $default): string => is_string(getenv($na
 
 $testEnv = [
 	'AUTHORIZATION_TOKEN_KEY' => 'test-token-key-test-token-key-test-token-key-0123',
+	'MERCURE_SUBSCRIBER_JWT_KEY' => 'test-mercure-subscriber-key-0123456789-0123456789',
+	'MERCURE_PUBLISHER_JWT_KEY' => 'test-mercure-publisher-key-0123456789-0123456789',
 	'MYSQL_HOST' => $env('MYSQL_HOST', 'db'),
 	'MYSQL_USER' => $env('MYSQL_USER', 'flat_designer'),
 	'MYSQL_PASSWORD' => $env('MYSQL_PASSWORD', 'flat_designer'),

@@ -58,6 +58,8 @@ export class ViewerEngine {
     private bounds: Bounds = {minX: 0, minY: 0, maxX: 1, maxY: 1};
     private insetLeft = 0;
     private tween: CameraTween | null = null;
+    /** Floor currently shown; reloading the same floor (a live update) keeps the camera where it is. */
+    private loadedFloorId: number | null = null;
 
     public constructor(private readonly container: HTMLElement) {
         RectAreaLightUniformsLib.init();
@@ -129,7 +131,10 @@ export class ViewerEngine {
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
         this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
-        this.setView('overview', false);
+        if (this.loadedFloorId !== scene.floor.id) {
+            this.setView('overview', false);
+        }
+        this.loadedFloorId = scene.floor.id;
     }
 
     public setCeilingsVisible(visible: boolean): void {

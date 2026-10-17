@@ -48,6 +48,12 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   becomes the schema; JSON objects need `#[Schema(definition: …)]`). Domain `RuntimeException`s reach the
   agent as tool errors (`ToolErrorTranslatingReferenceHandler`). `tests/Mcp/McpServerTest` drives the
   server over JSON-RPC.
+- Live updates: `ProjectRevisionService::bump()` marks the project in `ProjectUpdatePublisher`; the worker
+  publishes after `frankenphp_finish_request()` (only revisions that were committed) to the private
+  Mercure topic `flat-designer/projects/{id}`. Subscribers get a cookie from `/api/realtime/subscription`
+  and listen on `/.well-known/mercure?match=<topic>` (Mercure protocol 1.0 uses `match`, not `topic`).
+  Each tab sends `X-Origin-Client-Id` so it can skip its own echoes. Tests record updates in
+  `RecordingMercureHub`.
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs

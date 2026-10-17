@@ -13,8 +13,8 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 final readonly class CorsMiddleware implements MiddlewareInterface
 {
-	private const string AllowHeaders = 'Content-Type, Authorization, X-Origin-Client-Id';
-	private const string AllowMethods = 'GET, POST, PUT, DELETE, OPTIONS';
+	private const string AllowHeaders = 'Content-Type, Authorization, If-Match, X-Origin-Client-Id';
+	private const string AllowMethods = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
 	private const string MaxAge = '600';
 
 	public function __construct(private CorsPolicy $policy)

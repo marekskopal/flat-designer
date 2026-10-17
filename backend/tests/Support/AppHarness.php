@@ -8,6 +8,7 @@ use FlatDesigner\App\Application;
 use FlatDesigner\App\ApplicationFactory;
 use FlatDesigner\Mcp\McpUserContext;
 use FlatDesigner\Service\Actor\ActorContext;
+use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
 use FlatDesigner\Service\Storage\FileStorageInterface;
 use League\Container\Container;
 use PDO;
@@ -15,6 +16,7 @@ use PDOException;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Component\Mercure\HubInterface;
 
 /**
  * Per-suite singleton for integration tests: on first use it recreates the test database, runs all
@@ -29,6 +31,8 @@ final class AppHarness
 
 	private static ?InMemoryFileStorage $fileStorage = null;
 
+	private static ?RecordingMercureHub $mercureHub = null;
+
 	/** @var list<string>|null */
 	private static ?array $tables = null;
 
@@ -42,6 +46,7 @@ final class AppHarness
 			$container = self::$application->container;
 			assert($container instanceof Container);
 			$container->extend(FileStorageInterface::class)->setConcrete(self::fileStorage());
+			$container->extend(HubInterface::class)->setConcrete(self::mercureHub());
 		}
 
 		return self::$application;
@@ -56,8 +61,16 @@ final class AppHarness
 		self::resetRequestContexts();
 		$response = self::app()->handler->handle($request);
 		self::app()->dbContext->resetOrmState();
+		self::updatePublisher()->flush();
+		self::app()->dbContext->resetOrmState();
 
 		return $response;
+	}
+
+	/** Replaces the Mercure hub for the whole suite. */
+	public static function mercureHub(): RecordingMercureHub
+	{
+		return self::$mercureHub ??= new RecordingMercureHub();
 	}
 
 	/** Replaces S3 for the whole suite. */
@@ -91,6 +104,7 @@ final class AppHarness
 
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
+		self::mercureHub()->updates = [];
 
 		self::resetRequestContexts();
 	}
@@ -104,6 +118,15 @@ final class AppHarness
 		$mcpUserContext = self::container()->get(McpUserContext::class);
 		assert($mcpUserContext instanceof McpUserContext);
 		$mcpUserContext->clear();
+		self::updatePublisher()->reset();
+	}
+
+	private static function updatePublisher(): ProjectUpdatePublisher
+	{
+		$publisher = self::container()->get(ProjectUpdatePublisher::class);
+		assert($publisher instanceof ProjectUpdatePublisher);
+
+		return $publisher;
 	}
 
 	/** @return list<string> */

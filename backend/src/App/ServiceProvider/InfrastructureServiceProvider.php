@@ -10,6 +10,11 @@ use FlatDesigner\Service\Authentication\RateLimitConfig;
 use FlatDesigner\Service\Authentication\TokenService;
 use FlatDesigner\Service\Cors\CorsPolicy;
 use FlatDesigner\Service\Logger\StderrLogger;
+use FlatDesigner\Service\Project\ProjectProvider;
+use FlatDesigner\Service\Realtime\MercureAccessToken;
+use FlatDesigner\Service\Realtime\MercureCookieIssuer;
+use FlatDesigner\Service\Realtime\MercurePublisherTokenProvider;
+use FlatDesigner\Service\Realtime\NullMercureHub;
 use FlatDesigner\Service\Storage\FileStorageInterface;
 use FlatDesigner\Service\Storage\S3Config;
 use FlatDesigner\Service\Storage\S3FileStorage;
@@ -17,6 +22,9 @@ use Http\Discovery\Psr17FactoryDiscovery;
 use League\Container\ServiceProvider\AbstractServiceProvider;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mercure\Hub;
+use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\ProtocolVersion;
 
 final class InfrastructureServiceProvider extends AbstractServiceProvider
 {
@@ -32,6 +40,8 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			S3Client::class,
 			FileStorageInterface::class,
 			FlatDesignerServer::class,
+			HubInterface::class,
+			MercureCookieIssuer::class,
 		], true);
 	}
 
@@ -74,6 +84,31 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			}
 
 			return new S3Client($options);
+		});
+
+		$container->add(HubInterface::class, static function (): HubInterface {
+			$url = (string) getenv('MERCURE_PUBLISH_URL');
+			$key = (string) getenv('MERCURE_PUBLISHER_JWT_KEY');
+			if ($url === '' || $key === '') {
+				return new NullMercureHub();
+			}
+
+			return new Hub(
+				$url,
+				new MercurePublisherTokenProvider($key, MercureAccessToken::resourceIdentifier()),
+				protocolVersion: ProtocolVersion::V1,
+			);
+		});
+
+		$container->add(MercureCookieIssuer::class, static function () use ($container): MercureCookieIssuer {
+			$projectProvider = $container->get(ProjectProvider::class);
+			assert($projectProvider instanceof ProjectProvider);
+
+			return new MercureCookieIssuer(
+				$projectProvider,
+				(string) getenv('MERCURE_SUBSCRIBER_JWT_KEY'),
+				MercureAccessToken::resourceIdentifier(),
+			);
 		});
 
 		$container->add(FlatDesignerServer::class, static function () use ($container): FlatDesignerServer {

@@ -61,6 +61,10 @@ services:
             FILE_MAX_SIZE_MB: ${FILE_MAX_SIZE_MB:-25}
             PROXY_HOST: ${PROXY_HOST:-}
             MCP_SESSION_TTL: ${MCP_SESSION_TTL:-86400}
+            MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_PUBLISHER_JWT_KEY}
+            MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_SUBSCRIBER_JWT_KEY}
+            MERCURE_PUBLISH_URL: ${MERCURE_PUBLISH_URL:-http://localhost/.well-known/mercure}
+            MERCURE_RESOURCE_IDENTIFIER: ${MERCURE_RESOURCE_IDENTIFIER:-}
         depends_on:
             db:
                 condition: service_healthy
