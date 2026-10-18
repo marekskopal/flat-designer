@@ -1,0 +1,8 @@
+# Plain http (local development, or TLS terminated in front of the stack).
+server {
+    listen 80 default_server;
+
+    server_name _;
+
+    include /etc/nginx/snippets/locations.conf;
+}

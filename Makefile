@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db env admin import-files install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db env ssl-cert admin import-files install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -34,6 +34,22 @@ env:
 			mv .env.tmp .env; \
 			echo "Generated $$key in .env"; \
 		fi; \
+	done
+
+## Self-signed certificate for https://localhost in ssl/, set as PROXY_SSL_CERT/KEY in .env
+ssl-cert: env
+	@mkdir -p ssl
+	@if [ ! -f ssl/server.pem ]; then \
+		openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj '/CN=localhost' \
+			-addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' \
+			-keyout ssl/server.key -out ssl/server.pem 2>/dev/null; \
+		echo "Generated ssl/server.pem"; \
+	fi
+	@for pair in PROXY_SSL_CERT=ssl/server.pem PROXY_SSL_KEY=ssl/server.key; do \
+		key=$${pair%%=*}; \
+		grep -v "^$$key=" .env > .env.tmp; \
+		echo "$$key=$(CURDIR)/$${pair#*=}" >> .env.tmp; \
+		mv .env.tmp .env; \
 	done
 
 ## Create an admin account in the running stack (prompts for email and password)

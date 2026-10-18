@@ -24,6 +24,11 @@ they change roles and delete accounts. Auth is JWT (access token 1 h, refresh to
 The backend applies pending migrations on start, so a fresh database comes up with the flat and the
 kitchen already in it. After changing a seed migration run `make reset-db`.
 
+HTTPS: uncomment `COMPOSE_FILE` in `.env` (adds `docker-compose.ssl.yml`) and set `PROXY_SSL_CERT` /
+`PROXY_SSL_KEY`, or run `make ssl-cert` for a self-signed localhost pair; then `make up` serves
+https://localhost:4443 (`PROXY_PORT_SSL`) and the http port redirects there. On a public host also set
+`PROXY_HOST`.
+
 Frontend development with hot reload (needs the stack running for the API):
 
 ```sh
@@ -73,7 +78,7 @@ change; the browser listens with an EventSource authorized by an HttpOnly cookie
 
 | Path | What |
 | --- | --- |
-| `proxy/` | nginx: `/api/*` → backend, everything else → frontend |
+| `proxy/` | nginx: `/api/*` → backend, everything else → frontend; http or https (`docker-compose.ssl.yml`) |
 | `backend/` | FrankenPHP worker, PHP 8.5, `marekskopal/orm` + `marekskopal/router`, MariaDB |
 | `backend/migrations/` | schema + seed data (`SeedFlat50`, `SeedKitchen`) |
 | `frontend/` | Angular 22 (standalone, signals, zoneless) |

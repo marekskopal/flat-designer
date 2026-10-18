@@ -1,0 +1,17 @@
+name: flat-designer
+
+# Override that turns on HTTPS for the proxy. Enable it with COMPOSE_FILE in .env (see .env.example) or
+#   docker compose -f docker-compose.yml -f docker-compose.ssl.yml up -d
+# Needs PROXY_PORT_SSL, PROXY_SSL_CERT and PROXY_SSL_KEY; `make ssl-cert` makes a self-signed pair.
+
+services:
+    proxy:
+        environment:
+            PROXY_HOST: ${PROXY_HOST:-localhost}
+            PROXY_PORT_SSL: ${PROXY_PORT_SSL:-443}
+            PROXY_SSL_ENABLED: "1"
+        ports:
+            - "${PROXY_PORT_SSL:-443}:443"
+        volumes:
+            - ${PROXY_SSL_CERT:?set PROXY_SSL_CERT in .env}:/etc/nginx/ssl/server.pem:ro
+            - ${PROXY_SSL_KEY:?set PROXY_SSL_KEY in .env}:/etc/nginx/ssl/server.key:ro

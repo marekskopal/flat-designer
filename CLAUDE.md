@@ -6,7 +6,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
 
 ## Services
 
-- `proxy/` — nginx, `/api/*` → backend, `/` → frontend (http only, port `PROXY_PORT`, default 4400).
+- `proxy/` — nginx, `/api/*` → backend, `/` → frontend (port `PROXY_PORT`, default 4400). Locations live
+  in `conf/locations.conf`, included by `http.conf.template` or, with `PROXY_SSL_ENABLED=1`
+  (`docker-compose.ssl.yml`, enabled via `COMPOSE_FILE` in `.env`), `ssl.conf.template` (port
+  `PROXY_PORT_SSL`, http redirects); `docker-entrypoint.d/10-select-template.sh` picks one at start. The
+  backend reads the scheme from `X-Forwarded-Proto`.
 - `minio/` (compose service only) — S3-compatible storage for uploaded files.
 - `backend/` — FrankenPHP worker + PHP 8.5 + `marekskopal/orm` + `marekskopal/router` + MariaDB.
   Namespace `FlatDesigner\`. Routes in `FlatDesigner\Route\Routes`. The entrypoint runs

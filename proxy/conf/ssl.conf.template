@@ -1,0 +1,32 @@
+# HTTPS (PROXY_SSL_ENABLED=1, see docker-compose.ssl.yml). Plain http only redirects.
+server {
+    listen 80 default_server;
+
+    server_name _;
+
+    return 301 https://$host:${PROXY_PORT_SSL}$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+
+    http2 on;
+
+    server_name ${PROXY_HOST};
+
+    ssl_protocols TLSv1.3;
+    ssl_ecdh_curve X25519:prime256v1:secp384r1;
+    ssl_prefer_server_ciphers off;
+    ssl_certificate /etc/nginx/ssl/server.pem;
+    ssl_certificate_key /etc/nginx/ssl/server.key;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_tickets off;
+    ssl_buffer_size 4k;
+
+    # Locations add their own headers; merge keeps this one on every response.
+    add_header_inherit merge;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+
+    include /etc/nginx/snippets/locations.conf;
+}
