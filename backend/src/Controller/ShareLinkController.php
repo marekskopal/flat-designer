@@ -89,6 +89,24 @@ final readonly class ShareLinkController
 		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::baseUrl($request)));
 	}
 
+	/** Points the link at a new version of the project as it is now (same URL). */
+	#[RoutePost(Routes::ProjectShareLinkRefresh->value)]
+	public function actionPostShareLinkRefresh(ServerRequestInterface $request, int $projectId, int $shareLinkId): ResponseInterface
+	{
+		$link = $this->findShareLink($request, $projectId, $shareLinkId);
+		if ($link === null) {
+			return new NotFoundResponse(self::NotFound);
+		}
+
+		try {
+			$this->shareLinkProvider->refresh($this->requestService->getUser($request), $link);
+		} catch (ProjectException $e) {
+			return new ErrorResponse($e->getMessage(), $e->getCode());
+		}
+
+		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::baseUrl($request)));
+	}
+
 	#[RouteDelete(Routes::ProjectShareLink->value)]
 	public function actionDeleteShareLink(ServerRequestInterface $request, int $projectId, int $shareLinkId): ResponseInterface
 	{

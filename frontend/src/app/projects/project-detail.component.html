@@ -171,6 +171,15 @@
                                 <span class="list__actions">
                                     <button type="button" class="btn btn--ghost" (click)="copyShareLink(link)">Copy</button>
                                     <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="editingShare.set(link.id)">Edit</button>
+                                    <button
+                                        type="button"
+                                        class="btn btn--ghost"
+                                        [disabled]="busy()"
+                                        title="Show the floor as it is now (saves a new version, the link stays)"
+                                        (click)="refreshShareLink(project, link)"
+                                    >
+                                        Update
+                                    </button>
                                     <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteShareLink(project, link)">
                                         Delete
                                     </button>

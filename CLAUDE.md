@@ -91,10 +91,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   exterior wall, then the largest indoor room).
 - Share links (`ShareLink`, `ShareLinkProvider`): a guest view of one floor at `/s/{token}` (no sign-in; the
   public `GET /api/shares/{token}` is open via `AuthorizationMiddleware::OpenRoutePrefixes`, `jwtInterceptor` sends
-  no token there). Creating a link saves a version ("Shared: <name>"); `floorId` is the floor's id inside that
+  no token there). Creating a link saves a version ("Shared: <name>"); refreshing it (`POST …/share-links/{id}/refresh`, MCP
+  `refresh_share_link`, the project page's Update) saves a new one for the same token; `floorId` is the floor's id inside that
   snapshot. `settings` (JSON, `ShareSettingsDto`) = allowed views, start view, optional 3D camera (plan mm,
   `ViewerEngine.cameraPose()`/`setCameraPose()`) and the display. `SharedViewerPageComponent` switches variants
-  locally only. Expired or unknown links answer 404. MCP: `ShareLinkTools` (list/create/update/delete_share_link;
+  locally only. Expired or unknown links answer 404. MCP: `ShareLinkTools` (list/create/update/refresh/delete_share_link;
   the URL comes from the base URL `McpController` puts in `McpUserContext`).
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`, `SeedDiningTable`; the early ones predate `AddProjectsAndFloors` and still

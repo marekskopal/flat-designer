@@ -167,6 +167,18 @@ export class ProjectDetailComponent {
         this.editingShare.set(null);
     }
 
+    protected async refreshShareLink(project: Project, link: ShareLink): Promise<void> {
+        if (!confirm(`Update "${link.name}" to the floor as it is now? It saves a new version; the link stays the same.`)) {
+            return;
+        }
+        await this.run(async () => {
+            const refreshed = await this.shareService.refresh(project.id, link.id);
+            this.shareLinks.update((links) => links.map((l) => (l.id === refreshed.id ? refreshed : l)));
+            this.versions.set(await this.projectService.listVersions(project.id));
+            this.alerts.success(`"${refreshed.name}" now shows version ${refreshed.versionNumber}.`);
+        });
+    }
+
     protected async deleteShareLink(project: Project, link: ShareLink): Promise<void> {
         if (!confirm(`Delete the share link "${link.name}"? Anyone who has it loses access. Its version stays.`)) {
             return;

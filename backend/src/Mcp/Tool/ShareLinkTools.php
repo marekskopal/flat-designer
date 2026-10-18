@@ -130,7 +130,7 @@ final readonly class ShareLinkTools
 	#[McpTool(
 		name: 'update_share_link',
 		description: 'Change a share link\'s name, views, start view, camera, start display or expiry; only the fields you pass change. '
-			. 'The shared floor and its version stay.',
+			. 'The shared floor and its version stay (refresh_share_link moves the link to the current state).',
 	)]
 	public function updateShareLink(
 		int $projectId,
@@ -186,6 +186,19 @@ final readonly class ShareLinkTools
 			settings: ShareSettingsDto::fromArray($merged),
 			expiresAt: $expiry,
 		));
+
+		return $this->toDto($link);
+	}
+
+	#[McpTool(
+		name: 'refresh_share_link',
+		description: 'Update what a share link shows to the floor as it is now: saves a new version of the project and points the link '
+			. 'at it. The URL, name, views, camera and expiry stay; the previous version stays in the history.',
+	)]
+	public function refreshShareLink(int $projectId, int $shareLinkId): ShareLinkDto
+	{
+		$link = $this->find($projectId, $shareLinkId);
+		$this->shareLinkProvider->refresh($this->context->user(), $link);
 
 		return $this->toDto($link);
 	}

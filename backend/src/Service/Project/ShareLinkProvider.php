@@ -22,7 +22,8 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * Share links of a project. Creating one saves a version ("Shared: <name>"), so the guest sees the floor as it
- * was then; later edits of the working copy do not reach the link. Deleting a link keeps its version.
+ * was then; later edits of the working copy do not reach the link until it is refreshed, which saves a new version for
+ * the same URL. Deleting a link keeps its version.
  */
 final readonly class ShareLinkProvider
 {
@@ -95,6 +96,28 @@ final readonly class ShareLinkProvider
 		$this->shareLinkRepository->persist($link);
 
 		return $link;
+	}
+
+	/**
+	 * Saves a new version ("Shared: <name>") and points the link at it, so guests see the floor as it is now; the
+	 * token, name, settings and expiry stay. The previous version stays in the history.
+	 */
+	public function refresh(User $author, ShareLink $link): ShareLink
+	{
+		// Floors keep their ids in snapshots, so the shared floor is the working copy's floor of the same id.
+		$floor = $this->floorRepository->findOneInProject($link->project->id, $link->floorId);
+		if ($floor === null) {
+			throw new ProjectException('The shared floor is no longer in the project; create a new link instead.');
+		}
+
+		return $this->orm->getTransactionProvider()->transaction(function () use ($author, $link, $floor): ShareLink {
+			$link->version = $this->versionProvider->create($author, $link->project, 'Shared: ' . $link->name);
+			$link->floorName = $floor->name;
+			$link->updatedAt = new DateTimeImmutable();
+			$this->shareLinkRepository->persist($link);
+
+			return $link;
+		});
 	}
 
 	public function delete(ShareLink $link): void

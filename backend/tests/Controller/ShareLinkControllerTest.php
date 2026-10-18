@@ -91,6 +91,42 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertCount(1, $scene['walls']);
 	}
 
+	public function testRefreshingALinkShowsTheFloorAsItIsNow(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$link = $this->createLink($user, $project->id, $floor->id);
+		self::assertIsInt($link['id']);
+		$token = self::stringField($link['token']);
+
+		$walls = Fixture::service(WallRepository::class);
+		foreach ($walls->findByFloor($floor->id) as $wall) {
+			$walls->delete($wall);
+		}
+
+		$refreshed = $this->request('POST', self::path(Routes::ProjectShareLinkRefresh, $project->id, $link['id']), authenticatedAs: $user);
+		self::assertSame(200, $refreshed->getStatusCode());
+		$body = $this->jsonBody($refreshed);
+		self::assertSame($token, $body['token']);
+		self::assertSame(2, $body['versionNumber']);
+		self::assertSame($link['settings'], $body['settings']);
+
+		$scene = $this->jsonBody($this->request('GET', self::sharePath($token)))['scene'];
+		self::assertIsArray($scene);
+		self::assertSame([], $scene['walls']);
+		$versions = $this->jsonList($this->request('GET', self::path(Routes::ProjectVersions, $project->id), authenticatedAs: $user));
+		self::assertSame(['Shared: Link', 'Shared: Link'], array_column($versions, 'note'));
+
+		$other = Fixture::createUser('other@example.com');
+		self::assertSame(
+			404,
+			$this->request('POST', self::path(Routes::ProjectShareLinkRefresh, $project->id, $link['id']), authenticatedAs: $other)
+				->getStatusCode(),
+		);
+	}
+
 	public function testOwnerListsUpdatesAndDeletesLinks(): void
 	{
 		$user = Fixture::createUser();

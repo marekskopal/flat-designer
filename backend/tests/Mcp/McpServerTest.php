@@ -94,6 +94,7 @@ final class McpServerTest extends IntegrationTestCase
 			'list_versions',
 			'move_group',
 			'redo',
+			'refresh_share_link',
 			'rename_group',
 			'rename_variant_set',
 			'save_version',
@@ -341,6 +342,11 @@ final class McpServerTest extends IntegrationTestCase
 		);
 		self::assertTrue($isError);
 		self::assertSame('A camera position needs the 3D view allowed.', $message);
+
+		$refreshed = $this->client->call('refresh_share_link', ['projectId' => $projectId, 'shareLinkId' => $link['id']]);
+		self::assertIsArray($refreshed);
+		self::assertSame($link['token'], $refreshed['token']);
+		self::assertSame(2, $refreshed['versionNumber']);
 
 		$list = $this->client->call('list_share_links', ['projectId' => $projectId]);
 		self::assertIsList($list);

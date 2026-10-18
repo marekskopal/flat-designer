@@ -27,6 +27,11 @@ export class ShareService {
         return firstValueFrom(this.http.put<ShareLink>(`${projectsUrl}/${projectId}/share-links/${shareLinkId}`, input));
     }
 
+    /** Saves a new version of the project and points the link at it; the URL and settings stay. */
+    public async refresh(projectId: number, shareLinkId: number): Promise<ShareLink> {
+        return firstValueFrom(this.http.post<ShareLink>(`${projectsUrl}/${projectId}/share-links/${shareLinkId}/refresh`, {}));
+    }
+
     public async delete(projectId: number, shareLinkId: number): Promise<void> {
         await firstValueFrom(this.http.delete<void>(`${projectsUrl}/${projectId}/share-links/${shareLinkId}`));
     }

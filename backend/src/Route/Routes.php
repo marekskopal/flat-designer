@@ -59,6 +59,7 @@ enum Routes: string
 	case ProjectFileContent = '/api/projects/{projectId:number}/files/{fileId:number}/content';
 	case ProjectShareLinks = '/api/projects/{projectId:number}/share-links';
 	case ProjectShareLink = '/api/projects/{projectId:number}/share-links/{shareLinkId:number}';
+	case ProjectShareLinkRefresh = '/api/projects/{projectId:number}/share-links/{shareLinkId:number}/refresh';
 
 	/** Public: a guest opening a share link. */
 	case Share = '/api/shares/{token:[a-f0-9]+}';
