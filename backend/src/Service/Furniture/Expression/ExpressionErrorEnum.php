@@ -8,6 +8,12 @@ namespace FlatDesigner\Service\Furniture\Expression;
 enum ExpressionErrorEnum: string
 {
 	case Syntax = 'syntax';
+	/** A null where a value is needed (anything but `??`, `== / != null` and `contains`). */
+	case Null = 'null';
+	/** A list index that is not a whole number within the list. */
+	case Index = 'index';
+	/** A record without the field. */
+	case UnknownField = 'unknownField';
 	case UnknownVariable = 'unknownVariable';
 	case UnknownFunction = 'unknownFunction';
 	case Arity = 'arity';

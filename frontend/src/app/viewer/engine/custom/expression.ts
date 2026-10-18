@@ -2,19 +2,28 @@
  * The expression language of furniture definitions. Twin: backend/src/Service/Furniture/Expression (Parser and its
  * nodes), both checked against backend/tests/fixtures/furniture-expressions.json.
  *
- * Lowest precedence first: `a ? b : c` (right associative), `||`, `&&`, `== !=`, `< <= > >=`, `+ -`, `* / %`, unary
- * `- !`; operands are numbers, 'strings', `true` / `false`, variables, calls of {@link Functions} and parentheses. There
- * are no implicit conversions: arithmetic takes numbers, `&&` / `||` / `!` / `? :` booleans, `==` two values of one type.
- * Unknown functions and wrong argument counts fail when parsing; unknown variables and type errors when evaluating (so
- * `false && x` is fine).
+ * Lowest precedence first: `a ? b : c` (right associative), `??`, `||`, `&&`, `== !=`, `< <= > >=`, `+ -`, `* / %`,
+ * unary `- !`, then `list[i]` and `record.field`; operands are numbers, 'strings', `true` / `false` / `null`, variables,
+ * calls of {@link Functions} and parentheses. There are no implicit conversions: arithmetic takes numbers, `&&` / `||` /
+ * `!` / `? :` booleans, `==` two numbers, booleans or strings of one type, or anything with null; null fails anything
+ * but `??`, `== / != null` and `contains` (error `null`). Unknown functions and wrong argument counts fail when
+ * parsing; unknown variables and type errors when evaluating (so `false && x` is fine).
  */
 
-export type Value = number | boolean | string;
+/** Numbers, booleans, strings, null, lists and records (items of list parameters). */
+export type Value = number | boolean | string | null | Value[] | ValueRecord;
+
+export interface ValueRecord {
+    readonly [field: string]: Value;
+}
 
 export type Variables = Readonly<Record<string, Value>>;
 
 export type ExpressionErrorCode =
     | 'syntax'
+    | 'null'
+    | 'index'
+    | 'unknownField'
     | 'unknownVariable'
     | 'unknownFunction'
     | 'arity'
@@ -42,19 +51,32 @@ export function roundHalfAway(value: number): number {
     return Math.sign(value) * Math.round(Math.abs(value)) || 0;
 }
 
+type FunctionDef = {arity: [number, number | null]; apply: (args: Value[], context: string) => Value};
+
+const numbers = (args: Value[], context: string): number[] => args.map((a) => number(a, context));
+
 /** Functions with their least and most argument count (null = any). */
-const Functions: Readonly<Record<string, {arity: [number, number | null]; apply: (args: number[]) => number}>> = {
-    min: {arity: [1, null], apply: (args) => Math.min(...args)},
-    max: {arity: [1, null], apply: (args) => Math.max(...args)},
-    round: {arity: [1, 1], apply: ([x]) => roundHalfAway(x)},
-    floor: {arity: [1, 1], apply: ([x]) => Math.floor(x)},
-    ceil: {arity: [1, 1], apply: ([x]) => Math.ceil(x)},
-    abs: {arity: [1, 1], apply: ([x]) => Math.abs(x)},
-    clamp: {arity: [3, 3], apply: ([x, lo, hi]) => Math.max(lo, Math.min(hi, x))},
+const Functions: Readonly<Record<string, FunctionDef>> = {
+    min: {arity: [1, null], apply: (args, c) => Math.min(...numbers(args, c))},
+    max: {arity: [1, null], apply: (args, c) => Math.max(...numbers(args, c))},
+    round: {arity: [1, 1], apply: ([x], c) => roundHalfAway(number(x, c))},
+    floor: {arity: [1, 1], apply: ([x], c) => Math.floor(number(x, c))},
+    ceil: {arity: [1, 1], apply: ([x], c) => Math.ceil(number(x, c))},
+    abs: {arity: [1, 1], apply: ([x], c) => Math.abs(number(x, c))},
+    clamp: {arity: [3, 3], apply: ([x, lo, hi], c) => Math.max(number(lo, c), Math.min(number(hi, c), number(x, c)))},
+    len: {arity: [1, 1], apply: ([l], c) => list(l, c).length},
+    sum: {arity: [1, 1], apply: ([l], c) => finite(numbers(list(l, c), c).reduce((a, b) => a + b, 0))},
+    contains: {arity: [2, 2], apply: ([l, needle], c) => contains(list(l, c), needle)},
+    field: {arity: [2, 2], apply: ([l, name], c) => list(l, c).map((item) => fieldOf(record(item, c), string(name, c)))},
+    share: {arity: [2, 3], apply: ([l, total, gap], c) => share(list(l, c), number(total, c), gap === undefined ? 0 : number(gap, c), c)},
+    offsets: {arity: [1, 2], apply: ([l, gap], c) => offsets(list(l, c), gap === undefined ? 0 : number(gap, c), c)},
 };
 
 type Node =
     | {kind: 'literal'; value: Value}
+    | {kind: 'nullish'; left: Node; right: Node}
+    | {kind: 'index'; target: Node; index: Node}
+    | {kind: 'member'; target: Node; field: string}
     | {kind: 'variable'; name: string}
     | {kind: 'unary'; operator: string; operand: Node}
     | {kind: 'binary'; operator: string; left: Node; right: Node}
@@ -90,7 +112,7 @@ interface Token {
     position: number;
 }
 
-const Operators = ['<=', '>=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%', '(', ')', ',', '?', ':', '<', '>', '!'];
+const Operators = ['<=', '>=', '==', '!=', '&&', '||', '??', '+', '-', '*', '/', '%', '(', ')', '[', ']', ',', '.', '?', ':', '<', '>', '!'];
 
 const SpacePattern = /[ \t\n\v\f\r]+/y;
 const NumberPattern = /[0-9]+(\.[0-9]+)?/y;
@@ -158,13 +180,21 @@ class Parser {
 
     private parseConditional(): Node {
         this.enter();
-        let node = this.parseOr();
+        let node = this.parseNullish();
         if (this.accept('?')) {
             const then = this.parseConditional();
             this.expect(':');
             node = {kind: 'conditional', condition: node, then, else: this.parseConditional()};
         }
         this.depth--;
+        return node;
+    }
+
+    private parseNullish(): Node {
+        let node = this.parseOr();
+        while (this.accept('??')) {
+            node = {kind: 'nullish', left: node, right: this.parseOr()};
+        }
         return node;
     }
 
@@ -213,12 +243,36 @@ class Parser {
     private parseUnary(): Node {
         const operator = this.acceptAny(['-', '!']);
         if (operator === null) {
-            return this.parsePrimary();
+            return this.parsePostfix();
         }
         this.enter();
         const node: Node = {kind: 'unary', operator, operand: this.parseUnary()};
         this.depth--;
         return node;
+    }
+
+    /** Indexing and field access after an operand: `fronts[0].height`. */
+    private parsePostfix(): Node {
+        let node = this.parsePrimary();
+        for (;;) {
+            if (this.accept('[')) {
+                node = {kind: 'index', target: node, index: this.parseConditional()};
+                this.expect(']');
+            } else if (this.accept('.')) {
+                node = {kind: 'member', target: node, field: this.fieldName()};
+            } else {
+                return node;
+            }
+        }
+    }
+
+    private fieldName(): string {
+        const field = this.peek();
+        if (field.type !== 'identifier') {
+            throw this.unexpected(' (expected a field name)');
+        }
+        this.position++;
+        return field.value;
     }
 
     private parsePrimary(): Node {
@@ -239,6 +293,9 @@ class Parser {
                 this.position++;
                 if (token.value === 'true' || token.value === 'false') {
                     return {kind: 'literal', value: token.value === 'true'};
+                }
+                if (token.value === 'null') {
+                    return {kind: 'literal', value: null};
                 }
                 return this.accept('(') ? this.parseCall(token) : {kind: 'variable', name: token.value};
             default:
@@ -266,7 +323,8 @@ class Parser {
         }
         const [least, most] = fn.arity;
         if (args.length < least || (most !== null && args.length > most)) {
-            const takes = most === null ? `at least ${least} argument(s)` : `${least} argument(s)`;
+            const range = most === least ? `${least}` : `${least} to ${most}`;
+            const takes = most === null ? `at least ${least} argument(s)` : `${range} argument(s)`;
             throw new ExpressionError('arity', `Function "${name.value}" takes ${takes}, got ${args.length}.`);
         }
         return {kind: 'call', name: name.value, args};
@@ -312,28 +370,114 @@ class Parser {
 }
 
 export function typeName(value: Value): string {
+    if (value === null) {
+        return 'null';
+    }
+    if (Array.isArray(value)) {
+        return 'a list';
+    }
     switch (typeof value) {
         case 'number':
             return 'a number';
         case 'boolean':
             return 'a boolean';
-        default:
+        case 'string':
             return 'a string';
+        default:
+            return 'a record';
     }
 }
 
-function number(value: Value, context: string): number {
+function wrong(value: Value, expected: string, context: string): ExpressionError {
+    return new ExpressionError(value === null ? 'null' : 'type', `${context} needs ${expected}, got ${typeName(value)}.`);
+}
+
+function number(value: Value | undefined, context: string): number {
     if (typeof value !== 'number') {
-        throw new ExpressionError('type', `${context} needs a number, got ${typeName(value)}.`);
+        throw wrong(value ?? null, 'a number', context);
     }
     return value;
 }
 
 function boolean(value: Value, context: string): boolean {
     if (typeof value !== 'boolean') {
-        throw new ExpressionError('type', `${context} needs true or false, got ${typeName(value)}.`);
+        throw wrong(value, 'true or false', context);
     }
     return value;
+}
+
+function string(value: Value | undefined, context: string): string {
+    if (typeof value !== 'string') {
+        throw wrong(value ?? null, 'a string', context);
+    }
+    return value;
+}
+
+function list(value: Value | undefined, context: string): Value[] {
+    if (!Array.isArray(value)) {
+        throw wrong(value ?? null, 'a list', context);
+    }
+    return value;
+}
+
+function isRecord(value: Value): value is ValueRecord {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function record(value: Value, context: string): ValueRecord {
+    if (!isRecord(value)) {
+        throw wrong(value, 'a record', context);
+    }
+    return value;
+}
+
+function fieldOf(value: ValueRecord, field: string): Value {
+    if (!Object.hasOwn(value, field)) {
+        throw new ExpressionError('unknownField', `No field "${field}".`);
+    }
+    return value[field];
+}
+
+/** A number, boolean, string or null: what `==` and `contains` compare. */
+function isScalar(value: Value): value is number | boolean | string | null {
+    return value === null || typeof value !== 'object';
+}
+
+/** `==`: null equals only null; otherwise two numbers, booleans or strings of one type. */
+function equals(a: Value, b: Value, context: string): boolean {
+    if (a === null || b === null) {
+        return a === b;
+    }
+    if (!isScalar(a) || !isScalar(b) || typeof a !== typeof b) {
+        throw new ExpressionError('type', `${context} compares ${typeName(a)} with ${typeName(b)}.`);
+    }
+    return a === b;
+}
+
+function contains(items: Value[], needle: Value | undefined): boolean {
+    const value = needle ?? null;
+    if (!isScalar(value)) {
+        throw new ExpressionError('type', `Function "contains" looks for a number, boolean, string or null, got ${typeName(value)}.`);
+    }
+    return items.some((item) => isScalar(item) && item === value);
+}
+
+/** The sizes with each null replaced by an equal share of what the others and the gaps between them leave of `total`. */
+function share(sizes: Value[], total: number, gap: number, context: string): number[] {
+    const given = finite(sizes.filter((s) => s !== null).reduce((sum: number, s) => sum + number(s, context), 0));
+    const open = sizes.filter((s) => s === null).length;
+    const each = finite(open === 0 ? 0 : (total - given - gap * Math.max(sizes.length - 1, 0)) / open);
+    return sizes.map((s) => (s === null ? each : number(s, context)));
+}
+
+/** Where each size starts when laid out in a row from 0 with `gap` between them. */
+function offsets(sizes: Value[], gap: number, context: string): number[] {
+    let position = 0;
+    return sizes.map((s) => {
+        const start = position;
+        position = finite(position + number(s, context) + gap);
+        return start;
+    });
 }
 
 function finite(value: number): number {
@@ -352,6 +496,12 @@ function evaluate(node: Node, variables: Variables): Value {
                 throw new ExpressionError('unknownVariable', `Unknown variable "${node.name}".`);
             }
             return variables[node.name];
+        case 'nullish':
+            return evaluate(node.left, variables) ?? evaluate(node.right, variables);
+        case 'index':
+            return evaluateIndex(list(evaluate(node.target, variables), '"[ ]"'), number(evaluate(node.index, variables), 'An index'));
+        case 'member':
+            return fieldOf(record(evaluate(node.target, variables), `".${node.field}"`), node.field);
         case 'unary': {
             const value = evaluate(node.operand, variables);
             return node.operator === '-' ? -number(value, 'Unary "-"') : !boolean(value, '"!"');
@@ -366,20 +516,24 @@ function evaluate(node: Node, variables: Variables): Value {
         case 'conditional':
             return boolean(evaluate(node.condition, variables), '"? :"') ? evaluate(node.then, variables) : evaluate(node.else, variables);
         case 'call': {
-            const context = `Function "${node.name}"`;
-            return Functions[node.name].apply(node.args.map((arg) => number(evaluate(arg, variables), context)));
+            const args = node.args.map((arg) => evaluate(arg, variables));
+            return Functions[node.name].apply(args, `Function "${node.name}"`);
         }
     }
 }
 
-function evaluateBinary(operator: string, left: Value, right: Value): Value {
-    if (operator === '==' || operator === '!=') {
-        if (typeof left !== typeof right) {
-            throw new ExpressionError('type', `"${operator}" compares ${typeName(left)} with ${typeName(right)}.`);
-        }
-        return (left === right) === (operator === '==');
+function evaluateIndex(items: Value[], index: number): Value {
+    if (!Number.isInteger(index) || index < 0 || index >= items.length) {
+        throw new ExpressionError('index', `Index ${index} is not within the list (${items.length} items).`);
     }
+    return items[index];
+}
+
+function evaluateBinary(operator: string, left: Value, right: Value): Value {
     const context = `"${operator}"`;
+    if (operator === '==' || operator === '!=') {
+        return equals(left, right, context) === (operator === '==');
+    }
     const a = number(left, context);
     const b = number(right, context);
     if ((operator === '/' || operator === '%') && b === 0) {

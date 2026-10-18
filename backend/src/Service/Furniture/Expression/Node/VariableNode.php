@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Furniture\Expression\Node;
 
 use FlatDesigner\Service\Furniture\Expression\ExpressionErrorEnum;
 use FlatDesigner\Service\Furniture\Expression\ExpressionException;
+use FlatDesigner\Service\Furniture\Expression\RecordValue;
 
 final readonly class VariableNode implements Node
 {
@@ -13,7 +14,7 @@ final readonly class VariableNode implements Node
 	{
 	}
 
-	public function evaluate(array $variables): float|bool|string
+	public function evaluate(array $variables): float|bool|string|array|RecordValue|null
 	{
 		if (!array_key_exists($this->name, $variables)) {
 			throw new ExpressionException(ExpressionErrorEnum::UnknownVariable, sprintf('Unknown variable "%s".', $this->name));

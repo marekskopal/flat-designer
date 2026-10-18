@@ -10,8 +10,13 @@ use FlatDesigner\Service\Furniture\Expression\ExpressionException;
 use FlatDesigner\Service\Furniture\Expression\Node\LiteralNode;
 use FlatDesigner\Service\Furniture\Expression\Node\Values;
 use FlatDesigner\Service\Furniture\Expression\Parser;
+use FlatDesigner\Service\Furniture\Expression\RecordValue;
 
-/** Expressions inside a definition: parsing and evaluating them with errors pointing at their path. */
+/**
+ * Expressions inside a definition: parsing and evaluating them with errors pointing at their path.
+ *
+ * @phpstan-import-type Value from Values
+ */
 final readonly class Expressions
 {
 	/** A number or expression (and, with `$booleans`, true / false) as an `Expression`. */
@@ -34,8 +39,11 @@ final readonly class Expressions
 		}
 	}
 
-	/** @param array<string, float|bool|string> $variables */
-	public static function run(Expression $expression, array $variables, string $path): float|bool|string
+	/**
+	 * @param array<string, Value> $variables
+	 * @return Value
+	 */
+	public static function run(Expression $expression, array $variables, string $path): float|bool|string|array|RecordValue|null
 	{
 		try {
 			return $expression->evaluate($variables);
@@ -44,7 +52,7 @@ final readonly class Expressions
 		}
 	}
 
-	/** @param array<string, float|bool|string> $variables */
+	/** @param array<string, Value> $variables */
 	public static function condition(Expression $expression, array $variables, string $path): bool
 	{
 		$value = self::run($expression, $variables, $path);
@@ -58,7 +66,7 @@ final readonly class Expressions
 	/** Lengths beyond this (mm) are a mistake, and PHP ints would overflow further on. */
 	public const int MaxLength = 1000000000;
 
-	/** @param array<string, float|bool|string> $variables the result rounded half away from zero to whole mm */
+	/** @param array<string, Value> $variables the result rounded half away from zero to whole mm */
 	public static function length(Expression $expression, array $variables, string $path): int
 	{
 		$value = self::run($expression, $variables, $path);
@@ -72,10 +80,10 @@ final readonly class Expressions
 		return (int) round($value);
 	}
 
-	private static function typeError(string $path, string $expected, float|bool|string $value): DefinitionException
+	private static function typeError(string $path, string $expected, mixed $value): DefinitionException
 	{
 		return new DefinitionException(
-			ExpressionErrorEnum::Type,
+			$value === null ? ExpressionErrorEnum::Null : ExpressionErrorEnum::Type,
 			$path,
 			sprintf('Must come out %s, got %s.', $expected, Values::typeName($value)),
 		);

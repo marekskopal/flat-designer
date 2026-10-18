@@ -7,18 +7,22 @@ namespace FlatDesigner\Service\Furniture\Expression;
 use FlatDesigner\Service\Furniture\Expression\Node\BinaryNode;
 use FlatDesigner\Service\Furniture\Expression\Node\CallNode;
 use FlatDesigner\Service\Furniture\Expression\Node\ConditionalNode;
+use FlatDesigner\Service\Furniture\Expression\Node\IndexNode;
 use FlatDesigner\Service\Furniture\Expression\Node\LiteralNode;
 use FlatDesigner\Service\Furniture\Expression\Node\LogicalNode;
+use FlatDesigner\Service\Furniture\Expression\Node\MemberNode;
 use FlatDesigner\Service\Furniture\Expression\Node\Node;
+use FlatDesigner\Service\Furniture\Expression\Node\NullishNode;
 use FlatDesigner\Service\Furniture\Expression\Node\UnaryNode;
 use FlatDesigner\Service\Furniture\Expression\Node\VariableNode;
 
 /**
  * Parses the expression language of furniture definitions (twin: frontend/src/app/viewer/engine/custom/expression.ts,
  * both checked against tests/fixtures/furniture-expressions.json). Lowest precedence first: `a ? b : c` (right
- * associative), `||`, `&&`, `== !=`, `< <= > >=`, `+ -`, `* / %`, unary `- !`; operands are numbers, 'strings',
- * `true` / `false`, variables, calls of `FunctionEnum` and parentheses. Unknown functions and wrong argument counts
- * fail here; unknown variables and type errors only when evaluated (so `false && x` is fine).
+ * associative), `??`, `||`, `&&`, `== !=`, `< <= > >=`, `+ -`, `* / %`, unary `- !`, then `list[i]` and
+ * `record.field`; operands are numbers, 'strings', `true` / `false` / `null`, variables, calls of `FunctionEnum` and
+ * parentheses. Unknown functions and wrong argument counts fail here; unknown variables and type errors only when
+ * evaluated (so `false && x` is fine).
  */
 final class Parser
 {
@@ -56,13 +60,23 @@ final class Parser
 	private function parseConditional(): Node
 	{
 		$this->enter();
-		$node = $this->parseOr();
+		$node = $this->parseNullish();
 		if ($this->accept('?')) {
 			$then = $this->parseConditional();
 			$this->expect(':');
 			$node = new ConditionalNode($node, $then, $this->parseConditional());
 		}
 		$this->depth--;
+
+		return $node;
+	}
+
+	private function parseNullish(): Node
+	{
+		$node = $this->parseOr();
+		while ($this->accept('??')) {
+			$node = new NullishNode($node, $this->parseOr());
+		}
 
 		return $node;
 	}
@@ -131,7 +145,7 @@ final class Parser
 	{
 		$operator = $this->acceptAny(['-', '!']);
 		if ($operator === null) {
-			return $this->parsePrimary();
+			return $this->parsePostfix();
 		}
 
 		$this->enter();
@@ -139,6 +153,33 @@ final class Parser
 		$this->depth--;
 
 		return $node;
+	}
+
+	/** Indexing and field access after an operand: `fronts[0].height`. */
+	private function parsePostfix(): Node
+	{
+		$node = $this->parsePrimary();
+		while (true) {
+			if ($this->accept('[')) {
+				$node = new IndexNode($node, $this->parseConditional());
+				$this->expect(']');
+			} elseif ($this->accept('.')) {
+				$node = new MemberNode($node, $this->fieldName());
+			} else {
+				return $node;
+			}
+		}
+	}
+
+	private function fieldName(): string
+	{
+		$field = $this->peek();
+		if ($field->type !== TokenTypeEnum::Identifier) {
+			throw $this->unexpected(' (expected a field name)');
+		}
+		$this->position++;
+
+		return $field->value;
 	}
 
 	private function parsePrimary(): Node
@@ -162,6 +203,9 @@ final class Parser
 				$this->position++;
 				if ($token->value === 'true' || $token->value === 'false') {
 					return new LiteralNode($token->value === 'true');
+				}
+				if ($token->value === 'null') {
+					return new LiteralNode(null);
 				}
 
 				return $this->accept('(') ? $this->parseCall($token) : new VariableNode($token->value);
@@ -193,19 +237,9 @@ final class Parser
 			$this->expect(')');
 		}
 
-		[$least, $most] = $function->arity();
-		$first = array_shift($arguments);
-		$count = $first === null ? 0 : count($arguments) + 1;
-		if ($first === null || $count < $least || $most !== null && $count > $most) {
-			throw new ExpressionException(ExpressionErrorEnum::Arity, sprintf(
-				'Function "%s" takes %s, got %d.',
-				$function->value,
-				$most === null ? sprintf('at least %d argument(s)', $least) : sprintf('%d argument(s)', $least),
-				$count,
-			));
-		}
+		$function->checkArity(count($arguments));
 
-		return new CallNode($function, $first, $arguments);
+		return new CallNode($function, $arguments);
 	}
 
 	private function enter(): void

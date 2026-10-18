@@ -137,7 +137,7 @@ function readParameter(definition: unknown, path: string, taken: Map<string, Par
     const fields = definition as Record<string, unknown>;
     const key = freeName(fields['key'], (name) => taken.has(name));
     if (key === null) {
-        throw invalid(`${path}.key`, 'Must be a unique name (letters, digits, _), not W, D, H, true or false.');
+        throw invalid(`${path}.key`, 'Must be a unique name (letters, digits, _), not W, D, H, true, false or null.');
     }
     const type = fields['type'];
     if (type !== 'int' && type !== 'bool' && type !== 'select') {
@@ -212,7 +212,7 @@ function readDerived(derived: unknown, variables: Record<string, Value>): Record
     for (const [key, source] of entries(derived)) {
         const path = `derived.${key}`;
         if (freeName(key, (name) => Object.hasOwn(result, name)) === null) {
-            throw invalid(path, 'Must be a unique name (letters, digits, _), not W, D, H, true, false or a parameter.');
+            throw invalid(path, 'Must be a unique name (letters, digits, _), not W, D, H, true, false, null or a parameter.');
         }
         result[key] = run(compile(source, path), result, path);
     }
@@ -384,7 +384,7 @@ function run(expression: Expression, variables: Variables, path: string): Value 
 function condition(expression: Expression, variables: Variables, path: string): boolean {
     const value = run(expression, variables, path);
     if (typeof value !== 'boolean') {
-        throw new DefinitionError('type', path, `Must come out true or false, got ${typeName(value)}.`);
+        throw new DefinitionError(value === null ? 'null' : 'type', path, `Must come out true or false, got ${typeName(value)}.`);
     }
     return value;
 }
@@ -393,7 +393,7 @@ function condition(expression: Expression, variables: Variables, path: string): 
 function length(expression: Expression, variables: Variables, path: string): number {
     const value = run(expression, variables, path);
     if (typeof value !== 'number') {
-        throw new DefinitionError('type', path, `Must come out a number (mm), got ${typeName(value)}.`);
+        throw new DefinitionError(value === null ? 'null' : 'type', path, `Must come out a number (mm), got ${typeName(value)}.`);
     }
     if (Math.abs(value) > MaxLength) {
         throw new DefinitionError('limit', path, `Must come out within ±${MaxLength} mm.`);
@@ -410,10 +410,10 @@ function invalid(path: string, message: string): DefinitionError {
 }
 
 /**
- * The item size and the boolean literals, and `__proto__` (a plain object cannot hold it); no parameter, derived value
+ * The item size, the literals true, false and null, and `__proto__` (a plain object cannot hold it); no parameter, derived value
  * or repeat index may take them.
  */
-const Reserved = ['W', 'D', 'H', 'true', 'false', '__proto__'];
+const Reserved = ['W', 'D', 'H', 'true', 'false', 'null', '__proto__'];
 
 function isName(value: unknown): value is string {
     return typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);

@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Furniture;
 
 use FlatDesigner\Service\Furniture\Expression\Expression;
+use FlatDesigner\Service\Furniture\Expression\Node\Values;
 
-/** One entry of a definition's `parts`, read and with its expressions parsed; `resolve()` makes one part of it. */
+/**
+ * One entry of a definition's `parts`, read and with its expressions parsed; `resolve()` makes one part of it.
+ *
+ * @phpstan-import-type Value from Values
+ */
 final readonly class PartEntry
 {
 	/** The keys every part has; the others are options of its type. */
@@ -38,7 +43,7 @@ final readonly class PartEntry
 	/**
 	 * Reads `parts[n]`; `repeat.count` is evaluated here, the rest per copy.
 	 *
-	 * @param array<string, float|bool|string> $variables
+	 * @param array<string, Value> $variables
 	 * @param list<string> $slots material slot keys
 	 */
 	public static function read(mixed $entry, string $path, array $variables, array $slots): self
@@ -78,7 +83,7 @@ final readonly class PartEntry
 	/**
 	 * The copy `$index` (null without `repeat`), or null when its `when` is false.
 	 *
-	 * @param array<string, float|bool|string> $variables
+	 * @param array<string, Value> $variables
 	 */
 	public function resolve(array $variables, ?int $index): ?ResolvedPart
 	{
@@ -136,7 +141,7 @@ final readonly class PartEntry
 	}
 
 	/**
-	 * @param array<string, float|bool|string> $variables
+	 * @param array<string, Value> $variables
 	 * @return array{string, int}
 	 */
 	private static function repeat(mixed $repeat, string $path, array $variables): array

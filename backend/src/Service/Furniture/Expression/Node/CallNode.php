@@ -8,18 +8,14 @@ use FlatDesigner\Service\Furniture\Expression\FunctionEnum;
 
 final readonly class CallNode implements Node
 {
-	/** @param list<Node> $rest the arguments after the first, checked against the function's arity by the parser */
-	public function __construct(private FunctionEnum $function, private Node $first, private array $rest)
+	/** @param list<Node> $arguments checked against the function's arity by the parser */
+	public function __construct(private FunctionEnum $function, private array $arguments)
 	{
 	}
 
-	public function evaluate(array $variables): float
+	/** @return float|bool|list<mixed> */
+	public function evaluate(array $variables): float|bool|array
 	{
-		$context = sprintf('Function "%s"', $this->function->value);
-
-		return $this->function->apply(
-			Values::number($this->first->evaluate($variables), $context),
-			array_map(static fn (Node $argument): float => Values::number($argument->evaluate($variables), $context), $this->rest),
-		);
+		return $this->function->apply(array_map(static fn (Node $argument): mixed => $argument->evaluate($variables), $this->arguments));
 	}
 }

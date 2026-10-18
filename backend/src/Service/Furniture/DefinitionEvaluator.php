@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Furniture;
 
+use FlatDesigner\Service\Furniture\Expression\Node\Values;
+
 /**
  * Turns a furniture definition (decoded JSON, format 1, see docs/furniture-definitions-plan.md) and an item's size and
  * parameter values into its parts. Twin: frontend/src/app/viewer/engine/custom/definition.ts, both checked against
@@ -14,6 +16,8 @@ namespace FlatDesigner\Service\Furniture;
  * `repeat`), each kept when `when` is true; `x y z w h d` are numbers or expressions, rounded half away from zero to
  * mm, and `w h d` must come out positive. Only what the evaluation reads is checked here (part types, material codes
  * and the like are the validator's business).
+ *
+ * @phpstan-import-type Value from Values
  */
 final readonly class DefinitionEvaluator
 {
@@ -63,7 +67,7 @@ final readonly class DefinitionEvaluator
 	/**
 	 * @param array<string, DefinitionParameter> $parameters
 	 * @param array<mixed> $values
-	 * @return array<string, float|bool|string>
+	 * @return array<string, Value>
 	 */
 	private static function values(array $parameters, array $values): array
 	{
@@ -93,8 +97,8 @@ final readonly class DefinitionEvaluator
 	}
 
 	/**
-	 * @param array<string, float|bool|string> $variables
-	 * @return array<string, float|bool|string>
+	 * @param array<string, Value> $variables
+	 * @return array<string, Value>
 	 */
 	private static function derived(mixed $derived, array $variables): array
 	{
@@ -108,7 +112,7 @@ final readonly class DefinitionEvaluator
 			if ($name === null) {
 				throw DefinitionException::invalid(
 					$path,
-					'Must be a unique name (letters, digits, _), not W, D, H, true, false or a parameter.',
+					'Must be a unique name (letters, digits, _), not W, D, H, true, false, null or a parameter.',
 				);
 			}
 			$variables[$name] = Expressions::run(Expressions::compile($source, $path), $variables, $path);
@@ -137,7 +141,7 @@ final readonly class DefinitionEvaluator
 	}
 
 	/**
-	 * @param array<string, float|bool|string> $variables
+	 * @param array<string, Value> $variables
 	 * @param list<string> $slots
 	 * @return list<ResolvedPart>
 	 */

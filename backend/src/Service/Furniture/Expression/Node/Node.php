@@ -4,9 +4,18 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Furniture\Expression\Node;
 
-/** A node of a parsed expression; `evaluate()` throws ExpressionException for unknown variables and type errors. */
+use FlatDesigner\Service\Furniture\Expression\RecordValue;
+
+/**
+ * A node of a parsed expression; `evaluate()` throws ExpressionException for unknown variables and type errors.
+ *
+ * @phpstan-import-type Value from Values
+ */
 interface Node
 {
-	/** @param array<string, float|bool|string> $variables */
-	public function evaluate(array $variables): float|bool|string;
+	/**
+	 * @param array<string, Value> $variables
+	 * @return Value
+	 */
+	public function evaluate(array $variables): float|bool|string|array|RecordValue|null;
 }

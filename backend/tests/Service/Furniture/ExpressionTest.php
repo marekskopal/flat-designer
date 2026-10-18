@@ -5,28 +5,35 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Service\Furniture;
 
 use FlatDesigner\Service\Furniture\Expression\ExpressionException;
+use FlatDesigner\Service\Furniture\Expression\Node\Values;
 use FlatDesigner\Service\Furniture\Expression\Parser;
 use FlatDesigner\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversNamespace;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use stdClass;
+use const JSON_THROW_ON_ERROR;
 
-/** Runs the shared fixture tests/fixtures/furniture-expressions.json (also run by the frontend twin). */
+/**
+ * Runs the shared fixture tests/fixtures/furniture-expressions.json (also run by the frontend twin).
+ *
+ * @phpstan-import-type Value from Values
+ */
 #[CoversNamespace('FlatDesigner\Service\Furniture\Expression')]
 final class ExpressionTest extends TestCase
 {
 	private const string Fixture = __DIR__ . '/../../fixtures/furniture-expressions.json';
 
-	/** @return iterable<string, array{string, array<string, float|bool|string>, mixed, string|null}> */
+	/** @return iterable<string, array{string, array<string, mixed>, mixed, string|null}> */
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var array<string, int|bool|string> $fixtureVariables */
 		$fixtureVariables = $fixture['variables'];
-		$variables = array_map(
-			static fn (int|bool|string $value): float|bool|string => is_int($value) ? (float) $value : $value,
-			$fixtureVariables,
-		);
+		self::assertIsArray($fixtureVariables);
+		$variables = [];
+		foreach ($fixtureVariables as $name => $value) {
+			$variables[(string) $name] = Values::fromJson($value);
+		}
 		/** @var list<array{expression: string, result?: mixed, error?: string}> $cases */
 		$cases = $fixture['cases'];
 		foreach ($cases as $index => $case) {
@@ -39,7 +46,7 @@ final class ExpressionTest extends TestCase
 		}
 	}
 
-	/** @param array<string, float|bool|string> $variables */
+	/** @param array<string, Value> $variables */
 	#[DataProvider('cases')]
 	public function testFixture(string $expression, array $variables, mixed $result, ?string $error): void
 	{
@@ -59,8 +66,28 @@ final class ExpressionTest extends TestCase
 			self::assertIsFloat($value);
 			self::assertEqualsWithDelta((float) $result, $value, 1e-9);
 		} else {
-			self::assertSame($result, $value);
+			// Lists and records as JSON (records stay objects), numbers rounded to 9 decimals.
+			self::assertSame(self::json(Values::fromJson($result)), self::json($value));
 		}
+	}
+
+	private static function json(mixed $value): string
+	{
+		return json_encode(self::rounded(Values::toJson($value)), JSON_THROW_ON_ERROR);
+	}
+
+	private static function rounded(mixed $data): mixed
+	{
+		if ($data instanceof stdClass) {
+			$object = new stdClass();
+			foreach (get_object_vars($data) as $field => $item) {
+				$object->{$field} = self::rounded($item);
+			}
+
+			return $object;
+		}
+
+		return is_array($data) ? array_map(self::rounded(...), $data) : (is_float($data) ? round($data, 9) : $data);
 	}
 
 	public function testParsedExpressionIsReusable(): void

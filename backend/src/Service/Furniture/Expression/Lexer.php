@@ -10,7 +10,31 @@ namespace FlatDesigner\Service\Furniture\Expression;
  */
 final readonly class Lexer
 {
-	private const array Operators = ['<=', '>=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%', '(', ')', ',', '?', ':', '<', '>', '!'];
+	private const array Operators = [
+		'<=',
+		'>=',
+		'==',
+		'!=',
+		'&&',
+		'||',
+		'??',
+		'+',
+		'-',
+		'*',
+		'/',
+		'%',
+		'(',
+		')',
+		'[',
+		']',
+		',',
+		'.',
+		'?',
+		':',
+		'<',
+		'>',
+		'!',
+	];
 
 	/** @return list<Token> */
 	public static function tokenize(string $source): array
