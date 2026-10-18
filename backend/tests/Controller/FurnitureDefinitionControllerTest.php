@@ -340,6 +340,49 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		}
 	}
 
+	public function testAppliancesSlidingDoorsAndBoardOptions(): void
+	{
+		$wardrobe = [
+			'format' => 1,
+			'size' => ['width' => 1200, 'depth' => 600, 'height' => 2400],
+			'materialSlots' => [['key' => 'carcass', 'default' => 'kitchen-oak'], ['key' => 'profile', 'default' => 'aluminium-brushed']],
+			'parts' => [
+				['type' => 'board', 'name' => 'Plinth', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 60, 'd' => 'D', 'material' => 'carcass', 'shade' => 0.3],
+				['type' => 'board', 'name' => 'Seat', 'x' => 0, 'y' => 400, 'z' => 0, 'w' => 'W', 'h' => 20, 'd' => 'D', 'backWidth' => 1000, 'taper' => 'left', 'tilt' => 5, 'tiltY' => 400],
+				['type' => 'slidingDoor', 'repeat' => ['count' => 2], 'x' => 'i * W / 2', 'y' => 60, 'z' => 'D - 20 - i * 25', 'w' => 'W / 2', 'h' => 'H - 60', 'd' => 20, 'material' => 'carcass', 'profile' => 'profile', 'mirror' => ['expr' => 'i == 1']],
+				['type' => 'appliance', 'kind' => 'microwave', 'x' => 0, 'y' => 900, 'z' => 'D - 20', 'w' => 'W', 'h' => 400, 'd' => 20],
+			],
+		];
+		$user = Fixture::createUser();
+		$created = $this->create($user, ['definition' => $wardrobe]);
+		self::assertSame(201, $created->getStatusCode(), (string) $created->getBody());
+
+		$bad = [
+			'a profile that is no slot' => [['parts', 2, 'profile'], 'frame', 'parts[2].profile: Must be the key of one of the materialSlots.'],
+			'a profile expression naming no slot' => [
+				['parts', 2, 'profile'],
+				['expr' => "i == 0 ? 'profile' : 'frame'"],
+				'parts[2].profile: Must be the key of one of the materialSlots.',
+			],
+			'shade above 1' => [['parts', 0, 'shade'], 1.5, 'parts[0].shade: Must be a number from 0 to 1.'],
+			'tilt beyond 90°' => [['parts', 1, 'tilt'], 120, 'parts[1].tilt: Must be degrees from -90 to 90.'],
+			'an appliance not an oven or microwave' => [['parts', 3, 'kind'], 'fridge', 'parts[3].kind: Must be one of "oven", "microwave".'],
+			'mirror not a boolean once evaluated' => [['parts', 2, 'mirror'], ['expr' => 'i'], 'parts[2].mirror: Must be true or false.'],
+		];
+		foreach ($bad as $case => [$keys, $value, $message]) {
+			$definition = $wardrobe;
+			$target = &$definition;
+			foreach ($keys as $key) {
+				$target = &$target[$key];
+			}
+			$target = $value;
+			unset($target);
+			$response = $this->create($user, ['definition' => $definition]);
+			self::assertSame(422, $response->getStatusCode(), $case);
+			self::assertSame($message, self::stringField($this->jsonBody($response)['message']), $case);
+		}
+	}
+
 	public function testNameIsRequired(): void
 	{
 		self::assertSame(422, $this->create(Fixture::createUser(), ['name' => '  '])->getStatusCode());

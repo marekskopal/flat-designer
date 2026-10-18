@@ -66,7 +66,7 @@ final readonly class DefinitionValidator
 			self::checkSlot($slot, sprintf('materialSlots[%d]', $index), $codes);
 		}
 		foreach (self::list($definition, 'parts') as $index => $part) {
-			self::checkPart($part, sprintf('parts[%d]', $index));
+			PartChecker::check($part, sprintf('parts[%d]', $index));
 		}
 		return new ValidatedDefinition($json, $parts);
 	}
@@ -128,49 +128,6 @@ final readonly class DefinitionValidator
 		}
 	}
 
-	/** @param array<mixed> $part */
-	private static function checkPart(array $part, string $path): void
-	{
-		$type = PartTypeEnum::tryFrom(is_string($part['type'] ?? null) ? $part['type'] : '');
-		if ($type === null) {
-			throw DefinitionException::invalid(
-				$path . '.type',
-				sprintf('Unknown part type; one of "%s".', implode('", "', PartTypeEnum::values())),
-			);
-		}
-
-		self::checkLabel($part, 'name', $path);
-		$options = [];
-		foreach ($part as $key => $value) {
-			$key = (string) $key;
-			if ($type === PartTypeEnum::Assembly && $key === 'parts') {
-				foreach (self::list($part, 'parts') as $index => $child) {
-					self::checkPart($child, sprintf('%s.parts[%d]', $path, $index));
-				}
-			} elseif (!in_array($key, PartEntry::Keys, true) && PartOptions::isExpression($value)) {
-				// An expression's value is checked once evaluated (`PartOptions`); the key now.
-				$error = $type->checkOptionKey($key);
-				if ($error !== null) {
-					throw DefinitionException::invalid(sprintf('%s.%s', $path, $key), $error);
-				}
-			} elseif (!in_array($key, PartEntry::Keys, true)) {
-				$options[$key] = $value;
-			}
-		}
-		self::checkOptions($type, $options, $path);
-	}
-
-	/** @param array<string, mixed> $options */
-	private static function checkOptions(PartTypeEnum $type, array $options, string $path): void
-	{
-		foreach ($options as $key => $value) {
-			$error = $type->checkOption($key, $value);
-			if ($error !== null) {
-				throw DefinitionException::invalid(sprintf('%s.%s', $path, $key), $error);
-			}
-		}
-	}
-
 	/**
 	 * @param array<mixed> $object
 	 * @param list<string> $known
@@ -188,7 +145,7 @@ final readonly class DefinitionValidator
 	}
 
 	/** @param array<mixed> $object */
-	private static function checkLabel(array $object, string $key, string $path): void
+	public static function checkLabel(array $object, string $key, string $path): void
 	{
 		$value = $object[$key] ?? null;
 		if ($value !== null && (!is_string($value) || mb_strlen($value) > 255)) {
@@ -200,7 +157,7 @@ final readonly class DefinitionValidator
 	 * @param array<mixed> $definition
 	 * @return list<array<mixed>>
 	 */
-	private static function list(array $definition, string $key): array
+	public static function list(array $definition, string $key): array
 	{
 		$list = $definition[$key] ?? [];
 

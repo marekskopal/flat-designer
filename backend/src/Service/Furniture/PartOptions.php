@@ -17,13 +17,19 @@ use FlatDesigner\Service\Furniture\Expression\Node\Values;
  */
 final readonly class PartOptions
 {
-	/** @param array<string, mixed> $options literal values, or `Expression` for `{"expr": …}` ones */
-	private function __construct(private string $path, private ?PartTypeEnum $type, private array $options)
+	/**
+	 * @param array<string, mixed> $options literal values, or `Expression` for `{"expr": …}` ones
+	 * @param list<string> $slots the material slot keys, for options naming one
+	 */
+	private function __construct(private string $path, private ?PartTypeEnum $type, private array $options, private array $slots)
 	{
 	}
 
-	/** @param array<mixed> $entry */
-	public static function read(array $entry, string $path, bool $assembly): self
+	/**
+	 * @param array<mixed> $entry
+	 * @param list<string> $slots
+	 */
+	public static function read(array $entry, string $path, bool $assembly, array $slots): self
 	{
 		$type = is_string($entry['type'] ?? null) ? PartTypeEnum::tryFrom($entry['type']) : null;
 		$options = [];
@@ -31,12 +37,15 @@ final readonly class PartOptions
 			if (!is_string($key) || in_array($key, PartEntry::Keys, true) || $assembly && $key === 'parts') {
 				continue;
 			}
-			$options[$key] = self::isExpression($value) && is_array($value)
-				? Expressions::compile($value['expr'], sprintf('%s.%s', $path, $key))
-				: $value;
+			if (self::isExpression($value) && is_array($value)) {
+				$options[$key] = Expressions::compile($value['expr'], sprintf('%s.%s', $path, $key));
+				continue;
+			}
+			self::checkSlot($type, $key, $value, $slots, sprintf('%s.%s', $path, $key));
+			$options[$key] = $value;
 		}
 
-		return new self($path, $type, $options);
+		return new self($path, $type, $options, $slots);
 	}
 
 	/** Whether the value is an option written as an expression: `{"expr": "…"}`. */
@@ -63,10 +72,23 @@ final readonly class PartOptions
 			if ($error !== null) {
 				throw DefinitionException::invalid($path, $error);
 			}
+			self::checkSlot($this->type, $key, $evaluated, $this->slots, $path);
 			$options[$key] = $evaluated;
 		}
 
 		return $options;
+	}
+
+	/**
+	 * An option naming a material slot (`profile`) must name one of the definition's.
+	 *
+	 * @param list<string> $slots
+	 */
+	private static function checkSlot(?PartTypeEnum $type, string $key, mixed $value, array $slots, string $path): void
+	{
+		if ($type?->isSlotOption($key) === true && !in_array($value, $slots, true)) {
+			throw DefinitionException::invalid($path, 'Must be the key of one of the materialSlots.');
+		}
 	}
 
 	private static function plain(mixed $value): mixed
