@@ -64,6 +64,8 @@ export class SharedViewerPageComponent {
     protected readonly walkLocked = signal(false);
     /** The link opens in the walk, which needs a click to capture the mouse: a button asks for it. */
     protected readonly walkPrompt = signal(false);
+    /** The guest hid the panel to see more of the floor (on a phone it covers the lower part of the screen). */
+    protected readonly panelHidden = signal(false);
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly sectionSlider = signal(SectionMax);

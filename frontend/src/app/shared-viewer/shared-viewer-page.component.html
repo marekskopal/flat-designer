@@ -4,7 +4,7 @@
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
     [sectionHeight]="sectionHeight()"
-    [insetLeft]="walking() ? 0 : panelInset"
+    [insetLeft]="walking() || panelHidden() ? 0 : panelInset"
     (loaded)="onLoaded()"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
@@ -21,14 +21,26 @@
         </span>
     </div>
 } @else if (walkPrompt()) {
-    <button type="button" class="walk-start" (click)="startWalkthrough()">Start the walk-through</button>
+    <button type="button" class="walk-start" [class.walk-start--centered]="panelHidden()" (click)="startWalkthrough()">
+        Start the walk-through
+    </button>
 }
 
-<aside class="panel" [class.panel--hidden]="walking()">
+@if (panelHidden() && !walking()) {
+    <button type="button" class="panel-show" aria-label="Show the panel" (click)="panelHidden.set(false)">
+        <span class="panel-show__name">{{ shared()?.name ?? 'Flat Designer' }}</span>
+        <span class="panel-show__hint">Show</span>
+    </button>
+}
+
+<aside class="panel" [class.panel--hidden]="walking() || panelHidden()">
     <header class="panel__header">
         <span class="eyebrow">{{ shared()?.projectName ?? 'Flat Designer' }}</span>
         @if (shared(); as s) {
-            <h1 class="title">{{ s.name }}</h1>
+            <div class="title-row">
+                <h1 class="title">{{ s.name }}</h1>
+                <button type="button" class="share-button" aria-label="Hide the panel" (click)="panelHidden.set(true)">Hide</button>
+            </div>
             <p class="subtitle">{{ s.scene.floor.name }} · shared view</p>
         } @else if (error()) {
             <h1 class="title">Not available</h1>

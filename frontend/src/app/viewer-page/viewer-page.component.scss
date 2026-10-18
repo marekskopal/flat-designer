@@ -425,6 +425,51 @@
     cursor: pointer;
 }
 
+.walk-start--centered {
+    left: 50%;
+}
+
+.panel-show {
+    position: absolute;
+    top: $space-16;
+    left: $space-16;
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    max-width: calc(100% - 2 * #{$space-16});
+    padding: $space-8 $space-8 $space-8 $space-16;
+    background: $color-surface;
+    backdrop-filter: blur(14px);
+    border: 1px solid $color-border;
+    border-radius: 999px;
+    box-shadow: $shadow-panel;
+    font-size: $font-size-13;
+    font-weight: 600;
+    color: $color-text;
+    white-space: nowrap;
+    cursor: pointer;
+
+    @media (max-width: 640px) {
+        top: auto;
+        left: $space-8;
+        bottom: $space-8;
+    }
+}
+
+.panel-show__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.panel-show__hint {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: $color-accent;
+    font-size: $font-size-12;
+    color: #fff;
+}
+
 .share-button {
     flex: none;
     padding: 4px 12px;
