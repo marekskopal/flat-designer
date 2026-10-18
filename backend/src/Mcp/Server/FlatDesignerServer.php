@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Mcp\Server;
 
+use Mcp\Capability\Registry;
 use Mcp\Capability\Registry\ReferenceHandler;
 use Mcp\Server;
+use Mcp\Server\Handler\Request\CallToolHandler;
 use Mcp\Server\Session\SessionStoreInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
-/** Builds the MCP server: tools discovered from `Mcp/Tool` (`#[McpTool]` methods), instances from the container. */
+/**
+ * Builds the MCP server: tools discovered from `Mcp/Tool` (`#[McpTool]` methods), instances from the container.
+ *
+ * Tool calls go through our own `CallToolHandler` (added handlers win over the SDK's default one), which validates
+ * the arguments with `EmptyObjectSchemaValidator`; it needs the registry, so the server gets one passed in.
+ */
 final readonly class FlatDesignerServer
 {
 	private const string Instructions = <<<'TEXT'
@@ -40,10 +47,17 @@ final readonly class FlatDesignerServer
 
 	public function build(SessionStoreInterface $sessionStore): Server
 	{
+		$registry = new Registry(logger: $this->logger);
+		$referenceHandler = new ToolErrorTranslatingReferenceHandler(new ReferenceHandler($this->container));
+
 		return Server::builder()
 			->setContainer($this->container)
 			->setLogger($this->logger)
-			->setReferenceHandler(new ToolErrorTranslatingReferenceHandler(new ReferenceHandler($this->container)))
+			->setRegistry($registry)
+			->setReferenceHandler($referenceHandler)
+			->addRequestHandler(
+				new CallToolHandler($registry, $referenceHandler, $this->logger, new EmptyObjectSchemaValidator($this->logger)),
+			)
 			->setDiscovery(basePath: dirname(__DIR__, 2), scanDirs: ['Mcp/Tool'])
 			->setServerInfo(
 				name: 'flat-designer',

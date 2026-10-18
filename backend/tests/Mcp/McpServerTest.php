@@ -6,6 +6,7 @@ namespace FlatDesigner\Tests\Mcp;
 
 use FlatDesigner\Controller\McpController;
 use FlatDesigner\Dto\EditResultDto;
+use FlatDesigner\Mcp\Server\EmptyObjectSchemaValidator;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
 use FlatDesigner\Mcp\Tool\GroupTools;
@@ -24,12 +25,14 @@ use FlatDesigner\Tests\Support\McpClient;
 use FlatDesigner\Tests\Support\OAuthFlow;
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
+use stdClass;
 
 /** Drives the MCP server end to end over JSON-RPC, as Claude Code or claude.ai would. */
 #[CoversClass(McpController::class)]
 #[CoversClass(EditResultDto::class)]
 #[CoversClass(DatabaseSessionStore::class)]
 #[CoversClass(ToolErrorTranslatingReferenceHandler::class)]
+#[CoversClass(EmptyObjectSchemaValidator::class)]
 #[CoversClass(ProjectTools::class)]
 #[CoversClass(ShareLinkTools::class)]
 #[CoversClass(ItemTools::class)]
@@ -394,6 +397,30 @@ final class McpServerTest extends IntegrationTestCase
 		// Both in the text content (escaped JSON inside a string) and in structuredContent.
 		self::assertMatchesRegularExpression('/\\\\"params\\\\":\\s*\\{\\}/', $body);
 		self::assertMatchesRegularExpression('/[^\\\\]"params":\\s*\\{\\}/', $body);
+	}
+
+	public function testAcceptsEmptyItemParams(): void
+	{
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$isError = false;
+
+		// `new stdClass()` is sent as `{}`, which the SDK decodes into `[]`.
+		$box = $this->client->call(
+			'add_item',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'Box', 'x' => 0, 'y' => 0, 'params' => new stdClass()],
+			$isError,
+		);
+		self::assertFalse($isError, is_string($box) ? $box : '');
+		self::assertIsArray($box);
+		self::assertIsArray($box['element']);
+		self::assertSame([], $box['element']['params']);
+
+		$updated = $this->client->call(
+			'update_item',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'itemId' => $box['element']['id'], 'params' => new stdClass()],
+			$isError,
+		);
+		self::assertFalse($isError, is_string($updated) ? $updated : '');
 	}
 
 	public function testAddsAWardrobe(): void
