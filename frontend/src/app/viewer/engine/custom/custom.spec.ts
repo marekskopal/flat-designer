@@ -229,6 +229,9 @@ describe('partMaterial', () => {
         expect(color(partMaterial(part('back'), item, slots, library, 'vertical'))).toBe('#f4f4f0');
         expect(color(partMaterial(part('carcass'), {...item, materialId: null}, slots, library, 'vertical'))).toBe('#b08850');
         expect(color(partMaterial(part(null), item, slots, library, 'vertical'))).toBe('#556b4a');
+        // A second slot without a default takes the item material too.
+        const plainSlots = [...slots, {key: 'fronts'}];
+        expect(color(partMaterial(part('fronts'), item, plainSlots, library, 'vertical'))).toBe('#556b4a');
     });
 });
 

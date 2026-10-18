@@ -131,7 +131,7 @@
             <span class="cell__label">{{ slot.label ?? slot.key }} <span class="cell__unit">material</span></span>
             <select class="input input--compact" [disabled]="disabled()" (change)="setMaterial(slot.key, $event)">
                 <option value="" [selected]="current().materials[slot.key] === undefined">
-                    {{ first ? 'Item material, else ' + materialName(slot.default) : materialName(slot.default) }} (default)
+                    {{ first && slot.default ? 'Item material, else ' + materialName(slot.default) : materialName(slot.default) }} (default)
                 </option>
                 @for (material of materials(); track material.id) {
                     <option [value]="material.id" [selected]="material.id === current().materials[slot.key]">{{ material.name }}</option>

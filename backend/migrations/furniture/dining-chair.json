@@ -1,0 +1,204 @@
+{
+ "name": "Dining chair",
+ "description": "Solid wood chair: a seat of two boards narrowing to the back, legs tapered on the inside, aprons, and a back of two posts and two rails leaning back by the rake (5°; s5 / c5 are its sine and cosine, as expressions have no trigonometry — change all three together).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 400,
+   "depth": 395,
+   "height": 885
+  },
+  "parameters": [
+   {
+    "key": "seatHeight",
+    "label": "Seat height",
+    "type": "int",
+    "default": 460,
+    "min": 300,
+    "max": 700,
+    "unit": "mm"
+   },
+   {
+    "key": "backWidth",
+    "label": "Seat width at the back",
+    "type": "int",
+    "default": 375,
+    "min": 200,
+    "max": 1000,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "rake": "5",
+   "s5": "0.0871557427",
+   "c5": "0.9961946981",
+   "us": "seatHeight - 25",
+   "rise": "(H - us - 30 * s5) / c5",
+   "pz": "rise * s5",
+   "half": "backWidth / 2",
+   "spread": "(W - backWidth) / 2",
+   "halfFront": "half + spread * (D - 28) / D",
+   "halfPost": "half + spread * pz / D",
+   "frontLegX": "halfFront - 28",
+   "backLegX": "halfPost - 18",
+   "postX": "halfPost - 36",
+   "apronX": "min(frontLegX, backLegX) + 18 - 30",
+   "lowerTop": "seatHeight + 0.6 * (H - seatHeight) + 27.5"
+  },
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Wood"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Seat",
+    "repeat": {
+     "count": 2,
+     "as": "s"
+    },
+    "x": "s * (W / 2 + 0.5)",
+    "y": "us",
+    "z": "pz",
+    "w": "W / 2 - 0.5",
+    "h": 25,
+    "d": "D - pz",
+    "material": "wood",
+    "backWidth": {
+     "expr": "round(halfPost - 0.5)"
+    },
+    "taper": {
+     "expr": "s == 0 ? 'left' : 'right'"
+    }
+   },
+   {
+    "type": "taperedLeg",
+    "name": "Front leg",
+    "repeat": {
+     "count": 2,
+     "as": "s"
+    },
+    "x": "W / 2 + (s == 0 ? -1 : 1) * frontLegX - 18",
+    "y": 0,
+    "z": "D - 46",
+    "w": 36,
+    "h": "us",
+    "d": 36,
+    "material": "wood",
+    "bottomSize": 26
+   },
+   {
+    "type": "taperedLeg",
+    "name": "Back leg",
+    "repeat": {
+     "count": 2,
+     "as": "s"
+    },
+    "x": "W / 2 + (s == 0 ? -1 : 1) * backLegX - 18",
+    "y": 0,
+    "z": "pz",
+    "w": 36,
+    "h": "us",
+    "d": 30,
+    "material": "wood",
+    "bottomSize": 26
+   },
+   {
+    "type": "board",
+    "name": "Front apron",
+    "x": "W / 2 - (frontLegX - 18)",
+    "y": "us - 60",
+    "z": "D - 40",
+    "w": "2 * (frontLegX - 18)",
+    "h": 60,
+    "d": 20,
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Side apron",
+    "repeat": {
+     "count": 2,
+     "as": "s"
+    },
+    "x": "s == 0 ? W / 2 - apronX - 20 : W / 2 + apronX",
+    "y": "us - 60",
+    "z": "pz + 30",
+    "w": 20,
+    "h": 60,
+    "d": "D - 46 - pz - 30",
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Post",
+    "repeat": {
+     "count": 2,
+     "as": "s"
+    },
+    "x": "s == 0 ? W / 2 - halfPost : W / 2 + postX",
+    "y": "us",
+    "z": "pz",
+    "w": 36,
+    "h": "rise",
+    "d": 30,
+    "material": "wood",
+    "tilt": {
+     "expr": "rake"
+    },
+    "tiltY": {
+     "expr": "us"
+    },
+    "tiltZ": {
+     "expr": "pz"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Top rail",
+    "x": "W / 2 - postX",
+    "y": "us + (H - us - 25 * s5) / c5 - 70",
+    "z": "pz + 5",
+    "w": "2 * postX",
+    "h": 70,
+    "d": 20,
+    "material": "wood",
+    "grain": "horizontal",
+    "tilt": {
+     "expr": "rake"
+    },
+    "tiltY": {
+     "expr": "us"
+    },
+    "tiltZ": {
+     "expr": "pz"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Lower rail",
+    "x": "W / 2 - postX",
+    "y": "us + (lowerTop - us - 25 * s5) / c5 - 55",
+    "z": "pz + 5",
+    "w": "2 * postX",
+    "h": 55,
+    "d": 20,
+    "material": "wood",
+    "grain": "horizontal",
+    "tilt": {
+     "expr": "rake"
+    },
+    "tiltY": {
+     "expr": "us"
+    },
+    "tiltZ": {
+     "expr": "pz"
+    }
+   }
+  ]
+ }
+}

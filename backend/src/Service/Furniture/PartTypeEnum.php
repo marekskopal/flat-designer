@@ -151,6 +151,7 @@ enum PartTypeEnum: string
 				'handle' => ['horizontal', 'vertical', 'none'],
 				'handleSide' => ['left', 'right'],
 				'grain' => self::Grain,
+				'edges' => 'sides',
 			] + self::Tilt,
 			self::Cylinder => ['axis' => ['x', 'y', 'z']] + self::Tilt,
 			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Tilt,

@@ -1,0 +1,35 @@
+{
+ "name": "Worktop",
+ "description": "Worktop slab on the base cabinets, cut to the item (z = the cabinet height).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1200,
+   "depth": 600,
+   "height": 38
+  },
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Slab",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   }
+  ]
+ }
+}

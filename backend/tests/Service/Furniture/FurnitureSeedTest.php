@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Service\Furniture;
 
 use FlatDesigner\Service\Furniture\DefinitionValidator;
+use FlatDesigner\Service\Furniture\FurnitureSeeds;
 use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Migrations\SeedFlat50FurnitureDefinitionsMigration;
+use Migrations\SeedFurnitureDefinitionsMigration;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /** The global furniture definitions seeded by `SeedFurnitureDefinitionsMigration` pass the validator (material codes included). */
 #[CoversClass(DefinitionValidator::class)]
+#[CoversClass(FurnitureSeeds::class)]
 final class FurnitureSeedTest extends IntegrationTestCase
 {
 	/** @return iterable<string, array{string}> */
@@ -23,6 +27,15 @@ final class FurnitureSeedTest extends IntegrationTestCase
 		foreach ($files as $file) {
 			yield basename($file) => [$file];
 		}
+	}
+
+	/** Every file in the directory is seeded by exactly one migration, and every listed file exists. */
+	public function testEveryFileBelongsToOneSeedMigration(): void
+	{
+		$listed = [...SeedFurnitureDefinitionsMigration::Files, ...SeedFlat50FurnitureDefinitionsMigration::Files];
+		sort($listed);
+		self::assertSame(array_unique($listed), $listed, 'A file is listed by more than one migration.');
+		self::assertSame(FurnitureSeeds::files(), $listed);
 	}
 
 	#[DataProvider('seeds')]

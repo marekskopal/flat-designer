@@ -26,7 +26,8 @@ final readonly class ItemKindCatalog
 		. 'back, the width being its front (default: as wide as the front).';
 
 	private const string CustomParams = 'values: {parameter key: value} overriding the definition\'s parameter defaults; materials: {material slot '
-		. 'key: material id} (a slot without one takes the item material for the first slot, otherwise the slot\'s default).';
+		. 'key: material id} (a slot without one takes the slot\'s default material; the first slot, and a slot without a default, '
+		. 'take the item material).';
 
 	private const array Kinds = [
 		'BaseCabinet' => ['description' => 'Kitchen base cabinet standing on the floor, front facing the rotation direction.', 'width' => 600, 'depth' => 580, 'height' => 860, 'z' => 0, 'params' => self::CabinetParams],

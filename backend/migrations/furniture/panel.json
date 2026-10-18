@@ -1,0 +1,46 @@
+{
+ "name": "Panel",
+ "description": "One board cut to the item: a back panel, niche side or soffit board.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 600,
+   "depth": 18,
+   "height": 600
+  },
+  "parameters": [
+   {
+    "key": "grain",
+    "label": "Grain",
+    "type": "select",
+    "options": [
+     "vertical",
+     "horizontal"
+    ],
+    "default": "vertical"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "board",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Panel",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "material": "board",
+    "grain": {
+     "expr": "grain"
+    }
+   }
+  ]
+ }
+}

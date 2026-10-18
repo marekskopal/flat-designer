@@ -75,7 +75,7 @@ export function buildCustomItemBody(item: Item, materials: MaterialLibrary, defi
 
 /**
  * The material of a part: the item's choice for its slot (`params.materials`), for the first slot the item material,
- * otherwise the slot's default code; parts without a slot take the item material.
+ * otherwise the slot's default code; parts without a slot, or of a slot without a default, take the item material.
  */
 export function partMaterial(
     part: ResolvedPart,
@@ -89,11 +89,11 @@ export function partMaterial(
         return materials.get(chosen, grain);
     }
     const index = slots.findIndex((s) => s.key === part.material);
-    const fallback = index <= 0 && item.materialId !== null ? item.materialId : null;
-    if (fallback === null && index >= 0 && slots[index].default !== undefined) {
-        return materials.byCode(slots[index].default, grain);
+    const code = index >= 0 ? slots[index].default : undefined;
+    if (code !== undefined && (index > 0 || item.materialId === null)) {
+        return materials.byCode(code, grain);
     }
-    return materials.get(fallback, grain);
+    return materials.get(item.materialId, grain);
 }
 
 /** One part as a mesh (or a group, for a front with its handle) in the parts' frame, metres. */

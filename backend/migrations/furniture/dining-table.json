@@ -1,0 +1,100 @@
+{
+ "name": "Dining table",
+ "description": "Solid wood table: a top of boards along the width, legs tapered on the inside and an apron between them.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1320,
+   "depth": 700,
+   "height": 780
+  },
+  "parameters": [
+   {
+    "key": "boardWidth",
+    "label": "Board width of the top",
+    "type": "int",
+    "default": 180,
+    "min": 80,
+    "max": 400,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "underTop": "H - 28",
+   "boards": "max(1, round(D / boardWidth))",
+   "bd": "D / boards"
+  },
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Wood"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Top board",
+    "repeat": {
+     "count": "boards"
+    },
+    "x": 0,
+    "y": "underTop",
+    "z": "i * bd + (i > 0 ? 0.5 : 0)",
+    "w": "W",
+    "h": 28,
+    "d": "bd - (i > 0 ? 0.5 : 0) - (i < boards - 1 ? 0.5 : 0)",
+    "material": "wood",
+    "grain": "horizontal",
+    "edges": [
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "taperedLeg",
+    "name": "Leg",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 == 0 ? 40 : W - 95",
+    "y": 0,
+    "z": "i < 2 ? 40 : D - 95",
+    "w": 55,
+    "h": "underTop",
+    "d": 55,
+    "material": "wood",
+    "bottomSize": 38
+   },
+   {
+    "type": "board",
+    "name": "Long apron",
+    "repeat": {
+     "count": 2
+    },
+    "x": 95,
+    "y": "underTop - 90",
+    "z": "i == 0 ? 50 : D - 72",
+    "w": "W - 190",
+    "h": 90,
+    "d": 22,
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Short apron",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i == 0 ? 50 : W - 72",
+    "y": "underTop - 90",
+    "z": 95,
+    "w": 22,
+    "h": 90,
+    "d": "D - 190",
+    "material": "wood",
+    "grain": "horizontal"
+   }
+  ]
+ }
+}
