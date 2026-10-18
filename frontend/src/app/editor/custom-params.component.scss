@@ -40,3 +40,45 @@
     color: $color-danger;
     overflow-wrap: anywhere;
 }
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+}
+
+.list__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.list__row {
+    display: flex;
+    gap: $space-4;
+    align-items: center;
+}
+
+.list__row--head {
+    font-size: 10px;
+    color: $color-text-subtle;
+}
+
+.list__field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.list__check {
+    flex: 0 0 auto;
+    width: 20px;
+    margin: 0;
+    text-align: center;
+}
+
+.list__actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 2px;
+    width: 72px;
+}

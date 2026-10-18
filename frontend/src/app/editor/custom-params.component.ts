@@ -1,14 +1,30 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
-import {DefinitionParameter, FurnitureDefinitionBody} from '@app/models/furniture';
+import {DefinitionField, DefinitionParameter, FurnitureDefinitionBody} from '@app/models/furniture';
 import {Material} from '@app/models/scene';
 
 import {Params} from './cabinet-params';
-import {customParamsOf, definitionError, withSlotMaterial, withValue} from './custom-params';
+import {
+    customParamsOf,
+    definitionError,
+    ListItem,
+    listItems,
+    ownListItems,
+    parseWholeNumber,
+    withItemAdded,
+    withItemField,
+    withItemMoved,
+    withItemRemoved,
+    withSlotMaterial,
+    withValue,
+} from './custom-params';
+
+type ListParameter = Extract<DefinitionParameter, {type: 'list'}>;
 
 /**
  * Form for the params of a Custom item, generated from its furniture definition: an input per parameter (empty = the
- * default) and a material per slot (empty = the item material for the first slot, otherwise the slot's default). Shows
- * why the definition does not work out at the item's size. Every change emits the whole new params object.
+ * default), a list parameter as rows of its fields (add, remove, move; empty field = its default) and a material per
+ * slot (empty = the item material for the first slot, otherwise the slot's default). Shows why the definition does not
+ * work out at the item's size. Every change emits the whole new params object.
  */
 @Component({
     selector: 'fd-custom-params',
@@ -68,11 +84,12 @@ export class CustomParamsComponent {
             this.emit(withValue(this.params(), parameter.key, undefined));
             return;
         }
-        if (!/^-?\d+$/.test(text)) {
+        const number = parseWholeNumber(text);
+        if (number === null) {
             this.inputError.set(`${this.label(parameter)}: whole number expected.`);
             return;
         }
-        this.emit(withValue(this.params(), parameter.key, Number(text)));
+        this.emit(withValue(this.params(), parameter.key, number));
     }
 
     protected setBool(parameter: DefinitionParameter, event: Event): void {
@@ -83,6 +100,80 @@ export class CustomParamsComponent {
     protected setSelect(parameter: DefinitionParameter, event: Event): void {
         const value = (event.target as HTMLSelectElement).value;
         this.emit(withValue(this.params(), parameter.key, value === '' ? undefined : value));
+    }
+
+    /** The items of a list parameter as shown: the item's list, or the definition's default. */
+    protected items(parameter: ListParameter): ListItem[] {
+        return listItems(this.params(), parameter.key, parameter.default);
+    }
+
+    /** Whether the item has its own list (not the definition's default). */
+    protected hasOwnList(parameter: ListParameter): boolean {
+        return ownListItems(this.params(), parameter.key) !== null;
+    }
+
+    /** The fields of a list parameter (none while the definition lacks them, as the preview shows the error). */
+    protected fields(parameter: ListParameter): DefinitionField[] {
+        return Array.isArray(parameter.fields) ? parameter.fields : [];
+    }
+
+    protected fieldLabel(field: DefinitionField): string {
+        return field.type === 'int' && field.unit !== undefined ? `${field.label ?? field.key} (${field.unit})` : (field.label ?? field.key);
+    }
+
+    /** What an empty input of the field means: its default, or "auto" for an optional one without (shared, e.g. a height). */
+    protected placeholder(field: DefinitionField): string {
+        return field.default === undefined || field.default === null ? (field.optional === true ? 'auto' : '') : String(field.default);
+    }
+
+    /** A field of one item; an empty input, or a checkbox at the field's default, drops the field (its default applies). */
+    protected setItemField(parameter: ListParameter, index: number, field: DefinitionField, event: Event): void {
+        const target = event.target as HTMLInputElement | HTMLSelectElement;
+        const items = this.items(parameter);
+        const text = target.value.trim();
+        let value: unknown;
+        if (field.type === 'bool') {
+            const checked = (target as HTMLInputElement).checked;
+            value = checked === field.default ? undefined : checked;
+        } else if (text === '') {
+            value = undefined;
+        } else if (field.type === 'int') {
+            value = parseWholeNumber(text);
+            if (value === null) {
+                this.inputError.set(`${this.fieldLabel(field)}: whole number expected.`);
+                // Back to what the item has, so the rejected text cannot stay on a row that moves.
+                target.value = String(items[index]?.[field.key] ?? '');
+                return;
+            }
+        } else {
+            value = text;
+        }
+        this.setList(parameter, withItemField(items, index, field.key, value));
+    }
+
+    protected addItem(parameter: ListParameter): void {
+        this.setList(parameter, withItemAdded(this.items(parameter)));
+    }
+
+    protected removeItem(parameter: ListParameter, index: number): void {
+        this.setList(parameter, withItemRemoved(this.items(parameter), index));
+    }
+
+    protected moveItem(parameter: ListParameter, index: number, direction: -1 | 1): void {
+        this.setList(parameter, withItemMoved(this.items(parameter), index, direction));
+    }
+
+    protected resetList(parameter: ListParameter): void {
+        this.emit(withValue(this.params(), parameter.key, undefined));
+    }
+
+    protected checkedField(item: ListItem, field: DefinitionField): boolean {
+        const value = item[field.key];
+        return typeof value === 'boolean' ? value : field.default === true;
+    }
+
+    private setList(parameter: ListParameter, items: ListItem[]): void {
+        this.emit(withValue(this.params(), parameter.key, items));
     }
 
     protected setMaterial(slot: string, event: Event): void {

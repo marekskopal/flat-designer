@@ -69,25 +69,6 @@
     align-self: center;
 }
 
-.link {
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    color: $color-accent;
-    cursor: pointer;
-
-    &:hover {
-        text-decoration: underline;
-    }
-}
-
-.members {
-    margin: $space-8 0;
-    padding: 0;
-    list-style: none;
-}
-
 .members__item {
     padding: 2px 0;
     border: 0;

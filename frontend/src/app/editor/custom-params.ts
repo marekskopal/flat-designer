@@ -1,7 +1,7 @@
 import {FurnitureDefinitionBody} from '@app/models/furniture';
 import {evaluateDefinition, ItemSize} from '@app/viewer/engine/custom/definition';
 
-import {Params, withParam} from './cabinet-params';
+import {Params, swapped, withParam} from './cabinet-params';
 
 /** The params of a Custom item: parameter values over the definition's defaults, and materials of its slots. */
 export interface CustomParams {
@@ -49,4 +49,42 @@ function build(params: CustomParams): Params {
         ...(Object.keys(params.values).length > 0 ? {values: params.values} : {}),
         ...(Object.keys(params.materials).length > 0 ? {materials: params.materials} : {}),
     };
+}
+
+/** One item of a list parameter, as the item stores it (fields left out take their defaults). */
+export type ListItem = Record<string, unknown>;
+
+/** The item's own list for the parameter, or null when the definition's default applies. */
+export function ownListItems(params: Params, key: string): ListItem[] | null {
+    const value = customParamsOf(params).values[key];
+    return Array.isArray(value) ? (value as ListItem[]) : null;
+}
+
+/** The list parameter's items: the item's own, or the definition's default list (none while the definition lacks one). */
+export function listItems(params: Params, key: string, fallback: unknown): ListItem[] {
+    return ownListItems(params, key) ?? (Array.isArray(fallback) ? [...(fallback as ListItem[])] : []);
+}
+
+/** A whole number typed into an input, or null for anything else (an empty text is the caller's business). */
+export function parseWholeNumber(text: string): number | null {
+    return /^-?\d+$/.test(text) ? Number(text) : null;
+}
+
+/** The list with one field of one item set, or dropped (back to the field's default) for undefined. */
+export function withItemField(items: readonly ListItem[], index: number, field: string, value: unknown): ListItem[] {
+    return items.map((item, i) => (i === index ? withParam(item, field, value) : item));
+}
+
+/** The list with an item of all-default fields added at the end. */
+export function withItemAdded(items: readonly ListItem[]): ListItem[] {
+    return [...items, {}];
+}
+
+export function withItemRemoved(items: readonly ListItem[], index: number): ListItem[] {
+    return items.filter((_, i) => i !== index);
+}
+
+/** The list with an item swapped with the one before (−1) or after (+1) it. */
+export function withItemMoved(items: readonly ListItem[], index: number, direction: -1 | 1): ListItem[] {
+    return swapped(items, index, direction);
 }
