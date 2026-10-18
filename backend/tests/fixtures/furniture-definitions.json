@@ -2072,6 +2072,82 @@
    ]
   },
   {
+   "name": "a tilt pivot inside an assembly moves with it",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "assembly",
+      "repeat": {
+       "count": 2
+      },
+      "x": 0,
+      "y": "i * 500",
+      "z": "i * 100",
+      "w": 100,
+      "h": 400,
+      "d": 100,
+      "parts": [
+       {
+        "type": "board",
+        "x": 0,
+        "y": 50,
+        "z": 10,
+        "w": 30,
+        "h": 300,
+        "d": 30,
+        "tilt": 5,
+        "tiltY": 60,
+        "tiltZ": 10
+       }
+      ]
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "board",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 50,
+     "z": 10,
+     "w": 30,
+     "h": 300,
+     "d": 30,
+     "material": null,
+     "props": {
+      "tilt": 5,
+      "tiltY": 60,
+      "tiltZ": 10
+     }
+    },
+    {
+     "name": "board",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 550,
+     "z": 110,
+     "w": 30,
+     "h": 300,
+     "d": 30,
+     "material": null,
+     "props": {
+      "tilt": 5,
+      "tiltY": 560,
+      "tiltZ": 110
+     }
+    }
+   ]
+  },
+  {
    "name": "int value above max",
    "definition": {
     "format": 1,

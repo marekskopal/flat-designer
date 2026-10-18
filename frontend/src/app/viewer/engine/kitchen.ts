@@ -121,11 +121,10 @@ function buildCabinet(item: Item, materials: MaterialLibrary): THREE.Group {
 
 /** Plinth in a darker shade of the carcass, as it sits in the shadow under the fronts. */
 function plinthMaterial(body: THREE.Material, materials: MaterialLibrary): THREE.Material {
-    const color = body instanceof THREE.MeshStandardMaterial ? body.color.clone().multiplyScalar(0.7) : new THREE.Color('#333333');
-    return materials.plain(`#${color.getHexString()}`, 0.8);
+    return materials.darkened(body, 0.7);
 }
 
-interface FrontBox {
+export interface FrontBox {
     left: number;
     width: number;
     bottom: number;
@@ -167,16 +166,24 @@ export function buildHandle(
     return boxAt(material, (x - HandleSection / 2) * MM, (centre - length / 2) * MM, z * MM, HandleSection * MM, length * MM, HandleSection * MM);
 }
 
-/** Built-in oven or microwave: black glass front with a darker window and a steel bar handle. */
-function buildAppliance(type: 'oven' | 'microwave', front: FrontBox, materials: MaterialLibrary): THREE.Group {
+/**
+ * Built-in oven or microwave: black glass front with a darker window and a steel bar handle (mm, item-local; the
+ * front `thickness` deep from its back face `front.z`).
+ */
+export function buildAppliance(
+    type: 'oven' | 'microwave',
+    front: FrontBox,
+    materials: MaterialLibrary,
+    thickness: number = FrontThickness,
+): THREE.Group {
     const group = new THREE.Group();
     const glass = materials.byCode('appliance-black-glass');
     const windowMaterial = materials.plain('#050506', 0.05, 0.5);
     const steel = materials.plain('#9a9a9a', 0.25, 1);
     const mm = (v: number): number => v * MM;
-    const faceZ = front.z + FrontThickness;
+    const faceZ = front.z + thickness;
 
-    group.add(boxAt(glass, mm(front.left), mm(front.bottom), mm(front.z), mm(front.width), mm(front.height), mm(FrontThickness)));
+    group.add(boxAt(glass, mm(front.left), mm(front.bottom), mm(front.z), mm(front.width), mm(front.height), mm(thickness)));
 
     if (type === 'oven') {
         const controls = 90;

@@ -3,9 +3,9 @@ import {Item, SceneDefinition} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {taperedLeg} from '../furniture';
-import {buildHandle} from '../kitchen';
+import {buildAppliance, buildHandle} from '../kitchen';
 import {GrainDirection, MaterialLibrary} from '../materials';
-import {boxAt} from '../meshes';
+import {boxAt, prismAt} from '../meshes';
 import {MM} from '../plan-geometry';
 import {evaluateDefinition, ResolvedPart} from './definition';
 
@@ -33,6 +33,9 @@ export function changedDefinitionIds(previous: DefinitionLibrary, next: Definiti
 }
 
 const CylinderSegments = 24;
+/** A sliding door's frame, as on the built-in wardrobe. */
+const SlidingProfileWidth = 22;
+const SlidingInfillThickness = 8;
 
 /**
  * Body of a `Custom` item from its furniture definition, in the item-local frame of `buildItem()` (bottom centre origin, x
@@ -55,7 +58,9 @@ export function buildCustomItemBody(item: Item, materials: MaterialLibrary, defi
         const slots = Array.isArray(definition.definition.materialSlots) ? definition.definition.materialSlots : [];
         const group = new THREE.Group();
         for (const part of parts) {
-            const mesh = buildPart(part, item, (grain) => partMaterial(part, item, slots, materials, grain), materials);
+            const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
+                partMaterial({...part, material: slot}, item, slots, materials, grain);
+            const mesh = tilted(buildPart(part, item, material, materials), part);
             mesh.name = `part:${part.name}`;
             mesh.userData['partName'] = part.name;
             mesh.position.x -= (item.width / 2) * MM;
@@ -95,11 +100,23 @@ export function partMaterial(
 function buildPart(
     part: ResolvedPart,
     item: Item,
-    material: (grain: GrainDirection) => THREE.Material,
+    material: (grain: GrainDirection, slot?: string | null) => THREE.Material,
     materials: MaterialLibrary,
 ): THREE.Object3D {
     const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
     switch (part.type) {
+        case 'appliance': {
+            const front = {left: part.x, bottom: part.y, width: part.w, height: part.h, z: part.z};
+            return buildAppliance(part.props['kind'] === 'microwave' ? 'microwave' : 'oven', front, materials, part.d);
+        }
+        case 'slidingDoor': {
+            const slot = part.props['profile'];
+            const profile = typeof slot === 'string' ? material('vertical', slot) : materials.byCode('aluminium-brushed');
+            const infill = part.props['mirror'] === true ? materials.byCode('mirror') : material('vertical');
+            return buildSlidingDoor(part, profile, infill);
+        }
+        case 'board':
+            return buildBoard(part, shaded(material(grain), part.props['shade'], materials));
         case 'front':
             return buildFront(part, item, material(grain), materials);
         case 'cylinder':
@@ -113,6 +130,71 @@ function buildPart(
         default:
             return box(part, material(grain));
     }
+}
+
+/** A board, narrowing towards the back to `backWidth` (on both sides, or only the `taper` side) when it has one. */
+function buildBoard(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
+    const back = typeof part.props['backWidth'] === 'number' ? Math.min(part.props['backWidth'], part.w) : part.w;
+    if (back === part.w) {
+        return box(part, material);
+    }
+    const narrowing = part.w - back;
+    const taper = part.props['taper'];
+    const left = part.x + (taper === 'right' ? 0 : taper === 'left' ? narrowing : narrowing / 2);
+    const footprint = [
+        {x: part.x, z: part.z + part.d},
+        {x: part.x + part.w, z: part.z + part.d},
+        {x: left + back, z: part.z},
+        {x: left, z: part.z},
+    ].map((p) => ({x: p.x * MM, z: p.z * MM}));
+    const mesh = prismAt(material, footprint, part.y * MM, (part.y + part.h) * MM);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+/** The material darkened by `shade` (0–1), as a plinth in the shadow under the fronts; unchanged without one. */
+function shaded(material: THREE.Material, shade: unknown, materials: MaterialLibrary): THREE.Material {
+    return typeof shade === 'number' && shade > 0 ? materials.darkened(material, 1 - Math.min(shade, 1)) : material;
+}
+
+/** A sliding door leaf: stiles and rails `profileWidth` wide in the profile material around a thin infill. */
+function buildSlidingDoor(part: ResolvedPart, profile: THREE.Material, infill: THREE.Material): THREE.Group {
+    const group = new THREE.Group();
+    const wanted = typeof part.props['profileWidth'] === 'number' ? part.props['profileWidth'] : SlidingProfileWidth;
+    // A frame cannot be wider than half the leaf.
+    const pw = Math.min(wanted, Math.floor(part.w / 2), Math.floor(part.h / 2));
+    const inner = Math.max(part.w - 2 * pw, 1);
+    const add = (material: THREE.Material, x: number, y: number, z: number, w: number, h: number, d: number): void => {
+        group.add(boxAt(material, x * MM, y * MM, z * MM, w * MM, h * MM, d * MM));
+    };
+    add(profile, part.x, part.y, part.z, pw, part.h, part.d);
+    add(profile, part.x + part.w - pw, part.y, part.z, pw, part.h, part.d);
+    add(profile, part.x + pw, part.y, part.z, inner, pw, part.d);
+    add(profile, part.x + pw, part.y + part.h - pw, part.z, inner, pw, part.d);
+    const thickness = Math.min(SlidingInfillThickness, part.d);
+    add(infill, part.x + pw, part.y + pw, part.z + (part.d - thickness) / 2, inner, Math.max(part.h - 2 * pw, 1), thickness);
+    return group;
+}
+
+/**
+ * The part leant back by `tilt` degrees (top towards the back) around a line along x at `tiltY` / `tiltZ` (mm, the
+ * item's parts frame; default the part's bottom-back edge).
+ */
+function tilted(object: THREE.Object3D, part: ResolvedPart): THREE.Object3D {
+    const tilt = part.props['tilt'];
+    if (typeof tilt !== 'number' || tilt === 0) {
+        return object;
+    }
+    const y = typeof part.props['tiltY'] === 'number' ? part.props['tiltY'] : part.y;
+    const z = typeof part.props['tiltZ'] === 'number' ? part.props['tiltZ'] : part.z;
+    const pivot = new THREE.Group();
+    pivot.position.set(0, y * MM, z * MM);
+    pivot.rotation.x = -THREE.MathUtils.degToRad(tilt);
+    object.position.y -= y * MM;
+    object.position.z -= z * MM;
+    pivot.add(object);
+    return pivot;
 }
 
 /** Clear glass; one per mesh, disposed with it (not one of the library's materials). */

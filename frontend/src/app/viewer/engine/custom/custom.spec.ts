@@ -38,6 +38,8 @@ const materials = (): MaterialLibrary =>
             material(3, 'solid-ash-honey', '#c59048'),
             material(4, 'aluminium-brushed', '#c0c0c0'),
             material(5, 'kitchen-green-matt', '#556b4a'),
+            material(6, 'mirror', '#d8dde0'),
+            material(7, 'appliance-black-glass', '#101012'),
         ],
         1,
     );
@@ -128,6 +130,74 @@ describe('buildCustomItemBody', () => {
 
     it('is null for other kinds', () => {
         expect(buildCustomItemBody({...customItem(1, {width: 1, depth: 1, height: 1}), kind: 'Box'}, materials(), new Map())).toBeNull();
+    });
+});
+
+describe('new part types and options', () => {
+    const body = (parts: unknown[], slots: {key: string; default?: string}[] = []): FurnitureDefinitionBody =>
+        ({format: 1, size: {width: 600, depth: 400, height: 800}, materialSlots: slots, parts}) as FurnitureDefinitionBody;
+    const build = (definition: FurnitureDefinitionBody, materialId: number | null = null): THREE.Group => {
+        const library = definitionLibrary([sceneDefinition(1, definition)]);
+        const group = buildCustomItemBody({...customItem(1, {width: 600, depth: 400, height: 800}), materialId}, materials(), library);
+        expect(group?.userData['definitionError']).toBeUndefined();
+        return group as THREE.Group;
+    };
+    const color = (mesh: THREE.Mesh): string => `#${(mesh.material as THREE.MeshStandardMaterial).color.getHexString()}`;
+
+    it('draws an oven and a microwave front in black glass', () => {
+        const part = {type: 'appliance', x: 0, y: 0, z: 380, w: 600, h: 600, d: 20};
+        const oven = meshes(build(body([part])));
+        const microwave = meshes(build(body([{...part, kind: 'microwave'}])));
+        expect(color(oven[0])).toBe('#101012');
+        // The oven has its control knobs, the microwave does not.
+        expect(oven.length).toBeGreaterThan(microwave.length);
+    });
+
+    it('frames a sliding door in the profile slot and faces it with mirror', () => {
+        const slots = [{key: 'carcass', default: 'kitchen-oak'}, {key: 'profile', default: 'aluminium-brushed'}];
+        const door = {type: 'slidingDoor', x: 0, y: 0, z: 0, w: 600, h: 800, d: 20, material: 'carcass', profile: 'profile'};
+        const plain = meshes(build(body([door], slots)));
+        expect(plain).toHaveLength(5);
+        expect(plain.slice(0, 4).map(color)).toEqual(['#c0c0c0', '#c0c0c0', '#c0c0c0', '#c0c0c0']);
+        expect(color(plain[4])).toBe('#b08850');
+        expect(color(meshes(build(body([{...door, mirror: true}], slots)))[4])).toBe('#d8dde0');
+    });
+
+    it('darkens a shaded board and narrows a board to its back width', () => {
+        const slots = [{key: 'carcass', default: 'kitchen-oak'}];
+        const plinth = {type: 'board', x: 0, y: 0, z: 0, w: 600, h: 100, d: 400, material: 'carcass', shade: 0.5};
+        const [shadedBoard] = meshes(build(body([plinth], slots)));
+        // Half as bright, the texture kept (the map of a textured material would stay too).
+        const shadedMaterial = shadedBoard.material as THREE.MeshStandardMaterial;
+        expect(shadedMaterial.color.r).toBeCloseTo(new THREE.Color('#b08850').r / 2, 2);
+        expect(shadedMaterial.map).toBe((materials().byCode('kitchen-oak') as THREE.MeshStandardMaterial).map);
+
+        const seat = {type: 'board', x: 0, y: 0, z: 0, w: 600, h: 20, d: 400, backWidth: 400};
+        // The x extent of the vertices on the back face: the geometry is in the parts frame (z = 0 at the back), the
+        // shift to the item centre sits on the mesh position.
+        const backSpan = (mesh: THREE.Mesh): [number, number] => {
+            const position = mesh.geometry.getAttribute('position');
+            const xs = Array.from({length: position.count}, (_, i) => i)
+                .filter((i) => Math.abs(position.getZ(i)) < 1e-6)
+                .map((i) => position.getX(i));
+            return [Math.min(...xs), Math.max(...xs)];
+        };
+        const [both] = meshes(build(body([seat])));
+        expect(backSpan(both)).toEqual([expect.closeTo(0.1), expect.closeTo(0.5)]);
+        const [left] = meshes(build(body([{...seat, taper: 'left'}])));
+        expect(backSpan(left)).toEqual([expect.closeTo(0.2), expect.closeTo(0.6)]);
+        const [right] = meshes(build(body([{...seat, taper: 'right'}])));
+        expect(backSpan(right)).toEqual([expect.closeTo(0), expect.closeTo(0.4)]);
+    });
+
+    it('leans a part back around its bottom-back edge or a given line', () => {
+        const post = {type: 'board', x: 0, y: 400, z: 0, w: 30, h: 400, d: 30, tilt: 5};
+        const [leaning] = build(body([post])).children;
+        expect(leaning.rotation.x).toBeCloseTo(-THREE.MathUtils.degToRad(5));
+        expect(leaning.position.y).toBeCloseTo(0.4);
+        const [around] = build(body([{...post, tiltY: 450, tiltZ: 10}])).children;
+        expect(around.position.y).toBeCloseTo(0.45);
+        expect(around.position.z).toBeCloseTo(0.01 - 0.2);
     });
 });
 

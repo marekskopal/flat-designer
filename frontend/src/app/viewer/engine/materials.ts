@@ -63,6 +63,24 @@ export class MaterialLibrary {
         return material as THREE.MeshStandardMaterial;
     }
 
+    /**
+     * The material darkened to `factor` of its brightness (a plinth in the shadow under the fronts): a copy keeping its
+     * texture, so a wood stays wood. Cached; the copies are the library's and go with it.
+     */
+    public darkened(material: THREE.Material, factor: number): THREE.Material {
+        if (!(material instanceof THREE.MeshStandardMaterial)) {
+            return material;
+        }
+        const key = `dark:${material.uuid}:${factor}`;
+        let dark = this.cache.get(key);
+        if (dark === undefined) {
+            dark = material.clone();
+            (dark as THREE.MeshStandardMaterial).color.multiplyScalar(factor);
+            this.cache.set(key, dark);
+        }
+        return dark;
+    }
+
     public isTile(material: THREE.Material): boolean {
         return this.tiles.has(material);
     }

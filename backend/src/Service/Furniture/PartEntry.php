@@ -80,7 +80,7 @@ final readonly class PartEntry
 			}
 			$geometry[$key] = Expressions::compile($entry[$key], sprintf('%s.%s', $path, $key));
 		}
-		$options = PartOptions::read($entry, $path, $type === self::Assembly);
+		$options = PartOptions::read($entry, $path, $type === self::Assembly, $slots);
 		$children = $type === self::Assembly ? self::children($entry['parts'] ?? null, $path . '.parts', $slots, $depth, $collector) : [];
 
 		return new self($path, $type, $name, $material, $repeat, $when, $geometry, $options, $children);
@@ -123,10 +123,28 @@ final readonly class PartEntry
 				h: $mm['h'],
 				d: $mm['d'],
 				material: $this->material,
-				props: $this->options->evaluate($scope),
+				props: self::placed($this->options->evaluate($scope), $offset),
 				path: $this->path,
 			));
 		}
+	}
+
+	/**
+	 * The tilt pivot (`tiltY`, `tiltZ`), written next to the part's `y` / `z`, moved into the item's frame like them.
+	 *
+	 * @param array<string, mixed> $props
+	 * @param array{int, int, int} $offset
+	 * @return array<string, mixed>
+	 */
+	private static function placed(array $props, array $offset): array
+	{
+		foreach (['tiltY' => 1, 'tiltZ' => 2] as $key => $axis) {
+			if (is_int($props[$key] ?? null) || is_float($props[$key] ?? null)) {
+				$props[$key] += $offset[$axis];
+			}
+		}
+
+		return $props;
 	}
 
 	/**
