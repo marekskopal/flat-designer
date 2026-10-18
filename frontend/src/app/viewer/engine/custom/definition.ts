@@ -7,25 +7,31 @@ import {
     roundHalfAway,
     typeName,
     Value,
+    ValueRecord,
     Variables,
 } from './expression';
 
 /**
  * Turns a furniture definition (`FurnitureDefinitionBody`, format 1) and an item's size and parameter values into its
- * parts. Twin: backend/src/Service/Furniture/DefinitionEvaluator.php, both checked against
- * backend/tests/fixtures/furniture-definitions.json.
+ * parts. Twin: backend/src/Service/Furniture/DefinitionEvaluator.php (with DefinitionParameter, ListValues, PartEntry,
+ * PartRepeat, PartOptions), both checked against backend/tests/fixtures/furniture-definitions.json.
  *
- * Variables: `W`, `D`, `H` (the item size), the parameters (item value or default), then `derived` in order, and inside
- * a repeated part its index (`repeat.as`, default `i`). For each part entry: `repeat.count` copies (one without
- * `repeat`), each kept when `when` is true; `x y z w h d` are numbers or expressions, rounded half away from zero to
- * mm, and `w h d` must come out positive. Only what the evaluation reads is checked here. The input is untrusted JSON;
- * like PHP's decoder, `{}` and `[]` are both accepted as an empty list or object.
+ * Variables: `W`, `D`, `H` (the item size), the parameters (item value or default; a list parameter gives a list of
+ * records of its fields), then `derived` in order, and inside a repeated part its copy: `repeat: {count, as?}` gives the
+ * index as `as` (default `i`), `repeat: {over, as?}` the list item as `as` (default `item`) and its index as
+ * `<as>_index` — evaluated per scope, so a nested part repeats by its parent's item. Each copy is kept when `when` is
+ * true; `x y z w h d` are numbers or expressions, rounded half away from zero to mm, and `w h d` must come out
+ * positive. An `assembly` makes no part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`.
+ * An option written `{"expr": "…"}` is evaluated per copy. Only what the evaluation reads is checked here. The input is
+ * untrusted JSON; like PHP's decoder, `{}` and `[]` are both accepted as an empty list or object.
  */
 
 export const DefinitionFormat = 1;
 export const MaxPartEntries = 200;
 export const MaxParts = 500;
 export const MaxRepeat = 100;
+/** Levels of parts: a top-level entry is at 1, the parts of its assembly at 2, … */
+export const MaxDepth = 4;
 /** Lengths beyond this (mm) are a mistake (and would overflow the PHP twin's ints). */
 export const MaxLength = 1000000000;
 
@@ -45,8 +51,9 @@ export class DefinitionError extends Error {
 
 /**
  * One part of an evaluated definition, in whole mm with the origin at the left-bottom-back corner of the item (x along
- * the width, y up, z towards the front). `index` is the repeat index (null without `repeat`); `props` are the part's
- * other keys as written (type-specific: grain, edges, handle, …).
+ * the width, y up, z towards the front; parts of assemblies are placed in the item's frame too). `index` is the repeat
+ * index (null without `repeat`); `props` are the part's other keys, `{"expr": …}` ones evaluated (type-specific:
+ * grain, edges, handle, …).
  */
 export interface ResolvedPart {
     name: string;
@@ -80,7 +87,7 @@ export function evaluateDefinition(definition: unknown, size: ItemSize, values: 
     return readParts(body['parts'], variables, slots);
 }
 
-type ParameterType = 'int' | 'bool' | 'select';
+type ParameterType = 'int' | 'bool' | 'select' | 'list';
 
 export interface Parameter {
     key: string;
@@ -89,7 +96,15 @@ export interface Parameter {
     min: number | null;
     max: number | null;
     options: string[];
+    /** The fields of a list parameter. */
+    fields: Parameter[];
+    /** A field that may be null (missing: its default, or null). */
+    optional: boolean;
+    minItems: number | null;
+    maxItems: number | null;
 }
+
+const NameRule = 'Must be a unique name (letters, digits, _), not W, D, H, AW, AH, AD, true, false or null.';
 
 /** The definition's parameters by key. */
 export function readParameters(definitions: unknown): Map<string, Parameter> {
@@ -98,13 +113,13 @@ export function readParameters(definitions: unknown): Map<string, Parameter> {
     }
     const parameters = new Map<string, Parameter>();
     asArray(definitions).forEach((definition, index) => {
-        const parameter = readParameter(definition, `parameters[${index}]`, parameters);
+        const parameter = readParameter(definition, `parameters[${index}]`, parameters, false);
         parameters.set(parameter.key, parameter);
     });
     return parameters;
 }
 
-/** The value as an expression variable, or null when it does not fit (wrong type, out of range, not an option). */
+/** A single value (not a list) as an expression variable, or null when it does not fit. */
 export function acceptValue(parameter: Parameter, value: unknown): Value | null {
     switch (parameter.type) {
         case 'int':
@@ -113,6 +128,8 @@ export function acceptValue(parameter: Parameter, value: unknown): Value | null 
             return typeof value === 'boolean' ? value : null;
         case 'select':
             return typeof value === 'string' && parameter.options.includes(value) ? value : null;
+        case 'list':
+            return null;
     }
 }
 
@@ -127,35 +144,102 @@ export function describeParameter(parameter: Parameter): string {
             return 'true or false';
         case 'select':
             return `one of "${parameter.options.join('", "')}"`;
+        case 'list': {
+            const counted = parameter.minItems === null && parameter.maxItems === null;
+            const range = counted ? '' : `${parameter.minItems ?? 0} to ${parameter.maxItems ?? 'any'} `;
+            return `a list of ${range}{${parameter.fields.map((f) => f.key).join(', ')}}`;
+        }
     }
 }
 
-function readParameter(definition: unknown, path: string, taken: Map<string, Parameter>): Parameter {
+/** The value as an expression variable; throws `code` at `path` (or the item / field in it) when it does not fit. */
+export function parameterValue(parameter: Parameter, value: unknown, path: string, code: DefinitionErrorCode): Value {
+    if (parameter.type === 'list') {
+        return listValue(parameter, value, path, code);
+    }
+    if (value === null && parameter.optional) {
+        return null;
+    }
+    const accepted = acceptValue(parameter, value);
+    if (accepted === null) {
+        throw new DefinitionError(code, path, `Must be ${describeParameter(parameter)}.`);
+    }
+    return accepted;
+}
+
+function readParameter(definition: unknown, path: string, taken: Map<string, Parameter>, field: boolean): Parameter {
     if (typeof definition !== 'object' || definition === null) {
         throw invalid(path, 'Must be an object.');
     }
     const fields = definition as Record<string, unknown>;
     const key = freeName(fields['key'], (name) => taken.has(name));
     if (key === null) {
-        throw invalid(`${path}.key`, 'Must be a unique name (letters, digits, _), not W, D, H, true, false or null.');
+        throw invalid(`${path}.key`, NameRule);
     }
     const type = fields['type'];
-    if (type !== 'int' && type !== 'bool' && type !== 'select') {
-        throw invalid(`${path}.type`, 'Must be "int", "bool" or "select".');
+    if (type !== 'int' && type !== 'bool' && type !== 'select' && (field || type !== 'list')) {
+        throw invalid(
+            `${path}.type`,
+            field ? 'Must be "int", "bool" or "select" (a field cannot be a list).' : 'Must be "int", "bool", "select" or "list".',
+        );
     }
     const parameter: Parameter = {
         key,
         type,
-        default: false,
+        default: null,
         min: optionalInt(fields['min'], `${path}.min`),
         max: optionalInt(fields['max'], `${path}.max`),
         options: type === 'select' ? readOptions(fields['options'], `${path}.options`) : [],
+        fields: type === 'list' ? readFields(fields['fields'], `${path}.fields`) : [],
+        optional: field && fields['optional'] === true,
+        minItems: optionalInt(fields['minItems'], `${path}.minItems`),
+        maxItems: optionalInt(fields['maxItems'], `${path}.maxItems`),
     };
-    const accepted = acceptValue(parameter, fields['default']);
-    if (accepted === null) {
-        throw invalid(`${path}.default`, `Must be ${describeParameter(parameter)}.`);
+    const hasDefault = Object.hasOwn(fields, 'default');
+    return {
+        ...parameter,
+        default: hasDefault || !parameter.optional ? parameterValue(parameter, fields['default'] ?? null, `${path}.default`, 'invalid') : null,
+    };
+}
+
+function readFields(definitions: unknown, path: string): Parameter[] {
+    if (!Array.isArray(definitions) || definitions.length === 0) {
+        throw invalid(path, 'Must be a non-empty list of fields.');
     }
-    return {...parameter, default: accepted};
+    const fields = new Map<string, Parameter>();
+    definitions.forEach((definition, index) => {
+        const field = readParameter(definition, `${path}[${index}]`, fields, true);
+        fields.set(field.key, field);
+    });
+    return [...fields.values()];
+}
+
+function listValue(parameter: Parameter, value: unknown, path: string, code: DefinitionErrorCode): ValueRecord[] {
+    const items = isList(value) ? asArray(value) : null;
+    const count = items === null ? -1 : items.length;
+    if (items === null || count < (parameter.minItems ?? 0) || (parameter.maxItems !== null && count > parameter.maxItems)) {
+        throw new DefinitionError(code, path, `Must be ${describeParameter(parameter)}.`);
+    }
+    if (count > MaxRepeat) {
+        throw new DefinitionError('limit', path, `At most ${MaxRepeat} items.`);
+    }
+    return items.map((item, index) => listRecord(parameter, item, `${path}[${index}]`, code));
+}
+
+function listRecord(parameter: Parameter, item: unknown, path: string, code: DefinitionErrorCode): ValueRecord {
+    if (!isRecord(item)) {
+        throw new DefinitionError(code, path, 'Must be an object.');
+    }
+    const record: Record<string, Value> = {};
+    for (const field of parameter.fields) {
+        record[field.key] = Object.hasOwn(item, field.key) ? parameterValue(field, item[field.key], `${path}.${field.key}`, code) : field.default;
+    }
+    for (const [key] of entries(item)) {
+        if (!Object.hasOwn(record, key)) {
+            throw new DefinitionError(code, `${path}.${key}`, `Unknown field "${key}".`);
+        }
+    }
+    return record;
 }
 
 function inRange(value: unknown, parameter: Parameter): value is number {
@@ -190,11 +274,7 @@ function readValues(parameters: Map<string, Parameter>, values: unknown): Record
         if (parameter === undefined) {
             throw new DefinitionError('invalidValue', path, `Unknown parameter "${key}".`);
         }
-        const accepted = acceptValue(parameter, value);
-        if (accepted === null) {
-            throw new DefinitionError('invalidValue', path, `Must be ${describeParameter(parameter)}.`);
-        }
-        variables[key] = accepted;
+        variables[key] = parameterValue(parameter, value, path, 'invalidValue');
     }
     for (const [key, parameter] of parameters) {
         if (!Object.hasOwn(variables, key)) {
@@ -212,7 +292,7 @@ function readDerived(derived: unknown, variables: Record<string, Value>): Record
     for (const [key, source] of entries(derived)) {
         const path = `derived.${key}`;
         if (freeName(key, (name) => Object.hasOwn(result, name)) === null) {
-            throw invalid(path, 'Must be a unique name (letters, digits, _), not W, D, H, true, false, null or a parameter.');
+            throw invalid(path, `${NameRule} A parameter's name is taken too.`);
         }
         result[key] = run(compile(source, path), result, path);
     }
@@ -234,6 +314,27 @@ function readMaterialSlots(slots: unknown): string[] {
     return keys;
 }
 
+/** The resolved parts, with the limits on part entries and parts counted across all nesting levels. */
+class PartCollector {
+    public readonly parts: ResolvedPart[] = [];
+    private entries = 0;
+
+    /** One more part entry read from the list at `path`. */
+    public entry(path: string): void {
+        this.entries++;
+        if (this.entries > MaxPartEntries) {
+            throw new DefinitionError('limit', path, `At most ${MaxPartEntries} part entries.`);
+        }
+    }
+
+    public add(part: ResolvedPart, path: string): void {
+        if (this.parts.length >= MaxParts) {
+            throw new DefinitionError('limit', path, `More than ${MaxParts} parts.`);
+        }
+        this.parts.push(part);
+    }
+}
+
 function readParts(entriesValue: unknown, variables: Variables, slots: string[]): ResolvedPart[] {
     if (!isList(entriesValue)) {
         throw invalid('parts', 'Must be a list.');
@@ -242,44 +343,108 @@ function readParts(entriesValue: unknown, variables: Variables, slots: string[])
     if (list.length > MaxPartEntries) {
         throw new DefinitionError('limit', 'parts', `At most ${MaxPartEntries} part entries.`);
     }
-    const parts: ResolvedPart[] = [];
+    const collector = new PartCollector();
     list.forEach((data, index) => {
-        const entry = PartEntry.read(data, `parts[${index}]`, variables, slots);
-        const copies = entry.count === null ? [null] : Array.from({length: entry.count}, (_, i) => i);
-        for (const copy of copies) {
-            const part = entry.resolve(variables, copy);
-            if (part === null) {
-                continue;
-            }
-            if (parts.length >= MaxParts) {
-                throw new DefinitionError('limit', entry.path, `More than ${MaxParts} parts.`);
-            }
-            parts.push(part);
-        }
+        collector.entry('parts');
+        PartEntry.read(data, `parts[${index}]`, slots, 1, collector).resolve(variables, [0, 0, 0], collector);
     });
-    return parts;
+    return collector.parts;
 }
 
 const PartKeys = ['type', 'name', 'when', 'repeat', 'material', 'x', 'y', 'z', 'w', 'h', 'd'];
+const Assembly = 'assembly';
 const Geometry = ['x', 'y', 'z', 'w', 'h', 'd'] as const;
-const Sizes: Partial<Record<(typeof Geometry)[number], string>> = {w: 'width', h: 'height', d: 'depth'};
+type GeometryKey = (typeof Geometry)[number];
+const Sizes: Partial<Record<GeometryKey, string>> = {w: 'width', h: 'height', d: 'depth'};
 
-/** One entry of a definition's `parts`, read and with its expressions parsed; `resolve()` makes one part of it. */
-class PartEntry {
+/** The `repeat` of a part entry (see the file comment), evaluated per scope. */
+class PartRepeat {
     private constructor(
-        public readonly path: string,
-        public readonly type: string,
-        public readonly name: string,
-        public readonly material: string | null,
-        public readonly indexName: string | null,
-        public readonly count: number | null,
-        private readonly when: Expression,
-        private readonly geometry: Map<(typeof Geometry)[number], Expression>,
-        private readonly props: Record<string, unknown>,
+        private readonly path: string,
+        private readonly over: boolean,
+        private readonly expression: Expression,
+        private readonly as: string,
     ) {}
 
-    /** Reads `parts[n]`; `repeat.count` is evaluated here, the rest per copy. */
-    public static read(data: unknown, path: string, variables: Variables, slots: string[]): PartEntry {
+    public static read(repeat: unknown, path: string): PartRepeat {
+        const fields = typeof repeat === 'object' && repeat !== null ? (repeat as Record<string, unknown>) : null;
+        const count = fields !== null && Object.hasOwn(fields, 'count');
+        const over = fields !== null && Object.hasOwn(fields, 'over');
+        if (fields === null || count === over) {
+            throw invalid(path, 'Must be an object with "count" or "over" (not both).');
+        }
+        const as = freeName(fields['as'] ?? (count ? 'i' : 'item'), () => false);
+        if (as === null) {
+            throw invalid(`${path}.as`, 'Must be a name (letters, digits, _) not used by another variable.');
+        }
+        const key = count ? 'count' : 'over';
+        return new PartRepeat(path, over, compile(fields[key], `${path}.${key}`), as);
+    }
+
+    /** The copies: the index and the variables of each. */
+    public copies(variables: Variables): [number, Variables][] {
+        const taken = (name: string): boolean => Object.hasOwn(variables, name);
+        if (freeName(this.as, taken) === null || (this.over && freeName(`${this.as}_index`, taken) === null)) {
+            throw invalid(`${this.path}.as`, 'Must be a name (letters, digits, _) not used by another variable.');
+        }
+        if (this.over) {
+            return this.items(variables).map((item, index) => [index, {...variables, [this.as]: item, [`${this.as}_index`]: index}]);
+        }
+        return Array.from({length: this.count(variables)}, (_, index) => [index, {...variables, [this.as]: index}]);
+    }
+
+    private items(variables: Variables): Value[] {
+        const path = `${this.path}.over`;
+        const list = run(this.expression, variables, path);
+        if (!Array.isArray(list)) {
+            throw new DefinitionError(list === null ? 'null' : 'type', path, `Must come out a list, got ${typeName(list)}.`);
+        }
+        checkCopies(list.length, path);
+        return list;
+    }
+
+    private count(variables: Variables): number {
+        const path = `${this.path}.count`;
+        const count = run(this.expression, variables, path);
+        if (!isWholeNumber(count) || count < 0) {
+            throw invalid(path, 'Must come out a whole number, 0 or more.');
+        }
+        checkCopies(count, path);
+        return count;
+    }
+}
+
+function checkCopies(count: number, path: string): void {
+    if (count > MaxRepeat) {
+        throw new DefinitionError('limit', path, `At most ${MaxRepeat} copies.`);
+    }
+}
+
+/** An option written `{"expr": "…"}`, parsed. */
+class OptionExpression {
+    public constructor(public readonly expression: Expression) {}
+}
+
+/**
+ * One entry of a definition's `parts` (or of an assembly's), read with all its expressions parsed; `resolve()` adds
+ * its parts for a scope of variables.
+ */
+class PartEntry {
+    private constructor(
+        private readonly path: string,
+        private readonly type: string,
+        private readonly name: string,
+        private readonly material: string | null,
+        private readonly repeat: PartRepeat | null,
+        private readonly when: Expression,
+        private readonly geometry: Map<GeometryKey, Expression>,
+        /** Literal values, or `OptionExpression` for `{"expr": …}` ones. */
+        private readonly options: Map<string, unknown>,
+        private readonly children: PartEntry[],
+    ) {}
+
+    /** Reads `parts[n]` (at `depth`, 1 for the top level) with the parts of an assembly. */
+    public static read(data: unknown, path: string, slots: string[], depth: number, collector: PartCollector): PartEntry {
         if (!isRecord(data)) {
             throw invalid(path, 'Must be an object.');
         }
@@ -295,67 +460,106 @@ class PartEntry {
         if (material !== null && !slots.includes(material as string)) {
             throw invalid(`${path}.material`, 'Must be the key of one of the materialSlots.');
         }
-        const [indexName, count] = Object.hasOwn(data, 'repeat') ? readRepeat(data['repeat'], `${path}.repeat`, variables) : [null, null];
+        const repeat = Object.hasOwn(data, 'repeat') ? PartRepeat.read(data['repeat'], `${path}.repeat`) : null;
         const when = compile(data['when'] ?? true, `${path}.when`, true);
-        const geometry = new Map<(typeof Geometry)[number], Expression>();
+        const geometry = new Map<GeometryKey, Expression>();
         for (const key of Geometry) {
             if (!Object.hasOwn(data, key)) {
                 throw invalid(`${path}.${key}`, `Missing "${key}".`);
             }
             geometry.set(key, compile(data[key], `${path}.${key}`));
         }
-        const props = Object.fromEntries(entries(data).filter(([key]) => !PartKeys.includes(key)));
-        return new PartEntry(path, type, name, material as string | null, indexName, count, when, geometry, props);
+        const assembly = type === Assembly;
+        const options = readPartOptions(data, path, assembly);
+        const children = assembly ? readChildren(data['parts'], `${path}.parts`, slots, depth, collector) : [];
+        return new PartEntry(path, type, name, material as string | null, repeat, when, geometry, options, children);
     }
 
-    /** The copy `index` (null without `repeat`), or null when its `when` is false. */
-    public resolve(variables: Variables, index: number | null): ResolvedPart | null {
-        const scope = this.indexName !== null && index !== null ? {...variables, [this.indexName]: index} : variables;
-        if (!condition(this.when, scope, `${this.path}.when`)) {
-            return null;
+    /** Adds the parts of this entry for the variables, its box shifted by the offset (mm) of the assemblies around it. */
+    public resolve(variables: Variables, offset: [number, number, number], collector: PartCollector): void {
+        const copies: [number | null, Variables][] = this.repeat === null ? [[null, variables]] : this.repeat.copies(variables);
+        for (const [index, scope] of copies) {
+            if (!condition(this.when, scope, `${this.path}.when`)) {
+                continue;
+            }
+            const mm = this.measure(scope);
+            const at: [number, number, number] = [offset[0] + mm.x, offset[1] + mm.y, offset[2] + mm.z];
+            if (this.type === Assembly) {
+                const inner = {...scope, AW: mm.w, AH: mm.h, AD: mm.d};
+                for (const child of this.children) {
+                    child.resolve(inner, at, collector);
+                }
+                continue;
+            }
+            collector.add(
+                {
+                    name: this.name,
+                    type: this.type,
+                    index,
+                    x: at[0],
+                    y: at[1],
+                    z: at[2],
+                    w: mm.w,
+                    h: mm.h,
+                    d: mm.d,
+                    material: this.material,
+                    props: this.evaluateOptions(scope),
+                },
+                this.path,
+            );
         }
-        const mm: Record<string, number> = {};
-        for (const [key, expression] of this.geometry) {
+    }
+
+    private measure(scope: Variables): Record<GeometryKey, number> {
+        const mm = {x: 0, y: 0, z: 0, w: 0, h: 0, d: 0};
+        for (const key of Geometry) {
             const path = `${this.path}.${key}`;
-            mm[key] = length(expression, scope, path);
+            mm[key] = length(this.geometry.get(key) as Expression, scope, path);
             const dimension = Sizes[key];
             if (dimension !== undefined && mm[key] <= 0) {
                 throw new DefinitionError('nonPositiveSize', path, `"${this.name}" gets a ${dimension} of ${mm[key]} mm.`);
             }
         }
-        return {
-            name: this.name,
-            type: this.type,
-            index,
-            x: mm['x'],
-            y: mm['y'],
-            z: mm['z'],
-            w: mm['w'],
-            h: mm['h'],
-            d: mm['d'],
-            material: this.material,
-            props: this.props,
-        };
+        return mm;
+    }
+
+    private evaluateOptions(scope: Variables): Record<string, unknown> {
+        const props: Record<string, unknown> = {};
+        for (const [key, value] of this.options) {
+            props[key] = value instanceof OptionExpression ? run(value.expression, scope, `${this.path}.${key}`) : value;
+        }
+        return props;
     }
 }
 
-function readRepeat(repeat: unknown, path: string, variables: Variables): [string, number] {
-    if (typeof repeat !== 'object' || repeat === null || !Object.hasOwn(repeat, 'count')) {
-        throw invalid(path, 'Must be an object with "count".');
+/** Whether the value is an option written as an expression: `{"expr": "…"}`. */
+export function isOptionExpression(value: unknown): value is {expr: unknown} {
+    return isRecord(value) && !Array.isArray(value) && Object.keys(value).length === 1 && Object.hasOwn(value, 'expr');
+}
+
+/** The options of the part type (grain, edges, handle, …): all but the keys read here, `{"expr": …}` ones parsed. */
+function readPartOptions(data: Record<string, unknown>, path: string, assembly: boolean): Map<string, unknown> {
+    const options = new Map<string, unknown>();
+    for (const [key, value] of entries(data)) {
+        if (PartKeys.includes(key) || (assembly && key === 'parts')) {
+            continue;
+        }
+        options.set(key, isOptionExpression(value) ? new OptionExpression(compile(value.expr, `${path}.${key}`)) : value);
     }
-    const fields = repeat as Record<string, unknown>;
-    const as = freeName(fields['as'] ?? 'i', (name) => Object.hasOwn(variables, name));
-    if (as === null) {
-        throw invalid(`${path}.as`, 'Must be a name (letters, digits, _) not used by another variable.');
+    return options;
+}
+
+function readChildren(entriesValue: unknown, path: string, slots: string[], depth: number, collector: PartCollector): PartEntry[] {
+    if (!isList(entriesValue)) {
+        throw invalid(path, 'An assembly needs a list of parts.');
     }
-    const count = run(compile(fields['count'], `${path}.count`), variables, `${path}.count`);
-    if (!isWholeNumber(count) || count < 0) {
-        throw invalid(`${path}.count`, 'Must come out a whole number, 0 or more.');
+    if (depth >= MaxDepth) {
+        throw new DefinitionError('limit', path, `Parts nest at most ${MaxDepth} levels deep.`);
     }
-    if (count > MaxRepeat) {
-        throw new DefinitionError('limit', `${path}.count`, `At most ${MaxRepeat} copies.`);
-    }
-    return [as, count];
+    return asArray(entriesValue).map((data, index) => {
+        collector.entry(path);
+        return PartEntry.read(data, `${path}[${index}]`, slots, depth + 1, collector);
+    });
 }
 
 /** A number or expression (and, with `booleans`, true / false) as an `Expression`. */
@@ -410,10 +614,10 @@ function invalid(path: string, message: string): DefinitionError {
 }
 
 /**
- * The item size, the literals true, false and null, and `__proto__` (a plain object cannot hold it); no parameter, derived value
- * or repeat index may take them.
+ * The item size, an assembly's size (AW, AH, AD), the literals true, false and null, and `__proto__` (a plain object
+ * cannot hold it); no parameter, derived value or repeat index may take them.
  */
-const Reserved = ['W', 'D', 'H', 'true', 'false', 'null', '__proto__'];
+const Reserved = ['W', 'D', 'H', 'AW', 'AH', 'AD', 'true', 'false', 'null', '__proto__'];
 
 function isName(value: unknown): value is string {
     return typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);

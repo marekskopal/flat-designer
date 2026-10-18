@@ -6,9 +6,13 @@ namespace FlatDesigner\Service\Furniture;
 
 use FlatDesigner\Service\Furniture\Expression\Expression;
 use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use LogicException;
 
 /**
- * One entry of a definition's `parts`, read and with its expressions parsed; `resolve()` makes one part of it.
+ * One entry of a definition's `parts` (or of an assembly's), read with all its expressions parsed; `resolve()` makes
+ * its parts for a scope of variables, the copies of its `repeat` (`PartRepeat`) evaluated per scope. An `assembly`
+ * places its `parts` in its own box, where they also see `AW`, `AH`, `AD` (its size).
+ * An option written `{"expr": "…"}` is evaluated per copy; a whole number stays whole.
  *
  * @phpstan-import-type Value from Values
  */
@@ -17,36 +21,38 @@ final readonly class PartEntry
 	/** The keys every part has; the others are options of its type. */
 	public const array Keys = ['type', 'name', 'when', 'repeat', 'material', 'x', 'y', 'z', 'w', 'h', 'd'];
 
+	public const string Assembly = 'assembly';
+
+	/** Levels of parts: a top-level entry is at 1, the parts of its assembly at 2, … */
+	public const int MaxDepth = 4;
+
 	private const array Geometry = ['x', 'y', 'z', 'w', 'h', 'd'];
 
 	private const array Sizes = ['w' => 'width', 'h' => 'height', 'd' => 'depth'];
 
 	/**
-	 * @param string|null $indexName the repeat index variable, null without `repeat`
-	 * @param int|null $count the number of copies, null without `repeat`
 	 * @param array<string, Expression> $geometry
-	 * @param array<string, mixed> $props
+	 * @param list<self> $children the parts of an assembly
 	 */
 	private function __construct(
 		public string $path,
 		public string $type,
 		public string $name,
 		public ?string $material,
-		public ?string $indexName,
-		public ?int $count,
+		private ?PartRepeat $repeat,
 		private Expression $when,
 		private array $geometry,
-		private array $props,
+		private PartOptions $options,
+		private array $children,
 	) {
 	}
 
 	/**
-	 * Reads `parts[n]`; `repeat.count` is evaluated here, the rest per copy.
+	 * Reads `parts[n]` (at `$depth`, 1 for the top level) with the parts of an assembly.
 	 *
-	 * @param array<string, Value> $variables
 	 * @param list<string> $slots material slot keys
 	 */
-	public static function read(mixed $entry, string $path, array $variables, array $slots): self
+	public static function read(mixed $entry, string $path, array $slots, int $depth, PartCollector $collector): self
 	{
 		if (!is_array($entry) || $entry !== [] && array_is_list($entry)) {
 			throw DefinitionException::invalid($path, 'Must be an object.');
@@ -64,9 +70,7 @@ final readonly class PartEntry
 		if ($material !== null && !in_array($material, $slots, true)) {
 			throw DefinitionException::invalid($path . '.material', 'Must be the key of one of the materialSlots.');
 		}
-		[$indexName, $count] = array_key_exists('repeat', $entry)
-			? self::repeat($entry['repeat'], $path . '.repeat', $variables)
-			: [null, null];
+		$repeat = array_key_exists('repeat', $entry) ? PartRepeat::read($entry['repeat'], $path . '.repeat') : null;
 		$when = Expressions::compile($entry['when'] ?? true, $path . '.when', true);
 
 		$geometry = [];
@@ -76,28 +80,65 @@ final readonly class PartEntry
 			}
 			$geometry[$key] = Expressions::compile($entry[$key], sprintf('%s.%s', $path, $key));
 		}
+		$options = PartOptions::read($entry, $path, $type === self::Assembly);
+		$children = $type === self::Assembly ? self::children($entry['parts'] ?? null, $path . '.parts', $slots, $depth, $collector) : [];
 
-		return new self($path, $type, $name, $material, $indexName, $count, $when, $geometry, self::props($entry));
+		return new self($path, $type, $name, $material, $repeat, $when, $geometry, $options, $children);
 	}
 
 	/**
-	 * The copy `$index` (null without `repeat`), or null when its `when` is false.
+	 * Adds the parts of this entry for the variables, its box shifted by the offset (mm) of the assemblies around it.
 	 *
 	 * @param array<string, Value> $variables
+	 * @param array{int, int, int} $offset
 	 */
-	public function resolve(array $variables, ?int $index): ?ResolvedPart
+	public function resolve(array $variables, array $offset, PartCollector $collector): void
 	{
-		if ($this->indexName !== null && $index !== null) {
-			$variables[$this->indexName] = (float) $index;
-		}
-		if (!Expressions::condition($this->when, $variables, $this->path . '.when')) {
-			return null;
-		}
+		$copies = $this->repeat === null ? [[null, $variables]] : $this->repeat->copies($variables);
+		foreach ($copies as [$index, $scope]) {
+			if (!Expressions::condition($this->when, $scope, $this->path . '.when')) {
+				continue;
+			}
 
+			$mm = $this->geometry($scope);
+			$x = $offset[0] + $mm['x'];
+			$y = $offset[1] + $mm['y'];
+			$z = $offset[2] + $mm['z'];
+			if ($this->type === self::Assembly) {
+				$inner = ['AW' => (float) $mm['w'], 'AH' => (float) $mm['h'], 'AD' => (float) $mm['d']] + $scope;
+				foreach ($this->children as $child) {
+					$child->resolve($inner, [$x, $y, $z], $collector);
+				}
+				continue;
+			}
+
+			$collector->add(new ResolvedPart(
+				name: $this->name,
+				type: $this->type,
+				index: $index,
+				x: $x,
+				y: $y,
+				z: $z,
+				w: $mm['w'],
+				h: $mm['h'],
+				d: $mm['d'],
+				material: $this->material,
+				props: $this->options->evaluate($scope),
+				path: $this->path,
+			));
+		}
+	}
+
+	/**
+	 * @param array<string, Value> $scope
+	 * @return array{x: int, y: int, z: int, w: int, h: int, d: int}
+	 */
+	private function geometry(array $scope): array
+	{
 		$mm = [];
-		foreach ($this->geometry as $key => $expression) {
+		foreach (self::Geometry as $key) {
 			$path = sprintf('%s.%s', $this->path, $key);
-			$mm[$key] = Expressions::length($expression, $variables, $path);
+			$mm[$key] = Expressions::length($this->geometry[$key] ?? throw new LogicException('Geometry not read.'), $scope, $path);
 			if (isset(self::Sizes[$key]) && $mm[$key] <= 0) {
 				throw new DefinitionException(
 					DefinitionErrorEnum::NonPositiveSize,
@@ -107,65 +148,28 @@ final readonly class PartEntry
 			}
 		}
 
-		return new ResolvedPart(
-			name: $this->name,
-			type: $this->type,
-			index: $index,
-			x: $mm['x'] ?? 0,
-			y: $mm['y'] ?? 0,
-			z: $mm['z'] ?? 0,
-			w: $mm['w'] ?? 0,
-			h: $mm['h'] ?? 0,
-			d: $mm['d'] ?? 0,
-			material: $this->material,
-			props: $this->props,
-		);
+		return ['x' => $mm['x'], 'y' => $mm['y'], 'z' => $mm['z'], 'w' => $mm['w'], 'h' => $mm['h'], 'd' => $mm['d']];
 	}
 
 	/**
-	 * The keys of a part type (grain, edges, handle, …): all but the ones read here.
-	 *
-	 * @param array<mixed> $entry
-	 * @return array<string, mixed>
+	 * @param list<string> $slots
+	 * @return list<self>
 	 */
-	private static function props(array $entry): array
+	private static function children(mixed $entries, string $path, array $slots, int $depth, PartCollector $collector): array
 	{
-		$props = [];
-		foreach ($entry as $key => $value) {
-			if (is_string($key) && !in_array($key, self::Keys, true)) {
-				$props[$key] = $value;
-			}
+		if (!is_array($entries) || !array_is_list($entries)) {
+			throw DefinitionException::invalid($path, 'An assembly needs a list of parts.');
+		}
+		if ($depth >= self::MaxDepth) {
+			throw new DefinitionException(DefinitionErrorEnum::Limit, $path, sprintf('Parts nest at most %d levels deep.', self::MaxDepth));
 		}
 
-		return $props;
-	}
-
-	/**
-	 * @param array<string, Value> $variables
-	 * @return array{string, int}
-	 */
-	private static function repeat(mixed $repeat, string $path, array $variables): array
-	{
-		if (!is_array($repeat) || !array_key_exists('count', $repeat)) {
-			throw DefinitionException::invalid($path, 'Must be an object with "count".');
-		}
-		$as = Names::free($repeat['as'] ?? 'i', $variables);
-		if ($as === null) {
-			throw DefinitionException::invalid($path . '.as', 'Must be a name (letters, digits, _) not used by another variable.');
+		$children = [];
+		foreach ($entries as $index => $entry) {
+			$collector->entry($path);
+			$children[] = self::read($entry, sprintf('%s[%d]', $path, $index), $slots, $depth + 1, $collector);
 		}
 
-		$count = Expressions::run(Expressions::compile($repeat['count'], $path . '.count'), $variables, $path . '.count');
-		if (!DefinitionParameter::isWholeNumber($count) || $count < 0) {
-			throw DefinitionException::invalid($path . '.count', 'Must come out a whole number, 0 or more.');
-		}
-		if ($count > DefinitionEvaluator::MaxRepeat) {
-			throw new DefinitionException(
-				DefinitionErrorEnum::Limit,
-				$path . '.count',
-				sprintf('At most %d copies.', DefinitionEvaluator::MaxRepeat),
-			);
-		}
-
-		return [$as, (int) $count];
+		return $children;
 	}
 }

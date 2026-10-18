@@ -124,6 +124,31 @@ final class CustomItemTest extends EditorTestCase
 		self::assertSame(200, $refit->getStatusCode());
 	}
 
+	public function testAnOptionWrittenAsAnExpressionIsCheckedAtTheItemsSize(): void
+	{
+		$definition = [
+			'format' => 1,
+			'size' => ['width' => 700, 'depth' => 300, 'height' => 700],
+			'parts' => [['type' => 'taperedLeg', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 50, 'h' => 'H', 'd' => 50, 'bottomSize' => ['expr' => 'W / 7']]],
+		];
+		$response = $this->request(
+			'POST',
+			Routes::FurnitureDefinitions->value,
+			['name' => 'Leg', 'definition' => $definition],
+			$this->user,
+		);
+		self::assertSame(201, $response->getStatusCode(), (string) $response->getBody());
+		$definitionId = self::id($this->jsonBody($response));
+
+		$this->create('items', ['kind' => 'Custom', 'definitionId' => $definitionId]);
+		$odd = $this->edit('POST', 'items', body: ['kind' => 'Custom', 'definitionId' => $definitionId, 'width' => 600]);
+		self::assertSame(422, $odd->getStatusCode());
+		self::assertStringContainsString(
+			'parts[0].bottomSize: Must be a whole number of mm above 0.',
+			self::stringField($this->jsonBody($odd)['message']),
+		);
+	}
+
 	public function testAnItemWhoseDefinitionIsGoneCanStillBeMoved(): void
 	{
 		$definitionId = $this->defineFurniture();
