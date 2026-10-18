@@ -1395,6 +1395,683 @@
    ]
   },
   {
+   "name": "fronts stacked from a list parameter, leaves repeated per front",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "parts": [
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 0,
+     "z": 561,
+     "w": 598,
+     "h": 180,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "drawer",
+      "handleSide": "left"
+     }
+    },
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 183,
+     "z": 561,
+     "w": 598,
+     "h": 577,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "door",
+      "handleSide": "left"
+     }
+    }
+   ]
+  },
+  {
+   "name": "a pair of doors gets handles at the meeting edges",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {
+      "type": "drawer",
+      "height": 180
+     },
+     {
+      "type": "door",
+      "count": 2
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 0,
+     "z": 561,
+     "w": 598,
+     "h": 180,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "drawer",
+      "handleSide": "left"
+     }
+    },
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 183,
+     "z": 561,
+     "w": 298,
+     "h": 577,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "door",
+      "handleSide": "right"
+     }
+    },
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 1,
+     "x": 301,
+     "y": 183,
+     "z": 561,
+     "w": 298,
+     "h": 577,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "door",
+      "handleSide": "left"
+     }
+    }
+   ]
+  },
+  {
+   "name": "an optional field may be null, missing fields take their default",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {
+      "type": "door",
+      "height": null
+     },
+     {}
+    ]
+   },
+   "parts": [
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 0,
+     "z": 561,
+     "w": 598,
+     "h": 379,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "door",
+      "handleSide": "left"
+     }
+    },
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 382,
+     "z": 561,
+     "w": 598,
+     "h": 379,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "door",
+      "handleSide": "left"
+     }
+    }
+   ]
+  },
+  {
+   "name": "when sees the list item",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ],
+      "when": "f.type == 'door'"
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "parts": [
+    {
+     "name": "Leaf",
+     "type": "front",
+     "index": 0,
+     "x": 1,
+     "y": 183,
+     "z": 561,
+     "w": 598,
+     "h": 577,
+     "d": 19,
+     "material": null,
+     "props": {
+      "kind": "door",
+      "handleSide": "left"
+     }
+    }
+   ]
+  },
+  {
+   "name": "default name of an item variable",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [
+     {
+      "key": "rows",
+      "type": "list",
+      "fields": [
+       {
+        "key": "h",
+        "type": "int",
+        "default": 100
+       }
+      ],
+      "default": [
+       {
+        "h": 50
+       },
+       {}
+      ]
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "repeat": {
+       "over": "rows"
+      },
+      "x": 0,
+      "y": "item_index * 200",
+      "z": 0,
+      "w": 10,
+      "h": "item.h",
+      "d": 10
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "board",
+     "type": "board",
+     "index": 0,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 10,
+     "h": 50,
+     "d": 10,
+     "material": null,
+     "props": {}
+    },
+    {
+     "name": "board",
+     "type": "board",
+     "index": 1,
+     "x": 0,
+     "y": 200,
+     "z": 0,
+     "w": 10,
+     "h": 100,
+     "d": 10,
+     "material": null,
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "options as expressions keep whole numbers whole",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "led",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 100,
+      "h": 10,
+      "d": 10,
+      "intensity": {
+       "expr": "W / 100"
+      },
+      "color": {
+       "expr": "H > 1000 ? '#ffffff' : '#ff0000'"
+      }
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "led",
+     "type": "led",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 100,
+     "h": 10,
+     "d": 10,
+     "material": null,
+     "props": {
+      "intensity": 8,
+      "color": "#ffffff"
+     }
+    }
+   ]
+  },
+  {
    "name": "int value above max",
    "definition": {
     "format": 1,
@@ -3496,6 +4173,2437 @@
    "error": {
     "code": "limit",
     "path": "parts[0].w"
+   }
+  },
+  {
+   "name": "unknown key in a list item",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {
+      "type": "door",
+      "colour": "red"
+     }
+    ]
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts[0].colour"
+   }
+  },
+  {
+   "name": "a field out of range",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {
+      "type": "door"
+     },
+     {
+      "type": "door",
+      "height": 0
+     }
+    ]
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts[1].height"
+   }
+  },
+  {
+   "name": "a select field not an option",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {
+      "type": "shelf"
+     }
+    ]
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts[0].type"
+   }
+  },
+  {
+   "name": "a required field null",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {
+      "type": "door",
+      "count": null
+     }
+    ]
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts[0].count"
+   }
+  },
+  {
+   "name": "a list value not a list",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": 5
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts"
+   }
+  },
+  {
+   "name": "a list item not an object",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     5
+    ]
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts[0]"
+   }
+  },
+  {
+   "name": "more items than maxItems",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": [
+     {},
+     {},
+     {},
+     {},
+     {}
+    ]
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts"
+   }
+  },
+  {
+   "name": "fewer items than minItems",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "values": {
+    "fronts": []
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.fronts"
+   }
+  },
+  {
+   "name": "a list parameter without fields",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].fields"
+   }
+  },
+  {
+   "name": "a field cannot be a list",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "list",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].fields[0].type"
+   }
+  },
+  {
+   "name": "a required field needs a default",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].fields[2].default"
+   }
+  },
+  {
+   "name": "a bad item in the default list",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "shelf",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].default[0].type"
+   }
+  },
+  {
+   "name": "AW is reserved",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     },
+     {
+      "key": "AW",
+      "type": "int",
+      "default": 1
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[1].key"
+   }
+  },
+  {
+   "name": "repeat with count and over",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f",
+       "count": 2
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].repeat"
+   }
+  },
+  {
+   "name": "repeat over something not a list",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "H",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "type",
+    "path": "parts[0].repeat.over"
+   }
+  },
+  {
+   "name": "the item index variable is taken",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     },
+     {
+      "key": "f_index",
+      "type": "int",
+      "default": 1
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].repeat.as"
+   }
+  },
+  {
+   "name": "an assembly without parts",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].parts"
+   }
+  },
+  {
+   "name": "assemblies nested deeper than 4",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "assembly",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 10,
+      "h": 10,
+      "d": 10,
+      "parts": [
+       {
+        "type": "assembly",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "w": 10,
+        "h": 10,
+        "d": 10,
+        "parts": [
+         {
+          "type": "assembly",
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 10,
+          "h": 10,
+          "d": 10,
+          "parts": [
+           {
+            "type": "assembly",
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 10,
+            "h": 10,
+            "d": 10,
+            "parts": [
+             {
+              "type": "assembly",
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 10,
+              "h": 10,
+              "d": 10,
+              "parts": [
+               {
+                "type": "board",
+                "x": 0,
+                "y": 0,
+                "z": 0,
+                "w": 10,
+                "h": 10,
+                "d": 10
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "error": {
+    "code": "limit",
+    "path": "parts[0].parts[0].parts[0].parts[0].parts"
+   }
+  },
+  {
+   "name": "a child too small names its path",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW - 1000",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "nonPositiveSize",
+    "path": "parts[0].parts[0].w"
+   }
+  },
+  {
+   "name": "an expression option with an unknown variable",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "g.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "unknownVariable",
+    "path": "parts[0].parts[0].kind"
+   }
+  },
+  {
+   "name": "an expression option that does not parse",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "k"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type +"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "syntax",
+    "path": "parts[0].parts[0].kind"
+   }
+  },
+  {
+   "name": "more list items than the repeat limit",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [
+     {
+      "key": "rows",
+      "type": "list",
+      "fields": [
+       {
+        "key": "h",
+        "type": "int",
+        "default": 100
+       }
+      ],
+      "default": []
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 10,
+      "h": "len(rows) + 1",
+      "d": 10
+     }
+    ]
+   },
+   "values": {
+    "rows": [
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {},
+     {}
+    ]
+   },
+   "error": {
+    "code": "limit",
+    "path": "values.rows"
+   }
+  },
+  {
+   "name": "a reserved repeat name is refused even where the part never resolves",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 580,
+     "height": 760
+    },
+    "parameters": [
+     {
+      "key": "fronts",
+      "label": "Fronts",
+      "type": "list",
+      "minItems": 1,
+      "maxItems": 4,
+      "fields": [
+       {
+        "key": "type",
+        "type": "select",
+        "options": [
+         "door",
+         "drawer"
+        ],
+        "default": "door"
+       },
+       {
+        "key": "height",
+        "type": "int",
+        "min": 1,
+        "optional": true
+       },
+       {
+        "key": "count",
+        "type": "int",
+        "default": 1,
+        "min": 1,
+        "max": 2
+       }
+      ],
+      "default": [
+       {
+        "type": "drawer",
+        "height": 180
+       },
+       {
+        "type": "door"
+       }
+      ]
+     }
+    ],
+    "derived": {
+     "heights": "share(field(fronts, 'height'), H, 3)",
+     "starts": "offsets(heights, 3)"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Front slot",
+      "repeat": {
+       "over": "fronts",
+       "as": "f"
+      },
+      "x": 0,
+      "y": "starts[f_index]",
+      "z": "D - 19",
+      "w": "W",
+      "h": "heights[f_index]",
+      "d": 19,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Leaf",
+        "repeat": {
+         "count": "f.count",
+         "as": "W"
+        },
+        "x": "k * AW / f.count + 1",
+        "y": 0,
+        "z": 0,
+        "w": "AW / f.count - 2",
+        "h": "AH",
+        "d": "AD",
+        "kind": {
+         "expr": "f.type"
+        },
+        "handleSide": {
+         "expr": "f.count == 2 && k == 0 ? 'right' : 'left'"
+        }
+       }
+      ],
+      "when": false
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 580,
+    "height": 760
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].parts[0].repeat.as"
    }
   },
   {

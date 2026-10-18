@@ -259,6 +259,87 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		self::assertSame([], $this->listNames($user));
 	}
 
+	public function testListParametersAssembliesAndExpressionOptions(): void
+	{
+		$cabinet = [
+			'format' => 1,
+			'size' => ['width' => 600, 'depth' => 580, 'height' => 760],
+			'parameters' => [
+				[
+					'key' => 'fronts',
+					'type' => 'list',
+					'fields' => [
+						['key' => 'type', 'type' => 'select', 'options' => ['door', 'drawer'], 'default' => 'door'],
+						['key' => 'height', 'type' => 'int', 'min' => 1, 'optional' => true, 'unit' => 'mm'],
+						['key' => 'count', 'type' => 'int', 'default' => 1, 'min' => 1, 'max' => 2],
+					],
+					'default' => [['type' => 'drawer', 'height' => 180], []],
+					'maxItems' => 6,
+				]],
+			'derived' => ['heights' => "share(field(fronts, 'height'), H, 3)", 'starts' => 'offsets(heights, 3)'],
+			'parts' => [
+				[
+					'type' => 'assembly',
+					'repeat' => ['over' => 'fronts', 'as' => 'f'],
+					'x' => 0,
+					'y' => 'starts[f_index]',
+					'z' => 'D - 19',
+					'w' => 'W',
+					'h' => 'heights[f_index]',
+					'd' => 19,
+					'parts' => [
+						[
+							'type' => 'front',
+							'name' => 'Leaf',
+							'repeat' => ['count' => 'f.count', 'as' => 'k'],
+							'x' => 'k * AW / f.count + 1',
+							'y' => 0,
+							'z' => 0,
+							'w' => 'AW / f.count - 2',
+							'h' => 'AH',
+							'd' => 'AD',
+							'kind' => ['expr' => 'f.type'],
+							'handleSide' => ['expr' => "f.count == 2 && k == 0 ? 'right' : 'left'"],
+						]],
+				]],
+		];
+		$user = Fixture::createUser();
+
+		$created = $this->create($user, ['definition' => $cabinet]);
+		self::assertSame(201, $created->getStatusCode(), (string) $created->getBody());
+		// The empty default item and the expression options stay objects.
+		self::assertStringContainsString('"default":[{"type":"drawer","height":180},{}]', (string) $created->getBody());
+		self::assertStringContainsString('"kind":{"expr":"f.type"}', (string) $created->getBody());
+
+		$bad = [
+			'an expression option giving a wrong value' => [
+				['parts', 0, 'parts', 0, 'handleSide'],
+				['expr' => "'up'"],
+				'parts[0].parts[0].handleSide: Must be one of "left", "right".',
+			],
+			'an option of an assembly' => [['parts', 0, 'grain'], 'vertical', 'parts[0].grain: An assembly part has no option "grain".'],
+			'an unknown option written as an expression' => [
+				['parts', 0, 'parts', 0, 'grian'],
+				['expr' => "'vertical'"],
+				'parts[0].parts[0].grian: A front part has no option "grian"',
+			],
+			'an unknown key of a field' => [['parameters', 0, 'fields', 1, 'optinal'], true, 'parameters[0].fields[1].optinal: Unknown key'],
+			'a child of unknown type' => [['parts', 0, 'parts', 0, 'type'], 'drawerBox', 'parts[0].parts[0].type: Unknown part type'],
+		];
+		foreach ($bad as $case => [$keys, $value, $message]) {
+			$definition = $cabinet;
+			$target = &$definition;
+			foreach ($keys as $key) {
+				$target = &$target[$key];
+			}
+			$target = $value;
+			unset($target);
+			$response = $this->create($user, ['definition' => $definition]);
+			self::assertSame(422, $response->getStatusCode(), $case);
+			self::assertStringStartsWith($message, self::stringField($this->jsonBody($response)['message']), $case);
+		}
+	}
+
 	public function testNameIsRequired(): void
 	{
 		self::assertSame(422, $this->create(Fixture::createUser(), ['name' => '  '])->getStatusCode());

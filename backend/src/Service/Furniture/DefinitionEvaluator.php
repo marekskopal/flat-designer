@@ -11,10 +11,11 @@ use FlatDesigner\Service\Furniture\Expression\Node\Values;
  * parameter values into its parts. Twin: frontend/src/app/viewer/engine/custom/definition.ts, both checked against
  * tests/fixtures/furniture-definitions.json.
  *
- * Variables: `W`, `D`, `H` (the item size), the parameters (item value or default), then `derived` in order, and inside
- * a repeated part its index (`repeat.as`, default `i`). For each part entry: `repeat.count` copies (one without
- * `repeat`), each kept when `when` is true; `x y z w h d` are numbers or expressions, rounded half away from zero to
- * mm, and `w h d` must come out positive. Only what the evaluation reads is checked here (part types, material codes
+ * Variables: `W`, `D`, `H` (the item size), the parameters (item value or default; a list parameter gives a list of
+ * records), then `derived` in order, and inside a repeated part its index or item (see `PartEntry`). For each part
+ * entry: its copies (one without `repeat`), each kept when `when` is true; `x y z w h d` are numbers or expressions,
+ * rounded half away from zero to mm, and `w h d` must come out positive; an `assembly` makes no part itself, its
+ * parts are placed in its box. Only what the evaluation reads is checked here (part types, material codes
  * and the like are the validator's business).
  *
  * @phpstan-import-type Value from Values
@@ -82,15 +83,13 @@ final readonly class DefinitionEvaluator
 			if ($parameter === null) {
 				throw new DefinitionException(DefinitionErrorEnum::InvalidValue, $path, sprintf('Unknown parameter "%s".', $key));
 			}
-			$accepted = $parameter->accept($value);
-			if ($accepted === null) {
-				throw new DefinitionException(DefinitionErrorEnum::InvalidValue, $path, sprintf('Must be %s.', $parameter->describe()));
-			}
-			$variables[$parameter->key] = $accepted;
+			$variables[$parameter->key] = $parameter->value($value, $path, DefinitionErrorEnum::InvalidValue);
 		}
 
 		foreach ($parameters as $key => $parameter) {
-			$variables[$key] ??= $parameter->default;
+			if (!array_key_exists($key, $variables)) {
+				$variables[$key] = $parameter->default;
+			}
 		}
 
 		return $variables;
@@ -110,10 +109,7 @@ final readonly class DefinitionEvaluator
 			$path = sprintf('derived.%s', $key);
 			$name = Names::free($key, $variables);
 			if ($name === null) {
-				throw DefinitionException::invalid(
-					$path,
-					'Must be a unique name (letters, digits, _), not W, D, H, true, false, null or a parameter.',
-				);
+				throw DefinitionException::invalid($path, Names::Rule . ' A parameter\'s name is taken too.');
 			}
 			$variables[$name] = Expressions::run(Expressions::compile($source, $path), $variables, $path);
 		}
@@ -154,26 +150,12 @@ final readonly class DefinitionEvaluator
 			throw new DefinitionException(DefinitionErrorEnum::Limit, 'parts', sprintf('At most %d part entries.', self::MaxPartEntries));
 		}
 
-		$parts = [];
+		$collector = new PartCollector();
 		foreach ($entries as $index => $data) {
-			$entry = PartEntry::read($data, sprintf('parts[%d]', $index), $variables, $slots);
-			$copies = match ($entry->count) {
-				null => [null],
-				0 => [],
-				default => range(0, $entry->count - 1),
-			};
-			foreach ($copies as $copy) {
-				$part = $entry->resolve($variables, $copy);
-				if ($part === null) {
-					continue;
-				}
-				if (count($parts) >= self::MaxParts) {
-					throw new DefinitionException(DefinitionErrorEnum::Limit, $entry->path, sprintf('More than %d parts.', self::MaxParts));
-				}
-				$parts[] = $part;
-			}
+			$collector->entry('parts');
+			PartEntry::read($data, sprintf('parts[%d]', $index), $slots, 1, $collector)->resolve($variables, [0, 0, 0], $collector);
 		}
 
-		return $parts;
+		return $collector->parts();
 	}
 }

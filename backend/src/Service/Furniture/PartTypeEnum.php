@@ -23,6 +23,8 @@ enum PartTypeEnum: string
 	case Glass = 'glass';
 	/** LED strip giving light of `color` (#rrggbb). */
 	case Led = 'led';
+	/** No part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`. */
+	case Assembly = 'assembly';
 
 	private const array Grain = ['vertical', 'horizontal'];
 
@@ -34,13 +36,23 @@ enum PartTypeEnum: string
 		return array_map(static fn (self $type): string => $type->value, self::cases());
 	}
 
-	/** Why `$value` is no good for option `$option`, or null when it is fine. */
-	public function checkOption(string $option, mixed $value): ?string
+	/** Why the type has no option `$option`, or null when it has. */
+	public function checkOptionKey(string $option): ?string
+	{
+		return $this->checkOption($option, null, true);
+	}
+
+	/** Why `$value` is no good for option `$option` (with `$keyOnly`: only whether the option exists), or null when it is fine. */
+	public function checkOption(string $option, mixed $value, bool $keyOnly = false): ?string
 	{
 		$options = $this->options();
+		if ($keyOnly) {
+			return array_key_exists($option, $options) ? null : $this->checkOption($option, $value);
+		}
 		if (!array_key_exists($option, $options)) {
 			return sprintf(
-				'A %s part has no option "%s"%s.',
+				'%s %s part has no option "%s"%s.',
+				in_array($this->value[0], ['a', 'e', 'i', 'o', 'u'], true) ? 'An' : 'A',
 				$this->value,
 				$option,
 				$options === [] ? '' : sprintf(' (options: %s)', implode(', ', array_keys($options))),
@@ -79,7 +91,7 @@ enum PartTypeEnum: string
 			],
 			self::Cylinder => ['axis' => ['x', 'y', 'z']],
 			self::TaperedLeg => ['bottomSize' => 'mm'],
-			self::Glass => [],
+			self::Glass, self::Assembly => [],
 			self::Led => ['color' => 'color', 'intensity' => 'number'],
 		};
 	}

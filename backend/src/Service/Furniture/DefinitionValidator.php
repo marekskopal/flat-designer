@@ -7,10 +7,6 @@ namespace FlatDesigner\Service\Furniture;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Service\Editor\Element\State;
-use stdClass;
-use const JSON_THROW_ON_ERROR;
-use const JSON_UNESCAPED_SLASHES;
-use const JSON_UNESCAPED_UNICODE;
 
 /**
  * Checks a furniture definition before it is saved: what `DefinitionEvaluator` reads (by evaluating it at its default
@@ -27,7 +23,12 @@ final readonly class DefinitionValidator
 	private const array ParameterKeys = ['key', 'label', 'type', 'default'];
 
 	/** Keys a parameter of the type takes besides `ParameterKeys`. */
-	private const array ParameterTypeKeys = ['int' => ['min', 'max', 'unit'], 'bool' => [], 'select' => ['options']];
+	private const array ParameterTypeKeys = [
+		'int' => ['min', 'max', 'unit'],
+		'bool' => [],
+		'select' => ['options'],
+		'list' => ['fields', 'minItems', 'maxItems'],
+	];
 
 	private const array SlotKeys = ['key', 'label', 'default'];
 
@@ -67,56 +68,17 @@ final readonly class DefinitionValidator
 		foreach (self::list($definition, 'parts') as $index => $part) {
 			self::checkPart($part, sprintf('parts[%d]', $index));
 		}
-
 		return new ValidatedDefinition($json, $parts);
 	}
 
 	/**
-	 * The definition as stored: JSON with the objects kept objects even when empty (PHP decodes `{}` as `[]`). Only the
-	 * objects of format 1 are known here; an option holding an object would need adding (the evaluators read `[]` as an
-	 * empty object either way).
+	 * The definition as stored (see `DefinitionEncoder`).
 	 *
 	 * @param array<mixed> $definition
 	 */
 	public static function encode(array $definition): string
 	{
-		$object = self::object($definition);
-		foreach (['size', 'derived'] as $key) {
-			if (is_array($definition[$key] ?? null)) {
-				$object->{$key} = self::object($definition[$key]);
-			}
-		}
-		foreach (['parameters', 'materialSlots', 'parts'] as $key) {
-			if (is_array($definition[$key] ?? null)) {
-				$object->{$key} = array_map(self::entry(...), $definition[$key]);
-			}
-		}
-
-		return json_encode($object, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-	}
-
-	private static function entry(mixed $entry): mixed
-	{
-		if (!is_array($entry)) {
-			return $entry;
-		}
-		$object = self::object($entry);
-		if (is_array($entry['repeat'] ?? null)) {
-			$object->repeat = self::object($entry['repeat']);
-		}
-
-		return $object;
-	}
-
-	/** @param array<mixed> $array */
-	private static function object(array $array): stdClass
-	{
-		$object = new stdClass();
-		foreach ($array as $key => $value) {
-			$object->{$key} = $value;
-		}
-
-		return $object;
+		return DefinitionEncoder::encode($definition);
 	}
 
 	/** @return array{int, int, int} */
@@ -139,13 +101,17 @@ final readonly class DefinitionValidator
 		return [$mm[0], $mm[1], $mm[2]];
 	}
 
-	/** @param array<mixed> $parameter */
-	private static function checkParameter(array $parameter, string $path): void
+	/** @param array<mixed> $parameter a parameter, or with `$field` a field of a list parameter */
+	private static function checkParameter(array $parameter, string $path, bool $field = false): void
 	{
 		$type = is_string($parameter['type'] ?? null) ? $parameter['type'] : '';
-		self::checkKeys($parameter, [...self::ParameterKeys, ...self::ParameterTypeKeys[$type] ?? []], $path);
+		$known = [...self::ParameterKeys, ...self::ParameterTypeKeys[$type] ?? [], ...$field ? ['optional'] : []];
+		self::checkKeys($parameter, $known, $path);
 		self::checkLabel($parameter, 'label', $path);
 		self::checkLabel($parameter, 'unit', $path);
+		foreach (self::list($parameter, 'fields') as $index => $definition) {
+			self::checkParameter($definition, sprintf('%s.fields[%d]', $path, $index), true);
+		}
 	}
 
 	/**
@@ -174,11 +140,30 @@ final readonly class DefinitionValidator
 		}
 
 		self::checkLabel($part, 'name', $path);
+		$options = [];
 		foreach ($part as $key => $value) {
 			$key = (string) $key;
-			if (in_array($key, PartEntry::Keys, true)) {
-				continue;
+			if ($type === PartTypeEnum::Assembly && $key === 'parts') {
+				foreach (self::list($part, 'parts') as $index => $child) {
+					self::checkPart($child, sprintf('%s.parts[%d]', $path, $index));
+				}
+			} elseif (!in_array($key, PartEntry::Keys, true) && PartOptions::isExpression($value)) {
+				// An expression's value is checked once evaluated (`PartOptions`); the key now.
+				$error = $type->checkOptionKey($key);
+				if ($error !== null) {
+					throw DefinitionException::invalid(sprintf('%s.%s', $path, $key), $error);
+				}
+			} elseif (!in_array($key, PartEntry::Keys, true)) {
+				$options[$key] = $value;
 			}
+		}
+		self::checkOptions($type, $options, $path);
+	}
+
+	/** @param array<string, mixed> $options */
+	private static function checkOptions(PartTypeEnum $type, array $options, string $path): void
+	{
+		foreach ($options as $key => $value) {
 			$error = $type->checkOption($key, $value);
 			if ($error !== null) {
 				throw DefinitionException::invalid(sprintf('%s.%s', $path, $key), $error);

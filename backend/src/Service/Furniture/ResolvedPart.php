@@ -8,8 +8,10 @@ use JsonSerializable;
 
 /**
  * One part of an evaluated definition, in whole mm with the origin at the left-bottom-back corner of the item (x along
- * the width, y up, z towards the front). `index` is the repeat index (null for a part without `repeat`); `props` are the
- * part's other keys as written (type-specific: grain, edges, handle, …).
+ * the width, y up, z towards the front; parts of assemblies are placed in the item's frame too). `index` is the repeat
+ * index (null for a part without `repeat`); `props` are the part's other keys, `{"expr": …}` ones evaluated
+ * (type-specific: grain, edges, handle, …). `path` is the part entry in the definition (`parts[2].parts[0]`), for errors;
+ * it is not part of the JSON (the twin has none).
  */
 final readonly class ResolvedPart implements JsonSerializable
 {
@@ -26,6 +28,7 @@ final readonly class ResolvedPart implements JsonSerializable
 		public int $d,
 		public ?string $material,
 		public array $props,
+		public string $path = '',
 	) {
 	}
 

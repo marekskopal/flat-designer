@@ -7,10 +7,25 @@
 /** A number, or an expression of `W`, `D`, `H`, the parameters, the derived values and a repeat index. */
 export type DefinitionExpression = string | number;
 
+/** A field of a list parameter's items: like a parameter, but never a list; an `optional` one may be null. */
+export type DefinitionField =
+    | {key: string; label?: string; type: 'int'; default?: number | null; min?: number; max?: number; unit?: string; optional?: boolean}
+    | {key: string; label?: string; type: 'bool'; default?: boolean | null; optional?: boolean}
+    | {key: string; label?: string; type: 'select'; default?: string | null; options: string[]; optional?: boolean};
+
 export type DefinitionParameter =
     | {key: string; label?: string; type: 'int'; default: number; min?: number; max?: number; unit?: string}
     | {key: string; label?: string; type: 'bool'; default: boolean}
-    | {key: string; label?: string; type: 'select'; default: string; options: string[]};
+    | {key: string; label?: string; type: 'select'; default: string; options: string[]}
+    | {
+          key: string;
+          label?: string;
+          type: 'list';
+          fields: DefinitionField[];
+          default: Record<string, number | boolean | string | null>[];
+          minItems?: number;
+          maxItems?: number;
+      };
 
 export interface MaterialSlot {
     key: string;
@@ -24,8 +39,11 @@ export interface DefinitionPart {
     name?: string;
     /** The part is left out when this comes out false. */
     when?: string | boolean;
-    /** `count` copies, the copy's index (from 0) in the variable `as` (default `i`). */
-    repeat?: {count: DefinitionExpression; as?: string};
+    /**
+     * `count` copies with the index (from 0) in the variable `as` (default `i`), or one copy per item of the list `over`
+     * with the item in `as` (default `item`) and its index in `<as>_index`.
+     */
+    repeat?: {count: DefinitionExpression; as?: string} | {over: string; as?: string};
     /** Key of one of the material slots. */
     material?: string;
     x: DefinitionExpression;
@@ -34,7 +52,9 @@ export interface DefinitionPart {
     w: DefinitionExpression;
     h: DefinitionExpression;
     d: DefinitionExpression;
-    /** Options of the part type (grain, edges, handle, …). */
+    /** The parts of an `assembly`, placed in its box (they see its size as AW, AH, AD). */
+    parts?: DefinitionPart[];
+    /** Options of the part type (grain, edges, handle, …), each a value or `{expr: "…"}` evaluated per copy. */
     [prop: string]: unknown;
 }
 
