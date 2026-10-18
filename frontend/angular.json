@@ -32,6 +32,7 @@
                         "styles": [
                             "src/styles.scss"
                         ],
+                        "inlineStyleLanguage": "scss",
                         "stylePreprocessorOptions": {
                             "includePaths": [
                                 "src/styles"

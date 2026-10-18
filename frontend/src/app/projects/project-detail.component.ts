@@ -6,16 +6,19 @@ import {Router, RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor} from '@app/models/scene';
+import {ShareLink, shareUrl} from '@app/models/share';
 import {ProjectFilesComponent} from '@app/projects/files/project-files.component';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
+import {ShareService} from '@app/services/share.service';
+import {ShareLinkFormComponent} from '@app/share/share-link-form.component';
 import {filter, switchMap} from 'rxjs';
 
-/** One project: its details, floors (the working copy), saved versions and files. */
+/** One project: its details, floors (the working copy), saved versions, share links and files. */
 @Component({
     selector: 'fd-project-detail',
-    imports: [DatePipe, NgTemplateOutlet, ProjectFilesComponent, ReactiveFormsModule, RouterLink],
+    imports: [DatePipe, NgTemplateOutlet, ProjectFilesComponent, ReactiveFormsModule, RouterLink, ShareLinkFormComponent],
     templateUrl: './project-detail.component.html',
     styleUrl: './project-detail.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,12 +27,17 @@ export class ProjectDetailComponent {
     public readonly projectId = input.required({transform: numberAttribute});
 
     private readonly projectService = inject(ProjectService);
+    private readonly shareService = inject(ShareService);
     private readonly alerts = inject(AlertService);
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder).nonNullable;
 
     protected readonly project = signal<Project | null>(null);
     protected readonly versions = signal<ProjectVersion[]>([]);
+    protected readonly shareLinks = signal<ShareLink[]>([]);
+    /** Share link whose settings are being edited. */
+    protected readonly editingShare = signal<number | null>(null);
+    protected readonly shareUrl = shareUrl;
     protected readonly busy = signal(false);
     protected readonly editingDetails = signal(false);
     /** Floor being renamed, or 'new' while adding one. */
@@ -145,11 +153,40 @@ export class ProjectDetailComponent {
         });
     }
 
+    protected async copyShareLink(link: ShareLink): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(shareUrl(link.token));
+            this.alerts.success('Link copied.');
+        } catch {
+            this.alerts.error('Could not copy the link.');
+        }
+    }
+
+    protected onShareSaved(link: ShareLink): void {
+        this.shareLinks.update((links) => links.map((l) => (l.id === link.id ? link : l)));
+        this.editingShare.set(null);
+    }
+
+    protected async deleteShareLink(project: Project, link: ShareLink): Promise<void> {
+        if (!confirm(`Delete the share link "${link.name}"? Anyone who has it loses access. Its version stays.`)) {
+            return;
+        }
+        await this.run(async () => {
+            await this.shareService.delete(project.id, link.id);
+            this.shareLinks.update((links) => links.filter((l) => l.id !== link.id));
+        });
+    }
+
     private async load(projectId: number): Promise<void> {
         try {
-            const [project, versions] = await Promise.all([this.projectService.get(projectId), this.projectService.listVersions(projectId)]);
+            const [project, versions, shareLinks] = await Promise.all([
+                this.projectService.get(projectId),
+                this.projectService.listVersions(projectId),
+                this.shareService.list(projectId),
+            ]);
             this.project.set(project);
             this.versions.set(versions);
+            this.shareLinks.set(shareLinks);
         } catch {
             // The error interceptor shows the toast.
         }

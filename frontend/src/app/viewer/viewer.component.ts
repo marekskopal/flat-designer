@@ -13,6 +13,7 @@ import {
     viewChild,
 } from '@angular/core';
 import {Room, Scene} from '@app/models/scene';
+import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
 
 import {Selection} from './engine/selection';
@@ -34,6 +35,10 @@ export interface SelectEvent {
             display: block;
             width: 100%;
             height: 100%;
+        }
+        /* CSS2D room labels carry their own z-index; keep them below UI laid over the viewer. */
+        :host {
+            isolation: isolate;
         }
         .host ::ng-deep canvas {
             display: block;
@@ -63,6 +68,8 @@ export class ViewerComponent {
     public readonly walkthroughEnded = output();
     /** Whether the walkthrough has the mouse captured. */
     public readonly walkthroughLocked = output<boolean>();
+    /** A scene was built (a new floor starts at the overview; set another view from here). */
+    public readonly loaded = output<Scene>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Created after the first render, once the host element has its size. */
@@ -93,6 +100,7 @@ export class ViewerComponent {
             engine.setCeilingsVisible(untracked(this.ceilingsVisible));
             engine.setSelection(untracked(this.selection));
             engine.setInsetLeft(untracked(this.insetLeft));
+            this.loaded.emit(scene);
         });
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
@@ -105,8 +113,8 @@ export class ViewerComponent {
         inject(DestroyRef).onDestroy(() => this.engine()?.dispose());
     }
 
-    public setView(preset: ViewPreset): void {
-        this.engine()?.setView(preset);
+    public setView(preset: ViewPreset, animate = true): void {
+        this.engine()?.setView(preset, animate);
     }
 
     /** First-person walk; call it from a click handler, it captures the mouse. */
@@ -117,6 +125,15 @@ export class ViewerComponent {
     /** Where the camera looks, in plan mm (placement of new elements). */
     public viewCenter(): {x: number; y: number} {
         return this.engine()?.viewCenter() ?? {x: 0, y: 0};
+    }
+
+    /** The 3D camera in plan mm; null before the engine starts. */
+    public cameraPose(): CameraPose | null {
+        return this.engine()?.cameraPose() ?? null;
+    }
+
+    public setCameraPose(pose: CameraPose, animate = true): void {
+        this.engine()?.setCameraPose(pose, animate);
     }
 
     public focusRoom(room: Room): void {

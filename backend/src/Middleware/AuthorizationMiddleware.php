@@ -16,8 +16,8 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Requires a valid access token (`Authorization: Bearer …`) on every route except `OpenRoutes`, and
- * puts the signed-in user on the request (`RequestService::getUser()`).
+ * Requires a valid access token (`Authorization: Bearer …`) on every route except `OpenRoutes` and the guest read of
+ * a share link, and puts the signed-in user on the request (`RequestService::getUser()`).
  */
 final readonly class AuthorizationMiddleware implements MiddlewareInterface
 {
@@ -42,6 +42,9 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 		Routes::OAuthClientInfo->value,
 	];
 
+	/** `Routes::Share` as a pattern: share links are read by guests, the token in the path is the credential. */
+	private const string ShareRoutePattern = '#^/api/shares/[a-f0-9]+$#';
+
 	public function __construct(
 		private TokenService $tokenService,
 		private UserProvider $userProvider,
@@ -54,7 +57,7 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 		// Which browser tab made the request, echoed in live updates (any route, also open ones).
 		$this->originContext->set($request->getHeaderLine(RealtimeOriginContext::Header));
 
-		if ($request->getMethod() === 'OPTIONS' || in_array($request->getUri()->getPath(), self::OpenRoutes, true)) {
+		if ($request->getMethod() === 'OPTIONS' || $this->isOpenRoute($request->getMethod(), $request->getUri()->getPath())) {
 			return $handler->handle($request);
 		}
 
@@ -76,5 +79,10 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 		}
 
 		return $handler->handle($request->withAttribute(self::AttributeUser, $user));
+	}
+
+	private function isOpenRoute(string $method, string $path): bool
+	{
+		return in_array($path, self::OpenRoutes, true) || $method === 'GET' && preg_match(self::ShareRoutePattern, $path) === 1;
 	}
 }

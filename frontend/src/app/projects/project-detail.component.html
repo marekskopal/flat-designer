@@ -132,6 +132,57 @@
                 </ul>
             </section>
 
+            <section class="card share-links">
+                <div class="card__header">
+                    <h2 class="card__title">Share links</h2>
+                </div>
+
+                <ul class="list">
+                    @for (link of shareLinks(); track link.id) {
+                        <li class="list__row" [class.list__row--editing]="editingShare() === link.id">
+                            @if (editingShare() === link.id) {
+                                <fd-share-link-form
+                                    class="share-links__form"
+                                    [projectId]="project.id"
+                                    [link]="link"
+                                    (saved)="onShareSaved($event)"
+                                    (cancelled)="editingShare.set(null)"
+                                />
+                            } @else {
+                                <a class="list__main" [href]="shareUrl(link.token)" target="_blank" rel="noopener">
+                                    <span class="list__title">
+                                        {{ link.name }}
+                                        @if (link.expired) {
+                                            <span class="badge">expired</span>
+                                        }
+                                    </span>
+                                    <span class="list__meta">
+                                        {{ link.floorName }} · v{{ link.versionNumber }} ·
+                                        @if (link.expiresAt) {
+                                            {{ link.expired ? 'expired' : 'until' }} {{ link.expiresAt | date: 'd MMM y' }}
+                                        } @else {
+                                            no expiry
+                                        }
+                                        @if (link.createdByName) {
+                                            · {{ link.createdByName }}
+                                        }
+                                    </span>
+                                </a>
+                                <span class="list__actions">
+                                    <button type="button" class="btn btn--ghost" (click)="copyShareLink(link)">Copy</button>
+                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="editingShare.set(link.id)">Edit</button>
+                                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteShareLink(project, link)">
+                                        Delete
+                                    </button>
+                                </span>
+                            }
+                        </li>
+                    } @empty {
+                        <li class="list__empty">No share links yet. Open a floor and use Share to send a view of it to someone.</li>
+                    }
+                </ul>
+            </section>
+
             <fd-project-files [projectId]="project.id" />
         </div>
     }

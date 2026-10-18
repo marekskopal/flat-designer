@@ -1,4 +1,5 @@
 import {Item, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -518,6 +519,20 @@ export class ViewerEngine {
                 break;
             }
         }
+    }
+
+    /** The orbit camera in plan mm (where a tween is heading, if one runs), e.g. to save it in a share link. */
+    public cameraPose(): CameraPose {
+        const toPlan = (v: THREE.Vector3): CameraPoint => ({x: Math.round(v.x / MM), y: Math.round(-v.z / MM), z: Math.round(v.y / MM)});
+        return {
+            position: toPlan(this.tween?.toPosition ?? this.camera.position),
+            target: toPlan(this.tween?.toTarget ?? this.controls.target),
+        };
+    }
+
+    public setCameraPose(pose: CameraPose, animate = true): void {
+        const toScene = (p: CameraPoint): THREE.Vector3 => new THREE.Vector3(p.x * MM, p.z * MM, -p.y * MM);
+        this.moveCamera(toScene(pose.position), toScene(pose.target), animate);
     }
 
     /**

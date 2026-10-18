@@ -1,0 +1,101 @@
+<fd-viewer
+    class="viewer"
+    [scene]="scene()"
+    [ceilingsVisible]="ceilingsVisible()"
+    [labelsVisible]="labelsVisible()"
+    [sectionHeight]="sectionHeight()"
+    [insetLeft]="walking() ? 0 : panelInset"
+    (loaded)="onLoaded()"
+    (walkthroughEnded)="onWalkthroughEnded()"
+    (walkthroughLocked)="walkLocked.set($event)"
+/>
+
+@if (walking()) {
+    <div class="walk-hint" role="status">
+        @if (!walkLocked()) {
+            <strong class="walk-hint__prompt">Click the view to look around</strong>
+        }
+        <span>
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around ·
+            <kbd>Esc</kbd> back to 3D
+        </span>
+    </div>
+} @else if (walkPrompt()) {
+    <button type="button" class="walk-start" (click)="startWalkthrough()">Start the walk-through</button>
+}
+
+<aside class="panel" [class.panel--hidden]="walking()">
+    <header class="panel__header">
+        <span class="eyebrow">{{ shared()?.projectName ?? 'Flat Designer' }}</span>
+        @if (shared(); as s) {
+            <h1 class="title">{{ s.name }}</h1>
+            <p class="subtitle">{{ s.scene.floor.name }} · shared view</p>
+        } @else if (error()) {
+            <h1 class="title">Not available</h1>
+            <p class="error">{{ error() }}</p>
+        } @else {
+            <h1 class="title">Loading…</h1>
+        }
+    </header>
+
+    @if (settings(); as settings) {
+        @if (views().length > 1) {
+            <section class="panel__section">
+                <h2 class="section-title">View</h2>
+                <div class="segmented" role="group" aria-label="Camera view">
+                    @for (view of views(); track view) {
+                        <button type="button" [class.active]="activeView() === view" (click)="setView(view)">
+                            {{ viewLabels[view] }}
+                        </button>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (hasVariants() && scene(); as s) {
+            <section class="panel__section">
+                <h2 class="section-title">Variants</h2>
+                <fd-variants [scene]="s" [local]="true" (switched)="switchVariant($event)" />
+            </section>
+        }
+
+        <section class="panel__section">
+            <h2 class="section-title">Display</h2>
+            <label class="toggle">
+                <input type="checkbox" [checked]="ceilingsVisible()" (change)="ceilingsVisible.set(!ceilingsVisible())" />
+                <span>Ceilings</span>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" [checked]="labelsVisible()" (change)="labelsVisible.set(!labelsVisible())" />
+                <span>Room labels</span>
+            </label>
+            <label class="slider">
+                <span class="slider__label">
+                    Wall cut
+                    <span class="slider__value">
+                        @if (sectionHeight(); as h) {
+                            {{ h / 1000 | number: '1.2-2' }} m
+                        } @else {
+                            off
+                        }
+                    </span>
+                </span>
+                <input
+                    type="range"
+                    [min]="sectionMin"
+                    [max]="sectionMax"
+                    step="50"
+                    [value]="sectionSlider()"
+                    (input)="onSectionInput($event)"
+                    aria-label="Wall cut height"
+                />
+            </label>
+        </section>
+
+        <section class="panel__section">
+            <button type="button" class="reset" (click)="resetToShared()">Reset to the shared view</button>
+        </section>
+
+        <footer class="panel__footer panel__footer--end">Drag to orbit · right-drag to pan · scroll to zoom</footer>
+    }
+</aside>

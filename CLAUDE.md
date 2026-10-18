@@ -83,6 +83,13 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   against `wallColliders()` (wall pieces at floor level; doors are gaps, windows solid), items do not block.
   It starts a step inside the door flagged `openings.entrance` (`entranceWalkStart()`; fallback: a door in an
   exterior wall, then the largest indoor room).
+- Share links (`ShareLink`, `ShareLinkProvider`): a guest view of one floor at `/s/{token}` (no sign-in; the
+  public `GET /api/shares/{token}` is open via `AuthorizationMiddleware::OpenRoutePrefixes`, `jwtInterceptor` sends
+  no token there). Creating a link saves a version ("Shared: <name>"); `floorId` is the floor's id inside that
+  snapshot. `settings` (JSON, `ShareSettingsDto`) = allowed views, start view, optional 3D camera (plan mm,
+  `ViewerEngine.cameraPose()`/`setCameraPose()`) and the display. `SharedViewerPageComponent` switches variants
+  locally only. Expired or unknown links answer 404. MCP: `ShareLinkTools` (list/create/update/delete_share_link;
+  the URL comes from the base URL `McpController` puts in `McpUserContext`).
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
   `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs

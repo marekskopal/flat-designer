@@ -21,9 +21,11 @@ import {EditorPanelComponent} from '@app/editor/editor-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ProjectUpdate} from '@app/models/realtime';
 import {Room, RoomType} from '@app/models/scene';
+import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
+import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {Selection} from '@app/viewer/engine/selection';
 import {ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
@@ -55,7 +57,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
  */
 @Component({
     selector: 'fd-viewer-page',
-    imports: [ViewerComponent, DecimalPipe, RouterLink, EditorPanelComponent, VariantsComponent],
+    imports: [ViewerComponent, DecimalPipe, RouterLink, EditorPanelComponent, VariantsComponent, ShareLinkFormComponent],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
@@ -123,12 +125,35 @@ export class ViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly sectionSlider = signal(SectionMax);
+    /** The share form is open ('form'), or shows the link just created. */
+    protected readonly sharing = signal<'form' | ShareLink | null>(null);
+    protected readonly sharedLink = computed(() => {
+        const sharing = this.sharing();
+        return typeof sharing === 'object' && sharing !== null ? {link: sharing, url: shareUrl(sharing.token)} : null;
+    });
     protected readonly selectedRoomId = computed(() => {
         const selection = this.editor.selection();
         return selection?.kind === 'room' ? selection.id : null;
     });
     /** Editing is possible on the working copy only. */
     protected readonly canEdit = computed(() => this.version() === null && this.scene() !== null);
+    /** What a new share link starts from: this floor as shown now. */
+    protected readonly shareSource = computed((): ShareSource | null => {
+        const scene = this.scene();
+        const view = this.activeView();
+        if (scene === null || view === 'walkthrough') {
+            return null;
+        }
+        return {
+            floorId: scene.floor.id,
+            floorName: scene.floor.name,
+            view,
+            camera: () => this.viewer().cameraPose(),
+            ceilings: this.ceilingsVisible(),
+            labels: this.labelsVisible(),
+            sectionHeight: this.sectionHeight(),
+        };
+    });
     /** For the editor panel: where new elements are placed. */
     protected readonly viewCenter = (): {x: number; y: number} => this.viewer().viewCenter();
 
@@ -165,10 +190,11 @@ export class ViewerPageComponent {
             )
             .subscribe((update) => this.onProjectUpdate(update));
 
-        // A different floor has different rooms (a live reload of the same floor keeps the selection).
+        // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
         effect(() => {
             this.floorId();
             this.editor.select(null);
+            this.sharing.set(null);
         });
     }
 
@@ -220,6 +246,15 @@ export class ViewerPageComponent {
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
         this.sectionSlider.set(SectionMax);
+    }
+
+    protected async copyShareUrl(url: string): Promise<void> {
+        try {
+            await navigator.clipboard.writeText(url);
+            this.alerts.success('Link copied.');
+        } catch {
+            this.alerts.error('Could not copy; select the link and copy it by hand.');
+        }
     }
 
     protected toggleEdit(): void {

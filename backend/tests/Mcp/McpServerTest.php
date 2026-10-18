@@ -12,6 +12,7 @@ use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
+use FlatDesigner\Mcp\Tool\ShareLinkTools;
 use FlatDesigner\Mcp\Tool\VariantTools;
 use FlatDesigner\Mcp\Tool\WallTools;
 use FlatDesigner\Model\Entity\Project;
@@ -30,6 +31,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(DatabaseSessionStore::class)]
 #[CoversClass(ToolErrorTranslatingReferenceHandler::class)]
 #[CoversClass(ProjectTools::class)]
+#[CoversClass(ShareLinkTools::class)]
 #[CoversClass(ItemTools::class)]
 #[CoversClass(GroupTools::class)]
 #[CoversClass(VariantTools::class)]
@@ -68,11 +70,13 @@ final class McpServerTest extends IntegrationTestCase
 			'add_variant',
 			'add_wall',
 			'create_group',
+			'create_share_link',
 			'create_variant_set',
 			'delete_group',
 			'delete_item',
 			'delete_opening',
 			'delete_room',
+			'delete_share_link',
 			'delete_variant_set',
 			'delete_wall',
 			'duplicate_group',
@@ -83,6 +87,7 @@ final class McpServerTest extends IntegrationTestCase
 			'list_item_kinds',
 			'list_materials',
 			'list_projects',
+			'list_share_links',
 			'list_versions',
 			'move_group',
 			'redo',
@@ -95,6 +100,7 @@ final class McpServerTest extends IntegrationTestCase
 			'update_item',
 			'update_opening',
 			'update_room',
+			'update_share_link',
 			'update_wall',
 		], $names);
 	}
@@ -288,6 +294,57 @@ final class McpServerTest extends IntegrationTestCase
 		$floor = $this->client->call('get_floor', $ids);
 		self::assertIsArray($floor);
 		self::assertSame([], $floor['hiddenItemIds']);
+	}
+
+	public function testManagesShareLinks(): void
+	{
+		$projectId = $this->project->id;
+		$camera = ['position' => ['x' => 1000, 'y' => -2000, 'z' => 5000], 'target' => ['x' => 3000, 'y' => 2000, 'z' => 0]];
+		$link = $this->client->call('create_share_link', [
+			'projectId' => $projectId,
+			'floorId' => Fixture::firstFloor($this->project)->id,
+			'name' => 'For the carpenter',
+			'camera' => $camera,
+		]);
+		self::assertIsArray($link);
+		self::assertIsArray($link['settings']);
+		self::assertSame(['overview', 'top'], $link['settings']['views']);
+		self::assertSame('overview', $link['settings']['initialView']);
+		self::assertSame($camera, $link['settings']['camera']);
+		self::assertSame('http://localhost:4400/s/' . self::stringField($link['token']), $link['url']);
+		self::assertSame(1, $link['versionNumber']);
+
+		// Narrowing the views to the plan moves the start view there; the camera is cleared with it.
+		$updated = $this->client->call('update_share_link', [
+			'projectId' => $projectId,
+			'shareLinkId' => $link['id'],
+			'views' => ['top'],
+			'sectionHeight' => 1300,
+			'clear' => ['camera'],
+		]);
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['settings']);
+		self::assertSame('For the carpenter', $updated['name']);
+		self::assertSame(['top'], $updated['settings']['views']);
+		self::assertSame('top', $updated['settings']['initialView']);
+		self::assertNull($updated['settings']['camera']);
+		self::assertSame(1300, $updated['settings']['sectionHeight']);
+
+		$isError = false;
+		$message = $this->client->call(
+			'update_share_link',
+			['projectId' => $projectId, 'shareLinkId' => $link['id'], 'camera' => $camera],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertSame('A camera position needs the 3D view allowed.', $message);
+
+		$list = $this->client->call('list_share_links', ['projectId' => $projectId]);
+		self::assertIsList($list);
+		self::assertSame(['For the carpenter'], array_column($list, 'name'));
+
+		$this->client->call('delete_share_link', ['projectId' => $projectId, 'shareLinkId' => $link['id']]);
+		self::assertSame([], $this->client->call('list_share_links', ['projectId' => $projectId]));
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void

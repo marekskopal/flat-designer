@@ -6,13 +6,15 @@ import {environment} from '@environments/environment';
 import {catchError, from, Observable, shareReplay, switchMap, throwError} from 'rxjs';
 
 const refreshTokenUrl = `${environment.apiUrl}/authentication/refresh-token`;
+/** Share links are opened as a guest, also by a signed-in user. */
+const sharesUrl = `${environment.apiUrl}/shares/`;
 
 /** Concurrent 401s share one refresh call. */
 let refreshInFlight: Observable<Authentication> | null = null;
 
 /**
  * Adds the access token to API calls. On 401 it refreshes the token pair once and retries; when the
- * refresh fails too, the user is signed out.
+ * refresh fails too, the user is signed out. Share link reads (`/shares/…`) are public and go without the token.
  */
 export function jwtInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
     const auth = inject(AuthenticationService);
@@ -29,7 +31,7 @@ export function jwtInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn): 
 
 function withAuthHeader(req: HttpRequest<unknown>, auth: AuthenticationService): HttpRequest<unknown> {
     const token = auth.authentication()?.accessToken;
-    if (token === undefined || !req.url.startsWith(environment.apiUrl)) {
+    if (token === undefined || !req.url.startsWith(environment.apiUrl) || req.url.startsWith(sharesUrl)) {
         return req;
     }
     return req.clone({setHeaders: {Authorization: `Bearer ${token}`}});

@@ -26,6 +26,28 @@
     </div>
 }
 
+@if (sharing() !== null && !walking()) {
+    <section class="share-card" aria-label="Share link">
+        @if (sharedLink(); as shared) {
+            <h2 class="share-card__title">Link “{{ shared.link.name }}” is ready</h2>
+            <div class="share-card__url">
+                <input class="input" type="text" readonly [value]="shared.url" aria-label="Share link" (focus)="$any($event.target).select()" />
+                <button type="button" class="btn btn--primary" (click)="copyShareUrl(shared.url)">Copy</button>
+            </div>
+            <p class="field__hint">
+                Saved as version {{ shared.link.versionNumber }}. Manage the project's links on the
+                <a [routerLink]="['/projects', projectId()]">project page</a>.
+            </p>
+            <div class="form__actions">
+                <button type="button" class="btn" (click)="sharing.set(null)">Close</button>
+            </div>
+        } @else if (shareSource(); as source) {
+            <h2 class="share-card__title">Share this floor</h2>
+            <fd-share-link-form [projectId]="projectId()" [source]="source" (saved)="sharing.set($event)" (cancelled)="sharing.set(null)" />
+        }
+    </section>
+}
+
 <aside class="panel" [class.panel--editing]="editor.enabled()" [class.panel--hidden]="walking()">
     <header class="panel__header">
         @if (project(); as p) {
@@ -37,9 +59,12 @@
             <div class="title-row">
                 <h1 class="title">{{ s.floor.name }}</h1>
                 @if (canEdit()) {
-                    <button type="button" class="edit-toggle" [class.edit-toggle--on]="editor.enabled()" (click)="toggleEdit()">
-                        {{ editor.enabled() ? 'Done' : 'Edit' }}
-                    </button>
+                    <span class="title-actions">
+                        <button type="button" class="share-button" [disabled]="sharing() !== null" (click)="sharing.set('form')">Share</button>
+                        <button type="button" class="edit-toggle" [class.edit-toggle--on]="editor.enabled()" (click)="toggleEdit()">
+                            {{ editor.enabled() ? 'Done' : 'Edit' }}
+                        </button>
+                    </span>
                 }
             </div>
             @if (project()?.address; as address) {

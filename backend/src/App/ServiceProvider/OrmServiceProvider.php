@@ -16,6 +16,7 @@ use FlatDesigner\Model\Entity\ProjectChange;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
@@ -31,6 +32,7 @@ use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\ShareLinkRepository;
 use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -56,6 +58,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ProjectVersionRepository::class,
 			ProjectFileRepository::class,
 			ProjectChangeRepository::class,
+			ShareLinkRepository::class,
 			OAuthClientRepository::class,
 			OAuthAuthorizationRepository::class,
 			FloorRepository::class,
@@ -84,6 +87,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ProjectVersionRepository::class, ProjectVersion::class);
 		$this->addRepository($container, $orm, ProjectFileRepository::class, ProjectFile::class);
 		$this->addRepository($container, $orm, ProjectChangeRepository::class, ProjectChange::class);
+		$this->addRepository($container, $orm, ShareLinkRepository::class, ShareLink::class);
 		$this->addRepository($container, $orm, OAuthClientRepository::class, OAuthClient::class);
 		$this->addRepository($container, $orm, OAuthAuthorizationRepository::class, OAuthAuthorization::class);
 		$this->addRepository($container, $orm, FloorRepository::class, Floor::class);

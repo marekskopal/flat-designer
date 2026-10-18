@@ -387,3 +387,101 @@
         background: $color-accent;
     }
 }
+
+// Share links: the guest page (shared-viewer) uses these styles too.
+
+.panel__footer--end {
+    margin-top: auto;
+}
+
+.reset {
+    width: 100%;
+    padding: 7px 0;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-10;
+    background: $color-surface-solid;
+    font-size: $font-size-13;
+    font-weight: 500;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+}
+
+.walk-start {
+    position: absolute;
+    left: calc(50% + 166px);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 12px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: $color-accent;
+    box-shadow: $shadow-panel;
+    font-size: $font-size-14;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+}
+
+.share-button {
+    flex: none;
+    padding: 4px 12px;
+    border: 1px solid $color-border-strong;
+    border-radius: 999px;
+    background: transparent;
+    font-size: $font-size-12;
+    font-weight: 600;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+        color: $color-text;
+        background: $color-surface-muted;
+    }
+}
+
+.title-actions {
+    display: flex;
+    gap: $space-4;
+}
+
+.share-card {
+    position: absolute;
+    top: $space-16;
+    right: $space-16;
+    width: 340px;
+    max-height: calc(100% - 2 * #{$space-16});
+    padding: $space-16;
+    overflow-y: auto;
+    background: $color-surface-solid;
+    border: 1px solid $color-border;
+    border-radius: $radius-14;
+    box-shadow: $shadow-panel;
+
+    @media (max-width: 640px) {
+        left: $space-8;
+        right: $space-8;
+        top: $space-8;
+        width: auto;
+    }
+}
+
+.share-card__title {
+    margin: 0 0 $space-12;
+    font-size: $font-size-14;
+    font-weight: 650;
+}
+
+.share-card__url {
+    display: flex;
+    gap: $space-8;
+    margin-bottom: $space-12;
+
+    .input {
+        flex: 1;
+        min-width: 0;
+        font-size: $font-size-13;
+    }
+}

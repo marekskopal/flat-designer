@@ -1,0 +1,170 @@
+import {DecimalPipe} from '@angular/common';
+import {HttpErrorResponse} from '@angular/common/http';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, resource, signal, viewChild} from '@angular/core';
+import {errorMessage} from '@app/core/interceptors/error.interceptor';
+import {VariantsComponent} from '@app/editor/variants.component';
+import {Scene} from '@app/models/scene';
+import {ShareView, ShareViewLabels} from '@app/models/share';
+import {ShareService} from '@app/services/share.service';
+import {ViewerComponent} from '@app/viewer/viewer.component';
+
+/** Section heights offered by the slider (mm); the top value means "no cut" (as on the viewer page). */
+const SectionMin = 900;
+const SectionMax = 2700;
+const PlanSectionHeight = 1300;
+
+/** Walking needs the pointer lock and a mouse. */
+const walkthroughSupported = (): boolean => 'exitPointerLock' in document && matchMedia('(pointer: fine)').matches;
+
+/**
+ * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
+ * decides which views are offered, the one it opens in, the 3D camera and the starting display; variants can be
+ * switched for a look, nothing is saved.
+ */
+@Component({
+    selector: 'fd-shared-viewer-page',
+    imports: [ViewerComponent, DecimalPipe, VariantsComponent],
+    templateUrl: './shared-viewer-page.component.html',
+    styleUrl: '../viewer-page/viewer-page.component.scss',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SharedViewerPageComponent {
+    public readonly token = input.required<string>();
+
+    protected readonly panelInset = 332;
+    protected readonly sectionMin = SectionMin;
+    protected readonly sectionMax = SectionMax;
+    protected readonly viewLabels = ShareViewLabels;
+
+    private readonly shares = inject(ShareService);
+
+    private readonly data = resource({
+        params: () => ({token: this.token()}),
+        loader: async ({params}) => this.shares.getShared(params.token),
+    });
+
+    protected readonly shared = computed(() => (this.data.hasValue() ? this.data.value() : null));
+    protected readonly settings = computed(() => this.shared()?.settings ?? null);
+    /** The shared scene with the guest's own variant choices. */
+    protected readonly scene = linkedSignal<Scene | null>(() => this.shared()?.scene ?? null);
+    protected readonly error = computed(() => {
+        const error = this.data.error();
+        if (error === undefined) {
+            return null;
+        }
+        return error instanceof HttpErrorResponse ? errorMessage(error) : 'Could not load the shared view.';
+    });
+    protected readonly views = computed(() =>
+        (this.settings()?.views ?? []).filter((view) => view !== 'walkthrough' || walkthroughSupported()),
+    );
+    protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
+
+    protected readonly activeView = signal<ShareView>('overview');
+    protected readonly walking = signal(false);
+    protected readonly walkLocked = signal(false);
+    /** The link opens in the walk, which needs a click to capture the mouse: a button asks for it. */
+    protected readonly walkPrompt = signal(false);
+    protected readonly ceilingsVisible = signal(false);
+    protected readonly labelsVisible = signal(true);
+    protected readonly sectionSlider = signal(SectionMax);
+    protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
+
+    private readonly viewer = viewChild.required(ViewerComponent);
+    /** The link's start state is applied once, when its floor is first built; another link starts over. */
+    private started = false;
+
+    public constructor() {
+        effect(() => {
+            this.token();
+            this.started = false;
+            this.walkPrompt.set(false);
+        });
+    }
+
+    protected onLoaded(): void {
+        if (!this.started) {
+            this.started = true;
+            this.resetToShared(false);
+            this.walkPrompt.set(this.settings()?.initialView === 'walkthrough' && this.views().includes('walkthrough'));
+        }
+    }
+
+    /** Back to how the link opens: its start view (3D when that is the walk), camera and display. */
+    protected resetToShared(animate = true): void {
+        const settings = this.settings();
+        if (settings === null) {
+            return;
+        }
+        this.ceilingsVisible.set(settings.ceilings);
+        this.labelsVisible.set(settings.labels);
+        this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
+        const view = settings.initialView === 'walkthrough' ? this.fallbackView() : settings.initialView;
+        this.activeView.set(view);
+        this.showView(view, animate);
+    }
+
+    protected setView(view: ShareView): void {
+        this.walkPrompt.set(false);
+        if (view === 'walkthrough') {
+            this.startWalkthrough();
+            return;
+        }
+        this.activeView.set(view);
+        this.labelsVisible.set(true);
+        this.ceilingsVisible.set(false);
+        this.sectionSlider.set(view === 'top' ? PlanSectionHeight : SectionMax);
+        this.showView(view, true);
+    }
+
+    /** The 3D view starts at the link's camera when it has one. */
+    private showView(view: 'overview' | 'top', animate: boolean): void {
+        const camera = this.settings()?.camera ?? null;
+        if (view === 'overview' && camera !== null) {
+            this.viewer().setCameraPose(camera, animate);
+        } else {
+            this.viewer().setView(view, animate);
+        }
+    }
+
+    /** A view to show around the walk: 3D if allowed, otherwise the plan (the server requires one of them). */
+    private fallbackView(): 'overview' | 'top' {
+        const views = this.settings()?.views ?? [];
+        return !views.includes('overview') && views.includes('top') ? 'top' : 'overview';
+    }
+
+    protected startWalkthrough(): void {
+        this.walkPrompt.set(false);
+        this.ceilingsVisible.set(true);
+        this.labelsVisible.set(false);
+        this.sectionSlider.set(SectionMax);
+        this.activeView.set('walkthrough');
+        this.walkLocked.set(false);
+        this.walking.set(true);
+        // Synchronously within the click: the pointer lock needs the user gesture.
+        this.viewer().startWalkthrough();
+    }
+
+    /** Esc: the engine flies back to the overview; continue to the link's own 3D shot or the plan. */
+    protected onWalkthroughEnded(): void {
+        this.walking.set(false);
+        this.walkLocked.set(false);
+        const view = this.fallbackView();
+        this.activeView.set(view);
+        this.labelsVisible.set(true);
+        this.ceilingsVisible.set(false);
+        this.sectionSlider.set(view === 'top' ? PlanSectionHeight : SectionMax);
+        this.showView(view, true);
+    }
+
+    protected switchVariant(change: {setId: number; groupId: number}): void {
+        this.scene.update((scene) =>
+            scene === null
+                ? scene
+                : {...scene, variantSets: scene.variantSets?.map((s) => (s.id === change.setId ? {...s, activeGroupId: change.groupId} : s))},
+        );
+    }
+
+    protected onSectionInput(event: Event): void {
+        this.sectionSlider.set(Number((event.target as HTMLInputElement).value));
+    }
+}

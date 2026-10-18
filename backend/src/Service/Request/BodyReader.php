@@ -68,4 +68,63 @@ final readonly class BodyReader
 
 		return $list;
 	}
+
+	/** @param array<string, mixed> $data */
+	public static function bool(array $data, string $key): bool
+	{
+		$value = $data[$key] ?? null;
+		if (!is_bool($value)) {
+			throw new InvalidRequestException(sprintf('Field "%s" must be a boolean.', $key));
+		}
+
+		return $value;
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @return array<string, mixed>
+	 */
+	public static function object(array $data, string $key): array
+	{
+		$value = $data[$key] ?? null;
+		if (!is_array($value) || array_is_list($value) && $value !== []) {
+			throw new InvalidRequestException(sprintf('Field "%s" must be an object.', $key));
+		}
+
+		/** @var array<string, mixed> $object */
+		$object = $value;
+
+		return $object;
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @return array<string, mixed>|null
+	 */
+	public static function optionalObject(array $data, string $key): ?array
+	{
+		if (($data[$key] ?? null) === null) {
+			return null;
+		}
+
+		return self::object($data, $key);
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @return list<string>
+	 */
+	public static function stringList(array $data, string $key): array
+	{
+		$value = $data[$key] ?? null;
+		$list = [];
+		foreach (is_array($value) && array_is_list($value) ? $value : [null] as $item) {
+			if (!is_string($item)) {
+				throw new InvalidRequestException(sprintf('Field "%s" must be a list of strings.', $key));
+			}
+			$list[] = $item;
+		}
+
+		return $list;
+	}
 }

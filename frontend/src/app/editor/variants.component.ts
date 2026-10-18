@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, output} from '@angular/core';
 import {Group, Scene, VariantSet} from '@app/models/scene';
 
 import {EditorStore} from './editor.store';
@@ -6,7 +6,8 @@ import {EditorStore} from './editor.store';
 /**
  * Switches between the variants of each variant set (e.g. the kitchen with or without its island). Switching is
  * a shared change like any edit, so it works outside edit mode too, but not on a saved version. While editing,
- * a set's name selects it and variants can be added.
+ * a set's name selects it and variants can be added. With `local` (a share link's guest, no `EditorStore`) a
+ * switch is only emitted, for the page to show it without saving.
  */
 @Component({
     selector: 'fd-variants',
@@ -24,7 +25,7 @@ import {EditorStore} from './editor.store';
                             type="button"
                             [class.active]="entry.set.activeGroupId === variant.id"
                             [attr.aria-pressed]="entry.set.activeGroupId === variant.id"
-                            [disabled]="readonly() || editor.busy()"
+                            [disabled]="readonly() || busy()"
                             (click)="switchTo(entry.set, variant)"
                         >
                             {{ variant.name }}
@@ -33,10 +34,10 @@ import {EditorStore} from './editor.store';
                 </div>
                 @if (editing()) {
                     <div class="variant-set__actions">
-                        <button type="button" [disabled]="editor.busy() || entry.set.activeGroupId === null" (click)="add(entry.set, true)">
+                        <button type="button" [disabled]="busy() || entry.set.activeGroupId === null" (click)="add(entry.set, true)">
                             + Copy of shown
                         </button>
-                        <button type="button" [disabled]="editor.busy()" (click)="add(entry.set, false)">+ Empty variant</button>
+                        <button type="button" [disabled]="busy()" (click)="add(entry.set, false)">+ Empty variant</button>
                     </div>
                 }
             </div>
@@ -135,8 +136,13 @@ export class VariantsComponent {
     /** A saved version: the variants are shown but cannot be switched. */
     public readonly readonly = input(false);
     public readonly editing = input(false);
+    public readonly local = input(false);
 
-    protected readonly editor = inject(EditorStore);
+    public readonly switched = output<{setId: number; groupId: number}>();
+
+    /** Not provided on the share link page; `editing` is never set there. */
+    protected readonly editor = inject(EditorStore, {optional: true});
+    protected readonly busy = computed(() => this.editor?.busy() ?? false);
 
     protected readonly entries = computed((): {set: VariantSet; variants: Group[]}[] => {
         const groups = this.scene().groups ?? [];
@@ -144,16 +150,21 @@ export class VariantsComponent {
     });
 
     protected switchTo(set: VariantSet, variant: Group): void {
-        if (set.activeGroupId !== variant.id) {
-            void this.editor.switchVariant(set.id, variant.id);
+        if (set.activeGroupId === variant.id) {
+            return;
+        }
+        if (this.local()) {
+            this.switched.emit({setId: set.id, groupId: variant.id});
+        } else {
+            void this.editor?.switchVariant(set.id, variant.id);
         }
     }
 
     protected add(set: VariantSet, copy: boolean): void {
-        void this.editor.addVariant(set.id, copy ? set.activeGroupId : null);
+        void this.editor?.addVariant(set.id, copy ? set.activeGroupId : null);
     }
 
     protected select(set: VariantSet): void {
-        this.editor.select({kind: 'variantSet', id: set.id});
+        this.editor?.select({kind: 'variantSet', id: set.id});
     }
 }

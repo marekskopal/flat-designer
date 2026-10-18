@@ -22,6 +22,12 @@ export const appRoutes: Routes = [
         loadComponent: async () => (await import('@app/oauth/oauth-authorize.component')).OAuthAuthorizeComponent,
     },
     {
+        // A share link: a guest view of one floor, also for signed-in users (no guard).
+        path: 's/:token',
+        title: 'Shared view · Flat Designer',
+        loadComponent: async () => (await import('@app/shared-viewer/shared-viewer-page.component')).SharedViewerPageComponent,
+    },
+    {
         path: '',
         component: LayoutComponent,
         canActivate: [authGuard],

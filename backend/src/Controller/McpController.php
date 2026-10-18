@@ -78,7 +78,7 @@ final readonly class McpController
 			return $this->unauthorized($request, 'Invalid or expired access token.');
 		}
 
-		$this->userContext->setUser($authorization->user);
+		$this->userContext->setUser($authorization->user, DiscoveryUrl::baseUrl($request));
 		$client = $this->clientService->findByClientId($authorization->clientId);
 		$this->actorContext->setAgent($authorization->clientId, $client->clientName ?? $authorization->clientId);
 
