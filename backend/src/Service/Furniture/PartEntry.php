@@ -9,7 +9,8 @@ use FlatDesigner\Service\Furniture\Expression\Expression;
 /** One entry of a definition's `parts`, read and with its expressions parsed; `resolve()` makes one part of it. */
 final readonly class PartEntry
 {
-	private const array Keys = ['type', 'name', 'when', 'repeat', 'material', 'x', 'y', 'z', 'w', 'h', 'd'];
+	/** The keys every part has; the others are options of its type. */
+	public const array Keys = ['type', 'name', 'when', 'repeat', 'material', 'x', 'y', 'z', 'w', 'h', 'd'];
 
 	private const array Geometry = ['x', 'y', 'z', 'w', 'h', 'd'];
 

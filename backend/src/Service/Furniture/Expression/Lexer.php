@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Furniture\Expression;
 
-/** Splits an expression into tokens: numbers (`12`, `0.5`), 'strings' / "strings", identifiers and operators. */
+/**
+ * Splits an expression into tokens: numbers (`12`, `0.5`), 'strings' / "strings", identifiers and operators. Positions
+ * (in the tokens and the error messages) count characters, as the TS twin's do.
+ */
 final readonly class Lexer
 {
 	private const array Operators = ['<=', '>=', '==', '!=', '&&', '||', '+', '-', '*', '/', '%', '(', ')', ',', '?', ':', '<', '>', '!'];
@@ -14,45 +17,45 @@ final readonly class Lexer
 	{
 		$tokens = [];
 		$position = 0;
-		while ($position < strlen($source)) {
-			if (preg_match('/\G\s+/', $source, $match, 0, $position) === 1) {
-				$position += strlen($match[0]);
+		$length = mb_strlen($source);
+		while ($position < $length) {
+			$rest = mb_substr($source, $position);
+			if (preg_match('/^\s+/u', $rest, $match) === 1) {
+				$position += mb_strlen($match[0]);
 				continue;
 			}
-			$token = self::readToken($source, $position);
+			$token = self::readToken($rest, $position);
 			$tokens[] = $token;
-			$position += strlen($token->value) + ($token->type === TokenTypeEnum::String ? 2 : 0);
+			$position += mb_strlen($token->value) + ($token->type === TokenTypeEnum::String ? 2 : 0);
 		}
-		$tokens[] = new Token(TokenTypeEnum::End, '', strlen($source));
+		$tokens[] = new Token(TokenTypeEnum::End, '', $length);
 
 		return $tokens;
 	}
 
-	private static function readToken(string $source, int $position): Token
+	/** @param string $rest the source from `$position` on */
+	private static function readToken(string $rest, int $position): Token
 	{
-		if (preg_match('/\G[0-9]+(\.[0-9]+)?/', $source, $match, 0, $position) === 1) {
+		if (preg_match('/^[0-9]+(\.[0-9]+)?/', $rest, $match) === 1) {
 			return new Token(TokenTypeEnum::Number, $match[0], $position);
 		}
-		if (preg_match('/\G[A-Za-z_][A-Za-z0-9_]*/', $source, $match, 0, $position) === 1) {
+		if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*/', $rest, $match) === 1) {
 			return new Token(TokenTypeEnum::Identifier, $match[0], $position);
 		}
 
-		$char = $source[$position];
+		$char = mb_substr($rest, 0, 1);
 		if ($char === '"' || $char === "'") {
-			$end = strpos($source, $char, $position + 1);
+			$end = mb_strpos($rest, $char, 1);
 			if ($end === false) {
 				throw new ExpressionException(ExpressionErrorEnum::Syntax, sprintf('Unterminated string at %d.', $position));
 			}
 
-			return new Token(TokenTypeEnum::String, substr($source, $position + 1, $end - $position - 1), $position);
+			return new Token(TokenTypeEnum::String, mb_substr($rest, 1, $end - 1), $position);
 		}
 
-		$operator = self::operator(substr($source, $position));
+		$operator = self::operator($rest);
 		if ($operator === null) {
-			throw new ExpressionException(
-				ExpressionErrorEnum::Syntax,
-				sprintf('Unexpected "%s" at %d.', mb_substr(substr($source, $position), 0, 1), $position),
-			);
+			throw new ExpressionException(ExpressionErrorEnum::Syntax, sprintf('Unexpected "%s" at %d.', $char, $position));
 		}
 
 		return new Token(TokenTypeEnum::Operator, $operator, $position);

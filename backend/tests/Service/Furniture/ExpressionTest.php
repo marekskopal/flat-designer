@@ -70,13 +70,16 @@ final class ExpressionTest extends TestCase
 		self::assertSame(282.0, $expression->evaluate(['W' => 600.0, 't' => 18.0]));
 	}
 
-	public function testErrorNamesThePosition(): void
+	public function testErrorNamesThePositionInCharacters(): void
 	{
-		try {
-			Parser::parse('W +* 2');
-			self::fail('Expected a syntax error.');
-		} catch (ExpressionException $exception) {
-			self::assertSame('Unexpected "*" at 3.', $exception->getMessage());
+		$cases = ['W +* 2' => 'Unexpected "*" at 3.', "'déčko' == x +" => 'Unexpected end of expression.', "'ěšč' ~ 1" => 'Unexpected "~" at 6.'];
+		foreach ($cases as $source => $message) {
+			try {
+				Parser::parse($source);
+				self::fail('Expected a syntax error.');
+			} catch (ExpressionException $exception) {
+				self::assertSame($message, $exception->getMessage());
+			}
 		}
 	}
 }

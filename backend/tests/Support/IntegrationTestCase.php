@@ -11,6 +11,7 @@ use Laminas\Diactoros\UploadedFile;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use const JSON_THROW_ON_ERROR;
+use const PHP_URL_QUERY;
 use const UPLOAD_ERR_OK;
 
 /** Dispatches requests through the production router and middleware stack against the test database. */
@@ -44,6 +45,10 @@ abstract class IntegrationTestCase extends TestCase
 		?string $bearerToken = null,
 	): ResponseInterface {
 		$request = new ServerRequest([], [], $path, $method);
+		parse_str((string) parse_url($path, PHP_URL_QUERY), $query);
+		if ($query !== []) {
+			$request = $request->withQueryParams($query);
+		}
 
 		if ($body !== null) {
 			$request = $request
