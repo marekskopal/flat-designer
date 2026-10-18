@@ -24,7 +24,9 @@ export type ItemKind =
     | 'FlushPlate'
     | 'Fixture'
     | 'Fence'
-    | 'Wardrobe';
+    | 'Wardrobe'
+    | 'Chair'
+    | 'Table';
 
 export type PlanPoint = [number, number];
 
@@ -136,6 +138,13 @@ export interface WardrobeParams {
     profileMaterialId?: number;
     /** Height (mm) under the doors; 60 by default. */
     plinth?: number;
+}
+
+export interface ChairParams {
+    /** Top of the seat (mm above the floor); 460 by default. */
+    seatHeight?: number;
+    /** Width (mm) of the seat at the back; the item width is the front. As wide as the front by default. */
+    backWidth?: number;
 }
 
 export interface Item {

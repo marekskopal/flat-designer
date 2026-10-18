@@ -22,7 +22,7 @@ final readonly class ItemTools
 	private const array ParamsSchema = [
 		'type' => ['object', 'null'],
 		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params); '
-			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet) and of Wardrobe',
+			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet), Wardrobe and Chair',
 		'properties' => [
 			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts / doors'],
 			'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles],
@@ -59,6 +59,8 @@ final readonly class ItemTools
 				'description' => 'Wardrobe: door numbers faced with mirror, counted from the left as seen from the front',
 			],
 			'profileMaterialId' => ['type' => 'integer', 'description' => 'Wardrobe: material of the door frames and tracks (default aluminium)'],
+			'seatHeight' => ['type' => 'integer', 'minimum' => 1, 'description' => 'Chair: mm from the floor to the top of the seat (default 460)'],
+			'backWidth' => ['type' => 'integer', 'minimum' => 1, 'description' => 'Chair: mm of the seat at the back (default: the width)'],
 		],
 		'additionalProperties' => true,
 		'default' => null,

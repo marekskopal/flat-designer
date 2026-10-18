@@ -134,7 +134,10 @@ export class MaterialLibrary {
         }
 
         const layout = tileLayout(dto);
-        if (layout !== null && dto.texture !== null) {
+        const woodPhoto = dto.pattern === 'Wood' && dto.texture !== null && dto.tileWidth !== null && dto.tileHeight !== null;
+        if (woodPhoto) {
+            texture = this.woodTexture(dto, grain);
+        } else if (layout !== null && dto.texture !== null) {
             texture = this.imageTexture(dto, layout);
         } else if (layout !== null) {
             texture = proceduralLayoutTexture(dto, layout);
@@ -149,8 +152,10 @@ export class MaterialLibrary {
         }
 
         texture.colorSpace = THREE.SRGBColorSpace;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
+        // A photo of solid wood does not tile seamlessly; mirrored repeats hide the seams.
+        const wrapping = woodPhoto ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping;
+        texture.wrapS = wrapping;
+        texture.wrapT = wrapping;
         texture.anisotropy = this.maxAnisotropy;
         this.textures.set(key, texture);
         return texture;
@@ -181,6 +186,19 @@ export class MaterialLibrary {
             }
         };
         image.src = new URL(`assets/${dto.texture}`, document.baseURI).href;
+        return texture;
+    }
+
+    /**
+     * Solid wood from the photo of a piece of one board, grain along the image height: `tileWidth` × `tileHeight`
+     * mm across × along the grain. Horizontal grain turns the image a quarter (the repeat applies after the turn).
+     */
+    private woodTexture(dto: MaterialDto, grain: GrainDirection): THREE.Texture {
+        const texture = new THREE.TextureLoader().load(new URL(`assets/${dto.texture}`, document.baseURI).href);
+        texture.repeat.set(1000 / (dto.tileWidth ?? 1000), 1000 / (dto.tileHeight ?? 1000));
+        if (grain === 'horizontal') {
+            texture.rotation = Math.PI / 2;
+        }
         return texture;
     }
 

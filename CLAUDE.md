@@ -97,7 +97,7 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   locally only. Expired or unknown links answer 404. MCP: `ShareLinkTools` (list/create/update/delete_share_link;
   the URL comes from the base URL `McpController` puts in `McpUserContext`).
 - Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
-  `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`; they predate `AddProjectsAndFloors` and still
+  `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`, `SeedDiningTable`; the early ones predate `AddProjectsAndFloors` and still
   say `flat_id`). Data changes go into a new migration; editing an applied one needs
   `make reset-db` (drops the DB volume).
 - Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`; each builds the

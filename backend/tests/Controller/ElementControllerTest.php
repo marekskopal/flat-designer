@@ -6,6 +6,7 @@ namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
+use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
@@ -26,6 +27,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
 #[CoversClass(WardrobeParamsValidator::class)]
+#[CoversClass(ChairParamsValidator::class)]
 final class ElementControllerTest extends EditorTestCase
 {
 	public function testCreateItemFillsDefaultsLogsAndBumpsRevision(): void
@@ -157,6 +159,22 @@ final class ElementControllerTest extends EditorTestCase
 			['profileMaterialId' => 999999],
 		] as $invalid) {
 			$response = $this->edit('PATCH', 'items', self::id($wardrobe), ['params' => $invalid]);
+			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
+		}
+	}
+
+	public function testChairParamsAreValidated(): void
+	{
+		$chair = $this->create('items', ['kind' => 'Chair', 'name' => 'Chair']);
+		self::assertSame([400, 395, 885], [$chair['width'], $chair['depth'], $chair['height']]);
+
+		$params = ['seatHeight' => 460, 'backWidth' => 375];
+		$changed = $this->jsonBody($this->edit('PATCH', 'items', self::id($chair), ['params' => $params]));
+		self::assertIsArray($changed['element']);
+		self::assertSame($params, $changed['element']['params']);
+
+		foreach ([['seatHeight' => 885], ['seatHeight' => '460'], ['backWidth' => 401], ['backWidth' => 0]] as $invalid) {
+			$response = $this->edit('PATCH', 'items', self::id($chair), ['params' => $invalid]);
 			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
 		}
 	}

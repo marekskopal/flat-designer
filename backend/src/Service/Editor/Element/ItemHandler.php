@@ -18,6 +18,7 @@ use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
+use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 use FlatDesigner\Service\Editor\WardrobeParamsValidator;
@@ -111,6 +112,7 @@ final readonly class ItemHandler implements ElementHandler
 		$params = self::params($fields->raw('params'));
 		CabinetParamsValidator::validate($kind, $params, $width, $height);
 		WardrobeParamsValidator::validate($kind, $params, $height);
+		ChairParamsValidator::validate($kind, $params, $width, $height);
 		if ($kind === ItemKindEnum::Wardrobe && is_int($params['profileMaterialId'] ?? null)) {
 			$this->materialResolver->resolve($params['profileMaterialId']);
 		}

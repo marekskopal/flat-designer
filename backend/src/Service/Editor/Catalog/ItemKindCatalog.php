@@ -22,6 +22,9 @@ final readonly class ItemKindCatalog
 		. 'counted from the left as seen from the front, e.g. [3], faced with mirror; profileMaterialId: material of the frames and '
 		. 'tracks (default aluminium); plinth: mm under the doors (default 60).';
 
+	private const string ChairParams = 'seatHeight: mm from the floor to the top of the seat (default 460); backWidth: mm of the seat at the '
+		. 'back, the width being its front (default: as wide as the front).';
+
 	private const array Kinds = [
 		'BaseCabinet' => ['description' => 'Kitchen base cabinet standing on the floor, front facing the rotation direction.', 'width' => 600, 'depth' => 580, 'height' => 860, 'z' => 0, 'params' => self::CabinetParams],
 		'WallCabinet' => ['description' => 'Kitchen wall cabinet hung on the wall; z is its bottom edge.', 'width' => 600, 'depth' => 350, 'height' => 720, 'z' => 1450, 'params' => self::CabinetParams],
@@ -42,6 +45,8 @@ final readonly class ItemKindCatalog
 		'Fixture' => ['description' => 'Chrome bathroom fixture on a wall.', 'width' => 60, 'depth' => 70, 'height' => 60, 'z' => 600, 'params' => 'type: "bathMixer" | "showerHead" | "bidetSpray".'],
 		'Fence' => ['description' => 'Garden panel fence along x with posts.', 'width' => 2500, 'depth' => 60, 'height' => 1530, 'z' => 0, 'params' => 'panelLength: mm between posts (default 2500); baseBoard: mm of concrete base board.'],
 		'Wardrobe' => ['description' => 'Built-in wardrobe with sliding doors on two tracks in aluminium frames; the item material is the carcass and door panels.', 'width' => 2400, 'depth' => 600, 'height' => 2400, 'z' => 0, 'params' => self::WardrobeParams],
+		'Chair' => ['description' => 'Solid wood chair with tapered legs and a two-rail back; front facing the rotation direction, the item material is the wood.', 'width' => 400, 'depth' => 395, 'height' => 885, 'z' => 0, 'params' => self::ChairParams],
+		'Table' => ['description' => 'Solid wood table: a top of boards along the width, tapered legs and an apron; the item material is the wood.', 'width' => 1320, 'depth' => 700, 'height' => 780, 'z' => 0, 'params' => 'none'],
 	];
 
 	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string}> */
