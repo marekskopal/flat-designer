@@ -123,7 +123,9 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   suites build them. UI: the Add menu's "Furniture —" groups and the inspector's `definition` / `custom` fields
   (`CustomParamsComponent`, form generated from the definition's parameters and slots; `EditorStore.definitions`);
   `/furniture` (library, `?projectId=`) and `/furniture/:id` (JSON editor with `FurniturePreview`, a framework-free
-  one-item scene in `viewer/engine/custom/preview.ts`).
+  one-item scene in `viewer/engine/custom/preview.ts`). MCP: `FurnitureTools` (list/get/create/update/delete/copy/
+  validate_furniture_definition; `FurnitureTools::Format` is the format text agents get, a test checks it names every
+  `PartTypeEnum`), `add_item`/`update_item` take `definitionId`, `get_floor` returns `definitions`.
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run

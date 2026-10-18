@@ -9,6 +9,8 @@ use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Mcp\Server\EmptyObjectSchemaValidator;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
+use FlatDesigner\Mcp\Tool\FloorTools;
+use FlatDesigner\Mcp\Tool\FurnitureTools;
 use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
@@ -37,6 +39,8 @@ use stdClass;
 #[CoversClass(ShareLinkTools::class)]
 #[CoversClass(ItemTools::class)]
 #[CoversClass(GroupTools::class)]
+#[CoversClass(FurnitureTools::class)]
+#[CoversClass(FloorTools::class)]
 #[CoversClass(VariantTools::class)]
 #[CoversClass(WallTools::class)]
 #[CoversClass(OpeningTools::class)]
@@ -72,9 +76,12 @@ final class McpServerTest extends IntegrationTestCase
 			'add_room',
 			'add_variant',
 			'add_wall',
+			'copy_furniture_definition',
+			'create_furniture_definition',
 			'create_group',
 			'create_share_link',
 			'create_variant_set',
+			'delete_furniture_definition',
 			'delete_group',
 			'delete_item',
 			'delete_opening',
@@ -85,8 +92,10 @@ final class McpServerTest extends IntegrationTestCase
 			'duplicate_group',
 			'duplicate_item',
 			'get_floor',
+			'get_furniture_definition',
 			'get_project',
 			'list_changes',
+			'list_furniture_definitions',
 			'list_item_kinds',
 			'list_materials',
 			'list_projects',
@@ -101,11 +110,13 @@ final class McpServerTest extends IntegrationTestCase
 			'switch_variant',
 			'undo',
 			'ungroup',
+			'update_furniture_definition',
 			'update_item',
 			'update_opening',
 			'update_room',
 			'update_share_link',
 			'update_wall',
+			'validate_furniture_definition',
 		], $names);
 	}
 
@@ -354,6 +365,106 @@ final class McpServerTest extends IntegrationTestCase
 
 		$this->client->call('delete_share_link', ['projectId' => $projectId, 'shareLinkId' => $link['id']]);
 		self::assertSame([], $this->client->call('list_share_links', ['projectId' => $projectId]));
+	}
+
+	public function testDesignsCustomFurnitureAndPlacesIt(): void
+	{
+		$projectId = $this->project->id;
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$definition = [
+			'format' => 1,
+			'size' => ['width' => 600, 'depth' => 300, 'height' => 900],
+			'parameters' => [['key' => 't', 'type' => 'int', 'default' => 18, 'min' => 10, 'max' => 40]],
+			'materialSlots' => [['key' => 'carcass', 'default' => 'kitchen-oak']],
+			'parts' => [
+				['type' => 'board', 'name' => 'Side', 'repeat' => ['count' => 2], 'x' => 'i * (W - t)', 'y' => 0, 'z' => 0, 'w' => 't', 'h' => 'H', 'd' => 'D', 'material' => 'carcass'],
+				['type' => 'board', 'name' => 'Top', 'x' => 't', 'y' => 'H - t', 'z' => 0, 'w' => 'W - 2*t', 'h' => 't', 'd' => 'D', 'material' => 'carcass'],
+			],
+		];
+		self::assertSame([], $this->client->call('list_furniture_definitions'));
+
+		// The agent checks its geometry first, also at another size.
+		$broken = $definition;
+		$broken['parts'][1]['w'] = 'W - 2*thickness';
+		$check = $this->client->call('validate_furniture_definition', ['definition' => $broken]);
+		self::assertIsArray($check);
+		self::assertFalse($check['valid']);
+		self::assertIsArray($check['error']);
+		self::assertSame('parts[1].w', $check['error']['path']);
+		$check = $this->client->call(
+			'validate_furniture_definition',
+			['definition' => $definition, 'width' => 1000, 'values' => ['t' => 25]],
+		);
+		self::assertIsArray($check);
+		self::assertTrue($check['valid']);
+		self::assertIsList($check['parts']);
+		self::assertSame([0, 975, 25], array_column($check['parts'], 'x'));
+
+		$created = $this->client->call('create_furniture_definition', ['name' => 'Low shelf', 'definition' => $definition]);
+		self::assertIsArray($created);
+		self::assertSame('user', $created['scope']);
+		$definitionId = $created['id'];
+		$listed = $this->client->call('list_furniture_definitions', ['projectId' => $projectId]);
+		self::assertIsList($listed);
+		self::assertIsArray($listed[0]);
+		self::assertSame(['Low shelf', ['width' => 600, 'depth' => 300, 'height' => 900]], [$listed[0]['name'], $listed[0]['size']]);
+
+		$added = $this->client->call(
+			'add_item',
+			['projectId' => $projectId, 'floorId' => $floorId, 'kind' => 'Custom', 'definitionId' => $definitionId, 'x' => 1000, 'y' => 500],
+		);
+		self::assertIsArray($added);
+		self::assertIsArray($added['element']);
+		self::assertSame(
+			[$definitionId, 'Low shelf', 600],
+			[$added['element']['definitionId'], $added['element']['name'], $added['element']['width']],
+		);
+		$floor = $this->client->call('get_floor', ['projectId' => $projectId, 'floorId' => $floorId]);
+		self::assertIsArray($floor);
+		self::assertIsList($floor['definitions']);
+		self::assertSame([$definitionId], array_column($floor['definitions'], 'id'));
+
+		$this->client->call('update_furniture_definition', ['definitionId' => $definitionId, 'name' => 'Low oak shelf']);
+		$read = $this->client->call('get_furniture_definition', ['definitionId' => $definitionId]);
+		self::assertIsArray($read);
+		self::assertSame(['Low oak shelf', 1], [$read['name'], $read['itemCount']]);
+		self::assertIsArray($read['definition']);
+		self::assertSame($definition['parts'], $read['definition']['parts']);
+
+		// Back to a plain box: the definition is cleared with the kind.
+		$box = $this->client->call('update_item', [
+			'projectId' => $projectId,
+			'floorId' => $floorId,
+			'itemId' => $added['element']['id'],
+			'kind' => 'Box',
+			'params' => [],
+			'clear' => ['definitionId'],
+		]);
+		self::assertIsArray($box);
+		self::assertIsArray($box['element']);
+		self::assertSame(['Box', null], [$box['element']['kind'], $box['element']['definitionId']]);
+
+		$copy = $this->client->call(
+			'copy_furniture_definition',
+			['definitionId' => $definitionId, 'scope' => 'project', 'projectId' => $projectId],
+		);
+		self::assertIsArray($copy);
+		self::assertSame(['project', $projectId], [$copy['scope'], $copy['projectId']]);
+		$deleted = $this->client->call('delete_furniture_definition', ['definitionId' => $definitionId]);
+		self::assertIsArray($deleted);
+		self::assertSame('Low oak shelf', $deleted['name']);
+		$isError = false;
+		$message = $this->client->call('get_furniture_definition', ['definitionId' => $definitionId], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringStartsWith('Furniture definition', $message);
+		self::assertStringEndsWith('not found. Use list_furniture_definitions to see the available ones.', $message);
+		$message = $this->client->call(
+			'create_furniture_definition',
+			['name' => 'Everyone\'s', 'definition' => $definition, 'scope' => 'global'],
+			$isError,
+		);
+		self::assertSame('Only admins manage global furniture.', $message);
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void
