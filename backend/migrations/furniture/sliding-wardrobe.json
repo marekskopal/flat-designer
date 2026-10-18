@@ -1,0 +1,174 @@
+{
+ "name": "Sliding wardrobe",
+ "description": "Built-in wardrobe: carcass, closed interior, plinth, and sliding doors on two tracks in aluminium frames, any of them a mirror.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2400,
+   "depth": 600,
+   "height": 2400
+  },
+  "parameters": [
+   {
+    "key": "doors",
+    "label": "Doors, from the left",
+    "type": "list",
+    "minItems": 2,
+    "maxItems": 6,
+    "fields": [
+     {
+      "key": "mirror",
+      "label": "Mirror",
+      "type": "bool",
+      "default": false
+     }
+    ],
+    "default": [
+     {},
+     {},
+     {}
+    ]
+   },
+   {
+    "key": "plinth",
+    "label": "Plinth",
+    "type": "int",
+    "default": 60,
+    "min": 0,
+    "max": 200,
+    "unit": "mm"
+   },
+   {
+    "key": "t",
+    "label": "Carcass board",
+    "type": "int",
+    "default": 19,
+    "min": 12,
+    "max": 30,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "opening": "W - 2*t",
+   "top": "H - t",
+   "zone": "60",
+   "lt": "20",
+   "trackGap": "5",
+   "overlap": "25",
+   "n": "len(doors)",
+   "lw": "(opening + (n - 1) * overlap) / n",
+   "leafBottom": "plinth + 15",
+   "leafH": "top - 40 - leafBottom"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Carcass and doors"
+   },
+   {
+    "key": "profile",
+    "label": "Frames and tracks",
+    "default": "aluminium-brushed"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": 0,
+    "z": 0,
+    "w": "t",
+    "h": "H",
+    "d": "D",
+    "material": "body",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": "t",
+    "y": "top",
+    "z": 0,
+    "w": "opening",
+    "h": "t",
+    "d": "D",
+    "material": "body",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Interior",
+    "x": "t",
+    "y": "plinth",
+    "z": 0,
+    "w": "opening",
+    "h": "top - plinth",
+    "d": "D - zone",
+    "material": "body"
+   },
+   {
+    "type": "board",
+    "name": "Plinth",
+    "when": "plinth > 0",
+    "x": "t",
+    "y": 0,
+    "z": 0,
+    "w": "opening",
+    "h": "plinth",
+    "d": "D - zone + t",
+    "material": "body",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Top track",
+    "x": "t",
+    "y": "top - 40",
+    "z": "D - zone",
+    "w": "opening",
+    "h": 40,
+    "d": "zone",
+    "material": "profile"
+   },
+   {
+    "type": "board",
+    "name": "Bottom rail",
+    "x": "t",
+    "y": "plinth",
+    "z": "D - zone",
+    "w": "opening",
+    "h": 15,
+    "d": "zone",
+    "material": "profile"
+   },
+   {
+    "type": "slidingDoor",
+    "name": "Door",
+    "repeat": {
+     "over": "doors",
+     "as": "door"
+    },
+    "x": "t + door_index * (lw - overlap)",
+    "y": "leafBottom",
+    "z": "door_index % 2 == 0 ? D - lt : D - 2*lt - trackGap",
+    "w": "lw",
+    "h": "leafH",
+    "d": "lt",
+    "material": "body",
+    "profile": "profile",
+    "mirror": {
+     "expr": "door.mirror"
+    }
+   }
+  ]
+ }
+}

@@ -23,7 +23,7 @@ type ListParameter = Extract<DefinitionParameter, {type: 'list'}>;
 /**
  * Form for the params of a Custom item, generated from its furniture definition: an input per parameter (empty = the
  * default), a list parameter as rows of its fields (add, remove, move; empty field = its default) and a material per
- * slot (empty = the item material for the first slot, otherwise the slot's default). Shows why the definition does not
+ * slot (empty = the slot's default, or the item material for the first slot and for a slot without a default). Shows why the definition does not
  * work out at the item's size. Every change emits the whole new params object.
  */
 @Component({

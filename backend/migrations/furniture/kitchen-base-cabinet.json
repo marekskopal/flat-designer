@@ -1,0 +1,299 @@
+{
+ "name": "Kitchen base cabinet",
+ "description": "Base cabinet on a recessed plinth: carcass boards, fronts stacked from the bottom (doors, drawers, appliances), blind corners.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 600,
+   "depth": 580,
+   "height": 860
+  },
+  "parameters": [
+   {
+    "key": "fronts",
+    "label": "Fronts, from the bottom",
+    "type": "list",
+    "minItems": 1,
+    "maxItems": 8,
+    "fields": [
+     {
+      "key": "type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+       "door",
+       "drawer",
+       "oven",
+       "microwave"
+      ],
+      "default": "door"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "int",
+      "min": 1,
+      "optional": true,
+      "unit": "mm"
+     },
+     {
+      "key": "count",
+      "label": "Leaves",
+      "type": "int",
+      "default": 1,
+      "min": 1,
+      "max": 4
+     },
+     {
+      "key": "handle",
+      "label": "Handle",
+      "type": "select",
+      "options": [
+       "horizontal",
+       "vertical",
+       "none"
+      ],
+      "optional": true
+     }
+    ],
+    "default": [
+     {
+      "type": "door"
+     }
+    ]
+   },
+   {
+    "key": "plinth",
+    "label": "Plinth",
+    "type": "int",
+    "default": 100,
+    "min": 0,
+    "max": 300,
+    "unit": "mm"
+   },
+   {
+    "key": "handle",
+    "label": "Handle",
+    "type": "select",
+    "options": [
+     "horizontal",
+     "vertical",
+     "none"
+    ],
+    "default": "horizontal"
+   },
+   {
+    "key": "handleSide",
+    "label": "Handle side of a single door",
+    "type": "select",
+    "options": [
+     "right",
+     "left"
+    ],
+    "default": "right"
+   },
+   {
+    "key": "blindLeft",
+    "label": "Blind left (corner)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "unit": "mm"
+   },
+   {
+    "key": "blindRight",
+    "label": "Blind right (corner)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "unit": "mm"
+   },
+   {
+    "key": "t",
+    "label": "Carcass board",
+    "type": "int",
+    "default": 18,
+    "min": 12,
+    "max": 30,
+    "unit": "mm"
+   },
+   {
+    "key": "ft",
+    "label": "Front thickness",
+    "type": "int",
+    "default": 19,
+    "min": 12,
+    "max": 40,
+    "unit": "mm"
+   },
+   {
+    "key": "gap",
+    "label": "Gap around fronts",
+    "type": "int",
+    "default": 3,
+    "min": 0,
+    "max": 10,
+    "unit": "mm"
+   },
+   {
+    "key": "recess",
+    "label": "Plinth recess",
+    "type": "int",
+    "default": 50,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "heights": "share(field(fronts, 'height'), H - plinth)",
+   "starts": "offsets(heights)",
+   "carcassD": "D - ft"
+  },
+  "materialSlots": [
+   {
+    "key": "carcass",
+    "label": "Carcass"
+   },
+   {
+    "key": "fronts",
+    "label": "Fronts"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": "plinth",
+    "z": 0,
+    "w": "t",
+    "h": "H - plinth",
+    "d": "carcassD",
+    "material": "carcass",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Bottom",
+    "x": "t",
+    "y": "plinth",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": "t",
+    "y": "H - t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "t",
+    "y": "plinth + t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "H - plinth - 2*t",
+    "d": 4,
+    "material": "carcass"
+   },
+   {
+    "type": "board",
+    "name": "Plinth",
+    "when": "plinth > 0",
+    "x": 2,
+    "y": 0,
+    "z": 0,
+    "w": "W - 4",
+    "h": "plinth",
+    "d": "carcassD - recess",
+    "material": "carcass",
+    "grain": "horizontal",
+    "shade": 0.3
+   },
+   {
+    "type": "assembly",
+    "name": "Front slot",
+    "repeat": {
+     "over": "fronts",
+     "as": "f"
+    },
+    "x": "blindLeft",
+    "y": "plinth + starts[f_index]",
+    "z": "carcassD",
+    "w": "W - blindLeft - blindRight",
+    "h": "heights[f_index]",
+    "d": "ft",
+    "parts": [
+     {
+      "type": "front",
+      "name": "Front",
+      "when": "f.type == 'door' || f.type == 'drawer'",
+      "repeat": {
+       "count": "(f.type == 'door' ? f.count : 1)",
+       "as": "k"
+      },
+      "x": "k * AW / (f.type == 'door' ? f.count : 1) + gap / 2",
+      "y": "gap / 2",
+      "z": 0,
+      "w": "AW / (f.type == 'door' ? f.count : 1) - gap",
+      "h": "AH - gap",
+      "d": "AD",
+      "material": "fronts",
+      "edges": [
+       "left",
+       "right",
+       "bottom",
+       "top"
+      ],
+      "kind": {
+       "expr": "f.type"
+      },
+      "handle": {
+       "expr": "f.handle ?? handle"
+      },
+      "handleSide": {
+       "expr": "(f.type == 'door' ? f.count : 1) == 2 ? (k == 0 ? 'right' : 'left') : handleSide"
+      }
+     },
+     {
+      "type": "appliance",
+      "name": "Appliance",
+      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "x": "gap / 2",
+      "y": "gap / 2",
+      "z": 0,
+      "w": "AW - gap",
+      "h": "AH - gap",
+      "d": "AD",
+      "kind": {
+       "expr": "f.type"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

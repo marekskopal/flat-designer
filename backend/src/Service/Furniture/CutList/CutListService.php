@@ -22,7 +22,8 @@ use const JSON_THROW_ON_ERROR;
 /**
  * The cut list of the Custom items of a floor or a whole project (working copy, shown variants only): each item's
  * definition evaluated at its size and values, the parts in their materials — the item's choice for the slot, the
- * item material for the first slot, otherwise the slot's default — as the viewer draws them (`partMaterial()`).
+ * item material for the first slot, otherwise the slot's default, the item material for a slot without one — as the
+ * viewer draws them (`partMaterial()`).
  */
 final readonly class CutListService
 {
@@ -154,6 +155,7 @@ final readonly class CutListService
 		$slot = $index === null ? null : $slots[$index];
 		$default = is_array($slot) ? ($slot['default'] ?? null) : null;
 
-		return is_string($default) ? ($byCode[$default] ?? null) : null;
+		// A slot without a default takes the item material, like a part without a slot.
+		return is_string($default) ? ($byCode[$default] ?? null) : $byId($item->materialId);
 	}
 }
