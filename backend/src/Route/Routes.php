@@ -17,6 +17,10 @@ enum Routes: string
 
 	case Materials = '/api/materials';
 	case ItemKinds = '/api/item-kinds';
+	case FurnitureDefinitions = '/api/furniture-definitions';
+	case FurnitureDefinitionValidate = '/api/furniture-definitions/validate';
+	case FurnitureDefinition = '/api/furniture-definitions/{definitionId:number}';
+	case FurnitureDefinitionCopy = '/api/furniture-definitions/{definitionId:number}/copy';
 	case RealtimeSubscription = '/api/realtime/subscription';
 
 	case Mcp = '/mcp';

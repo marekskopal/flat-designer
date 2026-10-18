@@ -14,6 +14,11 @@ final class MaterialRepository extends ARepository
 		return $this->findOne(['id' => $materialId]);
 	}
 
+	public function findByCode(string $code): ?Material
+	{
+		return $this->findOne(['code' => $code]);
+	}
+
 	/** @return list<Material> */
 	public function findAllOrdered(): array
 	{

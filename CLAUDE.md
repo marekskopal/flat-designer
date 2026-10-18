@@ -108,6 +108,10 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   parts whose sizes are expressions. The expression language and the definition evaluator exist twice, PHP
   (`Service/Furniture`) and TS (`viewer/engine/custom`), kept identical by the shared fixtures
   `backend/tests/fixtures/furniture-{expressions,definitions}.json`; change both twins and add a fixture case together.
+  `FurnitureDefinition` rows (`/api/furniture-definitions`) are global (`user`/`project` null, admins write), a user's
+  library or a project's (`FurnitureDefinitionProvider` has the access rules; soft-deleted). `DefinitionValidator` adds
+  what the evaluator does not read (unknown keys, `size`, `PartTypeEnum` options, material codes) and stores the JSON
+  with empty objects kept `{}`.
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run
