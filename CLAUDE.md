@@ -104,6 +104,10 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
 - Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`; each builds the
   item body in its local frame. A new item kind needs the PHP enum, a migration extending the
   `items.kind` column enum, the TS `ItemKind` union and a builder.
+- Furniture definitions (in progress, `docs/furniture-definitions-plan.md`): custom furniture as data — parameters and
+  parts whose sizes are expressions. The expression language and the definition evaluator exist twice, PHP
+  (`Service/Furniture`) and TS (`viewer/engine/custom`), kept identical by the shared fixtures
+  `backend/tests/fixtures/furniture-{expressions,definitions}.json`; change both twins and add a fixture case together.
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run

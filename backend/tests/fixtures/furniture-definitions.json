@@ -1,0 +1,6452 @@
+{
+ "_comment": "Twin fixture of the furniture definition evaluator: read by backend/tests/Service/Furniture/DefinitionEvaluatorTest.php and frontend/src/app/viewer/engine/custom/definition.spec.ts. `size` is the item's width/depth/height (W/D/H), `values` the item's parameter values; `parts` the expected resolved parts (mm, origin at the left-bottom-back corner) or `error` the expected error.",
+ "cases": [
+  {
+   "name": "open shelf with the defaults",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "parts": [
+    {
+     "name": "Left side",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Right side",
+     "type": "board",
+     "index": null,
+     "x": 782,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 0,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 1,
+     "x": 18,
+     "y": 594,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 2,
+     "x": 18,
+     "y": 1188,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 3,
+     "x": 18,
+     "y": 1782,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Back",
+     "type": "board",
+     "index": null,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 764,
+     "h": 1800,
+     "d": 4,
+     "material": "back",
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "values override the defaults",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "shelves": 2,
+    "back": false
+   },
+   "parts": [
+    {
+     "name": "Left side",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Right side",
+     "type": "board",
+     "index": null,
+     "x": 782,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 0,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 1,
+     "x": 18,
+     "y": 1782,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    }
+   ]
+  },
+  {
+   "name": "lengths round half away from zero",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "shelves": 5
+   },
+   "parts": [
+    {
+     "name": "Left side",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Right side",
+     "type": "board",
+     "index": null,
+     "x": 782,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 0,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 1,
+     "x": 18,
+     "y": 446,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 2,
+     "x": 18,
+     "y": 891,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 3,
+     "x": 18,
+     "y": 1337,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 4,
+     "x": 18,
+     "y": 1782,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Back",
+     "type": "board",
+     "index": null,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 764,
+     "h": 1800,
+     "d": 4,
+     "material": "back",
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "whole-number float value counts as int",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "t": 18.0,
+    "shelves": 2,
+    "back": false
+   },
+   "parts": [
+    {
+     "name": "Left side",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Right side",
+     "type": "board",
+     "index": null,
+     "x": 782,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 1800,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 0,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 1,
+     "x": 18,
+     "y": 1782,
+     "z": 0,
+     "w": 764,
+     "h": 18,
+     "d": 300,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    }
+   ]
+  },
+  {
+   "name": "the item size drives the parts",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 250,
+    "height": 900
+   },
+   "values": {
+    "shelves": 2,
+    "back": false
+   },
+   "parts": [
+    {
+     "name": "Left side",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 900,
+     "d": 250,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Right side",
+     "type": "board",
+     "index": null,
+     "x": 582,
+     "y": 0,
+     "z": 0,
+     "w": 18,
+     "h": 900,
+     "d": 250,
+     "material": "carcass",
+     "props": {
+      "grain": "vertical"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 0,
+     "x": 18,
+     "y": 0,
+     "z": 0,
+     "w": 564,
+     "h": 18,
+     "d": 250,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    },
+    {
+     "name": "Shelf",
+     "type": "board",
+     "index": 1,
+     "x": 18,
+     "y": 882,
+     "z": 0,
+     "w": 564,
+     "h": 18,
+     "d": 250,
+     "material": "carcass",
+     "props": {
+      "grain": "horizontal"
+     }
+    }
+   ]
+  },
+  {
+   "name": "when sees the repeat index, custom index name, defaults for name and material",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "cylinder",
+      "repeat": {
+       "count": 3,
+       "as": "k"
+      },
+      "when": "k != 1",
+      "x": "k * 100",
+      "y": 0,
+      "z": 0,
+      "w": 30,
+      "h": "H / 2",
+      "d": 30,
+      "segments": 12
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "cylinder",
+     "type": "cylinder",
+     "index": 0,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 30,
+     "h": 900,
+     "d": 30,
+     "material": null,
+     "props": {
+      "segments": 12
+     }
+    },
+    {
+     "name": "cylinder",
+     "type": "cylinder",
+     "index": 2,
+     "x": 200,
+     "y": 0,
+     "z": 0,
+     "w": 30,
+     "h": 900,
+     "d": 30,
+     "material": null,
+     "props": {
+      "segments": 12
+     }
+    }
+   ]
+  },
+  {
+   "name": "repeat count 0 and select values",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "taperedLeg",
+      "repeat": {
+       "count": "base == 'legs' ? 4 : 0"
+      },
+      "x": "i % 2 * (W - 40)",
+      "y": 0,
+      "z": "floor(i / 2) * (D - 40)",
+      "w": 40,
+      "h": 100,
+      "d": 40
+     }
+    ]
+   },
+   "parts": []
+  },
+  {
+   "name": "four legs",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "base": "legs"
+   },
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "taperedLeg",
+      "repeat": {
+       "count": "base == 'legs' ? 4 : 0"
+      },
+      "x": "i % 2 * (W - 40)",
+      "y": 0,
+      "z": "floor(i / 2) * (D - 40)",
+      "w": 40,
+      "h": 100,
+      "d": 40
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "taperedLeg",
+     "type": "taperedLeg",
+     "index": 0,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 40,
+     "h": 100,
+     "d": 40,
+     "material": null,
+     "props": {}
+    },
+    {
+     "name": "taperedLeg",
+     "type": "taperedLeg",
+     "index": 1,
+     "x": 760,
+     "y": 0,
+     "z": 0,
+     "w": 40,
+     "h": 100,
+     "d": 40,
+     "material": null,
+     "props": {}
+    },
+    {
+     "name": "taperedLeg",
+     "type": "taperedLeg",
+     "index": 2,
+     "x": 0,
+     "y": 0,
+     "z": 260,
+     "w": 40,
+     "h": 100,
+     "d": 40,
+     "material": null,
+     "props": {}
+    },
+    {
+     "name": "taperedLeg",
+     "type": "taperedLeg",
+     "index": 3,
+     "x": 760,
+     "y": 0,
+     "z": 260,
+     "w": 40,
+     "h": 100,
+     "d": 40,
+     "material": null,
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "derived may use earlier derived",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "derived": {
+     "a": "W / 2",
+     "b": "a - 100"
+    },
+    "parts": [
+     {
+      "type": "board",
+      "x": "b",
+      "y": 0,
+      "z": 0,
+      "w": "a",
+      "h": 10,
+      "d": 10
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "board",
+     "type": "board",
+     "index": null,
+     "x": 300,
+     "y": 0,
+     "z": 0,
+     "w": 400,
+     "h": 10,
+     "d": 10,
+     "material": null,
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "negative positions are fine",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "board",
+      "x": -20,
+      "y": "-0.4",
+      "z": "-0.5",
+      "w": 1,
+      "h": 1,
+      "d": 1
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "board",
+     "type": "board",
+     "index": null,
+     "x": -20,
+     "y": 0,
+     "z": -1,
+     "w": 1,
+     "h": 1,
+     "d": 1,
+     "material": null,
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "int value above max",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "shelves": 20
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.shelves"
+   }
+  },
+  {
+   "name": "int value not whole",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "t": 18.5
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.t"
+   }
+  },
+  {
+   "name": "bool value of wrong type",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "back": 1
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.back"
+   }
+  },
+  {
+   "name": "select value not an option",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "base": "wheels"
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.base"
+   }
+  },
+  {
+   "name": "unknown value",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "values": {
+    "drawers": 2
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.drawers"
+   }
+  },
+  {
+   "name": "item too narrow",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 30,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "nonPositiveSize",
+    "path": "parts[2].w"
+   }
+  },
+  {
+   "name": "unknown variable in a part",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitchh",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "unknownVariable",
+    "path": "parts[2].y"
+   }
+  },
+  {
+   "name": "syntax error in a part",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H +",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "syntax",
+    "path": "parts[0].h"
+   }
+  },
+  {
+   "name": "derived uses a later one",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "a": "b",
+     "b": "1"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "unknownVariable",
+    "path": "derived.a"
+   }
+  },
+  {
+   "name": "when is not boolean",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "t",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "type",
+    "path": "parts[3].when"
+   }
+  },
+  {
+   "name": "geometry is not a number",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "back",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "type",
+    "path": "parts[0].x"
+   }
+  },
+  {
+   "name": "repeat count not whole",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves / 3",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[2].repeat.count"
+   }
+  },
+  {
+   "name": "repeat count above 100",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": 101,
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "limit",
+    "path": "parts[2].repeat.count"
+   }
+  },
+  {
+   "name": "repeat index shadows a variable",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "t"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[2].repeat.as"
+   }
+  },
+  {
+   "name": "more than 500 parts",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "board",
+      "repeat": {
+       "count": 100
+      },
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "repeat": {
+       "count": 100
+      },
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "repeat": {
+       "count": 100
+      },
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "repeat": {
+       "count": 100
+      },
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "repeat": {
+       "count": 100
+      },
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "repeat": {
+       "count": 100
+      },
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     }
+    ]
+   },
+   "error": {
+    "code": "limit",
+    "path": "parts[5]"
+   }
+  },
+  {
+   "name": "unsupported format",
+   "definition": {
+    "format": 2,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "format"
+   }
+  },
+  {
+   "name": "reserved parameter key",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "W",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].key"
+   }
+  },
+  {
+   "name": "parameter key not an identifier",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "board thickness",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].key"
+   }
+  },
+  {
+   "name": "derived key clashes with a parameter",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "t": "1"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "derived.t"
+   }
+  },
+  {
+   "name": "default outside min/max",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 1,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[1].default"
+   }
+  },
+  {
+   "name": "select default not an option",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "wheels",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[3].default"
+   }
+  },
+  {
+   "name": "unknown parameter type",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "float",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].type"
+   }
+  },
+  {
+   "name": "undefined material slot",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "fronts",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].material"
+   }
+  },
+  {
+   "name": "missing geometry",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[1].d"
+   }
+  },
+  {
+   "name": "boolean geometry",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": true,
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[1].d"
+   }
+  },
+  {
+   "name": "missing type",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[1].type"
+   }
+  },
+  {
+   "name": "more than 200 part entries",
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [],
+    "parts": [
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     },
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": 1,
+      "h": 1,
+      "d": 1
+     }
+    ]
+   },
+   "error": {
+    "code": "limit",
+    "path": "parts"
+   }
+  }
+ ]
+}
