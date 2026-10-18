@@ -18,7 +18,8 @@ use MarekSkopal\ORM\Enum\Type;
  * origin at the inner south-west corner of the floor, y pointing north). `ceilingHeight` is null for
  * open-air areas (terrace). `wallFinishes` is an optional JSON list of horizontal bands
  * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left
- * free. Above the bands the walls keep their own material.
+ * free. Above the bands the walls keep their own material. `tileOriginX/Y` is a plan point where tile joints
+ * cross: the floor tiles, the wall bands and tiled items of the room share that grid (null: the plan origin).
  */
 #[Entity(repositoryClass: RoomRepository::class)]
 class Room extends AEntity
@@ -26,6 +27,12 @@ class Room extends AEntity
 	/** Set when deleted in the editor; the row stays so undo can bring it back with the same id. */
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $tileOriginX = null;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $tileOriginY = null;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

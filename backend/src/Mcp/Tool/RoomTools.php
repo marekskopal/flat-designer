@@ -14,7 +14,7 @@ use Mcp\Schema\ToolAnnotations;
 /** Rooms: floor areas with their finishes. */
 final readonly class RoomTools
 {
-	private const array Clearable = ['ceilingHeight', 'floorMaterialId'];
+	private const array Clearable = ['ceilingHeight', 'floorMaterialId', 'tileOriginX', 'tileOriginY'];
 
 	private const array WallFinishesSchema = [
 		'type' => ['array', 'null'],
@@ -39,6 +39,8 @@ final readonly class RoomTools
 	 * @param int|null $ceilingHeight mm (default 2600)
 	 * @param int|null $floorMaterialId floor surface from list_materials
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes horizontal bands around the room's walls, mm above the floor (e.g. tiling 0–1200)
+	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross; floor tiles, wall bands and tiled items share the grid
+	 * @param int|null $tileOriginY plan y (mm) of that point
 	 */
 	#[McpTool(name: 'add_room', description: 'Add a room (floor area) to a floor.')]
 	public function addRoom(
@@ -52,6 +54,8 @@ final readonly class RoomTools
 		?int $floorMaterialId = null,
 		#[Schema(definition: self::WallFinishesSchema)]
 		?array $wallFinishes = null,
+		?int $tileOriginX = null,
+		?int $tileOriginY = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -65,6 +69,8 @@ final readonly class RoomTools
 				'ceilingHeight' => $ceilingHeight,
 				'floorMaterialId' => $floorMaterialId,
 				'wallFinishes' => $wallFinishes,
+				'tileOriginX' => $tileOriginX,
+				'tileOriginY' => $tileOriginY,
 			]),
 		);
 	}
@@ -73,7 +79,9 @@ final readonly class RoomTools
 	 * @param list<list<int>>|null $polygon new outline as [[x, y], …] in mm
 	 * @param string|null $type "Living" | "Bedroom" | "Bathroom" | "Toilet" | "Hallway" | "Terrace" | "Garden"
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes replaces all bands; [] removes them
-	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId"
+	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross (floor, wall bands and tiled items share the grid)
+	 * @param int|null $tileOriginY plan y (mm) of that point
+	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId", "tileOriginX", "tileOriginY"
 	 */
 	#[McpTool(name: 'update_room', description: 'Change a room. Only the given fields change.')]
 	public function updateRoom(
@@ -88,6 +96,8 @@ final readonly class RoomTools
 		?int $floorMaterialId = null,
 		#[Schema(definition: self::WallFinishesSchema)]
 		?array $wallFinishes = null,
+		?int $tileOriginX = null,
+		?int $tileOriginY = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -103,6 +113,8 @@ final readonly class RoomTools
 				'ceilingHeight' => $ceilingHeight,
 				'floorMaterialId' => $floorMaterialId,
 				'wallFinishes' => $wallFinishes,
+				'tileOriginX' => $tileOriginX,
+				'tileOriginY' => $tileOriginY,
 			], $clear, self::Clearable),
 		);
 	}

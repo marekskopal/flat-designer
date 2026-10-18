@@ -24,6 +24,8 @@ final readonly class RoomDto
 		public ?int $ceilingHeight,
 		public ?int $floorMaterialId,
 		public array $wallFinishes,
+		public ?int $tileOriginX,
+		public ?int $tileOriginY,
 	) {
 	}
 
@@ -44,6 +46,8 @@ final readonly class RoomDto
 				fn (array $band): WallFinishDto => new WallFinishDto($band['materialId'], $band['bottom'], $band['top']),
 				JsonDecoder::decodeWallFinishes($room->wallFinishes),
 			),
+			tileOriginX: $room->tileOriginX,
+			tileOriginY: $room->tileOriginY,
 		);
 	}
 

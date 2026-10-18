@@ -50,6 +50,8 @@ const scene: Scene = {
             ceilingHeight: null,
             floorMaterialId: null,
             wallFinishes: [],
+            tileOriginX: null,
+            tileOriginY: null,
         },
     ],
     walls: [wall],

@@ -23,6 +23,8 @@ export class MaterialLibrary {
     private readonly idByCode = new Map<string, number>();
     private readonly cache = new Map<string, THREE.Material>();
     private readonly textures = new Map<string, THREE.Texture>();
+    /** Materials of laid tiles, whose UVs `alignTiles` puts on the room's tile grid. */
+    private readonly tiles = new WeakSet<THREE.Material>();
 
     public constructor(materials: readonly MaterialDto[], private readonly maxAnisotropy: number) {
         for (const material of materials) {
@@ -61,6 +63,10 @@ export class MaterialLibrary {
         return material as THREE.MeshStandardMaterial;
     }
 
+    public isTile(material: THREE.Material): boolean {
+        return this.tiles.has(material);
+    }
+
     /** Whether the material is one of the library's (shared, disposed with the library rather than with a mesh). */
     public owns(material: THREE.Material): boolean {
         for (const cached of this.cache.values()) {
@@ -91,6 +97,9 @@ export class MaterialLibrary {
 
         if (dto.pattern !== 'Plain') {
             material.map = this.texture(dto, grain);
+        }
+        if (dto.pattern === 'Tiles' && tileLayout(dto) !== null) {
+            this.tiles.add(material);
         }
         if (dto.code.startsWith('led')) {
             material.emissive = new THREE.Color(dto.color);

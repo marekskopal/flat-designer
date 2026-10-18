@@ -272,8 +272,9 @@ export class ViewerEngine {
         content.add(this.parts.root);
         this.joints = wallJoints(scene.walls);
 
+        const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         for (const item of scene.items) {
-            const object = buildItem(item, this.materials);
+            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0));
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -297,16 +298,22 @@ export class ViewerEngine {
             return;
         }
 
+        const rooms = diffById(previous.rooms, scene.rooms);
         const items = diffById(previous.items, scene.items);
-        for (const id of [...items.removed, ...items.changed.map((i) => i.id)]) {
+        // Tiled items follow their room's tile grid.
+        const changedRooms = new Set(rooms.changed.map((r) => r.id));
+        const changedItems = new Set(items.changed.map((i) => i.id));
+        const rebuiltItems = scene.items.filter((i) => changedItems.has(i.id) || (i.roomId !== null && changedRooms.has(i.roomId)));
+        for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
             if (object !== undefined) {
                 this.disposeObject(object);
             }
             this.items.delete(id);
         }
-        for (const item of items.changed) {
-            const object = buildItem(item, materials);
+        const roomsById = new Map(scene.rooms.map((room) => [room.id, room]));
+        for (const item of rebuiltItems) {
+            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0));
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -335,7 +342,6 @@ export class ViewerEngine {
             this.indexWalls();
         }
 
-        const rooms = diffById(previous.rooms, scene.rooms);
         for (const id of [...rooms.removed, ...rooms.changed.map((r) => r.id)]) {
             this.removeRoom(id);
         }
@@ -347,7 +353,6 @@ export class ViewerEngine {
         }
         if (wallsChanged) {
             // Wall finishes leave the doors free, so they follow the walls of unchanged rooms too.
-            const changedRooms = new Set(rooms.changed.map((r) => r.id));
             for (const room of scene.rooms) {
                 const roomParts = parts.rooms.get(room.id);
                 if (roomParts === undefined || changedRooms.has(room.id) || roomParts.finishes === null) {

@@ -292,6 +292,12 @@ final class ElementControllerTest extends EditorTestCase
 			['name' => 'L', 'code' => 'B_07', 'polygon' => [[0, 0], [3000, 0], [3000, 1000], [1000, 1000], [1000, 2000], [0, 2000]]],
 		);
 		self::assertEquals(4, $room['area']);
+		self::assertSame([null, null], [$room['tileOriginX'], $room['tileOriginY']]);
+
+		$changed = $this->jsonBody($this->edit('PATCH', 'rooms', self::id($room), ['tileOriginX' => 139, 'tileOriginY' => -251]));
+		self::assertIsArray($changed['element']);
+		self::assertSame([139, -251], [$changed['element']['tileOriginX'], $changed['element']['tileOriginY']]);
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['tileOriginX' => 1.5])->getStatusCode());
 	}
 
 	public function testDeletingRoomUnlinksItsItemsInTheScene(): void

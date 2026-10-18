@@ -67,6 +67,9 @@ export interface Room {
     ceilingHeight: number | null;
     floorMaterialId: number | null;
     wallFinishes: WallFinish[];
+    /** Plan point (mm) where tile joints cross; floor tiles, wall bands and tiled items share the grid. Null: plan origin. */
+    tileOriginX: number | null;
+    tileOriginY: number | null;
 }
 
 export interface Opening {

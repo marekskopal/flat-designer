@@ -131,6 +131,28 @@ export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tole
 }
 
 /** Signed area by the shoelace formula, mm²; positive for counter-clockwise polygons. */
+/** Plan point (mm) where a room's tile joints cross; the plan origin when the room sets none. */
+export function tileOrigin(room: Pick<Room, 'tileOriginX' | 'tileOriginY'> | undefined): Vec2 {
+    return {x: room?.tileOriginX ?? 0, y: room?.tileOriginY ?? 0};
+}
+
+/**
+ * Texture coordinates (metres) of a point on a tiled surface, on the grid whose joints cross at `origin`.
+ * Point and origin are plan mm, `height` mm above the floor; the normal is in plan axes plus `up`. Floors
+ * and other level faces take u, v from plan x, y. Upright faces take u along the face (to the right as seen
+ * from the front) measured from the origin's projection, so joints continue the floor's around every
+ * corner, and v from the floor, so rows start with a whole tile at the floor.
+ */
+export function tileUv(point: Vec2, height: number, normal: {x: number; y: number; up: number}, origin: Vec2): [number, number] {
+    const dx = point.x - origin.x;
+    const dy = point.y - origin.y;
+    if (Math.abs(normal.up) > 0.5) {
+        return [dx * MM, dy * MM];
+    }
+    const length = Math.hypot(normal.x, normal.y);
+    return [((dx * -normal.y + dy * normal.x) / length) * MM, height * MM];
+}
+
 export function polygonSignedArea(polygon: readonly PlanPoint[]): number {
     let sum = 0;
     for (let i = 0; i < polygon.length; i++) {

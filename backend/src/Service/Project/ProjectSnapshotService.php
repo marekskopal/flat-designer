@@ -183,6 +183,9 @@ final readonly class ProjectSnapshotService
 				floorMaterial: $materials[$data->nullableInt('floorMaterialId') ?? 0] ?? null,
 				wallFinishes: $wallFinishes === null || $wallFinishes === [] ? null : json_encode($wallFinishes, JSON_THROW_ON_ERROR),
 			));
+			// Snapshots taken before the tile origin existed have none.
+			$room->tileOriginX = $data->nullableInt('tileOriginX');
+			$room->tileOriginY = $data->nullableInt('tileOriginY');
 			$this->roomRepository->persist($room);
 			$restored[$data->int('id')] = $room;
 		}

@@ -37,7 +37,7 @@ final readonly class RoomHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['code', 'name', 'type', 'polygon', 'ceilingHeight', 'floorMaterialId', 'wallFinishes'];
+		return ['code', 'name', 'type', 'polygon', 'ceilingHeight', 'floorMaterialId', 'wallFinishes', 'tileOriginX', 'tileOriginY'];
 	}
 
 	/** @return list<string> */
@@ -57,6 +57,8 @@ final readonly class RoomHandler implements ElementHandler
 			'ceilingHeight' => 2600,
 			'floorMaterialId' => null,
 			'wallFinishes' => [],
+			'tileOriginX' => null,
+			'tileOriginY' => null,
 		];
 	}
 
@@ -93,6 +95,8 @@ final readonly class RoomHandler implements ElementHandler
 			'ceilingHeight' => $fields->nullableInt('ceilingHeight', 1000, State::MaxSize),
 			'floorMaterialId' => $floorMaterialId,
 			'wallFinishes' => $this->wallFinishes($fields->raw('wallFinishes')),
+			'tileOriginX' => $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit),
+			'tileOriginY' => $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit),
 		];
 	}
 
@@ -145,6 +149,8 @@ final readonly class RoomHandler implements ElementHandler
 		$room->floorMaterial = $this->materialResolver->resolve($fields->nullableId('floorMaterialId'));
 		$wallFinishes = $fields->raw('wallFinishes');
 		$room->wallFinishes = $wallFinishes === [] || $wallFinishes === null ? null : json_encode($wallFinishes, JSON_THROW_ON_ERROR);
+		$room->tileOriginX = $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit);
+		$room->tileOriginY = $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit);
 		$this->roomRepository->persist($room);
 	}
 

@@ -8,6 +8,7 @@ import {
     polygonBounds,
     polygonSignedArea,
     SquareEnds,
+    tileOrigin,
     WallEnds,
     wallFrame,
     WallGap,
@@ -16,6 +17,7 @@ import {
     WallPiece,
     wallPieces,
 } from './plan-geometry';
+import {alignTiles} from './tiling';
 
 const SlabThickness = 300;
 const FrameWidth = 50;
@@ -138,6 +140,7 @@ export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
     floor.receiveShadow = true;
     floor.name = `floor:${room.code}`;
     floor.userData = {roomId: room.id};
+    alignTiles(floor, tileOrigin(room), materials);
     return floor;
 }
 
@@ -212,8 +215,8 @@ const LiningThickness = 8;
 
 /**
  * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band. Door
- * openings on the edge stay free; UVs continue across pieces so the tile grid runs from the room
- * corner and from the floor.
+ * openings on the edge stay free; UVs continue across pieces from the room corner and the floor, and tiles
+ * are then put on the room's tile grid (`alignTiles`), the one its floor uses.
  */
 export function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
@@ -251,6 +254,7 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         group.add(edge);
     });
 
+    alignTiles(group, tileOrigin(room), materials);
     return group;
 }
 

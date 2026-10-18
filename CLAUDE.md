@@ -96,6 +96,10 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   `make import-files DIR=source_files PROJECT=1`.
 - Textures for real products are cut from the reference photos into `frontend/src/assets/textures/` (one
   plank or tile per image); the material's `tile_width`/`tile_height` give its real size.
+- Tile grid: a room's `tileOriginX/Y` (plan mm, null = plan origin) is where tile joints cross. `alignTiles()`
+  (`viewer/engine/tiling.ts`) recomputes the UVs of every `Tiles` material mesh from its plan position, so the
+  floor, the wall bands (rows start at the floor) and tiled items of that room (bath panel, pre-wall box) share
+  the grid, as in the bathroom/WC renders.
 - PHP style: tabs, slevomat ruleset copied from ukolio, phpstan at max level. TS: eslint config from
   ukolio, explicit member accessibility and return types, max line length 150.
 
