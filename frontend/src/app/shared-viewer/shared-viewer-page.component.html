@@ -1,4 +1,5 @@
 <fd-viewer
+    #viewerRef
     class="viewer"
     [scene]="scene()"
     [ceilingsVisible]="ceilingsVisible()"
@@ -10,7 +11,9 @@
     (walkthroughLocked)="walkLocked.set($event)"
 />
 
-@if (walking()) {
+@if (walking() && touchWalk) {
+    <fd-walk-pad [viewer]="viewerRef" />
+} @else if (walking()) {
     <div class="walk-hint" role="status">
         @if (!walkLocked()) {
             <strong class="walk-hint__prompt">Click the view to look around</strong>

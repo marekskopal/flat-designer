@@ -6,15 +6,14 @@ import {VariantsComponent} from '@app/editor/variants.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
+import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {ViewerComponent} from '@app/viewer/viewer.component';
+import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 
 /** Section heights offered by the slider (mm); the top value means "no cut" (as on the viewer page). */
 const SectionMin = 900;
 const SectionMax = 2700;
 const PlanSectionHeight = 1300;
-
-/** Walking needs the pointer lock and a mouse. */
-const walkthroughSupported = (): boolean => 'exitPointerLock' in document && matchMedia('(pointer: fine)').matches;
 
 /**
  * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
@@ -23,7 +22,7 @@ const walkthroughSupported = (): boolean => 'exitPointerLock' in document && mat
  */
 @Component({
     selector: 'fd-shared-viewer-page',
-    imports: [ViewerComponent, DecimalPipe, VariantsComponent],
+    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent],
     templateUrl: './shared-viewer-page.component.html',
     styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -54,13 +53,13 @@ export class SharedViewerPageComponent {
         }
         return error instanceof HttpErrorResponse ? errorMessage(error) : 'Could not load the shared view.';
     });
-    protected readonly views = computed(() =>
-        (this.settings()?.views ?? []).filter((view) => view !== 'walkthrough' || walkthroughSupported()),
-    );
+    protected readonly views = computed(() => this.settings()?.views ?? []);
     protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
 
     protected readonly activeView = signal<ShareView>('overview');
     protected readonly walking = signal(false);
+    /** No mouse to capture: the walk shows on-screen arrows instead of the keyboard hint. */
+    protected readonly touchWalk = walkthroughTouchMode();
     protected readonly walkLocked = signal(false);
     /** The link opens in the walk, which needs a click to capture the mouse: a button asks for it. */
     protected readonly walkPrompt = signal(false);

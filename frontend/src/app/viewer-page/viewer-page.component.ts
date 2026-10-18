@@ -28,7 +28,9 @@ import {RealtimeService} from '@app/services/realtime.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {Selection} from '@app/viewer/engine/selection';
 import {ViewPreset} from '@app/viewer/engine/viewer-engine';
+import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
+import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 import {switchMap} from 'rxjs';
 
 /** Section heights offered by the slider (mm); the top value means "no cut". */
@@ -45,9 +47,6 @@ interface ViewOption {
     label: string;
 }
 
-/** Walking needs the pointer lock and a mouse. */
-const walkthroughSupported = (): boolean => 'exitPointerLock' in document && matchMedia('(pointer: fine)').matches;
-
 const optionalId = (value: string | number | null | undefined): number | null =>
     value === null || value === undefined || value === '' ? null : Number(value);
 
@@ -57,7 +56,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
  */
 @Component({
     selector: 'fd-viewer-page',
-    imports: [ViewerComponent, DecimalPipe, RouterLink, EditorPanelComponent, VariantsComponent, ShareLinkFormComponent],
+    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, RouterLink, EditorPanelComponent, VariantsComponent, ShareLinkFormComponent],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
@@ -76,7 +75,7 @@ export class ViewerPageComponent {
     protected readonly views: ViewOption[] = [
         {mode: 'overview', label: '3D'},
         {mode: 'top', label: 'Plan'},
-        ...(walkthroughSupported() ? [{mode: 'walkthrough', label: 'Walk'} satisfies ViewOption] : []),
+        {mode: 'walkthrough', label: 'Walk'},
     ];
 
     protected readonly editor = inject(EditorStore);
@@ -120,6 +119,8 @@ export class ViewerPageComponent {
     protected readonly activeView = signal<ViewMode>('overview');
     /** First-person walk in progress: the panel steps aside for the full view. */
     protected readonly walking = signal(false);
+    /** No mouse to capture: the walk shows on-screen arrows instead of the keyboard hint. */
+    protected readonly touchWalk = walkthroughTouchMode();
     /** The walk has the mouse captured; otherwise the walker is asked to click the view. */
     protected readonly walkLocked = signal(false);
     protected readonly ceilingsVisible = signal(false);

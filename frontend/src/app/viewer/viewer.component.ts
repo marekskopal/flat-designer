@@ -122,6 +122,16 @@ export class ViewerComponent {
         this.engine()?.startWalkthrough();
     }
 
+    /** Keys held on the on-screen arrows of a touch walk (`KeyboardEvent.code` values). */
+    public setWalkKeys(codes: readonly string[]): void {
+        this.engine()?.setWalkKeys(codes);
+    }
+
+    /** Ends the walk as Esc does (`walkthroughEnded` follows). */
+    public endWalkthrough(): void {
+        this.engine()?.endWalkthrough();
+    }
+
     /** Where the camera looks, in plan mm (placement of new elements). */
     public viewCenter(): {x: number; y: number} {
         return this.engine()?.viewCenter() ?? {x: 0, y: 0};

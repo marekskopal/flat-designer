@@ -83,7 +83,9 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   of the same floor diffs the scene and rebuilds only changed items/walls/rooms (and neighbouring wall
   mitres, `wallJoints()`).
 - Walkthrough (View → Walk): `viewer/engine/walkthrough.ts`, first person at 1630 mm eye height with pointer
-  lock (WASD/arrows, Shift runs, Esc — i.e. losing the lock — returns to the 3D overview). It collides in plan mm
+  lock (WASD/arrows, Shift runs, Esc — i.e. losing the lock — returns to the 3D overview). Without a fine pointer
+  (`walkthroughTouchMode()`) a finger drags the view and `WalkPadComponent` (corner arrows, held as virtual W/A/S/D keys,
+  plus a "Back to 3D" button) stands in for the keyboard. It collides in plan mm
   against `wallColliders()` (wall pieces at floor level; doors are gaps, windows solid), items do not block.
   It starts a step inside the door flagged `openings.entrance` (`entranceWalkStart()`; fallback: a door in an
   exterior wall, then the largest indoor room).

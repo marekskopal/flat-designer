@@ -562,6 +562,16 @@ export class ViewerEngine {
         walkthrough.lock();
     }
 
+    /** Keys held on the on-screen arrows of a touch walk (`KeyboardEvent.code` values). */
+    public setWalkKeys(codes: readonly string[]): void {
+        this.walkthrough?.setVirtualKeys(codes);
+    }
+
+    /** Ends the walk as Esc does: `onWalkthroughEnd` follows. */
+    public endWalkthrough(): void {
+        this.walkthrough?.end();
+    }
+
     /** Back to the orbit controls; with `animate` the camera flies from the walker's eye to the overview. */
     public stopWalkthrough(animate = true): void {
         if (this.walkthrough === null) {

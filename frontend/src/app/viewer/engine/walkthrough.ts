@@ -13,6 +13,8 @@ const RunSpeed = 3000;
 const MaxStep = 100;
 /** Radians per pixel of mouse movement. */
 const LookSensitivity = 0.0022;
+/** Radians per pixel of a finger dragging the view (it grabs the scene, so it turns the other way than the mouse). */
+const TouchLookSensitivity = 0.005;
 const MaxPitch = THREE.MathUtils.degToRad(85);
 /** A wider lens than the orbit view: at eye level 45° feels like looking through a telephoto. */
 export const WalkthroughFov = 70;
@@ -24,10 +26,19 @@ const RightKeys = ['KeyD', 'ArrowRight'];
 const MoveKeys = new Set([...ForwardKeys, ...BackwardKeys, ...LeftKeys, ...RightKeys]);
 
 /**
+ * Without a mouse (phones, tablets) there is no pointer lock: a finger drags the view around and on-screen arrows
+ * stand in for the keys (`Walkthrough.setVirtualKeys()`).
+ */
+export function walkthroughTouchMode(): boolean {
+    return !('exitPointerLock' in document) || !matchMedia('(pointer: fine)').matches;
+}
+
+/**
  * First-person walk through the floor: WASD / arrows move (Shift runs), the mouse looks around while the
  * pointer is locked to the canvas. Positions are plan millimetres; the walker collides with the walls.
  * Esc ends it: the browser releases the pointer lock (the key itself never reaches the page while locked),
- * or, before the lock was acquired, the keydown arrives here.
+ * or, before the lock was acquired, the keydown arrives here. In touch mode (`walkthroughTouchMode()`) a finger
+ * dragging the canvas looks around, and `end()` stands in for Esc.
  */
 export class Walkthrough {
     /** The walk ended (Esc or the pointer lock was released). */
@@ -36,7 +47,12 @@ export class Walkthrough {
     public onLockChange: (locked: boolean) => void = () => undefined;
 
     private readonly keys = new Set<string>();
+    /** Keys held on the on-screen arrows. */
+    private virtualKeys: ReadonlySet<string> = new Set<string>();
     private readonly document: Document;
+    private readonly touch = walkthroughTouchMode();
+    /** The finger dragging the view and where it was last. */
+    private lookPointer: {id: number; x: number; y: number} | null = null;
     private position: Vec2;
     private yaw: number;
     private pitch = 0;
@@ -61,11 +77,15 @@ export class Walkthrough {
         this.document.addEventListener('pointerlockchange', this.handleLockChange);
         this.document.addEventListener('pointerlockerror', this.handleLockError);
         window.addEventListener('blur', this.handleBlur);
+        this.element.addEventListener('pointerdown', this.handleTouchDown);
+        this.element.addEventListener('pointermove', this.handleTouchMove);
+        this.element.addEventListener('pointerup', this.handleTouchUp);
+        this.element.addEventListener('pointercancel', this.handleTouchUp);
     }
 
-    /** Captures the mouse; must run inside a user gesture (a click). */
+    /** Captures the mouse; must run inside a user gesture (a click). Touch mode has nothing to capture. */
     public lock(): void {
-        if (this.locked) {
+        if (this.locked || this.touch) {
             return;
         }
         // Chrome refuses a lock within about a second after the last one was released.
@@ -83,15 +103,26 @@ export class Walkthrough {
         this.applyCamera();
     }
 
+    /** Keys held on the on-screen arrows (codes as in `KeyboardEvent.code`), replacing the previous ones. */
+    public setVirtualKeys(codes: readonly string[]): void {
+        this.virtualKeys = new Set(codes);
+    }
+
+    /** Ends the walk as Esc does (notifies `onExit`). */
+    public end(): void {
+        this.exit();
+    }
+
     /** Advances by `dt` seconds of held keys. */
     public update(dt: number): void {
-        const forward = axis(this.keys, ForwardKeys, BackwardKeys);
-        const strafe = axis(this.keys, RightKeys, LeftKeys);
+        const held = new Set([...this.keys, ...this.virtualKeys]);
+        const forward = axis(held, ForwardKeys, BackwardKeys);
+        const strafe = axis(held, RightKeys, LeftKeys);
         if (forward === 0 && strafe === 0) {
             return;
         }
 
-        const speed = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') ? RunSpeed : WalkSpeed;
+        const speed = held.has('ShiftLeft') || held.has('ShiftRight') ? RunSpeed : WalkSpeed;
         const length = Math.hypot(forward, strafe);
         const distance = speed * Math.min(dt, 0.1);
         // Plan directions of the view: forward (−sin yaw, cos yaw), right (cos yaw, sin yaw).
@@ -116,6 +147,10 @@ export class Walkthrough {
         this.document.removeEventListener('pointerlockchange', this.handleLockChange);
         this.document.removeEventListener('pointerlockerror', this.handleLockError);
         window.removeEventListener('blur', this.handleBlur);
+        this.element.removeEventListener('pointerdown', this.handleTouchDown);
+        this.element.removeEventListener('pointermove', this.handleTouchMove);
+        this.element.removeEventListener('pointerup', this.handleTouchUp);
+        this.element.removeEventListener('pointercancel', this.handleTouchUp);
         if (this.document.pointerLockElement === this.element) {
             this.document.exitPointerLock();
         }
@@ -160,6 +195,30 @@ export class Walkthrough {
         this.applyCamera();
     };
 
+    private readonly handleTouchDown = (event: PointerEvent): void => {
+        if (!this.touch || this.lookPointer !== null) {
+            return;
+        }
+        this.lookPointer = {id: event.pointerId, x: event.clientX, y: event.clientY};
+        this.element.setPointerCapture(event.pointerId);
+    };
+
+    private readonly handleTouchMove = (event: PointerEvent): void => {
+        if (this.lookPointer?.id !== event.pointerId) {
+            return;
+        }
+        this.yaw += (event.clientX - this.lookPointer.x) * TouchLookSensitivity;
+        this.pitch = THREE.MathUtils.clamp(this.pitch + (event.clientY - this.lookPointer.y) * TouchLookSensitivity, -MaxPitch, MaxPitch);
+        this.lookPointer = {id: event.pointerId, x: event.clientX, y: event.clientY};
+        this.applyCamera();
+    };
+
+    private readonly handleTouchUp = (event: PointerEvent): void => {
+        if (this.lookPointer?.id === event.pointerId) {
+            this.lookPointer = null;
+        }
+    };
+
     private readonly handleLockChange = (): void => {
         const locked = this.document.pointerLockElement === this.element;
         if (locked === this.locked) {
@@ -180,6 +239,7 @@ export class Walkthrough {
     /** Keys released while the window has no focus never send keyup. */
     private readonly handleBlur = (): void => {
         this.keys.clear();
+        this.virtualKeys = new Set<string>();
     };
 }
 
