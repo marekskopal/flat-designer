@@ -3250,6 +3250,255 @@
    }
   },
   {
+   "name": "__proto__ is reserved",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "__proto__": "W / 2"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "invalid",
+    "path": "derived.__proto__"
+   }
+  },
+  {
+   "name": "length beyond a billion mm",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 800,
+     "depth": 300,
+     "height": 1800
+    },
+    "parameters": [
+     {
+      "key": "t",
+      "label": "Board thickness",
+      "type": "int",
+      "default": 18,
+      "min": 10,
+      "max": 40,
+      "unit": "mm"
+     },
+     {
+      "key": "shelves",
+      "label": "Shelves",
+      "type": "int",
+      "default": 4,
+      "min": 2,
+      "max": 12
+     },
+     {
+      "key": "back",
+      "label": "Back panel",
+      "type": "bool",
+      "default": true
+     },
+     {
+      "key": "base",
+      "label": "Base",
+      "type": "select",
+      "default": "plinth",
+      "options": [
+       "plinth",
+       "legs"
+      ]
+     }
+    ],
+    "derived": {
+     "innerW": "W - 2*t",
+     "pitch": "(H - t) / (shelves - 1)"
+    },
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass",
+      "default": "oak-veneer"
+     },
+     {
+      "key": "back",
+      "label": "Back",
+      "default": "white-hdf"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Left side",
+      "x": "0",
+      "y": "0",
+      "z": "0",
+      "w": "W * 1000000000",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Right side",
+      "x": "W - t",
+      "y": 0,
+      "z": 0,
+      "w": "t",
+      "h": "H",
+      "d": "D",
+      "material": "carcass",
+      "grain": "vertical"
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "repeat": {
+       "count": "shelves",
+       "as": "i"
+      },
+      "x": "t",
+      "y": "i * pitch",
+      "z": "0",
+      "w": "innerW",
+      "h": "t",
+      "d": "D",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Back",
+      "when": "back",
+      "x": "t",
+      "y": "0",
+      "z": "0",
+      "w": "innerW",
+      "h": "H",
+      "d": 4,
+      "material": "back"
+     }
+    ]
+   },
+   "size": {
+    "width": 800,
+    "depth": 300,
+    "height": 1800
+   },
+   "error": {
+    "code": "limit",
+    "path": "parts[0].w"
+   }
+  },
+  {
    "name": "unsupported format",
    "definition": {
     "format": 2,

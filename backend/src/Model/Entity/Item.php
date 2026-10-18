@@ -27,6 +27,10 @@ class Item extends AEntity
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
 
+	/** For a `Custom` item, the furniture definition it is drawn from (live: editing the definition changes the item). */
+	#[ManyToOne(entityClass: FurnitureDefinition::class, nullable: true)]
+	public ?FurnitureDefinition $definition = null;
+
 	/** The piece of furniture the item is part of; a deleted group is not shown (undo brings it back). */
 	#[ManyToOne(entityClass: ItemGroup::class, nullable: true)]
 	public ?ItemGroup $group = null;

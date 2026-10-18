@@ -14,6 +14,7 @@ use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
@@ -42,9 +43,11 @@ use const JSON_THROW_ON_ERROR;
  *
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
- * [VariantSetDto]}]}` (`groups` / `variantSets` missing in snapshots taken before they existed) — each floor entry plus
- * the materials is exactly the viewer's `SceneDto`, so a version is rendered without touching the
- * working copy. Ids inside are those of the working copy at the time and only link entries together.
+ * [VariantSetDto], definitions: [SceneDefinitionDto]}]}` (`groups` / `variantSets` / `definitions` missing in snapshots
+ * taken before they existed) — each floor entry plus the materials is exactly the viewer's `SceneDto`, so a version is
+ * rendered without touching the working copy, with the furniture definitions as they were. Ids inside are those of the
+ * working copy at the time and only link entries together, except definition ids: a restore links an item to the live
+ * definition of that id while the project may still use it, otherwise to a project copy of the stored one.
  */
 final readonly class ProjectSnapshotService
 {
@@ -60,6 +63,7 @@ final readonly class ProjectSnapshotService
 		private ItemRepository $itemRepository,
 		private ItemGroupRepository $groupRepository,
 		private VariantSetRepository $variantSetRepository,
+		private SnapshotDefinitionRestorer $definitionRestorer,
 	) {
 	}
 
@@ -75,6 +79,7 @@ final readonly class ProjectSnapshotService
 				'items' => $scene->items,
 				'groups' => $scene->groups,
 				'variantSets' => $scene->variantSets,
+				'definitions' => $scene->definitions,
 			];
 		}
 
@@ -142,6 +147,8 @@ final readonly class ProjectSnapshotService
 		foreach ($this->materialRepository->findAllOrdered() as $material) {
 			$materials[$material->id] = $material;
 		}
+		/** @var array<int, FurnitureDefinition|null> $definitions by id in the snapshot, shared by all floors */
+		$definitions = [];
 
 		foreach ($data->objects('floors') as $entry) {
 			$floorData = $entry->object('floor');
@@ -153,7 +160,12 @@ final readonly class ProjectSnapshotService
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
 			$setIds = $this->restoreVariantSets($floor, $sets);
 			$groupIds = $this->restoreGroups($floor, $entry->raw('groups') === null ? [] : $entry->objects('groups'), $setIds);
-			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds, $groupIds);
+			$definitions = $this->definitionRestorer->restore(
+				$project,
+				$entry->raw('definitions') === null ? [] : $entry->objects('definitions'),
+				$definitions,
+			);
+			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds, $groupIds, $definitions);
 			// The active variants, once the groups have their new ids.
 			foreach ($sets as $data) {
 				$set = $setIds[$data->int('id')];
@@ -275,8 +287,9 @@ final readonly class ProjectSnapshotService
 	 * @param array<int, Material> $materials
 	 * @param array<int, Room> $roomIds
 	 * @param array<int, ItemGroup> $groupIds
+	 * @param array<int, FurnitureDefinition|null> $definitions by id in the snapshot (null: no usable copy)
 	 */
-	private function restoreItems(Floor $floor, array $items, array $materials, array $roomIds, array $groupIds): void
+	private function restoreItems(Floor $floor, array $items, array $materials, array $roomIds, array $groupIds, array $definitions): void
 	{
 		foreach ($items as $data) {
 			$params = $data->raw('params');
@@ -296,6 +309,8 @@ final readonly class ProjectSnapshotService
 				params: $params === null || $params === [] ? null : json_encode($params, JSON_THROW_ON_ERROR),
 			));
 			$item->group = $groupIds[$data->nullableInt('groupId') ?? 0] ?? null;
+			// Snapshots taken before Custom items existed have no definition ids.
+			$item->definition = $definitions[$data->nullableInt('definitionId') ?? 0] ?? null;
 			$this->itemRepository->persist($item);
 		}
 	}

@@ -27,4 +27,6 @@ enum ItemKindEnum: string
 	case Wardrobe = 'Wardrobe';
 	case Chair = 'Chair';
 	case Table = 'Table';
+	/** Drawn from a furniture definition (`Item::$definition`). */
+	case Custom = 'Custom';
 }

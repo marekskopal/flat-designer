@@ -111,7 +111,12 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   `FurnitureDefinition` rows (`/api/furniture-definitions`) are global (`user`/`project` null, admins write), a user's
   library or a project's (`FurnitureDefinitionProvider` has the access rules; soft-deleted). `DefinitionValidator` adds
   what the evaluator does not read (unknown keys, `size`, `PartTypeEnum` options, material codes) and stores the JSON
-  with empty objects kept `{}`.
+  with empty objects kept `{}`. A `Custom` item has `items.definition_id` (live link) and `params` `{values, materials}`
+  (`CustomItemValidator`, which evaluates it at the item size only when kind/definition/size/params change, so a later
+  definition edit does not block moving it). An item may use global definitions, the project owner's library and the
+  project's own (`FurnitureDefinitionProvider::isUsableIn`); deleted ones are still accepted. The scene carries
+  `definitions` (those its items use), so versions embed them; a restore links the live definition of that id or
+  recreates it as a project definition (`SnapshotDefinitionRestorer`).
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run

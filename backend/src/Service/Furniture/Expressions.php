@@ -55,12 +55,18 @@ final readonly class Expressions
 		return $value;
 	}
 
+	/** Lengths beyond this (mm) are a mistake, and PHP ints would overflow further on. */
+	public const int MaxLength = 1000000000;
+
 	/** @param array<string, float|bool|string> $variables the result rounded half away from zero to whole mm */
 	public static function length(Expression $expression, array $variables, string $path): int
 	{
 		$value = self::run($expression, $variables, $path);
 		if (!is_float($value)) {
 			throw self::typeError($path, 'a number (mm)', $value);
+		}
+		if (abs($value) > self::MaxLength) {
+			throw new DefinitionException(DefinitionErrorEnum::Limit, $path, sprintf('Must come out within ±%d mm.', self::MaxLength));
 		}
 
 		return (int) round($value);

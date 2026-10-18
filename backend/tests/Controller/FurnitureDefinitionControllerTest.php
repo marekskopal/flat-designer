@@ -102,9 +102,12 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		$this->create($other, ['name' => 'Other library']);
 		$this->create($owner, ['name' => 'Project', 'scope' => 'project', 'projectId' => $project->id]);
 
+		$this->create($admin, ['name' => 'Admin library']);
+
 		self::assertSame(['Global', 'Owner library'], $this->listNames($owner));
 		self::assertSame(['Global', 'Owner library', 'Project'], $this->listNames($owner, $project->id));
-		// An admin working on the project sees what the owner can use.
+		// With a project: what its items may use — an admin working on it sees the owner's library, not their own.
+		self::assertSame(['Admin library', 'Global'], $this->listNames($admin));
 		self::assertSame(['Global', 'Owner library', 'Project'], $this->listNames($admin, $project->id));
 		self::assertSame(['Global', 'Other library'], $this->listNames($other));
 		self::assertSame(

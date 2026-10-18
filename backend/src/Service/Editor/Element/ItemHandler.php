@@ -10,23 +10,31 @@ use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Editor\ChairParamsValidator;
+use FlatDesigner\Service\Editor\CustomItemValidator;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 use FlatDesigner\Service\Editor\WardrobeParamsValidator;
+use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
+use FlatDesigner\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
 
 final readonly class ItemHandler implements ElementHandler
 {
 	private const int MaxParamsBytes = 16384;
+
+	/** What the parts of a Custom item come out of. */
+	private const array CustomGeometry = ['kind', 'definitionId', 'width', 'depth', 'height', 'params'];
 
 	public function __construct(
 		private ItemRepository $itemRepository,
@@ -34,6 +42,8 @@ final readonly class ItemHandler implements ElementHandler
 		private ItemGroupRepository $groupRepository,
 		private MaterialResolver $materialResolver,
 		private ItemKindCatalog $catalog,
+		private FurnitureDefinitionRepository $definitionRepository,
+		private CustomItemValidator $customValidator,
 	) {
 	}
 
@@ -45,7 +55,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'groupId', 'kind', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+		return ['roomId', 'groupId', 'kind', 'definitionId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
 	}
 
 	/** @return list<string> */
@@ -59,12 +69,22 @@ final readonly class ItemHandler implements ElementHandler
 	{
 		$kind = is_string($fields['kind'] ?? null) ? ItemKindEnum::tryFrom($fields['kind']) : null;
 		$size = $this->catalog->get($kind ?? ItemKindEnum::Box);
+		$name = ($kind ?? ItemKindEnum::Box)->value;
+		// A Custom item starts at its definition's size and with its name.
+		$definition = $kind === ItemKindEnum::Custom && is_int($fields['definitionId'] ?? null)
+			? $this->definitionRepository->findById($fields['definitionId'])
+			: null;
+		if ($definition !== null) {
+			$name = $definition->name;
+			$size = self::definitionSize($definition) + $size;
+		}
 
 		return [
 			'roomId' => null,
 			'groupId' => null,
 			'kind' => ItemKindEnum::Box->value,
-			'name' => ($kind ?? ItemKindEnum::Box)->value,
+			'definitionId' => null,
+			'name' => $name,
 			'x' => 0,
 			'y' => 0,
 			'z' => $size['z'],
@@ -107,7 +127,10 @@ final readonly class ItemHandler implements ElementHandler
 		$this->materialResolver->resolve($materialId);
 
 		$kind = $fields->enum('kind', ItemKindEnum::class);
+		$definitionId = $fields->nullableId('definitionId');
+		$definition = $this->definition($floor, $definitionId);
 		$width = $fields->int('width', 1, State::MaxSize);
+		$depth = $fields->int('depth', 1, State::MaxSize);
 		$height = $fields->int('height', 1, State::MaxSize);
 		$params = self::params($fields->raw('params'));
 		CabinetParamsValidator::validate($kind, $params, $width, $height);
@@ -117,21 +140,36 @@ final readonly class ItemHandler implements ElementHandler
 			$this->materialResolver->resolve($params['profileMaterialId']);
 		}
 
-		return [
+		$state = [
 			'roomId' => $roomId,
 			'groupId' => $groupId,
 			'kind' => $kind->value,
+			'definitionId' => $definitionId,
 			'name' => $fields->string('name', 255),
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
 			'y' => $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit),
 			'z' => $fields->int('z', -State::MaxSize, State::MaxSize),
 			'width' => $width,
-			'depth' => $fields->int('depth', 1, State::MaxSize),
+			'depth' => $depth,
 			'height' => $height,
 			'rotation' => (($fields->int('rotation', -3600, 3600) % 360) + 360) % 360,
 			'materialId' => $materialId,
 			'params' => $params,
 		];
+		$this->customValidator->validate(
+			$kind,
+			$definition,
+			$params,
+			$width,
+			$depth,
+			$height,
+			$current === null || !State::equals(
+				array_intersect_key($this->state($current), array_flip(self::CustomGeometry)),
+				array_intersect_key($state, array_flip(self::CustomGeometry)),
+			),
+		);
+
+		return $state;
 	}
 
 	public function create(Floor $floor, array $state): Item
@@ -183,6 +221,8 @@ final readonly class ItemHandler implements ElementHandler
 		$item->room = $this->room($item->floor, $fields->nullableId('roomId'));
 		$item->group = $this->group($item->floor, $fields->nullableId('groupId'));
 		$item->kind = $fields->enum('kind', ItemKindEnum::class);
+		$definitionId = $fields->nullableId('definitionId');
+		$item->definition = $definitionId === null ? null : $this->definitionRepository->findById($definitionId);
 		$item->name = $fields->string('name', 255);
 		$item->x = $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit);
 		$item->y = $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit);
@@ -209,6 +249,42 @@ final readonly class ItemHandler implements ElementHandler
 		}
 
 		return $room;
+	}
+
+	/**
+	 * A definition the floor's project may use: global, from the project owner's library or the project's own. A deleted
+	 * one is still accepted (it is only left out of the lists), so undo and copies of items using it keep working — as
+	 * long as the item still fits its definition, which copies are checked against like any new item.
+	 */
+	private function definition(Floor $floor, ?int $definitionId): ?FurnitureDefinition
+	{
+		if ($definitionId === null) {
+			return null;
+		}
+
+		$definition = $this->definitionRepository->findById($definitionId);
+		if ($definition === null || !FurnitureDefinitionProvider::isUsableIn($definition, $floor->project)) {
+			throw EditException::invalid(sprintf(
+				'Furniture definition %d is not available in this project (global, the project owner\'s or the project\'s own).',
+				$definitionId,
+			));
+		}
+
+		return $definition;
+	}
+
+	/** @return array{width?: int, depth?: int, height?: int} the definition's default size, as far as it has one */
+	private static function definitionSize(FurnitureDefinition $definition): array
+	{
+		$size = JsonDecoder::decodeObject($definition->definition)['size'] ?? null;
+		$result = [];
+		foreach (['width', 'depth', 'height'] as $key) {
+			if (is_array($size) && is_int($size[$key] ?? null)) {
+				$result[$key] = $size[$key];
+			}
+		}
+
+		return $result;
 	}
 
 	private function group(Floor $floor, ?int $groupId): ?ItemGroup

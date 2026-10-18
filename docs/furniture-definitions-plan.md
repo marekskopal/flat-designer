@@ -207,9 +207,12 @@ Each phase is a separate commit and leaves the app working.
 3. **Items + scene**: `Custom` kind, `definition_id`, `ItemHandler`, `SceneDto`/snapshot/restore, tests (undo of a
    custom item change, version restore with a deleted definition).
 4. **Viewer builder**: `custom.ts`, `DefinitionLibrary`, diffing, error placeholder; `furniture.spec.ts`-style tests
-   for evaluated geometry; seed migration.
-5. **Editor**: Add menu, inspector form, library page, definition editor with preview.
-6. **MCP tools** + tests.
+   for evaluated geometry; seed migration. Also `scene-patch.ts`: an edit result whose item has a `definitionId` the
+   scene's `definitions` lack falls back to a reload (the result carries the item only).
+5. **Editor**: Add menu, inspector form, library page, definition editor with preview. The inspector's Kind select
+   lists `Custom` already; a Custom item's `definitionId` needs its own field (clearing it when the kind changes).
+6. **MCP tools** + tests; `ItemKindCatalog`'s `Custom` entry then points at `list_furniture_definitions`, and
+   `get_floor` returns the scene's `definitions`.
 7. **Live updates** for definition changes; **cut list** (PHP `CutListService` from `DefinitionEvaluator`: board size,
    material, edges, count per floor/project; REST + MCP `get_cut_list` + a viewer panel).
 

@@ -14,6 +14,7 @@ final readonly class SceneDto
 	 * @param list<ItemDto> $items
 	 * @param list<GroupDto> $groups
 	 * @param list<VariantSetDto> $variantSets
+	 * @param list<SceneDefinitionDto> $definitions the furniture definitions of the Custom items
 	 */
 	public function __construct(
 		public FloorDto $floor,
@@ -25,6 +26,7 @@ final readonly class SceneDto
 		public array $items,
 		public array $groups,
 		public array $variantSets,
+		public array $definitions,
 	)
 	{
 	}

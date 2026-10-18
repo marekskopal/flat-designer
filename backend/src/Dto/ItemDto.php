@@ -17,6 +17,8 @@ final readonly class ItemDto
 		public ?int $roomId,
 		public ?int $groupId,
 		public ItemKindEnum $kind,
+		/** The furniture definition of a `Custom` item (in the scene's `definitions`). */
+		public ?int $definitionId,
 		public string $name,
 		public int $x,
 		public int $y,
@@ -40,6 +42,7 @@ final readonly class ItemDto
 			roomId: $item->room !== null && $item->room->deletedAt === null ? $item->room->id : null,
 			groupId: $item->group !== null && $item->group->deletedAt === null ? $item->group->id : null,
 			kind: $item->kind,
+			definitionId: $item->definition?->id,
 			name: $item->name,
 			x: $item->x,
 			y: $item->y,

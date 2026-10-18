@@ -26,6 +26,8 @@ export const DefinitionFormat = 1;
 export const MaxPartEntries = 200;
 export const MaxParts = 500;
 export const MaxRepeat = 100;
+/** Lengths beyond this (mm) are a mistake (and would overflow the PHP twin's ints). */
+export const MaxLength = 1000000000;
 
 export type DefinitionErrorCode = 'invalid' | 'invalidValue' | 'limit' | 'nonPositiveSize';
 
@@ -393,6 +395,9 @@ function length(expression: Expression, variables: Variables, path: string): num
     if (typeof value !== 'number') {
         throw new DefinitionError('type', path, `Must come out a number (mm), got ${typeName(value)}.`);
     }
+    if (Math.abs(value) > MaxLength) {
+        throw new DefinitionError('limit', path, `Must come out within ±${MaxLength} mm.`);
+    }
     return roundHalfAway(value);
 }
 
@@ -404,8 +409,11 @@ function invalid(path: string, message: string): DefinitionError {
     return new DefinitionError('invalid', path, message);
 }
 
-/** The item size and the boolean literals; no parameter, derived value or repeat index may take them. */
-const Reserved = ['W', 'D', 'H', 'true', 'false'];
+/**
+ * The item size and the boolean literals, and `__proto__` (a plain object cannot hold it); no parameter, derived value
+ * or repeat index may take them.
+ */
+const Reserved = ['W', 'D', 'H', 'true', 'false', '__proto__'];
 
 function isName(value: unknown): value is string {
     return typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
