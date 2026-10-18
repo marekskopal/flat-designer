@@ -1,5 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
+import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
 import {Group, Item, Opening, Room, Scene, VariantSet, Wall} from '@app/models/scene';
+import {AlertService} from '@app/services/alert.service';
 import {polygonCentroid} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
@@ -42,6 +44,7 @@ export class EditorPanelComponent {
     public readonly viewCenter = input.required<() => {x: number; y: number}>();
 
     protected readonly editor = inject(EditorStore);
+    private readonly alerts = inject(AlertService);
 
     /** The selected element's current state, or null when it is gone (deleted, other floor). */
     protected readonly selected = computed(() => {
@@ -70,11 +73,64 @@ export class EditorPanelComponent {
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
     });
 
+    /** The furniture of the Add menu by where it comes from. */
+    protected readonly furnitureSections = computed(() => {
+        const sections: {label: string; definitions: FurnitureDefinition[]}[] = [];
+        for (const scope of ['project', 'user', 'global'] as const) {
+            const definitions = this.editor.definitions().filter((d) => d.scope === scope);
+            if (definitions.length > 0) {
+                const label = scope === 'user' ? 'Furniture — library' : `Furniture — ${ScopeLabels[scope].toLowerCase()}`;
+                sections.push({label, definitions});
+            }
+        }
+        return sections;
+    });
+
     protected onFieldChange(change: FieldChange): void {
         const selection = this.editor.selection();
-        if (selection !== null) {
-            void this.editor.update(selection.kind, selection.id, {[change.key]: change.value});
+        if (selection === null) {
+            return;
         }
+        const fields = selection.kind === 'item' ? this.customItemFields(change) : {[change.key]: change.value};
+        if (fields !== null) {
+            void this.editor.update(selection.kind, selection.id, fields);
+        }
+    }
+
+    /**
+     * An item's field change with what goes with it for Custom items: another definition starts afresh at its default
+     * size with its name (as a new item does), a kind change to or from Custom sets or clears the definition. Null when
+     * it cannot be made.
+     */
+    private customItemFields(change: FieldChange): Record<string, unknown> | null {
+        const element = this.selected()?.element ?? {};
+        if (change.key === 'definitionId') {
+            return this.freshCustom(change.value);
+        }
+        if (change.key !== 'kind') {
+            return {[change.key]: change.value};
+        }
+        if (change.value === 'Custom') {
+            const first = this.editor.definitions()[0];
+            if (first === undefined) {
+                this.alerts.error('There is no furniture definition to use; add one under Furniture.');
+                return null;
+            }
+            return this.freshCustom(first.id);
+        }
+        return element['kind'] === 'Custom' ? {kind: change.value, definitionId: null, params: {}} : {kind: change.value};
+    }
+
+    private freshCustom(definitionId: unknown): Record<string, unknown> {
+        const definition = this.editor.definitions().find((d) => d.id === definitionId);
+        const size = definition?.definition.size;
+        return {
+            kind: 'Custom',
+            definitionId,
+            params: {},
+            ...(definition === undefined ? {} : {name: definition.name}),
+            ...(size === undefined ? {} : {width: size.width, depth: size.depth, height: size.height}),
+        };
     }
 
     protected groupPicked(name: string): void {
@@ -101,9 +157,11 @@ export class EditorPanelComponent {
         const center = this.viewCenter()();
         const room = this.selectedRoom();
 
+        const at = room === null ? center : roundPoint(polygonCentroid(room.polygon));
         if (choice.startsWith('item:')) {
-            const at = room === null ? center : roundPoint(polygonCentroid(room.polygon));
             void this.editor.create('item', {kind: choice.slice(5), x: at.x, y: at.y, roomId: room?.id ?? null});
+        } else if (choice.startsWith('custom:')) {
+            void this.editor.create('item', {kind: 'Custom', definitionId: Number(choice.slice(7)), x: at.x, y: at.y, roomId: room?.id ?? null});
         } else if (choice === 'wall') {
             void this.editor.create('wall', {
                 startX: center.x - NewWallLength / 2,

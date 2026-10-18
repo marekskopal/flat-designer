@@ -1,13 +1,27 @@
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {isCabinet} from './cabinet-params';
+import {isCustom} from './custom-params';
 import {isWardrobe} from './wardrobe-params';
 
 /**
  * `cabinet`: the structured form for a cabinet's params (plinth, handle, fronts, blindRight); `wardrobe`: the same for
- * a sliding-door wardrobe (doors, plinth, profile material, mirror doors).
+ * a sliding-door wardrobe (doors, plinth, profile material, mirror doors); `definition`: the furniture definition of a
+ * Custom item; `custom`: the form generated from that definition (parameter values, slot materials).
  */
-export type FieldType = 'int' | 'text' | 'select' | 'material' | 'room' | 'group' | 'json' | 'bool' | 'cabinet' | 'wardrobe';
+export type FieldType =
+    | 'int'
+    | 'text'
+    | 'select'
+    | 'material'
+    | 'room'
+    | 'group'
+    | 'json'
+    | 'bool'
+    | 'cabinet'
+    | 'wardrobe'
+    | 'definition'
+    | 'custom';
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -37,6 +51,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     item: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'kind', label: 'Kind', type: 'select', options: ItemKinds},
+        {key: 'definitionId', label: 'Furniture', type: 'definition', when: isCustom},
         {key: 'x', label: 'X', type: 'int', unit: 'mm', half: true},
         {key: 'y', label: 'Y', type: 'int', unit: 'mm', half: true},
         {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
@@ -49,7 +64,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
         {key: 'params', label: 'Cabinet', type: 'cabinet', when: isCabinet},
         {key: 'params', label: 'Wardrobe', type: 'wardrobe', when: isWardrobe},
-        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCabinet(element) && !isWardrobe(element)},
+        {key: 'params', label: 'Options', type: 'custom', when: isCustom},
+        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCabinet(element) && !isWardrobe(element) && !isCustom(element)},
     ],
     wall: [
         {key: 'name', label: 'Name', type: 'text'},
@@ -127,6 +143,7 @@ export function parseFieldValue(def: FieldDef, raw: string): ParsedValue {
         case 'material':
         case 'room':
         case 'group':
+        case 'definition':
             return {ok: true, value: Number(text)};
         case 'json':
             try {

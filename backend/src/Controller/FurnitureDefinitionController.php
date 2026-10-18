@@ -100,7 +100,7 @@ final readonly class FurnitureDefinitionController
 			return new NotFoundResponse(self::NotFound);
 		}
 
-		return new JsonResponse($this->definitionProvider->toDto($user, $definition));
+		return new JsonResponse($this->definitionProvider->toDto($user, $definition, withUsage: true));
 	}
 
 	#[RoutePut(Routes::FurnitureDefinition->value)]

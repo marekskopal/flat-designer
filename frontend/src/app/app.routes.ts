@@ -49,6 +49,16 @@ export const appRoutes: Routes = [
                 loadComponent: async () => (await import('@app/viewer-page/viewer-page.component')).ViewerPageComponent,
             },
             {
+                path: 'furniture',
+                title: 'Furniture · Flat Designer',
+                loadComponent: async () => (await import('@app/furniture/furniture-library.component')).FurnitureLibraryComponent,
+            },
+            {
+                path: 'furniture/:definitionId',
+                title: 'Furniture · Flat Designer',
+                loadComponent: async () => (await import('@app/furniture/furniture-editor.component')).FurnitureEditorComponent,
+            },
+            {
                 path: 'account',
                 title: 'Account · Flat Designer',
                 loadComponent: async () => (await import('@app/account/account.component')).AccountComponent,

@@ -120,7 +120,10 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   `viewer/engine/custom/custom.ts` (one mesh per part, `userData.partName`; a red placeholder with
   `userData.definitionError` when it does not evaluate) and rebuilds them when their definition's `updatedAt` changes.
   Global definitions are seeded from `backend/migrations/furniture/*.json` (`SeedFurnitureDefinitions`); both test
-  suites build them.
+  suites build them. UI: the Add menu's "Furniture —" groups and the inspector's `definition` / `custom` fields
+  (`CustomParamsComponent`, form generated from the definition's parameters and slots; `EditorStore.definitions`);
+  `/furniture` (library, `?projectId=`) and `/furniture/:id` (JSON editor with `FurniturePreview`, a framework-free
+  one-item scene in `viewer/engine/custom/preview.ts`).
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run

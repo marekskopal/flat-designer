@@ -1,0 +1,213 @@
+@use 'variables' as *;
+
+:host {
+    display: block;
+    height: calc(100dvh - #{$topbar-height});
+}
+
+.editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: $space-12 $space-16 $space-16;
+    gap: $space-12;
+}
+
+.editor__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-12;
+    font-size: $font-size-13;
+}
+
+.back {
+    color: $color-text-muted;
+    text-decoration: none;
+
+    &:hover {
+        color: $color-text;
+    }
+}
+
+.badge {
+    padding: 1px 6px;
+    border-radius: $radius-6;
+    background: $color-surface-muted;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-text-muted;
+}
+
+.usage {
+    color: $color-highlight;
+    font-weight: 500;
+}
+
+.editor__body {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) minmax(320px, 1.2fr);
+    gap: $space-16;
+    flex: 1;
+    min-height: 0;
+}
+
+.pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: $space-12;
+    padding: $space-16;
+    border: 1px solid $color-border;
+    border-radius: $radius-14;
+    background: $color-surface-solid;
+}
+
+.field--grow {
+    flex: 1;
+    min-height: 200px;
+
+    .code {
+        flex: 1;
+    }
+}
+
+.field__label {
+    display: flex;
+    justify-content: space-between;
+}
+
+.code {
+    min-height: 0;
+    resize: none;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre;
+    tab-size: 2;
+}
+
+.messages {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+}
+
+.message {
+    margin: 0;
+    font-size: $font-size-13;
+    overflow-wrap: anywhere;
+}
+
+.message--error {
+    color: $color-danger;
+}
+
+.message--ok {
+    color: $color-accent;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-8;
+}
+
+.hint {
+    margin-right: auto;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+}
+
+.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: $font-size-12;
+    color: $color-accent;
+    cursor: pointer;
+
+    &:disabled {
+        color: $color-text-subtle;
+        cursor: default;
+    }
+}
+
+.preview {
+    flex: 1;
+    min-height: 240px;
+    overflow: hidden;
+    border-radius: $radius-10;
+}
+
+.tryout {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    max-height: 40%;
+    overflow-y: auto;
+}
+
+.tryout__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.tryout__title {
+    margin: 0;
+    font-size: $font-size-14;
+    font-weight: 650;
+}
+
+.sizes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space-8;
+}
+
+.cell {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+}
+
+.cell__label {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.cell__unit {
+    font-weight: 400;
+    color: $color-text-subtle;
+}
+
+.input--compact {
+    padding: 5px 8px;
+    font-size: $font-size-13;
+}
+
+@media (max-width: 900px) {
+    :host {
+        height: auto;
+    }
+
+    .editor__body {
+        grid-template-columns: 1fr;
+    }
+
+    .field--grow .code {
+        min-height: 320px;
+    }
+
+    .preview {
+        min-height: 320px;
+    }
+
+    .tryout {
+        max-height: none;
+    }
+}

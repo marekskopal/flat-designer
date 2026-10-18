@@ -1,0 +1,63 @@
+<div class="custom">
+    @for (parameter of parameters(); track parameter.key) {
+        @switch (parameter.type) {
+            @case ('int') {
+                <label class="cell">
+                    <span class="cell__label">
+                        {{ label(parameter) }}
+                        @if (unit(parameter); as u) {
+                            <span class="cell__unit">{{ u }}</span>
+                        }
+                    </span>
+                    <input
+                        class="input input--compact"
+                        type="number"
+                        step="1"
+                        [attr.min]="parameter.min ?? null"
+                        [attr.max]="parameter.max ?? null"
+                        [placeholder]="'' + parameter.default"
+                        [value]="value(parameter) ?? ''"
+                        [disabled]="disabled()"
+                        (change)="setInt(parameter, $event)"
+                    />
+                </label>
+            }
+            @case ('bool') {
+                <label class="check">
+                    <input type="checkbox" [checked]="checked(parameter)" [disabled]="disabled()" (change)="setBool(parameter, $event)" />
+                    {{ label(parameter) }}
+                </label>
+            }
+            @case ('select') {
+                <label class="cell">
+                    <span class="cell__label">{{ label(parameter) }}</span>
+                    <select class="input input--compact" [disabled]="disabled()" (change)="setSelect(parameter, $event)">
+                        <option value="" [selected]="value(parameter) === undefined">{{ parameter.default }} (default)</option>
+                        @for (option of parameter.options; track option) {
+                            <option [value]="option" [selected]="option === value(parameter)">{{ option }}</option>
+                        }
+                    </select>
+                </label>
+            }
+        }
+    }
+    @for (slot of slots(); track slot.key; let first = $first) {
+        <label class="cell">
+            <span class="cell__label">{{ slot.label ?? slot.key }} <span class="cell__unit">material</span></span>
+            <select class="input input--compact" [disabled]="disabled()" (change)="setMaterial(slot.key, $event)">
+                <option value="" [selected]="current().materials[slot.key] === undefined">
+                    {{ first ? 'Item material, else ' + materialName(slot.default) : materialName(slot.default) }} (default)
+                </option>
+                @for (material of materials(); track material.id) {
+                    <option [value]="material.id" [selected]="material.id === current().materials[slot.key]">{{ material.name }}</option>
+                }
+            </select>
+        </label>
+    }
+    @if (inputError(); as message) {
+        <span class="error">{{ message }}</span>
+    }
+    @if (problem(); as message) {
+        <span class="error" role="status">{{ message }}</span>
+    }
+</div>

@@ -53,6 +53,9 @@ final class CustomItemTest extends EditorTestCase
 		self::assertSame(self::Definition['parts'], $definitions[0]['definition']['parts']);
 		self::assertIsString($definitions[0]['updatedAt']);
 
+		$read = $this->jsonBody($this->request('GET', self::definitionPath($definitionId), authenticatedAs: $this->user));
+		self::assertSame(1, $read['itemCount']);
+
 		// Other kinds have no definition and the scene lists only what its items use.
 		self::assertNull($this->create('items', ['kind' => 'Box'])['definitionId']);
 		self::assertCount(1, $this->sceneList('definitions'));
@@ -119,6 +122,20 @@ final class CustomItemTest extends EditorTestCase
 		self::assertSame(422, $resized->getStatusCode());
 		$refit = $this->edit('PATCH', 'items', self::id($item), ['width' => 1100, 'params' => ['materials' => ['carcass' => 1]]]);
 		self::assertSame(200, $refit->getStatusCode());
+	}
+
+	public function testAnItemWhoseDefinitionIsGoneCanStillBeMoved(): void
+	{
+		$definitionId = $this->defineFurniture();
+		$item = $this->create('items', ['kind' => 'Custom', 'definitionId' => $definitionId]);
+		$repository = Fixture::service(FurnitureDefinitionRepository::class);
+		// Gone for good (with its owner, say): the key is set to null.
+		$repository->delete($repository->findById($definitionId) ?? self::fail('Definition missing.'));
+
+		[$orphan] = $this->sceneList('items');
+		self::assertNull($orphan['definitionId']);
+		self::assertSame(200, $this->edit('PATCH', 'items', self::id($item), ['x' => 2000, 'name' => 'Orphan'])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'items', self::id($item), ['width' => 900])->getStatusCode());
 	}
 
 	public function testUndoAndCopiesKeepTheDefinition(): void

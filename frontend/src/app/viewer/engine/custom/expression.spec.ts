@@ -50,6 +50,10 @@ describe('parseExpression', () => {
         expect(() => parseExpression('W +* 2')).toThrow('Unexpected "*" at 3.');
     });
 
+    it('treats a non-breaking space as an error, like the PHP twin', () => {
+        expect(() => parseExpression('W -\u00a02')).toThrow('Unexpected "\u00a0" at 3.');
+    });
+
     it('does not read inherited properties as variables', () => {
         expect(errorCode(() => parseExpression('constructor').evaluate({}))).toBe('unknownVariable');
         expect(errorCode(() => parseExpression('toString(1)'))).toBe('unknownFunction');

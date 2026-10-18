@@ -48,3 +48,49 @@ export interface FurnitureDefinitionBody {
     materialSlots?: MaterialSlot[];
     parts: DefinitionPart[];
 }
+
+export type FurnitureScope = 'global' | 'user' | 'project';
+
+/** A furniture definition as the API serves it (`FurnitureDefinitionDto`). */
+export interface FurnitureDefinition {
+    id: number;
+    name: string;
+    description: string;
+    scope: FurnitureScope;
+    /** The library it is in (scope `user`). */
+    userId: number | null;
+    userName: string | null;
+    projectId: number | null;
+    definition: FurnitureDefinitionBody;
+    /** Whether the signed-in user may change it (global ones: admins). */
+    canEdit: boolean;
+    /** Items in all projects drawn from it; only when one definition is read. */
+    itemCount: number | null;
+    createdByName: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface FurnitureDefinitionInput {
+    name: string;
+    description: string;
+    definition: FurnitureDefinitionBody;
+    /** Create only (default `user`: my library). */
+    scope?: FurnitureScope;
+    projectId?: number;
+}
+
+export interface FurnitureValidationError {
+    code: string;
+    /** Where in the definition, e.g. `parts[2].y`. */
+    path: string;
+    message: string;
+}
+
+/** The server's check of a definition: its parts at the default size, or the first error. */
+export interface FurnitureValidation {
+    valid: boolean;
+    error: FurnitureValidationError | null;
+}
+
+export const ScopeLabels: Record<FurnitureScope, string> = {global: 'Global', user: 'My library', project: 'This project'};

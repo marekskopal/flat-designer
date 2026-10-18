@@ -1,8 +1,10 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
-import {Group, Material, Room} from '@app/models/scene';
+import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
+import {Group, Material, Room, SceneDefinition} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CabinetParamsComponent} from './cabinet-params.component';
+import {CustomParamsComponent} from './custom-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
 import {WardrobeParamsComponent} from './wardrobe-params.component';
 
@@ -17,7 +19,7 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
-    imports: [CabinetParamsComponent, WardrobeParamsComponent],
+    imports: [CabinetParamsComponent, CustomParamsComponent, WardrobeParamsComponent],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,20 +30,42 @@ export class InspectorComponent {
     public readonly materials = input<Material[]>([]);
     public readonly rooms = input<Room[]>([]);
     public readonly groups = input<Group[]>([]);
+    /** Furniture definitions an item may be switched to (the project's choice). */
+    public readonly definitions = input<FurnitureDefinition[]>([]);
+    /** The definitions the scene's Custom items use (also ones no longer offered). */
+    public readonly sceneDefinitions = input<SceneDefinition[]>([]);
     public readonly disabled = input(false);
 
     public readonly fieldChange = output<FieldChange>();
 
     protected readonly fields = computed(() => ElementFields[this.kind()].filter((def) => def.when?.(this.element()) ?? true));
     protected readonly errors = signal<Record<string, string>>({});
+    /**
+     * The definitions to pick from, with the item's own first when it is not among them (deleted, another library), or a
+     * "none" entry when the item has lost its definition.
+     */
+    protected readonly definitionChoices = computed((): {id: number | ''; name: string}[] => {
+        const choices: {id: number | ''; name: string}[] = this.definitions().map((d) => ({id: d.id, name: d.name}));
+        const id = this.element()['definitionId'];
+        if (choices.some((c) => c.id === id)) {
+            return choices;
+        }
+        const own = this.sceneDefinitions().find((d) => d.id === id);
+        return [own !== undefined ? {id: own.id, name: `${own.name} (not offered)`} : {id: '', name: '— none —'}, ...choices];
+    });
+    /** The body of the item's furniture definition. */
+    protected readonly definitionBody = computed((): FurnitureDefinitionBody | null => {
+        const id = this.element()['definitionId'];
+        return (this.sceneDefinitions().find((d) => d.id === id) ?? this.definitions().find((d) => d.id === id))?.definition ?? null;
+    });
 
     protected value(def: FieldDef): string {
         return formatFieldValue(def, this.element()[def.key]);
     }
 
-    /** The element's width (mm), which sets the wardrobe's default door count. */
-    protected width(): number {
-        const value = this.element()['width'];
+    /** The element's size (mm); the width sets the wardrobe's default door count. */
+    protected size(key: 'width' | 'depth' | 'height'): number {
+        const value = this.element()[key];
         return typeof value === 'number' ? value : 0;
     }
 

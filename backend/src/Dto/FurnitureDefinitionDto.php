@@ -11,7 +11,8 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * A furniture definition; `definition` is its JSON (format 1) as stored, `userId` the library it is in (scope `user`),
- * `canEdit` whether the caller may change it.
+ * `canEdit` whether the caller may change it, `itemCount` how many items (in all projects) are drawn from it — only when
+ * one definition is read, null in lists.
  */
 final readonly class FurnitureDefinitionDto
 {
@@ -25,13 +26,14 @@ final readonly class FurnitureDefinitionDto
 		public ?int $projectId,
 		public mixed $definition,
 		public bool $canEdit,
+		public ?int $itemCount,
 		public ?string $createdByName,
 		public string $createdAt,
 		public string $updatedAt,
 	) {
 	}
 
-	public static function fromEntity(FurnitureDefinition $definition, bool $canEdit): self
+	public static function fromEntity(FurnitureDefinition $definition, bool $canEdit, ?int $itemCount = null): self
 	{
 		return new self(
 			id: $definition->id,
@@ -44,6 +46,7 @@ final readonly class FurnitureDefinitionDto
 			// Decoded to objects, so empty ones stay `{}` in the response.
 			definition: json_decode($definition->definition, flags: JSON_THROW_ON_ERROR),
 			canEdit: $canEdit,
+			itemCount: $itemCount,
 			createdByName: $definition->createdBy?->name,
 			createdAt: $definition->createdAt->format(DATE_ATOM),
 			updatedAt: $definition->updatedAt->format(DATE_ATOM),

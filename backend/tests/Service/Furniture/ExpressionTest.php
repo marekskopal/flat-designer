@@ -72,7 +72,12 @@ final class ExpressionTest extends TestCase
 
 	public function testErrorNamesThePositionInCharacters(): void
 	{
-		$cases = ['W +* 2' => 'Unexpected "*" at 3.', "'déčko' == x +" => 'Unexpected end of expression.', "'ěšč' ~ 1" => 'Unexpected "~" at 6.'];
+		$cases = [
+			'W +* 2' => 'Unexpected "*" at 3.',
+			"'déčko' == x +" => 'Unexpected end of expression.',
+			"'ěšč' ~ 1" => 'Unexpected "~" at 6.',
+			"W -\u{A0}2" => "Unexpected \"\u{A0}\" at 3.",
+		];
 		foreach ($cases as $source => $message) {
 			try {
 				Parser::parse($source);
