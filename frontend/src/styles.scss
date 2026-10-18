@@ -6,6 +6,8 @@
 
 html, body {
     height: 100%;
+    // The dynamic viewport ends above a mobile browser's toolbar (100% / inset: 0 span the large one).
+    height: 100dvh;
     margin: 0;
 }
 
