@@ -44,6 +44,11 @@ export const appRoutes: Routes = [
                 loadComponent: async () => (await import('@app/projects/project-detail.component')).ProjectDetailComponent,
             },
             {
+                path: 'projects/:projectId/cut-list',
+                title: 'Cut list · Flat Designer',
+                loadComponent: async () => (await import('@app/projects/cut-list/cut-list.component')).CutListComponent,
+            },
+            {
                 path: 'projects/:projectId/floors/:floorId',
                 title: 'Flat Designer',
                 loadComponent: async () => (await import('@app/viewer-page/viewer-page.component')).ViewerPageComponent,

@@ -80,9 +80,8 @@ export class RealtimeService {
 function parseUpdate(data: string): ProjectUpdate | null {
     try {
         const parsed: unknown = JSON.parse(data);
-        return typeof parsed === 'object' && parsed !== null && (parsed as ProjectUpdate).type === 'projectChanged'
-            ? (parsed as ProjectUpdate)
-            : null;
+        const type = typeof parsed === 'object' && parsed !== null ? (parsed as ProjectUpdate).type : null;
+        return type === 'projectChanged' || type === 'definitionChanged' ? (parsed as ProjectUpdate) : null;
     } catch {
         return null;
     }

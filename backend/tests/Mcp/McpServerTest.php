@@ -91,6 +91,7 @@ final class McpServerTest extends IntegrationTestCase
 			'delete_wall',
 			'duplicate_group',
 			'duplicate_item',
+			'get_cut_list',
 			'get_floor',
 			'get_furniture_definition',
 			'get_project',

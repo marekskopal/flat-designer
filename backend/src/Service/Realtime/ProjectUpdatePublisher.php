@@ -6,6 +6,8 @@ namespace FlatDesigner\Service\Realtime;
 
 use FlatDesigner\Model\Entity\Enum\ActorTypeEnum;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\ProjectChangeRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use Psr\Log\LoggerInterface;
@@ -18,6 +20,8 @@ use const JSON_THROW_ON_ERROR;
  * Live updates of projects over Mercure. Changes mark their project (`markChanged()`, from the revision
  * bump); the worker calls `flush()` after the response is sent, so updates go out only once the change is
  * committed. Each update carries the revision as committed plus the newest change's summary and actor.
+ * An edited furniture definition (`markDefinitionChanged()`) sends `definitionChanged` to every project with items
+ * drawn from it: their look changes although no project revision does.
  *
  * Topics are private: only subscribers whose cookie grants the topic (`MercureCookieIssuer`) get them.
  */
@@ -28,10 +32,15 @@ final class ProjectUpdatePublisher
 	/** @var array<int, int> project id => newest revision bumped in the current request */
 	private array $changed = [];
 
+	/** @var array<int, true> furniture definitions edited in the current request */
+	private array $changedDefinitions = [];
+
 	public function __construct(
 		private readonly HubInterface $hub,
 		private readonly ProjectRepository $projectRepository,
 		private readonly ProjectChangeRepository $changeRepository,
+		private readonly ItemRepository $itemRepository,
+		private readonly FloorRepository $floorRepository,
 		private readonly RealtimeOriginContext $originContext,
 		private readonly LoggerInterface $logger,
 	) {
@@ -47,16 +56,32 @@ final class ProjectUpdatePublisher
 		$this->changed[$projectId] = max($revision, $this->changed[$projectId] ?? 0);
 	}
 
+	public function markDefinitionChanged(int $definitionId): void
+	{
+		$this->changedDefinitions[$definitionId] = true;
+	}
+
 	/** Forgets marks of a request that is not going to be flushed (the worker resets before each request). */
 	public function reset(): void
 	{
 		$this->changed = [];
+		$this->changedDefinitions = [];
 	}
 
 	public function flush(): void
 	{
 		$changed = $this->changed;
+		$definitions = array_keys($this->changedDefinitions);
 		$this->changed = [];
+		$this->changedDefinitions = [];
+
+		foreach ($definitions as $definitionId) {
+			try {
+				$this->publishDefinition($definitionId);
+			} catch (Throwable $e) {
+				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
+			}
+		}
 
 		foreach ($changed as $projectId => $revision) {
 			try {
@@ -93,6 +118,19 @@ final class ProjectUpdatePublisher
 			'actorName' => $change === null ? null : self::actorName($change->actorType, $change->mcpClientName, $change->user),
 			'originClientId' => $this->originContext->get(),
 		], JSON_THROW_ON_ERROR), private: true));
+	}
+
+	private function publishDefinition(int $definitionId): void
+	{
+		$projectIds = $this->floorRepository->findProjectIds($this->itemRepository->findFloorIdsByDefinition($definitionId));
+		foreach ($projectIds as $projectId) {
+			$this->hub->publish(new Update(self::topic($projectId), json_encode([
+				'type' => 'definitionChanged',
+				'projectId' => $projectId,
+				'definitionId' => $definitionId,
+				'originClientId' => $this->originContext->get(),
+			], JSON_THROW_ON_ERROR), private: true));
+		}
 	}
 
 	private static function actorName(ActorTypeEnum $type, ?string $clientName, ?User $user): string

@@ -14,6 +14,7 @@ use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Service\Project\ProjectProvider;
+use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
 
 /**
  * Furniture definitions and who may use them. Reading: global ones everyone; a user's library its owner and admins; a
@@ -31,6 +32,7 @@ final readonly class FurnitureDefinitionProvider
 		private ProjectProvider $projectProvider,
 		private DefinitionValidator $validator,
 		private ItemRepository $itemRepository,
+		private ProjectUpdatePublisher $updatePublisher,
 	) {
 	}
 
@@ -125,6 +127,7 @@ final readonly class FurnitureDefinitionProvider
 		$definition->definition = $this->validated($input->definition);
 		$definition->updatedAt = new DateTimeImmutable();
 		$this->definitionRepository->persist($definition);
+		$this->updatePublisher->markDefinitionChanged($definition->id);
 
 		return $definition;
 	}

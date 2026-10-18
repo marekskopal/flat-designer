@@ -83,7 +83,10 @@ describe('RealtimeService', () => {
         source.emit(update(7, 12));
         source.emit(update(8, 13));
         source.onmessage?.({data: 'not json'} as MessageEvent<string>);
-        expect(received).toEqual([update(7, 12)]);
+        const definitionChange = {type: 'definitionChanged', projectId: 7, definitionId: 4, originClientId: null} as const;
+        source.emit(definitionChange);
+        source.emit({type: 'somethingElse', projectId: 7});
+        expect(received).toEqual([update(7, 12), definitionChange]);
 
         subscription.unsubscribe();
         expect(source.readyState).toBe(FakeEventSource.CLOSED);

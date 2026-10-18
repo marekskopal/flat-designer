@@ -104,7 +104,7 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
 - Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`; each builds the
   item body in its local frame. A new item kind needs the PHP enum, a migration extending the
   `items.kind` column enum, the TS `ItemKind` union and a builder.
-- Furniture definitions (in progress, `docs/furniture-definitions-plan.md`): custom furniture as data — parameters and
+- Furniture definitions (`docs/furniture-definitions-plan.md`): custom furniture as data — parameters and
   parts whose sizes are expressions. The expression language and the definition evaluator exist twice, PHP
   (`Service/Furniture`) and TS (`viewer/engine/custom`), kept identical by the shared fixtures
   `backend/tests/fixtures/furniture-{expressions,definitions}.json`; change both twins and add a fixture case together.
@@ -125,7 +125,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   `/furniture` (library, `?projectId=`) and `/furniture/:id` (JSON editor with `FurniturePreview`, a framework-free
   one-item scene in `viewer/engine/custom/preview.ts`). MCP: `FurnitureTools` (list/get/create/update/delete/copy/
   validate_furniture_definition; `FurnitureTools::Format` is the format text agents get, a test checks it names every
-  `PartTypeEnum`), `add_item`/`update_item` take `definitionId`, `get_floor` returns `definitions`.
+  `PartTypeEnum`), `add_item`/`update_item` take `definitionId`, `get_floor` returns `definitions`. Saving a definition
+  publishes `definitionChanged` (`ProjectUpdatePublisher::markDefinitionChanged`, no revision bump) to the projects with
+  items of it; the viewer reloads the scene. `CutList\CutListService` (REST `…/cut-list`, MCP `get_cut_list`, page
+  `/projects/:id/cut-list`) evaluates the shown Custom items: board/front parts by material, thickness, length along
+  the grain, width and banded edges, other parts, area and banding per material.
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run

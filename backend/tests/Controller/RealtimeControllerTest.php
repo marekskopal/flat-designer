@@ -92,6 +92,36 @@ final class RealtimeControllerTest extends EditorTestCase
 		self::assertSame([false, true], array_column($messages, 'undone'));
 	}
 
+	public function testEditingAFurnitureDefinitionTellsTheProjectsUsingIt(): void
+	{
+		$definition = [
+			'format' => 1,
+			'size' => ['width' => 600, 'depth' => 300, 'height' => 900],
+			'parts' => [['type' => 'board', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 18, 'd' => 'D']],
+		];
+		$created = $this->jsonBody(
+			$this->request('POST', Routes::FurnitureDefinitions->value, ['name' => 'Shelf', 'definition' => $definition], $this->user),
+		);
+		$definitionId = self::id($created);
+		$this->create('items', ['kind' => 'Custom', 'definitionId' => $definitionId]);
+		// A project without items of it hears nothing.
+		Fixture::createProject($this->user, 'Other');
+		AppHarness::mercureHub()->updates = [];
+
+		$path = str_replace('{definitionId:number}', (string) $definitionId, Routes::FurnitureDefinition->value);
+		$this->request(
+			'PUT',
+			$path,
+			['name' => 'Shelf', 'definition' => ['parts' => [...$definition['parts'], ...$definition['parts']]] + $definition],
+			$this->user,
+		);
+
+		self::assertSame(
+			[['type' => 'definitionChanged', 'projectId' => $this->project->id, 'definitionId' => $definitionId, 'originClientId' => null]],
+			AppHarness::mercureHub()->messages(),
+		);
+	}
+
 	/** @return list<string> */
 	private static function grantedTopics(string $cookie): array
 	{

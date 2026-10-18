@@ -174,6 +174,11 @@ fd-project-files {
     color: $color-danger;
 }
 
+.furniture-actions {
+    display: flex;
+    gap: $space-8;
+}
+
 .furniture-hint {
     margin: 0;
     font-size: $font-size-13;

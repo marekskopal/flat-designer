@@ -38,4 +38,20 @@ final class ItemRepository extends ARepository
 	{
 		return $this->select()->where(['definition_id' => $definitionId, 'deleted_at' => null])->count();
 	}
+
+	/**
+	 * Floors with items (not deleted) drawn from the furniture definition.
+	 *
+	 * @return list<int>
+	 */
+	public function findFloorIdsByDefinition(int $definitionId): array
+	{
+		$rows = $this->select()
+			->columns(['floor_id'])
+			->where(['definition_id' => $definitionId, 'deleted_at' => null])
+			->groupBy(['floor_id'])
+			->fetchAssocAll();
+
+		return array_map(static fn (array $row): int => is_numeric($row['floor_id']) ? (int) $row['floor_id'] : 0, $rows);
+	}
 }
