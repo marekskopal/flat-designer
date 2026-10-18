@@ -1,0 +1,204 @@
+{
+ "name": "Sideboard",
+ "description": "Low cabinet with doors (handles at the meeting edges), an optional row of drawers above them, on a plinth or legs.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1600,
+   "depth": 450,
+   "height": 800
+  },
+  "parameters": [
+   {
+    "key": "doors",
+    "label": "Doors",
+    "type": "int",
+    "default": 2,
+    "min": 1,
+    "max": 6
+   },
+   {
+    "key": "drawers",
+    "label": "Drawers above the doors",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "base",
+    "label": "Base",
+    "type": "select",
+    "default": "plinth",
+    "options": [
+     "plinth",
+     "legs"
+    ]
+   },
+   {
+    "key": "t",
+    "label": "Board thickness",
+    "type": "int",
+    "default": 19,
+    "min": 16,
+    "max": 30,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "f": "19",
+   "b": "base == 'legs' ? 150 : 80",
+   "ch": "H - b",
+   "fw": "W / doors",
+   "dh": "drawers ? 160 : 0"
+  },
+  "materialSlots": [
+   {
+    "key": "carcass",
+    "label": "Carcass",
+    "default": "kitchen-oak"
+   },
+   {
+    "key": "fronts",
+    "label": "Fronts",
+    "default": "furniture-white-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": "b",
+    "z": 0,
+    "w": "t",
+    "h": "ch - t",
+    "d": "D - f",
+    "material": "carcass"
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": 0,
+    "y": "H - t",
+    "z": 0,
+    "w": "W",
+    "h": "t",
+    "d": "D - f",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Bottom",
+    "x": "t",
+    "y": "b",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "D - f",
+    "material": "carcass",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "t",
+    "y": "b + t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "ch - 2*t",
+    "d": 4,
+    "material": "carcass"
+   },
+   {
+    "type": "board",
+    "name": "Plinth",
+    "when": "base == 'plinth'",
+    "x": 20,
+    "y": 0,
+    "z": 20,
+    "w": "W - 40",
+    "h": "b",
+    "d": "D - f - 60",
+    "material": "carcass",
+    "grain": "horizontal"
+   },
+   {
+    "type": "taperedLeg",
+    "name": "Leg",
+    "when": "base == 'legs'",
+    "repeat": {
+     "count": 4
+    },
+    "x": "10 + i % 2 * (W - 70)",
+    "y": 0,
+    "z": "10 + floor(i / 2) * (D - f - 70)",
+    "w": 50,
+    "h": "b",
+    "d": 50,
+    "material": "carcass",
+    "bottomSize": 30
+   },
+   {
+    "type": "front",
+    "name": "Drawer",
+    "when": "drawers",
+    "repeat": {
+     "count": "doors"
+    },
+    "x": "i * fw + 2",
+    "y": "H - t - dh + 2",
+    "z": "D - f",
+    "w": "fw - 4",
+    "h": "dh - 4",
+    "d": "f",
+    "material": "fronts",
+    "kind": "drawer",
+    "handle": "horizontal"
+   },
+   {
+    "type": "front",
+    "name": "Door",
+    "when": "i < doors / 2",
+    "repeat": {
+     "count": "doors"
+    },
+    "x": "i * fw + 2",
+    "y": "b + 2",
+    "z": "D - f",
+    "w": "fw - 4",
+    "h": "ch - t - dh - 4",
+    "d": "f",
+    "material": "fronts",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "right"
+   },
+   {
+    "type": "front",
+    "name": "Door",
+    "when": "i >= doors / 2",
+    "repeat": {
+     "count": "doors"
+    },
+    "x": "i * fw + 2",
+    "y": "b + 2",
+    "z": "D - f",
+    "w": "fw - 4",
+    "h": "ch - t - dh - 4",
+    "d": "f",
+    "material": "fronts",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "left"
+   }
+  ]
+ }
+}

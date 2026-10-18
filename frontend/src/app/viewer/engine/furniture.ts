@@ -298,7 +298,7 @@ function buildTable(item: Item, materials: MaterialLibrary): THREE.Group {
  * Leg from the floor to `height` (mm), `width` × `depth` at the top and `bottom` square at the floor, centred on
  * (x, z) at the top. The taper is on the inner faces: the outer faces, towards (`sx`, `sz`), stay plumb.
  */
-function taperedLeg(
+export function taperedLeg(
     material: THREE.Material,
     x: number,
     z: number,

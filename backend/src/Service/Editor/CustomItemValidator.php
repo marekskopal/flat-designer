@@ -28,7 +28,7 @@ final readonly class CustomItemValidator
 	/**
 	 * @param array<string, mixed> $params
 	 * @param bool $evaluate false when the definition, size and params are those the item already has: a later edit of
-	 *     the definition must not block moving or renaming items that no longer fit it
+	 *     the definition (its parts or material slots) must not block moving or renaming items that no longer fit it
 	 */
 	public function validate(
 		ItemKindEnum $kind,
@@ -55,12 +55,12 @@ final readonly class CustomItemValidator
 				throw EditException::invalid(sprintf('Custom item params take only "values" and "materials", not "%s".', $key));
 			}
 		}
-		$body = JsonDecoder::decodeObject($definition->definition);
-		$this->checkMaterials($params['materials'] ?? [], $body['materialSlots'] ?? []);
 		if (!$evaluate) {
 			return;
 		}
 
+		$body = JsonDecoder::decodeObject($definition->definition);
+		$this->checkMaterials($params['materials'] ?? [], $body['materialSlots'] ?? []);
 		$values = $params['values'] ?? [];
 		if (!is_array($values)) {
 			throw EditException::invalid('Custom item "values" must be an object of parameter values.');

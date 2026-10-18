@@ -94,6 +94,13 @@ describe('patchScene', () => {
         expect(patched).toEqual({...scene, revision: 8});
     });
 
+    it('reloads for an item whose furniture definition the scene does not have', () => {
+        const custom = {...item, kind: 'Custom', definitionId: 3};
+        expect(patchScene(scene, result('Item', 9, custom))).toBeNull();
+        const definition = {id: 3, name: 'Shelf', definition: {format: 1 as const, parts: []}, updatedAt: '2026-10-18T10:00:00+00:00'};
+        expect(patchScene({...scene, definitions: [definition]}, result('Item', 9, custom))?.items).toEqual([custom]);
+    });
+
     it('reloads instead when someone else changed the project meanwhile', () => {
         expect(patchScene(scene, result('Item', 9, item, 9))).toBeNull();
     });

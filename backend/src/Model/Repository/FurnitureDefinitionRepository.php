@@ -16,6 +16,12 @@ final class FurnitureDefinitionRepository extends ARepository
 		return $this->findOne(['id' => $definitionId]);
 	}
 
+	/** A not deleted definition of the project with exactly this name and JSON (a copy made by an earlier restore). */
+	public function findProjectCopy(int $projectId, string $name, string $definition): ?FurnitureDefinition
+	{
+		return $this->findOne(['project_id' => $projectId, 'name' => $name, 'definition' => $definition, 'deleted_at' => null]);
+	}
+
 	/**
 	 * Not deleted, by name: the global ones, the libraries of `$userIds` and the definitions of the project.
 	 *

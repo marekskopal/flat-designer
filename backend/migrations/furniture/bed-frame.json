@@ -1,0 +1,132 @@
+{
+ "name": "Bed frame",
+ "description": "Bed with a headboard at the back, rails, slats and feet, optionally with the mattress.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1600,
+   "depth": 2100,
+   "height": 900
+  },
+  "parameters": [
+   {
+    "key": "mattress",
+    "label": "Mattress",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "railHeight",
+    "label": "Rail top",
+    "type": "int",
+    "default": 350,
+    "min": 250,
+    "max": 600,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "slats": "floor((D - 120) / 90)",
+   "pitch": "(D - 160) / max(slats - 1, 1)"
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "solid-ash-honey"
+   },
+   {
+    "key": "mattress",
+    "label": "Mattress",
+    "default": "furniture-white-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Headboard",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": 40,
+    "material": "frame",
+    "grain": "horizontal",
+    "edges": [
+     "top",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Side rail",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 30)",
+    "y": "railHeight - 200",
+    "z": 40,
+    "w": 30,
+    "h": 200,
+    "d": "D - 40",
+    "material": "frame",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Foot rail",
+    "x": 30,
+    "y": "railHeight - 200",
+    "z": "D - 30",
+    "w": "W - 60",
+    "h": 200,
+    "d": 30,
+    "material": "frame",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Slat",
+    "repeat": {
+     "count": "slats"
+    },
+    "x": 30,
+    "y": "railHeight - 60",
+    "z": "60 + i * pitch",
+    "w": "W - 60",
+    "h": 20,
+    "d": 60,
+    "material": "frame",
+    "grain": "horizontal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Foot",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 60)",
+    "y": 0,
+    "z": "D - 60",
+    "w": 60,
+    "h": "railHeight - 200",
+    "d": 60,
+    "material": "frame"
+   },
+   {
+    "type": "board",
+    "name": "Mattress",
+    "when": "mattress",
+    "x": 30,
+    "y": "railHeight - 40",
+    "z": 40,
+    "w": "W - 60",
+    "h": 200,
+    "d": "D - 70",
+    "material": "mattress"
+   }
+  ]
+ }
+}

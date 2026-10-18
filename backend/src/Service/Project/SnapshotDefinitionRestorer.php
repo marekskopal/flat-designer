@@ -14,8 +14,8 @@ use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
 /**
  * The furniture definitions of a restored version (`definitions` of its floors, see ProjectSnapshotService): the live
  * definition of the same id while the project may use it (also a soft-deleted one, as the items used it until now),
- * otherwise a new project definition made from the copy stored in the version — or none when the version holds no
- * usable copy.
+ * otherwise a project definition made from the copy stored in the version (an identical one from an earlier restore
+ * is reused) — or none when the version holds no usable copy.
  */
 final readonly class SnapshotDefinitionRestorer
 {
@@ -53,13 +53,19 @@ final readonly class SnapshotDefinitionRestorer
 		if (!is_array($body)) {
 			return null;
 		}
+		$name = $data->string('name');
+		$json = DefinitionValidator::encode($body);
+		$existing = $this->definitionRepository->findProjectCopy($project->id, $name, $json);
+		if ($existing !== null) {
+			return $existing;
+		}
 
 		$copy = new FurnitureDefinition(
 			user: null,
 			project: $project,
-			name: $data->string('name'),
+			name: $name,
 			description: 'Restored from a version.',
-			definition: DefinitionValidator::encode($body),
+			definition: $json,
 			createdBy: null,
 		);
 		$copy->createdAt = new DateTimeImmutable();

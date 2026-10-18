@@ -159,8 +159,8 @@ bumped, so open editors' `If-Match` stays valid. The client refetches the defini
   later.
 - `DefinitionLibrary` (like `MaterialLibrary`) built from `scene.definitions`. `buildItem()` gets it as a parameter and
   dispatches `Custom` before the other builders.
-- `ViewerEngine.load()` diff: an item counts as changed when its definition's `updatedAt` changed as well. Add a
-  `reloadDefinition(def)` that rebuilds just the items using it (for the Mercure message).
+- `ViewerEngine.load()` diff: an item counts as changed when its definition's `updatedAt` changed as well, so a
+  reloaded scene (e.g. after the Mercure message) rebuilds just the items using an edited definition.
 - If a definition fails to evaluate (e.g. after an edit), show a red placeholder box of the item's size so the viewer
   never breaks.
 
