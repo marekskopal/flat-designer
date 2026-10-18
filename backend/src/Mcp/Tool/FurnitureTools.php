@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Mcp\Tool;
 
+use FlatDesigner\Dto\CutListDto;
 use FlatDesigner\Dto\FurnitureDefinitionDto;
 use FlatDesigner\Dto\FurnitureDefinitionInputDto;
 use FlatDesigner\Dto\FurnitureValidationDto;
 use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
+use FlatDesigner\Service\Furniture\CutList\CutListService;
 use FlatDesigner\Service\Furniture\DefinitionEvaluator;
 use FlatDesigner\Service\Furniture\DefinitionException;
 use FlatDesigner\Service\Furniture\DefinitionValidator;
@@ -68,6 +70,7 @@ final readonly class FurnitureTools
 		private FurnitureDefinitionProvider $definitionProvider,
 		private DefinitionValidator $validator,
 		private DefinitionEvaluator $evaluator,
+		private CutListService $cutListService,
 	) {
 	}
 
@@ -246,6 +249,22 @@ final readonly class FurnitureTools
 		} catch (DefinitionException $e) {
 			return FurnitureValidationDto::invalid($e);
 		}
+	}
+
+	/** @param int|null $floorId one floor only (default: the whole project) */
+	#[McpTool(
+		name: 'get_cut_list',
+		description: 'The cut list of the Custom furniture of a project or floor (shown variants only) for the carpenter: '
+			. 'boards (board and front parts) grouped by material, thickness, length along the grain, width and banded edges '
+			. 'with counts; other parts (legs, rods, glass, LEDs); board area (m²) and edge banding (m) per material; items '
+			. 'whose definition does not work out.',
+		annotations: new ToolAnnotations(readOnlyHint: true),
+	)]
+	public function getCutList(int $projectId, ?int $floorId = null): CutListDto
+	{
+		return $floorId === null
+			? $this->cutListService->forProject($this->context->project($projectId))
+			: $this->cutListService->forFloor($this->context->floor($projectId, $floorId));
 	}
 
 	private function find(int $definitionId): FurnitureDefinition

@@ -52,6 +52,8 @@ enum Routes: string
 	case ProjectFloorVariantSets = '/api/projects/{projectId:number}/floors/{floorId:number}/variant-sets';
 	case ProjectFloorVariantSetVariants = '/api/projects/{projectId:number}/floors/{floorId:number}/variant-sets/{setId:number}/variants';
 	case ProjectFloorVariantSetSwitch = '/api/projects/{projectId:number}/floors/{floorId:number}/variant-sets/{setId:number}/switch';
+	case ProjectCutList = '/api/projects/{projectId:number}/cut-list';
+	case ProjectFloorCutList = '/api/projects/{projectId:number}/floors/{floorId:number}/cut-list';
 	case ProjectChanges = '/api/projects/{projectId:number}/changes';
 	case ProjectUndo = '/api/projects/{projectId:number}/undo';
 	case ProjectRedo = '/api/projects/{projectId:number}/redo';

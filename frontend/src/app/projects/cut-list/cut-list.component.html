@@ -1,0 +1,99 @@
+<div class="page page--wide">
+    <div class="page__header">
+        <h1 class="page__title">Cut list{{ project() ? ': ' + project()?.name : '' }}</h1>
+        <div class="actions no-print">
+            <a class="btn btn--ghost" [routerLink]="['/projects', projectId()]">Back to the project</a>
+            <button type="button" class="btn btn--primary" (click)="print()">Print</button>
+        </div>
+    </div>
+
+    <div class="filters no-print">
+        <label class="field">
+            <span class="field__label">Floor</span>
+            <select class="input input--compact" (change)="setFloor($event)">
+                <option value="" [selected]="floorId() === null">All floors</option>
+                @for (floor of project()?.floors ?? []; track floor.id) {
+                    <option [value]="floor.id" [selected]="floor.id === floorId()">{{ floor.name }}</option>
+                }
+            </select>
+        </label>
+        <p class="hint">Custom furniture of the working copy, shown variants only. Lengths in mm; the length runs along the grain.</p>
+    </div>
+
+    @if (list(); as l) {
+        @for (skipped of l.skipped; track skipped.itemId) {
+            <p class="form-error">{{ skipped.itemName }} ({{ skipped.floorName }}) is left out: {{ skipped.error }}</p>
+        }
+
+        @for (material of materials(); track material.material + material.materialId) {
+            <section class="card card--table">
+                <h2 class="section">
+                    {{ material.material }}
+                    <span class="section__totals">{{ material.area | number: '1.2-2' }} m² · edge banding {{ material.edgeLength | number: '1.1-1' }} m</span>
+                </h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="num">Pcs</th>
+                            <th class="num">Length</th>
+                            <th class="num">Width</th>
+                            <th class="num">Thick.</th>
+                            <th>Edges</th>
+                            <th>Parts</th>
+                            <th>Furniture</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (board of material.boards; track $index) {
+                            <tr>
+                                <td class="num strong">{{ board.count }}</td>
+                                <td class="num">{{ board.length }}</td>
+                                <td class="num">{{ board.width }}</td>
+                                <td class="num">{{ board.thickness }}</td>
+                                <td>{{ edges(board) }}</td>
+                                <td>{{ board.parts.join(', ') }}</td>
+                                <td class="muted">{{ board.items.join(', ') }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @if (l.others.length > 0) {
+            <section class="card card--table">
+                <h2 class="section">Other parts</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="num">Pcs</th>
+                            <th>Type</th>
+                            <th>Material</th>
+                            <th class="num">W × H × D</th>
+                            <th>Parts</th>
+                            <th>Furniture</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (other of l.others; track $index) {
+                            <tr>
+                                <td class="num strong">{{ other.count }}</td>
+                                <td>{{ other.type }}</td>
+                                <td>{{ other.material }}</td>
+                                <td class="num">{{ other.w }} × {{ other.h }} × {{ other.d }}</td>
+                                <td>{{ other.parts.join(', ') }}</td>
+                                <td class="muted">{{ other.items.join(', ') }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @if (l.boards.length === 0 && l.others.length === 0 && !loading()) {
+            <p class="hint">No custom furniture here yet. Add some from the editor's Add menu (Furniture).</p>
+        }
+    } @else if (loading()) {
+        <p class="hint">Loading…</p>
+    }
+</div>

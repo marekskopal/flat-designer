@@ -66,7 +66,12 @@ export class ProjectDetailComponent {
         toObservable(this.projectId)
             .pipe(
                 switchMap((projectId) => realtime.projectUpdates(projectId)),
-                filter((update) => update.originClientId !== originClientId && update.revision > (this.project()?.revision ?? -1)),
+                filter(
+                    (update) =>
+                        update.type === 'projectChanged' &&
+                        update.originClientId !== originClientId &&
+                        update.revision > (this.project()?.revision ?? -1),
+                ),
                 takeUntilDestroyed(),
             )
             .subscribe((update) => void this.load(update.projectId));

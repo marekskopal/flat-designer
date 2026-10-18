@@ -204,6 +204,12 @@ export class ViewerPageComponent {
         if (update.originClientId === originClientId || this.version() !== null) {
             return;
         }
+        if (update.type === 'definitionChanged') {
+            // The reloaded scene carries the edited definition; only the items drawn from it are rebuilt.
+            this.data.reload();
+            void this.editor.loadDefinitions();
+            return;
+        }
         if (update.revision > (this.scene()?.revision ?? -1)) {
             this.data.reload();
             void this.editor.loadChanges();

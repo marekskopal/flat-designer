@@ -213,3 +213,14 @@ a {
         margin: 0;
     }
 }
+
+/* Printing a page (the cut list): just the content. */
+@media print {
+    .topbar {
+        display: none;
+    }
+
+    body {
+        background: white;
+    }
+}
