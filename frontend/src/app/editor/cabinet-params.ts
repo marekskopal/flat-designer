@@ -1,5 +1,6 @@
 import {CabinetHandle, CabinetParams, FrontSpec, FrontType, ItemKind} from '@app/models/scene';
 
+
 /** Item kinds whose params are edited with the cabinet form instead of raw JSON. */
 export const CabinetKinds: readonly ItemKind[] = ['BaseCabinet', 'WallCabinet', 'TallCabinet'];
 export const FrontTypes: readonly FrontType[] = ['door', 'drawer', 'oven', 'microwave'];
@@ -56,8 +57,7 @@ export function moveFront(params: Params, index: number, direction: -1 | 1): Par
     if (target < 0 || target >= fronts.length) {
         return params;
     }
-    [fronts[index], fronts[target]] = [fronts[target], fronts[index]];
-    return withParam(params, 'fronts', fronts);
+    return withParam(params, 'fronts', swapped(fronts, index, direction));
 }
 
 /** A whole-mm input: blank = unset (undefined), otherwise a non-negative integer or an error. */
@@ -67,4 +67,15 @@ export function parseMillimetres(raw: string): {ok: true; value: number | undefi
         return {ok: true, value: undefined};
     }
     return /^\d+$/.test(text) ? {ok: true, value: Number(text)} : {ok: false, error: 'Whole mm expected.'};
+}
+
+/** The list with an item swapped with the one before (−1) or after (+1) it; unchanged (a copy) at either end. */
+export function swapped<T>(items: readonly T[], index: number, direction: -1 | 1): T[] {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) {
+        return [...items];
+    }
+    const moved = [...items];
+    [moved[index], moved[target]] = [moved[target], moved[index]];
+    return moved;
 }

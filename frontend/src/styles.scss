@@ -214,6 +214,60 @@ a {
     }
 }
 
+/* Row controls of the editor forms (cabinet fronts, list parameters): small bordered buttons and a text link. */
+.icon,
+.add {
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-6;
+    background: $color-surface-solid;
+    font-size: $font-size-12;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: 0.4;
+    }
+}
+
+.icon {
+    flex: none;
+    width: 24px;
+    height: 26px;
+    padding: 0;
+}
+
+.icon--danger {
+    color: $color-danger;
+}
+
+.add {
+    align-self: flex-start;
+    padding: 4px 8px;
+}
+
+.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: $font-size-12;
+    color: $color-accent;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        text-decoration: underline;
+    }
+
+    &:disabled {
+        color: $color-text-subtle;
+        cursor: default;
+    }
+}
+
 /* Printing a page (the cut list): just the content. */
 @media print {
     .topbar {

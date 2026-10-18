@@ -39,6 +39,91 @@
                     </select>
                 </label>
             }
+            @case ('list') {
+                @let rows = items(parameter);
+                <div class="list">
+                    <div class="list__head">
+                        <span class="cell__label">{{ label(parameter) }}</span>
+                        @if (hasOwnList(parameter)) {
+                            <button type="button" class="link" [disabled]="disabled()" (click)="resetList(parameter)">Default</button>
+                        }
+                    </div>
+                    <div class="list__row list__row--head" aria-hidden="true">
+                        @for (field of fields(parameter); track field.key) {
+                            <span class="list__field" [class.list__check]="field.type === 'bool'">{{ fieldLabel(field) }}</span>
+                        }
+                        <span class="list__actions"></span>
+                    </div>
+                    @for (item of rows; track $index; let index = $index, last = $last, first = $first) {
+                        <div class="list__row">
+                            @for (field of fields(parameter); track field.key) {
+                                @switch (field.type) {
+                                    @case ('select') {
+                                        <select
+                                            class="input input--compact list__field"
+                                            [attr.aria-label]="label(parameter) + ' ' + (index + 1) + ' ' + fieldLabel(field)"
+                                            [disabled]="disabled()"
+                                            (change)="setItemField(parameter, index, field, $event)"
+                                        >
+                                            <option value="" [selected]="item[field.key] === undefined">
+                                                {{ field.default === undefined || field.default === null ? '—' : field.default + ' (default)' }}
+                                            </option>
+                                            @for (option of field.options; track option) {
+                                                <option [value]="option" [selected]="option === item[field.key]">{{ option }}</option>
+                                            }
+                                        </select>
+                                    }
+                                    @case ('bool') {
+                                        <input
+                                            type="checkbox"
+                                            class="list__field list__check"
+                                            [attr.aria-label]="label(parameter) + ' ' + (index + 1) + ' ' + fieldLabel(field)"
+                                            [checked]="checkedField(item, field)"
+                                            [disabled]="disabled()"
+                                            (change)="setItemField(parameter, index, field, $event)"
+                                        />
+                                    }
+                                    @default {
+                                        <input
+                                            class="input input--compact list__field"
+                                            type="number"
+                                            step="1"
+                                            [attr.min]="field.type === 'int' ? (field.min ?? null) : null"
+                                            [attr.max]="field.type === 'int' ? (field.max ?? null) : null"
+                                            [placeholder]="placeholder(field)"
+                                            [attr.aria-label]="label(parameter) + ' ' + (index + 1) + ' ' + fieldLabel(field)"
+                                            [value]="item[field.key] ?? ''"
+                                            [disabled]="disabled()"
+                                            (change)="setItemField(parameter, index, field, $event)"
+                                        />
+                                    }
+                                }
+                            }
+                            <span class="list__actions">
+                                <button type="button" class="icon" title="Move up" [disabled]="disabled() || first" (click)="moveItem(parameter, index, -1)">↑</button>
+                                <button type="button" class="icon" title="Move down" [disabled]="disabled() || last" (click)="moveItem(parameter, index, 1)">↓</button>
+                                <button
+                                    type="button"
+                                    class="icon icon--danger"
+                                    title="Remove"
+                                    [disabled]="disabled() || rows.length <= (parameter.minItems ?? 0)"
+                                    (click)="removeItem(parameter, index)"
+                                >
+                                    ×
+                                </button>
+                            </span>
+                        </div>
+                    }
+                    <button
+                        type="button"
+                        class="add"
+                        [disabled]="disabled() || (parameter.maxItems !== undefined && rows.length >= parameter.maxItems)"
+                        (click)="addItem(parameter)"
+                    >
+                        + Add
+                    </button>
+                </div>
+            }
         }
     }
     @for (slot of slots(); track slot.key; let first = $first) {
