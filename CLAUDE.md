@@ -116,7 +116,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   definition edit does not block moving it). An item may use global definitions, the project owner's library and the
   project's own (`FurnitureDefinitionProvider::isUsableIn`); deleted ones are still accepted. The scene carries
   `definitions` (those its items use), so versions embed them; a restore links the live definition of that id or
-  recreates it as a project definition (`SnapshotDefinitionRestorer`).
+  recreates it as a project definition (`SnapshotDefinitionRestorer`). The viewer draws Custom items with
+  `viewer/engine/custom/custom.ts` (one mesh per part, `userData.partName`; a red placeholder with
+  `userData.definitionError` when it does not evaluate) and rebuilds them when their definition's `updatedAt` changes.
+  Global definitions are seeded from `backend/migrations/furniture/*.json` (`SeedFurnitureDefinitions`); both test
+  suites build them.
 - Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
   `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
   The flat 50 references are no longer in git: keep a local `source_files/` and run

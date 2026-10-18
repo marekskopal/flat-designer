@@ -1,0 +1,102 @@
+{
+ "name": "Open shelf",
+ "description": "Bookcase of boards between two sides, with an optional thin back panel.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 800,
+   "depth": 300,
+   "height": 1800
+  },
+  "parameters": [
+   {
+    "key": "t",
+    "label": "Board thickness",
+    "type": "int",
+    "default": 18,
+    "min": 12,
+    "max": 40,
+    "unit": "mm"
+   },
+   {
+    "key": "shelves",
+    "label": "Boards",
+    "type": "int",
+    "default": 5,
+    "min": 2,
+    "max": 12
+   },
+   {
+    "key": "back",
+    "label": "Back panel",
+    "type": "bool",
+    "default": true
+   }
+  ],
+  "derived": {
+   "backT": "back ? 4 : 0",
+   "pitch": "(H - t) / (shelves - 1)"
+  },
+  "materialSlots": [
+   {
+    "key": "carcass",
+    "label": "Boards",
+    "default": "kitchen-oak"
+   },
+   {
+    "key": "back",
+    "label": "Back panel",
+    "default": "furniture-white-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": 0,
+    "z": 0,
+    "w": "t",
+    "h": "H",
+    "d": "D",
+    "material": "carcass",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Shelf",
+    "repeat": {
+     "count": "shelves"
+    },
+    "x": "t",
+    "y": "i * pitch",
+    "z": "backT",
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "D - backT",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "when": "back",
+    "x": "t",
+    "y": 0,
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "H",
+    "d": "backT",
+    "material": "back"
+   }
+  ]
+ }
+}

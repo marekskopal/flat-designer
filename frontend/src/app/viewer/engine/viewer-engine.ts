@@ -7,6 +7,7 @@ import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightU
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
+import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
 import {
@@ -274,8 +275,9 @@ export class ViewerEngine {
         this.joints = wallJoints(scene.walls);
 
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
+        const definitions = definitionLibrary(scene.definitions);
         for (const item of scene.items) {
-            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0));
+            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -301,10 +303,17 @@ export class ViewerEngine {
 
         const rooms = diffById(previous.rooms, scene.rooms);
         const items = diffById(previous.items, scene.items);
-        // Tiled items follow their room's tile grid.
+        // Tiled items follow their room's tile grid; Custom items their definition.
         const changedRooms = new Set(rooms.changed.map((r) => r.id));
         const changedItems = new Set(items.changed.map((i) => i.id));
-        const rebuiltItems = scene.items.filter((i) => changedItems.has(i.id) || (i.roomId !== null && changedRooms.has(i.roomId)));
+        const definitions = definitionLibrary(scene.definitions);
+        const changedDefinitions = changedDefinitionIds(definitionLibrary(previous.definitions), definitions);
+        const rebuiltItems = scene.items.filter(
+            (i) =>
+                changedItems.has(i.id) ||
+                (i.roomId !== null && changedRooms.has(i.roomId)) ||
+                (i.definitionId !== null && changedDefinitions.has(i.definitionId)),
+        );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
             if (object !== undefined) {
@@ -314,7 +323,7 @@ export class ViewerEngine {
         }
         const roomsById = new Map(scene.rooms.map((room) => [room.id, room]));
         for (const item of rebuiltItems) {
-            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0));
+            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions);
             this.items.set(item.id, object);
             content.add(object);
         }

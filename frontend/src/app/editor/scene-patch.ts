@@ -5,7 +5,8 @@ import {Group, Item, Opening, Room, Scene, VariantSet, Wall} from '@app/models/s
  * The scene after an edit, undo or redo, built from the result's element state instead of loading the
  * floor again; a batch (a group operation) applies each of its changes in order. Null when the result
  * cannot be applied safely: the project moved on by more than this one change (someone else edited
- * meanwhile), or a wall came back with openings the result does not carry.
+ * meanwhile), a wall came back with openings the result does not carry, or an item uses a furniture
+ * definition the scene does not have.
  */
 export function patchScene(scene: Scene, result: EditResult): Scene | null {
     const change = result.change;
@@ -30,8 +31,15 @@ export function patchScene(scene: Scene, result: EditResult): Scene | null {
 function patchElements(scene: Scene, change: Change, element: Record<string, unknown> | null): Scene | null {
     const id = change.elementId;
     switch (change.elementType) {
-        case 'Item':
-            return {...scene, items: upsert(scene.items, id, element as unknown as Item | null)};
+        case 'Item': {
+            const item = element as unknown as Item | null;
+            // The result carries the item only, not a furniture definition the scene does not have yet.
+            const definitionId = item?.definitionId ?? null;
+            if (definitionId !== null && !(scene.definitions ?? []).some((d) => d.id === definitionId)) {
+                return null;
+            }
+            return {...scene, items: upsert(scene.items, id, item)};
+        }
         case 'Room': {
             const room = element as unknown as Room | null;
             // Items of a deleted room no longer belong to it.

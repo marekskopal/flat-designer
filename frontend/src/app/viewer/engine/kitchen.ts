@@ -111,7 +111,7 @@ function buildCabinet(item: Item, materials: MaterialLibrary): THREE.Group {
             if (handle !== 'none') {
                 // Double doors get their handles at the meeting edges.
                 const edge = leaves === 2 ? (leaf === 0 ? 'right' : 'left') : params.handleSide;
-                group.add(buildHandle(handle, front, item.z, edge, materials));
+                group.add(buildHandle(handle, front, front.z + FrontThickness, item.z, edge, materials));
             }
         }
     });
@@ -134,15 +134,20 @@ interface FrontBox {
     z: number;
 }
 
-function buildHandle(
+/**
+ * Bar handle on a front (mm, item-local; `faceZ` is the front's outer face): horizontal ones near the top or bottom
+ * edge depending on the height (`itemElevation` + front), vertical ones at `edge` around reach height.
+ */
+export function buildHandle(
     orientation: 'horizontal' | 'vertical',
-    front: FrontBox,
+    front: Omit<FrontBox, 'z'>,
+    faceZ: number,
     itemElevation: number,
     edge: 'left' | 'right',
     materials: MaterialLibrary,
 ): THREE.Mesh {
     const material = materials.plain('#161616', 0.35, 0.6);
-    const z = front.z + FrontThickness + HandleStandoff - HandleSection;
+    const z = faceZ + HandleStandoff - HandleSection;
 
     if (orientation === 'horizontal') {
         const length = THREE.MathUtils.clamp(front.width * 0.45, 120, 480);

@@ -105,16 +105,20 @@ final class CustomItemTest extends EditorTestCase
 		$definitionId = $this->defineFurniture();
 		$item = $this->create('items', ['kind' => 'Custom', 'definitionId' => $definitionId]);
 
-		// The shelves now need 1000 mm of width; the item has 800.
+		$this->edit('PATCH', 'items', self::id($item), ['params' => ['materials' => ['back' => 1]]]);
+
+		// The shelves now need 1000 mm of width (the item has 800) and the "back" slot is gone.
 		$definition = self::Definition;
 		$definition['size']['width'] = 1200;
 		$definition['parts'][1]['w'] = 'W - 1000';
+		unset($definition['materialSlots'][1]);
 		$this->updateFurniture($definitionId, $definition);
 
 		self::assertSame(200, $this->edit('PATCH', 'items', self::id($item), ['x' => 2000, 'name' => 'Moved shelf'])->getStatusCode());
 		$resized = $this->edit('PATCH', 'items', self::id($item), ['width' => 900]);
 		self::assertSame(422, $resized->getStatusCode());
-		self::assertSame(200, $this->edit('PATCH', 'items', self::id($item), ['width' => 1100])->getStatusCode());
+		$refit = $this->edit('PATCH', 'items', self::id($item), ['width' => 1100, 'params' => ['materials' => ['carcass' => 1]]]);
+		self::assertSame(200, $refit->getStatusCode());
 	}
 
 	public function testUndoAndCopiesKeepTheDefinition(): void
@@ -169,6 +173,9 @@ final class CustomItemTest extends EditorTestCase
 		[$item] = $this->sceneList('items');
 		self::assertIsInt($item['definitionId']);
 		self::assertNotSame($definitionId, $item['definitionId']);
+		// Restoring again reuses that copy.
+		$this->restore($versionId);
+		self::assertSame([$item['definitionId']], array_column($this->sceneList('definitions'), 'id'));
 		$copy = $this->jsonBody($this->request('GET', self::definitionPath($item['definitionId']), authenticatedAs: $this->user));
 		self::assertSame('project', $copy['scope']);
 		self::assertSame($this->project->id, $copy['projectId']);

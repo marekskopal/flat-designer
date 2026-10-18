@@ -1,0 +1,96 @@
+{
+ "name": "Desk",
+ "description": "Solid wood desk: a top on two panel sides, with an optional modesty panel at the back.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1400,
+   "depth": 700,
+   "height": 750
+  },
+  "parameters": [
+   {
+    "key": "tt",
+    "label": "Top thickness",
+    "type": "int",
+    "default": 30,
+    "min": 18,
+    "max": 50,
+    "unit": "mm"
+   },
+   {
+    "key": "st",
+    "label": "Side thickness",
+    "type": "int",
+    "default": 25,
+    "min": 18,
+    "max": 60,
+    "unit": "mm"
+   },
+   {
+    "key": "modesty",
+    "label": "Modesty panel",
+    "type": "bool",
+    "default": true
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Wood",
+    "default": "solid-ash-honey"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Top",
+    "x": 0,
+    "y": "H - tt",
+    "z": 0,
+    "w": "W",
+    "h": "tt",
+    "d": "D",
+    "material": "wood",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "back",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "40 + i * (W - 80 - st)",
+    "y": 0,
+    "z": 25,
+    "w": "st",
+    "h": "H - tt",
+    "d": "D - 50",
+    "material": "wood",
+    "edges": [
+     "front",
+     "back"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Modesty panel",
+    "when": "modesty",
+    "x": "40 + st",
+    "y": "H - tt - 350",
+    "z": 60,
+    "w": "W - 80 - 2*st",
+    "h": 350,
+    "d": 18,
+    "material": "wood",
+    "grain": "horizontal"
+   }
+  ]
+ }
+}
