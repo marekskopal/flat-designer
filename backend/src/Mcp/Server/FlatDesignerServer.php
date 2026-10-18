@@ -34,6 +34,12 @@ final readonly class FlatDesignerServer
 		Alternatives of a piece of furniture (e.g. with or without a kitchen island) are groups in a variant
 		set; only its active variant is shown (switch_variant), get_floor lists the hidden items.
 
+		Custom-made furniture is data: a furniture definition (list_furniture_definitions) has parameters and
+		parts (boards, fronts, legs, …) whose sizes are expressions of the item's W, D, H; add it with
+		add_item(kind: "Custom", definitionId). To design a new piece, write a definition (the format is in the
+		schema of create_furniture_definition), check it with validate_furniture_definition, then create it.
+		Editing a definition changes every item drawn from it, in all projects.
+
 		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.
 		update_* tools change only the fields you pass. Every change is logged under your client's name and

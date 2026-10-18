@@ -49,7 +49,7 @@ final readonly class ItemKindCatalog
 		'Fence' => ['description' => 'Garden panel fence along x with posts.', 'width' => 2500, 'depth' => 60, 'height' => 1530, 'z' => 0, 'params' => 'panelLength: mm between posts (default 2500); baseBoard: mm of concrete base board.'],
 		'Wardrobe' => ['description' => 'Built-in wardrobe with sliding doors on two tracks in aluminium frames; the item material is the carcass and door panels.', 'width' => 2400, 'depth' => 600, 'height' => 2400, 'z' => 0, 'params' => self::WardrobeParams],
 		'Chair' => ['description' => 'Solid wood chair with tapered legs and a two-rail back; front facing the rotation direction, the item material is the wood.', 'width' => 400, 'depth' => 395, 'height' => 885, 'z' => 0, 'params' => self::ChairParams],
-		'Custom' => ['description' => 'Custom piece of furniture drawn from a furniture definition (definitionId); the size defaults to the definition\'s.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => self::CustomParams],
+		'Custom' => ['description' => 'Custom piece of furniture drawn from a furniture definition (definitionId, see list_furniture_definitions; create one with create_furniture_definition); the size defaults to the definition\'s.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => self::CustomParams],
 		'Table' => ['description' => 'Solid wood table: a top of boards along the width, tapered legs and an apron; the item material is the wood.', 'width' => 1320, 'depth' => 700, 'height' => 780, 'z' => 0, 'params' => 'none'],
 	];
 

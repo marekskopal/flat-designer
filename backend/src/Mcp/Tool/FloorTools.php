@@ -22,7 +22,8 @@ final readonly class FloorTools
 			. 'walls (centre line, thickness, height, type) with their openings (doors/windows: offset from wall start, width, '
 			. 'height, sill), items (kind, footprint centre x/y, elevation z, size, rotation, room, group, material, params), '
 			. 'groups (items forming one piece of furniture, see create_group; a group with variantSetId is a variant) and '
-			. 'variantSets (alternatives of which activeGroupId is shown; hiddenItemIds lists the items of the other variants). '
+			. 'variantSets (alternatives of which activeGroupId is shown; hiddenItemIds lists the items of the other variants) and '
+			. 'definitions (the furniture definitions of the Custom items, see get_furniture_definition). '
 			. 'All in mm. Material ids refer to list_materials.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
@@ -39,6 +40,7 @@ final readonly class FloorTools
 			'groups' => $scene->groups,
 			'variantSets' => $scene->variantSets,
 			'hiddenItemIds' => $scene->hiddenItemIds(),
+			'definitions' => $scene->definitions,
 		];
 	}
 

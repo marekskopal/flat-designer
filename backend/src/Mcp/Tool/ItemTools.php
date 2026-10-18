@@ -16,14 +16,24 @@ use Mcp\Schema\ToolAnnotations;
 /** Items: cabinets, appliances, sanitary ware, fences, … (see list_item_kinds). */
 final readonly class ItemTools
 {
-	private const array Clearable = ['roomId', 'groupId', 'materialId'];
+	private const array Clearable = ['roomId', 'groupId', 'materialId', 'definitionId'];
 
 	/** A JSON object (PHP arrays would otherwise be advertised as JSON arrays). */
 	private const array ParamsSchema = [
 		'type' => ['object', 'null'],
 		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params); '
-			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet), Wardrobe and Chair',
+			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet), Wardrobe, Chair and Custom',
 		'properties' => [
+			'values' => [
+				'type' => 'object',
+				'additionalProperties' => true,
+				'description' => 'Custom: parameter values over the definition\'s defaults, e.g. {"shelves": 6}',
+			],
+			'materials' => [
+				'type' => 'object',
+				'additionalProperties' => ['type' => 'integer'],
+				'description' => 'Custom: material id (list_materials) per material slot key of the definition',
+			],
 			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts / doors'],
 			'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles],
 			'handleSide' => [
@@ -84,6 +94,8 @@ final readonly class ItemTools
 	 * @param int|null $groupId group (piece of furniture) the item is part of (from get_floor)
 	 * @param int|null $materialId body/front material (from list_materials)
 	 * @param array<string, mixed>|null $params kind-specific options (see list_item_kinds)
+	 * @param int|null $definitionId for kind "Custom": the furniture definition (list_furniture_definitions); the size and name
+	 *     default to the definition's
 	 */
 	#[McpTool(name: 'add_item', description: 'Add an item to a floor. Unspecified size and elevation come from the kind\'s defaults.')]
 	public function addItem(
@@ -103,6 +115,7 @@ final readonly class ItemTools
 		?int $materialId = null,
 		#[Schema(definition: self::ParamsSchema)]
 		?array $params = null,
+		?int $definitionId = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -122,6 +135,7 @@ final readonly class ItemTools
 				'groupId' => $groupId,
 				'materialId' => $materialId,
 				'params' => $params,
+				'definitionId' => $definitionId,
 			]),
 		);
 	}
@@ -134,11 +148,14 @@ final readonly class ItemTools
 	 * @param int|null $rotation degrees counter-clockwise, 0 = front facing south
 	 * @param int|null $groupId group to move the item into (from get_floor)
 	 * @param array<string, mixed>|null $params replaces all params of the item
-	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId"
+	 * @param int|null $definitionId another furniture definition of a Custom item (send params {} with it, the old values
+	 *     belong to the old one)
+	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId",
+	 *     "definitionId" (with a kind other than Custom)
 	 */
 	#[McpTool(
 		name: 'update_item',
-		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId or materialId.',
+		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId, materialId or definitionId.',
 	)]
 	public function updateItem(
 		int $projectId,
@@ -158,6 +175,7 @@ final readonly class ItemTools
 		?int $materialId = null,
 		#[Schema(definition: self::ParamsSchema)]
 		?array $params = null,
+		?int $definitionId = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -179,6 +197,7 @@ final readonly class ItemTools
 				'groupId' => $groupId,
 				'materialId' => $materialId,
 				'params' => $params,
+				'definitionId' => $definitionId,
 			], $clear, self::Clearable),
 		);
 	}
