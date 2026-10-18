@@ -12,6 +12,7 @@ use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
+use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Service\Project\ProjectProvider;
 
 /**
@@ -29,6 +30,7 @@ final readonly class FurnitureDefinitionProvider
 		private FurnitureDefinitionRepository $definitionRepository,
 		private ProjectProvider $projectProvider,
 		private DefinitionValidator $validator,
+		private ItemRepository $itemRepository,
 	) {
 	}
 
@@ -154,9 +156,14 @@ final readonly class FurnitureDefinitionProvider
 		return $copy;
 	}
 
-	public function toDto(User $user, FurnitureDefinition $definition): FurnitureDefinitionDto
+	/** @param bool $withUsage also count the items drawn from it (for a single definition, not lists) */
+	public function toDto(User $user, FurnitureDefinition $definition, bool $withUsage = false): FurnitureDefinitionDto
 	{
-		return FurnitureDefinitionDto::fromEntity($definition, $this->canWrite($user, $definition));
+		return FurnitureDefinitionDto::fromEntity(
+			$definition,
+			$this->canWrite($user, $definition),
+			$withUsage ? $this->itemRepository->countByDefinition($definition->id) : null,
+		);
 	}
 
 	/** @return array{User|null, Project|null} the owners of a definition in `$scope` */

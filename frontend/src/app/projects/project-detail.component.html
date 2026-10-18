@@ -192,6 +192,17 @@
                 </ul>
             </section>
 
+            <section class="card">
+                <div class="card__header">
+                    <h2 class="card__title">Furniture</h2>
+                    <a class="btn btn--ghost" routerLink="/furniture" [queryParams]="{projectId: project.id}">Open</a>
+                </div>
+                <p class="furniture-hint">
+                    Custom furniture this project's items can use: global pieces, the owner's library and the project's own. Add them to a
+                    floor with the editor's Add menu.
+                </p>
+            </section>
+
             <fd-project-files [projectId]="project.id" />
         </div>
     }

@@ -26,6 +26,13 @@
                         }
                     </select>
                 }
+                @case ('definition') {
+                    <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
+                        @for (choice of definitionChoices(); track choice.id) {
+                            <option [value]="choice.id" [disabled]="choice.id === ''" [selected]="'' + choice.id === value(def)">{{ choice.name }}</option>
+                        }
+                    </select>
+                }
                 @case ('room') {
                     <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
                         <option value="" [selected]="value(def) === ''">—</option>
@@ -58,7 +65,19 @@
                 @case ('wardrobe') {
                     <fd-wardrobe-params
                         [params]="params(def)"
-                        [width]="width()"
+                        [width]="size('width')"
+                        [materials]="materials()"
+                        [disabled]="disabled()"
+                        (paramsChange)="commitValue(def, $event)"
+                    />
+                }
+                @case ('custom') {
+                    <fd-custom-params
+                        [definition]="definitionBody()"
+                        [params]="params(def)"
+                        [width]="size('width')"
+                        [depth]="size('depth')"
+                        [height]="size('height')"
                         [materials]="materials()"
                         [disabled]="disabled()"
                         (paramsChange)="commitValue(def, $event)"

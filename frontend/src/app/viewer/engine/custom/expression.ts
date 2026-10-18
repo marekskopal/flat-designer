@@ -69,7 +69,8 @@ export interface Expression {
 }
 
 export function parseExpression(source: string): Expression {
-    if (source.length > MaxExpressionLength) {
+    // Characters (code points), as the PHP twin's mb_strlen.
+    if ([...source].length > MaxExpressionLength) {
         throw new ExpressionError('tooLong', `Expression is longer than ${MaxExpressionLength} characters.`);
     }
     const root = new Parser(tokenize(source)).parse();

@@ -1,0 +1,89 @@
+<div class="editor">
+    <div class="editor__head">
+        <a routerLink="/furniture" class="back">← Furniture</a>
+        @if (definition(); as d) {
+            <span class="badge">{{ scopeLabels[d.scope] }}</span>
+            @if (d.itemCount) {
+                <span class="usage">Used by {{ d.itemCount }} {{ d.itemCount === 1 ? 'item' : 'items' }} — saving changes {{ d.itemCount === 1 ? 'it' : 'them all' }}.</span>
+            }
+        }
+    </div>
+
+    <div class="editor__body">
+        <section class="pane pane--form">
+            <label class="field">
+                <span class="field__label">Name</span>
+                <input class="input" [value]="name()" [readOnly]="readOnly()" (input)="name.set(text($event))" />
+            </label>
+            <label class="field">
+                <span class="field__label">Description</span>
+                <input class="input" [value]="description()" [readOnly]="readOnly()" (input)="description.set(text($event))" />
+            </label>
+            <label class="field field--grow">
+                <span class="field__label">
+                    Definition (JSON)
+                    <button type="button" class="link" [disabled]="body() === null || readOnly()" (click)="format()">Format</button>
+                </span>
+                <textarea class="input code" spellcheck="false" [value]="json()" [readOnly]="readOnly()" (input)="json.set(text($event))"></textarea>
+            </label>
+
+            <div class="messages" role="status">
+                @if (!parsed().ok) {
+                    <p class="message message--error">{{ $any(parsed()).error }}</p>
+                } @else if (previewError(); as error) {
+                    <p class="message message--error">At the tryout size: {{ error }}</p>
+                }
+                @if (serverError(); as error) {
+                    <p class="message message--error">Server: {{ error }}</p>
+                } @else if (serverOk() && !dirty()) {
+                    <p class="message message--ok">The server accepts this definition.</p>
+                }
+            </div>
+
+            <div class="actions">
+                @if (readOnly()) {
+                    <span class="hint">You cannot change this definition{{ definition()?.scope === 'global' ? ' (global ones are managed by admins)' : '' }}.</span>
+                    <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="copyToLibrary()">Copy to my library</button>
+                } @else {
+                    <button type="button" class="btn btn--ghost" [disabled]="busy() || body() === null" (click)="check()">Check</button>
+                    <button type="button" class="btn btn--primary" [disabled]="busy() || body() === null || !dirty()" (click)="save()">Save</button>
+                }
+            </div>
+        </section>
+
+        <section class="pane pane--preview">
+            <div #preview class="preview" aria-label="Preview of the furniture"></div>
+            <div class="tryout">
+                <div class="tryout__head">
+                    <h2 class="tryout__title">Try it out</h2>
+                    <button type="button" class="link" (click)="resetTryout()">Defaults</button>
+                </div>
+                <div class="sizes">
+                    <label class="cell">
+                        <span class="cell__label">Width <span class="cell__unit">mm</span></span>
+                        <input class="input input--compact" type="number" min="1" step="10" [value]="tryWidth()" (change)="setNumber('width', $event)" />
+                    </label>
+                    <label class="cell">
+                        <span class="cell__label">Depth <span class="cell__unit">mm</span></span>
+                        <input class="input input--compact" type="number" min="1" step="10" [value]="tryDepth()" (change)="setNumber('depth', $event)" />
+                    </label>
+                    <label class="cell">
+                        <span class="cell__label">Height <span class="cell__unit">mm</span></span>
+                        <input class="input input--compact" type="number" min="1" step="10" [value]="tryHeight()" (change)="setNumber('height', $event)" />
+                    </label>
+                </div>
+                @if (body(); as b) {
+                    <fd-custom-params
+                        [definition]="b"
+                        [params]="tryParams()"
+                        [width]="tryWidth()"
+                        [depth]="tryDepth()"
+                        [height]="tryHeight()"
+                        [materials]="materials()"
+                        (paramsChange)="tryParams.set($event)"
+                    />
+                }
+            </div>
+        </section>
+    </div>
+</div>

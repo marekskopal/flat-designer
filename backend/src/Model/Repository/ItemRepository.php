@@ -32,4 +32,10 @@ final class ItemRepository extends ARepository
 	{
 		return $this->findOne(['id' => $itemId, 'floor_id' => $floorId]);
 	}
+
+	/** Items (not deleted, in any project) drawn from the furniture definition. */
+	public function countByDefinition(int $definitionId): int
+	{
+		return $this->select()->where(['definition_id' => $definitionId, 'deleted_at' => null])->count();
+	}
 }

@@ -20,7 +20,8 @@ final readonly class Lexer
 		$length = mb_strlen($source);
 		while ($position < $length) {
 			$rest = mb_substr($source, $position);
-			if (preg_match('/^\s+/u', $rest, $match) === 1) {
+			// ASCII whitespace only, as the TS twin (a non-breaking space is an error in both).
+			if (preg_match('/^[ \t\n\v\f\r]+/', $rest, $match) === 1) {
 				$position += mb_strlen($match[0]);
 				continue;
 			}

@@ -1,0 +1,55 @@
+<div class="page">
+    <div class="page__header">
+        <h1 class="page__title">Furniture</h1>
+        <div class="actions">
+            @if (project() !== null) {
+                <a class="btn btn--ghost" [routerLink]="['/projects', project()]">Back to the project</a>
+                <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="create('project')">New in this project</button>
+            } @else {
+                <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="create('user')">New in my library</button>
+            }
+        </div>
+    </div>
+    <p class="intro">
+        Custom furniture is defined by parameters and parts (boards, fronts, legs…) whose sizes are expressions of the item's
+        width <code>W</code>, depth <code>D</code> and height <code>H</code>. Editing a definition changes every item made from it.
+    </p>
+
+    @for (section of sections(); track section.scope) {
+        <section class="card card--table">
+            <h2 class="section">{{ section.label }}</h2>
+            <table class="table">
+                <tbody>
+                    @for (definition of section.definitions; track definition.id) {
+                        <tr>
+                            <td class="table__strong">
+                                <a [routerLink]="['/furniture', definition.id]">{{ definition.name }}</a>
+                                @if (definition.scope === 'user' && project() !== null && definition.userName) {
+                                    <span class="badge">{{ definition.userName }}</span>
+                                }
+                            </td>
+                            <td class="table__muted description">{{ definition.description }}</td>
+                            <td class="table__actions">
+                                @if (definition.scope !== 'user') {
+                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="copy(definition, 'user')">Copy to my library</button>
+                                }
+                                @if (project() !== null && definition.scope !== 'project') {
+                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="copy(definition, 'project')">
+                                        Copy to the project
+                                    </button>
+                                }
+                                @if (definition.canEdit) {
+                                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="delete(definition)">Delete</button>
+                                }
+                            </td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="3" class="table__empty">{{ loading() ? 'Loading…' : 'None yet.' }}</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    }
+</div>

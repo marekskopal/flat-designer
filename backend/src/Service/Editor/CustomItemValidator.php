@@ -46,17 +46,17 @@ final readonly class CustomItemValidator
 
 			return;
 		}
-		if ($definition === null) {
-			throw EditException::invalid('A Custom item needs a definitionId.');
-		}
-
 		foreach (array_keys($params) as $key) {
 			if (!in_array($key, self::ParamKeys, true)) {
 				throw EditException::invalid(sprintf('Custom item params take only "values" and "materials", not "%s".', $key));
 			}
 		}
 		if (!$evaluate) {
+			// Also when the definition is gone (hard-deleted with its owner): the item can still be moved or renamed.
 			return;
+		}
+		if ($definition === null) {
+			throw EditException::invalid('A Custom item needs a definitionId.');
 		}
 
 		$body = JsonDecoder::decodeObject($definition->definition);

@@ -1,8 +1,10 @@
 import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
+import {FurnitureDefinition} from '@app/models/furniture';
 import {Scene} from '@app/models/scene';
 import {EditorApiService, GroupMove} from '@app/services/editor-api.service';
+import {FurnitureService} from '@app/services/furniture.service';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
 
 import {patchScene} from './scene-patch';
@@ -35,8 +37,11 @@ export class EditorStore {
     public readonly busy = signal(false);
     public readonly changes = signal<Change[]>([]);
     public readonly itemKinds = signal<ItemKindInfo[]>([]);
+    /** Furniture definitions the project's items may use (global, the project's own, its owner's library). */
+    public readonly definitions = signal<FurnitureDefinition[]>([]);
 
     private readonly api = inject(EditorApiService);
+    private readonly furniture = inject(FurnitureService);
     private context: EditorContext | null = null;
 
     public connect(context: EditorContext): void {
@@ -46,7 +51,11 @@ export class EditorStore {
     public async enable(enabled: boolean): Promise<void> {
         this.enabled.set(enabled);
         if (enabled) {
-            await Promise.all([this.loadChanges(), this.itemKinds().length === 0 ? this.loadItemKinds() : Promise.resolve()]);
+            await Promise.all([
+                this.loadChanges(),
+                this.itemKinds().length === 0 ? this.loadItemKinds() : Promise.resolve(),
+                this.loadDefinitions(),
+            ]);
         }
     }
 
@@ -187,6 +196,19 @@ export class EditorStore {
             return (this.context?.scene()?.items ?? []).filter((i) => i.groupId === selection.id).map((i) => i.id);
         }
         return [];
+    }
+
+    /** The furniture to pick from, again (e.g. after a definition was added in another tab). */
+    public async loadDefinitions(): Promise<void> {
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        try {
+            this.definitions.set(await this.furniture.list(context.projectId()));
+        } catch {
+            // The error interceptor shows the toast.
+        }
     }
 
     private async loadItemKinds(): Promise<void> {

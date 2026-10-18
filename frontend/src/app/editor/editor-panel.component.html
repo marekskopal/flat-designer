@@ -9,6 +9,13 @@
                     <option [value]="'item:' + kind.kind" [title]="kind.description">{{ kindLabel(kind.kind) }}</option>
                 }
             </optgroup>
+            @for (section of furnitureSections(); track section.label) {
+                <optgroup [label]="section.label">
+                    @for (definition of section.definitions; track definition.id) {
+                        <option [value]="'custom:' + definition.id" [title]="definition.description">{{ definition.name }}</option>
+                    }
+                </optgroup>
+            }
             <optgroup label="Building">
                 <option value="wall">Wall</option>
                 <option value="Door" [disabled]="selectedWall() === null">Door in selected wall</option>
@@ -47,6 +54,8 @@
             [materials]="scene().materials"
             [rooms]="scene().rooms"
             [groups]="groups()"
+            [definitions]="editor.definitions()"
+            [sceneDefinitions]="scene().definitions ?? []"
             [disabled]="editor.busy()"
             (fieldChange)="onFieldChange($event)"
         />
