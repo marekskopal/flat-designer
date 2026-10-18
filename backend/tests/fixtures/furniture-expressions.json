@@ -1,0 +1,434 @@
+{
+ "_comment": "Twin fixture of the furniture expression language: read by backend/tests/Service/Furniture/ExpressionTest.php and frontend/src/app/viewer/engine/custom/expression.spec.ts. Every case is evaluated with `variables`; `error` is the error code.",
+ "variables": {
+  "W": 800,
+  "D": 300,
+  "H": 1800,
+  "t": 18,
+  "shelves": 4,
+  "back": true,
+  "base": "plinth"
+ },
+ "cases": [
+  {
+   "expression": "1 + 2 * 3",
+   "result": 7
+  },
+  {
+   "expression": "(1 + 2) * 3",
+   "result": 9
+  },
+  {
+   "expression": "2 - 3 - 4",
+   "result": -5
+  },
+  {
+   "expression": "12 / 2 / 3",
+   "result": 2
+  },
+  {
+   "expression": "10 / 4",
+   "result": 2.5
+  },
+  {
+   "expression": "7 % 3",
+   "result": 1
+  },
+  {
+   "expression": "-7 % 3",
+   "result": -1
+  },
+  {
+   "expression": "7.5 % 2",
+   "result": 1.5
+  },
+  {
+   "expression": "-2 * 3",
+   "result": -6
+  },
+  {
+   "expression": "--2",
+   "result": 2
+  },
+  {
+   "expression": "1.25 * 4",
+   "result": 5
+  },
+  {
+   "expression": "0.1 + 0.2 == 0.3",
+   "result": false
+  },
+  {
+   "expression": "  W\t+\n1 ",
+   "result": 801
+  },
+  {
+   "expression": "W - 2*t",
+   "result": 764
+  },
+  {
+   "expression": "(H - t) / (shelves - 1)",
+   "result": 594
+  },
+  {
+   "expression": "W > 500",
+   "result": true
+  },
+  {
+   "expression": "W >= 800",
+   "result": true
+  },
+  {
+   "expression": "W < 800",
+   "result": false
+  },
+  {
+   "expression": "W <= 800",
+   "result": true
+  },
+  {
+   "expression": "t == 18",
+   "result": true
+  },
+  {
+   "expression": "t != 18",
+   "result": false
+  },
+  {
+   "expression": "base == 'legs'",
+   "result": false
+  },
+  {
+   "expression": "base != \"legs\"",
+   "result": true
+  },
+  {
+   "expression": "base == 'plinth' && back",
+   "result": true
+  },
+  {
+   "expression": "back && shelves > 2",
+   "result": true
+  },
+  {
+   "expression": "!back || false",
+   "result": false
+  },
+  {
+   "expression": "!!back",
+   "result": true
+  },
+  {
+   "expression": "true == back",
+   "result": true
+  },
+  {
+   "expression": "false && missing",
+   "result": false
+  },
+  {
+   "expression": "true || 1 / 0 > 0",
+   "result": true
+  },
+  {
+   "expression": "back ? t : 0",
+   "result": 18
+  },
+  {
+   "expression": "!back ? missing : 1",
+   "result": 1
+  },
+  {
+   "expression": "W > 1000 ? 3 : W > 600 ? 2 : 1",
+   "result": 2
+  },
+  {
+   "expression": "(true ? 1 : 2) + 1",
+   "result": 2
+  },
+  {
+   "expression": "1 + 2 > 2 ? 'big' : 'small'",
+   "result": "big"
+  },
+  {
+   "expression": "1 < 2 == true",
+   "result": true
+  },
+  {
+   "expression": "-t + W",
+   "result": 782
+  },
+  {
+   "expression": "min(3, 1, 2)",
+   "result": 1
+  },
+  {
+   "expression": "min(7)",
+   "result": 7
+  },
+  {
+   "expression": "max(W, 900)",
+   "result": 900
+  },
+  {
+   "expression": "round(2.5)",
+   "result": 3
+  },
+  {
+   "expression": "round(-2.5)",
+   "result": -3
+  },
+  {
+   "expression": "round(2.4)",
+   "result": 2
+  },
+  {
+   "expression": "round(445.5)",
+   "result": 446
+  },
+  {
+   "expression": "floor(-1.5)",
+   "result": -2
+  },
+  {
+   "expression": "ceil(1.2)",
+   "result": 2
+  },
+  {
+   "expression": "abs(-4)",
+   "result": 4
+  },
+  {
+   "expression": "clamp(1200, 300, 900)",
+   "result": 900
+  },
+  {
+   "expression": "clamp(100, 300, 900)",
+   "result": 300
+  },
+  {
+   "expression": "clamp(500, 300, 900)",
+   "result": 500
+  },
+  {
+   "expression": "max(min(W, 600), t * 2)",
+   "result": 600
+  },
+  {
+   "expression": "'a' == 'a'",
+   "result": true
+  },
+  {
+   "expression": "((((((((((((((((((((1))))))))))))))))))))",
+   "result": 1
+  },
+  {
+   "expression": "",
+   "error": "syntax"
+  },
+  {
+   "expression": "1 +",
+   "error": "syntax"
+  },
+  {
+   "expression": "(1 + 2",
+   "error": "syntax"
+  },
+  {
+   "expression": "1 2",
+   "error": "syntax"
+  },
+  {
+   "expression": "W +* 2",
+   "error": "syntax"
+  },
+  {
+   "expression": "1 ? 2",
+   "error": "syntax"
+  },
+  {
+   "expression": "a.b",
+   "error": "syntax"
+  },
+  {
+   "expression": "1.",
+   "error": "syntax"
+  },
+  {
+   "expression": ".5",
+   "error": "syntax"
+  },
+  {
+   "expression": "'abc",
+   "error": "syntax"
+  },
+  {
+   "expression": "= 1",
+   "error": "syntax"
+  },
+  {
+   "expression": "t & back",
+   "error": "syntax"
+  },
+  {
+   "expression": "t | back",
+   "error": "syntax"
+  },
+  {
+   "expression": "2W",
+   "error": "syntax"
+  },
+  {
+   "expression": "min(1,)",
+   "error": "syntax"
+  },
+  {
+   "expression": "min(1 2)",
+   "error": "syntax"
+  },
+  {
+   "expression": "1)",
+   "error": "syntax"
+  },
+  {
+   "expression": "#",
+   "error": "syntax"
+  },
+  {
+   "expression": "pitchh * 2",
+   "error": "unknownVariable"
+  },
+  {
+   "expression": "min + 1",
+   "error": "unknownVariable"
+  },
+  {
+   "expression": "sqrt(4)",
+   "error": "unknownFunction"
+  },
+  {
+   "expression": "t(2)",
+   "error": "unknownFunction"
+  },
+  {
+   "expression": "false && sqrt(4)",
+   "error": "unknownFunction"
+  },
+  {
+   "expression": "min()",
+   "error": "arity"
+  },
+  {
+   "expression": "max()",
+   "error": "arity"
+  },
+  {
+   "expression": "clamp(1, 2)",
+   "error": "arity"
+  },
+  {
+   "expression": "round(1, 2)",
+   "error": "arity"
+  },
+  {
+   "expression": "abs()",
+   "error": "arity"
+  },
+  {
+   "expression": "floor(1, 2)",
+   "error": "arity"
+  },
+  {
+   "expression": "ceil()",
+   "error": "arity"
+  },
+  {
+   "expression": "true + 1",
+   "error": "type"
+  },
+  {
+   "expression": "'a' * 2",
+   "error": "type"
+  },
+  {
+   "expression": "base + 1",
+   "error": "type"
+  },
+  {
+   "expression": "1 && true",
+   "error": "type"
+  },
+  {
+   "expression": "!back || 0",
+   "error": "type"
+  },
+  {
+   "expression": "back && 0",
+   "error": "type"
+  },
+  {
+   "expression": "!1",
+   "error": "type"
+  },
+  {
+   "expression": "-true",
+   "error": "type"
+  },
+  {
+   "expression": "1 ? 2 : 3",
+   "error": "type"
+  },
+  {
+   "expression": "1 == true",
+   "error": "type"
+  },
+  {
+   "expression": "base == 1",
+   "error": "type"
+  },
+  {
+   "expression": "'a' < 'b'",
+   "error": "type"
+  },
+  {
+   "expression": "min(1, true)",
+   "error": "type"
+  },
+  {
+   "expression": "round(base)",
+   "error": "type"
+  },
+  {
+   "expression": "1 / 0",
+   "error": "divisionByZero"
+  },
+  {
+   "expression": "5 % 0",
+   "error": "divisionByZero"
+  },
+  {
+   "expression": "1 / (W - 800)",
+   "error": "divisionByZero"
+  },
+  {
+   "expression": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+   "error": "nonFinite"
+  },
+  {
+   "expression": "100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 * 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+   "error": "nonFinite"
+  },
+  {
+   "expression": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "error": "tooDeep"
+  },
+  {
+   "expression": "------------------------------------------------------------1",
+   "error": "tooDeep"
+  },
+  {
+   "expression": "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1",
+   "error": "tooLong"
+  }
+ ]
+}
