@@ -11,6 +11,20 @@ const fixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests
     cases: {expression: string; result?: Value; error?: string}[];
 };
 
+/** The value with every number matched to 9 decimals (lists and records compared item by item). */
+function approximately(value: Value): unknown {
+    if (typeof value === 'number') {
+        return expect.closeTo(value, 9);
+    }
+    if (Array.isArray(value)) {
+        return value.map(approximately);
+    }
+    if (typeof value === 'object' && value !== null) {
+        return Object.fromEntries(Object.entries(value).map(([key, field]) => [key, approximately(field)]));
+    }
+    return value;
+}
+
 function errorCode(fn: () => unknown): string | null {
     try {
         fn();
@@ -34,7 +48,7 @@ describe('expression fixture', () => {
             expect(typeof value).toBe('number');
             expect(value).toBeCloseTo(c.result, 9);
         } else {
-            expect(value).toBe(c.result);
+            expect(value).toEqual(approximately(c.result ?? null));
         }
     });
 });

@@ -30,7 +30,10 @@ final readonly class DefinitionParameter
 		}
 		$key = Names::free($definition['key'] ?? null, $taken);
 		if ($key === null) {
-			throw DefinitionException::invalid($path . '.key', 'Must be a unique name (letters, digits, _), not W, D, H, true or false.');
+			throw DefinitionException::invalid(
+				$path . '.key',
+				'Must be a unique name (letters, digits, _), not W, D, H, true, false or null.',
+			);
 		}
 		$type = is_string($definition['type'] ?? null) ? ParameterTypeEnum::tryFrom($definition['type']) : null;
 		if ($type === null) {

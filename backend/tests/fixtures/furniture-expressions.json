@@ -7,7 +7,46 @@
   "t": 18,
   "shelves": 4,
   "back": true,
-  "base": "plinth"
+  "base": "plinth",
+  "fronts": [
+   {
+    "type": "drawer",
+    "height": 180
+   },
+   {
+    "type": "drawer",
+    "height": null
+   },
+   {
+    "type": "door",
+    "height": null
+   }
+  ],
+  "sizes": [
+   180,
+   null,
+   null
+  ],
+  "huge": [
+   1e+308,
+   1e+308,
+   null
+  ],
+  "empty": [],
+  "rec": {
+   "a": 1,
+   "b": null,
+   "s": "x"
+  },
+  "nested": [
+   [
+    1,
+    2
+   ],
+   [
+    3
+   ]
+  ]
  },
  "cases": [
   {
@@ -223,6 +262,200 @@
    "result": 1
   },
   {
+   "expression": "null",
+   "result": null
+  },
+  {
+   "expression": "null ?? 5",
+   "result": 5
+  },
+  {
+   "expression": "t ?? 5",
+   "result": 18
+  },
+  {
+   "expression": "rec.b ?? 7",
+   "result": 7
+  },
+  {
+   "expression": "rec.a",
+   "result": 1
+  },
+  {
+   "expression": "rec.s",
+   "result": "x"
+  },
+  {
+   "expression": "rec.a ?? 1 / 0",
+   "result": 1
+  },
+  {
+   "expression": "null ?? null",
+   "result": null
+  },
+  {
+   "expression": "t > 0 ? null : 1",
+   "result": null
+  },
+  {
+   "expression": "1 == null",
+   "result": false
+  },
+  {
+   "expression": "null == null",
+   "result": true
+  },
+  {
+   "expression": "rec.b == null",
+   "result": true
+  },
+  {
+   "expression": "rec.b != null",
+   "result": false
+  },
+  {
+   "expression": "sizes == null",
+   "result": false
+  },
+  {
+   "expression": "rec",
+   "result": {
+    "a": 1,
+    "b": null,
+    "s": "x"
+   }
+  },
+  {
+   "expression": "sizes",
+   "result": [
+    180,
+    null,
+    null
+   ]
+  },
+  {
+   "expression": "fronts[0].type",
+   "result": "drawer"
+  },
+  {
+   "expression": "fronts[1].height ?? 0",
+   "result": 0
+  },
+  {
+   "expression": "fronts[len(fronts) - 1].type",
+   "result": "door"
+  },
+  {
+   "expression": "nested[1][0]",
+   "result": 3
+  },
+  {
+   "expression": "len(fronts)",
+   "result": 3
+  },
+  {
+   "expression": "len(empty)",
+   "result": 0
+  },
+  {
+   "expression": "field(fronts, 'type')",
+   "result": [
+    "drawer",
+    "drawer",
+    "door"
+   ]
+  },
+  {
+   "expression": "len(field(fronts, 'height'))",
+   "result": 3
+  },
+  {
+   "expression": "contains(field(fronts, 'type'), 'door')",
+   "result": true
+  },
+  {
+   "expression": "contains(sizes, null)",
+   "result": true
+  },
+  {
+   "expression": "contains(empty, 1)",
+   "result": false
+  },
+  {
+   "expression": "contains(sizes, '180')",
+   "result": false
+  },
+  {
+   "expression": "sum(nested[0])",
+   "result": 3
+  },
+  {
+   "expression": "sum(empty)",
+   "result": 0
+  },
+  {
+   "expression": "share(sizes, 760)",
+   "result": [
+    180,
+    290,
+    290
+   ]
+  },
+  {
+   "expression": "share(sizes, 760, 10)",
+   "result": [
+    180,
+    280,
+    280
+   ]
+  },
+  {
+   "expression": "share(empty, 100)",
+   "result": []
+  },
+  {
+   "expression": "share(nested[0], 10)",
+   "result": [
+    1,
+    2
+   ]
+  },
+  {
+   "expression": "share(field(fronts, 'height'), 760)[2]",
+   "result": 290
+  },
+  {
+   "expression": "offsets(share(sizes, 760))",
+   "result": [
+    0,
+    180,
+    470
+   ]
+  },
+  {
+   "expression": "offsets(share(sizes, 760, 10), 10)",
+   "result": [
+    0,
+    190,
+    480
+   ]
+  },
+  {
+   "expression": "offsets(empty)",
+   "result": []
+  },
+  {
+   "expression": "(rec).a",
+   "result": 1
+  },
+  {
+   "expression": "fronts[0]",
+   "result": {
+    "type": "drawer",
+    "height": 180
+   }
+  },
+  {
    "expression": "",
    "error": "syntax"
   },
@@ -248,7 +481,7 @@
   },
   {
    "expression": "a.b",
-   "error": "syntax"
+   "error": "unknownVariable"
   },
   {
    "expression": "1.",
@@ -429,6 +662,178 @@
   {
    "expression": "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1",
    "error": "tooLong"
+  },
+  {
+   "expression": "null + 1",
+   "error": "null"
+  },
+  {
+   "expression": "rec.b * 2",
+   "error": "null"
+  },
+  {
+   "expression": "-null",
+   "error": "null"
+  },
+  {
+   "expression": "!null",
+   "error": "null"
+  },
+  {
+   "expression": "null ? 1 : 2",
+   "error": "null"
+  },
+  {
+   "expression": "null < 1",
+   "error": "null"
+  },
+  {
+   "expression": "null && true",
+   "error": "null"
+  },
+  {
+   "expression": "min(rec.b, 1)",
+   "error": "null"
+  },
+  {
+   "expression": "sum(sizes)",
+   "error": "null"
+  },
+  {
+   "expression": "offsets(sizes)",
+   "error": "null"
+  },
+  {
+   "expression": "fronts[3]",
+   "error": "index"
+  },
+  {
+   "expression": "fronts[-1]",
+   "error": "index"
+  },
+  {
+   "expression": "fronts[0.5]",
+   "error": "index"
+  },
+  {
+   "expression": "empty[0]",
+   "error": "index"
+  },
+  {
+   "expression": "fronts[null]",
+   "error": "null"
+  },
+  {
+   "expression": "fronts['a']",
+   "error": "type"
+  },
+  {
+   "expression": "t[0]",
+   "error": "type"
+  },
+  {
+   "expression": "rec[0]",
+   "error": "type"
+  },
+  {
+   "expression": "fronts.type",
+   "error": "type"
+  },
+  {
+   "expression": "t.x",
+   "error": "type"
+  },
+  {
+   "expression": "W.x",
+   "error": "type"
+  },
+  {
+   "expression": "rec.zzz",
+   "error": "unknownField"
+  },
+  {
+   "expression": "fronts[0].zzz",
+   "error": "unknownField"
+  },
+  {
+   "expression": "field(fronts, 'zzz')",
+   "error": "unknownField"
+  },
+  {
+   "expression": "len(t)",
+   "error": "type"
+  },
+  {
+   "expression": "len()",
+   "error": "arity"
+  },
+  {
+   "expression": "len(fronts, 1)",
+   "error": "arity"
+  },
+  {
+   "expression": "sum(field(fronts, 'type'))",
+   "error": "type"
+  },
+  {
+   "expression": "field(fronts, 1)",
+   "error": "type"
+  },
+  {
+   "expression": "field(sizes, 'a')",
+   "error": "type"
+  },
+  {
+   "expression": "share(sizes)",
+   "error": "arity"
+  },
+  {
+   "expression": "share(t, 1)",
+   "error": "type"
+  },
+  {
+   "expression": "share(field(fronts, 'type'), 100)",
+   "error": "type"
+  },
+  {
+   "expression": "contains(t, 1)",
+   "error": "type"
+  },
+  {
+   "expression": "min(sizes)",
+   "error": "type"
+  },
+  {
+   "expression": "fronts == fronts",
+   "error": "type"
+  },
+  {
+   "expression": "rec == rec",
+   "error": "type"
+  },
+  {
+   "expression": "fronts[",
+   "error": "syntax"
+  },
+  {
+   "expression": "rec.",
+   "error": "syntax"
+  },
+  {
+   "expression": "rec.1",
+   "error": "syntax"
+  },
+  {
+   "expression": "contains(fronts, rec)",
+   "error": "type"
+  },
+  {
+   "expression": "share(huge, 1)",
+   "error": "nonFinite"
+  },
+  {
+   "expression": "share(sizes, 760, 10, 1)",
+   "error": "arity"
   }
  ]
 }

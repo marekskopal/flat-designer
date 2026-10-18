@@ -8,10 +8,10 @@ namespace FlatDesigner\Service\Furniture;
 final readonly class Names
 {
 	/**
-	 * The item size and the boolean literals, and `__proto__` (a plain JS object cannot hold it); no parameter, derived
+	 * The item size, the literals true, false and null, and `__proto__` (a plain JS object cannot hold it); no parameter, derived
 	 * value or repeat index may take them.
 	 */
-	private const array Reserved = ['W', 'D', 'H', 'true', 'false', '__proto__'];
+	private const array Reserved = ['W', 'D', 'H', 'true', 'false', 'null', '__proto__'];
 
 	/** @phpstan-assert-if-true string $value */
 	public static function isName(mixed $value): bool
