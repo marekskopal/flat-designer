@@ -7,8 +7,11 @@ namespace FlatDesigner\Service\Furniture;
 /** Names of variables in a definition: parameters, derived values, repeat indexes and material slots. */
 final readonly class Names
 {
-	/** The item size and the boolean literals; no parameter, derived value or repeat index may take them. */
-	private const array Reserved = ['W', 'D', 'H', 'true', 'false'];
+	/**
+	 * The item size and the boolean literals, and `__proto__` (a plain JS object cannot hold it); no parameter, derived
+	 * value or repeat index may take them.
+	 */
+	private const array Reserved = ['W', 'D', 'H', 'true', 'false', '__proto__'];
 
 	/** @phpstan-assert-if-true string $value */
 	public static function isName(mixed $value): bool

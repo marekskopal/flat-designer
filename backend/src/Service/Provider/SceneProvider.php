@@ -10,10 +10,12 @@ use FlatDesigner\Dto\ItemDto;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\RoomDto;
+use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
 use FlatDesigner\Dto\VariantSetDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
@@ -57,17 +59,30 @@ final readonly class SceneProvider
 			$groupsById[$group->id] = $group;
 		}
 
+		$items = $this->itemRepository->findByFloor($floor->id);
+		$definitions = [];
+		foreach ($items as $item) {
+			if ($item->definition !== null) {
+				$definitions[$item->definition->id] = $item->definition;
+			}
+		}
+		ksort($definitions);
+
 		return new SceneDto(
 			floor: FloorDto::fromEntity($floor),
 			revision: $floor->project->revision,
 			materials: $this->getMaterials(),
 			rooms: array_map(fn (Room $room): RoomDto => RoomDto::fromEntity($room), $this->roomRepository->findByFloor($floor->id)),
 			walls: array_map(fn (Wall $wall): WallDto => WallDto::fromEntity($wall, $openingsByWall[$wall->id] ?? []), $walls),
-			items: array_map(fn (Item $item): ItemDto => ItemDto::fromEntity($item), $this->itemRepository->findByFloor($floor->id)),
+			items: array_map(fn (Item $item): ItemDto => ItemDto::fromEntity($item), $items),
 			groups: array_map(fn (ItemGroup $group): GroupDto => GroupDto::fromEntity($group), $groups),
 			variantSets: array_map(
 				fn (VariantSet $set): VariantSetDto => VariantSetDto::fromEntity($set, $groupsById[$set->activeGroupId ?? 0] ?? null),
 				$this->variantSetRepository->findByFloor($floor->id),
+			),
+			definitions: array_map(
+				fn (FurnitureDefinition $definition): SceneDefinitionDto => SceneDefinitionDto::fromEntity($definition),
+				array_values($definitions),
 			),
 		);
 	}

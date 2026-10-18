@@ -33,18 +33,22 @@ final readonly class FurnitureDefinitionProvider
 	}
 
 	/**
-	 * What the user can pick: global, their library and, with a project, the project's own and its owner's library.
+	 * What the user can pick: global ones and their library; with a project, what its items may use instead (`isUsableIn`):
+	 * global ones, the project's own and its owner's library (an admin's own library is not among them — copy to the
+	 * project).
 	 *
 	 * @return list<FurnitureDefinition>
 	 */
 	public function listVisible(User $user, ?Project $project): array
 	{
-		$userIds = [$user->id];
-		if ($project?->owner !== null && $project->owner->id !== $user->id && self::canReadLibraryOf($user, $project->owner)) {
-			$userIds[] = $project->owner->id;
+		if ($project === null) {
+			return $this->definitionRepository->findVisible([$user->id], null);
 		}
 
-		return $this->definitionRepository->findVisible($userIds, $project?->id);
+		$owner = $project->owner;
+		$userIds = $owner !== null && self::canReadLibraryOf($user, $owner) ? [$owner->id] : [];
+
+		return $this->definitionRepository->findVisible($userIds, $project->id);
 	}
 
 	/** The definition when the user may read it and it is not deleted; otherwise null, as if it did not exist. */
@@ -72,6 +76,16 @@ final readonly class FurnitureDefinitionProvider
 	public static function canReadLibraryOf(User $user, User $owner): bool
 	{
 		return $user->isAdmin() || $owner->id === $user->id;
+	}
+
+	/** Whether items of the project may use it: global ones, the project owner's library and the project's own. */
+	public static function isUsableIn(FurnitureDefinition $definition, Project $project): bool
+	{
+		return match ($definition->scope()) {
+			FurnitureScopeEnum::Global => true,
+			FurnitureScopeEnum::User => $project->owner !== null && $definition->user?->id === $project->owner->id,
+			FurnitureScopeEnum::Project => $definition->project?->id === $project->id,
+		};
 	}
 
 	public function canWrite(User $user, FurnitureDefinition $definition): bool

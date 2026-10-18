@@ -19,7 +19,7 @@ final class FurnitureDefinitionRepository extends ARepository
 	/**
 	 * Not deleted, by name: the global ones, the libraries of `$userIds` and the definitions of the project.
 	 *
-	 * @param non-empty-list<int> $userIds
+	 * @param list<int> $userIds
 	 * @return list<FurnitureDefinition>
 	 */
 	public function findVisible(array $userIds, ?int $projectId): array
@@ -28,7 +28,9 @@ final class FurnitureDefinitionRepository extends ARepository
 			->where(['deleted_at' => null])
 			->where(static function (WhereBuilder $builder) use ($userIds, $projectId): void {
 				$builder->where(['user_id' => null, 'project_id' => null]);
-				$builder->orWhere(['user_id', 'IN', $userIds]);
+				if ($userIds !== []) {
+					$builder->orWhere(['user_id', 'IN', $userIds]);
+				}
 				if ($projectId !== null) {
 					$builder->orWhere(['project_id' => $projectId]);
 				}

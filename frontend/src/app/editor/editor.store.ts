@@ -191,7 +191,8 @@ export class EditorStore {
 
     private async loadItemKinds(): Promise<void> {
         try {
-            this.itemKinds.set(await this.api.itemKinds());
+            // Custom items need a furniture definition, picked elsewhere than the plain kinds.
+            this.itemKinds.set((await this.api.itemKinds()).filter((k) => k.kind !== 'Custom'));
         } catch {
             // The error interceptor shows the toast.
         }

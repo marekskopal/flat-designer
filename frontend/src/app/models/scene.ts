@@ -1,3 +1,5 @@
+import {FurnitureDefinitionBody} from './furniture';
+
 // Mirrors the backend DTOs (FlatDesigner\Dto). All lengths are millimetres in plan coordinates:
 // origin at the inner south-west corner of the floor, x east, y north.
 
@@ -26,7 +28,9 @@ export type ItemKind =
     | 'Fence'
     | 'Wardrobe'
     | 'Chair'
-    | 'Table';
+    | 'Table'
+    /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
+    | 'Custom';
 
 export type PlanPoint = [number, number];
 
@@ -153,6 +157,8 @@ export interface Item {
     /** The group (piece of furniture) the item is part of. */
     groupId: number | null;
     kind: ItemKind;
+    /** The furniture definition of a `Custom` item. */
+    definitionId: number | null;
     name: string;
     x: number;
     y: number;
@@ -193,4 +199,14 @@ export interface Scene {
     groups?: Group[];
     /** Absent in versions saved before variant sets existed. */
     variantSets?: VariantSet[];
+    /** The furniture definitions of the `Custom` items (also deleted ones still in use); absent in older versions. */
+    definitions?: SceneDefinition[];
+}
+
+/** A furniture definition as the scene carries it; `updatedAt` changes whenever it is edited. */
+export interface SceneDefinition {
+    id: number;
+    name: string;
+    definition: FurnitureDefinitionBody;
+    updatedAt: string;
 }
