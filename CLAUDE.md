@@ -1,167 +1,230 @@
 # Flat Designer
 
-3D viewer of projects (1..N floors each) with parametric custom-made furniture (furniture definitions); the seeded
-project is flat no. 50 (H1B). PoC: view only, data seeded by migrations. Accounts (roles Admin/User) with JWT auth; users own
-projects, admins see all. Architecture mirrors `../ukolio` (same author), trimmed to what a viewer needs.
+A 3D designer for flats and houses. A project has 1..N floors with rooms, walls, openings and items. Custom-made
+furniture is stored as parametric furniture definitions. The app includes a viewer, an editor, a walkthrough, versions,
+share links, a cut list and an MCP server for AI agents. Accounts have the roles Admin or User and authenticate with JWT.
+Users own projects, and admins see all of them. The architecture mirrors `../ukolio` (same author), and parts of it
+(OAuth, lint configs) were ported from there. See `README.md` for the user-facing overview.
 
 ## Services
 
-- `proxy/` — nginx, `/api/*` → backend, `/` → frontend (port `PROXY_PORT`, default 4400). Locations live
-  in `conf/locations.conf`, included by `http.conf.template` or, with `PROXY_SSL_ENABLED=1`
-  (`docker-compose.ssl.yml`, enabled via `COMPOSE_FILE` in `.env`), `ssl.conf.template` (port
-  `PROXY_PORT_SSL`, http redirects); `docker-entrypoint.d/10-select-template.sh` picks one at start. The
-  backend reads the scheme from `X-Forwarded-Proto`.
-- `minio/` (compose service only) — S3-compatible storage for uploaded files.
-- `backend/` — FrankenPHP worker + PHP 8.5 + `marekskopal/orm` + `marekskopal/router` + MariaDB.
-  Namespace `FlatDesigner\`. Routes in `FlatDesigner\Route\Routes`. The entrypoint runs
-  `migration:run` before serving (unlike ukolio, where migrations are manual). Every route needs a
-  Bearer access token except `AuthorizationMiddleware::OpenRoutes`; controllers get the user from
-  `RequestService::getUser()` and answer 403 (not 401, which makes the frontend refresh/sign out) for
-  missing permissions. Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
-  `bin/console admin:create` (`make admin`) creates an admin.
-- `frontend/` — Angular 22 (standalone, signals, zoneless), prefix `fd`, SCSS tokens in
-  `src/styles/_variables.scss`. three.js code lives in `src/app/viewer/engine/` and must stay
-  framework-free (no Angular imports). Routes in `app.routes.ts` (lazy pages under `LayoutComponent`,
-  `authGuard`/`guestGuard`/`adminGuard`); `jwtInterceptor` adds the token and refreshes on 401,
-  `errorInterceptor` toasts API errors (skip with the `SkipErrorToast` context token).
+- `proxy/`: nginx. It sends `/api/*`, `/mcp`, OAuth discovery and Mercure to the backend and everything else to the
+  frontend (port `PROXY_PORT`, default 4400). Locations are in `conf/locations.conf`. They are included by
+  `http.conf.template`, or by `ssl.conf.template` when `PROXY_SSL_ENABLED=1` (set by `docker-compose.ssl.yml`, which is
+  enabled via `COMPOSE_FILE` in `.env`; it serves `PROXY_PORT_SSL` and makes http redirect).
+  `docker-entrypoint.d/10-select-template.sh` picks the template at start. The backend reads the scheme from
+  `X-Forwarded-Proto`.
+- `minio/` (a compose service only): S3-compatible storage for uploaded files.
+- `backend/`: FrankenPHP worker, PHP 8.5, `marekskopal/orm`, `marekskopal/router`, MariaDB. Namespace `FlatDesigner\`.
+  - Routes are in `FlatDesigner\Route\Routes`. The entrypoint runs `migration:run` before serving.
+  - Every route needs a Bearer access token, except `AuthorizationMiddleware::OpenRoutes` and the guest share read (`ShareRoutePattern`).
+  - Controllers get the user from `RequestService::getUser()`. For missing permissions they answer 403, not 401
+    (a 401 makes the frontend refresh the token or sign out).
+  - Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
+  - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
+    directory as project files.
+- `frontend/`: Angular 22 (standalone, signals, zoneless), component prefix `fd`, SCSS tokens in
+  `src/styles/_variables.scss`.
+  - three.js code lives in `src/app/viewer/engine/` and must stay framework-free (no Angular imports).
+  - Routes are in `app.routes.ts`: lazy pages under `LayoutComponent`, guarded by `authGuard` / `guestGuard` /
+    `adminGuard`.
+  - `jwtInterceptor` adds the token and refreshes it on 401. `errorInterceptor` shows a toast for API errors; skip it
+    with the `SkipErrorToast` context token.
 
-## Conventions
+## Domain conventions
 
-- All stored lengths are integer **millimetres** in plan coordinates: origin at the inner south-west
-  corner of the floor, x east, y north. The viewer converts with `MM` (0.001) and maps plan y → scene −z.
-- Item rotation is degrees counter-clockwise; 0 = front facing south (−y). Cabinet-local frame: x along
+- All stored lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the
+  floor, x points east and y points north. The viewer converts with `MM` (0.001) and maps plan y to scene −z.
+- Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
-- Walls are centre lines + thickness; openings are offsets along the centre line from the wall start.
-  Door `hinge` = Start/End of the opening, `side` = Left/Right of the wall direction.
-- `Project` → `Floor` (was `Flat`) → rooms/walls/items. Access goes through
-  `ProjectProvider::findAccessible()` (owner or admin, otherwise 404). Versions: the floors are the
-  working copy, `ProjectVersion::$snapshot` is JSON from `ProjectSnapshotService` (format documented
-  there); a new floor/room/wall/item field must be added to the snapshot restore too. Foreign keys cascade
-  on delete (project → floors → content), so deletes go through the parent row.
-- Editing: every change of a floor element goes through `Service\Editor\SceneEditor` (REST controllers
-  and MCP tools alike), which bumps `projects.revision` (optimistic lock via `If-Match`), validates via
-  the type's `ElementHandler` and logs a `ProjectChange` (before/after = the element's scene JSON).
-  `UndoService` reverts the current actor's (`ActorContext`: person or MCP client) own changes only
-  while the element is unchanged since; it writes back the handler's `restorableFields()` (fields plus
-  derived state: a wall's `openingOffsets`, which moving its start shifts so doors/windows stay put on the
-  plan). Items, walls, openings and rooms are soft-deleted (`deletedAt`);
-  repositories' `findByFloor`/`findByWalls` skip deleted rows. A new element field must be added to its
-  handler's `fields()`/`normalize()`/`apply()` and to the snapshot restore.
-- Item groups (`ItemGroup`, `items.group_id`, one level, may be empty): membership is the item field
-  `groupId`; `GroupEditor` (group, move, copy, ungroup, delete) changes several elements under one revision as
-  a `ChangeBatch` built with `BatchWriter` (`project_changes.batch`; the first change carries the operation's
-  summary). `UndoService` reverts a batch as a whole (backwards for undo) and closes all of it on a conflict;
-  `EditResultDto::$batch` lists every change, which `scene-patch.ts` applies in order. In the viewer, clicking
-  a grouped item selects the group (Alt/double-click: the item), Shift+click picks items to group.
-- Variants (`VariantSet`, `item_groups.variant_set_id`): alternatives of a piece of furniture are groups of a
-  set; only `activeGroupId` is shown (items only, shared items stay outside). `VariantEditor` makes a set,
-  adds a variant (copy in place or empty), switches (a logged change, also outside edit mode) and decides it
-  (delete keeps the active variant). The active variant cannot leave its set; deleting it activates another.
-  The client hides the other variants' items (`hiddenItemIds()` in `viewer/engine/variants.ts`, PHP twin
-  `SceneDto::hiddenItemIds()` for MCP); the sidebar's `VariantsComponent` switches them.
-- MCP: `McpController` (`/mcp`, `mcp/sdk` Streamable HTTP, sessions in `mcp_sessions`) authenticates the
-  OAuth access token (`OAuth\AuthorizationService`, ported from ukolio), sets `McpUserContext` and the
-  agent `ActorContext`. Tools live in `src/Mcp/Tool` (discovered by `#[McpTool]`, needs symfony/finder);
-  keep them thin wrappers over `SceneEditor`/providers with typed, documented parameters (the docblock
-  becomes the schema; JSON objects need `#[Schema(definition: …)]`). Domain `RuntimeException`s reach the
-  agent as tool errors (`ToolErrorTranslatingReferenceHandler`). `tests/Mcp/McpServerTest` drives the
-  server over JSON-RPC.
-- Materials are a global catalogue (seeded by migrations); admins add and change them with MCP `add_material` /
-  `update_material` (`MaterialService`: code permanent — definitions name slot defaults by it — texture never set, no
-  revision). A change publishes `materialChanged` to every project; the viewer reloads the scene. Tests keep the seeded
-  materials and drop those with `created_by_id`.
-- Live updates: `ProjectRevisionService::bump()` marks the project in `ProjectUpdatePublisher`; the worker
-  publishes after `frankenphp_finish_request()` (only revisions that were committed) to the private
-  Mercure topic `flat-designer/projects/{id}`. Subscribers get a cookie from `/api/realtime/subscription`
-  and listen on `/.well-known/mercure?match=<topic>` (Mercure protocol 1.0 uses `match`, not `topic`).
-  Each tab sends `X-Origin-Client-Id` so it can skip its own echoes. Tests record updates in
-  `RecordingMercureHub`.
-- Editor UI: `app/editor` — `EditorStore` (provided per viewer page: selection, edit mode, API calls with
-  the scene revision as `If-Match`; the result's element is patched into the scene by `scene-patch.ts`,
-  falling back to a reload), `EditorPanelComponent` (toolbar, Add menu, shortcuts), `InspectorComponent`
-  driven by `ElementFields` (add a field there to make it editable; `when` limits a field by element, e.g.
-  the `cabinet` / `wardrobe` forms for cabinet and wardrobe params). Engine picking: builders tag objects with
-  `itemId`/`openingId`/`wallId`/`roomId` in `userData` (`selection.ts`). In edit mode with the camera
-  looking down, items, walls and openings drag, and the selected wall's ends / room's corners get handles
-  (overlay scene, drawn above the section cut); one drag = one `onEdit` = one change. `ViewerEngine.load()`
-  of the same floor diffs the scene and rebuilds only changed items/walls/rooms (and neighbouring wall
-  mitres, `wallJoints()`).
-- Walkthrough (View → Walk): `viewer/engine/walkthrough.ts`, first person at 1630 mm eye height with pointer
-  lock (WASD/arrows, Shift runs, Esc — i.e. losing the lock — returns to the 3D overview). Without a fine pointer
-  (`walkthroughTouchMode()`) a finger drags the view and `WalkPadComponent` (corner arrows, held as virtual W/A/S/D keys,
-  plus a "Back to 3D" button) stands in for the keyboard. It collides in plan mm
-  against `wallColliders()` (wall pieces at floor level; doors and `walkable` windows are gaps, other windows solid) and
-  `leafColliders()` (each door leaf / French window sash as a thin wall at its current angle), items do not block.
-  Doors open and close (session only): `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots tagged
-  `userData.leaf`) and the colliders, `LeafStates` (`doors.ts`) animates them; E, a click (view centre, `DoorReach`)
-  or a tap toggles the door in view. Outside the walk doors show open and French windows closed; a walk starts with
-  all closed but the entrance. `openings.walkable` (a window with sill 0 only, sashes swing into `side`) makes a
-  French window a way out. It starts a step inside the door flagged `openings.entrance` (`entranceWalkStart()`;
-  fallback: a door in an exterior wall, then the largest indoor room).
-- Share links (`ShareLink`, `ShareLinkProvider`): a guest view of one floor at `/s/{token}` (no sign-in; the
-  public `GET /api/shares/{token}` is open via `AuthorizationMiddleware::OpenRoutePrefixes`, `jwtInterceptor` sends
-  no token there). Creating a link saves a version ("Shared: <name>"); refreshing it (`POST …/share-links/{id}/refresh`, MCP
-  `refresh_share_link`, the project page's Update) saves a new one for the same token; `floorId` is the floor's id inside that
-  snapshot. `settings` (JSON, `ShareSettingsDto`) = allowed views, start view, optional 3D camera (plan mm,
-  `ViewerEngine.cameraPose()`/`setCameraPose()`) and the display. `SharedViewerPageComponent` switches variants
-  locally only. Expired or unknown links answer 404. MCP: `ShareLinkTools` (list/create/update/refresh/delete_share_link;
-  the URL comes from the base URL `McpController` puts in `McpUserContext`).
-- Seed data lives in migrations (`SeedFlat50`, `SeedKitchen`, `FixRoomNiche`, `SeedFinishes`,
-  `SeedBathroomAndWc`, `FixHallwayDoorAndTiles`, `SeedGardens`, `SeedDiningTable`; the early ones predate `AddProjectsAndFloors` and still
-  say `flat_id`). Data changes go into a new migration; editing an applied one needs
-  `make reset-db` (drops the DB volume).
-- Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`; each builds the
-  item body in its local frame. Custom-made furniture is a furniture definition (below), not a new kind; a new item kind
-  (a bought product or a building element) needs the PHP enum, a migration extending the `items.kind` column enum, the
-  TS `ItemKind` union and a builder.
-- Furniture definitions (`docs/furniture-definitions-plan.md`, `docs/furniture-definitions-v2-plan.md`; the current
-  format is `FurnitureTools::Format`): custom furniture as data — parameters and
-  parts whose sizes are expressions. The expression language and the definition evaluator exist twice, PHP
-  (`Service/Furniture`) and TS (`viewer/engine/custom`), kept identical by the shared fixtures
-  `backend/tests/fixtures/furniture-{expressions,definitions}.json`; change both twins and add a fixture case together.
-  `FurnitureDefinition` rows (`/api/furniture-definitions`) are global (`user`/`project` null, admins write), a user's
-  library or a project's (`FurnitureDefinitionProvider` has the access rules; soft-deleted). `DefinitionValidator` adds
-  what the evaluator does not read (unknown keys, `size`, `PartTypeEnum` options, material codes) and stores the JSON
-  with empty objects kept `{}`. A `Custom` item has `items.definition_id` (live link) and `params` `{values, materials}`
-  (`CustomItemValidator`, which evaluates it at the item size only when kind/definition/size/params change, so a later
-  definition edit does not block moving it). An item may use global definitions, the project owner's library and the
-  project's own (`FurnitureDefinitionProvider::isUsableIn`); deleted ones are still accepted. The scene carries
-  `definitions` (those its items use), so versions embed them; a restore links the live definition of that id or
-  recreates it as a project definition (`SnapshotDefinitionRestorer`). The viewer draws Custom items with
-  `viewer/engine/custom/custom.ts` (one mesh per part, `userData.partName`; a red placeholder with
-  `userData.definitionError` when it does not evaluate) and rebuilds them when their definition's `updatedAt` changes.
-  Global definitions are seeded from `backend/migrations/furniture/*.json` (`SeedFurnitureDefinitions`,
-  `SeedFlat50FurnitureDefinitions`, each listing its files; `FurnitureSeeds` reads them); both test suites build them, and
-  `custom/parity.spec.ts` checks flat 50's (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against
-  the built-in kinds. A material slot without a default takes the item material, like the first slot.
-  `ConvertFlat50FurnitureToDefinitions` made flat 50's custom-made furniture Custom items of those definitions (in
-  place, same ids; `BuiltInFurnitureConverter` maps params ↔ values, `down()` maps back). The built-in furniture kinds
-  stay for saved versions and old changes; `ItemKindCatalog` marks them `replacedBy` (the Add menu lists them as
-  "Built-in (old)"). UI: the Add menu's "Furniture —" groups and the inspector's `definition` / `custom` fields
-  (`CustomParamsComponent`, form generated from the definition's parameters and slots; `EditorStore.definitions`);
-  `/furniture` (library, `?projectId=`) and `/furniture/:id` (JSON editor with `FurniturePreview`, a framework-free
-  one-item scene in `viewer/engine/custom/preview.ts`). MCP: `FurnitureTools` (list/get/create/update/delete/copy/
-  validate_furniture_definition; `FurnitureTools::Format` is the format text agents get, a test checks it names every
-  `PartTypeEnum`), `add_item`/`update_item` take `definitionId`, `get_floor` returns `definitions`. Saving a definition
-  publishes `definitionChanged` (`ProjectUpdatePublisher::markDefinitionChanged`, no revision bump) to the projects with
-  items of it; the viewer reloads the scene. `CutList\CutListService` (REST `…/cut-list`, MCP `get_cut_list`, page
-  `/projects/:id/cut-list`) evaluates the shown Custom items: board/front parts by material, thickness, length along
-  the grain, width and banded edges, other parts, area and banding per material.
-- Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through
-  `ProjectFileProvider`; tests swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
-  The flat 50 references are no longer in git: keep a local `source_files/` and run
-  `make import-files DIR=source_files PROJECT=1`.
-- Textures for real products are cut from the reference photos into `frontend/src/assets/textures/` (one
-  plank or tile per image); the material's `tile_width`/`tile_height` give its real size.
-- Tile grid: a room's `tileOriginX/Y` (plan mm, null = plan origin) is where tile joints cross. `alignTiles()`
-  (`viewer/engine/tiling.ts`) recomputes the UVs of every `Tiles` material mesh from its plan position, so the
-  floor, the wall bands (rows start at the floor) and tiled items of that room (bath panel, pre-wall box) share
-  the grid, as in the bathroom/WC renders.
-- PHP style: tabs, slevomat ruleset copied from ukolio, phpstan at max level. TS: eslint config from
-  ukolio, explicit member accessibility and return types, max line length 150.
+- Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. A door's
+  `hinge` is Start or End of the opening; `side` is Left or Right of the wall direction.
+- Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
+  allows the owner or an admin and answers 404 otherwise.
+- Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.
+- Versions: the floors are the working copy. `ProjectVersion::$snapshot` is JSON from `ProjectSnapshotService`, which
+  documents the format. **A new floor, room, wall or item field must be added to the snapshot restore too.**
+
+## Editing
+
+- Every change of a floor element goes through `Service\Editor\SceneEditor`, from REST controllers and MCP tools alike.
+  It bumps `projects.revision` (optimistic lock via `If-Match`), validates through the type's `ElementHandler` and logs
+  a `ProjectChange` whose before/after values are the element's scene JSON.
+- **A new element field must be added to its handler's `fields()` / `normalize()` / `apply()` and to the snapshot
+  restore.**
+- `UndoService` reverts only the current actor's own changes (`ActorContext`: a person or an MCP client), and only
+  while the element is unchanged since. It writes back the handler's `restorableFields()`: the fields plus derived
+  state. For example, a wall's `openingOffsets` is included because moving the wall's start shifts the offsets, and
+  doors and windows have to stay in place on the plan.
+- Items, walls, openings and rooms are soft-deleted (`deletedAt`). The repositories' `findByFloor` / `findByWalls`
+  skip deleted rows.
+- Item groups (`ItemGroup`, `items.group_id`): one level deep, and a group may be empty. Membership is the item field
+  `groupId`. `GroupEditor` (group, move, copy, ungroup, delete) changes several elements under one revision as a
+  `ChangeBatch` built with `BatchWriter` (`project_changes.batch`; the first change carries the operation's summary).
+  `UndoService` reverts a batch as a whole (undo runs backwards) and closes all of it on a conflict.
+  `EditResultDto::$batch` lists every change, and `scene-patch.ts` applies them in order. In the viewer, clicking a
+  grouped item selects the group (Alt or double-click selects the item), and Shift+click picks items to group.
+- Variants (`VariantSet`, `item_groups.variant_set_id`): the alternatives of a piece of furniture are groups of one
+  set, and only `activeGroupId` is shown (this applies to items only; shared items stay outside the set).
+  `VariantEditor` creates a set, adds a variant (a copy in place or an empty one), switches variants (a logged change
+  that is also allowed outside edit mode) and decides a set (deletion keeps the active variant). The active variant
+  cannot leave its set, and deleting it activates another. The client hides the other variants' items with
+  `hiddenItemIds()` in `viewer/engine/variants.ts`; its PHP twin `SceneDto::hiddenItemIds()` does the same for MCP. The
+  sidebar's `VariantsComponent` switches variants.
+- Editor UI (`app/editor`):
+  - `EditorStore` is provided per viewer page. It holds the selection and edit mode and makes the API calls, sending
+    the scene revision as `If-Match`. `scene-patch.ts` patches the returned element into the scene and falls back to a
+    reload.
+  - `EditorPanelComponent` has the toolbar, the Add menu and the shortcuts.
+  - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. `when` limits a field
+    to certain elements, e.g. the `cabinet` / `wardrobe` forms.
+- Engine picking: builders tag objects with `itemId` / `openingId` / `wallId` / `roomId` in `userData`
+  (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
+  selected wall's ends or room's corners get handles (in an overlay scene drawn above the section cut). One drag
+  results in one `onEdit` call and one change.
+- `ViewerEngine.load()` of the same floor diffs the scene and rebuilds only the changed items, walls and rooms, plus
+  the mitres of neighbouring walls (`wallJoints()`).
+
+## Furniture definitions
+
+The design notes are in `docs/furniture-definitions-plan.md` and `docs/furniture-definitions-v2-plan.md`. The current
+format is the text in `FurnitureTools::Format`.
+
+- A definition describes custom furniture as data: parameters and parts whose sizes are expressions.
+- The expression language and the definition evaluator exist twice: in PHP (`Service/Furniture`) and in TS
+  (`viewer/engine/custom`). The shared fixtures `backend/tests/fixtures/furniture-{expressions,definitions}.json` keep
+  them identical. **Always change both twins and add a fixture case in the same change.**
+- `FurnitureDefinition` rows (`/api/furniture-definitions`, soft-deleted) are global (`user` / `project` null, only
+  admins write them), part of a user's library, or a project's own. The access rules are in
+  `FurnitureDefinitionProvider`.
+- `DefinitionValidator` checks what the evaluator does not read (unknown keys, `size`, `PartTypeEnum` options, material
+  codes). It stores the JSON with empty objects kept as `{}`.
+- A `Custom` item has `items.definition_id` (a live link) and `params` of the form `{values, materials}`.
+  `CustomItemValidator` evaluates the item at its size only when its kind, definition, size or params change, so a
+  later definition edit does not block moving the item.
+- An item may use global definitions, the project owner's library and the project's own definitions
+  (`FurnitureDefinitionProvider::isUsableIn`). Deleted definitions are still accepted.
+- The scene carries `definitions` (the ones its items use), so versions embed them. A restore links the live
+  definition with that id, or recreates it as a project definition (`SnapshotDefinitionRestorer`).
+- Rendering: `viewer/engine/custom/custom.ts` builds one mesh per part (`userData.partName`). When a definition does not
+  evaluate, the item is a red placeholder with `userData.definitionError`. An item is rebuilt when its definition's
+  `updatedAt` changes. A material slot without a default takes the item material, as the first slot does.
+- Seeding: global definitions come from `backend/migrations/furniture/*.json`. The seed migrations list their files,
+  and `FurnitureSeeds` reads them. Both test suites build them, and `custom/parity.spec.ts` checks the sample project's
+  definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against the built-in kinds.
+- Built-in furniture kinds: a conversion migration turned the sample project's built-in furniture into Custom items
+  in place, keeping the same ids (`BuiltInFurnitureConverter` maps params to values; `down()` maps them back). The
+  built-in kinds stay for saved versions and old changes. `ItemKindCatalog` marks them `replacedBy`, and the Add menu
+  lists them as "Built-in (old)".
+- UI: the Add menu's "Furniture —" groups; the inspector's `definition` / `custom` fields (`CustomParamsComponent`
+  generates a form from the definition's parameters and slots; `EditorStore.definitions`); `/furniture` (the library,
+  `?projectId=`); and `/furniture/:id` (a JSON editor with `FurniturePreview`, a framework-free one-item scene in
+  `viewer/engine/custom/preview.ts`).
+- Saving a definition publishes `definitionChanged` (`ProjectUpdatePublisher::markDefinitionChanged`, with no
+  revision bump) to the projects that have items of it, and the viewer reloads the scene.
+- Cut list: `CutList\CutListService` (REST `…/cut-list`, MCP `get_cut_list`, page `/projects/:id/cut-list`) evaluates
+  the shown Custom items. Board and front parts are listed by material, thickness, length along the grain, width and
+  banded edges; other parts are listed separately, with area and banding totals per material.
+
+## Item builders
+
+- `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`. Each one builds
+  the item body in its local frame.
+- Custom-made furniture is a furniture definition, not a new kind. A new item kind (a bought product or a building
+  element) needs the PHP enum, a migration extending the `items.kind` column enum, the TS `ItemKind` union and a
+  builder.
+
+## Materials and tiling
+
+- Materials are a global catalogue seeded by migrations. Admins add and change them with the MCP tools
+  `add_material` / `update_material` (`MaterialService`). The material code is permanent because definitions name slot
+  defaults by it. `texture` is never set this way, and these changes do not bump a revision. A change publishes
+  `materialChanged` to every project, and the viewer reloads the scene. Tests keep the seeded materials and drop the
+  ones with `created_by_id`.
+- Textures of real products are cut from reference photos into `frontend/src/assets/textures/`, one plank or tile per
+  image. The material's `tile_width` / `tile_height` give its real size.
+- Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
+  `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
+  position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
+  grid.
+
+## Walkthrough
+
+- View → Walk is implemented in `viewer/engine/walkthrough.ts`: first person at an eye height of 1630 mm with pointer
+  lock (WASD/arrows, Shift runs). Esc releases the lock and returns to the 3D overview.
+- Without a fine pointer (`walkthroughTouchMode()`), a finger drag turns the view and `WalkPadComponent` replaces the
+  keyboard: corner arrows act as held W/A/S/D keys, plus a "Back to 3D" button.
+- Collisions are computed in plan mm against:
+  - `wallColliders()`: wall pieces at floor level. Doors and `walkable` windows are gaps; other windows are solid.
+  - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle.
+  - Items do not block.
+- Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
+  tagged `userData.leaf`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
+  (`DoorReach`) or a tap toggles the door in view.
+- Outside the walk, doors show open and French windows closed. A walk starts with everything closed except the
+  entrance.
+- `openings.walkable` (allowed only on a window with sill 0; the sashes swing towards `side`) makes a French window a
+  way out.
+- The walk starts one step inside the door flagged `openings.entrance` (`entranceWalkStart()`). Fallbacks: a door in an
+  exterior wall, then the largest indoor room.
+
+## Share links
+
+- `ShareLink` / `ShareLinkProvider`: a guest view of one floor at `/s/{token}`, without sign-in. The public
+  `GET /api/shares/{token}` is opened via `AuthorizationMiddleware::ShareRoutePattern`, and `jwtInterceptor` sends no
+  token there.
+- Creating a link saves a version ("Shared: <name>"). Refreshing it (`POST …/share-links/{id}/refresh`, MCP
+  `refresh_share_link`, the project page's Update button) saves a new version for the same token. `floorId` is the
+  floor's id inside that snapshot.
+- `settings` (JSON, `ShareSettingsDto`) holds the allowed views, the start view, an optional 3D camera (plan mm, from
+  `ViewerEngine.cameraPose()` / `setCameraPose()`) and the display options.
+- `SharedViewerPageComponent` switches variants locally only. Expired or unknown links answer 404.
+
+## Live updates
+
+- `ProjectRevisionService::bump()` marks the project in `ProjectUpdatePublisher`. The worker publishes after
+  `frankenphp_finish_request()`, so only committed revisions are sent, to the private Mercure topic
+  `flat-designer/projects/{id}`.
+- Subscribers get a cookie from `/api/realtime/subscription` and listen on `/.well-known/mercure?match=<topic>`
+  (Mercure protocol 1.0 uses `match`, not `topic`).
+- Each tab sends `X-Origin-Client-Id` so it can skip its own echoes. Tests record updates in `RecordingMercureHub`.
+
+## MCP server
+
+- `McpController` (`/mcp`, `mcp/sdk` Streamable HTTP, sessions in `mcp_sessions`) authenticates the OAuth access
+  token (`OAuth\AuthorizationService`), then sets `McpUserContext` (including the base URL used for share links) and
+  the agent `ActorContext`.
+- Tools live in `src/Mcp/Tool` and are discovered by `#[McpTool]` (this needs symfony/finder). Keep them as thin
+  wrappers over `SceneEditor` and the providers, with typed, documented parameters: the docblock becomes the schema,
+  and JSON objects need `#[Schema(definition: …)]`.
+- Domain `RuntimeException`s reach the agent as tool errors (`ToolErrorTranslatingReferenceHandler`).
+- `FurnitureTools::Format` is the format text agents get; a test checks that it names every `PartTypeEnum` case.
+- `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
+
+## Seed data and files
+
+- Seed data lives in migrations (`Seed*`, `Fix*`, `Convert*`). The early ones predate `AddProjectsAndFloors` and still
+  use `flat_id`.
+- **Data changes go into a new migration.** Editing an already applied migration requires `make reset-db`, which drops
+  the database volume. Do not rename existing migration classes.
+- Project files (plans, renders, photos) are uploaded to S3 (MinIO in the stack) through `ProjectFileProvider`. Tests
+  swap `FileStorageInterface` for `Tests\Support\InMemoryFileStorage`.
+- Reference files of the sample project are not in git. Keep them locally in `source_files/` (gitignored) and import
+  them with `make import-files DIR=source_files PROJECT=1`.
+
+## Code style
+
+- PHP: tabs, the slevomat ruleset copied from ukolio, phpstan at max level.
+- TS: the eslint config from ukolio, explicit member accessibility and return types, max line length 150.
 
 ## Commands
 
-`make up`, `make admin`, `make import-files DIR=… PROJECT=…`, `make dev` (ng serve on 4200 against the running stack), `make lint`,
-`make test` (phpunit runs in a one-off backend container against the stack's MariaDB, database
-`flat_designer_test`; integration tests extend `Tests\Support\IntegrationTestCase`), `make reset-db`.
+| Command | What it does |
+| --- | --- |
+| `make up` | Build and start the stack (creates `.env` and secrets on first run) |
+| `make admin` | Create an admin account |
+| `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
+| `make dev` | `ng serve` on 4200 against the running stack |
+| `make lint` | phpcs + phpstan, eslint |
+| `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `flat_designer_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
+| `make reset-db` | Drop the database and file volumes and re-seed |
