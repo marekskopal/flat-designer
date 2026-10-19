@@ -43,6 +43,7 @@ enum Routes: string
 	case ProjectFloors = '/api/projects/{projectId:number}/floors';
 	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
 	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
+	case ProjectFloorUnderlay = '/api/projects/{projectId:number}/floors/{floorId:number}/underlay';
 	case ProjectFloorElements = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms}';
 	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups|variant-sets}/{elementId:number}';
 	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups|variant-sets}/{elementId:number}/duplicate';

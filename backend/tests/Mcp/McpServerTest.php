@@ -9,6 +9,7 @@ use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Mcp\Server\EmptyObjectSchemaValidator;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
+use FlatDesigner\Mcp\Tool\FileTools;
 use FlatDesigner\Mcp\Tool\FloorTools;
 use FlatDesigner\Mcp\Tool\FurnitureTools;
 use FlatDesigner\Mcp\Tool\GroupTools;
@@ -18,12 +19,14 @@ use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
 use FlatDesigner\Mcp\Tool\RoomTools;
 use FlatDesigner\Mcp\Tool\ShareLinkTools;
+use FlatDesigner\Mcp\Tool\UnderlayTools;
 use FlatDesigner\Mcp\Tool\VariantTools;
 use FlatDesigner\Mcp\Tool\WallTools;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Material\MaterialService;
+use FlatDesigner\Service\Project\ImagePreviewService;
 use FlatDesigner\Tests\Support\AppHarness;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
@@ -51,6 +54,9 @@ use stdClass;
 #[CoversClass(OpeningTools::class)]
 #[CoversClass(MaterialTools::class)]
 #[CoversClass(MaterialService::class)]
+#[CoversClass(FileTools::class)]
+#[CoversClass(UnderlayTools::class)]
+#[CoversClass(ImagePreviewService::class)]
 final class McpServerTest extends IntegrationTestCase
 {
 	private User $user;
@@ -106,20 +112,24 @@ final class McpServerTest extends IntegrationTestCase
 			'get_floor',
 			'get_furniture_definition',
 			'get_project',
+			'get_project_file',
 			'get_room_schedule',
 			'list_changes',
 			'list_furniture_definitions',
 			'list_item_kinds',
 			'list_materials',
+			'list_project_files',
 			'list_projects',
 			'list_share_links',
 			'list_versions',
 			'move_group',
 			'redo',
 			'refresh_share_link',
+			'remove_floor_underlay',
 			'rename_group',
 			'rename_variant_set',
 			'save_version',
+			'set_floor_underlay',
 			'switch_variant',
 			'undo',
 			'ungroup',
@@ -724,6 +734,81 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertTrue($isError);
 		self::assertIsString($message);
 		self::assertStringContainsString('mirrorDoors', $message);
+	}
+
+	public function testReadsAPlanAndCalibratesTheUnderlay(): void
+	{
+		$image = imagecreatetruecolor(2000, 1000);
+		self::assertNotFalse($image);
+		ob_start();
+		imagepng($image);
+		$uploaded = $this->upload(
+			str_replace('{projectId:number}', (string) $this->project->id, Routes::ProjectFiles->value),
+			'Propuesta.png',
+			(string) ob_get_clean(),
+			$this->user,
+		);
+		$fileId = $this->jsonBody($uploaded)['id'];
+		self::assertIsInt($fileId);
+		$floorId = Fixture::firstFloor($this->project)->id;
+
+		$files = $this->client->call('list_project_files', ['projectId' => $this->project->id]);
+		self::assertIsList($files);
+		self::assertSame([['Propuesta.png', 'image/png']], array_map(
+			static fn (mixed $file): array => is_array($file) ? [$file['filename'], $file['mimeType']] : [],
+			$files,
+		));
+
+		// A zoomed crop with a grid comes back scaled to maxSize, as a PNG.
+		$result = $this->client->request('tools/call', ['name' => 'get_project_file', 'arguments' => [
+			'projectId' => $this->project->id,
+			'fileId' => $fileId,
+			'cropX' => 1000,
+			'cropY' => 200,
+			'cropWidth' => 800,
+			'cropHeight' => 400,
+			'maxSize' => 400,
+			'grid' => 50,
+		]]);
+		self::assertIsList($result['content']);
+		self::assertIsArray($result['content'][0]);
+		self::assertIsString($result['content'][0]['text']);
+		self::assertSame(
+			['fileId' => $fileId, 'filename' => 'Propuesta.png', 'widthPx' => 2000, 'heightPx' => 1000, 'crop' => ['x' => 1000, 'y' => 200, 'width' => 800, 'height' => 400], 'scale' => 0.5],
+			json_decode($result['content'][0]['text'], true, 512, JSON_THROW_ON_ERROR),
+		);
+		self::assertIsArray($result['content'][1]);
+		self::assertSame('image', $result['content'][1]['type']);
+		self::assertSame('image/png', $result['content'][1]['mimeType']);
+		self::assertIsString($result['content'][1]['data']);
+		$size = getimagesizefromstring((string) base64_decode($result['content'][1]['data'], true));
+		self::assertNotFalse($size);
+		self::assertSame([400, 200], [$size[0], $size[1]]);
+
+		$isError = false;
+		$message = $this->client->call('get_project_file', ['projectId' => $this->project->id, 'fileId' => $fileId, 'grid' => 2], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('grid', $message);
+
+		// The scale bar: 1 m from pixel (1193, 285) to (1328, 285); its left end goes to the plan origin.
+		$underlay = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $fileId,
+			'points' => [[1193, 285, 0, 0], [1328, 285, 1000, 0]],
+			'opacity' => 0.4,
+		]);
+		self::assertIsArray($underlay);
+		self::assertEqualsWithDelta(7.407, $underlay['scale'], 0.001);
+		self::assertEquals([0.0, 0.4, 2000, 1000], [$underlay['rotation'], $underlay['opacity'], $underlay['widthPx'], $underlay['heightPx']]);
+
+		$floor = $this->client->call('get_floor', ['projectId' => $this->project->id, 'floorId' => $floorId]);
+		self::assertIsArray($floor);
+		self::assertEquals($underlay, $floor['underlay']);
+
+		self::assertSame(['removed' => true], $this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]));
+		self::assertSame(['removed' => false], $this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]));
 	}
 
 	public function testRequestsWithoutAValidTokenAreRejected(): void

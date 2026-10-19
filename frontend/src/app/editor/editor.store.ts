@@ -3,9 +3,10 @@ import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
 import {PlanPoint, Scene} from '@app/models/scene';
-import {EditorApiService, GroupMove, WallDraft} from '@app/services/editor-api.service';
+import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
+import {Vec2} from '@app/viewer/engine/plan-geometry';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
 
 import {patchScene} from './scene-patch';
@@ -44,6 +45,13 @@ export class EditorStore {
     public readonly tool = signal<EditorTool>('select');
     /** Type, thickness and height of the walls drawn next. */
     public readonly wallDraft = signal<WallDraft>({type: 'Interior', thickness: 100, height: 2600});
+    /** The plan image under the top view is shown. */
+    public readonly underlayVisible = signal(true);
+    /**
+     * Calibrating the underlay: two points are being clicked ('picking'), or both are there (plan mm, as the image
+     * lies now) and wait for their real distance.
+     */
+    public readonly calibration = signal<'picking' | {a: Vec2; b: Vec2} | null>(null);
 
     private readonly api = inject(EditorApiService);
     private readonly furniture = inject(FurnitureService);
@@ -57,6 +65,7 @@ export class EditorStore {
         this.enabled.set(enabled);
         if (!enabled) {
             this.tool.set('select');
+            this.calibration.set(null);
         }
         if (enabled) {
             await Promise.all([
@@ -98,6 +107,43 @@ export class EditorStore {
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
             this.selection.set({kind: 'room', id});
+        }
+    }
+
+    /** Sets the floor's underlay and loads the floor again; resolves true when it was saved. */
+    public async saveUnderlay(input: UnderlayInput): Promise<boolean> {
+        const context = this.context;
+        if (context === null) {
+            return false;
+        }
+        this.busy.set(true);
+        try {
+            await this.api.setUnderlay(context.projectId(), context.floorId(), input);
+            this.underlayVisible.set(true);
+            context.reload();
+            return true;
+        } catch {
+            // The error interceptor has shown the message.
+            return false;
+        } finally {
+            this.busy.set(false);
+        }
+    }
+
+    public async removeUnderlay(): Promise<void> {
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        this.busy.set(true);
+        try {
+            await this.api.removeUnderlay(context.projectId(), context.floorId());
+            this.calibration.set(null);
+            context.reload();
+        } catch {
+            // The error interceptor has shown the message.
+        } finally {
+            this.busy.set(false);
         }
     }
 

@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {Item, PlanPoint, Room, Scene, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -45,6 +45,7 @@ import {
 } from './plan-geometry';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {buildUnderlay, disposeUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
 
@@ -171,6 +172,8 @@ export class ViewerEngine {
     public onToolStatus: (status: ToolStatus | null) => void = () => undefined;
     /** The readout of the measure tool changed; null when it is off. */
     public onMeasureStatus: (status: MeasureStatus | null) => void = () => undefined;
+    /** Both calibration points were clicked (plan mm, where they lie on the underlay as placed now). */
+    public onCalibrate: (a: Vec2, b: Vec2) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -206,6 +209,11 @@ export class ViewerEngine {
     /** The measure tool: on in any top view (edit mode or not), a click places the points. */
     private measuring = false;
     private measurement: Measurement = NoMeasurement;
+    /** The measure tool picks the two calibration points of the underlay: no snapping, and both are reported. */
+    private calibrating = false;
+    /** The plan image under the top view, shown there only. */
+    private underlay: THREE.Mesh | null = null;
+    private underlayVisible = true;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -706,6 +714,33 @@ export class ViewerEngine {
         return true;
     }
 
+    /**
+     * The plan image under the top view, drawn over the plan at its opacity; null (or no image yet) removes it.
+     * The image is the decoded file of `underlay.fileId`.
+     */
+    public setUnderlay(underlay: Underlay | null, image: TexImageSource | null): void {
+        if (this.underlay !== null) {
+            disposeUnderlay(this.underlay);
+            this.underlay = null;
+        }
+        if (underlay !== null && image !== null) {
+            this.underlay = buildUnderlay(underlay, image);
+            this.underlay.visible = false;
+            this.scene.add(this.underlay);
+        }
+    }
+
+    public setUnderlayVisible(visible: boolean): void {
+        this.underlayVisible = visible;
+    }
+
+    /** With the measure tool on: the two points clicked next calibrate the underlay (`onCalibrate`), without snapping. */
+    public setCalibrating(on: boolean): void {
+        this.calibrating = on;
+        this.measurement = NoMeasurement;
+        this.updateMeasure();
+    }
+
     /** Cuts everything above `height` (mm) away; `null` shows the full height. */
     public setSectionHeight(height: number | null): void {
         this.sectionHeight = height;
@@ -880,6 +915,7 @@ export class ViewerEngine {
         this.walkthrough = null;
         this.clearContent();
         this.removeDimensions();
+        this.setUnderlay(null, null);
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
         this.measureLabel.element.remove();
         this.handles.clear();
@@ -1024,6 +1060,9 @@ export class ViewerEngine {
             if (this.dimensions.visible) {
                 alignDimensionLabels(this.dimensions, this.camera, this.container.clientWidth, this.container.clientHeight);
             }
+        }
+        if (this.underlay !== null) {
+            this.underlay.visible = this.underlayVisible && topDown;
         }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
         this.renderer.render(this.scene, this.camera);
@@ -1279,7 +1318,7 @@ export class ViewerEngine {
             ]);
         const start = {x: wall.startX, y: wall.startY};
         const end = {x: wall.endX, y: wall.endY};
-        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        const radius = free || this.calibrating ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
         const grid = free ? 1 : DragSnap;
         let next: {start: Vec2; end: Vec2};
 
@@ -1348,6 +1387,10 @@ export class ViewerEngine {
             if (point !== null) {
                 this.measurement = measureClick(this.measurement, this.snapMeasure(point, event.shiftKey).point);
                 this.updateMeasure();
+                const {a, b} = this.measurement;
+                if (this.calibrating && a !== null && b !== null) {
+                    this.onCalibrate(a, b);
+                }
             }
             return;
         }

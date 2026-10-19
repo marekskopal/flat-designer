@@ -51,6 +51,27 @@ final readonly class BodyReader
 		return self::int($data, $key);
 	}
 
+	/** @param array<string, mixed> $data */
+	public static function number(array $data, string $key): float
+	{
+		$value = $data[$key] ?? null;
+		if (!is_int($value) && !is_float($value)) {
+			throw new InvalidRequestException(sprintf('Field "%s" must be a number.', $key));
+		}
+
+		return (float) $value;
+	}
+
+	/** @param array<string, mixed> $data */
+	public static function optionalNumber(array $data, string $key): ?float
+	{
+		if (($data[$key] ?? null) === null) {
+			return null;
+		}
+
+		return self::number($data, $key);
+	}
+
 	/**
 	 * @param array<string, mixed> $data
 	 * @return list<int>
@@ -108,6 +129,30 @@ final readonly class BodyReader
 		}
 
 		return self::object($data, $key);
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @return list<array<string, mixed>>
+	 */
+	public static function objectList(array $data, string $key): array
+	{
+		$value = $data[$key] ?? null;
+		if (!is_array($value) || !array_is_list($value)) {
+			throw new InvalidRequestException(sprintf('Field "%s" must be a list of objects.', $key));
+		}
+
+		$list = [];
+		foreach ($value as $item) {
+			if (!is_array($item) || array_is_list($item) && $item !== []) {
+				throw new InvalidRequestException(sprintf('Field "%s" must be a list of objects.', $key));
+			}
+			/** @var array<string, mixed> $object */
+			$object = $item;
+			$list[] = $object;
+		}
+
+		return $list;
 	}
 
 	/**

@@ -229,6 +229,25 @@ export interface Scene {
     variantSets?: VariantSet[];
     /** The furniture definitions of the `Custom` items (also deleted ones still in use); absent in older versions. */
     definitions?: SceneDefinition[];
+    /** The plan image under the top view, for tracing; absent in older versions. */
+    underlay?: Underlay | null;
+}
+
+/** How an underlay image lies in the plan: its top-left pixel at (x, y), `scale` mm per pixel, turned `rotation` degrees counter-clockwise. */
+export interface UnderlayPlacement {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+}
+
+/** A plan image (a project file) laid under a floor's top view. */
+export interface Underlay extends UnderlayPlacement {
+    fileId: number;
+    filename: string;
+    widthPx: number;
+    heightPx: number;
+    opacity: number;
 }
 
 /** A furniture definition as the scene carries it; `updatedAt` changes whenever it is edited. */
