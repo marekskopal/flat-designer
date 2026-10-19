@@ -4,6 +4,8 @@
     [scene]="scene()"
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
+    [dimensionsVisible]="dimensionsVisible()"
+    [measuring]="measuring()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
@@ -16,12 +18,17 @@
     [drawWallsHandler]="drawWalls"
     (roomDetect)="detectRoom($event)"
     (toolStatus)="toolStatus.set($event)"
+    (measureStatus)="measureStatus.set($event)"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
 />
 
-@if (toolStatus(); as status) {
+@if (measureStatus(); as status) {
+    @if (!walking()) {
+        <fd-measure-hud [status]="status" />
+    }
+} @else if (toolStatus(); as status) {
     @if (editor.enabled() && !walking()) {
         <fd-draw-hud [status]="status" (segment)="viewerRef.placeRunPoint($event.length, $event.angle)" />
     }
@@ -140,6 +147,18 @@
                 </button>
             }
         </div>
+        @if (!walking()) {
+            <button
+                type="button"
+                class="measure-toggle"
+                [class.measure-toggle--on]="measuring()"
+                [attr.aria-pressed]="measuring()"
+                title="Measure a distance in the plan (D)"
+                (click)="toggleMeasuring()"
+            >
+                Measure <kbd>D</kbd>
+            </button>
+        }
     </section>
 
     @if (hasVariants() && scene(); as s) {
@@ -158,6 +177,10 @@
         <label class="toggle">
             <input type="checkbox" [checked]="labelsVisible()" (change)="labelsVisible.set(!labelsVisible())" />
             <span>Room labels</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
+            <span>Dimensions (Plan)</span>
         </label>
         <label class="slider">
             <span class="slider__label">

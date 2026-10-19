@@ -240,6 +240,7 @@ describe('entranceWalkStart', () => {
             type,
             polygon,
             area: 0,
+            perimeter: 0,
             ceilingHeight: null,
             floorMaterialId: null,
             wallFinishes: [],

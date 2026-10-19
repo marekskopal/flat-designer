@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Mcp\Tool;
 
+use FlatDesigner\Dto\RoomScheduleDto;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Provider\SceneProvider;
+use FlatDesigner\Service\Schedule\RoomScheduleService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 
 final readonly class FloorTools
 {
-	public function __construct(private ToolContext $context, private SceneProvider $sceneProvider, private ItemKindCatalog $catalog,)
-	{
+	public function __construct(
+		private ToolContext $context,
+		private SceneProvider $sceneProvider,
+		private ItemKindCatalog $catalog,
+		private RoomScheduleService $roomScheduleService,
+	) {
 	}
 
 	/** @return array<string, mixed> */
@@ -42,6 +48,20 @@ final readonly class FloorTools
 			'hiddenItemIds' => $scene->hiddenItemIds(),
 			'definitions' => $scene->definitions,
 		];
+	}
+
+	#[McpTool(
+		name: 'get_room_schedule',
+		description: 'Room schedule of a project, or of one floor with floorId: per room the net floor area (m², inside the '
+			. 'wall faces), perimeter (m), clear height (mm, null for open-air rooms) and volume (m³), with indoor and outdoor '
+			. '(terrace, garden) totals per floor and for the whole project.',
+		annotations: new ToolAnnotations(readOnlyHint: true),
+	)]
+	public function getRoomSchedule(int $projectId, ?int $floorId = null): RoomScheduleDto
+	{
+		return $floorId === null
+			? $this->roomScheduleService->forProject($this->context->project($projectId))
+			: $this->roomScheduleService->forFloor($this->context->floor($projectId, $floorId));
 	}
 
 	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}> */

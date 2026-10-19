@@ -713,6 +713,19 @@ export const SquareEnds: WallEnds = {startLeft: 0, startRight: 0, endLeft: 0, en
 const JointTolerance = 1;
 
 /**
+ * The two faces of a wall, each from end to end: `left` of the direction start → end and `right`, running on
+ * to the mitred corners given by `ends` (from `wallJoints()`).
+ */
+export function wallFaces(wall: WallLine, ends: WallEnds = SquareEnds): {left: [Vec2, Vec2]; right: [Vec2, Vec2]} {
+    const frame = wallFrame(wall);
+    const h = wall.thickness / 2;
+    return {
+        left: [pointOnWall(frame, -ends.startLeft, h), pointOnWall(frame, frame.length + ends.endLeft, h)],
+        right: [pointOnWall(frame, -ends.startRight, -h), pointOnWall(frame, frame.length + ends.endRight, -h)],
+    };
+}
+
+/**
  * Mitres for walls whose end points meet in pairs: at such a corner each face runs on until it meets the
  * corresponding face of the other wall. Ends shared by three or more walls, straight continuations and
  * very sharp angles stay square. Walls without a joint are left out of the map.

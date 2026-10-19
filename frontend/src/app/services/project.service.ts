@@ -2,6 +2,7 @@ import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {CutList} from '@app/models/cut-list';
 import {FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
+import {RoomSchedule} from '@app/models/room-schedule';
 import {Floor, Scene} from '@app/models/scene';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
@@ -21,6 +22,13 @@ export class ProjectService {
     public async cutList(projectId: number, floorId?: number): Promise<CutList> {
         const path = floorId === undefined ? `${projectsUrl}/${projectId}/cut-list` : `${projectsUrl}/${projectId}/floors/${floorId}/cut-list`;
         return firstValueFrom(this.http.get<CutList>(path));
+    }
+
+    /** Areas, perimeters and clear heights of the project's rooms (or one floor's), with the indoor and outdoor totals. */
+    public async roomSchedule(projectId: number, floorId?: number): Promise<RoomSchedule> {
+        const path =
+            floorId === undefined ? `${projectsUrl}/${projectId}/room-schedule` : `${projectsUrl}/${projectId}/floors/${floorId}/room-schedule`;
+        return firstValueFrom(this.http.get<RoomSchedule>(path));
     }
 
     public async get(projectId: number): Promise<Project> {

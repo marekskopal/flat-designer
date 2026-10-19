@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Editor\Geometry;
 
 /**
- * Plan geometry on float points (mm) for `RoomDetector`, matching the helpers of the frontend twin.
+ * Plan geometry on float points (mm) for `RoomDetector` and the room measures, matching the helpers of the frontend twin.
  *
  * @phpstan-type Point array{float, float}
  */
@@ -49,6 +49,23 @@ final readonly class PlanMath
 		}
 
 		return $sum / 2;
+	}
+
+	/**
+	 * Length of the closed outline, mm.
+	 *
+	 * @param list<Point> $polygon
+	 */
+	public static function perimeter(array $polygon): float
+	{
+		$sum = 0.0;
+		$count = count($polygon);
+		foreach ($polygon as $i => [$x, $y]) {
+			[$nextX, $nextY] = $polygon[($i + 1) % $count];
+			$sum += hypot($nextX - $x, $nextY - $y);
+		}
+
+		return $sum;
 	}
 
 	/**

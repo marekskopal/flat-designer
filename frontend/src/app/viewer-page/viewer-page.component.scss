@@ -118,6 +118,42 @@
     }
 }
 
+.measure-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-8;
+    width: 100%;
+    margin-top: $space-8;
+    padding: 6px 0;
+    border: 1px solid $color-border;
+    border-radius: $radius-10;
+    background: transparent;
+    font-size: $font-size-13;
+    font-weight: 500;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        color: $color-text;
+    }
+
+    kbd {
+        padding: 0 4px;
+        border: 1px solid $color-border;
+        border-radius: 4px;
+        font: inherit;
+        font-size: 11px;
+    }
+}
+
+.measure-toggle--on {
+    border-color: $color-accent;
+    background: $color-surface-solid;
+    color: $color-text;
+}
+
 .toggle {
     display: flex;
     align-items: center;

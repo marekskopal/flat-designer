@@ -8,10 +8,12 @@ import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRend
 
 import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
+import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
+import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
 import {
     alongWall,
     Bounds,
@@ -35,6 +37,7 @@ import {
     WalkStart,
     wallColliders,
     WallEnds,
+    wallFaces,
     wallFrame,
     wallJoints,
 } from './plan-geometry';
@@ -164,6 +167,8 @@ export class ViewerEngine {
     public onDetectRoom: (point: PlanPoint) => void = () => undefined;
     /** The readout of the drawing tool changed; null when no tool is active or the pointer left the view. */
     public onToolStatus: (status: ToolStatus | null) => void = () => undefined;
+    /** The readout of the measure tool changed; null when it is off. */
+    public onMeasureStatus: (status: MeasureStatus | null) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -182,11 +187,23 @@ export class ViewerEngine {
     private readonly handleGeometry = new THREE.CircleGeometry(0.5, 24).rotateX(-Math.PI / 2);
     private readonly handleCoreGeometry = new THREE.CircleGeometry(0.28, 24).rotateX(-Math.PI / 2);
     private readonly handleMaterials = new Map<string, THREE.MeshBasicMaterial>();
+    /** The measure tool's line and points, drawn above the cut like the handles. */
+    private readonly measureLayer = new THREE.Group();
+    private readonly measureLabel = new CSS2DObject(document.createElement('div'));
 
     private content: THREE.Group | null = null;
     private materials: MaterialLibrary | null = null;
     private parts: BuildingParts | null = null;
     private labels = new Map<number, CSS2DObject>();
+    private labelsVisible = true;
+    /** Dimension lines of the rooms, shown in the top view when turned on. */
+    private dimensions: THREE.Group | null = null;
+    private dimensionsVisible = false;
+    /** The shown dimensions belong to an earlier state of the floor; rebuilt when next shown. */
+    private dimensionsStale = true;
+    /** The measure tool: on in any top view (edit mode or not), a click places the points. */
+    private measuring = false;
+    private measurement: Measurement = NoMeasurement;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -263,6 +280,11 @@ export class ViewerEngine {
         this.overlay.add(this.handles);
         this.drawLayer.name = 'drawing';
         this.scene.add(this.drawLayer);
+        this.measureLayer.name = 'measure';
+        this.overlay.add(this.measureLayer);
+        this.measureLabel.element.className = 'measure-label';
+        this.measureLabel.visible = false;
+        this.scene.add(this.measureLabel);
 
         this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.addEventListener('pointermove', this.handlePointerMove);
@@ -325,6 +347,22 @@ export class ViewerEngine {
         this.detection = null;
         this.roomFaces = null;
         this.updateDrawing();
+        this.dimensionsStale = true;
+        this.updateMeasure();
+    }
+
+    private removeDimensions(): void {
+        this.dimensions?.traverse((o) => disposeLine(o));
+        this.dimensions?.removeFromParent();
+        this.dimensions = null;
+    }
+
+    /** Dimension lines of the shown rooms, built when they are first shown after a load (walls and rooms change them). */
+    private updateDimensions(scene: Scene): void {
+        this.removeDimensions();
+        this.dimensions = buildDimensions(roomDimensions(scene.rooms, scene.walls));
+        this.scene.add(this.dimensions);
+        this.dimensionsStale = false;
     }
 
     /** Hides the items of variants that are not shown; switching a variant rebuilds nothing. */
@@ -567,7 +605,7 @@ export class ViewerEngine {
         // A run still on its way is left to the server; its answer no longer concerns the view.
         this.pendingRun = null;
         this.detection = null;
-        this.renderer.domElement.style.cursor = tool === 'select' ? '' : 'crosshair';
+        this.renderer.domElement.style.cursor = tool === 'select' && !this.measuring ? '' : 'crosshair';
         this.updateDrawing();
     }
 
@@ -619,7 +657,42 @@ export class ViewerEngine {
     }
 
     public setLabelsVisible(visible: boolean): void {
-        this.labelRenderer.domElement.style.display = visible ? '' : 'none';
+        this.labelsVisible = visible;
+        this.labels.forEach((label) => (label.visible = visible));
+    }
+
+    /** Dimension lines along the room edges, split at doors and windows; drawn in the top view only. */
+    public setDimensionsVisible(visible: boolean): void {
+        this.dimensionsVisible = visible;
+    }
+
+    /**
+     * The measure tool: in a top view, clicks place two points and the distance between them is shown
+     * (snapping to wall ends, face corners and faces; Shift measures freely). Independent of edit mode and its
+     * tools, and takes the clicks before them.
+     */
+    public setMeasuring(on: boolean): void {
+        if (on === this.measuring) {
+            return;
+        }
+        this.measuring = on;
+        this.measurement = NoMeasurement;
+        if (on) {
+            this.cancelDrag();
+        }
+        this.renderer.domElement.style.cursor = on || this.tool !== 'select' ? 'crosshair' : '';
+        this.updateHandles();
+        this.updateMeasure();
+    }
+
+    /** Clears the measurement; false when there was none. */
+    public clearMeasurement(): boolean {
+        if (this.measurement.a === null) {
+            return false;
+        }
+        this.measurement = NoMeasurement;
+        this.updateMeasure();
+        return true;
     }
 
     /** Cuts everything above `height` (mm) away; `null` shows the full height. */
@@ -795,6 +868,9 @@ export class ViewerEngine {
         this.walkthrough?.dispose();
         this.walkthrough = null;
         this.clearContent();
+        this.removeDimensions();
+        this.measureLayer.children.slice().forEach((o) => disposeLine(o));
+        this.measureLabel.element.remove();
         this.handles.clear();
         this.handleGeometry.dispose();
         this.handleCoreGeometry.dispose();
@@ -860,12 +936,14 @@ export class ViewerEngine {
         name.textContent = room.name;
         const meta = document.createElement('span');
         meta.className = 'room-label__meta';
-        meta.textContent = `${room.code.replace('H1/', '')} · ${room.area.toFixed(1)} m²`;
+        const height = room.ceilingHeight === null ? '' : ` · h ${(room.ceilingHeight / 1000).toFixed(2)} m`;
+        meta.textContent = `${room.code.replace('H1/', '')} · ${room.area.toFixed(1)} m²${height}`;
         element.append(name, meta);
 
         const label = new CSS2DObject(element);
         const c = polygonCentroid(room.polygon);
         label.position.set(c.x * MM, 0.05, -c.y * MM);
+        label.visible = this.labelsVisible;
         return label;
     }
 
@@ -907,8 +985,11 @@ export class ViewerEngine {
             this.walkthrough.update(dt);
             this.updateAim();
             this.renderer.render(this.scene, this.camera);
+            // Labels are not rendered in the walk; their last positions would float over the view.
+            this.labelRenderer.domElement.style.display = 'none';
             return;
         }
+        this.labelRenderer.domElement.style.display = '';
 
         if (this.tween !== null) {
             // performance.now() rather than the loop's timestamp: the two need not share a time origin.
@@ -923,21 +1004,38 @@ export class ViewerEngine {
         }
         this.controls.update();
         this.updateOutline();
+        const topDown = this.isTopDown();
+        if (this.dimensionsVisible && topDown && this.dimensionsStale && this.sceneData !== null) {
+            this.updateDimensions(this.sceneData);
+        }
+        if (this.dimensions !== null) {
+            this.dimensions.visible = this.dimensionsVisible && topDown;
+            if (this.dimensions.visible) {
+                alignDimensionLabels(this.dimensions, this.camera, this.container.clientWidth, this.container.clientHeight);
+            }
+        }
+        this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
         this.renderer.render(this.scene, this.camera);
         this.renderOverlay();
         this.labelRenderer.render(this.scene, this.camera);
+        // The renderer stacks labels by distance; the measured distance stays above the room labels.
+        this.measureLabel.element.style.zIndex = String(this.labels.size + (this.dimensions?.children.length ?? 0) + 1);
     }
 
     /** Handles on top of everything, at a constant size on screen and only where they can be dragged. */
     private renderOverlay(): void {
-        this.handles.visible = this.editMode && this.isTopDown();
-        if (!this.handles.visible || this.handles.children.length === 0) {
+        const topDown = this.isTopDown();
+        this.handles.visible = this.editMode && topDown && this.handles.children.length > 0;
+        this.measureLayer.visible = this.measuring && topDown && this.measureLayer.children.length > 0;
+        if (!this.handles.visible && !this.measureLayer.visible) {
             return;
         }
         const perPixel = this.metresPerPixel();
-        for (const handle of this.handles.children) {
-            const pixels = (handle.userData as {pixels?: number}).pixels ?? HandlePixels;
-            handle.scale.setScalar(pixels * perPixel);
+        for (const handle of [...this.handles.children, ...this.measureLayer.children]) {
+            const pixels = (handle.userData as {pixels?: number}).pixels;
+            if (pixels !== undefined || handle.parent === this.handles) {
+                handle.scale.setScalar((pixels ?? HandlePixels) * perPixel);
+            }
         }
         const planes = this.renderer.clippingPlanes;
         this.renderer.autoClear = false;
@@ -987,7 +1085,7 @@ export class ViewerEngine {
             }
             return;
         }
-        if (!this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null || this.tool !== 'select') {
+        if (this.measuring || !this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null || this.tool !== 'select') {
             return;
         }
 
@@ -1092,6 +1190,10 @@ export class ViewerEngine {
 
     private readonly handlePointerMove = (event: PointerEvent): void => {
         const drag = this.drag;
+        if (drag === null && this.measuring) {
+            this.trackMeasure(event);
+            return;
+        }
         if (drag === null && this.editMode && this.tool !== 'select') {
             this.trackTool(event);
             return;
@@ -1206,7 +1308,7 @@ export class ViewerEngine {
         const neighbours = [drag.polygon[(drag.index + n - 1) % n], drag.polygon[(drag.index + 1) % n]].map(([x, y]) => ({x, y}));
         const corners = [
             ...scene.rooms.filter((r) => r.id !== drag.room.id).flatMap((r) => r.polygon.map(([x, y]) => ({x, y}))),
-            ...scene.walls.flatMap(wallCorners),
+            ...scene.walls.flatMap((w) => wallCorners(w, this.joints.get(w.id))),
         ];
         return snapPoint(point, {grid: DragSnap, radius: (SnapPixels * this.metresPerPixel()) / MM, points: corners, anchors: neighbours});
     }
@@ -1227,6 +1329,14 @@ export class ViewerEngine {
             // Touch walk: tapping a door within reach opens or closes it (the mouse uses the view centre instead).
             if (event.pointerType !== 'mouse') {
                 this.toggleDoor(this.doorAt(this.toNdc(event)));
+            }
+            return;
+        }
+        if (this.measuring) {
+            const point = event.button === 0 && this.isTopDown() ? this.planPointOn(event, FloorPlane) : null;
+            if (point !== null) {
+                this.measurement = measureClick(this.measurement, this.snapMeasure(point, event.shiftKey).point);
+                this.updateMeasure();
             }
             return;
         }
@@ -1333,6 +1443,9 @@ export class ViewerEngine {
 
     /** Double-clicking an item of a group selects just that item; double-clicking a room corner removes it (a room keeps at least three). */
     private readonly handleDoubleClick = (event: MouseEvent): void => {
+        if (this.measuring) {
+            return;
+        }
         if (this.editMode && this.tool === 'drawWalls') {
             this.commitRun(false);
             return;
@@ -1367,6 +1480,11 @@ export class ViewerEngine {
             return;
         }
         const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+        // Esc clears a measurement first; without one it is the page's (turning the tool off).
+        if (event.key === 'Escape' && this.measuring && !typing && this.clearMeasurement()) {
+            event.stopPropagation();
+            return;
+        }
         if (this.run === null || typing) {
             return;
         }
@@ -1390,6 +1508,11 @@ export class ViewerEngine {
 
     /** The pointer left the view: the readout no longer follows it. */
     private readonly handlePointerLeave = (): void => {
+        if (this.measuring) {
+            this.measurement = {...this.measurement, cursor: this.measurement.b, snap: null};
+            this.updateMeasure();
+            return;
+        }
         if (!this.editMode || this.tool === 'select') {
             return;
         }
@@ -1400,6 +1523,70 @@ export class ViewerEngine {
         this.detection = null;
         this.updateDrawing(null, null);
     };
+
+    /** Follows the pointer with the measure tool: the second point until it is placed, else just the snap marker. */
+    private trackMeasure(event: PointerEvent): void {
+        const point = this.isTopDown() ? this.planPointOn(event, FloorPlane) : null;
+        if (point === null) {
+            this.measurement = {...this.measurement, cursor: this.measurement.b, snap: null};
+        } else {
+            const snapped = this.snapMeasure(point, event.shiftKey);
+            this.measurement = {...this.measurement, cursor: snapped.point, snap: snapped.kind};
+        }
+        this.updateMeasure();
+    }
+
+    private snapMeasure(point: Vec2, free: boolean): SnapResult {
+        const from = this.measurement.b === null ? this.measurement.a : null;
+        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from});
+    }
+
+    /** Redraws the measurement (line, points, distance label) and reports the readout. */
+    private updateMeasure(): void {
+        // The markers share the handles' geometry and materials; only the line is the layer's own.
+        this.measureLayer.children.slice().forEach((o) => {
+            disposeLine(o);
+            o.removeFromParent();
+        });
+        this.measureLabel.element.textContent = '';
+        if (!this.measuring) {
+            this.onMeasureStatus(null);
+            return;
+        }
+        const {a, b, cursor, snap} = this.measurement;
+        const end = b ?? cursor;
+        const y = 0.03;
+        if (a !== null && end !== null && (end.x !== a.x || end.y !== a.y)) {
+            const geometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(a.x * MM, y, -a.y * MM),
+                new THREE.Vector3(end.x * MM, y, -end.y * MM),
+            ]);
+            const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({color: HighlightColor, depthTest: false, transparent: true}));
+            line.renderOrder = 9;
+            this.measureLayer.add(line);
+            const status = measureStatus(this.measurement);
+            this.measureLabel.element.textContent = `${status.distance ?? 0} mm`;
+            this.measureLabel.position.set(((a.x + end.x) / 2) * MM, y, (-(a.y + end.y) / 2) * MM);
+        }
+        for (const point of [a, b]) {
+            if (point !== null) {
+                this.addMarker(point, 'normal');
+            }
+        }
+        if (cursor !== null && b === null) {
+            this.addMarker(cursor, handleState(true, snap));
+        }
+        this.onMeasureStatus(measureStatus(this.measurement));
+    }
+
+    private addMarker(at: Vec2, state: HandleState): void {
+        const disc = new THREE.Mesh(this.handleGeometry, this.handleMaterial(HandleColors[state]));
+        disc.position.set(at.x * MM, 0.03, -at.y * MM);
+        disc.renderOrder = 10;
+        disc.userData = {pixels: MidpointPixels};
+        this.measureLayer.add(disc);
+    }
 
     /** Follows the pointer with the active tool: the next point of a run, or the room that a click would add. */
     private trackTool(event: PointerEvent): void {
@@ -1679,7 +1866,7 @@ export class ViewerEngine {
     private updateHandles(): void {
         this.handles.clear();
         const scene = this.sceneData;
-        if (!this.editMode || scene === null || this.selection === null || this.tool !== 'select') {
+        if (!this.editMode || scene === null || this.selection === null || this.tool !== 'select' || this.measuring) {
             return;
         }
         const drag = this.drag;
@@ -1984,18 +2171,23 @@ function handleState(valid: boolean, snap: SnapResult['kind'] | null): HandleSta
     return snap !== null && snap !== 'grid' ? 'snapped' : 'normal';
 }
 
+/** Frees the geometry and material of a line (dimension or measure lines); other objects are left alone. */
+function disposeLine(object: THREE.Object3D): void {
+    if (object instanceof THREE.Line) {
+        object.geometry.dispose();
+        (object.material as THREE.Material).dispose();
+    }
+    if (object instanceof CSS2DObject) {
+        object.element.remove();
+    }
+}
+
 function sameJson(a: unknown, b: unknown): boolean {
     return a === b || JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** The four corners of a wall's footprint, where room outlines usually meet it. */
-function wallCorners(wall: Wall): Vec2[] {
-    const frame = wallFrame(wall);
-    const h = wall.thickness / 2;
-    return [
-        {x: wall.startX + frame.normal.x * h, y: wall.startY + frame.normal.y * h},
-        {x: wall.startX - frame.normal.x * h, y: wall.startY - frame.normal.y * h},
-        {x: wall.endX + frame.normal.x * h, y: wall.endY + frame.normal.y * h},
-        {x: wall.endX - frame.normal.x * h, y: wall.endY - frame.normal.y * h},
-    ].map((p) => ({x: Math.round(p.x), y: Math.round(p.y)}));
+/** The four corners of a wall's footprint (mitred with `ends`), where room outlines usually meet it. */
+function wallCorners(wall: Wall, ends?: WallEnds): Vec2[] {
+    const {left, right} = wallFaces(wall, ends);
+    return [...left, ...right].map((p) => ({x: Math.round(p.x), y: Math.round(p.y)}));
 }

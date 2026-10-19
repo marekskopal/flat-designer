@@ -4,13 +4,22 @@
     [scene]="scene()"
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
+    [dimensionsVisible]="dimensionsVisible()"
+    [measuring]="measuring()"
     [sectionHeight]="sectionHeight()"
     [insetLeft]="walking() || panelHidden() ? 0 : panelInset"
     (loaded)="onLoaded()"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
+    (measureStatus)="measureStatus.set($event)"
 />
+
+@if (measureStatus(); as status) {
+    @if (!walking()) {
+        <fd-measure-hud [status]="status" />
+    }
+}
 
 @if (walking() && touchWalk) {
     <fd-walk-pad [viewer]="viewerRef" />
@@ -61,16 +70,30 @@
     </header>
 
     @if (settings(); as settings) {
-        @if (views().length > 1) {
+        @if (views().length > 1 || views().includes('top')) {
             <section class="panel__section">
                 <h2 class="section-title">View</h2>
-                <div class="segmented" role="group" aria-label="Camera view">
-                    @for (view of views(); track view) {
-                        <button type="button" [class.active]="activeView() === view" (click)="setView(view)">
-                            {{ viewLabels[view] }}
-                        </button>
-                    }
-                </div>
+                @if (views().length > 1) {
+                    <div class="segmented" role="group" aria-label="Camera view">
+                        @for (view of views(); track view) {
+                            <button type="button" [class.active]="activeView() === view" (click)="setView(view)">
+                                {{ viewLabels[view] }}
+                            </button>
+                        }
+                    </div>
+                }
+                @if (views().includes('top')) {
+                    <button
+                        type="button"
+                        class="measure-toggle"
+                        [class.measure-toggle--on]="measuring()"
+                        [attr.aria-pressed]="measuring()"
+                        title="Measure a distance in the plan (D)"
+                        (click)="toggleMeasuring()"
+                    >
+                        Measure <kbd>D</kbd>
+                    </button>
+                }
             </section>
         }
 
@@ -90,6 +113,10 @@
             <label class="toggle">
                 <input type="checkbox" [checked]="labelsVisible()" (change)="labelsVisible.set(!labelsVisible())" />
                 <span>Room labels</span>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
+                <span>Dimensions (Plan)</span>
             </label>
             <label class="slider">
                 <span class="slider__label">

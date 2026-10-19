@@ -29,9 +29,11 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {ToolStatus} from '@app/viewer/engine/drawing';
+import {MeasureStatus} from '@app/viewer/engine/measure';
 import {Selection} from '@app/viewer/engine/selection';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
+import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 import {switchMap} from 'rxjs';
@@ -68,11 +70,13 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         VariantsComponent,
         ShareLinkFormComponent,
         DrawHudComponent,
+        MeasureHudComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
+    host: {'(document:keydown)': 'onKeydown($event)'},
 })
 export class ViewerPageComponent {
     public readonly projectId = input.required({transform: numberAttribute});
@@ -141,6 +145,10 @@ export class ViewerPageComponent {
     protected readonly toolStatus = signal<ToolStatus | null>(null);
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
+    protected readonly dimensionsVisible = signal(false);
+    /** The measure tool (top view only); an edit tool turns it off and the other way round. */
+    protected readonly measuring = signal(false);
+    protected readonly measureStatus = signal<MeasureStatus | null>(null);
     protected readonly sectionSlider = signal(SectionMax);
     /** The share form is open ('form'), or shows the link just created. */
     protected readonly sharing = signal<'form' | ShareLink | null>(null);
@@ -169,6 +177,7 @@ export class ViewerPageComponent {
             ceilings: this.ceilingsVisible(),
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
+            dimensions: this.dimensionsVisible(),
         };
     });
     /** For the editor panel: where new elements are placed. */
@@ -207,10 +216,15 @@ export class ViewerPageComponent {
             )
             .subscribe((update) => this.onProjectUpdate(update));
 
-        // The drawing tools work in the top view.
+        // The drawing tools work in the top view, and take the clicks from the measure tool.
         effect(() => {
-            if (this.editor.tool() !== 'select' && untracked(this.activeView) !== 'top') {
-                untracked(() => this.setView('top'));
+            if (this.editor.tool() !== 'select') {
+                untracked(() => {
+                    this.measuring.set(false);
+                    if (this.activeView() !== 'top') {
+                        this.setView('top');
+                    }
+                });
             }
         });
 
@@ -249,6 +263,9 @@ export class ViewerPageComponent {
     }
 
     protected setView(mode: ViewMode): void {
+        if (mode !== 'top') {
+            this.measuring.set(false);
+        }
         if (mode === 'walkthrough') {
             this.startWalkthrough();
             return;
@@ -282,6 +299,33 @@ export class ViewerPageComponent {
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
         this.sectionSlider.set(SectionMax);
+    }
+
+    /** Turns the measure tool on (in the top view, instead of an edit tool) or off. */
+    protected toggleMeasuring(): void {
+        if (this.measuring()) {
+            this.measuring.set(false);
+            return;
+        }
+        this.editor.setTool('select');
+        if (this.activeView() !== 'top') {
+            this.setView('top');
+        }
+        this.measuring.set(true);
+    }
+
+    /** D toggles the measure tool; Esc (once the engine has cleared the measurement) turns it off. */
+    protected onKeydown(event: KeyboardEvent): void {
+        const target = event.target as HTMLElement | null;
+        if (this.walking() || target?.closest('input, textarea, select') != null || event.ctrlKey || event.metaKey || event.altKey) {
+            return;
+        }
+        if (event.key === 'd' || event.key === 'D') {
+            event.preventDefault();
+            this.toggleMeasuring();
+        } else if (event.key === 'Escape' && this.measuring()) {
+            this.measuring.set(false);
+        }
     }
 
     protected async copyShareUrl(url: string): Promise<void> {

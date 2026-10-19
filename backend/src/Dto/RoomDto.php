@@ -6,6 +6,7 @@ namespace FlatDesigner\Dto;
 
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Service\Editor\Geometry\PlanMath;
 use FlatDesigner\Service\Json\JsonDecoder;
 
 final readonly class RoomDto
@@ -21,6 +22,7 @@ final readonly class RoomDto
 		public RoomTypeEnum $type,
 		public array $polygon,
 		public float $area,
+		public float $perimeter,
 		public ?int $ceilingHeight,
 		public ?int $floorMaterialId,
 		public array $wallFinishes,
@@ -32,6 +34,7 @@ final readonly class RoomDto
 	public static function fromEntity(Room $room): self
 	{
 		$polygon = JsonDecoder::decodePolygon($room->polygon);
+		$points = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $polygon);
 
 		return new self(
 			id: $room->id,
@@ -39,7 +42,8 @@ final readonly class RoomDto
 			name: $room->name,
 			type: $room->type,
 			polygon: $polygon,
-			area: round(self::polygonArea($polygon) / 1000000, 2),
+			area: round(abs(PlanMath::signedArea($points)) / 1000000, 2),
+			perimeter: round(PlanMath::perimeter($points) / 1000, 2),
 			ceilingHeight: $room->ceilingHeight,
 			floorMaterialId: $room->floorMaterial?->id,
 			wallFinishes: $room->wallFinishes === null ? [] : array_map(
@@ -49,22 +53,5 @@ final readonly class RoomDto
 			tileOriginX: $room->tileOriginX,
 			tileOriginY: $room->tileOriginY,
 		);
-	}
-
-	/**
-	 * Shoelace formula, mm².
-	 *
-	 * @param list<array{int, int}> $polygon
-	 */
-	private static function polygonArea(array $polygon): float
-	{
-		$sum = 0;
-		$count = count($polygon);
-		foreach ($polygon as $i => [$x, $y]) {
-			[$nextX, $nextY] = $polygon[($i + 1) % $count];
-			$sum += $x * $nextY - $nextX * $y;
-		}
-
-		return abs($sum) / 2;
 	}
 }

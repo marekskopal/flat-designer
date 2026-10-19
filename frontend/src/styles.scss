@@ -65,6 +65,29 @@ button, input, textarea, select {
     font-variant-numeric: tabular-nums;
 }
 
+// Lengths of the plan's dimension lines (mm), turned along their lines by the engine.
+.dim-label {
+    padding: 0 3px;
+    border-radius: 3px;
+    background: rgba(252, 251, 248, 0.88);
+    font-size: 10px;
+    line-height: 14px;
+    color: #4a4640;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.measure-label {
+    padding: 2px 6px;
+    border-radius: $radius-6;
+    background: $color-highlight;
+    font-size: $font-size-12;
+    font-weight: 600;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 // Shared form and page primitives.
 a {
     color: $color-accent;

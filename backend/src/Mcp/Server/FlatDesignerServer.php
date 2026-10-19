@@ -39,7 +39,8 @@ final readonly class FlatDesignerServer
 		Editing a definition changes every item drawn from it, in all projects. Kitchen cabinets, worktops,
 		wardrobes, chairs and tables are such definitions; the built-in kinds of the same furniture (marked
 		replacedBy in list_item_kinds) are kept only for older items, so add new furniture from the definitions.
-		get_cut_list lists the boards of a project's custom-made furniture.
+		get_cut_list lists the boards of a project's custom-made furniture; get_room_schedule lists the rooms'
+		areas, perimeters and clear heights with the indoor and outdoor totals.
 
 		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
 		outer walls, open runs for partitions ending on other walls), then add each room with

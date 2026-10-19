@@ -18,6 +18,9 @@ All geometry is generated from parameters. The project contains no 3D model file
 - **Furniture definitions**: parametric custom furniture (cabinets, wardrobes, worktops, tables, …) defined
   as JSON with parameters, material slots and parts. Definitions can be global, part of a user's library or
   belong to one project. They are edited with a JSON editor that shows a live preview.
+- **Measurements**: a room schedule (net area, perimeter, clear height and volume per room, indoor and outdoor
+  totals) on the project page, room labels with area and height, dimension lines of the rooms in the plan view
+  (split at doors and windows), and a measure tool that snaps to wall ends, corners and faces.
 - **Cut list**: boards and fronts by material, thickness and grain direction, with edge banding and per-material
   totals.
 - **Groups and variants**: group items into pieces of furniture, and compare alternatives as variants and
@@ -119,7 +122,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 
 The backend is an MCP server at `/mcp` (Streamable HTTP, OAuth 2.1 with dynamic client registration and PKCE).
 Agents can read projects and floors, add, change and delete rooms, walls, openings and items, manage groups,
-variants, share links, versions and furniture definitions, get cut lists, and undo or redo their own changes.
+variants, share links, versions and furniture definitions, get cut lists and room schedules, and undo or redo their own changes.
 Agent changes are logged under the client's name and appear live in open viewers.
 
 Connect Claude Code:
@@ -149,6 +152,7 @@ Every endpoint except health, authentication, OAuth and public share links requi
 | `/api/projects/{id}/share-links`, `/api/shares/{token}` | Share links and the public guest view |
 | `/api/projects/{id}/files` | Project files |
 | `/api/projects/{id}/cut-list` | Cut list of the project's custom furniture |
+| `/api/projects/{id}/room-schedule` | Room areas, perimeters and clear heights with indoor and outdoor totals (also per floor) |
 | `/api/furniture-definitions` | Furniture definitions (CRUD, copy, validate) |
 | `/api/materials`, `/api/item-kinds` | Catalogues |
 | `/api/realtime/subscription` | Cookie for the Mercure live-update stream |

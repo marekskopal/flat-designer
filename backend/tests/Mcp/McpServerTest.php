@@ -106,6 +106,7 @@ final class McpServerTest extends IntegrationTestCase
 			'get_floor',
 			'get_furniture_definition',
 			'get_project',
+			'get_room_schedule',
 			'list_changes',
 			'list_furniture_definitions',
 			'list_item_kinds',
@@ -321,6 +322,12 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($room['element']);
 		self::assertSame('Living room', $room['element']['name']);
 		self::assertEqualsWithDelta(12.0, $room['element']['area'], 0.001);
+		self::assertEqualsWithDelta(14.0, $room['element']['perimeter'], 0.001);
+
+		$schedule = $this->client->call('get_room_schedule', ['projectId' => $this->project->id]);
+		self::assertIsArray($schedule);
+		self::assertEquals(['rooms' => 1, 'area' => 12.0, 'perimeter' => 14.0], $schedule['indoor']);
+		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $schedule['outdoor']);
 
 		$this->client->call('undo', ['projectId' => $this->project->id]);
 		$this->client->call('undo', ['projectId' => $this->project->id]);

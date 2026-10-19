@@ -69,7 +69,10 @@ export interface Room {
     name: string;
     type: RoomType;
     polygon: PlanPoint[];
+    /** Net floor area, m². */
     area: number;
+    /** Length of the outline, m. Missing in versions saved before it existed. */
+    perimeter?: number;
     ceilingHeight: number | null;
     floorMaterialId: number | null;
     wallFinishes: WallFinish[];

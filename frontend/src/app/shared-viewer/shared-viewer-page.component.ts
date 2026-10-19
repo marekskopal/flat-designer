@@ -6,8 +6,10 @@ import {VariantsComponent} from '@app/editor/variants.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
+import {MeasureStatus} from '@app/viewer/engine/measure';
 import {DoorAim} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
+import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 
@@ -23,10 +25,11 @@ const PlanSectionHeight = 1300;
  */
 @Component({
     selector: 'fd-shared-viewer-page',
-    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent],
+    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent],
     templateUrl: './shared-viewer-page.component.html',
     styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
+    host: {'(document:keydown)': 'onKeydown($event)'},
 })
 export class SharedViewerPageComponent {
     public readonly token = input.required<string>();
@@ -70,6 +73,10 @@ export class SharedViewerPageComponent {
     protected readonly panelHidden = signal(false);
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
+    protected readonly dimensionsVisible = signal(false);
+    /** The measure tool, in the plan view (when the link offers it). */
+    protected readonly measuring = signal(false);
+    protected readonly measureStatus = signal<MeasureStatus | null>(null);
     protected readonly sectionSlider = signal(SectionMax);
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
 
@@ -101,7 +108,9 @@ export class SharedViewerPageComponent {
         }
         this.ceilingsVisible.set(settings.ceilings);
         this.labelsVisible.set(settings.labels);
+        this.dimensionsVisible.set(settings.dimensions);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
+        this.measuring.set(false);
         const view = settings.initialView === 'walkthrough' ? this.fallbackView() : settings.initialView;
         this.activeView.set(view);
         this.showView(view, animate);
@@ -109,6 +118,9 @@ export class SharedViewerPageComponent {
 
     protected setView(view: ShareView): void {
         this.walkPrompt.set(false);
+        if (view !== 'top') {
+            this.measuring.set(false);
+        }
         if (view === 'walkthrough') {
             this.startWalkthrough();
             return;
@@ -138,6 +150,7 @@ export class SharedViewerPageComponent {
 
     protected startWalkthrough(): void {
         this.walkPrompt.set(false);
+        this.measuring.set(false);
         this.ceilingsVisible.set(true);
         this.labelsVisible.set(false);
         this.sectionSlider.set(SectionMax);
@@ -159,6 +172,35 @@ export class SharedViewerPageComponent {
         this.ceilingsVisible.set(false);
         this.sectionSlider.set(view === 'top' ? PlanSectionHeight : SectionMax);
         this.showView(view, true);
+    }
+
+    /** Turns the measure tool on (switching to the plan) or off. */
+    protected toggleMeasuring(): void {
+        if (this.measuring()) {
+            this.measuring.set(false);
+            return;
+        }
+        if (!this.views().includes('top')) {
+            return;
+        }
+        if (this.activeView() !== 'top') {
+            this.setView('top');
+        }
+        this.measuring.set(true);
+    }
+
+    /** D toggles the measure tool; Esc (once the engine has cleared the measurement) turns it off. */
+    protected onKeydown(event: KeyboardEvent): void {
+        const target = event.target as HTMLElement | null;
+        if (this.walking() || target?.closest('input, textarea, select') != null || event.ctrlKey || event.metaKey || event.altKey) {
+            return;
+        }
+        if (event.key === 'd' || event.key === 'D') {
+            event.preventDefault();
+            this.toggleMeasuring();
+        } else if (event.key === 'Escape' && this.measuring()) {
+            this.measuring.set(false);
+        }
     }
 
     protected switchVariant(change: {setId: number; groupId: number}): void {

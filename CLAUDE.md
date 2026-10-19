@@ -175,6 +175,20 @@ format is the text in `FurnitureTools::Format`.
 - The walk starts one step inside the door flagged `openings.entrance` (`entranceWalkStart()`). Fallbacks: a door in an
   exterior wall, then the largest indoor room.
 
+## Measurements
+
+- Room schedule: `Service/Schedule/RoomScheduleService` (REST `…/room-schedule`, MCP `get_room_schedule`, the project
+  page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
+  the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Terraces and gardens
+  (`RoomTypeEnum::isOutdoor()`) are totalled separately. Only PHP computes it, so there is no TS twin.
+- Dimension lines (`viewer/engine/dimensions.ts`, the Display toggle and `ShareSettings.dimensions`): every room edge
+  gets a line offset into the room. Where `wallGapsAlongEdge()` finds openings, the edge also gets a chain of piers and
+  openings. They show only while `isTopDown()`, and labels that are longer than their line on screen are hidden.
+- Measure tool (`viewer/engine/measure.ts`, `MeasureHudComponent`, the View section's Measure button, key D): two clicks
+  in the top view. It is independent of edit mode, takes clicks before the editor tools, and the pages turn it off
+  when an edit tool is picked. It snaps to wall ends and to face corners and faces (`wallFaces()` with the
+  `wallJoints()` mitres). Esc first clears the measurement, then ends the tool.
+
 ## Share links
 
 - `ShareLink` / `ShareLinkProvider`: a guest view of one floor at `/s/{token}`, without sign-in. The public

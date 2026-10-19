@@ -78,6 +78,7 @@ final readonly class ShareLinkTools
 	 * @param bool $ceilings show ceilings at the start
 	 * @param bool $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700); null = no cut
+	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working; null = never
 	 */
 	#[McpTool(
@@ -97,6 +98,7 @@ final readonly class ShareLinkTools
 		bool $ceilings = false,
 		bool $labels = true,
 		?int $sectionHeight = null,
+		bool $dimensions = false,
 		?string $expiresAt = null,
 	): ShareLinkDto {
 		$views ??= ['overview', 'top'];
@@ -107,6 +109,7 @@ final readonly class ShareLinkTools
 			'ceilings' => $ceilings,
 			'labels' => $labels,
 			'sectionHeight' => $sectionHeight,
+			'dimensions' => $dimensions,
 		]);
 		$link = $this->shareLinkProvider->create(
 			$this->context->user(),
@@ -124,6 +127,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $ceilings show ceilings at the start
 	 * @param bool|null $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700)
+	 * @param bool|null $dimensions show the dimension lines in the top view at the start
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
 	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "expiresAt" (never)
 	 */
@@ -144,6 +148,7 @@ final readonly class ShareLinkTools
 		?bool $ceilings = null,
 		?bool $labels = null,
 		?int $sectionHeight = null,
+		?bool $dimensions = null,
 		?string $expiresAt = null,
 		?array $clear = null,
 	): ShareLinkDto {
@@ -158,6 +163,7 @@ final readonly class ShareLinkTools
 				'ceilings' => $ceilings,
 				'labels' => $labels,
 				'sectionHeight' => $sectionHeight,
+				'dimensions' => $dimensions,
 				'expiresAt' => $expiresAt,
 			],
 			$clear,

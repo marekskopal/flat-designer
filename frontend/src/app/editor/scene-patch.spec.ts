@@ -47,6 +47,7 @@ const scene: Scene = {
             type: 'Living',
             polygon: [[0, 0], [1, 0], [0, 1]],
             area: 0,
+            perimeter: 0,
             ceilingHeight: null,
             floorMaterialId: null,
             wallFinishes: [],

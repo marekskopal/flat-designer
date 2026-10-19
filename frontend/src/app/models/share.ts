@@ -27,6 +27,8 @@ export interface ShareSettings {
     labels: boolean;
     /** Wall cut in mm; null = none. */
     sectionHeight: number | null;
+    /** Dimension lines of the rooms in the top view. */
+    dimensions: boolean;
 }
 
 export interface ShareLink {

@@ -1,0 +1,80 @@
+<section class="card card--table">
+    <div class="card__header">
+        <h2 class="card__title">Rooms</h2>
+        @if (schedule(); as s) {
+            <span class="totals">
+                {{ s.indoor.area | number: '1.2-2' }} m² indoor
+                @if (s.outdoor.rooms > 0) {
+                    · {{ s.outdoor.area | number: '1.2-2' }} m² outdoor
+                }
+            </span>
+        }
+    </div>
+
+    @if (schedule(); as s) {
+        @if (s.indoor.rooms + s.outdoor.rooms === 0) {
+            <p class="empty">No rooms yet. Add them in a floor's editor (Room from walls).</p>
+        } @else {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th class="num">Area m²</th>
+                        <th class="num">Perimeter m</th>
+                        <th class="num">Clear height m</th>
+                        <th class="num">Volume m³</th>
+                    </tr>
+                </thead>
+                @for (floor of s.floors; track floor.id) {
+                    <tbody>
+                        @if (s.floors.length > 1) {
+                            <tr class="floor">
+                                <th colspan="5" scope="rowgroup">{{ floor.name }}</th>
+                            </tr>
+                        }
+                        @for (room of floor.rooms; track room.id) {
+                            <tr [class.outdoor]="room.outdoor">
+                                <td>
+                                    <span class="code">{{ room.code.replace('H1/', '') }}</span>
+                                    {{ room.name }}
+                                </td>
+                                <td class="num">{{ room.area | number: '1.2-2' }}</td>
+                                <td class="num">{{ room.perimeter | number: '1.2-2' }}</td>
+                                <td class="num">{{ room.clearHeight === null ? '–' : (room.clearHeight / 1000 | number: '1.2-2') }}</td>
+                                <td class="num">{{ room.volume === null ? '–' : (room.volume | number: '1.1-1') }}</td>
+                            </tr>
+                        }
+                        @if (s.floors.length > 1) {
+                            <tr class="subtotal">
+                                <td>Indoor, {{ floor.name }}</td>
+                                <td class="num">{{ floor.indoor.area | number: '1.2-2' }}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                            @if (floor.outdoor.rooms > 0) {
+                                <tr class="subtotal">
+                                    <td>Outdoor, {{ floor.name }}</td>
+                                    <td class="num">{{ floor.outdoor.area | number: '1.2-2' }}</td>
+                                    <td colspan="3"></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                }
+                <tfoot>
+                    <tr class="total">
+                        <td>Indoor total ({{ s.indoor.rooms }} {{ s.indoor.rooms === 1 ? 'room' : 'rooms' }})</td>
+                        <td class="num">{{ s.indoor.area | number: '1.2-2' }}</td>
+                        <td colspan="3"></td>
+                    </tr>
+                    @if (s.outdoor.rooms > 0) {
+                        <tr class="total">
+                            <td>Outdoor total (terraces, gardens)</td>
+                            <td class="num">{{ s.outdoor.area | number: '1.2-2' }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    }
+                </tfoot>
+            </table>
+        }
+    }
+</section>

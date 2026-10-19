@@ -17,6 +17,7 @@ import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
 
 import {EditorTool, ToolStatus} from './engine/drawing';
+import {MeasureStatus} from './engine/measure';
 import {Selection} from './engine/selection';
 import {DoorAim, EditHandler, ViewerEngine, ViewPreset, WallDraftShape} from './engine/viewer-engine';
 
@@ -52,6 +53,10 @@ export class ViewerComponent {
     public readonly scene = input<Scene | null>(null);
     public readonly ceilingsVisible = input(false);
     public readonly labelsVisible = input(true);
+    /** Dimension lines along the room edges, in the top view. */
+    public readonly dimensionsVisible = input(false);
+    /** The measure tool: clicks in the top view place two points and show their distance (before any edit tool). */
+    public readonly measuring = input(false);
     /** Section plane height in mm; null shows everything. */
     public readonly sectionHeight = input<number | null>(null);
     public readonly selection = input<Selection | null>(null);
@@ -83,6 +88,8 @@ export class ViewerComponent {
     public readonly roomDetect = output<PlanPoint>();
     /** The readout of the drawing tool (null when none is active). */
     public readonly toolStatus = output<ToolStatus | null>();
+    /** The readout of the measure tool (null when it is off). */
+    public readonly measureStatus = output<MeasureStatus | null>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Created after the first render, once the host element has its size. */
@@ -99,6 +106,7 @@ export class ViewerComponent {
             engine.onDrawWalls = (points, closed): Promise<boolean> => this.drawWallsHandler()(points, closed);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
+            engine.onMeasureStatus = (status): void => this.measureStatus.emit(status);
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -121,6 +129,8 @@ export class ViewerComponent {
         });
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
+        effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
+        effect(() => this.engine()?.setMeasuring(this.measuring()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));
@@ -149,6 +159,11 @@ export class ViewerComponent {
     /** Drops the run being drawn; false when there was none. */
     public cancelRun(): boolean {
         return this.engine()?.cancelRun() ?? false;
+    }
+
+    /** Clears the measurement; false when there was none. */
+    public clearMeasurement(): boolean {
+        return this.engine()?.clearMeasurement() ?? false;
     }
 
     /** First-person walk; call it from a click handler, it captures the mouse. */
