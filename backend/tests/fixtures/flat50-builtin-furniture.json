@@ -1,0 +1,619 @@
+{
+ "_comment": "The distinct built-in furniture items of flat 50 (project 1) the conversion migration maps to furniture definitions: kind, size and params as they were stored. Read by BuiltInFurnitureConverterTest.",
+ "items": [
+  {
+   "kind": "BaseCabinet",
+   "width": 300,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "fronts": [
+     {
+      "type": "drawer"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 500,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 600,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 600,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "fronts": [
+     {
+      "type": "drawer",
+      "height": 180
+     },
+     {
+      "type": "drawer",
+      "height": 290
+     },
+     {
+      "type": "drawer",
+      "height": 290
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 600,
+   "depth": 580,
+   "height": 860,
+   "params": {}
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 800,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "fronts": [
+     {
+      "type": "drawer",
+      "height": 180
+     },
+     {
+      "type": "drawer",
+      "height": 290
+     },
+     {
+      "type": "drawer",
+      "height": 290
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 900,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "blindLeft": 580,
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 1200,
+   "depth": 400,
+   "height": 450,
+   "params": {
+    "plinth": 60,
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door",
+      "count": 2
+     }
+    ]
+   }
+  },
+  {
+   "kind": "BaseCabinet",
+   "width": 1200,
+   "depth": 580,
+   "height": 860,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "blindLeft": 580,
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 400,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 426,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 480,
+   "depth": 350,
+   "height": 700,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 480,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 560,
+   "depth": 350,
+   "height": 700,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 560,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 600,
+   "depth": 350,
+   "height": 700,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 600,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 650,
+   "depth": 350,
+   "height": 700,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 650,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 674,
+   "depth": 350,
+   "height": 700,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 674,
+   "depth": 600,
+   "height": 450,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 676,
+   "depth": 350,
+   "height": 700,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "WallCabinet",
+   "width": 1200,
+   "depth": 400,
+   "height": 500,
+   "params": {
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door",
+      "count": 2
+     }
+    ]
+   }
+  },
+  {
+   "kind": "TallCabinet",
+   "width": 600,
+   "depth": 600,
+   "height": 2600,
+   "params": {
+    "plinth": 100,
+    "handle": "horizontal",
+    "fronts": [
+     {
+      "type": "drawer",
+      "height": 300
+     },
+     {
+      "type": "drawer",
+      "height": 150
+     },
+     {
+      "type": "oven",
+      "height": 600
+     },
+     {
+      "type": "microwave",
+      "height": 400
+     },
+     {
+      "type": "door",
+      "height": 600
+     },
+     {
+      "type": "door",
+      "height": 450,
+      "handle": "none"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "TallCabinet",
+   "width": 600,
+   "depth": 600,
+   "height": 2600,
+   "params": {
+    "plinth": 100,
+    "handle": "vertical",
+    "handleSide": "left",
+    "fronts": [
+     {
+      "type": "door",
+      "height": 700
+     },
+     {
+      "type": "door",
+      "height": 1350
+     },
+     {
+      "type": "door",
+      "height": 450,
+      "handle": "none"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "TallCabinet",
+   "width": 600,
+   "depth": 600,
+   "height": 2200,
+   "params": {}
+  },
+  {
+   "kind": "TallCabinet",
+   "width": 600,
+   "depth": 400,
+   "height": 2400,
+   "params": {
+    "plinth": 60,
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door",
+      "height": 420
+     },
+     {
+      "type": "door",
+      "height": 1420
+     },
+     {
+      "type": "door"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "TallCabinet",
+   "width": 600,
+   "depth": 600,
+   "height": 2600,
+   "params": {
+    "plinth": 100,
+    "handle": "vertical",
+    "fronts": [
+     {
+      "type": "door",
+      "height": 700
+     },
+     {
+      "type": "door",
+      "height": 1350
+     },
+     {
+      "type": "door",
+      "height": 450,
+      "handle": "none"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "TallCabinet",
+   "width": 2468,
+   "depth": 600,
+   "height": 2400,
+   "params": {
+    "plinth": 60,
+    "handle": "none",
+    "fronts": [
+     {
+      "type": "door",
+      "count": 4
+     }
+    ]
+   }
+  },
+  {
+   "kind": "Worktop",
+   "width": 1100,
+   "depth": 600,
+   "height": 40,
+   "params": {}
+  },
+  {
+   "kind": "Worktop",
+   "width": 1200,
+   "depth": 600,
+   "height": 40,
+   "params": {}
+  },
+  {
+   "kind": "Worktop",
+   "width": 1200,
+   "depth": 400,
+   "height": 30,
+   "params": {}
+  },
+  {
+   "kind": "Worktop",
+   "width": 1680,
+   "depth": 600,
+   "height": 40,
+   "params": {}
+  },
+  {
+   "kind": "Worktop",
+   "width": 1700,
+   "depth": 600,
+   "height": 40,
+   "params": {}
+  },
+  {
+   "kind": "Worktop",
+   "width": 2280,
+   "depth": 600,
+   "height": 40,
+   "params": {}
+  },
+  {
+   "kind": "Backsplash",
+   "width": 1680,
+   "depth": 16,
+   "height": 550,
+   "params": {}
+  },
+  {
+   "kind": "Backsplash",
+   "width": 1700,
+   "depth": 16,
+   "height": 550,
+   "params": {}
+  },
+  {
+   "kind": "Backsplash",
+   "width": 2280,
+   "depth": 16,
+   "height": 550,
+   "params": {}
+  },
+  {
+   "kind": "Backsplash",
+   "width": 2300,
+   "depth": 16,
+   "height": 550,
+   "params": {}
+  },
+  {
+   "kind": "Box",
+   "width": 18,
+   "depth": 400,
+   "height": 1400,
+   "params": {}
+  },
+  {
+   "kind": "Box",
+   "width": 25,
+   "depth": 60,
+   "height": 25,
+   "params": {}
+  },
+  {
+   "kind": "Box",
+   "width": 400,
+   "depth": 20,
+   "height": 20,
+   "params": {}
+  },
+  {
+   "kind": "Box",
+   "width": 1200,
+   "depth": 18,
+   "height": 1400,
+   "params": {}
+  },
+  {
+   "kind": "Box",
+   "width": 1200,
+   "depth": 400,
+   "height": 20,
+   "params": {}
+  },
+  {
+   "kind": "Wardrobe",
+   "width": 2468,
+   "depth": 600,
+   "height": 2400,
+   "params": {
+    "doors": 4,
+    "mirrorDoors": [
+     3
+    ],
+    "plinth": 60
+   }
+  },
+  {
+   "kind": "Chair",
+   "width": 400,
+   "depth": 395,
+   "height": 885,
+   "params": {
+    "seatHeight": 460,
+    "backWidth": 375
+   }
+  },
+  {
+   "kind": "Table",
+   "width": 1320,
+   "depth": 700,
+   "height": 780,
+   "params": {}
+  }
+ ]
+}

@@ -122,7 +122,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   Global definitions are seeded from `backend/migrations/furniture/*.json` (`SeedFurnitureDefinitions`,
   `SeedFlat50FurnitureDefinitions`, each listing its files; `FurnitureSeeds` reads them); both test suites build them, and
   `custom/parity.spec.ts` checks flat 50's (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against
-  the built-in kinds. A material slot without a default takes the item material, like the first slot. UI: the Add menu's "Furniture —" groups and the inspector's `definition` / `custom` fields
+  the built-in kinds. A material slot without a default takes the item material, like the first slot.
+  `ConvertFlat50FurnitureToDefinitions` made flat 50's custom-made furniture Custom items of those definitions (in
+  place, same ids; `BuiltInFurnitureConverter` maps params ↔ values, `down()` maps back). The built-in furniture kinds
+  stay for saved versions and old changes; `ItemKindCatalog` marks them `replacedBy` (the Add menu lists them as
+  "Built-in (old)"). UI: the Add menu's "Furniture —" groups and the inspector's `definition` / `custom` fields
   (`CustomParamsComponent`, form generated from the definition's parameters and slots; `EditorStore.definitions`);
   `/furniture` (library, `?projectId=`) and `/furniture/:id` (JSON editor with `FurniturePreview`, a framework-free
   one-item scene in `viewer/engine/custom/preview.ts`). MCP: `FurnitureTools` (list/get/create/update/delete/copy/

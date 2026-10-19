@@ -5,7 +5,7 @@
         <select class="tool tool--add" aria-label="Add" [disabled]="editor.busy()" (change)="add($event)">
             <option value="" selected disabled>+ Add…</option>
             <optgroup label="Item">
-                @for (kind of editor.itemKinds(); track kind.kind) {
+                @for (kind of currentKinds(); track kind.kind) {
                     <option [value]="'item:' + kind.kind" [title]="kind.description">{{ kindLabel(kind.kind) }}</option>
                 }
             </optgroup>
@@ -13,6 +13,15 @@
                 <optgroup [label]="section.label">
                     @for (definition of section.definitions; track definition.id) {
                         <option [value]="'custom:' + definition.id" [title]="definition.description">{{ definition.name }}</option>
+                    }
+                </optgroup>
+            }
+            @if (oldKinds().length > 0) {
+                <optgroup label="Built-in (old)">
+                    @for (kind of oldKinds(); track kind.kind) {
+                        <option [value]="'item:' + kind.kind" [title]="'Kept for older items; prefer the furniture “' + kind.replacedBy + '”.'">
+                            {{ kindLabel(kind.kind) }}
+                        </option>
                     }
                 </optgroup>
             }
