@@ -170,6 +170,15 @@ format is the text in `FurnitureTools::Format`.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
   grid.
+- Ceilings and skirting are room fields (rules in `RoomCeiling`). A room has a `ceilingMaterialId`. With
+  `vaultSpacing`, its ceiling is vaulted: sine arches `vaultRise` high spring between beams spaced at whole
+  multiples of `vaultSpacing` from the plan origin, so neighbouring rooms line up. The beams run at `vaultAngle`,
+  and the crowns are at `ceilingHeight`. Beams are `beamWidth` wide, hang `beamDrop` below the springing and are in
+  `beamMaterialId`. `skirtingHeight` / `skirtingMaterialId` add skirting along the walls, except at doorways.
+  The geometry is in `viewer/engine/ceilings.ts`; it is TS only, as the backend does not need it.
+- Where rooms meet without a wall and their ceilings differ in height, `ceilingSteps()` closes the gap with an
+  upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
+  beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
 
 ## Walkthrough
 

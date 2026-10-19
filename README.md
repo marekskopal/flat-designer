@@ -26,7 +26,8 @@ All geometry is generated from parameters. The project contains no 3D model file
 - **Groups and variants**: group items into pieces of furniture, and compare alternatives as variants and
   switch between them.
 - **Materials and finishes**: a shared material catalogue with procedural or photo textures, floor materials,
-  wall finish bands and tile grids aligned across floors, walls and tiled items.
+  wall finish bands and tile grids aligned across floors, walls and tiled items, ceiling materials, vaulted
+  ceilings between beams, and skirting boards.
 - **Versions**: immutable snapshots of a project that can be restored at any time.
 - **Share links**: a read-only guest view of a floor, with configurable views, start camera and display options.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
