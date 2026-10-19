@@ -202,6 +202,24 @@ format is the text in `FurnitureTools::Format`.
   when an edit tool is picked. It snaps to wall ends and to face corners and faces (`wallFaces()` with the
   `wallJoints()` mitres). Esc first clears the measurement, then ends the tool.
 
+## Plan underlays
+
+- A floor may have one `FloorUnderlay` (`floor_underlays`): an image project file laid under the top view for tracing.
+  Pixel (px, py), with py counted down from the top, lies at plan `x + scale·(px·cos r + py·sin r)`,
+  `y + scale·(px·sin r − py·cos r)`. It goes with the floor and with its file (both cascade).
+- `UnderlayService` sets it (placement given, or calibrated from two pixel/plan point pairs by `placementFromPoints()`,
+  twinned in `viewer/engine/underlay.ts`) and removes it. Both bump the revision, but it is not an element: there is no
+  `SceneEditor`, no change log and no undo. REST `PUT|DELETE …/floors/{id}/underlay`, MCP `set_floor_underlay` /
+  `remove_floor_underlay`.
+- The scene carries `underlay`, so versions keep it. `SnapshotUnderlayRestorer` restores it while the file still exists.
+- Viewer: `buildUnderlay()` draws the image over the plan at its opacity (no depth test), only while `isTopDown()`.
+  `UnderlayPanelComponent` (edit mode) picks the image and sets its placement. Calibrate… uses the measure tool without
+  snapping (`EditorStore.calibration`, `ViewerEngine.setCalibrating()`), then `calibrateUnderlay()` applies the real
+  distance and an optional axis. Images only; PDF pages have to be uploaded as images.
+- MCP `list_project_files` / `get_project_file` let an agent read uploaded plans and photos. Images come back as image
+  content, optionally cropped, scaled to `maxSize` and overlaid with a labelled pixel `grid` (`ImagePreviewService`,
+  which needs PHP gd).
+
 ## Share links
 
 - `ShareLink` / `ShareLinkProvider`: a guest view of one floor at `/s/{token}`, without sign-in. The public

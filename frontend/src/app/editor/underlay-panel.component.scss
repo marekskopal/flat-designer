@@ -1,0 +1,137 @@
+@use 'variables' as *;
+
+:host {
+    display: block;
+    padding: $space-12 $space-16 $space-4;
+}
+
+.section-title {
+    margin: 0 0 $space-8;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-text-subtle;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: $space-4;
+    margin-top: $space-8;
+}
+
+.row__grow {
+    flex: 1;
+    min-width: 0;
+}
+
+.show {
+    display: flex;
+    align-items: center;
+    gap: $space-4;
+    font-size: $font-size-13;
+    cursor: pointer;
+
+    input {
+        accent-color: $color-accent;
+    }
+}
+
+.slider {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    margin-top: $space-8;
+    font-size: $font-size-13;
+
+    input {
+        width: 100%;
+        accent-color: $color-accent;
+    }
+}
+
+.slider__label {
+    display: flex;
+    justify-content: space-between;
+}
+
+.slider__value {
+    color: $color-text-muted;
+    font-variant-numeric: tabular-nums;
+}
+
+.placement {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $space-4;
+    margin-top: $space-8;
+}
+
+.placement__field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    font-size: 11px;
+    color: $color-text-subtle;
+
+    .input {
+        width: 100%;
+    }
+}
+
+.calibration {
+    margin-top: $space-8;
+    padding: $space-8;
+    border: 1px solid $color-accent;
+    border-radius: $radius-6;
+    background: $color-accent-soft;
+}
+
+.tool {
+    padding: 5px 8px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-6;
+    background: $color-surface-solid;
+    font-size: $font-size-13;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+}
+
+.tool--primary {
+    border-color: $color-accent;
+    background: $color-accent;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+        background: $color-accent;
+        filter: brightness(1.08);
+    }
+}
+
+.tool--danger {
+    color: $color-danger;
+}
+
+.underlay__pick {
+    width: 100%;
+}
+
+.hint {
+    margin: $space-8 0 0;
+    font-size: $font-size-12;
+    color: $color-text-muted;
+}
+
+.calibration .hint {
+    margin-top: 0;
+}

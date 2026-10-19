@@ -20,6 +20,7 @@ import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
+import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ProjectUpdate} from '@app/models/realtime';
 import {PlanPoint, Room, RoomType} from '@app/models/scene';
@@ -52,6 +53,19 @@ interface ViewOption {
     label: string;
 }
 
+/** An image file decoded for use as a texture. */
+async function decodeImage(blob: Blob): Promise<HTMLImageElement> {
+    const url = URL.createObjectURL(blob);
+    try {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        return image;
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+}
+
 const optionalId = (value: string | number | null | undefined): number | null =>
     value === null || value === undefined || value === '' ? null : Number(value);
 
@@ -71,6 +85,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         ShareLinkFormComponent,
         DrawHudComponent,
         MeasureHudComponent,
+        UnderlayPanelComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -112,6 +127,20 @@ export class ViewerPageComponent {
     });
 
     protected readonly scene = computed(() => (this.data.hasValue() ? this.data.value().scene : null));
+    private readonly underlayFileId = computed(() => this.scene()?.underlay?.fileId ?? null);
+    /** The decoded image of the floor's underlay. */
+    private readonly underlayFile = resource({
+        params: () => {
+            const fileId = this.underlayFileId();
+            return fileId === null ? undefined : {projectId: this.projectId(), fileId};
+        },
+        loader: async ({params}) => decodeImage(await this.projects.downloadFile(params.projectId, params.fileId)),
+    });
+    protected readonly underlayImage = computed(() =>
+        this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,
+    );
+    /** The measure tool is on, for measuring or to pick the underlay's calibration points. */
+    protected readonly measureActive = computed(() => this.measuring() || this.editor.calibration() !== null);
     protected readonly project = computed(() => (this.data.hasValue() ? this.data.value().project : null));
     protected readonly viewedVersion = computed(() => (this.data.hasValue() ? this.data.value().version : null));
     /** Floors to switch between: those of the viewed version, or of the working copy. */
@@ -228,6 +257,18 @@ export class ViewerPageComponent {
             }
         });
 
+        // Calibration points are clicked in the top view, with the measure tool.
+        effect(() => {
+            if (this.editor.calibration() === 'picking') {
+                untracked(() => {
+                    this.editor.setTool('select');
+                    this.measuring.set(false);
+                    if (this.activeView() !== 'top') {
+                        this.setView('top');
+                    }
+                });
+            }
+        });
         // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
         effect(() => {
             this.floorId();
@@ -323,6 +364,8 @@ export class ViewerPageComponent {
         if (event.key === 'd' || event.key === 'D') {
             event.preventDefault();
             this.toggleMeasuring();
+        } else if (event.key === 'Escape' && this.editor.calibration() !== null) {
+            this.editor.calibration.set(null);
         } else if (event.key === 'Escape' && this.measuring()) {
             this.measuring.set(false);
         }

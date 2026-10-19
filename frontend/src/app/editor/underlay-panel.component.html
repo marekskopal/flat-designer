@@ -1,0 +1,93 @@
+<h2 class="section-title">Plan underlay</h2>
+
+@if (underlay(); as u) {
+    <div class="row">
+        <select class="input input--compact row__grow" aria-label="Underlay image" [disabled]="editor.busy()" (change)="choose($event)">
+            @for (file of imageFiles(); track file.id) {
+                <option [value]="file.id" [selected]="file.id === u.fileId">{{ file.filename }}</option>
+            }
+        </select>
+        <label class="show" title="Show the underlay in the plan view">
+            <input type="checkbox" [checked]="editor.underlayVisible()" (change)="editor.underlayVisible.set(!editor.underlayVisible())" />
+            Show
+        </label>
+    </div>
+
+    <label class="slider">
+        <span class="slider__label">
+            Opacity <span class="slider__value">{{ u.opacity * 100 | number: '1.0-0' }} %</span>
+        </span>
+        <input type="range" min="5" max="100" step="5" [value]="u.opacity * 100" aria-label="Underlay opacity" (change)="setNumber('opacity', $event)" />
+    </label>
+
+    <div class="placement" aria-label="Underlay placement">
+        <label class="placement__field">
+            x (mm)
+            <input class="input input--compact" type="number" step="10" [value]="u.x" (change)="setNumber('x', $event)" />
+        </label>
+        <label class="placement__field">
+            y (mm)
+            <input class="input input--compact" type="number" step="10" [value]="u.y" (change)="setNumber('y', $event)" />
+        </label>
+        <label class="placement__field">
+            Turn (°)
+            <input class="input input--compact" type="number" step="0.1" [value]="u.rotation | number: '1.0-2'" (change)="setNumber('rotation', $event)" />
+        </label>
+        <label class="placement__field">
+            mm / px
+            <input class="input input--compact" type="number" step="0.01" min="0.01" [value]="u.scale | number: '1.0-4'" (change)="setNumber('scale', $event)" />
+        </label>
+    </div>
+
+    @if (points(); as p) {
+        <div class="calibration" role="group" aria-label="Calibration">
+            <p class="hint">Clicked {{ clickedDistance() | number: '1.0-0' }} mm apart. How far apart are they really?</p>
+            <div class="row">
+                <input
+                    class="input input--compact row__grow"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="Distance, mm"
+                    aria-label="Real distance in mm"
+                    (input)="setDistance($event)"
+                    (keydown.enter)="applyCalibration()"
+                />
+                <select class="input input--compact" aria-label="Direction" (change)="setDirection($event)">
+                    <option value="keep">as clicked</option>
+                    <option value="horizontal">along x</option>
+                    <option value="vertical">along y</option>
+                </select>
+            </div>
+            <div class="row">
+                <button type="button" class="tool tool--primary" [disabled]="distance() === null || editor.busy()" (click)="applyCalibration()">Apply</button>
+                <button type="button" class="tool" (click)="cancelCalibration()">Cancel</button>
+            </div>
+        </div>
+    } @else if (editor.calibration() === 'picking') {
+        <div class="calibration">
+            <p class="hint">Click two points of a known distance on the plan image (a dimensioned wall, the scale bar).</p>
+            <button type="button" class="tool" (click)="cancelCalibration()">Cancel</button>
+        </div>
+    } @else {
+        <div class="row">
+            <button type="button" class="tool row__grow" [disabled]="editor.busy()" title="Set the scale from two points of a known distance" (click)="startCalibration()">
+                Calibrate…
+            </button>
+            <button type="button" class="tool tool--danger" [disabled]="editor.busy()" (click)="remove()">Remove</button>
+        </div>
+        <p class="hint">{{ scaleLabel(u) }} · {{ u.widthPx }} × {{ u.heightPx }} px</p>
+    }
+} @else if (imageFiles().length > 0) {
+    <select class="input input--compact underlay__pick" aria-label="Underlay image" [disabled]="editor.busy()" (change)="choose($event)">
+        <option value="" selected disabled>Lay an image under the plan…</option>
+        @for (file of imageFiles(); track file.id) {
+            <option [value]="file.id">{{ file.filename }}</option>
+        }
+    </select>
+    <p class="hint">Trace walls over a scanned floor plan. Calibrate it after placing.</p>
+} @else {
+    <p class="hint">
+        Upload a floor plan image (PNG, JPEG) under <a [routerLink]="['/projects', projectId()]">Files</a> to trace over it.
+    </p>
+}
