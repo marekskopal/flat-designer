@@ -547,7 +547,7 @@ final class McpServerTest extends IntegrationTestCase
 	public function testAdminsManageMaterials(): void
 	{
 		$oak = [
-			'code' => 'oak-veneer',
+			'code' => 'walnut-veneer',
 			'name' => 'Oak veneer, natural',
 			'pattern' => 'Wood',
 			'color' => '#C49A6C',
@@ -563,7 +563,7 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($added);
 		self::assertIsInt($added['id']);
 		self::assertSame(
-			['oak-veneer', '#c49a6c', 0.55, 0, false, null],
+			['walnut-veneer', '#c49a6c', 0.55, 0, false, null],
 			[$added['code'], $added['color'], $added['roughness'], $added['metalness'], $added['textured'], $added['tileWidth']],
 		);
 		$listed = $this->client->call('list_materials');
@@ -572,7 +572,7 @@ final class McpServerTest extends IntegrationTestCase
 
 		$message = $admin->call('add_material', $oak, $isError);
 		self::assertTrue($isError);
-		self::assertSame(sprintf('Material code "oak-veneer" exists (id %d).', $added['id']), $message);
+		self::assertSame(sprintf('Material code "walnut-veneer" exists (id %d).', $added['id']), $message);
 		foreach ([
 			[['color' => 'brown'], 'Field "color" must be #rrggbb, e.g. "#f2f1ed".'],
 			[['roughness' => 2], 'Field "roughness" must be between 0 and 1.'],
@@ -599,7 +599,7 @@ final class McpServerTest extends IntegrationTestCase
 			'definition' => [
 				'format' => 1,
 				'size' => ['width' => 600, 'depth' => 300, 'height' => 18],
-				'materialSlots' => [['key' => 'board', 'default' => 'oak-veneer']],
+				'materialSlots' => [['key' => 'board', 'default' => 'walnut-veneer']],
 				'parts' => [['type' => 'board', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D', 'material' => 'board']],
 			]]);
 		self::assertIsArray($definition);
@@ -616,7 +616,7 @@ final class McpServerTest extends IntegrationTestCase
 		);
 		self::assertIsArray($updated);
 		self::assertSame(
-			['oak-veneer', 'Oak veneer, natural', 'Planks', '#a07850', 0.55, 180, 1200],
+			['walnut-veneer', 'Oak veneer, natural', 'Planks', '#a07850', 0.55, 180, 1200],
 			[$updated['code'], $updated['name'], $updated['pattern'], $updated['color'], $updated['roughness'], $updated['tileWidth'], $updated['tileHeight']],
 		);
 		self::assertSame(

@@ -166,6 +166,11 @@ format is the text in `FurnitureTools::Format`.
   ones with `created_by_id`.
 - Textures of real products are cut from reference photos into `frontend/src/assets/textures/`, one plank or tile per
   image. The material's `tile_width` / `tile_height` give its real size.
+- Patterns without photos are drawn on canvas in `materials.ts`: wood, planks, tiles, grass and gravel, plus
+  `Terrazzo` (chips, with slab joints at the tile size), `Brick` (stretcher bond, `tile_width` × `tile_height` per
+  brick) and `Herringbone`. A herringbone tile's length is rounded to a whole multiple of its width, and the texture
+  is drawn axis-aligned and turned 45°. Tiles, terrazzo and herringbone go on the room's tile grid; bricks keep
+  their surface's UVs, which on a vaulted ceiling run along and across the beams.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
