@@ -45,7 +45,7 @@ import {
 } from './plan-geometry';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
-import {buildUnderlay, disposeUnderlay} from './underlay';
+import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
 
@@ -213,6 +213,7 @@ export class ViewerEngine {
     private calibrating = false;
     /** The plan image under the top view, shown there only. */
     private underlay: THREE.Mesh | null = null;
+    private underlayImage: TexImageSource | null = null;
     private underlayVisible = true;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
@@ -719,10 +720,16 @@ export class ViewerEngine {
      * The image is the decoded file of `underlay.fileId`.
      */
     public setUnderlay(underlay: Underlay | null, image: TexImageSource | null): void {
+        if (this.underlay !== null && underlay !== null && image === this.underlayImage) {
+            // The same image moved or faded: no new texture upload.
+            updateUnderlay(this.underlay, underlay);
+            return;
+        }
         if (this.underlay !== null) {
             disposeUnderlay(this.underlay);
             this.underlay = null;
         }
+        this.underlayImage = image;
         if (underlay !== null && image !== null) {
             this.underlay = buildUnderlay(underlay, image);
             this.underlay.visible = false;

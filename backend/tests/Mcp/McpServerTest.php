@@ -793,6 +793,34 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertTrue($isError);
 		self::assertIsString($message);
 		self::assertStringContainsString('grid', $message);
+		// A crop lying entirely outside the image is refused rather than cut to a sliver.
+		$message = $this->client->call(
+			'get_project_file',
+			['projectId' => $this->project->id, 'fileId' => $fileId, 'cropX' => 2500, 'cropY' => 0, 'cropWidth' => 300, 'cropHeight' => 300],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('outside', $message);
+		// Points are [px, py, x, y] lists, but the REST body's objects (which the schema check lets through) work too.
+		$asObjects = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $fileId,
+			'points' => [['px' => 1193, 'py' => 285, 'x' => 0, 'y' => 0], ['px' => 1328, 'py' => 285, 'x' => 1000, 'y' => 0]],
+		], $isError);
+		self::assertFalse($isError);
+		self::assertIsArray($asObjects);
+		self::assertEqualsWithDelta(7.407, $asObjects['scale'], 0.001);
+		$message = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $fileId,
+			'points' => [[1193, 285, 0, 0], [1328, 285]],
+		], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('[px, py, x, y]', $message);
 
 		// The scale bar: 1 m from pixel (1193, 285) to (1328, 285); its left end goes to the plan origin.
 		$underlay = $this->client->call('set_floor_underlay', [

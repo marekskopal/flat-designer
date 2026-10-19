@@ -61,10 +61,16 @@ final readonly class OpeningLook
 		}
 		$panelHeight = null;
 		if ($fields->raw('panelHeight') !== null) {
-			if ($height < 100 + self::MinGlassAbovePanel) {
-				throw EditException::invalid('The window is too low for a solid lower panel.');
+			$panelHeight = $fields->int('panelHeight', 100, max(100, $height - self::MinGlassAbovePanel));
+			// Also when the panel was set earlier and the window is being lowered under it.
+			if ($panelHeight > $height - self::MinGlassAbovePanel) {
+				throw EditException::invalid(sprintf(
+					'A solid lower panel of %d mm leaves less than %d mm of glass in a window %d mm high; lower or clear panelHeight.',
+					$panelHeight,
+					self::MinGlassAbovePanel,
+					$height,
+				));
 			}
-			$panelHeight = $fields->int('panelHeight', 100, $height - self::MinGlassAbovePanel);
 		}
 		$shutters = $fields->nullableEnum('shutters', ShutterStyleEnum::class);
 		$materialId = $shutters === null ? null : $fields->nullableId('shutterMaterialId');

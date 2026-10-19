@@ -19,7 +19,7 @@ final readonly class UnderlayTools
 
 	/**
 	 * @param int $fileId an image file of the project (list_project_files)
-	 * @param list<list<int|float>>|null $points calibration: two [px, py, x, y] pairs, an image pixel (py counted down from the top) and the plan point in mm where it belongs; sets x, y, scale and rotation
+	 * @param list<list<int|float>>|null $points calibration: two [px, py, x, y] lists, an image pixel (py counted down from the top) and the plan point in mm where it belongs; sets x, y, scale and rotation
 	 * @param int|null $x plan x (mm) of the image's top-left corner
 	 * @param int|null $y plan y (mm) of the image's top-left corner
 	 * @param float|null $scale mm per image pixel
@@ -45,17 +45,7 @@ final readonly class UnderlayTools
 		?float $rotation = null,
 		?float $opacity = null,
 	): UnderlayDto {
-		$calibration = null;
-		if ($points !== null) {
-			$calibration = [];
-			foreach ($points as $point) {
-				if (count($point) !== 4) {
-					throw new RuntimeException('Each point must be [px, py, x, y].');
-				}
-				[$px, $py, $planX, $planY] = $point;
-				$calibration[] = ['px' => (float) $px, 'py' => (float) $py, 'x' => (float) $planX, 'y' => (float) $planY];
-			}
-		}
+		$calibration = $points === null ? null : array_map(self::point(...), $points);
 
 		return UnderlayDto::fromEntity($this->underlayService->set(
 			$this->context->floor($projectId, $floorId),
@@ -69,6 +59,35 @@ final readonly class UnderlayTools
 				points: $calibration,
 			),
 		));
+	}
+
+	/**
+	 * A calibration point as `[px, py, x, y]`, or as the REST body's `{px, py, x, y}` (the schema check lets objects
+	 * through as arrays).
+	 *
+	 * @return array{px: float, py: float, x: float, y: float}
+	 */
+	private static function point(mixed $point): array
+	{
+		$values = null;
+		if (is_array($point) && array_is_list($point) && count($point) === 4) {
+			$values = $point;
+		} elseif (is_array($point) && isset($point['px'], $point['py'], $point['x'], $point['y'])) {
+			$values = [$point['px'], $point['py'], $point['x'], $point['y']];
+		}
+		$numbers = [];
+		foreach ($values ?? [] as $value) {
+			if (!is_int($value) && !is_float($value)) {
+				$numbers = [];
+				break;
+			}
+			$numbers[] = (float) $value;
+		}
+		if (count($numbers) !== 4) {
+			throw new RuntimeException('Each point must be [px, py, x, y] in numbers: an image pixel and the plan mm it belongs at.');
+		}
+
+		return ['px' => $numbers[0], 'py' => $numbers[1], 'x' => $numbers[2], 'y' => $numbers[3]];
 	}
 
 	/** @return array{removed: bool} */

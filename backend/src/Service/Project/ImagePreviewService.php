@@ -111,8 +111,9 @@ final readonly class ImagePreviewService
 	 */
 	private static function clampCrop(array $crop, int $width, int $height): array
 	{
-		$x = max(0, min($crop['x'], $width - 1));
-		$y = max(0, min($crop['y'], $height - 1));
+		// A crop reaching past an edge is cut at it; one lying entirely outside is refused.
+		$x = max(0, $crop['x']);
+		$y = max(0, $crop['y']);
 		$right = min($width, $crop['x'] + $crop['width']);
 		$bottom = min($height, $crop['y'] + $crop['height']);
 		if ($right - $x < 1 || $bottom - $y < 1) {

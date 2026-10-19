@@ -84,15 +84,8 @@ function normalizeAngle(degrees: number): number {
  * traced on it. Not pickable: it carries no element tag.
  */
 export function buildUnderlay(underlay: Underlay, image: TexImageSource): THREE.Mesh {
-    const corners = [
-        pixelToPlan(underlay, 0, 0),
-        pixelToPlan(underlay, underlay.widthPx, 0),
-        pixelToPlan(underlay, 0, underlay.heightPx),
-        pixelToPlan(underlay, underlay.widthPx, underlay.heightPx),
-    ];
     const geometry = new THREE.BufferGeometry();
-    // Plan y maps to scene −z; a hair above the floor so it never fights with the room floors.
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(corners.flatMap((c) => [c.x * MM, 0.002, -c.y * MM]), 3));
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(cornerPositions(underlay), 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 1, 1, 1, 0, 0, 1, 0], 2));
     geometry.setIndex([0, 2, 1, 1, 2, 3]);
     geometry.computeVertexNormals();
@@ -114,6 +107,25 @@ export function buildUnderlay(underlay: Underlay, image: TexImageSource): THREE.
     mesh.renderOrder = 10;
     mesh.name = 'underlay';
     return mesh;
+}
+
+/** The four corners of the image on the floor plane: plan y maps to scene −z, a hair above the floor so it never fights with the room floors. */
+function cornerPositions(underlay: Underlay): number[] {
+    return [
+        pixelToPlan(underlay, 0, 0),
+        pixelToPlan(underlay, underlay.widthPx, 0),
+        pixelToPlan(underlay, 0, underlay.heightPx),
+        pixelToPlan(underlay, underlay.widthPx, underlay.heightPx),
+    ].flatMap((c) => [c.x * MM, 0.002, -c.y * MM]);
+}
+
+/** Moves a built underlay to a new placement and opacity without touching its texture. */
+export function updateUnderlay(mesh: THREE.Mesh, underlay: Underlay): void {
+    const position = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+    position.set(cornerPositions(underlay));
+    position.needsUpdate = true;
+    mesh.geometry.computeBoundingSphere();
+    (mesh.material as THREE.MeshBasicMaterial).opacity = underlay.opacity;
 }
 
 export function disposeUnderlay(mesh: THREE.Mesh): void {

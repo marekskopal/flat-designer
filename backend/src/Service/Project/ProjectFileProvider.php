@@ -9,6 +9,7 @@ use finfo;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use FlatDesigner\Service\Storage\FileStorageInterface;
@@ -27,8 +28,10 @@ final readonly class ProjectFileProvider
 
 	public function __construct(
 		private ProjectFileRepository $projectFileRepository,
+		private FloorUnderlayRepository $underlayRepository,
 		private FileStorageInterface $fileStorage,
 		private S3Config $s3Config,
+		private ProjectRevisionService $revisionService,
 	) {
 	}
 
@@ -87,10 +90,15 @@ final readonly class ProjectFileProvider
 		return $this->fileStorage->get($file->storageKey);
 	}
 
+	/** The floor underlays laid from the file go with it (ON DELETE CASCADE), so open viewers are told to reload. */
 	public function delete(ProjectFile $file): void
 	{
+		$underlays = $this->underlayRepository->findByFile($file->id);
 		$this->projectFileRepository->delete($file);
 		$this->fileStorage->delete($file->storageKey);
+		if ($underlays !== []) {
+			$this->revisionService->bump($file->project);
+		}
 	}
 
 	/** @return list<string> storage keys of all files of the project, to delete after the project rows */

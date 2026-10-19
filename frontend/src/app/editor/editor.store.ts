@@ -2,7 +2,7 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
-import {PlanPoint, Scene} from '@app/models/scene';
+import {PlanPoint, Scene, Underlay} from '@app/models/scene';
 import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
@@ -120,12 +120,7 @@ export class EditorStore {
         try {
             const {underlay, revision} = await this.api.setUnderlay(context.projectId(), context.floorId(), input);
             this.underlayVisible.set(true);
-            const scene = context.scene();
-            if (scene === null) {
-                context.reload();
-            } else {
-                context.setScene({...scene, underlay, revision});
-            }
+            this.patchUnderlay(context, underlay, revision);
             return true;
         } catch {
             // The error interceptor has shown the message.
@@ -144,17 +139,25 @@ export class EditorStore {
         try {
             const {revision} = await this.api.removeUnderlay(context.projectId(), context.floorId());
             this.calibration.set(null);
-            const scene = context.scene();
-            if (scene === null) {
-                context.reload();
-            } else {
-                context.setScene({...scene, underlay: null, revision});
-            }
+            this.patchUnderlay(context, null, revision);
         } catch {
             // The error interceptor has shown the message.
         } finally {
             this.busy.set(false);
         }
+    }
+
+    /**
+     * Shows the saved underlay. The request carries no `If-Match`, so the scene is patched only when the answer's
+     * revision follows the shown one directly; otherwise someone else changed the floor meanwhile and it reloads.
+     */
+    private patchUnderlay(context: EditorContext, underlay: Underlay | null, revision: number): void {
+        const scene = context.scene();
+        if (scene === null || scene.revision === undefined || revision !== scene.revision + 1) {
+            context.reload();
+            return;
+        }
+        context.setScene({...scene, underlay, revision});
     }
 
     /** Resolves true when the element changed. */

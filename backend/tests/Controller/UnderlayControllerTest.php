@@ -113,10 +113,13 @@ final class UnderlayControllerTest extends IntegrationTestCase
 		self::assertSame(200, $this->request('DELETE', $path, authenticatedAs: $user)->getStatusCode());
 		self::assertNull($this->scene($user, $project, $floor->id)['underlay']);
 
-		// Deleting the file takes its underlay with it.
-		$this->request('PUT', $path, ['fileId' => $fileId], $user);
+		// Deleting the file takes its underlay with it, and open viewers learn of it from the revision.
+		$revision = $this->jsonBody($this->request('PUT', $path, ['fileId' => $fileId], $user))['revision'];
+		self::assertIsInt($revision);
 		$this->request('DELETE', self::filesPath($project) . '/' . $fileId, authenticatedAs: $user);
-		self::assertNull($this->scene($user, $project, $floor->id)['underlay']);
+		$scene = $this->scene($user, $project, $floor->id);
+		self::assertNull($scene['underlay']);
+		self::assertSame($revision + 1, $scene['revision']);
 	}
 
 	public function testVersionsKeepTheUnderlayWhileItsFileExists(): void

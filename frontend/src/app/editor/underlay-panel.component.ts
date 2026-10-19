@@ -54,9 +54,11 @@ export class UnderlayPanelComponent {
     public constructor() {
         // Picked points are plan positions of image features under the placement of that moment: a changed placement
         // (a live update from an agent or another tab) makes them meaningless.
-        let placement = JSON.stringify(untracked(this.underlay));
+        const placementOf = (underlay: Underlay | null): string =>
+            underlay === null ? '' : JSON.stringify([underlay.fileId, underlay.x, underlay.y, underlay.scale, underlay.rotation]);
+        let placement = placementOf(untracked(this.underlay));
         effect(() => {
-            const current = JSON.stringify(this.underlay());
+            const current = placementOf(this.underlay());
             if (current !== placement) {
                 placement = current;
                 untracked(() => {

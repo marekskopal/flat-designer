@@ -313,8 +313,11 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
 
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
     for (const leaf of openingLeaves(opening, wall.thickness)) {
-        // A sliding leaf covers the opening's head too; the others stop short of the lining.
-        const leafHeight = (opening.type === 'SlidingDoor' ? opening.height + SlidingDoorOverlap : opening.height - 20) * MM;
+        // A sliding leaf covers the opening's head too; the others stop short of the frame head (and the floor).
+        const leafHeight =
+            opening.type === 'SlidingDoor'
+                ? (opening.height + SlidingDoorOverlap) * MM
+                : (opening.height - LeafGap) * MM - doorHeadDepth(opening);
         const pivot = leafPivot(leaf, 1);
         for (const part of doorLeaf(opening, leaf, leafHeight, frameMaterial, materials.byCode('glass'))) {
             pivot.add(part);
@@ -399,6 +402,15 @@ function doorLeaf(opening: Opening, leaf: Leaf, height: number, material: THREE.
     return parts;
 }
 
+/** Clearance of a swinging leaf under the frame head, mm. */
+const LeafGap = 10;
+
+/** How far the frame head of a door comes down into the opening (m), by its `frameStyle`; nothing for a bare hole. */
+function doorHeadDepth(opening: Opening): number {
+    const style = opening.frameStyle ?? 'Lining';
+    return style === 'None' ? 0 : DoorFrameWidth * MM * (style === 'Flush' ? 0.4 : 0.6);
+}
+
 /** Jambs and head of a door frame by its style (none for `None`), plus casings on both faces for `Architrave`. */
 function doorFrame(opening: Opening, wallThickness: number, material: THREE.Material): THREE.Mesh[] {
     const style = opening.frameStyle ?? 'Lining';
@@ -409,7 +421,7 @@ function doorFrame(opening: Opening, wallThickness: number, material: THREE.Mate
     const width = opening.width * MM;
     const height = opening.height * MM;
     // A lining is slightly proud of both wall faces; a flush frame is thinner and level with them.
-    const lining = DoorFrameWidth * MM * (style === 'Flush' ? 0.4 : 0.6);
+    const lining = doorHeadDepth(opening);
     const depth = wallThickness * MM + (style === 'Flush' ? 0 : 0.02);
     const parts = [
         boxAt(material, from, 0, -depth / 2, lining, height, depth),
