@@ -306,6 +306,23 @@ describe('snapPoint', () => {
         });
     });
 
+    it('snaps onto a line after the points, rounded to whole mm', () => {
+        const lines = [[{x: 2000, y: -150}, {x: 2000, y: 3150}]] as const;
+        expect(snapPoint({x: 2040, y: 1517.4}, {grid: 10, radius: 100, points, lines})).toEqual({
+            point: {x: 2000, y: 1517},
+            kind: 'line',
+        });
+        expect(snapPoint({x: 1040, y: 970}, {grid: 10, radius: 100, points, lines})).toEqual({point: {x: 1000, y: 1000}, kind: 'point'});
+    });
+
+    it('stays in line with an anchor along the line it snapped onto', () => {
+        const lines = [[{x: -150, y: 4150}, {x: 6150, y: 4150}]] as const;
+        expect(snapPoint({x: 4805, y: 4100}, {grid: 10, radius: 100, lines, anchors: [{x: 4800, y: 2500}]})).toEqual({
+            point: {x: 4800, y: 4150},
+            kind: 'line',
+        });
+    });
+
     it('falls back to the grid, or to whole mm without snapping', () => {
         expect(snapPoint({x: 3043, y: 2517}, {grid: 10, radius: 100, points})).toEqual({point: {x: 3040, y: 2520}, kind: 'grid'});
         expect(snapPoint({x: 1040.4, y: 970.6}, {grid: 1, radius: 0, points})).toEqual({point: {x: 1040, y: 971}, kind: 'grid'});

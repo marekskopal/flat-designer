@@ -127,4 +127,24 @@ final readonly class BodyReader
 
 		return $list;
 	}
+
+	/**
+	 * A list of [x, y] integer pairs (plan points, mm).
+	 *
+	 * @param array<string, mixed> $data
+	 * @return list<array{int, int}>
+	 */
+	public static function pointList(array $data, string $key): array
+	{
+		$value = $data[$key] ?? null;
+		$list = [];
+		foreach (is_array($value) && array_is_list($value) ? $value : [null] as $point) {
+			if (!is_array($point) || !array_is_list($point) || count($point) !== 2 || !is_int($point[0]) || !is_int($point[1])) {
+				throw new InvalidRequestException(sprintf('Field "%s" must be a list of [x, y] integer points.', $key));
+			}
+			$list[] = [$point[0], $point[1]];
+		}
+
+		return $list;
+	}
 }

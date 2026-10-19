@@ -16,6 +16,7 @@ use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\MaterialTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
+use FlatDesigner\Mcp\Tool\RoomTools;
 use FlatDesigner\Mcp\Tool\ShareLinkTools;
 use FlatDesigner\Mcp\Tool\VariantTools;
 use FlatDesigner\Mcp\Tool\WallTools;
@@ -46,6 +47,7 @@ use stdClass;
 #[CoversClass(FloorTools::class)]
 #[CoversClass(VariantTools::class)]
 #[CoversClass(WallTools::class)]
+#[CoversClass(RoomTools::class)]
 #[CoversClass(OpeningTools::class)]
 #[CoversClass(MaterialTools::class)]
 #[CoversClass(MaterialService::class)]
@@ -82,6 +84,7 @@ final class McpServerTest extends IntegrationTestCase
 			'add_room',
 			'add_variant',
 			'add_wall',
+			'add_walls',
 			'copy_furniture_definition',
 			'create_furniture_definition',
 			'create_group',
@@ -95,8 +98,10 @@ final class McpServerTest extends IntegrationTestCase
 			'delete_share_link',
 			'delete_variant_set',
 			'delete_wall',
+			'detect_room',
 			'duplicate_group',
 			'duplicate_item',
+			'find_room_outline',
 			'get_cut_list',
 			'get_floor',
 			'get_furniture_definition',
@@ -293,6 +298,36 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($floor);
 		self::assertIsList($floor['items']);
 		self::assertSame([0, 0], array_column($floor['items'], 'y'));
+	}
+
+	public function testDrawsWallsAndDetectsTheRoomInside(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+
+		$walls = $this->client->call('add_walls', $ids + [
+			'points' => [[-150, -150], [4150, -150], [4150, 3150], [-150, 3150]],
+			'closed' => true,
+			'thickness' => 300,
+		]);
+		self::assertIsArray($walls);
+		self::assertIsList($walls['batch']);
+		self::assertCount(4, $walls['batch']);
+
+		$outline = $this->client->call('find_room_outline', $ids + ['x' => 2000, 'y' => 1500]);
+		self::assertSame(['polygon' => [[0, 0], [4000, 0], [4000, 3000], [0, 3000]]], $outline);
+
+		$room = $this->client->call('detect_room', $ids + ['x' => 2000, 'y' => 1500, 'name' => 'Living room']);
+		self::assertIsArray($room);
+		self::assertIsArray($room['element']);
+		self::assertSame('Living room', $room['element']['name']);
+		self::assertEqualsWithDelta(12.0, $room['element']['area'], 0.001);
+
+		$this->client->call('undo', ['projectId' => $this->project->id]);
+		$this->client->call('undo', ['projectId' => $this->project->id]);
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertSame([], $floor['rooms']);
+		self::assertSame([], $floor['walls']);
 	}
 
 	public function testVariantsHideTheItemsOfTheOtherVariants(): void

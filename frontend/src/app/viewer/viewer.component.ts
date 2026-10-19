@@ -12,12 +12,13 @@ import {
     untracked,
     viewChild,
 } from '@angular/core';
-import {Room, Scene} from '@app/models/scene';
+import {PlanPoint, Room, Scene} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
 
+import {EditorTool, ToolStatus} from './engine/drawing';
 import {Selection} from './engine/selection';
-import {DoorAim, EditHandler, ViewerEngine, ViewPreset} from './engine/viewer-engine';
+import {DoorAim, EditHandler, ViewerEngine, ViewPreset, WallDraftShape} from './engine/viewer-engine';
 
 /** A click on the view: the element (or group) under the pointer, `additive` for Shift+click. */
 export interface SelectEvent {
@@ -62,6 +63,12 @@ export class ViewerComponent {
     public readonly editHandler = input<EditHandler>(() => Promise.resolve(false));
     /** Width (px) of UI overlapping the canvas on the left. */
     public readonly insetLeft = input(0);
+    /** What a click does in edit mode: select and drag, draw walls, or add the room around the point. */
+    public readonly tool = input<EditorTool>('select');
+    /** Thickness and height of the walls drawn next (for their preview). */
+    public readonly wallDraft = input<WallDraftShape>({thickness: 100, height: 2600});
+    /** Adds a drawn run of walls; resolves true when it was added (the scene input then changes). */
+    public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean) => Promise<boolean>>(() => Promise.resolve(false));
 
     public readonly selected = output<SelectEvent>();
     /** The walkthrough ended (Esc); the camera returns to the overview. */
@@ -72,6 +79,10 @@ export class ViewerComponent {
     public readonly walkthroughAim = output<DoorAim | null>();
     /** A scene was built (a new floor starts at the overview; set another view from here). */
     public readonly loaded = output<Scene>();
+    /** A click with the room tool inside closed walls: the point to outline a room around. */
+    public readonly roomDetect = output<PlanPoint>();
+    /** The readout of the drawing tool (null when none is active). */
+    public readonly toolStatus = output<ToolStatus | null>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Created after the first render, once the host element has its size. */
@@ -85,6 +96,9 @@ export class ViewerComponent {
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
+            engine.onDrawWalls = (points, closed): Promise<boolean> => this.drawWallsHandler()(points, closed);
+            engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
+            engine.onToolStatus = (status): void => this.toolStatus.emit(status);
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -112,12 +126,29 @@ export class ViewerComponent {
         effect(() => this.engine()?.setPicked(this.picked()));
         effect(() => this.engine()?.setEditMode(this.editMode()));
         effect(() => this.engine()?.setInsetLeft(this.insetLeft()));
+        effect(() => this.engine()?.setTool(this.tool()));
+        effect(() => this.engine()?.setWallDraft(this.wallDraft()));
 
         inject(DestroyRef).onDestroy(() => this.engine()?.dispose());
     }
 
     public setView(preset: ViewPreset, animate = true): void {
         this.engine()?.setView(preset, animate);
+    }
+
+    /** Places the next point of the run being drawn, `length` mm on (towards the pointer, or at `angle` degrees). */
+    public placeRunPoint(length: number, angle: number | null): void {
+        this.engine()?.placeRunPoint(length, angle);
+    }
+
+    /** Ends the run being drawn, open. */
+    public finishRun(): void {
+        this.engine()?.finishRun();
+    }
+
+    /** Drops the run being drawn; false when there was none. */
+    public cancelRun(): boolean {
+        return this.engine()?.cancelRun() ?? false;
     }
 
     /** First-person walk; call it from a click handler, it captures the mouse. */

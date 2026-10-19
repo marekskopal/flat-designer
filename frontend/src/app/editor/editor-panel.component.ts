@@ -1,12 +1,13 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
 import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
-import {Group, Item, Opening, Room, Scene, VariantSet, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
+import {EditorTool} from '@app/viewer/engine/drawing';
 import {polygonCentroid} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {ActivityComponent} from './activity.component';
-import {EditorStore} from './editor.store';
+import {EditorStore, newRoomFields} from './editor.store';
 import {FieldChange, InspectorComponent} from './inspector.component';
 
 const KindLabels: Record<ElementKind, string> = {
@@ -17,6 +18,15 @@ const KindLabels: Record<ElementKind, string> = {
     group: 'Group',
     variantSet: 'Variant set',
 };
+
+/** The tools of the top view, with their shortcuts. */
+const Tools: {tool: EditorTool; label: string; title: string}[] = [
+    {tool: 'select', label: 'Select', title: 'Select and drag elements (Esc)'},
+    {tool: 'drawWalls', label: 'Draw walls', title: 'Click the centre-line points of a run of walls; type a length for an exact one (W)'},
+    {tool: 'detectRoom', label: 'Room from walls', title: 'Click inside walls to add the room they enclose (M)'},
+];
+
+const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
 
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
@@ -44,6 +54,8 @@ export class EditorPanelComponent {
     public readonly viewCenter = input.required<() => {x: number; y: number}>();
 
     protected readonly editor = inject(EditorStore);
+    protected readonly tools = Tools;
+    protected readonly wallTypes = WallTypes;
     private readonly alerts = inject(AlertService);
 
     /** The selected element's current state, or null when it is gone (deleted, other floor). */
@@ -183,8 +195,7 @@ export class EditorPanelComponent {
         } else if (choice === 'room') {
             const half = NewRoomSize / 2;
             void this.editor.create('room', {
-                name: 'New room',
-                code: `R${this.scene().rooms.length + 1}`,
+                ...newRoomFields(this.scene()),
                 polygon: [
                     [center.x - half, center.y - half],
                     [center.x + half, center.y - half],
@@ -192,6 +203,21 @@ export class EditorPanelComponent {
                     [center.x - half, center.y + half],
                 ],
             });
+        }
+    }
+
+    /** Changes a field of the walls drawn next; values out of range are left as they were. */
+    protected setDraft(field: 'type' | 'thickness' | 'height', event: Event): void {
+        const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
+        const draft = this.editor.wallDraft();
+        if (field === 'type') {
+            this.editor.wallDraft.set({...draft, type: value as WallType});
+            return;
+        }
+        const [min, max] = field === 'thickness' ? [10, 2000] : [100, 20000];
+        const number = Math.round(Number(value));
+        if (Number.isFinite(number) && number >= min && number <= max) {
+            this.editor.wallDraft.set({...draft, [field]: number});
         }
     }
 
@@ -219,7 +245,14 @@ export class EditorPanelComponent {
             event.preventDefault();
             void this.editor.deleteSelected();
         } else if (event.key === 'Escape') {
-            this.editor.select(null);
+            if (this.editor.tool() === 'select') {
+                this.editor.select(null);
+            } else {
+                this.editor.setTool('select');
+            }
+        } else if (!mod && !event.altKey && (key === 'w' || key === 'm')) {
+            const tool = key === 'w' ? 'drawWalls' : 'detectRoom';
+            this.editor.setTool(this.editor.tool() === tool ? 'select' : tool);
         } else if (!mod) {
             this.moveItem(event);
             this.moveGroup(event);

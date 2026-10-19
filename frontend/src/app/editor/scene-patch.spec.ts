@@ -146,6 +146,27 @@ describe('patchScene', () => {
         expect(patched?.revision).toBe(8);
     });
 
+    it('adds the walls of a drawn run in order', () => {
+        const {openings: _openings, ...state} = wall;
+        const first = result('Wall', 6, {...state, id: 6, endX: 0, endY: 3000, openingOffsets: []});
+        const second = result('Wall', 7, {...state, id: 7, startY: 3000, endY: 3000, openingOffsets: []});
+        if (first.change === null || second.change === null) {
+            throw new Error('changes expected');
+        }
+        const patched = patchScene(scene, {
+            ...first,
+            batch: [
+                {change: {...first.change, operation: 'Create'}, element: first.element},
+                {change: {...second.change, operation: 'Create'}, element: second.element},
+            ],
+        });
+        expect(patched?.walls.map((w) => [w.id, w.openings])).toEqual([
+            [5, [door(1, 1000)]],
+            [6, []],
+            [7, []],
+        ]);
+    });
+
     it('unlinks the items of a deleted group', () => {
         const grouped: Scene = {...scene, groups: [{id: 4, name: 'Pair', variantSetId: null}], items: [{...item, groupId: 4}]};
         const patched = patchScene(grouped, result('Group', 4, null));

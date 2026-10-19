@@ -6,14 +6,16 @@ namespace FlatDesigner\Mcp\Tool;
 
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Service\Editor\Drawing\WallDrawer;
 use FlatDesigner\Service\Editor\SceneEditor;
+use FlatDesigner\Service\Request\BodyReader;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 
 /** Walls, given by their centre line. */
 final readonly class WallTools
 {
-	public function __construct(private ToolContext $context, private SceneEditor $editor)
+	public function __construct(private ToolContext $context, private SceneEditor $editor, private WallDrawer $wallDrawer)
 	{
 	}
 
@@ -50,6 +52,45 @@ final readonly class WallTools
 				'startY' => $startY,
 				'endX' => $endX,
 				'endY' => $endY,
+				'thickness' => $thickness,
+				'height' => $height,
+				'type' => $type,
+				'name' => $name,
+				'materialId' => $materialId,
+			]),
+		);
+	}
+
+	/**
+	 * @param list<list<int>> $points centre-line points as [[x, y], …] in mm; each wall runs from one point to the next
+	 * @param bool|null $closed true adds a last wall from the last point back to the first (default false)
+	 * @param int|null $thickness mm, for every wall (default 100)
+	 * @param int|null $height mm, for every wall (default 2600)
+	 * @param string|null $type "Exterior" | "Interior" | "Shaft" (default Interior)
+	 * @param int|null $materialId surface material from list_materials
+	 */
+	#[McpTool(
+		name: 'add_walls',
+		description: 'Draw a run of straight walls through the given centre-line points, as one change (one undo step, listed in `batch`). '
+			. 'Walls sharing an end point join in a mitred corner. Put rooms inside with detect_room.',
+	)]
+	public function addWalls(
+		int $projectId,
+		int $floorId,
+		array $points,
+		?bool $closed = null,
+		?int $thickness = null,
+		?int $height = null,
+		?string $type = null,
+		?string $name = null,
+		?int $materialId = null,
+	): EditResultDto {
+		return $this->wallDrawer->drawWalls(
+			$this->context->user(),
+			$this->context->floor($projectId, $floorId),
+			BodyReader::pointList(['points' => $points], 'points'),
+			$closed ?? false,
+			ToolContext::fields([
 				'thickness' => $thickness,
 				'height' => $height,
 				'type' => $type,

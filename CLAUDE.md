@@ -82,6 +82,13 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
   selected wall's ends or room's corners get handles (in an overlay scene drawn above the section cut). One drag
   results in one `onEdit` call and one change.
+- Drawing tools (`EditorStore.tool`, `viewer/engine/drawing.ts`, `DrawHudComponent`): in the top view, Draw walls
+  clicks a run of centre-line points (snapping to wall ends, onto centre lines for T-joints, axes and 15° steps; a
+  typed `3200` or `3200<90` places an exact segment). `WallDrawer` (`POST …/walls/polyline`, MCP `add_walls`) adds
+  the run as one `ChangeBatch`. Room from walls (`RoomOutliner`, `POST …/rooms/detect`, MCP `detect_room` /
+  `find_room_outline`) outlines the inner wall faces around a point. The detection exists twice, `RoomDetector`
+  (`Service/Editor/Geometry`) and `room-detect.ts`, kept identical by `backend/tests/fixtures/room-detection.json`.
+  **Always change both twins and add a fixture case in the same change.**
 - `ViewerEngine.load()` of the same floor diffs the scene and rebuilds only the changed items, walls and rooms, plus
   the mitres of neighbouring walls (`wallJoints()`).
 

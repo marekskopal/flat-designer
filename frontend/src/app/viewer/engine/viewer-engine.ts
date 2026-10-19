@@ -9,6 +9,7 @@ import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRend
 import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {leafObjects, LeafStates} from './doors';
+import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
 import {
@@ -21,8 +22,10 @@ import {
     leafColliders,
     MM,
     moveWallEnds,
+    pointInPolygon,
     polygonBounds,
     polygonCentroid,
+    polygonSignedArea,
     removeVertex,
     slideOpening,
     snapPoint,
@@ -35,6 +38,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
+import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {hiddenItemIds} from './variants';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
@@ -60,6 +64,10 @@ const OrbitFov = 45;
 /** How far away a door can be opened in the walkthrough, metres from the eye. */
 const DoorReach = 2.2;
 
+/** Shortest wall the backend accepts, mm. */
+const MinWallLength = 100;
+/** The floor level, where the drawing tools place points. */
+const FloorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 /** Snap grid for dragged elements, mm (Shift: whole mm, no snapping). */
 const DragSnap = 10;
 /** Dragging works only while the camera looks down steeply (Plan view), where plan moves are unambiguous. */
@@ -83,8 +91,21 @@ type HandleState = keyof typeof HandleColors;
 /** Commits an edit made by dragging; resolves true when it was applied (the scene then reloads). */
 export type EditHandler = (selection: Selection, fields: Record<string, unknown>) => Promise<boolean>;
 
-/** What a handle of the selected wall or room stands for. */
-type HandleRole = {role: 'wallStart' | 'wallEnd'} | {role: 'vertex'; index: number} | {role: 'midpoint'; index: number};
+/** What a handle of the selected wall or room stands for; `draw` marks the points of a run of walls (not draggable). */
+type HandleRole = {role: 'wallStart' | 'wallEnd'} | {role: 'vertex'; index: number} | {role: 'midpoint'; index: number} | {role: 'draw'};
+
+/** Wall fields of a run being drawn, for its preview. */
+export interface WallDraftShape {
+    thickness: number;
+    height: number;
+}
+
+/** The run of walls being drawn: the points placed and where the pointer would put the next one. */
+interface WallRun {
+    points: Vec2[];
+    cursor: Vec2 | null;
+    snap: SnapResult['kind'] | null;
+}
 
 interface DragBase {
     plane: THREE.Plane;
@@ -137,6 +158,12 @@ export class ViewerEngine {
     public onWalkthroughLock: (locked: boolean) => void = () => undefined;
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
+    /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
+    public onDrawWalls: (points: PlanPoint[], closed: boolean) => Promise<boolean> = () => Promise.resolve(false);
+    /** A click with the room tool inside walls that close around the point. */
+    public onDetectRoom: (point: PlanPoint) => void = () => undefined;
+    /** The readout of the drawing tool changed; null when no tool is active or the pointer left the view. */
+    public onToolStatus: (status: ToolStatus | null) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -177,6 +204,17 @@ export class ViewerEngine {
     private aim: DoorAim | null = null;
     private selection: Selection | null = null;
     private editMode = false;
+    private tool: EditorTool = 'select';
+    private wallDraft: WallDraftShape = {thickness: 100, height: 2600};
+    private run: WallRun | null = null;
+    /** A drawn run sent off and not yet loaded back, still shown. */
+    private pendingRun: {points: Vec2[]; closed: boolean} | null = null;
+    /** The room the room tool would add at the pointer (kept while the pointer stays inside it). */
+    private detection: RoomDetection | null = null;
+    /** The faces between the loaded walls, for the room tool; computed when first needed after a load. */
+    private roomFaces: RoomFaces | null = null;
+    /** Previews of the drawing tools: the walls of a run, the outline of a room. */
+    private readonly drawLayer = new THREE.Group();
     private drag: Drag | null = null;
     private preview: Preview | null = null;
     /** Bumped by every load; a commit whose load never comes (refused, no-op) restores its preview. */
@@ -223,10 +261,13 @@ export class ViewerEngine {
         this.setupEnvironment();
         this.handles.name = 'handles';
         this.overlay.add(this.handles);
+        this.drawLayer.name = 'drawing';
+        this.scene.add(this.drawLayer);
 
         this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.addEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.addEventListener('pointerup', this.handlePointerUp);
+        this.renderer.domElement.addEventListener('pointerleave', this.handlePointerLeave);
         this.renderer.domElement.addEventListener('dblclick', this.handleDoubleClick);
         // Capturing, so Esc cancels a drag before the editor's shortcut clears the selection.
         window.addEventListener('keydown', this.handleKeyDown, true);
@@ -277,6 +318,13 @@ export class ViewerEngine {
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
         this.setPicked(this.picked);
+        if (this.pendingRun !== null && this.hasWallsAlong(scene, this.pendingRun)) {
+            // The drawn walls arrived; a refused run is restored by `commitRun` instead.
+            this.pendingRun = null;
+        }
+        this.detection = null;
+        this.roomFaces = null;
+        this.updateDrawing();
     }
 
     /** Hides the items of variants that are not shown; switching a variant rebuilds nothing. */
@@ -500,8 +548,62 @@ export class ViewerEngine {
         this.editMode = enabled;
         if (!enabled) {
             this.cancelDrag();
+            this.setTool('select');
         }
         this.updateHandles();
+    }
+
+    /**
+     * What a click in the top view does in edit mode: select and drag (`select`), place the points of a run
+     * of walls (`drawWalls`: a click on the first point closes it, a double-click or `finishRun()` ends it
+     * open), or add the room around the pointer (`detectRoom`).
+     */
+    public setTool(tool: EditorTool): void {
+        if (tool === this.tool) {
+            return;
+        }
+        this.tool = tool;
+        this.run = null;
+        // A run still on its way is left to the server; its answer no longer concerns the view.
+        this.pendingRun = null;
+        this.detection = null;
+        this.renderer.domElement.style.cursor = tool === 'select' ? '' : 'crosshair';
+        this.updateDrawing();
+    }
+
+    /** Thickness and height of the walls drawn next. */
+    public setWallDraft(draft: WallDraftShape): void {
+        this.wallDraft = draft;
+        this.updateDrawing();
+    }
+
+    /**
+     * Places the next point of the run `length` mm from the last one, in the direction `angle` (degrees
+     * counter-clockwise from east), or towards the pointer when null. Typed lengths come in this way.
+     */
+    public placeRunPoint(length: number, angle: number | null): void {
+        const run = this.run;
+        const previous = run?.points.at(-1);
+        if (run === null || previous === undefined) {
+            return;
+        }
+        const direction = angle ?? (run.cursor === null ? 0 : directionOf(previous, run.cursor));
+        this.addRunPoint(pointAt(previous, length, direction));
+    }
+
+    /** Ends the run being drawn as it is (open); a run of one point is dropped. */
+    public finishRun(): void {
+        this.commitRun(false);
+    }
+
+    /** Drops the run being drawn; false when there was none. */
+    public cancelRun(): boolean {
+        if (this.run === null) {
+            return false;
+        }
+        this.run = null;
+        this.updateDrawing();
+        return true;
     }
 
     /** The point the camera looks at, in plan mm: where new elements are placed. */
@@ -687,6 +789,7 @@ export class ViewerEngine {
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.removeEventListener('pointerup', this.handlePointerUp);
+        this.renderer.domElement.removeEventListener('pointerleave', this.handlePointerLeave);
         this.renderer.domElement.removeEventListener('dblclick', this.handleDoubleClick);
         window.removeEventListener('keydown', this.handleKeyDown, true);
         this.walkthrough?.dispose();
@@ -884,7 +987,7 @@ export class ViewerEngine {
             }
             return;
         }
-        if (!this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null) {
+        if (!this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null || this.tool !== 'select') {
             return;
         }
 
@@ -989,6 +1092,10 @@ export class ViewerEngine {
 
     private readonly handlePointerMove = (event: PointerEvent): void => {
         const drag = this.drag;
+        if (drag === null && this.editMode && this.tool !== 'select') {
+            this.trackTool(event);
+            return;
+        }
         if (drag === null) {
             this.updateCursor(event);
             return;
@@ -1123,6 +1230,12 @@ export class ViewerEngine {
             }
             return;
         }
+        if (this.editMode && this.tool !== 'select') {
+            if (event.button === 0 && this.isTopDown()) {
+                this.toolClick(event);
+            }
+            return;
+        }
         if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
             return;
         }
@@ -1220,6 +1333,13 @@ export class ViewerEngine {
 
     /** Double-clicking an item of a group selects just that item; double-clicking a room corner removes it (a room keeps at least three). */
     private readonly handleDoubleClick = (event: MouseEvent): void => {
+        if (this.editMode && this.tool === 'drawWalls') {
+            this.commitRun(false);
+            return;
+        }
+        if (this.editMode && this.tool !== 'select') {
+            return;
+        }
         const clicked = selectionOf(this.pick(event)?.object ?? null);
         const grouped = clicked?.kind === 'item' && (this.sceneData?.items.find((i) => i.id === clicked.id)?.groupId ?? null) !== null;
         if (clicked !== null && grouped && this.walkthrough === null) {
@@ -1244,8 +1364,237 @@ export class ViewerEngine {
         if (event.key === 'Escape' && this.drag !== null) {
             event.stopPropagation();
             this.cancelDrag();
+            return;
+        }
+        const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+        if (this.run === null || typing) {
+            return;
+        }
+        // The run being drawn takes these keys before the editor's shortcuts (Esc would end the tool, Backspace delete).
+        if (event.key === 'Escape') {
+            event.stopPropagation();
+            this.cancelRun();
+        } else if (event.key === 'Backspace') {
+            event.stopPropagation();
+            event.preventDefault();
+            this.run.points.pop();
+            if (this.run.points.length === 0) {
+                this.run = null;
+            }
+            this.updateDrawing();
+        } else if (event.key === 'Enter') {
+            event.stopPropagation();
+            this.commitRun(false);
         }
     };
+
+    /** The pointer left the view: the readout no longer follows it. */
+    private readonly handlePointerLeave = (): void => {
+        if (!this.editMode || this.tool === 'select') {
+            return;
+        }
+        if (this.run !== null) {
+            this.run.cursor = null;
+            this.run.snap = null;
+        }
+        this.detection = null;
+        this.updateDrawing(null, null);
+    };
+
+    /** Follows the pointer with the active tool: the next point of a run, or the room that a click would add. */
+    private trackTool(event: PointerEvent): void {
+        const point = this.isTopDown() ? this.planPointOn(event, FloorPlane) : null;
+        if (point === null) {
+            // Tilted away from the plan: the tools do nothing here, and the readout says nothing either.
+            this.onToolStatus(null);
+            return;
+        }
+        if (this.tool === 'drawWalls') {
+            const snapped = this.snapRunPoint(point, event.shiftKey);
+            if (this.run !== null) {
+                this.run.cursor = snapped.point;
+                this.run.snap = snapped.kind;
+            }
+            this.updateDrawing(snapped.point, snapped.kind);
+            return;
+        }
+        const current = this.detection;
+        const inside = current !== null && 'polygon' in current && pointInPolygon(point, current.polygon);
+        if (!inside) {
+            this.detection = this.roomAt(point);
+            this.updateDrawing();
+        }
+    }
+
+    private roomAt(point: Vec2): RoomDetection {
+        this.roomFaces ??= prepareRoomFaces(this.sceneData?.walls ?? []);
+        return pickRoom(this.roomFaces, point);
+    }
+
+    /** Whether the scene has a wall along every segment of the run (the run arrived). */
+    private hasWallsAlong(scene: Scene, run: {points: Vec2[]; closed: boolean}): boolean {
+        const {points} = run;
+        const ends = points.slice(1).map((p, i): [Vec2, Vec2] => [points[i], p]);
+        if (run.closed) {
+            ends.push([points[points.length - 1], points[0]]);
+        }
+        return ends.every(([a, b]) => scene.walls.some((w) => w.startX === a.x && w.startY === a.y && w.endX === b.x && w.endY === b.y));
+    }
+
+    private toolClick(event: PointerEvent): void {
+        const point = this.planPointOn(event, FloorPlane);
+        if (point === null || this.pendingRun !== null) {
+            return;
+        }
+        if (this.tool === 'drawWalls') {
+            this.addRunPoint(this.snapRunPoint(point, event.shiftKey).point);
+            return;
+        }
+        const detection = this.roomAt(point);
+        this.detection = detection;
+        this.updateDrawing();
+        if ('polygon' in detection) {
+            this.onDetectRoom([Math.round(point.x), Math.round(point.y)]);
+        }
+    }
+
+    private snapRunPoint(point: Vec2, free: boolean): SnapResult {
+        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        return snapDrawPoint(point, {grid: free ? 1 : DragSnap, radius, walls: this.sceneData?.walls ?? [], points: this.run?.points ?? []});
+    }
+
+    /** Adds a point to the run (starting one); back at the first point the run closes and is sent. */
+    private addRunPoint(point: Vec2): void {
+        const run = this.run;
+        if (run === null) {
+            this.run = {points: [point], cursor: point, snap: null};
+            this.updateDrawing();
+            return;
+        }
+        if (closesRun(run.points, point)) {
+            this.commitRun(true);
+            return;
+        }
+        if (run.points.length < 3 && point.x === run.points[0].x && point.y === run.points[0].y) {
+            // Back at the start with nothing to close: a wall there and back would lie on itself.
+            return;
+        }
+        // Too short for a wall (the backend's minimum): a second click of a double-click, or a slip.
+        const last = run.points[run.points.length - 1];
+        if (Math.hypot(point.x - last.x, point.y - last.y) < MinWallLength) {
+            return;
+        }
+        run.points.push(point);
+        this.updateDrawing();
+    }
+
+    /** Sends the run; it stays on screen until the result loads, and comes back to be fixed when refused. */
+    private commitRun(closed: boolean): void {
+        const run = this.run;
+        if (run === null || this.pendingRun !== null) {
+            return;
+        }
+        this.run = null;
+        if (run.points.length < (closed ? 3 : 2)) {
+            this.updateDrawing();
+            return;
+        }
+        const pending = {points: run.points, closed};
+        this.pendingRun = pending;
+        this.updateDrawing();
+        void this.onDrawWalls(
+            run.points.map((p): PlanPoint => [p.x, p.y]),
+            closed,
+        ).then((added) => {
+            if (this.pendingRun !== pending) {
+                return;
+            }
+            this.pendingRun = null;
+            if (!added) {
+                this.run = {...run, cursor: null, snap: null};
+            }
+            this.updateDrawing();
+        });
+    }
+
+    /**
+     * Rebuilds the previews of the active tool (the walls of the run, up to the pointer at `cursor`; the room
+     * outline under the pointer), their markers, and reports the readout.
+     */
+    private updateDrawing(cursor: Vec2 | null = this.run?.cursor ?? null, snap: SnapResult['kind'] | null = this.run?.snap ?? null): void {
+        this.drawLayer.children.slice().forEach((o) => this.disposeObject(o));
+        this.updateHandles();
+        if (!this.editMode || this.tool === 'select') {
+            this.onToolStatus(null);
+            return;
+        }
+        if (this.tool === 'detectRoom') {
+            const detection = this.detection;
+            if (detection !== null && 'polygon' in detection) {
+                this.drawLayer.add(outlineMesh(detection.polygon));
+            }
+            this.onToolStatus({
+                tool: 'detectRoom',
+                area: detection !== null && 'polygon' in detection ? polygonSignedArea(detection.polygon) / 1e6 : null,
+                error: detection !== null && 'error' in detection ? detection.error : null,
+            });
+            return;
+        }
+
+        const pending = this.pendingRun;
+        const points = pending?.points ?? this.run?.points ?? [];
+        const last = points.at(-1);
+        const segments: [Vec2, Vec2][] = points.slice(1).map((p, i) => [points[i], p]);
+        if (pending?.closed === true && last !== undefined) {
+            segments.push([last, points[0]]);
+        }
+        if (pending === null && last !== undefined && cursor !== null && Math.hypot(cursor.x - last.x, cursor.y - last.y) >= 1) {
+            segments.push([last, cursor]);
+        }
+        this.addRunWalls(segments);
+        this.markRun(points, pending === null ? cursor : null, snap);
+        const length = last !== undefined && cursor !== null ? Math.round(Math.hypot(cursor.x - last.x, cursor.y - last.y)) : null;
+        this.onToolStatus({
+            tool: 'drawWalls',
+            points: points.length,
+            length,
+            angle: last !== undefined && cursor !== null && length !== 0 ? Math.round(directionOf(last, cursor) * 10) / 10 : null,
+            snap: cursor === null ? null : snap,
+        });
+    }
+
+    /** Preview walls of a run, mitred with each other and with the walls of the floor. */
+    private addRunWalls(segments: readonly [Vec2, Vec2][]): void {
+        const parts = this.parts;
+        const materials = this.materials;
+        if (parts === null || materials === null || segments.length === 0) {
+            return;
+        }
+        const drawn: Wall[] = segments.map(([a, b], i) => ({
+            id: -1 - i,
+            name: 'New wall',
+            type: 'Interior',
+            startX: a.x,
+            startY: a.y,
+            endX: b.x,
+            endY: b.y,
+            thickness: this.wallDraft.thickness,
+            height: this.wallDraft.height,
+            materialId: null,
+            openings: [],
+        }));
+        const joints = wallJoints([...(this.sceneData?.walls ?? []), ...drawn]);
+        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id))));
+    }
+
+    /** Markers of a run in the overlay: its points, and the pointer (green when snapped). */
+    private markRun(points: readonly Vec2[], cursor: Vec2 | null, snap: SnapResult['kind'] | null): void {
+        const y = 0.02;
+        points.forEach((p) => this.addHandle(p, y, {role: 'draw'}, 'midpoint'));
+        if (cursor !== null) {
+            this.addHandle(cursor, y, {role: 'draw'}, handleState(true, snap));
+        }
+    }
 
     private updateCursor(event: PointerEvent): void {
         const overHandle = this.editMode && this.isTopDown() && this.handles.children.length > 0 && this.pickHandle(event) !== null;
@@ -1330,7 +1679,7 @@ export class ViewerEngine {
     private updateHandles(): void {
         this.handles.clear();
         const scene = this.sceneData;
-        if (!this.editMode || scene === null || this.selection === null) {
+        if (!this.editMode || scene === null || this.selection === null || this.tool !== 'select') {
             return;
         }
         const drag = this.drag;
@@ -1370,7 +1719,10 @@ export class ViewerEngine {
         const disc = new THREE.Mesh(this.handleGeometry, this.handleMaterial(HandleColors[state]));
         disc.position.set(at.x * MM, y, -at.y * MM);
         disc.renderOrder = 10;
-        disc.userData = {handle, pixels: handle.role === 'midpoint' ? MidpointPixels : HandlePixels};
+        disc.userData = {handle, pixels: handle.role === 'midpoint' || handle.role === 'draw' ? MidpointPixels : HandlePixels};
+        if (handle.role === 'draw') {
+            disc.raycast = (): void => undefined;
+        }
         const core = new THREE.Mesh(this.handleCoreGeometry, this.handleMaterial('#ffffff'));
         core.renderOrder = 11;
         core.raycast = (): void => undefined;
@@ -1607,12 +1959,29 @@ function diffById<T extends {id: number}>(previous: readonly T[], next: readonly
     return {changed, removed: previous.filter((e) => !ids.has(e.id)).map((e) => e.id)};
 }
 
-/** A dragged handle: red when the result would be refused, green when snapped onto a point or axis. */
+/** A flat outline of a room-to-be on the floor, drawn over the floor finishes. */
+function outlineMesh(polygon: readonly PlanPoint[]): THREE.Mesh {
+    const shape = new THREE.Shape(polygon.map(([x, y]) => new THREE.Vector2(x * MM, y * MM)));
+    const geometry = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2);
+    const material = new THREE.MeshBasicMaterial({
+        color: HighlightColor,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.y = 0.025;
+    mesh.renderOrder = 5;
+    return mesh;
+}
+
+/** A dragged handle: red when the result would be refused, green when snapped onto anything but the grid. */
 function handleState(valid: boolean, snap: SnapResult['kind'] | null): HandleState {
     if (!valid) {
         return 'invalid';
     }
-    return snap === 'point' || snap === 'axis' ? 'snapped' : 'normal';
+    return snap !== null && snap !== 'grid' ? 'snapped' : 'normal';
 }
 
 function sameJson(a: unknown, b: unknown): boolean {

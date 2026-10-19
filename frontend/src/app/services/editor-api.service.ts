@@ -1,6 +1,7 @@
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
+import {PlanPoint, WallType} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
@@ -13,6 +14,13 @@ const Segments: Record<ElementKind, string> = {
     group: 'groups',
     variantSet: 'variant-sets',
 };
+
+/** Fields shared by the walls of a drawn run. */
+export interface WallDraft {
+    type: WallType;
+    thickness: number;
+    height: number;
+}
 
 /** Shift (mm) and counter-clockwise turn (degrees, about the group's footprint centre) of a group. */
 export interface GroupMove {
@@ -97,6 +105,31 @@ export class EditorApiService {
         return firstValueFrom(
             this.http.post<EditResult>(`${this.url(projectId, floorId, 'variantSet')}/${setId}/switch`, {groupId}, {headers: ifMatch(baseRevision)}),
         );
+    }
+
+    /** A run of walls through centre-line points, as one change listing the batch. */
+    public async drawWalls(
+        projectId: number,
+        floorId: number,
+        points: PlanPoint[],
+        closed: boolean,
+        fields: Partial<WallDraft>,
+        baseRevision?: number,
+    ): Promise<EditResult> {
+        const url = `${this.url(projectId, floorId, 'wall')}/polyline`;
+        return firstValueFrom(this.http.post<EditResult>(url, {...fields, points, closed}, {headers: ifMatch(baseRevision)}));
+    }
+
+    /** A room outlined by the walls around the point; the other fields as for any new room. */
+    public async detectRoom(
+        projectId: number,
+        floorId: number,
+        point: PlanPoint,
+        fields: Record<string, unknown>,
+        baseRevision?: number,
+    ): Promise<EditResult> {
+        const url = `${this.url(projectId, floorId, 'room')}/detect`;
+        return firstValueFrom(this.http.post<EditResult>(url, {...fields, x: point[0], y: point[1]}, {headers: ifMatch(baseRevision)}));
     }
 
     public async undo(projectId: number): Promise<EditResult> {

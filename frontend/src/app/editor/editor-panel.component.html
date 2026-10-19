@@ -45,6 +45,41 @@
             Delete
         </button>
     </div>
+    <div class="toolbar toolbar--tools" role="toolbar" aria-label="Drawing tools">
+        @for (option of tools; track option.tool) {
+            <button
+                type="button"
+                class="tool tool--toggle"
+                [class.tool--active]="editor.tool() === option.tool"
+                [attr.aria-pressed]="editor.tool() === option.tool"
+                [title]="option.title"
+                (click)="editor.setTool(option.tool)"
+            >
+                {{ option.label }}
+            </button>
+        }
+    </div>
+    @if (editor.tool() === 'drawWalls') {
+        @let draft = editor.wallDraft();
+        <div class="draft" aria-label="New walls">
+            <label class="draft__field">
+                <span>Type</span>
+                <select class="input input--compact" [value]="draft.type" (change)="setDraft('type', $event)">
+                    @for (type of wallTypes; track type) {
+                        <option [value]="type">{{ type }}</option>
+                    }
+                </select>
+            </label>
+            <label class="draft__field">
+                <span>Thickness</span>
+                <input class="input input--compact" type="number" min="10" max="2000" step="10" [value]="draft.thickness" (change)="setDraft('thickness', $event)" />
+            </label>
+            <label class="draft__field">
+                <span>Height</span>
+                <input class="input input--compact" type="number" min="100" max="20000" step="10" [value]="draft.height" (change)="setDraft('height', $event)" />
+            </label>
+        </div>
+    }
 </section>
 
 <section class="panel__section panel__section--inspector">

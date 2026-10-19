@@ -6,6 +6,7 @@ namespace FlatDesigner\Mcp\Tool;
 
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Service\Editor\Drawing\RoomOutliner;
 use FlatDesigner\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
@@ -27,8 +28,59 @@ final readonly class RoomTools
 		'default' => null,
 	];
 
-	public function __construct(private ToolContext $context, private SceneEditor $editor)
+	public function __construct(private ToolContext $context, private SceneEditor $editor, private RoomOutliner $roomOutliner)
 	{
+	}
+
+	/**
+	 * @param int $x plan x (mm) of a point inside the room
+	 * @param int $y plan y (mm) of that point
+	 * @param string|null $name e.g. "Kitchen" (default "Room")
+	 * @param string|null $code short room code, e.g. "B_07"
+	 * @param string|null $type "Living" | "Bedroom" | "Bathroom" | "Toilet" | "Hallway" | "Terrace" | "Garden"
+	 * @param int|null $ceilingHeight mm (default 2600)
+	 * @param int|null $floorMaterialId floor surface from list_materials
+	 */
+	#[McpTool(
+		name: 'detect_room',
+		description: 'Add a room whose outline is the inner faces of the walls enclosing the point (x, y), mitred corners included. '
+			. 'Fails when the point is inside a wall or the walls around it do not close (doors do not matter).',
+	)]
+	public function detectRoom(
+		int $projectId,
+		int $floorId,
+		int $x,
+		int $y,
+		?string $name = null,
+		?string $code = null,
+		?string $type = null,
+		?int $ceilingHeight = null,
+		?int $floorMaterialId = null,
+	): EditResultDto {
+		$floor = $this->context->floor($projectId, $floorId);
+
+		return $this->roomOutliner->createRoom($this->context->user(), $floor, $x, $y, ToolContext::fields([
+			'name' => $name,
+			'code' => $code,
+			'type' => $type,
+			'ceilingHeight' => $ceilingHeight,
+			'floorMaterialId' => $floorMaterialId,
+		]));
+	}
+
+	/**
+	 * @param int $x plan x (mm) of a point inside the room
+	 * @param int $y plan y (mm) of that point
+	 * @return array{polygon: list<array{int, int}>}
+	 */
+	#[McpTool(
+		name: 'find_room_outline',
+		description: 'The outline detect_room would give for the point (x, y), as {polygon: [[x, y], …]}, without adding anything.',
+		annotations: new ToolAnnotations(readOnlyHint: true),
+	)]
+	public function findRoomOutline(int $projectId, int $floorId, int $x, int $y): array
+	{
+		return ['polygon' => $this->roomOutliner->outline($this->context->floor($projectId, $floorId), $x, $y)];
 	}
 
 	/**

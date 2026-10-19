@@ -12,6 +12,7 @@ All geometry is generated from parameters. The project contains no 3D model file
 - **3D viewer**: dollhouse overview, architectural plan view (section cut at 1.3 m, adjustable), and a
   first-person walkthrough with collisions and doors you can open (keyboard and pointer lock, or touch controls).
 - **Editor**: select and edit rooms, walls, openings and items in an inspector; drag them in the plan view;
+  draw runs of walls with snapping and typed lengths, and add a room by clicking inside the walls around it;
   snapping, keyboard shortcuts and undo/redo of your own changes. Changes use optimistic locking and are
   recorded in an activity log.
 - **Furniture definitions**: parametric custom furniture (cabinets, wardrobes, worktops, tables, …) defined
@@ -142,6 +143,7 @@ Every endpoint except health, authentication, OAuth and public share links requi
 | `/api/projects`, `/api/projects/{id}` | Projects |
 | `…/floors/{floorId}/scene` | Everything the viewer needs to render a floor |
 | `…/floors/{floorId}/{items,walls,openings,rooms,groups,variant-sets}` | Element editing (send the revision as `If-Match`; a stale revision returns `409`) |
+| `…/floors/{floorId}/walls/polyline`, `…/rooms/detect` | Draw a run of walls (one change); add the room enclosed by walls around a point |
 | `/api/projects/{id}/{changes,undo,redo}` | Activity log and undo/redo |
 | `/api/projects/{id}/versions` | Saved versions and restore |
 | `/api/projects/{id}/share-links`, `/api/shares/{token}` | Share links and the public guest view |

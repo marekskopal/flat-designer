@@ -10,22 +10,25 @@ import {
     numberAttribute,
     resource,
     signal,
+    untracked,
     viewChild,
 } from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
+import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ProjectUpdate} from '@app/models/realtime';
-import {Room, RoomType} from '@app/models/scene';
+import {PlanPoint, Room, RoomType} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
+import {ToolStatus} from '@app/viewer/engine/drawing';
 import {Selection} from '@app/viewer/engine/selection';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
@@ -56,7 +59,16 @@ const optionalId = (value: string | number | null | undefined): number | null =>
  */
 @Component({
     selector: 'fd-viewer-page',
-    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, RouterLink, EditorPanelComponent, VariantsComponent, ShareLinkFormComponent],
+    imports: [
+        ViewerComponent,
+        WalkPadComponent,
+        DecimalPipe,
+        RouterLink,
+        EditorPanelComponent,
+        VariantsComponent,
+        ShareLinkFormComponent,
+        DrawHudComponent,
+    ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
@@ -125,6 +137,8 @@ export class ViewerPageComponent {
     protected readonly walkLocked = signal(false);
     /** The door in view during the walk (E opens or closes it). */
     protected readonly doorAim = signal<DoorAim | null>(null);
+    /** Readout of the active drawing tool. */
+    protected readonly toolStatus = signal<ToolStatus | null>(null);
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly sectionSlider = signal(SectionMax);
@@ -192,6 +206,13 @@ export class ViewerPageComponent {
                 takeUntilDestroyed(),
             )
             .subscribe((update) => this.onProjectUpdate(update));
+
+        // The drawing tools work in the top view.
+        effect(() => {
+            if (this.editor.tool() !== 'select' && untracked(this.activeView) !== 'top') {
+                untracked(() => this.setView('top'));
+            }
+        });
 
         // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
         effect(() => {
@@ -284,6 +305,14 @@ export class ViewerPageComponent {
             this.editor.select(event.selection);
         }
     }
+
+    /** A click with the room tool. */
+    protected detectRoom(point: PlanPoint): void {
+        void this.editor.detectRoom(point);
+    }
+
+    /** A run of walls drawn in the viewer. */
+    protected readonly drawWalls = (points: PlanPoint[], closed: boolean): Promise<boolean> => this.editor.drawWalls(points, closed);
 
     /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
     protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>

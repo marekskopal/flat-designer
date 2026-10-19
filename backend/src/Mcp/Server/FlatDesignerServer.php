@@ -41,12 +41,18 @@ final readonly class FlatDesignerServer
 		replacedBy in list_item_kinds) are kept only for older items, so add new furniture from the definitions.
 		get_cut_list lists the boards of a project's custom-made furniture.
 
+		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
+		outer walls, open runs for partitions ending on other walls), then add each room with
+		detect_room(x, y) at a point inside it: its outline follows the inner wall faces.
+
 		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.
 		update_* tools change only the fields you pass. Every change is logged under your client's name and
 		shows up live in the user's viewer; undo/redo revert your own changes only. Before a larger
 		redesign, call save_version so the user can go back.
 		TEXT;
+
+	private const int PaginationLimit = 200;
 
 	public function __construct(private ContainerInterface $container, private LoggerInterface $logger)
 	{
@@ -60,6 +66,8 @@ final readonly class FlatDesignerServer
 			->setReferenceHandler(new ToolErrorTranslatingReferenceHandler(new ReferenceHandler($this->container)))
 			->setSchemaValidator(new EmptyObjectSchemaValidator(logger: $this->logger))
 			->setDiscovery(basePath: dirname(__DIR__, 2), scanDirs: ['Mcp/Tool'])
+			// All tools on one page of tools/list: not every client follows `nextCursor` (the default page is 50).
+			->setPaginationLimit(self::PaginationLimit)
 			->setServerInfo(
 				name: 'flat-designer',
 				version: '1.0.0',

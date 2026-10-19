@@ -125,4 +125,37 @@ describe('EditorStore', () => {
         expect(store.selection()).toEqual({kind: 'group', id: 6});
         expect(store.picked()).toEqual([]);
     });
+
+    it('draws a run of walls with the draft fields and the scene revision', async () => {
+        api['drawWalls'] = vi.fn(async (): Promise<EditResult> => ({revision: 8, change, element: null}));
+        store.wallDraft.set({type: 'Exterior', thickness: 300, height: 2700});
+        const points: [number, number][] = [
+            [0, 0],
+            [4000, 0],
+            [4000, 3000],
+        ];
+
+        expect(await store.drawWalls(points, true)).toBe(true);
+
+        expect(api['drawWalls']).toHaveBeenCalledWith(1, 3, points, true, {type: 'Exterior', thickness: 300, height: 2700}, 7);
+    });
+
+    it('adds the room around a point as the next numbered room and selects it', async () => {
+        api['detectRoom'] = vi.fn(async (): Promise<EditResult> => ({revision: 8, change, element: {id: 12}}));
+        store.setTool('detectRoom');
+
+        await store.detectRoom([2000, 1500]);
+
+        expect(api['detectRoom']).toHaveBeenCalledWith(1, 3, [2000, 1500], {name: 'New room', code: 'R1'}, 7);
+        expect(store.selection()).toEqual({kind: 'room', id: 12});
+        expect(store.tool()).toBe('detectRoom');
+    });
+
+    it('drops the drawing tool when edit mode ends', async () => {
+        store.setTool('drawWalls');
+
+        await store.enable(false);
+
+        expect(store.tool()).toBe('select');
+    });
 });

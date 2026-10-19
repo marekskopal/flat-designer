@@ -11,10 +11,21 @@
     [insetLeft]="walking() ? 0 : panelInset"
     (selected)="onSelected($event)"
     [editHandler]="applyDrag"
+    [tool]="editor.tool()"
+    [wallDraft]="editor.wallDraft()"
+    [drawWallsHandler]="drawWalls"
+    (roomDetect)="detectRoom($event)"
+    (toolStatus)="toolStatus.set($event)"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
 />
+
+@if (toolStatus(); as status) {
+    @if (editor.enabled() && !walking()) {
+        <fd-draw-hud [status]="status" (segment)="viewerRef.placeRunPoint($event.length, $event.angle)" />
+    }
+}
 
 @if (walking() && touchWalk) {
     <fd-walk-pad [viewer]="viewerRef" />

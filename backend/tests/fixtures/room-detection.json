@@ -1,0 +1,751 @@
+{
+ "_comment": "Twin fixture of room detection: read by backend/tests/Service/Editor/Geometry/RoomDetectorTest.php and frontend/src/app/viewer/engine/room-detect.spec.ts. Walls are centre lines with a thickness (mm); every case detects the room around `point` in `layout` and expects its `polygon` or an `error` (onWall, open, invalid).",
+ "layouts": {
+  "rectangle": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   }
+  ],
+  "reversed": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": -150,
+    "startY": -150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   }
+  ],
+  "partition": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 5,
+    "startX": 2000,
+    "startY": -150,
+    "endX": 2000,
+    "endY": 3150,
+    "thickness": 100
+   }
+  ],
+  "cross": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 5,
+    "startX": 2000,
+    "startY": -150,
+    "endX": 2000,
+    "endY": 3150,
+    "thickness": 100
+   },
+   {
+    "id": 6,
+    "startX": -150,
+    "startY": 1500,
+    "endX": 4150,
+    "endY": 1500,
+    "thickness": 100
+   }
+  ],
+  "stub": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 5,
+    "startX": 2000,
+    "startY": -150,
+    "endX": 2000,
+    "endY": 1500,
+    "thickness": 100
+   }
+  ],
+  "open": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   }
+  ],
+  "island": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 5,
+    "startX": 1500,
+    "startY": 1000,
+    "endX": 2500,
+    "endY": 1000,
+    "thickness": 100
+   },
+   {
+    "id": 6,
+    "startX": 2500,
+    "startY": 1000,
+    "endX": 2500,
+    "endY": 2000,
+    "thickness": 100
+   },
+   {
+    "id": 7,
+    "startX": 2500,
+    "startY": 2000,
+    "endX": 1500,
+    "endY": 2000,
+    "thickness": 100
+   },
+   {
+    "id": 8,
+    "startX": 1500,
+    "startY": 2000,
+    "endX": 1500,
+    "endY": 1000,
+    "thickness": 100
+   }
+  ],
+  "angled": [
+   {
+    "id": 1,
+    "startX": 0,
+    "startY": 0,
+    "endX": 4000,
+    "endY": 0,
+    "thickness": 200
+   },
+   {
+    "id": 2,
+    "startX": 4000,
+    "startY": 0,
+    "endX": 4000,
+    "endY": 2000,
+    "thickness": 200
+   },
+   {
+    "id": 3,
+    "startX": 4000,
+    "startY": 2000,
+    "endX": 2000,
+    "endY": 4000,
+    "thickness": 200
+   },
+   {
+    "id": 4,
+    "startX": 2000,
+    "startY": 4000,
+    "endX": 0,
+    "endY": 4000,
+    "thickness": 200
+   },
+   {
+    "id": 5,
+    "startX": 0,
+    "startY": 4000,
+    "endX": 0,
+    "endY": 0,
+    "thickness": 200
+   }
+  ],
+  "lShape": [
+   {
+    "id": 1,
+    "startX": 0,
+    "startY": 0,
+    "endX": 6000,
+    "endY": 0,
+    "thickness": 200
+   },
+   {
+    "id": 2,
+    "startX": 6000,
+    "startY": 0,
+    "endX": 6000,
+    "endY": 3000,
+    "thickness": 200
+   },
+   {
+    "id": 3,
+    "startX": 6000,
+    "startY": 3000,
+    "endX": 3000,
+    "endY": 3000,
+    "thickness": 200
+   },
+   {
+    "id": 4,
+    "startX": 3000,
+    "startY": 3000,
+    "endX": 3000,
+    "endY": 5000,
+    "thickness": 200
+   },
+   {
+    "id": 5,
+    "startX": 3000,
+    "startY": 5000,
+    "endX": 0,
+    "endY": 5000,
+    "thickness": 200
+   },
+   {
+    "id": 6,
+    "startX": 0,
+    "startY": 5000,
+    "endX": 0,
+    "endY": 0,
+    "thickness": 200
+   }
+  ],
+  "farAway": [
+   {
+    "id": 1,
+    "startX": 199850,
+    "startY": -150,
+    "endX": 204150,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 204150,
+    "startY": -150,
+    "endX": 204150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 3,
+    "startX": 204150,
+    "startY": 3150,
+    "endX": 199850,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": 199850,
+    "startY": 3150,
+    "endX": 199850,
+    "endY": -150,
+    "thickness": 300
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "a rectangle of four walls",
+   "layout": "rectangle",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     4000,
+     0
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "walls drawn in either direction join the same way",
+   "layout": "reversed",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     4000,
+     0
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "a point inside a wall",
+   "layout": "rectangle",
+   "point": [
+    2000,
+    -100
+   ],
+   "error": "onWall"
+  },
+  {
+   "name": "outside the building",
+   "layout": "rectangle",
+   "point": [
+    -1000,
+    -1000
+   ],
+   "error": "open"
+  },
+  {
+   "name": "a partition ending on both outer walls splits the room: left",
+   "layout": "partition",
+   "point": [
+    1000,
+    1500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     1950,
+     0
+    ],
+    [
+     1950,
+     3000
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "a partition ending on both outer walls splits the room: right",
+   "layout": "partition",
+   "point": [
+    3000,
+    1500
+   ],
+   "polygon": [
+    [
+     2050,
+     0
+    ],
+    [
+     4000,
+     0
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     2050,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "crossing partitions make four rooms",
+   "layout": "cross",
+   "point": [
+    1000,
+    500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     1950,
+     0
+    ],
+    [
+     1950,
+     1450
+    ],
+    [
+     0,
+     1450
+    ]
+   ]
+  },
+  {
+   "name": "a stub wall is wrapped by the outline",
+   "layout": "stub",
+   "point": [
+    3000,
+    2500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     1950,
+     0
+    ],
+    [
+     1950,
+     1500
+    ],
+    [
+     2050,
+     1500
+    ],
+    [
+     2050,
+     0
+    ],
+    [
+     4000,
+     0
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "walls that do not close",
+   "layout": "open",
+   "point": [
+    2000,
+    1500
+   ],
+   "error": "open"
+  },
+  {
+   "name": "a free-standing shaft: the room around it",
+   "layout": "island",
+   "point": [
+    500,
+    500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     4000,
+     0
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "a free-standing shaft: inside it",
+   "layout": "island",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     1550,
+     1050
+    ],
+    [
+     2450,
+     1050
+    ],
+    [
+     2450,
+     1950
+    ],
+    [
+     1550,
+     1950
+    ]
+   ]
+  },
+  {
+   "name": "an angled wall",
+   "layout": "angled",
+   "point": [
+    1000,
+    1000
+   ],
+   "polygon": [
+    [
+     100,
+     100
+    ],
+    [
+     3900,
+     100
+    ],
+    [
+     3900,
+     1959
+    ],
+    [
+     1959,
+     3900
+    ],
+    [
+     100,
+     3900
+    ]
+   ]
+  },
+  {
+   "name": "an L-shaped room",
+   "layout": "lShape",
+   "point": [
+    1000,
+    4000
+   ],
+   "polygon": [
+    [
+     100,
+     100
+    ],
+    [
+     5900,
+     100
+    ],
+    [
+     5900,
+     2900
+    ],
+    [
+     2900,
+     2900
+    ],
+    [
+     2900,
+     4900
+    ],
+    [
+     100,
+     4900
+    ]
+   ]
+  },
+  {
+   "name": "an outline beyond the coordinate limit of a room",
+   "layout": "farAway",
+   "point": [
+    202000,
+    1500
+   ],
+   "error": "invalid"
+  }
+ ]
+}

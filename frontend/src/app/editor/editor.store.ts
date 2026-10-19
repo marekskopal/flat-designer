@@ -2,9 +2,10 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
-import {Scene} from '@app/models/scene';
-import {EditorApiService, GroupMove} from '@app/services/editor-api.service';
+import {PlanPoint, Scene} from '@app/models/scene';
+import {EditorApiService, GroupMove, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {EditorTool} from '@app/viewer/engine/drawing';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
 
 import {patchScene} from './scene-patch';
@@ -39,6 +40,10 @@ export class EditorStore {
     public readonly itemKinds = signal<ItemKindInfo[]>([]);
     /** Furniture definitions the project's items may use (global, the project's own, its owner's library). */
     public readonly definitions = signal<FurnitureDefinition[]>([]);
+    /** What a click in the top view does: select and drag, draw walls, or outline a room. */
+    public readonly tool = signal<EditorTool>('select');
+    /** Type, thickness and height of the walls drawn next. */
+    public readonly wallDraft = signal<WallDraft>({type: 'Interior', thickness: 100, height: 2600});
 
     private readonly api = inject(EditorApiService);
     private readonly furniture = inject(FurnitureService);
@@ -50,6 +55,9 @@ export class EditorStore {
 
     public async enable(enabled: boolean): Promise<void> {
         this.enabled.set(enabled);
+        if (!enabled) {
+            this.tool.set('select');
+        }
         if (enabled) {
             await Promise.all([
                 this.loadChanges(),
@@ -65,6 +73,31 @@ export class EditorStore {
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
             this.select({kind, id});
+        }
+    }
+
+    /** Switches the tool; a drawing tool drops the selection (its handles would get in the way). */
+    public setTool(tool: EditorTool): void {
+        this.tool.set(tool);
+        if (tool !== 'select') {
+            this.select(null);
+        }
+    }
+
+    /** Draws a run of walls with the `wallDraft` fields; resolves true when they were added. */
+    public async drawWalls(points: PlanPoint[], closed: boolean): Promise<boolean> {
+        const draft = this.wallDraft();
+        const result = await this.run((c) => this.api.drawWalls(c.projectId(), c.floorId(), points, closed, draft, revisionOf(c)));
+        return result?.change != null;
+    }
+
+    /** Adds the room enclosed by the walls around the point and selects it (to name it in the inspector). */
+    public async detectRoom(point: PlanPoint): Promise<void> {
+        const fields = newRoomFields(this.context?.scene() ?? null);
+        const result = await this.run((c) => this.api.detectRoom(c.projectId(), c.floorId(), point, fields, revisionOf(c)));
+        const id = result?.element?.['id'];
+        if (typeof id === 'number') {
+            this.selection.set({kind: 'room', id});
         }
     }
 
@@ -250,6 +283,11 @@ export class EditorStore {
             this.busy.set(false);
         }
     }
+}
+
+/** Name and code of a room added by hand (the Add menu, the room tool): numbered after the rooms there are. */
+export function newRoomFields(scene: Scene | null): {name: string; code: string} {
+    return {name: 'New room', code: `R${(scene?.rooms.length ?? 0) + 1}`};
 }
 
 function revisionOf(context: EditorContext): number | undefined {

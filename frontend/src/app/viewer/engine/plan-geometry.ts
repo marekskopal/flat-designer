@@ -27,7 +27,10 @@ export interface WallFrame {
     angle: number;
 }
 
-export function wallFrame(wall: Wall): WallFrame {
+/** The fields of a wall that define its footprint. */
+export type WallLine = Pick<Wall, 'id' | 'startX' | 'startY' | 'endX' | 'endY' | 'thickness'>;
+
+export function wallFrame(wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY'>): WallFrame {
     const dx = wall.endX - wall.startX;
     const dy = wall.endY - wall.startY;
     const length = Math.hypot(dx, dy);
@@ -462,8 +465,11 @@ export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]
 /** Where a dragged point ended up and what it snapped to (for feedback). */
 export interface SnapResult {
     point: Vec2;
-    /** `point`: onto one of the candidate points; `axis`: x and/or y aligned with an anchor; `grid`: grid only. */
-    kind: 'point' | 'axis' | 'grid';
+    /**
+     * `point`: onto one of the candidate points; `line`: onto one of the candidate lines; `axis`: x and/or y
+     * aligned with an anchor; `angle`: a drawn segment turned to a multiple of 15° (`snapDrawPoint`); `grid`: grid only.
+     */
+    kind: 'point' | 'line' | 'axis' | 'angle' | 'grid';
 }
 
 export interface SnapOptions {
@@ -475,11 +481,14 @@ export interface SnapOptions {
     points?: readonly Vec2[];
     /** Points to align with horizontally or vertically (the other end of the wall, neighbouring corners). */
     anchors?: readonly Vec2[];
+    /** Segments to snap onto, after the points (wall centre lines, for T-joints). */
+    lines?: readonly (readonly [Vec2, Vec2])[];
 }
 
 /**
- * Snaps a dragged plan point: onto the nearest candidate point within `radius`; otherwise each coordinate
- * separately onto the nearest anchor's x / y within `radius` (keeping edges orthogonal), else onto the grid.
+ * Snaps a dragged plan point: onto the nearest candidate point within `radius`; otherwise onto the nearest
+ * point of a candidate line within `radius` (rounded to whole mm); otherwise each coordinate separately onto
+ * the nearest anchor's x / y within `radius` (keeping edges orthogonal), else onto the grid.
  */
 export function snapPoint(point: Vec2, options: SnapOptions): SnapResult {
     const {grid, radius} = options;
@@ -495,6 +504,11 @@ export function snapPoint(point: Vec2, options: SnapOptions): SnapResult {
         }
         if (best !== null) {
             return {point: {x: best.x, y: best.y}, kind: 'point'};
+        }
+        const onLine = nearestOnLines(point, options.lines ?? [], radius);
+        if (onLine !== null) {
+            const aligned = alignOnLine(point, onLine.line, options.anchors ?? [], radius) ?? onLine.point;
+            return {point: {x: Math.round(aligned.x), y: Math.round(aligned.y)}, kind: 'line'};
         }
     }
 
@@ -516,6 +530,58 @@ export function snapPoint(point: Vec2, options: SnapOptions): SnapResult {
         point: {x: x ?? snapToGrid(point.x, grid), y: y ?? snapToGrid(point.y, grid)},
         kind: x !== null || y !== null ? 'axis' : 'grid',
     };
+}
+
+/** The nearest point on any of the segments (and that segment), if one is within `radius`. */
+function nearestOnLines(
+    point: Vec2,
+    lines: readonly (readonly [Vec2, Vec2])[],
+    radius: number,
+): {point: Vec2; line: readonly [Vec2, Vec2]} | null {
+    let best: {point: Vec2; line: readonly [Vec2, Vec2]} | null = null;
+    let bestDistance = radius;
+    for (const line of lines) {
+        const [a, b] = line;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const lengthSquared = dx * dx + dy * dy;
+        if (lengthSquared === 0) {
+            continue;
+        }
+        const t = Math.min(Math.max(((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared, 0), 1);
+        const candidate = {x: a.x + dx * t, y: a.y + dy * t};
+        const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
+        if (distance <= bestDistance) {
+            best = {point: candidate, line};
+            bestDistance = distance;
+        }
+    }
+    return best;
+}
+
+/**
+ * The point of the segment in line with an anchor (same x or same y) nearest to `point`, if within
+ * `radius`: a partition drawn onto a wall then stays square to the previous point.
+ */
+function alignOnLine(point: Vec2, [a, b]: readonly [Vec2, Vec2], anchors: readonly Vec2[], radius: number): Vec2 | null {
+    let best: Vec2 | null = null;
+    let bestDistance = radius;
+    const consider = (t: number): void => {
+        if (!Number.isFinite(t) || t < 0 || t > 1) {
+            return;
+        }
+        const candidate = {x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t};
+        const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
+        if (distance <= bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+        }
+    };
+    for (const anchor of anchors) {
+        consider((anchor.x - a.x) / (b.x - a.x));
+        consider((anchor.y - a.y) / (b.y - a.y));
+    }
+    return best;
 }
 
 /** Distance along the wall's centre line of the point's projection onto it, mm from the start. */
@@ -651,9 +717,9 @@ const JointTolerance = 1;
  * corresponding face of the other wall. Ends shared by three or more walls, straight continuations and
  * very sharp angles stay square. Walls without a joint are left out of the map.
  */
-export function wallJoints(walls: readonly Wall[]): Map<number, WallEnds> {
+export function wallJoints(walls: readonly WallLine[]): Map<number, WallEnds> {
     interface End {
-        wall: Wall;
+        wall: WallLine;
         atStart: boolean;
         point: Vec2;
     }
