@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Editor\Catalog;
 
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
+use FlatDesigner\Service\Furniture\BuiltInFurnitureConverter;
 
 /**
  * What every item kind is, the size and elevation a new one starts with, and the `params` the viewer
@@ -54,12 +55,19 @@ final readonly class ItemKindCatalog
 		'Table' => ['description' => 'Solid wood table: a top of boards along the width, tapered legs and an apron; the item material is the wood.', 'width' => 1320, 'depth' => 700, 'height' => 780, 'z' => 0, 'params' => 'none'],
 	];
 
-	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string}> */
+	/**
+	 * Every kind; `replacedBy` names the global furniture definition to use for new items instead of a built-in kind
+	 * (kept for older items and saved versions), null for the others.
+	 *
+	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}>
+	 */
 	public function all(): array
 	{
 		$kinds = [];
 		foreach (ItemKindEnum::cases() as $case) {
-			$kinds[] = ['kind' => $case->value] + $this->get($case);
+			$kinds[] = ['kind' => $case->value] + $this->get(
+				$case,
+			) + ['replacedBy' => BuiltInFurnitureConverter::Replaced[$case->value] ?? null];
 		}
 
 		return $kinds;

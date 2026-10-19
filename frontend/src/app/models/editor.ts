@@ -42,4 +42,6 @@ export interface ItemKindInfo {
     height: number;
     z: number;
     params: string;
+    /** The furniture definition to add instead (a built-in kind kept for older items), or null. */
+    replacedBy: string | null;
 }

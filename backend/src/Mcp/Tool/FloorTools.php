@@ -66,11 +66,12 @@ final readonly class FloorTools
 		return $materials;
 	}
 
-	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string}> */
+	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}> */
 	#[McpTool(
 		name: 'list_item_kinds',
 		description: 'Item kinds you can add, each with a description, the default size (width × depth × height) and elevation z '
-			. 'a new item gets, and the params it understands.',
+			. 'a new item gets, and the params it understands. A kind with replacedBy is built-in furniture kept for older items: '
+			. 'add the furniture definition of that name instead (kind "Custom", see list_furniture_definitions).',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function listItemKinds(): array

@@ -83,11 +83,21 @@ final readonly class FurnitureSeeds
 		return JsonDecoder::decodeObject((string) file_get_contents($path));
 	}
 
-	private static function prepare(PDO $pdo, string $sql): PDOStatement
+	/** @return list<array<string, int|string|null>> the selected columns as PDO gives them */
+	public static function rows(PDOStatement $statement): array
+	{
+		/** @var list<array<string, int|string|null>> $rows */
+		$rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+		return $rows;
+	}
+
+	/** A prepared statement of the furniture migrations, or the reason it could not be made. */
+	public static function prepare(PDO $pdo, string $sql): PDOStatement
 	{
 		$statement = $pdo->prepare($sql);
 		if ($statement === false) {
-			throw new RuntimeException('Cannot prepare a statement for the furniture definitions.');
+			throw new RuntimeException(sprintf('Cannot prepare a statement for the furniture definitions: %s', $sql));
 		}
 
 		return $statement;
