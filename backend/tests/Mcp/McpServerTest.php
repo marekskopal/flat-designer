@@ -488,6 +488,7 @@ final class McpServerTest extends IntegrationTestCase
 		try {
 			$busy = $this->client->post(['jsonrpc' => '2.0', 'id' => 99, 'method' => 'tools/list']);
 			self::assertSame(503, $busy->getStatusCode());
+			self::assertStringContainsString('-32000', (string) $busy->getBody());
 
 			$release = $other->prepare('SELECT RELEASE_LOCK(?)');
 			self::assertNotFalse($release);

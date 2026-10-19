@@ -9,8 +9,8 @@ use stdClass;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * The SDK decodes tool arguments into PHP arrays, so an empty JSON object (`"params": {}`) arrives as `[]` and its
- * validator, which only fixes that at the top level, rejects it against `type: object`. This walks the schema and
+ * The SDK decodes tool arguments into PHP arrays, so an empty JSON object (`"params": {}`, or no arguments at all)
+ * arrives as `[]` and its validator rejects it against `type: object`. This walks the schema and
  * turns `[]` back into an object wherever the schema expects an object and not a list. Only the validated copy
  * changes: the tool still gets `[]` for its `?array` parameter.
  */

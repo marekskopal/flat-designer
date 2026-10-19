@@ -6,6 +6,7 @@ namespace FlatDesigner\Controller;
 
 use FlatDesigner\Mcp\McpUserContext;
 use FlatDesigner\Mcp\Server\FlatDesignerServer;
+use FlatDesigner\Mcp\Session\DatabaseSessionLock;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
 use FlatDesigner\OAuth\AuthorizationService;
 use FlatDesigner\OAuth\ClientService;
@@ -24,7 +25,6 @@ use Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware;
 use Mcp\Server\Transport\StreamableHttpTransport;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Symfony\Component\Uid\Uuid;
 
 /**
  * The MCP endpoint (Streamable HTTP). Requests carry an OAuth access token issued by `OAuthController`;
@@ -83,47 +83,26 @@ final readonly class McpController
 		$this->actorContext->setAgent($authorization->clientId, $client->clientName ?? $authorization->clientId);
 
 		$ttl = (int) getenv('MCP_SESSION_TTL');
-		$server = $this->server->build(new DatabaseSessionStore($this->database, $ttl > 0 ? $ttl : self::DefaultSessionTtl));
+		$server = $this->server->build(
+			new DatabaseSessionStore($this->database, $ttl > 0 ? $ttl : self::DefaultSessionTtl),
+			new DatabaseSessionLock($this->database, $this->sessionLockTimeout()),
+		);
 
 		$transport = new StreamableHttpTransport($request, middleware: [
 			new CorsMiddleware(),
-			new DnsRebindingProtectionMiddleware($this->allowedHosts()),
+			new DnsRebindingProtectionMiddleware(allowedHosts: $this->allowedHosts()),
 			new ProtocolVersionMiddleware(),
 		]);
 
-		$lock = $this->sessionLockName($request);
-		if ($lock === null) {
-			return $server->run($transport);
-		}
-		if (!$this->acquireLock($lock)) {
-			return new ErrorResponse('The MCP session is busy with another request, try again.', 503, ['Retry-After' => '1']);
-		}
-
-		try {
-			return $server->run($transport);
-		} finally {
-			$this->database->execute('SELECT RELEASE_LOCK(?)', [$lock], cached: false);
-		}
+		return $server->run($transport);
 	}
 
-	/**
-	 * Requests of one session run one at a time: the SDK queues each response in the shared session data and
-	 * the request drains the whole queue, so parallel requests would take (or lose) each other's responses.
-	 * Requests without a valid session id (initialize, or ones the transport rejects) need no lock.
-	 */
-	private function sessionLockName(ServerRequestInterface $request): ?string
-	{
-		$sessionId = $request->getHeaderLine('Mcp-Session-Id');
-
-		return Uuid::isValid($sessionId) ? 'mcp:' . strtolower($sessionId) : null;
-	}
-
-	private function acquireLock(string $lock): bool
+	/** How long a request waits for another request of the same session to finish (then 503). */
+	private function sessionLockTimeout(): int
 	{
 		$configured = getenv('MCP_SESSION_LOCK_TIMEOUT');
-		$timeout = is_string($configured) && is_numeric($configured) ? (int) $configured : self::DefaultSessionLockTimeout;
 
-		return (int) $this->database->execute('SELECT GET_LOCK(?, ?)', [$lock, $timeout], cached: false)->fetchColumn() === 1;
+		return is_string($configured) && is_numeric($configured) ? (int) $configured : self::DefaultSessionLockTimeout;
 	}
 
 	/** Points the client at the resource metadata, which starts its OAuth flow (RFC 9728). */
