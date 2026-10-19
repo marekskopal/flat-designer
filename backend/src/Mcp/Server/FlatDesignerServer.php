@@ -46,6 +46,11 @@ final readonly class FlatDesignerServer
 		outer walls, open runs for partitions ending on other walls), then add each room with
 		detect_room(x, y) at a point inside it: its outline follows the inner wall faces.
 
+		To work from a plan or photos the user uploaded, list them with list_project_files and look at them
+		with get_project_file (crop into a region and add a pixel grid to read positions exactly). Lay the plan
+		under the floor with set_floor_underlay, calibrated from two points you know (a dimensioned wall, the
+		scale bar), then convert pixel positions to plan mm with its placement to place walls and openings.
+
 		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.
 		update_* tools change only the fields you pass. Every change is logged under your client's name and

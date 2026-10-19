@@ -29,7 +29,8 @@ final readonly class FloorTools
 			. 'height, sill), items (kind, footprint centre x/y, elevation z, size, rotation, room, group, material, params), '
 			. 'groups (items forming one piece of furniture, see create_group; a group with variantSetId is a variant) and '
 			. 'variantSets (alternatives of which activeGroupId is shown; hiddenItemIds lists the items of the other variants) and '
-			. 'definitions (the furniture definitions of the Custom items, see get_furniture_definition). '
+			. 'definitions (the furniture definitions of the Custom items, see get_furniture_definition) and underlay (the '
+			. 'plan image under the top view, see set_floor_underlay). '
 			. 'All in mm. Material ids refer to list_materials.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
@@ -47,6 +48,7 @@ final readonly class FloorTools
 			'variantSets' => $scene->variantSets,
 			'hiddenItemIds' => $scene->hiddenItemIds(),
 			'definitions' => $scene->definitions,
+			'underlay' => $scene->underlay,
 		];
 	}
 

@@ -27,6 +27,8 @@ final readonly class SceneDto
 		public array $groups,
 		public array $variantSets,
 		public array $definitions,
+		/** The plan image laid under the top view for tracing. */
+		public ?UnderlayDto $underlay = null,
 	)
 	{
 	}
