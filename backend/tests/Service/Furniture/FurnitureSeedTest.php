@@ -11,6 +11,7 @@ use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
 use Migrations\SeedFlat50FurnitureDefinitionsMigration;
 use Migrations\SeedFurnitureDefinitionsMigration;
+use Migrations\SeedHallStandFittingDefinitionsMigration;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -32,7 +33,11 @@ final class FurnitureSeedTest extends IntegrationTestCase
 	/** Every file in the directory is seeded by exactly one migration, and every listed file exists. */
 	public function testEveryFileBelongsToOneSeedMigration(): void
 	{
-		$listed = [...SeedFurnitureDefinitionsMigration::Files, ...SeedFlat50FurnitureDefinitionsMigration::Files];
+		$listed = [
+			...SeedFurnitureDefinitionsMigration::Files,
+			...SeedFlat50FurnitureDefinitionsMigration::Files,
+			...SeedHallStandFittingDefinitionsMigration::Files,
+		];
 		sort($listed);
 		self::assertSame(array_unique($listed), $listed, 'A file is listed by more than one migration.');
 		self::assertSame(FurnitureSeeds::files(), $listed);

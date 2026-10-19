@@ -1,0 +1,82 @@
+{
+ "name": "Coat peg",
+ "description": "Round wooden peg out of the wall behind, as thick as the item's width or height, optionally with a knob at the end and angled up.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 25,
+   "depth": 60,
+   "height": 25
+  },
+  "parameters": [
+   {
+    "key": "knob",
+    "label": "Knob at the end",
+    "type": "bool",
+    "default": false
+   },
+   {
+    "key": "angle",
+    "label": "Angled up",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 45,
+    "unit": "°"
+   }
+  ],
+  "derived": {
+   "size": "min(W, H)",
+   "shank": "knob ? round(size * 0.6) : size",
+   "head": "knob ? min(12, D - 1) : 0"
+  },
+  "materialSlots": [
+   {
+    "key": "peg",
+    "label": "Peg",
+    "default": "kitchen-oak"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Peg",
+    "axis": "z",
+    "x": "(W - shank) / 2",
+    "y": "(H - shank) / 2",
+    "z": 0,
+    "w": "shank",
+    "h": "shank",
+    "d": "D - head",
+    "material": "peg",
+    "tilt": {
+     "expr": "angle"
+    },
+    "tiltY": {
+     "expr": "H / 2"
+    },
+    "tiltZ": 0
+   },
+   {
+    "type": "cylinder",
+    "name": "Knob",
+    "when": "knob",
+    "axis": "z",
+    "x": "(W - size) / 2",
+    "y": "(H - size) / 2",
+    "z": "D - head",
+    "w": "size",
+    "h": "size",
+    "d": "head",
+    "material": "peg",
+    "tilt": {
+     "expr": "angle"
+    },
+    "tiltY": {
+     "expr": "H / 2"
+    },
+    "tiltZ": 0
+   }
+  ]
+ }
+}

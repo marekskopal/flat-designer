@@ -1,0 +1,174 @@
+{
+ "name": "Hanging rail",
+ "description": "Round clothes rail along the width: between two sides on end flanges, hung from the board above on two drops, or held out from the wall behind on two brackets.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 800,
+   "depth": 50,
+   "height": 50
+  },
+  "parameters": [
+   {
+    "key": "mount",
+    "label": "Mounting",
+    "type": "select",
+    "default": "ends",
+    "options": [
+     "ends",
+     "top",
+     "back"
+    ]
+   },
+   {
+    "key": "tube",
+    "label": "Tube diameter",
+    "type": "int",
+    "default": 20,
+    "min": 12,
+    "max": 40,
+    "unit": "mm"
+   },
+   {
+    "key": "inset",
+    "label": "Drops / brackets from the ends",
+    "type": "int",
+    "default": 50,
+    "min": 10,
+    "max": 400,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "flange": 5,
+   "stem": 10,
+   "rose": 40
+  },
+  "materialSlots": [
+   {
+    "key": "rail",
+    "label": "Rail",
+    "default": "aluminium-brushed"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Tube",
+    "when": "mount == 'ends'",
+    "axis": "x",
+    "x": "flange",
+    "y": "(H - tube) / 2",
+    "z": "(D - tube) / 2",
+    "w": "W - 2 * flange",
+    "h": "tube",
+    "d": "tube",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "End flange",
+    "when": "mount == 'ends'",
+    "repeat": {
+     "count": 2
+    },
+    "axis": "x",
+    "x": "i * (W - flange)",
+    "y": 0,
+    "z": 0,
+    "w": "flange",
+    "h": "H",
+    "d": "D",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "Tube",
+    "when": "mount == 'top'",
+    "axis": "x",
+    "x": 0,
+    "y": 0,
+    "z": "(D - tube) / 2",
+    "w": "W",
+    "h": "tube",
+    "d": "tube",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "Drop",
+    "when": "mount == 'top'",
+    "repeat": {
+     "count": 2
+    },
+    "x": "inset - stem / 2 + i * (W - 2 * inset)",
+    "y": "tube / 2",
+    "z": "(D - stem) / 2",
+    "w": "stem",
+    "h": "H - tube / 2 - flange",
+    "d": "stem",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "Ceiling rose",
+    "when": "mount == 'top'",
+    "repeat": {
+     "count": 2
+    },
+    "x": "inset - min(rose, D) / 2 + i * (W - 2 * inset)",
+    "y": "H - flange",
+    "z": "(D - min(rose, D)) / 2",
+    "w": "min(rose, D)",
+    "h": "flange",
+    "d": "min(rose, D)",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "Tube",
+    "when": "mount == 'back'",
+    "axis": "x",
+    "x": 0,
+    "y": "(H - tube) / 2",
+    "z": "D - tube",
+    "w": "W",
+    "h": "tube",
+    "d": "tube",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "Bracket",
+    "when": "mount == 'back'",
+    "repeat": {
+     "count": 2
+    },
+    "axis": "z",
+    "x": "inset - stem / 2 + i * (W - 2 * inset)",
+    "y": "(H - stem) / 2",
+    "z": "flange",
+    "w": "stem",
+    "h": "stem",
+    "d": "D - flange - tube / 2",
+    "material": "rail"
+   },
+   {
+    "type": "cylinder",
+    "name": "Wall rose",
+    "when": "mount == 'back'",
+    "repeat": {
+     "count": 2
+    },
+    "axis": "z",
+    "x": "inset - min(rose, H) / 2 + i * (W - 2 * inset)",
+    "y": "(H - min(rose, H)) / 2",
+    "z": 0,
+    "w": "min(rose, H)",
+    "h": "min(rose, H)",
+    "d": "flange",
+    "material": "rail"
+   }
+  ]
+ }
+}
