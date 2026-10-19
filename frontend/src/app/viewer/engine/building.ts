@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import {
     ceilingSteps,
     clipToBand,
-    counterClockwise,
     roomBeams,
     skirtingPieces,
     vaultBreaks,
@@ -18,6 +17,7 @@ import {boxAt, prismAt, worldUvBox} from './meshes';
 import {exteriorSign, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
 import {
     cornerWindows,
+    counterClockwise,
     DoorFrameWidth,
     isDoor,
     Leaf,

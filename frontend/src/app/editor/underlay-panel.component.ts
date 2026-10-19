@@ -83,7 +83,7 @@ export class UnderlayPanelComponent {
         const underlay = this.underlay();
         if (underlay === null || box.value.trim() === '' || !Number.isFinite(value)) {
             // An emptied box is put back to the stored value rather than sent as 0.
-            box.value = String(underlay === null ? '' : field === 'opacity' ? underlay.opacity * 100 : underlay[field]);
+            box.value = underlay === null ? '' : field === 'opacity' ? String(underlay.opacity * 100) : this.plain(underlay[field], 4);
             return;
         }
         // x and y are whole mm; the others are floats.
@@ -128,6 +128,11 @@ export class UnderlayPanelComponent {
 
     protected remove(): void {
         void this.editor.removeUnderlay();
+    }
+
+    /** A number for an input box: rounded, without the locale's group separators (which `Number()` would not read back). */
+    protected plain(value: number, decimals: number): string {
+        return String(Number(value.toFixed(decimals)));
     }
 
     protected scaleLabel(underlay: Underlay): string {

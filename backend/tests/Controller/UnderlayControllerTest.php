@@ -109,7 +109,26 @@ final class UnderlayControllerTest extends IntegrationTestCase
 		$fileId = $this->uploadImage($user, $project, 20, 20);
 		$path = self::path(Routes::ProjectFloorUnderlay, $project->id, $floor->id);
 
-		$this->request('PUT', $path, ['fileId' => $fileId], $user);
+		$set = $this->jsonBody($this->request('PUT', $path, ['fileId' => $fileId], $user));
+		self::assertIsInt($set['revision']);
+		// A stale If-Match is refused like any other edit; the current one goes through.
+		$stale = $this->request(
+			'PUT',
+			$path,
+			['fileId' => $fileId, 'opacity' => 0.7],
+			$user,
+			headers: ['If-Match' => (string) ($set['revision'] - 1)],
+		);
+		self::assertSame(409, $stale->getStatusCode());
+		$fresh = $this->request(
+			'PUT',
+			$path,
+			['fileId' => $fileId, 'opacity' => 0.7],
+			$user,
+			headers: ['If-Match' => (string) $set['revision']],
+		);
+		self::assertSame(200, $fresh->getStatusCode());
+		self::assertSame(409, $this->request('DELETE', $path, authenticatedAs: $user, headers: ['If-Match' => '1'])->getStatusCode());
 		self::assertSame(200, $this->request('DELETE', $path, authenticatedAs: $user)->getStatusCode());
 		self::assertNull($this->scene($user, $project, $floor->id)['underlay']);
 

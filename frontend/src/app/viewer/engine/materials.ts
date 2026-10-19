@@ -430,10 +430,15 @@ function drawTerrazzo(ctx: CanvasRenderingContext2D, rng: () => number, slabWidt
         const angle = rng() * Math.PI;
         const squash = 0.5 + rng() * 0.5;
         ctx.fillStyle = palette[Math.floor(rng() * palette.length)];
-        for (const [dx, dy] of [[0, 0], [-width, 0], [0, -height], [-width, -height]]) {
-            ctx.beginPath();
-            ctx.ellipse(x + dx, y + dy, size / 2, (size / 2) * squash, angle, 0, Math.PI * 2);
-            ctx.fill();
+        // A chip crossing the right or top edge reappears at the left or bottom, so the patch tiles.
+        const shiftsX = x + size > width ? [0, -width] : [0];
+        const shiftsY = y + size > height ? [0, -height] : [0];
+        for (const dx of shiftsX) {
+            for (const dy of shiftsY) {
+                ctx.beginPath();
+                ctx.ellipse(x + dx, y + dy, size / 2, (size / 2) * squash, angle, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
     ctx.fillStyle = 'rgba(80, 76, 70, 0.35)';

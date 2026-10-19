@@ -362,7 +362,7 @@ export class ViewerPageComponent {
         if (this.walking() || target?.closest('input, textarea, select') != null || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
-        if (event.key === 'd' || event.key === 'D') {
+        if ((event.key === 'd' || event.key === 'D') && this.editor.calibration() === null) {
             event.preventDefault();
             this.toggleMeasuring();
         } else if (event.key === 'Escape' && this.editor.calibration() !== null) {

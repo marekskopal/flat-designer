@@ -44,7 +44,7 @@
                 class="input input--compact"
                 type="number"
                 step="0.1"
-                [value]="u.rotation | number: '1.0-2'"
+                [value]="plain(u.rotation, 2)"
                 [disabled]="locked()"
                 (change)="setNumber('rotation', $event)"
             />
@@ -56,7 +56,7 @@
                 type="number"
                 step="0.01"
                 min="0.01"
-                [value]="u.scale | number: '1.0-4'"
+                [value]="plain(u.scale, 4)"
                 [disabled]="locked()"
                 (change)="setNumber('scale', $event)"
             />

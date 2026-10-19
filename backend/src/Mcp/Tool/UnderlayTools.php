@@ -8,7 +8,6 @@ use FlatDesigner\Dto\UnderlayDto;
 use FlatDesigner\Dto\UnderlayInputDto;
 use FlatDesigner\Service\Project\UnderlayService;
 use Mcp\Capability\Attribute\McpTool;
-use RuntimeException;
 
 /** The plan image under a floor's top view, which the user traces over in the editor and an agent can calibrate. */
 final readonly class UnderlayTools
@@ -45,49 +44,31 @@ final readonly class UnderlayTools
 		?float $rotation = null,
 		?float $opacity = null,
 	): UnderlayDto {
-		$calibration = $points === null ? null : array_map(self::point(...), $points);
+		// Validated like the REST body, so both paths agree; a [px, py, x, y] list becomes the body's object.
+		$input = UnderlayInputDto::fromArray([
+			'fileId' => $fileId,
+			'x' => $x,
+			'y' => $y,
+			'scale' => $scale,
+			'rotation' => $rotation,
+			'opacity' => $opacity,
+			'points' => $points === null ? null : array_map(self::pointObject(...), $points),
+		]);
 
-		return UnderlayDto::fromEntity($this->underlayService->set(
-			$this->context->floor($projectId, $floorId),
-			new UnderlayInputDto(
-				fileId: $fileId,
-				x: $x,
-				y: $y,
-				scale: $scale,
-				rotation: $rotation,
-				opacity: $opacity,
-				points: $calibration,
-			),
-		));
+		return UnderlayDto::fromEntity($this->underlayService->set($this->context->floor($projectId, $floorId), $input));
 	}
 
 	/**
-	 * A calibration point as `[px, py, x, y]`, or as the REST body's `{px, py, x, y}` (the schema check lets objects
-	 * through as arrays).
-	 *
-	 * @return array{px: float, py: float, x: float, y: float}
+	 * A point as `[px, py, x, y]` turned into `{px, py, x, y}`; anything else (the body's objects, which the schema
+	 * check lets through, or a wrong shape) is left to the body reader's own messages.
 	 */
-	private static function point(mixed $point): array
+	private static function pointObject(mixed $point): mixed
 	{
-		$values = null;
 		if (is_array($point) && array_is_list($point) && count($point) === 4) {
-			$values = $point;
-		} elseif (is_array($point) && isset($point['px'], $point['py'], $point['x'], $point['y'])) {
-			$values = [$point['px'], $point['py'], $point['x'], $point['y']];
-		}
-		$numbers = [];
-		foreach ($values ?? [] as $value) {
-			if (!is_int($value) && !is_float($value)) {
-				$numbers = [];
-				break;
-			}
-			$numbers[] = (float) $value;
-		}
-		if (count($numbers) !== 4) {
-			throw new RuntimeException('Each point must be [px, py, x, y] in numbers: an image pixel and the plan mm it belongs at.');
+			return ['px' => $point[0], 'py' => $point[1], 'x' => $point[2], 'y' => $point[3]];
 		}
 
-		return ['px' => $numbers[0], 'py' => $numbers[1], 'x' => $numbers[2], 'y' => $numbers[3]];
+		return $point;
 	}
 
 	/** @return array{removed: bool} */

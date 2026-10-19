@@ -59,18 +59,15 @@ final readonly class OpeningLook
 		if ($type !== OpeningTypeEnum::Window) {
 			return ['panelHeight' => null, 'shutters' => null, 'shutterMaterialId' => null, 'shuttersClosed' => false];
 		}
-		$panelHeight = null;
-		if ($fields->raw('panelHeight') !== null) {
-			$panelHeight = $fields->int('panelHeight', 100, max(100, $height - self::MinGlassAbovePanel));
+		$panelHeight = $fields->nullableInt('panelHeight', 100, State::MaxSize);
+		if ($panelHeight !== null && $panelHeight > $height - self::MinGlassAbovePanel) {
 			// Also when the panel was set earlier and the window is being lowered under it.
-			if ($panelHeight > $height - self::MinGlassAbovePanel) {
-				throw EditException::invalid(sprintf(
-					'A solid lower panel of %d mm leaves less than %d mm of glass in a window %d mm high; lower or clear panelHeight.',
-					$panelHeight,
-					self::MinGlassAbovePanel,
-					$height,
-				));
-			}
+			throw EditException::invalid(sprintf(
+				'A solid lower panel of %d mm leaves less than %d mm of glass in a window %d mm high; lower or clear panelHeight.',
+				$panelHeight,
+				self::MinGlassAbovePanel,
+				$height,
+			));
 		}
 		$shutters = $fields->nullableEnum('shutters', ShutterStyleEnum::class);
 		$materialId = $shutters === null ? null : $fields->nullableId('shutterMaterialId');

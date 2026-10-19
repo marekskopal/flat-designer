@@ -110,54 +110,50 @@ export class EditorStore {
         }
     }
 
-    /** Sets the floor's underlay and loads the floor again; resolves true when it was saved. */
+    /** Sets the floor's underlay; resolves true when it was saved. */
     public async saveUnderlay(input: UnderlayInput): Promise<boolean> {
-        const context = this.context;
-        if (context === null) {
-            return false;
-        }
-        this.busy.set(true);
-        try {
-            const {underlay, revision} = await this.api.setUnderlay(context.projectId(), context.floorId(), input);
+        const saved = await this.underlayRequest((c) => this.api.setUnderlay(c.projectId(), c.floorId(), input, revisionOf(c)));
+        if (saved !== null) {
             this.underlayVisible.set(true);
-            this.patchUnderlay(context, underlay, revision);
-            return true;
-        } catch {
-            // The error interceptor has shown the message.
-            return false;
-        } finally {
-            this.busy.set(false);
         }
+        return saved !== null;
     }
 
     public async removeUnderlay(): Promise<void> {
-        const context = this.context;
-        if (context === null) {
-            return;
-        }
-        this.busy.set(true);
-        try {
-            const {revision} = await this.api.removeUnderlay(context.projectId(), context.floorId());
-            this.calibration.set(null);
-            this.patchUnderlay(context, null, revision);
-        } catch {
-            // The error interceptor has shown the message.
-        } finally {
-            this.busy.set(false);
-        }
+        await this.underlayRequest(async (c) => ({underlay: null, ...(await this.api.removeUnderlay(c.projectId(), c.floorId(), revisionOf(c)))}));
+        this.calibration.set(null);
     }
 
     /**
-     * Shows the saved underlay. The request carries no `If-Match`, so the scene is patched only when the answer's
-     * revision follows the shown one directly; otherwise someone else changed the floor meanwhile and it reloads.
+     * An underlay request with the scene's revision as `If-Match`: the answer is patched into the scene, a 409 (someone
+     * changed the floor meanwhile) reloads it. Not an element change: there is nothing to log or undo.
      */
-    private patchUnderlay(context: EditorContext, underlay: Underlay | null, revision: number): void {
-        const scene = context.scene();
-        if (scene === null || scene.revision === undefined || revision !== scene.revision + 1) {
-            context.reload();
-            return;
+    private async underlayRequest(
+        request: (context: EditorContext) => Promise<{underlay: Underlay | null; revision: number}>,
+    ): Promise<{underlay: Underlay | null; revision: number} | null> {
+        const context = this.context;
+        if (context === null || this.busy()) {
+            return null;
         }
-        context.setScene({...scene, underlay, revision});
+        this.busy.set(true);
+        try {
+            const result = await request(context);
+            const scene = context.scene();
+            if (scene === null) {
+                context.reload();
+            } else {
+                context.setScene({...scene, underlay: result.underlay, revision: result.revision});
+            }
+            return result;
+        } catch (e: unknown) {
+            // Other errors have been shown by the error interceptor.
+            if (e instanceof HttpErrorResponse && e.status === 409) {
+                context.reload();
+            }
+            return null;
+        } finally {
+            this.busy.set(false);
+        }
     }
 
     /** Resolves true when the element changed. */

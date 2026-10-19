@@ -771,11 +771,12 @@ final class McpServerTest extends IntegrationTestCase
 				'cropWidth' => 800,
 				'cropHeight' => 400,
 				'maxSize' => 400,
-				'grid' => 50,
+				'grid' => 100,
 			]]);
 		self::assertIsList($result['content']);
 		self::assertIsArray($result['content'][0]);
 		self::assertIsString($result['content'][0]['text']);
+		self::assertFalse($result['isError'] ?? false, $result['content'][0]['text']);
 		self::assertSame(
 			['fileId' => $fileId, 'filename' => 'Propuesta.png', 'widthPx' => 2000, 'heightPx' => 1000, 'crop' => ['x' => 1000, 'y' => 200, 'width' => 800, 'height' => 400], 'scale' => 0.5],
 			json_decode($result['content'][0]['text'], true, 512, JSON_THROW_ON_ERROR),
@@ -820,7 +821,7 @@ final class McpServerTest extends IntegrationTestCase
 		], $isError);
 		self::assertTrue($isError);
 		self::assertIsString($message);
-		self::assertStringContainsString('[px, py, x, y]', $message);
+		self::assertStringContainsString('"points"', $message);
 
 		// The scale bar: 1 m from pixel (1193, 285) to (1328, 285); its left end goes to the plan origin.
 		$underlay = $this->client->call('set_floor_underlay', [

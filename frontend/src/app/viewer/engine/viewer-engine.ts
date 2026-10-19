@@ -1396,6 +1396,10 @@ export class ViewerEngine {
             return;
         }
         if (this.measuring) {
+            if (this.calibrating && this.measurement.b !== null) {
+                // Both calibration points are placed and reported; the panel takes it from here (or cancels).
+                return;
+            }
             const point = event.button === 0 && this.isTopDown() ? this.planPointOn(event, FloorPlane) : null;
             if (point !== null) {
                 this.measurement = measureClick(this.measurement, this.snapMeasure(point, event.shiftKey).point);

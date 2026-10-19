@@ -13,18 +13,18 @@ use FlatDesigner\Service\Editor\FieldReader;
  */
 final readonly class RoomCeiling
 {
-	/** The fields as a new room gets them: a flat white ceiling, no skirting. */
-	public const array Defaults = [
-		'ceilingMaterialId' => null,
+	/** A flat ceiling: no vault, and the beam fields at rest. */
+	private const array VaultDefaults = [
 		'vaultSpacing' => null,
 		'vaultAngle' => 0,
 		'vaultRise' => 130,
 		'beamWidth' => 80,
 		'beamDrop' => 30,
 		'beamMaterialId' => null,
-		'skirtingHeight' => null,
-		'skirtingMaterialId' => null,
 	];
+
+	/** The fields as a new room gets them: a flat white ceiling, no skirting. */
+	public const array Defaults = ['ceilingMaterialId' => null] + self::VaultDefaults + ['skirtingHeight' => null, 'skirtingMaterialId' => null];
 
 	private const int MinVaultSpacing = 300;
 	private const int MaxVaultSpacing = 3000;
@@ -50,13 +50,13 @@ final readonly class RoomCeiling
 			'skirtingMaterialId' => $skirtingHeight === null ? null : $this->material($fields, 'skirtingMaterialId'),
 		];
 		if ($ceilingHeight === null) {
-			return ['ceilingMaterialId' => null] + array_slice(self::Defaults, 1, 6) + $skirting;
+			return ['ceilingMaterialId' => null] + self::VaultDefaults + $skirting;
 		}
 
 		$ceiling = ['ceilingMaterialId' => $this->material($fields, 'ceilingMaterialId')];
 		$spacing = $fields->nullableInt('vaultSpacing', self::MinVaultSpacing, self::MaxVaultSpacing);
 		if ($spacing === null) {
-			return $ceiling + array_slice(self::Defaults, 1, 6) + $skirting;
+			return $ceiling + self::VaultDefaults + $skirting;
 		}
 
 		$rise = self::intOr($fields, 'vaultRise', 0, self::MaxVaultRise);
@@ -95,7 +95,7 @@ final readonly class RoomCeiling
 	/** The field, or its default when not given (states from before it existed). */
 	private static function intOr(FieldReader $fields, string $key, int $min, int $max): int
 	{
-		$default = self::Defaults[$key];
+		$default = self::VaultDefaults[$key];
 		assert(is_int($default));
 
 		return $fields->raw($key) === null ? $default : $fields->int($key, $min, $max);

@@ -139,6 +139,11 @@ export function tileOrigin(room: Pick<Room, 'tileOriginX' | 'tileOriginY'> | und
     return {x: room?.tileOriginX ?? 0, y: room?.tileOriginY ?? 0};
 }
 
+/** A polygon counter-clockwise, so its interior is on the left of every edge. */
+export function counterClockwise(polygon: readonly PlanPoint[]): PlanPoint[] {
+    return polygonSignedArea(polygon) >= 0 ? [...polygon] : [...polygon].reverse();
+}
+
 /**
  * Texture coordinates (metres) of a point on a tiled surface, on the grid whose joints cross at `origin`.
  * Point and origin are plan mm, `height` mm above the floor; the normal is in plan axes plus `up`. Floors

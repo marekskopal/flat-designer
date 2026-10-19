@@ -1,6 +1,6 @@
 import {PlanPoint, Room, Wall} from '@app/models/scene';
 
-import {pointInPolygon, polygonSignedArea, Vec2, wallFrame, wallGapsAlongEdge} from './plan-geometry';
+import {counterClockwise, pointInPolygon, Vec2, wallFrame, wallGapsAlongEdge} from './plan-geometry';
 
 /** Directions of a vaulted ceiling in plan: `u` along the beams, `v` across them (u turned 90° counter-clockwise). */
 export interface VaultFrame {
@@ -203,11 +203,6 @@ export function skirtingPieces(a: Vec2, b: Vec2, walls: readonly Wall[]): [numbe
         .filter((gap) => gap.bottom <= 0)
         .map((gap): [number, number] => [gap.from, gap.to]);
     return subtractSpans(wallSpansAlongEdge(a, b, walls), doorways);
-}
-
-/** A room's polygon counter-clockwise, so its interior is on the left of every edge. */
-export function counterClockwise(polygon: readonly PlanPoint[]): PlanPoint[] {
-    return polygonSignedArea(polygon) >= 0 ? [...polygon] : [...polygon].reverse();
 }
 
 /** An upright face where one room's ceiling is lower than its neighbour's across an edge without a wall. */

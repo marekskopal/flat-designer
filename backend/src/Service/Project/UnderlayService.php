@@ -13,8 +13,9 @@ use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 
 /**
- * The plan image under a floor's top view, for tracing. Setting or removing it bumps the project's revision, so
- * open viewers show it, but it is not a logged element change and has no undo.
+ * The plan image under a floor's top view, for tracing. Setting or removing it bumps the project's revision (checked
+ * against the caller's `If-Match` like an edit), so open viewers show it, but it is not a logged element change and
+ * has no undo.
  */
 final readonly class UnderlayService
 {
@@ -40,8 +41,11 @@ final readonly class UnderlayService
 		return $this->underlayRepository->findByFloor($floor->id);
 	}
 
-	/** Sets the floor's underlay; fields left out keep their value (or take the defaults on a new underlay). */
-	public function set(Floor $floor, UnderlayInputDto $input): FloorUnderlay
+	/**
+	 * Sets the floor's underlay; fields left out keep their value (or take the defaults on a new underlay).
+	 * `$baseRevision` is the revision the caller saw; a stale one is refused (409) like any other edit.
+	 */
+	public function set(Floor $floor, UnderlayInputDto $input, ?int $baseRevision = null): FloorUnderlay
 	{
 		$file = $this->projectFileProvider->find($floor->project, $input->fileId)
 			?? throw new ProjectException(sprintf('File %d is not a file of this project.', $input->fileId));
@@ -107,13 +111,13 @@ final readonly class UnderlayService
 		}
 		$underlay->updatedAt = $now;
 		$this->underlayRepository->persist($underlay);
-		$this->revisionService->bump($floor->project);
+		$this->revisionService->bump($floor->project, $baseRevision);
 
 		return $underlay;
 	}
 
 	/** Removes the floor's underlay; false when it had none. */
-	public function remove(Floor $floor): bool
+	public function remove(Floor $floor, ?int $baseRevision = null): bool
 	{
 		$underlay = $this->find($floor);
 		if ($underlay === null) {
@@ -121,7 +125,7 @@ final readonly class UnderlayService
 		}
 
 		$this->underlayRepository->delete($underlay);
-		$this->revisionService->bump($floor->project);
+		$this->revisionService->bump($floor->project, $baseRevision);
 
 		return true;
 	}

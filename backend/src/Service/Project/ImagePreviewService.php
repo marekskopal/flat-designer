@@ -17,8 +17,8 @@ final readonly class ImagePreviewService
 	public const int MinMaxSize = 64;
 	public const int MaxMaxSize = 4096;
 
-	/** Fewer grid lines than this many output pixels apart would hide the image. */
-	private const int MinGridSpacing = 12;
+	/** Grid lines closer than this many output pixels would overlap their labels (a five-digit label is 30 px wide). */
+	private const int MinGridSpacing = 36;
 
 	/** gd decodes the whole source into a 4-byte-per-pixel bitmap; above this the worker's memory_limit would be hit. */
 	private const int MaxSourcePixels = 30000000;

@@ -17,9 +17,6 @@ use RuntimeException;
 /** Files uploaded to a project (plans, photos, renders), so an agent can work from them. */
 final readonly class FileTools
 {
-	private const array TextMimeTypes = ['text/plain', 'text/csv', 'application/json'];
-	private const int MaxTextBytes = 200000;
-
 	public function __construct(
 		private ToolContext $context,
 		private ProjectFileProvider $projectFileProvider,
@@ -73,14 +70,10 @@ final readonly class FileTools
 		$file = $this->projectFileProvider->find($this->context->project($projectId), $fileId)
 			?? throw new RuntimeException(sprintf('File %d is not a file of project %d. Use list_project_files.', $fileId, $projectId));
 
-		if (in_array($file->mimeType, self::TextMimeTypes, true)) {
-			if ($file->size > self::MaxTextBytes) {
-				throw new RuntimeException(sprintf('File "%s" is larger than %d kB of text.', $file->filename, self::MaxTextBytes / 1000));
-			}
-
-			return [new TextContent($this->projectFileProvider->readContent($file))];
+		if ($this->projectFileProvider->isText($file)) {
+			return [new TextContent($this->projectFileProvider->readText($file))];
 		}
-		if (!str_starts_with($file->mimeType, 'image/') || $file->mimeType === 'image/svg+xml') {
+		if (!$this->projectFileProvider->isImage($file)) {
 			throw new RuntimeException(sprintf(
 				'File "%s" is %s; only images and text files can be read. Upload a PDF page as an image.',
 				$file->filename,

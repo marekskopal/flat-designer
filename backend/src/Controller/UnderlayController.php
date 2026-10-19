@@ -11,6 +11,7 @@ use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Response\ErrorResponse;
 use FlatDesigner\Response\NotFoundResponse;
 use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use FlatDesigner\Service\Project\ProjectProvider;
 use FlatDesigner\Service\Project\UnderlayService;
@@ -21,7 +22,7 @@ use MarekSkopal\Router\Attribute\RoutePut;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/** The plan image under a floor's top view: set (place or calibrate) and remove. Both answer the new revision. */
+/** The plan image under a floor's top view: set (place or calibrate) and remove. Both take `If-Match` and answer the new revision. */
 final readonly class UnderlayController
 {
 	private const string NotFound = 'Floor not found.';
@@ -45,8 +46,8 @@ final readonly class UnderlayController
 		$input = $this->requestService->getRequestBodyDto($request, UnderlayInputDto::class);
 
 		try {
-			$underlay = $this->underlayService->set($floor, $input);
-		} catch (ProjectException $e) {
+			$underlay = $this->underlayService->set($floor, $input, $this->requestService->getBaseRevision($request));
+		} catch (ProjectException | EditException $e) {
 			return new ErrorResponse($e->getMessage(), $e->getCode());
 		}
 
@@ -61,7 +62,11 @@ final readonly class UnderlayController
 			return new NotFoundResponse(self::NotFound);
 		}
 
-		$this->underlayService->remove($floor);
+		try {
+			$this->underlayService->remove($floor, $this->requestService->getBaseRevision($request));
+		} catch (EditException $e) {
+			return new ErrorResponse($e->getMessage(), $e->getCode());
+		}
 
 		return new JsonResponse(['underlay' => null, 'revision' => $floor->project->revision]);
 	}

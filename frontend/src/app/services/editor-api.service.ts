@@ -155,14 +155,23 @@ export class EditorApiService {
     }
 
     /** Sets the plan image under the floor's top view (not an element: no undo, no `If-Match`). */
-    public async setUnderlay(projectId: number, floorId: number, input: UnderlayInput): Promise<{underlay: Underlay; revision: number}> {
+    public async setUnderlay(
+        projectId: number,
+        floorId: number,
+        input: UnderlayInput,
+        baseRevision?: number,
+    ): Promise<{underlay: Underlay; revision: number}> {
         return firstValueFrom(
-            this.http.put<{underlay: Underlay; revision: number}>(`${environment.apiUrl}/projects/${projectId}/floors/${floorId}/underlay`, input),
+            this.http.put<{underlay: Underlay; revision: number}>(this.underlayUrl(projectId, floorId), input, {headers: ifMatch(baseRevision)}),
         );
     }
 
-    public async removeUnderlay(projectId: number, floorId: number): Promise<{revision: number}> {
-        return firstValueFrom(this.http.delete<{revision: number}>(`${environment.apiUrl}/projects/${projectId}/floors/${floorId}/underlay`));
+    public async removeUnderlay(projectId: number, floorId: number, baseRevision?: number): Promise<{revision: number}> {
+        return firstValueFrom(this.http.delete<{revision: number}>(this.underlayUrl(projectId, floorId), {headers: ifMatch(baseRevision)}));
+    }
+
+    private underlayUrl(projectId: number, floorId: number): string {
+        return `${environment.apiUrl}/projects/${projectId}/floors/${floorId}/underlay`;
     }
 
     public async itemKinds(): Promise<ItemKindInfo[]> {

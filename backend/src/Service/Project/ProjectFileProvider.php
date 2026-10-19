@@ -26,6 +26,11 @@ final readonly class ProjectFileProvider
 {
 	private const int MaxFilenameLength = 200;
 
+	/** Files whose content is read as text (`readText`). */
+	private const array TextMimeTypes = ['text/plain', 'text/csv', 'application/json'];
+
+	private const int MaxTextBytes = 200000;
+
 	public function __construct(
 		private ProjectFileRepository $projectFileRepository,
 		private FloorUnderlayRepository $underlayRepository,
@@ -88,6 +93,32 @@ final readonly class ProjectFileProvider
 	public function readContent(ProjectFile $file): string
 	{
 		return $this->fileStorage->get($file->storageKey);
+	}
+
+	public function isText(ProjectFile $file): bool
+	{
+		return in_array($file->mimeType, self::TextMimeTypes, true);
+	}
+
+	/** A raster image the viewer and the image tools can draw; SVG is not (it is a document, never served as one). */
+	public function isImage(ProjectFile $file): bool
+	{
+		return str_starts_with($file->mimeType, 'image/') && $file->mimeType !== 'image/svg+xml';
+	}
+
+	/** The content of a text file (plain, CSV, JSON) of a sensible size. */
+	public function readText(ProjectFile $file): string
+	{
+		if (!$this->isText($file)) {
+			throw new ProjectException(sprintf('File "%s" is %s, not a text file.', $file->filename, $file->mimeType));
+		}
+		if ($file->size > self::MaxTextBytes) {
+			throw new ProjectException(
+				sprintf('File "%s" is larger than %d kB of text.', $file->filename, intdiv(self::MaxTextBytes, 1000)),
+			);
+		}
+
+		return $this->readContent($file);
 	}
 
 	/** The floor underlays laid from the file go with it (ON DELETE CASCADE), so open viewers are told to reload. */
