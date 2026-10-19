@@ -117,6 +117,8 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
   floor, x points east and y points north.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south.
 - Walls are centre lines with a thickness. Openings are positioned by their offset along the wall from its start.
+- Openings are doors (single, double, sliding, pocket), passages without a door, and windows. Doors have a frame style
+  (lining, architrave, flush, none) and a handle (lever, knob, pull, none).
 
 ## AI agents (MCP)
 

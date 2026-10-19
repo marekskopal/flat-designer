@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Dto;
 
+use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
@@ -24,6 +26,8 @@ final readonly class OpeningDto
 		public ?OpeningSideEnum $side,
 		public bool $entrance,
 		public bool $walkable,
+		public DoorFrameStyleEnum $frameStyle,
+		public ?DoorHandleEnum $handle,
 	) {
 	}
 
@@ -42,6 +46,8 @@ final readonly class OpeningDto
 			side: $opening->side,
 			entrance: $opening->entrance,
 			walkable: $opening->walkable,
+			frameStyle: $opening->frameStyle,
+			handle: $opening->handle,
 		);
 	}
 }

@@ -27,8 +27,9 @@
             }
             <optgroup label="Building">
                 <option value="wall">Wall</option>
-                <option value="Door" [disabled]="selectedWall() === null">Door in selected wall</option>
-                <option value="Window" [disabled]="selectedWall() === null">Window in selected wall</option>
+                @for (type of openingTypes; track type[0]) {
+                    <option [value]="'opening:' + type[0]" [disabled]="selectedWall() === null">{{ type[1] }} in selected wall</option>
+                }
                 <option value="room">Room</option>
             </optgroup>
         </select>

@@ -14,7 +14,7 @@
                             <option value="">—</option>
                         }
                         @for (option of def.options ?? []; track option) {
-                            <option [value]="option" [selected]="option === value(def)">{{ option }}</option>
+                            <option [value]="option" [selected]="option === value(def)">{{ def.optionLabels?.[option] ?? option }}</option>
                         }
                     </select>
                 }

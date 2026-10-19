@@ -5,12 +5,14 @@ import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
 import {
     DoorFrameWidth,
+    isDoor,
     Leaf,
     LeafOpenAngle,
     MM,
     openingLeaves,
     polygonBounds,
     polygonSignedArea,
+    SlidingDoorOverlap,
     SquareEnds,
     tileOrigin,
     WallEnds,
@@ -186,7 +188,7 @@ export function buildWall(wall: Wall, materials: MaterialLibrary, sectionMateria
     }
 
     for (const opening of wall.openings) {
-        group.add(opening.type === 'Door' ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials));
+        group.add(isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials));
     }
 
     return group;
@@ -284,41 +286,109 @@ function clipGap(gap: WallGap, bandBottom: number, bandTop: number): Opening[] {
     }];
 }
 
+/** Casing boards of an `Architrave` door frame: width and thickness, mm. */
+const ArchitraveWidth = 70;
+const ArchitraveThickness = 15;
+
 function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
     group.name = `door:${opening.name}`;
     group.userData = {openingId: opening.id};
     const frameMaterial = materials.byCode('door-white');
-    const t = wall.thickness * MM;
-    const from = opening.offset * MM;
-    const width = opening.width * MM;
-    const height = opening.height * MM;
-    const lining = DoorFrameWidth * MM * 0.6;
-    const liningDepth = t + 0.02;
+    for (const part of doorFrame(opening, wall.thickness, frameMaterial)) {
+        group.add(part);
+    }
 
-    // Lining: two jambs and a head, slightly proud of both wall faces.
-    group.add(boxAt(frameMaterial, from, 0, -liningDepth / 2, lining, height, liningDepth));
-    group.add(boxAt(frameMaterial, from + width - lining, 0, -liningDepth / 2, lining, height, liningDepth));
-    group.add(boxAt(frameMaterial, from, height - lining, -liningDepth / 2, width, lining, liningDepth));
-
-    const leafHeight = Math.min(1970, opening.height - 20) * MM;
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
     for (const leaf of openingLeaves(opening, wall.thickness)) {
-        const leafGroup = leafPivot(leaf, LeafOpenAngle);
-        const leafWidth = leaf.width * MM;
-        const leafThickness = leaf.thickness * MM;
-        leafGroup.add(boxAt(frameMaterial, 0, 0, -leafThickness / 2, leafWidth, leafHeight, leafThickness));
-
-        // Lever handles on both faces near the free edge.
-        for (const face of [-1, 1]) {
-            const handle = boxAt(handleMaterial, leafWidth - 0.16, 1.03, 0, 0.12, 0.018, 0.018);
-            handle.position.z = face * (leafThickness / 2 + 0.03);
-            leafGroup.add(handle);
+        // A sliding leaf covers the opening's head too; the others stop short of the lining.
+        const leafHeight = (opening.type === 'SlidingDoor' ? opening.height + SlidingDoorOverlap : Math.min(1970, opening.height - 20)) * MM;
+        const pivot = leafPivot(leaf, 1);
+        pivot.add(boxAt(frameMaterial, 0, 0, (-leaf.thickness * MM) / 2, leaf.width * MM, leafHeight, leaf.thickness * MM));
+        for (const handle of doorHandles(opening, leaf, handleMaterial)) {
+            pivot.add(handle);
         }
-        group.add(leafGroup);
+        group.add(pivot);
+
+        if (opening.type === 'SlidingDoor') {
+            // The track the leaf hangs from, as long as its way.
+            const from = Math.min(leaf.along, leaf.along + leaf.travel) * MM;
+            const length = (leaf.width + Math.abs(leaf.travel)) * MM;
+            group.add(boxAt(handleMaterial, from, leafHeight + 0.01, -leaf.across * MM - 0.015, length, 0.04, 0.03));
+        }
     }
 
     return group;
+}
+
+/** Jambs and head of a door frame by its style (none for `None`), plus casings on both faces for `Architrave`. */
+function doorFrame(opening: Opening, wallThickness: number, material: THREE.Material): THREE.Mesh[] {
+    const style = opening.frameStyle ?? 'Lining';
+    if (style === 'None') {
+        return [];
+    }
+    const from = opening.offset * MM;
+    const width = opening.width * MM;
+    const height = opening.height * MM;
+    // A lining is slightly proud of both wall faces; a flush frame is thinner and level with them.
+    const lining = DoorFrameWidth * MM * (style === 'Flush' ? 0.4 : 0.6);
+    const depth = wallThickness * MM + (style === 'Flush' ? 0 : 0.02);
+    const parts = [
+        boxAt(material, from, 0, -depth / 2, lining, height, depth),
+        boxAt(material, from + width - lining, 0, -depth / 2, lining, height, depth),
+        boxAt(material, from, height - lining, -depth / 2, width, lining, depth),
+    ];
+    if (style === 'Architrave') {
+        const reach = ArchitraveWidth * MM - lining;
+        const thickness = ArchitraveThickness * MM;
+        for (const z of [depth / 2, -depth / 2 - thickness]) {
+            parts.push(
+                boxAt(material, from - reach, 0, z, ArchitraveWidth * MM, height + reach, thickness),
+                boxAt(material, from + width - lining, 0, z, ArchitraveWidth * MM, height + reach, thickness),
+                boxAt(material, from - reach, height - lining, z, width + 2 * reach, ArchitraveWidth * MM, thickness),
+            );
+        }
+    }
+    return parts;
+}
+
+/**
+ * Handles of a leaf, in its pivot's frame (x from the hinge along the leaf), on both faces: near the free edge of
+ * a swinging leaf, near the edge a sliding leaf leaves in the opening. Without a style a swinging leaf gets a
+ * lever and a sliding one a pull; the face of a sliding door towards the wall only takes a flush pull.
+ */
+function doorHandles(opening: Opening, leaf: Leaf, material: THREE.Material): THREE.Object3D[] {
+    const style = opening.handle ?? (leaf.motion === 'slide' ? 'Pull' : 'Lever');
+    if (style === 'None') {
+        return [];
+    }
+    const width = leaf.width * MM;
+    const t = leaf.thickness * MM;
+    const edge = leaf.motion === 'slide' && leaf.travel > 0 ? 0 : width;
+    const inward = edge === 0 ? 1 : -1;
+    const box = (w: number, h: number, d: number, x: number, y: number, z: number): THREE.Mesh =>
+        boxAt(material, x - w / 2, y - h / 2, z - d / 2, w, h, d);
+
+    return [-1, 1].map((face) => {
+        // Plan across is local −z, so a sliding leaf's face towards the wall is +z for a leaf on the left.
+        const flush = leaf.motion === 'slide' && (opening.type === 'PocketDoor' || face === leaf.swing);
+        if (flush) {
+            return box(0.03, 0.16, 0.004, edge + inward * 0.05, 1.0, face * (t / 2 + 0.002));
+        }
+        switch (style) {
+            case 'Knob': {
+                const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.05, 20), material);
+                knob.rotation.x = Math.PI / 2;
+                knob.position.set(edge + inward * 0.07, 1.0, face * (t / 2 + 0.025));
+                knob.castShadow = true;
+                return knob;
+            }
+            case 'Pull':
+                return box(0.02, 0.3, 0.02, edge + inward * 0.06, 1.0, face * (t / 2 + 0.035));
+            default:
+                return box(0.12, 0.018, 0.018, edge + inward * 0.1, 1.039, face * (t / 2 + 0.03));
+        }
+    });
 }
 
 function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
@@ -382,20 +452,34 @@ function buildSash(leaf: Leaf, bottom: number, height: number, frameMaterial: TH
 }
 
 /**
- * The group a leaf or sash turns in: at its hinge in the wall's local frame (x along, −z towards the wall's
- * left), tagged `userData.leaf` so `setLeafAngle` can swing it. Children are built along +x from the hinge.
+ * The group a leaf or sash moves in: at its hinge (a sliding leaf's start edge) in the wall's local frame (x
+ * along, −z towards the wall's left), tagged `userData.leaf` so `setLeafPose` can swing or slide it. Children
+ * are built along +x from the hinge. `open` is 0 closed … 1 open.
  */
-function leafPivot(leaf: Leaf, angle: number): THREE.Group {
+function leafPivot(leaf: Leaf, open: number): THREE.Group {
     const pivot = new THREE.Group();
     pivot.position.set(leaf.along * MM, 0.008, -leaf.across * MM);
     pivot.userData = {leaf};
-    setLeafAngle(pivot, angle);
+    setLeafPose(pivot, open);
     return pivot;
 }
 
-/** Swings a leaf built by `buildWall` (an object with `userData.leaf`) to `angle` radians (0 closed). */
-export function setLeafAngle(pivot: THREE.Object3D, angle: number): void {
-    const leaf = (pivot.userData as {leaf: Leaf}).leaf;
+/** The leaf of an object tagged by `buildWall`. */
+export function leafOf(pivot: THREE.Object3D): Leaf {
+    return (pivot.userData as {leaf: Leaf}).leaf;
+}
+
+/**
+ * Moves a leaf built by `buildWall` (an object with `userData.leaf`) to `open` (0 closed … 1 open): a swinging
+ * leaf turns to that share of `LeafOpenAngle`, a sliding one that share of its `travel` along the wall.
+ */
+export function setLeafPose(pivot: THREE.Object3D, open: number): void {
+    const leaf = leafOf(pivot);
+    if (leaf.motion === 'slide') {
+        pivot.position.x = (leaf.along + open * leaf.travel) * MM;
+        return;
+    }
+    const angle = open * LeafOpenAngle;
     // Plan across is local −z: the leaf points along (closed · cos, −swing · sin) in local x / z.
     pivot.rotation.y = Math.atan2(leaf.swing * Math.sin(angle), leaf.closed * Math.cos(angle));
 }

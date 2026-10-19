@@ -1,11 +1,11 @@
 import {Opening, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 
-import {setLeafAngle} from './building';
+import {setLeafPose} from './building';
 import {LeafStates} from './doors';
-import {LeafOpenAngle, openingLeaves} from './plan-geometry';
+import {MM, openingLeaves} from './plan-geometry';
 
-function opening(id: number, type: 'Door' | 'Window', walkable = false): Opening {
+function opening(id: number, type: Opening['type'], walkable = false): Opening {
     const placement = {offset: 100 + id * 1500, width: 1200, height: 2200, sillHeight: 0};
     return {id, name: '', type, ...placement, leafWidth: null, hinge: null, side: null, entrance: false, walkable};
 }
@@ -92,9 +92,26 @@ describe('LeafStates', () => {
         states.apply([pivot]);
         const expected = new THREE.Object3D();
         expected.userData = {leaf};
-        setLeafAngle(expected, LeafOpenAngle);
+        setLeafPose(expected, 1);
         expect(pivot.rotation.y).toBeCloseTo(expected.rotation.y);
         // Swinging to the right of the wall: plan −y, scene +z.
         expect(new THREE.Vector3(1, 0, 0).applyEuler(pivot.rotation).z).toBeGreaterThan(0.9);
+    });
+
+    it('opens every door kind with a leaf and slides the sliding ones', () => {
+        states.sync([wallWith([opening(1, 'SlidingDoor'), opening(2, 'Passage')])]);
+        expect(states.openness(1)).toBe(1);
+        expect(states.has(2)).toBe(false);
+
+        const leaf = {...openingLeaves({...opening(1, 'SlidingDoor'), hinge: 'End'}, 200)[0]};
+        const pivot = new THREE.Object3D();
+        pivot.userData = {leaf};
+        states.closeAll();
+        states.apply([pivot]);
+        expect(pivot.position.x).toBeCloseTo(leaf.along * MM);
+        states.setOpen(1, true, false);
+        states.apply([pivot]);
+        expect(pivot.position.x).toBeCloseTo((leaf.along + leaf.travel) * MM);
+        expect(pivot.rotation.y).toBe(0);
     });
 });

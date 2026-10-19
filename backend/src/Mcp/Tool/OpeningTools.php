@@ -10,10 +10,10 @@ use FlatDesigner\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 
-/** Doors and windows in walls. */
+/** Doors, passages and windows in walls. */
 final readonly class OpeningTools
 {
-	private const array Clearable = ['leafWidth', 'hinge', 'side'];
+	private const array Clearable = ['leafWidth', 'hinge', 'side', 'handle'];
 
 	public function __construct(private ToolContext $context, private SceneEditor $editor)
 	{
@@ -21,20 +21,22 @@ final readonly class OpeningTools
 
 	/**
 	 * @param int $wallId wall to cut the opening into (from get_floor)
-	 * @param string $type "Door" | "Window"
+	 * @param string $type "Door" (one swinging leaf) | "DoubleDoor" (two leaves hinged on the jambs) | "SlidingDoor" (leaf hung on a wall face, sliding along it) | "PocketDoor" (leaf sliding into the wall) | "Passage" (doorway without a leaf) | "Window"
 	 * @param int $offset mm from the wall's start point (along the centre line) to the near edge of the opening
-	 * @param int|null $width mm (door default 900, window 1200)
-	 * @param int|null $height mm (door default 1970, window 1200)
+	 * @param int|null $width mm (door default 900, double door 1400, window 1200)
+	 * @param int|null $height mm (door default 1970, passage 2100, window 1200)
 	 * @param int|null $sillHeight mm above the floor (door 0, window default 900)
-	 * @param int|null $leafWidth door leaf width, mm
-	 * @param string|null $hinge door: which edge carries the leaf, "Start" (nearer the wall start) | "End"
-	 * @param string|null $side door (or walkable window): side the leaf (sashes) swings to, "Left" | "Right" when walking from wall start to end
+	 * @param int|null $leafWidth Door: leaf width, mm; DoubleDoor: width of the leaf on `hinge` (none: equal halves)
+	 * @param string|null $hinge "Start" (the opening's edge nearer the wall start) | "End". Door: edge carrying the leaf; DoubleDoor: the wider leaf's edge; SlidingDoor/PocketDoor: the way the leaf slides open (the wall on that side must be free for it)
+	 * @param string|null $side "Left" | "Right" of the wall when walking from its start to end. Door/DoubleDoor/walkable window: where the leaves swing to; SlidingDoor: the face the leaf hangs on
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
+	 * @param string|null $frameStyle doors: "Lining" (default) | "Architrave" (lining with casings) | "Flush" (hidden frame) | "None" (bare hole, a passage's default)
+	 * @param string|null $handle doors with a leaf: "Lever" | "Knob" | "Pull" | "None"; none given: a lever, a pull on sliding and pocket doors
 	 */
 	#[McpTool(
 		name: 'add_opening',
-		description: 'Add a door or window to a wall. It must fit within the wall and not overlap another opening.',
+		description: 'Add a door, passage or window to a wall. It must fit within the wall and not overlap another opening.',
 	)]
 	public function addOpening(
 		int $projectId,
@@ -51,6 +53,8 @@ final readonly class OpeningTools
 		?string $side = null,
 		?bool $entrance = null,
 		?bool $walkable = null,
+		?string $frameStyle = null,
+		?string $handle = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -69,20 +73,28 @@ final readonly class OpeningTools
 				'side' => $side,
 				'entrance' => $entrance,
 				'walkable' => $walkable,
+				'frameStyle' => $frameStyle,
+				'handle' => $handle,
 			]),
 		);
 	}
 
 	/**
-	 * @param string|null $type "Door" | "Window"
+	 * @param string|null $type "Door" | "DoubleDoor" | "SlidingDoor" | "PocketDoor" | "Passage" | "Window" (see add_opening)
 	 * @param int|null $offset mm from the wall's start point
-	 * @param string|null $hinge "Start" | "End"
-	 * @param string|null $side "Left" | "Right" (door leaf or walkable window sashes)
+	 * @param int|null $leafWidth Door: leaf width, mm; DoubleDoor: width of the leaf on `hinge`
+	 * @param string|null $hinge "Start" | "End" (see add_opening: hinge edge, or the way a sliding leaf opens)
+	 * @param string|null $side "Left" | "Right" (swing side of door leaves and walkable window sashes; the face a sliding door hangs on)
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
-	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side"
+	 * @param string|null $frameStyle doors: "Lining" | "Architrave" | "Flush" | "None"
+	 * @param string|null $handle doors with a leaf: "Lever" | "Knob" | "Pull" | "None"
+	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle)
 	 */
-	#[McpTool(name: 'update_opening', description: 'Change a door or window (it stays on its wall). Only the given fields change.')]
+	#[McpTool(
+		name: 'update_opening',
+		description: 'Change a door, passage or window (it stays on its wall). Only the given fields change.',
+	)]
 	public function updateOpening(
 		int $projectId,
 		int $floorId,
@@ -98,6 +110,8 @@ final readonly class OpeningTools
 		?string $side = null,
 		?bool $entrance = null,
 		?bool $walkable = null,
+		?string $frameStyle = null,
+		?string $handle = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -117,13 +131,15 @@ final readonly class OpeningTools
 				'side' => $side,
 				'entrance' => $entrance,
 				'walkable' => $walkable,
+				'frameStyle' => $frameStyle,
+				'handle' => $handle,
 			], $clear, self::Clearable),
 		);
 	}
 
 	#[McpTool(
 		name: 'delete_opening',
-		description: 'Delete a door or window (can be undone).',
+		description: 'Delete a door, passage or window (can be undone).',
 		annotations: new ToolAnnotations(destructiveHint: true),
 	)]
 	public function deleteOpening(int $projectId, int $floorId, int $openingId): EditResultDto

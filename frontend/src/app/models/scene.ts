@@ -6,7 +6,9 @@ import {FurnitureDefinitionBody} from './furniture';
 export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
-export type OpeningType = 'Door' | 'Window';
+export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window';
+export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
+export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
 export type ItemKind =
     | 'BaseCabinet'
     | 'WallCabinet'
@@ -81,6 +83,12 @@ export interface Room {
     tileOriginY: number | null;
 }
 
+/**
+ * A door, passage or window in a wall. `side` is a side of the wall (walking from its start to end), `hinge` an
+ * edge of the opening: a door's leaf hangs on `hinge` and swings into `side`; a double door's leaves swing into
+ * `side` and `leafWidth` is the one on `hinge`; a sliding door hangs on the `side` face and a pocket door's leaf
+ * goes into the wall, both sliding open towards `hinge`.
+ */
 export interface Opening {
     id: number;
     name: string;
@@ -99,6 +107,10 @@ export interface Opening {
      * snapshots saved before the flag existed.
      */
     walkable?: boolean;
+    /** Missing in snapshots saved before doors had a frame style (then `Lining`) and handle. */
+    frameStyle?: DoorFrameStyle;
+    /** Null: the type's default, a lever (a pull on sliding and pocket doors). */
+    handle?: DoorHandle | null;
 }
 
 export interface Wall {

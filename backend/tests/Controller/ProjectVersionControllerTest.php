@@ -12,6 +12,7 @@ use FlatDesigner\Service\Project\ProjectSnapshotService;
 use FlatDesigner\Service\Project\ProjectVersionProvider;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
+use MarekSkopal\ORM\Database\DatabaseInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(ProjectVersionController::class)]
@@ -95,6 +96,38 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertIsInt($projectBody['floors'][0]['id']);
 		self::assertSame($before, $this->sceneWithoutIds($user, $project->id, $projectBody['floors'][0]['id']));
 		self::assertSame(2, $projectBody['latestVersion']);
+	}
+
+	public function testRestoreOfSnapshotWithoutDoorStyleUsesDefaults(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		Fixture::furnishFloor(Fixture::firstFloor($project));
+		$versionId = $this->saveVersion($user, $project->id);
+		// Snapshots saved before doors had a frame style and handle.
+		Fixture::service(DatabaseInterface::class)->getPdo()->exec(sprintf(
+			"UPDATE project_versions SET snapshot = REPLACE(REPLACE(snapshot, '\"frameStyle\":\"Architrave\",', ''), ',\"handle\":\"Knob\"', '') WHERE id = %d",
+			$versionId,
+		));
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+
+		$projectBody = $this->jsonBody($this->request('GET', self::path(Routes::Project, $project->id), authenticatedAs: $user));
+		self::assertIsList($projectBody['floors']);
+		self::assertIsArray($projectBody['floors'][0]);
+		self::assertIsInt($projectBody['floors'][0]['id']);
+		$scene = $this->jsonBody(
+			$this->request(
+				'GET',
+				self::path(Routes::ProjectFloorScene, $project->id, null, $projectBody['floors'][0]['id']),
+				authenticatedAs: $user,
+			),
+		);
+		self::assertIsList($scene['walls']);
+		self::assertIsArray($scene['walls'][0]);
+		self::assertIsList($scene['walls'][0]['openings']);
+		self::assertIsArray($scene['walls'][0]['openings'][0]);
+		self::assertSame(['Lining', null], [$scene['walls'][0]['openings'][0]['frameStyle'], $scene['walls'][0]['openings'][0]['handle']]);
 	}
 
 	public function testVersionsOfOtherProjectsAreNotFound(): void

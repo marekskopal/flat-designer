@@ -7,6 +7,8 @@ namespace FlatDesigner\Service\Project;
 use DateTimeImmutable;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
@@ -244,6 +246,11 @@ final readonly class ProjectSnapshotService
 				// Snapshots taken before the flags existed have neither.
 				$restored->entrance = $opening->raw('entrance') === true;
 				$restored->walkable = $opening->raw('walkable') === true;
+				// Nor the door's frame style and handle.
+				$restored->frameStyle = DoorFrameStyleEnum::tryFrom(
+					$opening->nullableString('frameStyle') ?? '',
+				) ?? DoorFrameStyleEnum::Lining;
+				$restored->handle = DoorHandleEnum::tryFrom($opening->nullableString('handle') ?? '');
 				$this->openingRepository->persist($restored);
 			}
 		}

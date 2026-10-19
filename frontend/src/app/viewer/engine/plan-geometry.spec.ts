@@ -6,6 +6,7 @@ import {
     entranceWalkStart,
     insertVertex,
     isSimplePolygon,
+    leafCollider,
     leafColliders,
     moveWallEnds,
     openingLeaves,
@@ -193,7 +194,9 @@ describe('door leaves', () => {
         collideCircle(point, radius, [...wallColliders([wall]), ...leafColliders([wall], () => openness)]);
 
     it('hangs a door leaf on its hinge, flush with the face it swings to', () => {
-        expect(openingLeaves(door, 200)).toEqual([{openingId: 1, index: 0, along: 1050, across: 80, closed: 1, swing: 1, width: 800, thickness: 40}]);
+        expect(openingLeaves(door, 200)).toEqual([
+            {openingId: 1, index: 0, motion: 'swing', along: 1050, across: 80, closed: 1, swing: 1, travel: 0, width: 800, thickness: 40},
+        ]);
         const mirrored = openingLeaves({...door, hinge: 'End', side: 'Right'}, 200)[0];
         expect([mirrored.along, mirrored.across, mirrored.closed, mirrored.swing]).toEqual([1850, -80, -1, -1]);
     });
@@ -228,6 +231,38 @@ describe('door leaves', () => {
     it('opens a French window only with its sashes', () => {
         expect(collide({x: 3100, y: 0}, 0).y).toBeLessThan(-150);
         expect(collide({x: 3100, y: 0}, 1)).toEqual({x: 3100, y: 0});
+    });
+});
+
+describe('door kinds', () => {
+    const at = (type: Opening['type'], fields: Partial<Opening> = {}): Opening => ({...opening(1000, 1400, 2020), id: 1, type, ...fields});
+
+    it('hangs a double door on both jambs, the hinge leaf as wide as leafWidth', () => {
+        expect(openingLeaves(at('DoubleDoor'), 200).map((l) => [l.along, l.closed, l.width])).toEqual([[1050, 1, 650], [2350, -1, 650]]);
+        const uneven = openingLeaves(at('DoubleDoor', {leafWidth: 900, hinge: 'End', side: 'Right'}), 200);
+        expect(uneven.map((l) => [l.width, l.across, l.swing])).toEqual([[400, -80, -1], [900, -80, -1]]);
+    });
+
+    it('slides a sliding door in front of its side face and a pocket door inside the wall, towards the hinge', () => {
+        const [sliding] = openingLeaves(at('SlidingDoor', {width: 900, hinge: 'End', side: 'Right'}), 200);
+        expect(sliding).toMatchObject({motion: 'slide', along: 950, across: -135, travel: 950, width: 1000, closed: 1});
+        const [pocket] = openingLeaves(at('PocketDoor', {width: 900}), 200);
+        expect(pocket).toMatchObject({motion: 'slide', along: 1000, across: 0, travel: -900, width: 900});
+    });
+
+    it('moves a sliding leaf along the wall, clearing the opening when open', () => {
+        const frame = wallFrame({startX: 0, startY: 0, endX: 4000, endY: 0});
+        const [leaf] = openingLeaves(at('SlidingDoor', {width: 900, hinge: 'End'}), 200);
+        const open = leafCollider(frame, leaf, 1);
+        expect([open.frame.start.x, open.frame.start.y, open.to]).toEqual([1900, 135, 1000]);
+        expect(open.frame.dir).toEqual({x: 1, y: 0});
+    });
+
+    it('gives a passage no leaves and leaves it open for the walker', () => {
+        const passage = at('Passage', {width: 900});
+        expect(openingLeaves(passage, 200)).toEqual([]);
+        const wall = {startX: 0, startY: 0, endX: 4000, endY: 0, thickness: 200, height: 2600, openings: [passage]} as Wall;
+        expect(wallColliders([wall]).map((c) => [c.from, c.to])).toEqual([[0, 1000], [1900, 4000]]);
     });
 });
 

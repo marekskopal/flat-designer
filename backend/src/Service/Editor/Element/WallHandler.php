@@ -174,7 +174,7 @@ final readonly class WallHandler implements ElementHandler
 	 * taken as it is when it differs from the current offsets; otherwise a moved start point shifts them so
 	 * every opening keeps its place on the plan.
 	 *
-	 * @param array{startX: int, startY: int, endX: int, endY: int, height: int, ...} $next
+	 * @param array{startX: int, startY: int, endX: int, endY: int, thickness: int, height: int, ...} $next
 	 * @return array<int, int> offset by opening id
 	 */
 	private function openingOffsets(Wall $wall, array $next, int $length, mixed $requested): array
@@ -201,8 +201,8 @@ final readonly class WallHandler implements ElementHandler
 		}
 
 		foreach ($openings as $opening) {
-			$offset = $offsets[$opening->id];
-			if ($offset < 0 || $offset + $opening->width > $length || $opening->sillHeight + $opening->height > $next['height']) {
+			// Sliding and pocket doors also keep the wall their open leaf slides along.
+			if (!OpeningPlacement::fits($opening, $offsets[$opening->id], $length, $next['thickness'], $next['height'])) {
 				throw EditException::invalid(sprintf('Opening "%s" would no longer fit the wall.', $opening->name));
 			}
 		}

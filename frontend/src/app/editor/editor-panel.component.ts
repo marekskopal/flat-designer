@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
 import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
-import {Group, Item, Opening, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
+import {Group, Item, Opening, OpeningType, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {polygonCentroid} from '@app/viewer/engine/plan-geometry';
@@ -8,6 +8,7 @@ import {ElementKind} from '@app/viewer/engine/selection';
 
 import {ActivityComponent} from './activity.component';
 import {EditorStore, newRoomFields} from './editor.store';
+import {OpeningTypeLabels} from './element-fields';
 import {FieldChange, InspectorComponent} from './inspector.component';
 
 const KindLabels: Record<ElementKind, string> = {
@@ -31,6 +32,15 @@ const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
 const NewRoomSize = 3000;
+/** Width of an opening added from the Add menu (the server's default, used to centre it on the wall). */
+const NewOpeningWidths: Record<OpeningType, number> = {
+    Door: 900,
+    DoubleDoor: 1400,
+    SlidingDoor: 900,
+    PocketDoor: 900,
+    Passage: 900,
+    Window: 1200,
+};
 
 /** Nudge steps for arrow keys, mm (Shift: coarse). */
 const NudgeStep = 10;
@@ -56,6 +66,7 @@ export class EditorPanelComponent {
     protected readonly editor = inject(EditorStore);
     protected readonly tools = Tools;
     protected readonly wallTypes = WallTypes;
+    protected readonly openingTypes = Object.entries(OpeningTypeLabels);
     private readonly alerts = inject(AlertService);
 
     /** The selected element's current state, or null when it is gone (deleted, other floor). */
@@ -185,12 +196,15 @@ export class EditorPanelComponent {
                 endX: center.x + NewWallLength / 2,
                 endY: center.y,
             });
-        } else if (choice === 'Door' || choice === 'Window') {
+        } else if (choice.startsWith('opening:')) {
             const wall = this.selectedWall();
             if (wall !== null) {
+                const type = choice.slice(8) as OpeningType;
                 const length = Math.floor(Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY));
-                const width = choice === 'Door' ? 900 : 1200;
-                void this.editor.create('opening', {wallId: wall.id, type: choice, offset: Math.max(0, Math.round((length - width) / 2))});
+                const width = NewOpeningWidths[type];
+                // Centred; a sliding or pocket door opens towards the wall start, so it sits past the middle.
+                const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
+                void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
         } else if (choice === 'room') {
             const half = NewRoomSize / 2;

@@ -258,7 +258,7 @@ export interface WallCollider {
 }
 
 /**
- * Floor-level footprints of the walls; doors and walkable French windows leave gaps (their leaves are
+ * Floor-level footprints of the walls; doorways and walkable French windows leave gaps (their leaves are
  * `leafColliders`), other windows count as solid wall.
  */
 export function wallColliders(walls: readonly Wall[]): WallCollider[] {
@@ -268,7 +268,7 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
         if (!(frame.length > 0)) {
             continue;
         }
-        const doors = wall.openings.filter(hasLeaves);
+        const doors = wall.openings.filter(isPassable);
         for (const piece of wallPieces(frame.length, wall.height, doors)) {
             if (piece.bottom < WalkableStep) {
                 colliders.push({frame, from: piece.from, to: piece.to, halfThickness: wall.thickness / 2});
@@ -281,6 +281,10 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
 /** Door frame on each side of a door leaf, mm; the leaf fills the rest of the opening unless `leafWidth` says otherwise. */
 export const DoorFrameWidth = 50;
 export const DoorLeafThickness = 40;
+/** How far a sliding door's leaf overlaps the opening on each edge (the PHP `OpeningPlacement::SlidingDoorOverlap`). */
+export const SlidingDoorOverlap = 50;
+/** Gap between a sliding door's leaf and the wall face it hangs on, mm. */
+export const SlidingDoorGap = 15;
 /** Frame bar around a French window; its sashes hinge on the inside of it (mm). */
 export const WindowFrameBar = 70;
 export const SashThickness = 60;
@@ -288,71 +292,131 @@ export const SashThickness = 60;
 export const LeafOpenAngle = (80 * Math.PI) / 180;
 
 /**
- * A swinging door leaf or French window sash, on its wall's centre-line frame (mm). At angle `a` (0 closed,
- * `LeafOpenAngle` open) it runs from the hinge along `closed · cos a` and across `swing · sin a`.
+ * A door leaf or French window sash, on its wall's centre-line frame (mm). A swinging one, at angle `a` (0
+ * closed, `LeafOpenAngle` open), runs from the hinge along `closed · cos a` and across `swing · sin a`. A sliding
+ * one runs from `along` towards the wall end and, open, has moved `travel` along the wall.
  */
 export interface Leaf {
     openingId: number;
-    /** Index of the sash (0, 1) of a French window; 0 for a door. */
+    /** Index of the leaf (0, 1) of a double door or French window; 0 otherwise. */
     index: number;
-    /** The hinge axis: mm along the wall from its start, mm across it (+ towards `normal`). */
+    motion: 'swing' | 'slide';
+    /** The hinge axis (a sliding leaf's start edge, closed): mm along the wall from its start, mm across it (+ towards `normal`). */
     along: number;
     across: number;
-    /** From the hinge to the free edge when closed: +1 towards the wall end, −1 towards its start. */
+    /** From the hinge to the free edge when closed: +1 towards the wall end, −1 towards its start; +1 when sliding. */
     closed: 1 | -1;
-    /** Side it swings into: +1 the left of the wall direction (`normal`), −1 the right. */
+    /** Side it swings into, or a sliding door hangs on: +1 the left of the wall direction (`normal`), −1 the right. */
     swing: 1 | -1;
+    /** How far a sliding leaf moves when open, mm along the wall (signed); 0 for a swinging one. */
+    travel: number;
     width: number;
     thickness: number;
 }
 
-/** Doors and walkable French windows: openings that open and can be walked through. */
+/** Doorways of every kind, passages included. */
+export function isDoor(opening: Pick<Opening, 'type'>): boolean {
+    return opening.type !== 'Window';
+}
+
+/** Doorways and walkable French windows: openings a walker can pass through. */
+export function isPassable(opening: Opening): boolean {
+    return isDoor(opening) || opening.walkable === true;
+}
+
+/** Doors with a leaf and walkable French windows: openings that open. */
 export function hasLeaves(opening: Opening): boolean {
-    return opening.type === 'Door' || opening.walkable === true;
+    return isPassable(opening) && opening.type !== 'Passage';
 }
 
 /**
- * The leaves of an opening: a door's one leaf on its `hinge` edge, or a walkable French window's two sashes
- * hinged on its jambs; both swing into `side` (default left). Closed, a leaf lies flush with that wall face
- * (a sash inside the window frame). Other windows have none.
+ * The leaves of an opening. A door's one leaf hangs on its `hinge` edge, a double door's two and a walkable
+ * French window's two sashes on its jambs; they swing into `side` (default left) and, closed, lie flush with
+ * that wall face (a sash inside the window frame). A sliding door's leaf hangs in front of the `side` face, a
+ * pocket door's in the wall; both slide open towards `hinge` until they clear the opening. Passages and other
+ * windows have none.
  */
 export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
     const swing: Leaf['swing'] = opening.side === 'Right' ? -1 : 1;
-    if (opening.type === 'Door') {
-        const width = opening.leafWidth ?? opening.width - 2 * DoorFrameWidth;
-        const clearance = (opening.width - width) / 2;
-        const atEnd = opening.hinge === 'End';
-        return [{
-            openingId: opening.id,
-            index: 0,
-            along: atEnd ? opening.offset + opening.width - clearance : opening.offset + clearance,
-            across: swing * (wallThickness / 2 - DoorLeafThickness / 2),
-            closed: atEnd ? -1 : 1,
-            swing,
-            width,
-            thickness: DoorLeafThickness,
-        }];
+    const towardsEnd = opening.hinge === 'End';
+    const base = {openingId: opening.id, index: 0, swing, travel: 0};
+    switch (opening.type) {
+        case 'Door': {
+            const width = opening.leafWidth ?? opening.width - 2 * DoorFrameWidth;
+            const clearance = (opening.width - width) / 2;
+            return [{
+                ...base,
+                motion: 'swing',
+                along: towardsEnd ? opening.offset + opening.width - clearance : opening.offset + clearance,
+                across: swing * (wallThickness / 2 - DoorLeafThickness / 2),
+                closed: towardsEnd ? -1 : 1,
+                width,
+                thickness: DoorLeafThickness,
+            }];
+        }
+        case 'DoubleDoor': {
+            const space = opening.width - 2 * DoorFrameWidth;
+            const active = Math.min(opening.leafWidth ?? space / 2, space);
+            const widths = towardsEnd ? [space - active, active] : [active, space - active];
+            const across = swing * (wallThickness / 2 - DoorLeafThickness / 2);
+            const leaf = {...base, motion: 'swing' as const, across, thickness: DoorLeafThickness};
+            return [
+                {...leaf, along: opening.offset + DoorFrameWidth, closed: 1 as const, width: widths[0]},
+                {...leaf, index: 1, along: opening.offset + opening.width - DoorFrameWidth, closed: -1 as const, width: widths[1]},
+            ].filter((l) => l.width > 0);
+        }
+        case 'SlidingDoor':
+            return [{
+                ...base,
+                motion: 'slide',
+                along: opening.offset - SlidingDoorOverlap,
+                across: swing * (wallThickness / 2 + SlidingDoorGap + DoorLeafThickness / 2),
+                closed: 1,
+                travel: (towardsEnd ? 1 : -1) * (opening.width + SlidingDoorOverlap),
+                width: opening.width + 2 * SlidingDoorOverlap,
+                thickness: DoorLeafThickness,
+            }];
+        case 'PocketDoor':
+            return [{
+                ...base,
+                motion: 'slide',
+                along: opening.offset,
+                across: 0,
+                closed: 1,
+                travel: (towardsEnd ? 1 : -1) * opening.width,
+                width: opening.width,
+                thickness: DoorLeafThickness,
+            }];
+        case 'Passage':
+            return [];
+        case 'Window': {
+            if (opening.walkable !== true) {
+                return [];
+            }
+            const width = (opening.width - 2 * WindowFrameBar) / 2;
+            const across = swing * (WindowFrameBar / 2 - SashThickness / 2);
+            const sash = {...base, motion: 'swing' as const, across, width, thickness: SashThickness};
+            return [
+                {...sash, along: opening.offset + WindowFrameBar, closed: 1},
+                {...sash, index: 1, along: opening.offset + opening.width - WindowFrameBar, closed: -1},
+            ];
+        }
     }
-    if (opening.walkable !== true) {
-        return [];
-    }
-    const width = (opening.width - 2 * WindowFrameBar) / 2;
-    const across = swing * (WindowFrameBar / 2 - SashThickness / 2);
-    const sash = {openingId: opening.id, across, swing, width, thickness: SashThickness};
-    return [
-        {...sash, index: 0, along: opening.offset + WindowFrameBar, closed: 1},
-        {...sash, index: 1, along: opening.offset + opening.width - WindowFrameBar, closed: -1},
-    ];
 }
 
-/** Footprint of a leaf at `angle` (radians) as a thin wall from its hinge along the leaf. */
-export function leafCollider(frame: WallFrame, leaf: Leaf, angle: number): WallCollider {
+/**
+ * Footprint of a leaf as a thin wall from its hinge (a sliding leaf's start edge) along the leaf; `open` is
+ * 0 closed … 1 open: the angle of a swinging leaf over `LeafOpenAngle`, the way of a sliding one along `travel`.
+ */
+export function leafCollider(frame: WallFrame, leaf: Leaf, open: number): WallCollider {
+    const angle = leaf.motion === 'swing' ? open * LeafOpenAngle : 0;
     const along = leaf.closed * Math.cos(angle);
     const across = leaf.swing * Math.sin(angle);
     const dir = {x: frame.dir.x * along + frame.normal.x * across, y: frame.dir.y * along + frame.normal.y * across};
+    const hinge = leaf.motion === 'slide' ? leaf.along + open * leaf.travel : leaf.along;
     return {
         frame: {
-            start: pointOnWall(frame, leaf.along, leaf.across),
+            start: pointOnWall(frame, hinge, leaf.across),
             dir,
             normal: {x: -dir.y, y: dir.x},
             length: leaf.width,
@@ -364,7 +428,7 @@ export function leafCollider(frame: WallFrame, leaf: Leaf, angle: number): WallC
     };
 }
 
-/** Footprints of all door leaves and sashes; `openness` (0 closed … 1 open) of an opening sets their angle. */
+/** Footprints of all door leaves and sashes; `openness` (0 closed … 1 open) of an opening sets their angle or way. */
 export function leafColliders(walls: readonly Wall[], openness: (openingId: number) => number): WallCollider[] {
     return walls.flatMap((wall) => {
         const frame = wallFrame(wall);
@@ -372,7 +436,7 @@ export function leafColliders(walls: readonly Wall[], openness: (openingId: numb
             return [];
         }
         return wall.openings.flatMap((opening) =>
-            openingLeaves(opening, wall.thickness).map((leaf) => leafCollider(frame, leaf, openness(opening.id) * LeafOpenAngle)),
+            openingLeaves(opening, wall.thickness).map((leaf) => leafCollider(frame, leaf, openness(opening.id))),
         );
     });
 }
@@ -439,7 +503,7 @@ const EntranceStep = 700;
  * Null when there is no such door.
  */
 export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]): WalkStart | null {
-    const doors = walls.flatMap((wall) => wall.openings.filter((o) => o.type === 'Door').map((opening) => ({wall, opening})));
+    const doors = walls.flatMap((wall) => wall.openings.filter(isDoor).map((opening) => ({wall, opening})));
     const door = doors.find((d) => d.opening.entrance) ?? doors.find((d) => d.wall.type === 'Exterior');
     if (door === undefined) {
         return null;

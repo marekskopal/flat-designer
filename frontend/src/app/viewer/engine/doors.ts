@@ -1,10 +1,10 @@
 import {Wall} from '@app/models/scene';
 import * as THREE from 'three';
 
-import {setLeafAngle} from './building';
-import {hasLeaves, Leaf, LeafOpenAngle} from './plan-geometry';
+import {leafOf, setLeafPose} from './building';
+import {hasLeaves, isDoor} from './plan-geometry';
 
-/** Seconds a leaf takes to swing fully open or closed. */
+/** Seconds a leaf takes to swing or slide fully open or closed. */
 const SwingDuration = 0.45;
 
 interface LeafState {
@@ -16,8 +16,8 @@ interface LeafState {
 }
 
 /**
- * How far each door and walkable French window is open (session only, never stored), animated towards its
- * target. The display state, shown outside the walkthrough, is doors open and French windows closed.
+ * How far each door with a leaf and walkable French window is open (session only, never stored), animated
+ * towards its target. The display state, shown outside the walkthrough, is doors open and French windows closed.
  */
 export class LeafStates {
     private readonly states = new Map<number, LeafState>();
@@ -39,7 +39,7 @@ export class LeafStates {
         for (const opening of walls.flatMap((w) => w.openings).filter(hasLeaves)) {
             present.add(opening.id);
             if (!this.states.has(opening.id)) {
-                const display = opening.type === 'Door' ? 1 : 0;
+                const display = isDoor(opening) ? 1 : 0;
                 this.states.set(opening.id, {current: display, target: display, display});
             }
         }
@@ -50,7 +50,7 @@ export class LeafStates {
         }
     }
 
-    /** Whether the opening opens at all (a door or a walkable French window). */
+    /** Whether the opening opens at all (a door with a leaf or a walkable French window). */
     public has(openingId: number): boolean {
         return this.states.has(openingId);
     }
@@ -60,7 +60,7 @@ export class LeafStates {
         return this.states.get(openingId)?.current ?? 0;
     }
 
-    /** How far the leaves are swung, 0 … 1 of `LeafOpenAngle`: `openness` eased, for the meshes and colliders alike. */
+    /** How far the leaves are swung or slid, 0 … 1: `openness` eased, for the meshes and colliders alike. */
     public swing(openingId: number): number {
         return easeSwing(this.openness(openingId));
     }
@@ -107,11 +107,10 @@ export class LeafStates {
         return moved;
     }
 
-    /** Swings the leaves (objects tagged by `buildWall` with `userData.leaf`) to their openings' state, eased. */
+    /** Moves the leaves (objects tagged by `buildWall` with `userData.leaf`) to their openings' state, eased. */
     public apply(leaves: readonly THREE.Object3D[]): void {
         for (const pivot of leaves) {
-            const leaf = (pivot.userData as {leaf: Leaf}).leaf;
-            setLeafAngle(pivot, this.swing(leaf.openingId) * LeafOpenAngle);
+            setLeafPose(pivot, this.swing(leafOf(pivot).openingId));
         }
     }
 }

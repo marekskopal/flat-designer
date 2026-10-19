@@ -188,6 +188,14 @@ final class McpServerTest extends IntegrationTestCase
 		);
 		self::assertSame(['Claude Code', 'Claude Code', 'Claude Code', 'Claude Code'], array_column($changes, 'actorName'));
 		self::assertSame(['Agent', 'Agent', 'Agent', 'Agent'], array_column($changes, 'actorType'));
+
+		$slidingDoor = $this->client->call(
+			'add_opening',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'wallId' => $wallId, 'type' => 'SlidingDoor', 'offset' => 100, 'width' => 600, 'hinge' => 'End', 'side' => 'Right'],
+		);
+		self::assertIsArray($slidingDoor);
+		self::assertIsArray($slidingDoor['change']);
+		self::assertSame('Added sliding door "Sliding door"', $slidingDoor['change']['summary']);
 	}
 
 	public function testDomainErrorsReachTheAgentAsToolErrors(): void

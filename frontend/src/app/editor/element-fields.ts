@@ -1,3 +1,4 @@
+import {OpeningType} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {isCabinet} from './cabinet-params';
@@ -23,6 +24,16 @@ export type FieldType =
     | 'definition'
     | 'custom';
 
+/** Opening types in the order of the inspector and the Add menu. */
+export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
+    Door: 'Door',
+    DoubleDoor: 'Double door',
+    SlidingDoor: 'Sliding door',
+    PocketDoor: 'Pocket door',
+    Passage: 'Passage',
+    Window: 'Window',
+};
+
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
     key: string;
@@ -31,6 +42,8 @@ export interface FieldDef {
     /** May be cleared (empty input = null). */
     nullable?: boolean;
     options?: readonly string[];
+    /** Shown instead of the option values that are not readable as they are. */
+    optionLabels?: Readonly<Record<string, string>>;
     unit?: string;
     /** Shown in pairs on one row. */
     half?: boolean;
@@ -80,14 +93,55 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     opening: [
         {key: 'name', label: 'Name', type: 'text'},
-        {key: 'type', label: 'Type', type: 'select', options: ['Door', 'Window']},
+        {key: 'type', label: 'Type', type: 'select', options: Object.keys(OpeningTypeLabels), optionLabels: OpeningTypeLabels},
         {key: 'offset', label: 'Offset from wall start', type: 'int', unit: 'mm'},
         {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
         {key: 'sillHeight', label: 'Sill', type: 'int', unit: 'mm', half: true},
-        {key: 'leafWidth', label: 'Leaf width', type: 'int', unit: 'mm', nullable: true, half: true},
-        {key: 'hinge', label: 'Hinge', type: 'select', options: ['Start', 'End'], nullable: true, half: true},
-        {key: 'side', label: 'Swing side', type: 'select', options: ['Left', 'Right'], nullable: true, half: true},
+        {
+            key: 'leafWidth',
+            label: 'Leaf width (the hinge leaf of a double door)',
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            half: true,
+            when: (element) => element['type'] === 'Door' || element['type'] === 'DoubleDoor',
+        },
+        {
+            key: 'hinge',
+            label: 'Hinge (sliding: opens towards)',
+            type: 'select',
+            options: ['Start', 'End'],
+            nullable: true,
+            half: true,
+            when: (element) => element['type'] !== 'Passage',
+        },
+        {
+            key: 'side',
+            label: 'Swing side (sliding: hangs on)',
+            type: 'select',
+            options: ['Left', 'Right'],
+            nullable: true,
+            half: true,
+            when: (element) => element['type'] !== 'Passage' && element['type'] !== 'PocketDoor',
+        },
+        {
+            key: 'frameStyle',
+            label: 'Frame',
+            type: 'select',
+            options: ['Lining', 'Architrave', 'Flush', 'None'],
+            half: true,
+            when: (element) => element['type'] !== 'Window',
+        },
+        {
+            key: 'handle',
+            label: 'Handle',
+            type: 'select',
+            options: ['Lever', 'Knob', 'Pull', 'None'],
+            nullable: true,
+            half: true,
+            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Passage',
+        },
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
     ],

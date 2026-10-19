@@ -37,8 +37,14 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   floor, x points east and y points north. The viewer converts with `MM` (0.001) and maps plan y to scene −z.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
-- Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. A door's
-  `hinge` is Start or End of the opening; `side` is Left or Right of the wall direction.
+- Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
+  Start or End of the opening; `side` is Left or Right of the wall direction.
+- Opening types (`OpeningTypeEnum`): `Door`, `DoubleDoor`, `SlidingDoor`, `PocketDoor`, `Passage` (no leaf) and
+  `Window`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
+  `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
+  `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
+  and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
+  the type's default).
 - Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
   allows the owner or an admin and answers 404 otherwise.
 - Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.
@@ -162,11 +168,13 @@ format is the text in `FurnitureTools::Format`.
 - Without a fine pointer (`walkthroughTouchMode()`), a finger drag turns the view and `WalkPadComponent` replaces the
   keyboard: corner arrows act as held W/A/S/D keys, plus a "Back to 3D" button.
 - Collisions are computed in plan mm against:
-  - `wallColliders()`: wall pieces at floor level. Doors and `walkable` windows are gaps; other windows are solid.
-  - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle.
+  - `wallColliders()`: wall pieces at floor level. Doorways (passages included) and `walkable` windows are gaps;
+    other windows are solid.
+  - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle, or its current
+    position along the wall for a sliding or pocket leaf (`Leaf.motion`).
   - Items do not block.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
-  tagged `userData.leaf`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
+  tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.
 - Outside the walk, doors show open and French windows closed. A walk starts with everything closed except the
   entrance.

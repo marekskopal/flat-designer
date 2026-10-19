@@ -234,6 +234,94 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertCount(2, $walls[0]['openings']);
 	}
 
+	public function testDoorKindsGetTheirDefaultsAndNormalisedFields(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 6000, 'endY' => 0, 'thickness' => 150]);
+
+		$double = $this->create('openings', ['wallId' => self::id($wall), 'type' => 'DoubleDoor', 'offset' => 100]);
+		self::assertSame(['Double door', 1400, null, 'Start', 'Left', 'Lining', null], [
+			$double['name'],
+			$double['width'],
+			$double['leafWidth'],
+			$double['hinge'],
+			$double['side'],
+			$double['frameStyle'],
+			$double['handle'],
+		]);
+
+		$passage = $this->create(
+			'openings',
+			['wallId' => self::id($wall), 'type' => 'Passage', 'offset' => 2000, 'leafWidth' => 800, 'hinge' => 'End', 'handle' => 'Knob'],
+		);
+		self::assertSame([2100, null, null, null, 'None', null], [
+			$passage['height'],
+			$passage['leafWidth'],
+			$passage['hinge'],
+			$passage['side'],
+			$passage['frameStyle'],
+			$passage['handle'],
+		]);
+
+		$sliding = $this->create(
+			'openings',
+			[
+				'wallId' => self::id(
+					$wall,
+				),
+				'type' => 'SlidingDoor',
+				'offset' => 4000,
+				'hinge' => 'End',
+				'handle' => 'Pull',
+				'frameStyle' => 'Architrave'],
+		);
+		self::assertSame(
+			['End', null, 'Pull', 'Architrave'],
+			[$sliding['hinge'], $sliding['leafWidth'], $sliding['handle'], $sliding['frameStyle']],
+		);
+
+		$changes = $this->jsonBody($this->edit('PATCH', 'openings', self::id($sliding), ['type' => 'Door']));
+		self::assertIsArray($changes['change']);
+		self::assertSame('Changed door "Sliding door" (type)', $changes['change']['summary']);
+	}
+
+	public function testSlidingAndPocketDoorsNeedWallBesideThem(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'thickness' => 150]);
+		$wallId = self::id($wall);
+
+		// Opening at 1000–1900 sliding towards the end needs 1900–2900 free for its 1000 mm leaf.
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'openings',
+				body: ['wallId' => $wallId, 'type' => 'SlidingDoor', 'offset' => 1200, 'hinge' => 'End'],
+			)->getStatusCode(),
+		);
+		$sliding = $this->create('openings', ['wallId' => $wallId, 'type' => 'SlidingDoor', 'offset' => 1000, 'hinge' => 'End']);
+
+		// Nothing may sit where the leaf parks, and the wall cannot be shortened under it.
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'openings',
+				body: ['wallId' => $wallId, 'type' => 'Window', 'offset' => 2000, 'width' => 600],
+			)->getStatusCode(),
+		);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['endX' => 2800])->getStatusCode());
+		$this->create('openings', ['wallId' => $wallId, 'type' => 'Window', 'offset' => 100, 'width' => 600]);
+
+		// A pocket door needs a wall thick enough for the pocket, and keeps it that thick.
+		$thin = $this->create('walls', ['startX' => 0, 'startY' => 1000, 'endX' => 3000, 'endY' => 1000, 'thickness' => 80]);
+		self::assertSame(
+			422,
+			$this->edit('POST', 'openings', body: ['wallId' => self::id($thin), 'type' => 'PocketDoor', 'offset' => 1000])->getStatusCode(),
+		);
+		self::assertSame(200, $this->edit('PATCH', 'openings', self::id($sliding), ['type' => 'PocketDoor'])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 90])->getStatusCode());
+	}
+
 	public function testMovingWallStartKeepsOpeningsInPlace(): void
 	{
 		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0]);
