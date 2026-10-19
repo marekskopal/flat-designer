@@ -18,15 +18,18 @@ use FlatDesigner\Service\Editor\PolygonValidator;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * Rooms: floor outline, ceiling height, floor material and wall finishes. Items keep their link to a
+ * Rooms: floor outline, ceiling height, floor material, wall finishes, ceiling and skirting (`RoomCeiling`). Items keep their link to a
  * deleted room (hidden in the scene) so undo restores both.
  */
 final readonly class RoomHandler implements ElementHandler
 {
 	private const int MaxWallFinishes = 10;
 
-	public function __construct(private RoomRepository $roomRepository, private MaterialResolver $materialResolver)
-	{
+	public function __construct(
+		private RoomRepository $roomRepository,
+		private MaterialResolver $materialResolver,
+		private RoomCeiling $ceiling,
+	) {
 	}
 
 	public function type(): ElementTypeEnum
@@ -37,7 +40,18 @@ final readonly class RoomHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['code', 'name', 'type', 'polygon', 'ceilingHeight', 'floorMaterialId', 'wallFinishes', 'tileOriginX', 'tileOriginY'];
+		return [
+			'code',
+			'name',
+			'type',
+			'polygon',
+			'ceilingHeight',
+			'floorMaterialId',
+			'wallFinishes',
+			'tileOriginX',
+			'tileOriginY',
+			...array_keys(RoomCeiling::Defaults),
+		];
 	}
 
 	/** @return list<string> */
@@ -59,7 +73,7 @@ final readonly class RoomHandler implements ElementHandler
 			'wallFinishes' => [],
 			'tileOriginX' => null,
 			'tileOriginY' => null,
-		];
+		] + RoomCeiling::Defaults;
 	}
 
 	public function find(Floor $floor, int $id): ?Room
@@ -86,18 +100,19 @@ final readonly class RoomHandler implements ElementHandler
 		$fields = new FieldReader($state);
 		$floorMaterialId = $fields->nullableId('floorMaterialId');
 		$this->materialResolver->resolve($floorMaterialId);
+		$ceilingHeight = $fields->nullableInt('ceilingHeight', 1000, State::MaxSize);
 
 		return [
 			'code' => $fields->string('code', 32),
 			'name' => $fields->string('name', 255),
 			'type' => $fields->enum('type', RoomTypeEnum::class)->value,
 			'polygon' => PolygonValidator::validate($fields->raw('polygon'), State::CoordinateLimit),
-			'ceilingHeight' => $fields->nullableInt('ceilingHeight', 1000, State::MaxSize),
+			'ceilingHeight' => $ceilingHeight,
 			'floorMaterialId' => $floorMaterialId,
 			'wallFinishes' => $this->wallFinishes($fields->raw('wallFinishes')),
 			'tileOriginX' => $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit),
 			'tileOriginY' => $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit),
-		];
+		] + $this->ceiling->fields($ceilingHeight, $fields);
 	}
 
 	public function create(Floor $floor, array $state): Room
@@ -151,6 +166,15 @@ final readonly class RoomHandler implements ElementHandler
 		$room->wallFinishes = $wallFinishes === [] || $wallFinishes === null ? null : json_encode($wallFinishes, JSON_THROW_ON_ERROR);
 		$room->tileOriginX = $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit);
 		$room->tileOriginY = $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit);
+		$room->ceilingMaterial = $this->materialResolver->resolve($fields->nullableId('ceilingMaterialId'));
+		$room->vaultSpacing = $fields->nullableInt('vaultSpacing', 1, State::MaxSize);
+		$room->vaultAngle = $fields->int('vaultAngle', 0, 179);
+		$room->vaultRise = $fields->int('vaultRise', 0, State::MaxSize);
+		$room->beamWidth = $fields->int('beamWidth', 0, State::MaxSize);
+		$room->beamDrop = $fields->int('beamDrop', 0, State::MaxSize);
+		$room->beamMaterial = $this->materialResolver->resolve($fields->nullableId('beamMaterialId'));
+		$room->skirtingHeight = $fields->nullableInt('skirtingHeight', 1, State::MaxSize);
+		$room->skirtingMaterial = $this->materialResolver->resolve($fields->nullableId('skirtingMaterialId'));
 		$this->roomRepository->persist($room);
 	}
 

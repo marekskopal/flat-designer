@@ -83,6 +83,22 @@ export interface Room {
     /** Plan point (mm) where tile joints cross; floor tiles, wall bands and tiled items share the grid. Null: plan origin. */
     tileOriginX: number | null;
     tileOriginY: number | null;
+    /** Ceiling surface; null: white plaster (also when missing, in older versions). */
+    ceilingMaterialId?: number | null;
+    /**
+     * Vaulted ceiling: shallow vaults `vaultRise` high between parallel beams `vaultSpacing` apart, running at
+     * `vaultAngle` degrees (counter-clockwise from plan x). The crowns are at `ceilingHeight`; the beams, `beamWidth`
+     * wide, hang `beamDrop` below the springing, in `beamMaterialId` (null: white paint). Null spacing: flat.
+     */
+    vaultSpacing?: number | null;
+    vaultAngle?: number;
+    vaultRise?: number;
+    beamWidth?: number;
+    beamDrop?: number;
+    beamMaterialId?: number | null;
+    /** Skirting boards along the room's walls (doors left free), mm high; null: none. */
+    skirtingHeight?: number | null;
+    skirtingMaterialId?: number | null;
 }
 
 /**

@@ -1,6 +1,18 @@
 import {Opening, Room, Scene, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 
+import {
+    ceilingSteps,
+    clipToBand,
+    counterClockwise,
+    roomBeams,
+    skirtingPieces,
+    vaultBreaks,
+    vaultFrame,
+    vaultHeight,
+    VaultProfile,
+    vaultProfile,
+} from './ceilings';
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
 import {exteriorSign, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
@@ -14,7 +26,6 @@ import {
     NoCorners,
     openingLeaves,
     polygonBounds,
-    polygonSignedArea,
     SlidingDoorOverlap,
     SquareEnds,
     tileOrigin,
@@ -41,6 +52,8 @@ export interface BuildingParts {
     root: THREE.Group;
     /** Ceilings, toggled separately so the dollhouse view can look in from above. */
     ceilings: THREE.Group;
+    /** The faces between rooms' ceilings of different heights where they meet without a wall (in `ceilings`). */
+    ceilingSteps: THREE.Group;
     slab: THREE.Mesh;
     /** Per room: its floor mesh (for picking and highlighting), ceiling and wall finishes, keyed by room id. */
     rooms: Map<number, RoomParts>;
@@ -52,7 +65,9 @@ export interface BuildingParts {
 
 export interface RoomParts {
     floor: THREE.Mesh;
-    ceiling: THREE.Mesh | null;
+    /** The ceiling surface, with the beams of a vaulted one. */
+    ceiling: THREE.Group | null;
+    /** Wall finishes and skirting. */
     finishes: THREE.Group | null;
 }
 
@@ -68,6 +83,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     const parts: BuildingParts = {
         root,
         ceilings,
+        ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
         slab: buildSlab(scene.walls, materials),
         rooms: new Map(),
         walls: new Map(),
@@ -87,6 +103,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root.add(group);
     }
 
+    ceilings.add(parts.ceilingSteps);
     root.add(ceilings);
     return parts;
 }
@@ -96,7 +113,7 @@ export function buildRoom(room: Room, walls: readonly Wall[], materials: Materia
     return {
         floor: buildFloor(room, materials),
         ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials),
-        finishes: room.wallFinishes.length > 0 ? buildWallFinishes(room, walls, materials) : null,
+        finishes: room.wallFinishes.length > 0 || room.skirtingHeight != null ? buildWallFinishes(room, walls, materials) : null,
     };
 }
 
@@ -155,15 +172,102 @@ export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
     return floor;
 }
 
-function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Mesh {
-    const geometry = new THREE.ShapeGeometry(roomShape(room));
-    geometry.rotateX(-Math.PI / 2);
-    // Faces up after the rotation, so only its back side is visible from inside the room.
-    const ceiling = new THREE.Mesh(geometry, materials.plain('#f7f6f3', 0.95, 0, THREE.BackSide));
-    ceiling.position.y = (room.ceilingHeight ?? 0) * MM;
-    ceiling.receiveShadow = true;
-    ceiling.name = `ceiling:${room.code}`;
-    return ceiling;
+/** Strips across each vault of a vaulted ceiling, enough for a smooth arch. */
+const VaultSegments = 8;
+
+/**
+ * The ceiling: a flat surface at the ceiling height, or vaults arching between beams (in their own material, white
+ * paint by default). Faces down, seen from inside the room.
+ */
+function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Group {
+    const group = new THREE.Group();
+    group.name = `ceiling:${room.code}`;
+    const material = room.ceilingMaterialId == null ? materials.plain('#f7f6f3', 0.95) : materials.get(room.ceilingMaterialId);
+    const profile = vaultProfile(room);
+    group.add(ceilingSurface(room, profile, material));
+    if (profile === null) {
+        return group;
+    }
+
+    const beamMaterial = room.beamMaterialId == null ? materials.plain('#f4f2ee', 0.8) : materials.get(room.beamMaterialId);
+    const springing = profile.crown - profile.rise;
+    // Down to `beamDrop` under the springing, up into the vaults so no gap shows beside them.
+    const bottom = (springing - (room.beamDrop ?? 30)) * MM;
+    const height = (room.beamDrop ?? 30) * MM + (profile.rise / 2) * MM;
+    const width = profile.beamWidth * MM;
+    for (const beam of roomBeams(room, profile)) {
+        const length = Math.hypot(beam.end.x - beam.start.x, beam.end.y - beam.start.y) * MM;
+        const holder = new THREE.Group();
+        holder.position.set(beam.start.x * MM, 0, -beam.start.y * MM);
+        holder.rotation.y = Math.atan2(beam.end.y - beam.start.y, beam.end.x - beam.start.x);
+        holder.add(boxAt(beamMaterial, 0, bottom, -width / 2, length, height, width));
+        group.add(holder);
+    }
+    return group;
+}
+
+/**
+ * The ceiling's surface over the room's outline: one flat piece, or strips across the beams lifted to the vault
+ * profile. UVs are metres along and across the beams.
+ */
+function ceilingSurface(room: Room, profile: VaultProfile | null, material: THREE.Material): THREE.Mesh {
+    const frame = vaultFrame(room.vaultAngle ?? 0);
+    const along = (p: {x: number; y: number}): number => p.x * frame.u.x + p.y * frame.u.y;
+    const across = (p: {x: number; y: number}): number => p.x * frame.v.x + p.y * frame.v.y;
+    const outline = counterClockwise(room.polygon).map(([x, y]) => ({x, y}));
+    let strips = [outline];
+    if (profile !== null) {
+        const vs = outline.map(across);
+        const breaks = vaultBreaks(Math.min(...vs), Math.max(...vs), profile, VaultSegments);
+        strips = breaks.slice(1).map((hi, i) => clipToBand(outline, frame.v, breaks[i], hi));
+    }
+
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (const strip of strips.filter((s) => s.length >= 3)) {
+        const base = positions.length / 3;
+        for (const p of strip) {
+            const height = profile === null ? (room.ceilingHeight ?? 0) : vaultHeight(across(p), profile);
+            positions.push(p.x * MM, height * MM, -p.y * MM);
+            uvs.push(along(p) * MM, across(p) * MM);
+        }
+        // Counter-clockwise in plan is clockwise seen from below once plan y becomes −z: the faces look down.
+        for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(strip.map((p) => new THREE.Vector2(p.x, p.y)), [])) {
+            indices.push(base + i, base + k, base + j);
+        }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const surface = new THREE.Mesh(geometry, material);
+    surface.receiveShadow = true;
+    return surface;
+}
+
+/** Upright faces closing the step between ceilings of different heights in an open plan (`ceilingSteps`). */
+export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
+    const group = new THREE.Group();
+    group.name = 'ceiling-steps';
+    const material = materials.plain('#f7f6f3', 0.95, 0, THREE.DoubleSide);
+    for (const step of ceilingSteps(rooms, walls)) {
+        const geometry = new THREE.BufferGeometry();
+        const corners = [
+            [step.a.x, step.bottom, step.a.y],
+            [step.b.x, step.bottom, step.b.y],
+            [step.b.x, step.top, step.b.y],
+            [step.a.x, step.top, step.a.y],
+        ].flatMap(([x, h, y]) => [x * MM, h * MM, -y * MM]);
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(corners, 3));
+        geometry.setIndex([0, 1, 2, 0, 2, 3]);
+        geometry.computeVertexNormals();
+        const face = new THREE.Mesh(geometry, material);
+        face.receiveShadow = true;
+        group.add(face);
+    }
+    return group;
 }
 
 /**
@@ -230,9 +334,12 @@ function wallPieceMesh(material: THREE.Material, piece: WallPiece, length: numbe
 }
 
 const LiningThickness = 8;
+/** Thickness of skirting boards, mm. */
+const SkirtingThickness = 15;
 
 /**
- * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band. Door
+ * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band, and skirting
+ * boards along the walls (`skirtingPieces`: not across open edges or doorways). Door
  * openings on the edge stay free; UVs continue across pieces from the room corner and the floor, and tiles
  * are then put on the room's tile grid (`alignTiles`), the one its floor uses.
  */
@@ -242,7 +349,8 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     group.userData = {roomId: room.id};
     group.name = `finishes:${room.code}`;
     // Counter-clockwise, so the room interior is on the left of every edge.
-    const polygon = polygonSignedArea(room.polygon) >= 0 ? room.polygon : [...room.polygon].reverse();
+    const polygon = counterClockwise(room.polygon);
+    const skirtingMaterial = room.skirtingMaterialId == null ? materials.plain('#f4f2ee', 0.6) : materials.get(room.skirtingMaterialId);
 
     polygon.forEach(([ax, ay], i) => {
         const [bx, by] = polygon[(i + 1) % polygon.length];
@@ -255,6 +363,15 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         // Mirror local z so +z points into the room and the box's +z face (u along +x) is the visible one.
         edge.scale.z = -1;
 
+        const skirting = room.skirtingHeight ?? null;
+        for (const [from, to] of skirting === null ? [] : skirtingPieces({x: ax, y: ay}, {x: bx, y: by}, walls)) {
+            // In front of a finish band reaching the floor (tiling), otherwise on the wall face.
+            const inset = room.wallFinishes.some((band) => band.bottom <= 0) ? LiningThickness * MM : 0;
+            const width = (to - from) * MM;
+            const height = (skirting ?? 0) * MM;
+            const mesh = boxAt(skirtingMaterial, from * MM, 0, inset, width, height, SkirtingThickness * MM);
+            edge.add(mesh);
+        }
         for (const band of room.wallFinishes) {
             const bandGaps = gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top));
             const material = materials.get(band.materialId);

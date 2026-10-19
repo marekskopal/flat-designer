@@ -6,7 +6,7 @@ import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.j
 import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
+import {addRoom, buildBuilding, buildCeilingSteps, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
@@ -492,8 +492,14 @@ export class ViewerEngine {
             this.labels.set(room.id, label);
             content.add(label);
         }
+        if (wallsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
+            // Steps between ceilings depend on the neighbouring rooms and on which edges have walls.
+            this.disposeObject(parts.ceilingSteps);
+            parts.ceilingSteps = buildCeilingSteps(scene.rooms, scene.walls, materials);
+            parts.ceilings.add(parts.ceilingSteps);
+        }
         if (wallsChanged) {
-            // Wall finishes leave the doors free, so they follow the walls of unchanged rooms too.
+            // Wall finishes and skirting leave the doors free, so they follow the walls of unchanged rooms too.
             for (const room of scene.rooms) {
                 const roomParts = parts.rooms.get(room.id);
                 if (roomParts === undefined || changedRooms.has(room.id) || roomParts.finishes === null) {
