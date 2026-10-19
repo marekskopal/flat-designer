@@ -9,11 +9,13 @@ use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
+use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
@@ -259,6 +261,13 @@ final readonly class ProjectSnapshotService
 				$restored->mullions = $opening->nullableInt('mullions') ?? 1;
 				$restored->transoms = $opening->nullableInt('transoms') ?? 0;
 				$restored->sillBoard = $opening->nullableInt('sillBoard');
+				// And openings before leaf styles and shutters.
+				$restored->leafStyle = DoorLeafStyleEnum::tryFrom($opening->nullableString('leafStyle') ?? '') ?? DoorLeafStyleEnum::Flush;
+				$restored->leafPanels = $opening->nullableInt('leafPanels') ?? 2;
+				$restored->panelHeight = $opening->nullableInt('panelHeight');
+				$restored->shutters = ShutterStyleEnum::tryFrom($opening->nullableString('shutters') ?? '');
+				$restored->shutterMaterial = $materials[$opening->nullableInt('shutterMaterialId') ?? 0] ?? null;
+				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
 				$this->openingRepository->persist($restored);
 			}
 		}

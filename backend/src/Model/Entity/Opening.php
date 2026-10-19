@@ -7,9 +7,11 @@ namespace FlatDesigner\Model\Entity;
 use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
@@ -28,11 +30,14 @@ use MarekSkopal\ORM\Enum\Type;
  * - `SlidingDoor`: the leaf hangs on the `side` face and slides open towards `hinge`.
  * - `PocketDoor`: the leaf slides into a pocket in the wall towards `hinge`.
  * - `Passage`: no leaf.
- * `frameStyle` and `handle` (none: the type's default) dress doors. A window is divided by `mullions` (vertical
+ * `frameStyle` and `handle` (none: the type's default) dress doors, `leafStyle` with `leafPanels` (panels or
+ * panes) their leaves. A window is divided by `mullions` (vertical
  * bars; 1 = two panes) and `transoms` (horizontal bars); `sillBoard` is how far its inner sill board reaches past
  * the wall face on `side`, the interior (none: no boards; exterior walls also get an outer sill). `entrance` marks the main door of the
  * floor (where a walkthrough starts); `walkable` a window down to the floor (French window) whose two sashes
- * open in the walkthrough (into `side`), so it can be walked through like a door.
+ * open in the walkthrough (into `side`), so it can be walked through like a door. A window's `panelHeight` is a
+ * solid lower part of its glazing (mm from the sill), and `shutters` are two leaves on the exterior face (opposite
+ * `side`), folded back against the wall or `shuttersClosed`, in `shutterMaterial` (none: painted timber).
  */
 #[Entity(repositoryClass: OpeningRepository::class)]
 class Opening extends AEntity
@@ -61,6 +66,24 @@ class Opening extends AEntity
 
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $sillBoard = null;
+
+	#[ColumnEnum(enum: DoorLeafStyleEnum::class)]
+	public DoorLeafStyleEnum $leafStyle = DoorLeafStyleEnum::Flush;
+
+	#[Column(type: Type::Int)]
+	public int $leafPanels = 2;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $panelHeight = null;
+
+	#[ColumnEnum(enum: ShutterStyleEnum::class, nullable: true)]
+	public ?ShutterStyleEnum $shutters = null;
+
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $shutterMaterial = null;
+
+	#[Column(type: Type::Boolean)]
+	public bool $shuttersClosed = false;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]

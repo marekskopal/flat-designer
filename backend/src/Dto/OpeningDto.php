@@ -6,9 +6,11 @@ namespace FlatDesigner\Dto;
 
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
 use FlatDesigner\Model\Entity\Opening;
 
 final readonly class OpeningDto
@@ -31,6 +33,12 @@ final readonly class OpeningDto
 		public int $mullions,
 		public int $transoms,
 		public ?int $sillBoard,
+		public DoorLeafStyleEnum $leafStyle,
+		public int $leafPanels,
+		public ?int $panelHeight,
+		public ?ShutterStyleEnum $shutters,
+		public ?int $shutterMaterialId,
+		public bool $shuttersClosed,
 	) {
 	}
 
@@ -54,6 +62,12 @@ final readonly class OpeningDto
 			mullions: $opening->mullions,
 			transoms: $opening->transoms,
 			sillBoard: $opening->sillBoard,
+			leafStyle: $opening->leafStyle,
+			leafPanels: $opening->leafPanels,
+			panelHeight: $opening->panelHeight,
+			shutters: $opening->shutters,
+			shutterMaterialId: $opening->shutterMaterial?->id,
+			shuttersClosed: $opening->shuttersClosed,
 		);
 	}
 }

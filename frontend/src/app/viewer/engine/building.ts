@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
+import {exteriorSign, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
 import {
     cornerWindows,
     DoorFrameWidth,
@@ -313,9 +314,11 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
     for (const leaf of openingLeaves(opening, wall.thickness)) {
         // A sliding leaf covers the opening's head too; the others stop short of the lining.
-        const leafHeight = (opening.type === 'SlidingDoor' ? opening.height + SlidingDoorOverlap : Math.min(1970, opening.height - 20)) * MM;
+        const leafHeight = (opening.type === 'SlidingDoor' ? opening.height + SlidingDoorOverlap : opening.height - 20) * MM;
         const pivot = leafPivot(leaf, 1);
-        pivot.add(boxAt(frameMaterial, 0, 0, (-leaf.thickness * MM) / 2, leaf.width * MM, leafHeight, leaf.thickness * MM));
+        for (const part of doorLeaf(opening, leaf, leafHeight, frameMaterial, materials.byCode('glass'))) {
+            pivot.add(part);
+        }
         for (const handle of doorHandles(opening, leaf, handleMaterial)) {
             pivot.add(handle);
         }
@@ -330,6 +333,70 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     }
 
     return group;
+}
+
+/** Raised panels: a bead round each rectangle (mm, in the slab's frame) and a field inside it, a few mm proud of the given faces. */
+const PanelBead = 0.02;
+const PanelBeadDepth = 0.006;
+const PanelFieldInset = 0.045;
+const PanelFieldDepth = 0.003;
+
+/**
+ * The relief of panels on a slab `thickness` m thick, centred on z = 0: on its +z face (`faces` 1), −z face (−1) or
+ * both.
+ */
+function panelRelief(rects: readonly PanelRect[], thickness: number, faces: readonly (1 | -1)[], material: THREE.Material): THREE.Mesh[] {
+    const parts: THREE.Mesh[] = [];
+    for (const rect of rects) {
+        const x = rect.x * MM;
+        const y = rect.y * MM;
+        const w = rect.width * MM;
+        const h = rect.height * MM;
+        for (const face of faces) {
+            const z = face > 0 ? thickness / 2 : -thickness / 2 - PanelBeadDepth;
+            parts.push(
+                boxAt(material, x, y, z, w, PanelBead, PanelBeadDepth),
+                boxAt(material, x, y + h - PanelBead, z, w, PanelBead, PanelBeadDepth),
+                boxAt(material, x, y + PanelBead, z, PanelBead, h - 2 * PanelBead, PanelBeadDepth),
+                boxAt(material, x + w - PanelBead, y + PanelBead, z, PanelBead, h - 2 * PanelBead, PanelBeadDepth),
+            );
+            if (w > 2 * PanelFieldInset && h > 2 * PanelFieldInset) {
+                const fieldZ = face > 0 ? thickness / 2 : -thickness / 2 - PanelFieldDepth;
+                const inset = PanelFieldInset;
+                parts.push(boxAt(material, x + inset, y + inset, fieldZ, w - 2 * inset, h - 2 * inset, PanelFieldDepth));
+            }
+        }
+    }
+    return parts;
+}
+
+/**
+ * A door leaf by its `leafStyle`, in its pivot's frame (x from the hinge, centred on z = 0): a flush slab, a slab
+ * with raised panels on both faces, or stiles and rails round glass panes.
+ */
+function doorLeaf(opening: Opening, leaf: Leaf, height: number, material: THREE.Material, glass: THREE.Material): THREE.Mesh[] {
+    const width = leaf.width * MM;
+    const t = leaf.thickness * MM;
+    const style = opening.leafStyle ?? 'Flush';
+    const rects = style === 'Flush' ? [] : leafPanels(leaf.width, height / MM, opening.leafPanels ?? 2);
+    const slab = (): THREE.Mesh => boxAt(material, 0, 0, -t / 2, width, height, t);
+    if (rects.length === 0) {
+        return [slab()];
+    }
+    if (style === 'Panelled') {
+        return [slab(), ...panelRelief(rects, t, [-1, 1], material)];
+    }
+    // Glazed: the frame round the panes, and the panes.
+    const stile = LeafStile * MM;
+    const parts = [boxAt(material, 0, 0, -t / 2, stile, height, t), boxAt(material, width - stile, 0, -t / 2, stile, height, t)];
+    let below = 0;
+    for (const rect of rects) {
+        parts.push(boxAt(material, stile, below, -t / 2, width - 2 * stile, rect.y * MM - below, t));
+        parts.push(boxAt(glass, rect.x * MM, rect.y * MM, -0.004, rect.width * MM, rect.height * MM, 0.008, false));
+        below = (rect.y + rect.height) * MM;
+    }
+    parts.push(boxAt(material, stile, below, -t / 2, width - 2 * stile, height - below, t));
+    return parts;
 }
 
 /** Jambs and head of a door frame by its style (none for `None`), plus casings on both faces for `Architrave`. */
@@ -449,17 +516,28 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
     const leaves = openingLeaves(opening, wall.thickness);
     if (leaves.length > 0) {
         // Walkable: sashes hinged on the jambs, closed by default.
+        const panel = opening.panelHeight == null ? null : opening.panelHeight * MM - 0.04;
         for (const leaf of leaves) {
-            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, frameMaterial, glassMaterial));
+            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, panel, frameMaterial, glassMaterial));
+        }
+        for (const part of shutters(opening, wall, materials)) {
+            group.add(part);
         }
         return group;
     }
 
-    // Fixed glazing: one pane behind a grid of bars, evenly spaced between the jambs (or the corner).
+    // Fixed glazing: one pane behind a grid of bars, evenly spaced between the jambs (or the corner), above a
+    // solid lower panel when there is one.
     const glassFrom = cornerStart ? from : from + bar;
     const glassTo = cornerEnd ? to : to - bar;
-    const glassBottom = bottom + 0.04;
+    let glassBottom = bottom + 0.04;
     const glassTop = bottom + height - bar;
+    if (opening.panelHeight != null && opening.panelHeight * MM > 0.04 + bar) {
+        const panelTop = bottom + opening.panelHeight * MM;
+        group.add(boxAt(frameMaterial, glassFrom, glassBottom, -depth * 0.3, glassTo - glassFrom, panelTop - glassBottom, depth * 0.6));
+        group.add(boxAt(frameMaterial, glassFrom, panelTop, z, glassTo - glassFrom, bar, depth));
+        glassBottom = panelTop + bar;
+    }
     group.add(boxAt(glassMaterial, glassFrom, glassBottom, -0.004, glassTo - glassFrom, glassTop - glassBottom, 0.008, false));
     const columns = (opening.mullions ?? 1) + 1;
     for (let i = 1; i < columns; i++) {
@@ -470,8 +548,63 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
         const y = glassBottom + ((glassTop - glassBottom) * i) / (transoms + 1);
         group.add(boxAt(frameMaterial, glassFrom, y - bar / 2, z, glassTo - glassFrom, bar, depth));
     }
+    for (const part of shutters(opening, wall, materials)) {
+        group.add(part);
+    }
 
     return group;
+}
+
+/** Shutters: leaf thickness and its gap off the wall face, frame members and louvre slats of a louvred leaf (m). */
+const ShutterThickness = 0.03;
+const ShutterGap = 0.003;
+const ShutterStile = 0.05;
+const ShutterRail = 0.07;
+const ShutterSlatPitch = 45;
+const ShutterSlatTilt = 0.6;
+
+/**
+ * Exterior shutters of a window (`shutters`): two leaves on the outer face, across the window when
+ * `shuttersClosed`, else folded back flat against the wall beside it. Louvred leaves have tilted slats in a frame,
+ * solid ones raised panels on their outer face.
+ */
+function shutters(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Object3D[] {
+    if (opening.shutters == null) {
+        return [];
+    }
+    const material = opening.shutterMaterialId == null ? materials.plain('#6b4f37', 0.7, 0) : materials.get(opening.shutterMaterialId);
+    const sign = exteriorSign(opening);
+    const face = (wall.thickness / 2) * MM;
+    // The leaves' centre plane, just off the outer face.
+    const centre = sign * (face + ShutterGap + ShutterThickness / 2);
+    const bottom = opening.sillHeight * MM;
+    const height = opening.height * MM;
+    const t = ShutterThickness;
+    return shutterLeaves(opening, opening.shuttersClosed === true).map((leaf) => {
+        const group = new THREE.Group();
+        group.position.set(leaf.from * MM, bottom, centre);
+        const width = (leaf.to - leaf.from) * MM;
+        if (opening.shutters === 'Solid') {
+            group.add(boxAt(material, 0, 0, -t / 2, width, height, t));
+            for (const part of panelRelief(leafPanels(leaf.to - leaf.from, height / MM, 2), t, [sign], material)) {
+                group.add(part);
+            }
+            return group;
+        }
+        group.add(boxAt(material, 0, 0, -t / 2, ShutterStile, height, t));
+        group.add(boxAt(material, width - ShutterStile, 0, -t / 2, ShutterStile, height, t));
+        group.add(boxAt(material, ShutterStile, 0, -t / 2, width - 2 * ShutterStile, ShutterRail, t));
+        group.add(boxAt(material, ShutterStile, height - ShutterRail, -t / 2, width - 2 * ShutterStile, ShutterRail, t));
+        for (const y of louvreSlats(height / MM, ShutterRail / MM, ShutterSlatPitch)) {
+            // A thin blade across the leaf's thickness, its outer edge lower to shed rain outwards.
+            const slat = new THREE.Mesh(worldUvBox(width - 2 * ShutterStile, 0.008, t * 1.2), material);
+            slat.position.set(width / 2, y * MM, 0);
+            slat.rotation.x = sign * ShutterSlatTilt;
+            slat.castShadow = true;
+            group.add(slat);
+        }
+        return group;
+    });
 }
 
 /**
@@ -516,6 +649,7 @@ function buildSash(
     bottom: number,
     height: number,
     transoms: number,
+    panel: number | null,
     frameMaterial: THREE.Material,
     glassMaterial: THREE.Material,
 ): THREE.Group {
@@ -529,9 +663,20 @@ function buildSash(
     sash.add(boxAt(frameMaterial, width - bar, 0, z, bar, height, thickness));
     sash.add(boxAt(frameMaterial, bar, 0, z, width - 2 * bar, bar, thickness));
     sash.add(boxAt(frameMaterial, bar, height - bar, z, width - 2 * bar, bar, thickness));
-    sash.add(boxAt(glassMaterial, bar, bar, -0.004, width - 2 * bar, height - 2 * bar, 0.008, false));
+    // A solid lower panel up to `panel` (from the sash bottom), with a rail above it and raised fields on both faces.
+    let glassBottom = bar;
+    if (panel !== null && panel > 2 * bar && panel < height - 2 * bar) {
+        sash.add(boxAt(frameMaterial, bar, bar, -thickness * 0.3, width - 2 * bar, panel - bar, thickness * 0.6));
+        const field = {x: bar / MM, y: bar / MM, width: (width - 2 * bar) / MM, height: (panel - bar) / MM};
+        for (const part of panelRelief([field], thickness * 0.6, [-1, 1], frameMaterial)) {
+            sash.add(part);
+        }
+        sash.add(boxAt(frameMaterial, bar, panel, z, width - 2 * bar, bar, thickness));
+        glassBottom = panel + bar;
+    }
+    sash.add(boxAt(glassMaterial, bar, glassBottom, -0.004, width - 2 * bar, height - bar - glassBottom, 0.008, false));
     for (let i = 1; i <= transoms; i++) {
-        const y = bar + ((height - 2 * bar) * i) / (transoms + 1);
+        const y = glassBottom + ((height - bar - glassBottom) * i) / (transoms + 1);
         sash.add(boxAt(frameMaterial, bar, y - bar / 2, z, width - 2 * bar, bar, thickness));
     }
     // Handle on the inner face of the free edge.

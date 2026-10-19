@@ -9,6 +9,8 @@ export type WallType = 'Exterior' | 'Interior' | 'Shaft';
 export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
+export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
+export type ShutterStyle = 'Louvred' | 'Solid';
 export type ItemKind =
     | 'BaseCabinet'
     | 'WallCabinet'
@@ -119,6 +121,18 @@ export interface Opening {
     mullions?: number;
     transoms?: number;
     sillBoard?: number | null;
+    /** Door leaves: a plain slab, raised panels or glass panes (`leafPanels` of them, stacked). Missing in older snapshots: Flush. */
+    leafStyle?: DoorLeafStyle;
+    leafPanels?: number;
+    /** Window: solid lower panel of the glazing, mm from the sill; null: glass down to the bottom rail. */
+    panelHeight?: number | null;
+    /**
+     * Window: exterior shutters, two leaves on the outer face (opposite `side`), in `shutterMaterialId` (null: painted
+     * timber), folded back against the wall unless `shuttersClosed`.
+     */
+    shutters?: ShutterStyle | null;
+    shutterMaterialId?: number | null;
+    shuttersClosed?: boolean;
 }
 
 export interface Wall {

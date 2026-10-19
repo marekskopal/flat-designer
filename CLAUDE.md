@@ -44,12 +44,17 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
   `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
   and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
-  the type's default).
+  the type's default). Doors with a leaf have a `leafStyle` (Flush, Panelled, Glazed) with `leafPanels` panels or
+  panes (`leafPanels()` in `viewer/engine/opening-looks.ts`). These rules, and the window ones below, are in
+  `OpeningLook`.
 - Windows have `mullions` (vertical bars; 1, two panes, is the default) and `transoms`, plus an optional `sillBoard`
   (the inner board's reach past the wall face on `side`, the interior; exterior walls also get an outer sill). A
   walkable window has one sash on `hinge` (mullions 0) or two. Corner windows have no stored field:
   `cornerWindows()` finds two windows that reach the shared end of an L-joint at overlapping heights, and
   `buildWall()` drops their corner jambs. The wall pieces already leave such a corner open.
+- A window may have a solid lower `panelHeight` (mm from the sill) and exterior `shutters` (Louvred or Solid, in
+  `shutterMaterialId`, null for painted timber). They are two leaves on the face opposite `side`. They lie folded back
+  against the wall beside the window unless `shuttersClosed`. Shutters do not take part in the walkthrough.
 - Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
   allows the owner or an admin and answers 404 otherwise.
 - Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.
