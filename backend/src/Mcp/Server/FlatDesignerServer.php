@@ -22,7 +22,7 @@ final readonly class FlatDesignerServer
 {
 	private const string Instructions = <<<'TEXT'
 		This server edits 3D designs of flats. A user has projects; a project has floors; a floor holds rooms
-		(floor outlines), walls (centre lines) with openings (doors, windows) and items (kitchen cabinets,
+		(floor outlines), walls (centre lines) with openings (doors, windows) and items (custom-made furniture,
 		appliances, sanitary ware, fences, …).
 
 		Units and coordinates: all lengths are whole millimetres in plan coordinates of the floor — origin at the
@@ -38,7 +38,10 @@ final readonly class FlatDesignerServer
 		parts (boards, fronts, legs, …) whose sizes are expressions of the item's W, D, H; add it with
 		add_item(kind: "Custom", definitionId). To design a new piece, write a definition (the format is in the
 		schema of create_furniture_definition), check it with validate_furniture_definition, then create it.
-		Editing a definition changes every item drawn from it, in all projects.
+		Editing a definition changes every item drawn from it, in all projects. Kitchen cabinets, worktops,
+		wardrobes, chairs and tables are such definitions; the built-in kinds of the same furniture (marked
+		replacedBy in list_item_kinds) are kept only for older items, so add new furniture from the definitions.
+		get_cut_list lists the boards of a project's custom-made furniture.
 
 		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.

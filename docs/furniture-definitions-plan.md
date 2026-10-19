@@ -11,6 +11,11 @@ Decisions taken:
 - Three scopes: **global** (admins manage), **user** library, **project**.
 - UI: JSON editor with a live preview at first; a visual part editor later.
 
+Status: done (phases 1–7, PR #1). v2 (`docs/furniture-definitions-v2-plan.md`) extended the format — null, lists and
+records in expressions, list parameters, `repeat.over`, assemblies, `{expr}` options, appliance / sliding door parts —
+and converted flat 50's custom-made furniture, so the format below is the v1 subset. The current format is the text of
+`FurnitureTools::Format` (what agents get); the shared fixtures are the reference for the expression language.
+
 ## 1. Definition format (v1)
 
 Stored as JSON in `furniture_definitions.definition`. The local frame is the cabinet frame from CLAUDE.md, but for
@@ -217,7 +222,7 @@ Each phase is a separate commit and leaves the app working.
    material, edges, count per floor/project; REST + MCP `get_cut_list` + a viewer panel).
 
 Later: assemblies, per-part rotation, a visual part editor, definition history/undo, possibly rewriting `Wardrobe` /
-cabinets as definitions.
+cabinets as definitions. (Assemblies, part tilt and the cabinets / wardrobe / dining set as definitions came with v2.)
 
 ## 8. CLAUDE.md updates (with the phases)
 

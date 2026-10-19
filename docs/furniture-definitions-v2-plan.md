@@ -7,6 +7,9 @@ washbasin, toilet, bathtub, mirror, towel radiator, flush plate, fixtures, washi
 
 Builds on `docs/furniture-definitions-plan.md` (v1, phases 1–7).
 
+Status: done (phases 1–7, ukolio FD-16…FD-22). Removing the built-in furniture kinds is a follow-up task (see the
+decisions at the end).
+
 ## What flat 50 needs that format 1 cannot express
 
 From the items of project 1 (25 wall, 13 base and 5 tall cabinets, 6 worktops, 4 backsplashes, 5 LED strips, a
@@ -130,10 +133,15 @@ Each phase is its own commit and leaves the app working.
 6. **Conversion migration** (in place, reversible) + Add menu / catalog changes, cut list of flat 50 checked by hand.
 7. **Docs and clean-up**: CLAUDE.md, plan v1 notes, MCP instructions; decide on hiding or removing the built-in furniture kinds.
 
-## Decisions to make on the way
+## Decisions taken
 
-- Whether the flat 50 definitions are global (useful to every project; proposed) or project 1's own.
-- Whether `CabinetParamsComponent` / `WardrobeParamsComponent` go once nothing uses the built-in kinds (only old versions
-  would).
-- Gaps, thicknesses and recesses: today they are constants in `kitchen.ts` (front gap 3 mm, front 19 mm, plinth recess).
-  In the definitions they become parameters with those defaults.
+- The flat 50 definitions are **global** (`SeedFlat50FurnitureDefinitions`), usable in every project.
+- Gaps, thicknesses and recesses that were constants in `kitchen.ts` (front gap 3 mm, front 19 mm, plinth recess) are
+  parameters of the definitions with those defaults.
+- The built-in furniture kinds (`BaseCabinet`, `WallCabinet`, `TallCabinet`, `Worktop`, `Backsplash`, `Wardrobe`,
+  `Chair`, `Table`) **stay for now**: versions saved before the conversion and the change log still use them (undo of an
+  older change restores the built-in kind). `ItemKindCatalog` marks them `replacedBy`, the Add menu lists them as
+  "Built-in (old)", and `CabinetParamsComponent` / `WardrobeParamsComponent` stay to edit them.
+- Removing them is a **separate follow-up**: it needs saved versions and change-log JSON converted too (or the snapshot
+  restore and undo mapping built-in items through `BuiltInFurnitureConverter`), then drops the builders
+  (`kitchen.ts` / `furniture.ts` parts), the inspector forms, `parity.spec.ts`' built-in side and the enum values.
