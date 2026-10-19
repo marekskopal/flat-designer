@@ -11,6 +11,7 @@ use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\OpeningLook;
+use FlatDesigner\Service\Editor\Element\RoomCeiling;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
@@ -27,6 +28,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(OpeningHandler::class)]
 #[CoversClass(OpeningLook::class)]
 #[CoversClass(RoomHandler::class)]
+#[CoversClass(RoomCeiling::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
 #[CoversClass(WardrobeParamsValidator::class)]
@@ -486,6 +488,62 @@ final class ElementControllerTest extends EditorTestCase
 
 		self::assertSame([], $this->sceneList('walls'));
 		self::assertSame(422, $this->edit('POST', 'openings', body: ['wallId' => self::id($wall)])->getStatusCode());
+	}
+
+	public function testRoomCeilingsVaultsAndSkirting(): void
+	{
+		$materials = Fixture::service(MaterialRepository::class);
+		$brick = $materials->findByCode('kitchen-oak');
+		self::assertNotNull($brick);
+		$polygon = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+
+		$room = $this->create('rooms', ['name' => 'Living', 'polygon' => $polygon]);
+		self::assertSame([null, null, null], [$room['ceilingMaterialId'], $room['vaultSpacing'], $room['skirtingHeight']]);
+
+		$vaulted = $this->jsonBody($this->edit('PATCH', 'rooms', self::id($room), [
+			'ceilingHeight' => 2920,
+			'ceilingMaterialId' => $brick->id,
+			'vaultSpacing' => 550,
+			'vaultAngle' => 270,
+			'skirtingHeight' => 70,
+		]));
+		self::assertIsArray($vaulted['element']);
+		$element = $vaulted['element'];
+		self::assertSame(
+			[$brick->id, 550, 90, 130, 80, 30, null, 70, null],
+			[
+				$element['ceilingMaterialId'],
+				$element['vaultSpacing'],
+				$element['vaultAngle'],
+				$element['vaultRise'],
+				$element['beamWidth'],
+				$element['beamDrop'],
+				$element['beamMaterialId'],
+				$element['skirtingHeight'],
+				$element['skirtingMaterialId'],
+			],
+		);
+
+		// Beams must fit between each other, and leave head room under them.
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['beamWidth' => 600])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['vaultRise' => 600, 'beamDrop' => 600])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['vaultSpacing' => 100])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['skirtingHeight' => 5])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['ceilingMaterialId' => 999999])->getStatusCode());
+
+		// An open-air room has no ceiling to vault; skirting stays.
+		$terrace = $this->jsonBody($this->edit('PATCH', 'rooms', self::id($room), ['ceilingHeight' => null]));
+		self::assertIsArray($terrace['element']);
+		self::assertSame(
+			[null, null, null, 70],
+			[$terrace['element']['ceilingMaterialId'], $terrace['element']['vaultSpacing'], $terrace['element']['beamMaterialId'], $terrace['element']['skirtingHeight']],
+		);
+		$this->undo();
+		$restored = array_values(
+			array_filter($this->sceneList('rooms'), static fn (array $r): bool => $r['id'] === $room['id']),
+		)[0] ?? null;
+		self::assertIsArray($restored);
+		self::assertSame([550, 90, $brick->id], [$restored['vaultSpacing'], $restored['vaultAngle'], $restored['ceilingMaterialId']]);
 	}
 
 	public function testRoomPolygonIsValidated(): void

@@ -206,6 +206,16 @@ final readonly class ProjectSnapshotService
 			// Snapshots taken before the tile origin existed have none.
 			$room->tileOriginX = $data->nullableInt('tileOriginX');
 			$room->tileOriginY = $data->nullableInt('tileOriginY');
+			// Nor ceilings and skirting before they had their own fields.
+			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
+			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
+			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
+			$room->vaultRise = $data->nullableInt('vaultRise') ?? 130;
+			$room->beamWidth = $data->nullableInt('beamWidth') ?? 80;
+			$room->beamDrop = $data->nullableInt('beamDrop') ?? 30;
+			$room->beamMaterial = $materials[$data->nullableInt('beamMaterialId') ?? 0] ?? null;
+			$room->skirtingHeight = $data->nullableInt('skirtingHeight');
+			$room->skirtingMaterial = $materials[$data->nullableInt('skirtingMaterialId') ?? 0] ?? null;
 			$this->roomRepository->persist($room);
 			$restored[$data->int('id')] = $room;
 		}
