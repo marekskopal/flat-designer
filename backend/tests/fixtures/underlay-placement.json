@@ -1,0 +1,105 @@
+{
+ "description": "Cases for the underlay calibration twins: UnderlayService::placementFromPoints (PHP) and placementFromPoints (TS, viewer/engine/underlay.ts). points are {px, py, x, y}; expected is the placement, or null when the points are refused. Checks: every point mapped through the placement lies within tolerance mm of its plan position.",
+ "cases": [
+  {
+   "name": "a horizontal scale bar on the plan axis",
+   "points": [
+    {
+     "px": 100,
+     "py": 500,
+     "x": 0,
+     "y": 0
+    },
+    {
+     "px": 200,
+     "py": 500,
+     "x": 1000,
+     "y": 0
+    }
+   ],
+   "expected": {
+    "x": -1000,
+    "y": 5000,
+    "scale": 10,
+    "rotation": 0
+   }
+  },
+  {
+   "name": "a rotated plan maps both points back",
+   "points": [
+    {
+     "px": 300,
+     "py": 120,
+     "x": 2500,
+     "y": 4000
+    },
+    {
+     "px": 420,
+     "py": 410,
+     "x": 6100,
+     "y": 3100
+    }
+   ],
+   "tolerance": 1
+  },
+  {
+   "name": "a plan scanned upside down",
+   "points": [
+    {
+     "px": 1500,
+     "py": 900,
+     "x": 0,
+     "y": 0
+    },
+    {
+     "px": 500,
+     "py": 900,
+     "x": 5000,
+     "y": 0
+    }
+   ],
+   "expected": {
+    "x": 7500,
+    "y": -4500,
+    "scale": 5,
+    "rotation": 180
+   }
+  },
+  {
+   "name": "points on top of each other are refused",
+   "points": [
+    {
+     "px": 10,
+     "py": 10,
+     "x": 0,
+     "y": 0
+    },
+    {
+     "px": 10,
+     "py": 10,
+     "x": 1000,
+     "y": 0
+    }
+   ],
+   "expected": null
+  },
+  {
+   "name": "plan points on top of each other are refused",
+   "points": [
+    {
+     "px": 10,
+     "py": 10,
+     "x": 0,
+     "y": 0
+    },
+    {
+     "px": 500,
+     "py": 10,
+     "x": 0,
+     "y": 0
+    }
+   ],
+   "expected": null
+  }
+ ]
+}

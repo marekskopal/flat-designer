@@ -2,7 +2,7 @@
 
 @if (underlay(); as u) {
     <div class="row">
-        <select class="input input--compact row__grow" aria-label="Underlay image" [disabled]="editor.busy()" (change)="choose($event)">
+        <select class="input input--compact row__grow" aria-label="Underlay image" [disabled]="locked()" (change)="choose($event)">
             @for (file of imageFiles(); track file.id) {
                 <option [value]="file.id" [selected]="file.id === u.fileId">{{ file.filename }}</option>
             }
@@ -17,25 +17,49 @@
         <span class="slider__label">
             Opacity <span class="slider__value">{{ u.opacity * 100 | number: '1.0-0' }} %</span>
         </span>
-        <input type="range" min="5" max="100" step="5" [value]="u.opacity * 100" aria-label="Underlay opacity" (change)="setNumber('opacity', $event)" />
+        <input
+            type="range"
+            min="5"
+            max="100"
+            step="5"
+            [value]="u.opacity * 100"
+            [disabled]="editor.busy()"
+            aria-label="Underlay opacity"
+            (change)="setNumber('opacity', $event)"
+        />
     </label>
 
     <div class="placement" aria-label="Underlay placement">
         <label class="placement__field">
             x (mm)
-            <input class="input input--compact" type="number" step="10" [value]="u.x" (change)="setNumber('x', $event)" />
+            <input class="input input--compact" type="number" step="10" [value]="u.x" [disabled]="locked()" (change)="setNumber('x', $event)" />
         </label>
         <label class="placement__field">
             y (mm)
-            <input class="input input--compact" type="number" step="10" [value]="u.y" (change)="setNumber('y', $event)" />
+            <input class="input input--compact" type="number" step="10" [value]="u.y" [disabled]="locked()" (change)="setNumber('y', $event)" />
         </label>
         <label class="placement__field">
             Turn (°)
-            <input class="input input--compact" type="number" step="0.1" [value]="u.rotation | number: '1.0-2'" (change)="setNumber('rotation', $event)" />
+            <input
+                class="input input--compact"
+                type="number"
+                step="0.1"
+                [value]="u.rotation | number: '1.0-2'"
+                [disabled]="locked()"
+                (change)="setNumber('rotation', $event)"
+            />
         </label>
         <label class="placement__field">
             mm / px
-            <input class="input input--compact" type="number" step="0.01" min="0.01" [value]="u.scale | number: '1.0-4'" (change)="setNumber('scale', $event)" />
+            <input
+                class="input input--compact"
+                type="number"
+                step="0.01"
+                min="0.01"
+                [value]="u.scale | number: '1.0-4'"
+                [disabled]="locked()"
+                (change)="setNumber('scale', $event)"
+            />
         </label>
     </div>
 

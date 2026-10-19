@@ -161,8 +161,8 @@ export class EditorApiService {
         );
     }
 
-    public async removeUnderlay(projectId: number, floorId: number): Promise<void> {
-        await firstValueFrom(this.http.delete(`${environment.apiUrl}/projects/${projectId}/floors/${floorId}/underlay`));
+    public async removeUnderlay(projectId: number, floorId: number): Promise<{revision: number}> {
+        return firstValueFrom(this.http.delete<{revision: number}>(`${environment.apiUrl}/projects/${projectId}/floors/${floorId}/underlay`));
     }
 
     public async itemKinds(): Promise<ItemKindInfo[]> {

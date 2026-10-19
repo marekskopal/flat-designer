@@ -1318,7 +1318,7 @@ export class ViewerEngine {
             ]);
         const start = {x: wall.startX, y: wall.startY};
         const end = {x: wall.endX, y: wall.endY};
-        const radius = free || this.calibrating ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
         const grid = free ? 1 : DragSnap;
         let next: {start: Vec2; end: Vec2};
 
@@ -1534,8 +1534,8 @@ export class ViewerEngine {
             return;
         }
         const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
-        // Esc clears a measurement first; without one it is the page's (turning the tool off).
-        if (event.key === 'Escape' && this.measuring && !typing && this.clearMeasurement()) {
+        // Esc clears a measurement first; without one it is the page's (turning the tool off, or cancelling a calibration).
+        if (event.key === 'Escape' && this.measuring && !typing && !this.calibrating && this.clearMeasurement()) {
             event.stopPropagation();
             return;
         }
@@ -1592,7 +1592,8 @@ export class ViewerEngine {
 
     private snapMeasure(point: Vec2, free: boolean): SnapResult {
         const from = this.measurement.b === null ? this.measurement.a : null;
-        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        // Calibration points are features of the image, which the drawn walls would only pull them away from.
+        const radius = free || this.calibrating ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
         return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from});
     }
 

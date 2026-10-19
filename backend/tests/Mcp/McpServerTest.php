@@ -35,6 +35,7 @@ use FlatDesigner\Tests\Support\OAuthFlow;
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 use stdClass;
+use const JSON_THROW_ON_ERROR;
 
 /** Drives the MCP server end to end over JSON-RPC, as Claude Code or claude.ai would. */
 #[CoversClass(McpController::class)]
@@ -760,16 +761,18 @@ final class McpServerTest extends IntegrationTestCase
 		));
 
 		// A zoomed crop with a grid comes back scaled to maxSize, as a PNG.
-		$result = $this->client->request('tools/call', ['name' => 'get_project_file', 'arguments' => [
-			'projectId' => $this->project->id,
-			'fileId' => $fileId,
-			'cropX' => 1000,
-			'cropY' => 200,
-			'cropWidth' => 800,
-			'cropHeight' => 400,
-			'maxSize' => 400,
-			'grid' => 50,
-		]]);
+		$result = $this->client->request('tools/call', [
+			'name' => 'get_project_file',
+			'arguments' => [
+				'projectId' => $this->project->id,
+				'fileId' => $fileId,
+				'cropX' => 1000,
+				'cropY' => 200,
+				'cropWidth' => 800,
+				'cropHeight' => 400,
+				'maxSize' => 400,
+				'grid' => 50,
+			]]);
 		self::assertIsList($result['content']);
 		self::assertIsArray($result['content'][0]);
 		self::assertIsString($result['content'][0]['text']);
@@ -801,14 +804,23 @@ final class McpServerTest extends IntegrationTestCase
 		]);
 		self::assertIsArray($underlay);
 		self::assertEqualsWithDelta(7.407, $underlay['scale'], 0.001);
-		self::assertEquals([0.0, 0.4, 2000, 1000], [$underlay['rotation'], $underlay['opacity'], $underlay['widthPx'], $underlay['heightPx']]);
+		self::assertEquals(
+			[0.0, 0.4, 2000, 1000],
+			[$underlay['rotation'], $underlay['opacity'], $underlay['widthPx'], $underlay['heightPx']],
+		);
 
 		$floor = $this->client->call('get_floor', ['projectId' => $this->project->id, 'floorId' => $floorId]);
 		self::assertIsArray($floor);
 		self::assertEquals($underlay, $floor['underlay']);
 
-		self::assertSame(['removed' => true], $this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]));
-		self::assertSame(['removed' => false], $this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]));
+		self::assertSame(
+			['removed' => true],
+			$this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]),
+		);
+		self::assertSame(
+			['removed' => false],
+			$this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]),
+		);
 	}
 
 	public function testRequestsWithoutAValidTokenAreRejected(): void

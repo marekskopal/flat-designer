@@ -1,5 +1,5 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, inject, input, resource, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, input, resource, signal, untracked} from '@angular/core';
 import {RouterLink} from '@angular/router';
 import {Scene, Underlay} from '@app/models/scene';
 import {UnderlayInput} from '@app/services/editor-api.service';
@@ -48,6 +48,25 @@ export class UnderlayPanelComponent {
     });
     protected readonly distance = signal<number | null>(null);
     protected readonly direction = signal<CalibrationDirection>('keep');
+    /** The placement fields and the image stay as they are while points are picked, which refer to them. */
+    protected readonly locked = computed(() => this.editor.busy() || this.editor.calibration() !== null);
+
+    public constructor() {
+        // Picked points are plan positions of image features under the placement of that moment: a changed placement
+        // (a live update from an agent or another tab) makes them meaningless.
+        let placement = JSON.stringify(untracked(this.underlay));
+        effect(() => {
+            const current = JSON.stringify(this.underlay());
+            if (current !== placement) {
+                placement = current;
+                untracked(() => {
+                    if (this.editor.calibration() !== null) {
+                        this.editor.calibration.set(null);
+                    }
+                });
+            }
+        });
+    }
 
     protected choose(event: Event): void {
         const fileId = Number((event.target as HTMLSelectElement).value);
@@ -57,12 +76,17 @@ export class UnderlayPanelComponent {
     }
 
     protected setNumber(field: 'x' | 'y' | 'scale' | 'rotation' | 'opacity', event: Event): void {
-        const value = Number((event.target as HTMLInputElement).value);
+        const box = event.target as HTMLInputElement;
+        const value = Number(box.value);
         const underlay = this.underlay();
-        if (underlay === null || !Number.isFinite(value)) {
+        if (underlay === null || box.value.trim() === '' || !Number.isFinite(value)) {
+            // An emptied box is put back to the stored value rather than sent as 0.
+            box.value = String(underlay === null ? '' : field === 'opacity' ? underlay.opacity * 100 : underlay[field]);
             return;
         }
-        void this.save({fileId: underlay.fileId, [field]: field === 'opacity' ? value / 100 : value});
+        // x and y are whole mm; the others are floats.
+        const sent = field === 'opacity' ? value / 100 : field === 'x' || field === 'y' ? Math.round(value) : value;
+        void this.save({fileId: underlay.fileId, [field]: sent});
     }
 
     protected startCalibration(): void {

@@ -118,9 +118,14 @@ export class EditorStore {
         }
         this.busy.set(true);
         try {
-            await this.api.setUnderlay(context.projectId(), context.floorId(), input);
+            const {underlay, revision} = await this.api.setUnderlay(context.projectId(), context.floorId(), input);
             this.underlayVisible.set(true);
-            context.reload();
+            const scene = context.scene();
+            if (scene === null) {
+                context.reload();
+            } else {
+                context.setScene({...scene, underlay, revision});
+            }
             return true;
         } catch {
             // The error interceptor has shown the message.
@@ -137,9 +142,14 @@ export class EditorStore {
         }
         this.busy.set(true);
         try {
-            await this.api.removeUnderlay(context.projectId(), context.floorId());
+            const {revision} = await this.api.removeUnderlay(context.projectId(), context.floorId());
             this.calibration.set(null);
-            context.reload();
+            const scene = context.scene();
+            if (scene === null) {
+                context.reload();
+            } else {
+                context.setScene({...scene, underlay: null, revision});
+            }
         } catch {
             // The error interceptor has shown the message.
         } finally {

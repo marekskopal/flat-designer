@@ -1,29 +1,37 @@
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+
 import {UnderlayPlacement} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
-import {calibrateUnderlay, pixelToPlan, placementFromPoints, planToPixel} from './underlay';
+import {calibrateUnderlay, CalibrationPoint, pixelToPlan, placementFromPoints, planToPixel} from './underlay';
 
-describe('placementFromPoints', () => {
-    it('puts a horizontal scale bar on the plan axis (as UnderlayPlacementTest does)', () => {
-        const placement = placementFromPoints({px: 100, py: 500, x: 0, y: 0}, {px: 200, py: 500, x: 1000, y: 0});
-        expect(placement).toEqual({x: -1000, y: 5000, scale: 10, rotation: 0});
-    });
+/** Shared with the backend twin (`UnderlayPlacementTest`). */
+const fixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests/fixtures/underlay-placement.json'), 'utf8')) as {
+    cases: {name: string; points: [CalibrationPoint, CalibrationPoint]; expected?: UnderlayPlacement | null; tolerance?: number}[];
+};
 
-    it('maps both points of a rotated plan back onto their plan positions', () => {
-        const a = {px: 300, py: 120, x: 2500, y: 4000};
-        const b = {px: 420, py: 410, x: 6100, y: 3100};
-        const placement = placementFromPoints(a, b)!;
-        for (const point of [a, b]) {
-            const plan = pixelToPlan(placement, point.px, point.py);
-            expect(plan.x).toBeCloseTo(point.x, -0.5);
-            expect(plan.y).toBeCloseTo(point.y, -0.5);
+describe('placementFromPoints (shared fixture)', () => {
+    it.each(fixture.cases)('$name', (testCase) => {
+        const [a, b] = testCase.points;
+        const placement = placementFromPoints(a, b);
+        // `expected: null` means the points are refused; no `expected` checks the mapping only.
+        if ('expected' in testCase && testCase.expected === null) {
+            expect(placement).toBeNull();
+            return;
         }
-        expect(placement.rotation).toBeGreaterThanOrEqual(0);
-        expect(placement.rotation).toBeLessThan(360);
-    });
-
-    it('refuses points that coincide', () => {
-        expect(placementFromPoints({px: 10, py: 10, x: 0, y: 0}, {px: 10, py: 10, x: 1000, y: 0})).toBeNull();
+        expect(placement).not.toBeNull();
+        if (testCase.expected != null) {
+            expect(placement).toEqual(testCase.expected);
+        }
+        expect(placement!.rotation).toBeGreaterThanOrEqual(0);
+        expect(placement!.rotation).toBeLessThan(360);
+        const tolerance = testCase.tolerance ?? 0.5;
+        for (const point of testCase.points) {
+            const plan = pixelToPlan(placement!, point.px, point.py);
+            expect(Math.abs(plan.x - point.x)).toBeLessThanOrEqual(tolerance);
+            expect(Math.abs(plan.y - point.y)).toBeLessThanOrEqual(tolerance);
+        }
     });
 });
 

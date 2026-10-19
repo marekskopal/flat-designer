@@ -134,7 +134,8 @@ export class ViewerPageComponent {
             const fileId = this.underlayFileId();
             return fileId === null ? undefined : {projectId: this.projectId(), fileId};
         },
-        loader: async ({params}) => decodeImage(await this.projects.downloadFile(params.projectId, params.fileId)),
+        // Quietly: a saved version may point at a file deleted since, and then just shows no underlay.
+        loader: async ({params}) => decodeImage(await this.projects.downloadFile(params.projectId, params.fileId, {quiet: true})),
     });
     protected readonly underlayImage = computed(() =>
         this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,

@@ -65,7 +65,9 @@ final class UnderlayControllerTest extends IntegrationTestCase
 		self::assertIsArray($new);
 		self::assertEquals([0, 500, 10.0], [$new['x'], $new['y'], $new['scale']]);
 
-		$moved = $this->jsonBody($this->request('PUT', $path, ['fileId' => $fileId, 'x' => 250, 'rotation' => -90, 'opacity' => 0.8], $user));
+		$moved = $this->jsonBody(
+			$this->request('PUT', $path, ['fileId' => $fileId, 'x' => 250, 'rotation' => -90, 'opacity' => 0.8], $user),
+		);
 		self::assertIsArray($moved['underlay']);
 		self::assertEquals([250, 500, 10.0, 270.0, 0.8], [
 			$moved['underlay']['x'],
@@ -164,7 +166,9 @@ final class UnderlayControllerTest extends IntegrationTestCase
 	/** @return array<string, mixed> */
 	private function scene(User $user, Project $project, int $floorId): array
 	{
-		return $this->jsonBody($this->request('GET', self::path(Routes::ProjectFloorScene, $project->id, $floorId), authenticatedAs: $user));
+		return $this->jsonBody(
+			$this->request('GET', self::path(Routes::ProjectFloorScene, $project->id, $floorId), authenticatedAs: $user),
+		);
 	}
 
 	private function firstFloorId(User $user, Project $project): int

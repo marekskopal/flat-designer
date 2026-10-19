@@ -20,6 +20,9 @@ final readonly class ImagePreviewService
 	/** Fewer grid lines than this many output pixels apart would hide the image. */
 	private const int MinGridSpacing = 12;
 
+	/** gd decodes the whole source into a 4-byte-per-pixel bitmap; above this the worker's memory_limit would be hit. */
+	private const int MaxSourcePixels = 30000000;
+
 	/**
 	 * @param array{x: int, y: int, width: int, height: int}|null $crop source pixels; null is the whole image
 	 * @return array{data: string, mimeType: string, widthPx: int, heightPx: int, crop: array{x: int, y: int, width: int, height: int}, scale: float}
@@ -46,6 +49,14 @@ final readonly class ImagePreviewService
 		}
 		if (!extension_loaded('gd')) {
 			throw new ProjectException('Cropping and scaling images needs the PHP extension gd.', 500);
+		}
+		if ($width * $height > self::MaxSourcePixels) {
+			throw new ProjectException(sprintf(
+				'The image is %d × %d px, too large to crop or scale here (at most %d megapixels); upload a smaller copy.',
+				$width,
+				$height,
+				intdiv(self::MaxSourcePixels, 1000000),
+			));
 		}
 
 		$image = self::resample($bytes, $crop, $scale);

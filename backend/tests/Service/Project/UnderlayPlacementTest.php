@@ -4,50 +4,75 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Tests\Service\Project;
 
+use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use FlatDesigner\Service\Project\UnderlayService;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+/** Runs the shared fixture tests/fixtures/underlay-placement.json (also run by the frontend twin, `underlay.spec.ts`). */
 #[CoversClass(UnderlayService::class)]
 final class UnderlayPlacementTest extends TestCase
 {
-	public function testAxisAlignedPlanKeepsRotationZero(): void
-	{
-		// A scale bar from pixel (100, 500) to (200, 500) is 1 m; its left end belongs at the plan origin.
-		$placement = UnderlayService::placementFromPoints([
-			['px' => 100.0, 'py' => 500.0, 'x' => 0.0, 'y' => 0.0],
-			['px' => 200.0, 'py' => 500.0, 'x' => 1000.0, 'y' => 0.0],
-		]);
+	private const string Fixture = __DIR__ . '/../../fixtures/underlay-placement.json';
 
-		self::assertSame(['x' => -1000, 'y' => 5000, 'scale' => 10.0, 'rotation' => 0.0], $placement);
+	/** @return iterable<string, array{list<array{px: float, py: float, x: float, y: float}>, array{x: int, y: int, scale: float, rotation: float}|null, bool, float}> */
+	public static function cases(): iterable
+	{
+		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
+		/** @var list<array{name: string, points: list<array{px: int|float, py: int|float, x: int|float, y: int|float}>, expected?: array{x: int, y: int, scale: int|float, rotation: int|float}|null, tolerance?: int|float}> $cases */
+		$cases = $fixture['cases'];
+		foreach ($cases as $case) {
+			// `expected: null` means the points are refused; no `expected` checks the mapping only.
+			$expected = $case['expected'] ?? null;
+
+			yield $case['name'] => [
+				array_map(
+					static fn (array $point): array => ['px' => (float) $point['px'], 'py' => (float) $point['py'], 'x' => (float) $point['x'], 'y' => (float) $point['y']],
+					$case['points'],
+				),
+				$expected === null ? null :
+				[
+					'x' => $expected['x'],
+					'y' => $expected['y'],
+					'scale' => (float) $expected['scale'],
+					'rotation' => (float) $expected['rotation'],
+				],
+				array_key_exists('expected', $case) && $expected === null,
+				(float) ($case['tolerance'] ?? 0.5),
+			];
+		}
 	}
 
-	public function testRotatedPlanMapsBothPointsBack(): void
+	/**
+	 * @param list<array{px: float, py: float, x: float, y: float}> $points
+	 * @param array{x: int, y: int, scale: float, rotation: float}|null $expected
+	 */
+	#[DataProvider('cases')]
+	public function testPlacement(array $points, ?array $expected, bool $refused, float $tolerance): void
 	{
-		$points = [
-			['px' => 300.0, 'py' => 120.0, 'x' => 2500.0, 'y' => 4000.0],
-			['px' => 420.0, 'py' => 410.0, 'x' => 6100.0, 'y' => 3100.0],
-		];
-		$placement = UnderlayService::placementFromPoints($points);
+		if ($refused) {
+			$this->expectException(ProjectException::class);
+			UnderlayService::placementFromPoints($points);
 
-		foreach ($points as $point) {
-			[$x, $y] = self::toPlan($placement, $point['px'], $point['py']);
-			self::assertEqualsWithDelta($point['x'], $x, 1.0);
-			self::assertEqualsWithDelta($point['y'], $y, 1.0);
+			return;
+		}
+
+		$placement = UnderlayService::placementFromPoints($points);
+		if ($expected !== null) {
+			self::assertSame($expected['x'], $placement['x']);
+			self::assertSame($expected['y'], $placement['y']);
+			self::assertEqualsWithDelta($expected['scale'], $placement['scale'], 1e-9);
+			self::assertEqualsWithDelta($expected['rotation'], $placement['rotation'], 1e-6);
 		}
 		self::assertGreaterThanOrEqual(0.0, $placement['rotation']);
 		self::assertLessThan(360.0, $placement['rotation']);
-	}
-
-	public function testPointsMustLieApart(): void
-	{
-		$this->expectException(ProjectException::class);
-
-		UnderlayService::placementFromPoints([
-			['px' => 10.0, 'py' => 10.0, 'x' => 0.0, 'y' => 0.0],
-			['px' => 10.0, 'py' => 10.0, 'x' => 1000.0, 'y' => 0.0],
-		]);
+		foreach ($points as $point) {
+			[$x, $y] = self::toPlan($placement, $point['px'], $point['py']);
+			self::assertEqualsWithDelta($point['x'], $x, $tolerance);
+			self::assertEqualsWithDelta($point['y'], $y, $tolerance);
+		}
 	}
 
 	/**
