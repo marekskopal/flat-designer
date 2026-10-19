@@ -1,7 +1,7 @@
 # Flat Designer
 
-3D viewer of projects (1..N floors each) with a parametric kitchen; the seeded project is flat no. 50
-(H1B). PoC: view only, data seeded by migrations. Accounts (roles Admin/User) with JWT auth; users own
+3D viewer of projects (1..N floors each) with parametric custom-made furniture (furniture definitions); the seeded
+project is flat no. 50 (H1B). PoC: view only, data seeded by migrations. Accounts (roles Admin/User) with JWT auth; users own
 projects, admins see all. Architecture mirrors `../ukolio` (same author), trimmed to what a viewer needs.
 
 ## Services
@@ -102,9 +102,11 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   say `flat_id`). Data changes go into a new migration; editing an applied one needs
   `make reset-db` (drops the DB volume).
 - Item builders: `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`; each builds the
-  item body in its local frame. A new item kind needs the PHP enum, a migration extending the
-  `items.kind` column enum, the TS `ItemKind` union and a builder.
-- Furniture definitions (`docs/furniture-definitions-plan.md`): custom furniture as data — parameters and
+  item body in its local frame. Custom-made furniture is a furniture definition (below), not a new kind; a new item kind
+  (a bought product or a building element) needs the PHP enum, a migration extending the `items.kind` column enum, the
+  TS `ItemKind` union and a builder.
+- Furniture definitions (`docs/furniture-definitions-plan.md`, `docs/furniture-definitions-v2-plan.md`; the current
+  format is `FurnitureTools::Format`): custom furniture as data — parameters and
   parts whose sizes are expressions. The expression language and the definition evaluator exist twice, PHP
   (`Service/Furniture`) and TS (`viewer/engine/custom`), kept identical by the shared fixtures
   `backend/tests/fixtures/furniture-{expressions,definitions}.json`; change both twins and add a fixture case together.
