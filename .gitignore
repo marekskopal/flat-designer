@@ -4,3 +4,4 @@
 .playwright-mcp/
 /source_files/
 /ssl/
+/node_modules/
