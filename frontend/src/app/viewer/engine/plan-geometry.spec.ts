@@ -2,6 +2,7 @@ import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 import {
     collideCircle,
+    cornerWindows,
     edgeMidpoints,
     entranceWalkStart,
     insertVertex,
@@ -444,6 +445,45 @@ describe('wallJoints', () => {
         const tee = [straightWall(1, [0, 0], [3000, 0]), straightWall(2, [3000, 0], [6000, 0]), straightWall(3, [3000, 0], [3000, 2000])];
         expect(wallJoints(tee).size).toBe(0);
         expect(wallJoints([straightWall(1, [0, 0], [3000, 0])]).size).toBe(0);
+    });
+});
+
+describe('cornerWindows', () => {
+    const window = (id: number, offset: number, width: number, sillHeight = 900): Opening => ({
+        ...opening(offset, width, 1200, sillHeight),
+        id,
+        type: 'Window',
+    });
+
+    it('finds two windows meeting at an L corner', () => {
+        const walls = [straightWall(1, [0, 0], [3000, 0], [window(11, 0, 1500)]), straightWall(2, [0, 3000], [0, 0], [window(12, 1800, 1200)])];
+        const corners = cornerWindows(walls);
+        expect(corners.get(1)).toEqual({start: 11, end: null});
+        expect(corners.get(2)).toEqual({start: null, end: 12});
+    });
+
+    it('needs a window on both walls, reaching the corner, at overlapping heights', () => {
+        const alone = [straightWall(1, [0, 0], [3000, 0], [window(11, 0, 1500)]), straightWall(2, [0, 3000], [0, 0])];
+        expect(cornerWindows(alone).size).toBe(0);
+        const short = [straightWall(1, [0, 0], [3000, 0], [window(11, 0, 1500)]), straightWall(2, [0, 3000], [0, 0], [window(12, 1700, 1200)])];
+        expect(cornerWindows(short).size).toBe(0);
+        const apart = [straightWall(1, [0, 0], [3000, 0], [window(11, 0, 1500)]), straightWall(2, [0, 3000], [0, 0], [window(12, 1800, 1200, 2200)])];
+        expect(cornerWindows(apart).size).toBe(0);
+    });
+
+    it('ignores straight continuations and three walls meeting', () => {
+        const straight = [straightWall(1, [0, 0], [3000, 0], [window(11, 1500, 1500)]), straightWall(2, [3000, 0], [6000, 0], [window(12, 0, 1000)])];
+        expect(cornerWindows(straight).size).toBe(0);
+        const three = [...straight, straightWall(3, [3000, 0], [3000, 2000], [window(13, 0, 800)])];
+        expect(cornerWindows(three).size).toBe(0);
+    });
+});
+
+describe('window sashes', () => {
+    it('hangs a walkable window without a mullion as one sash on its hinge', () => {
+        const french = {...opening(1000, 1000, 2200), id: 1, type: 'Window', walkable: true, mullions: 0, hinge: 'End'} as Opening;
+        expect(openingLeaves(french, 200).map((l) => [l.along, l.closed, l.width])).toEqual([[1930, -1, 860]]);
+        expect(openingLeaves({...french, mullions: 1}, 200)).toHaveLength(2);
     });
 });
 

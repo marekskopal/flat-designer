@@ -251,6 +251,10 @@ final readonly class ProjectSnapshotService
 					$opening->nullableString('frameStyle') ?? '',
 				) ?? DoorFrameStyleEnum::Lining;
 				$restored->handle = DoorHandleEnum::tryFrom($opening->nullableString('handle') ?? '');
+				// And windows before their divisions and sill boards.
+				$restored->mullions = $opening->nullableInt('mullions') ?? 1;
+				$restored->transoms = $opening->nullableInt('transoms') ?? 0;
+				$restored->sillBoard = $opening->nullableInt('sillBoard');
 				$this->openingRepository->persist($restored);
 			}
 		}

@@ -28,7 +28,9 @@ use MarekSkopal\ORM\Enum\Type;
  * - `SlidingDoor`: the leaf hangs on the `side` face and slides open towards `hinge`.
  * - `PocketDoor`: the leaf slides into a pocket in the wall towards `hinge`.
  * - `Passage`: no leaf.
- * `frameStyle` and `handle` (none: the type's default) dress doors. `entrance` marks the main door of the
+ * `frameStyle` and `handle` (none: the type's default) dress doors. A window is divided by `mullions` (vertical
+ * bars; 1 = two panes) and `transoms` (horizontal bars); `sillBoard` is how far its inner sill board reaches past
+ * the wall face on `side`, the interior (none: no boards; exterior walls also get an outer sill). `entrance` marks the main door of the
  * floor (where a walkthrough starts); `walkable` a window down to the floor (French window) whose two sashes
  * open in the walkthrough (into `side`), so it can be walked through like a door.
  */
@@ -50,6 +52,15 @@ class Opening extends AEntity
 
 	#[ColumnEnum(enum: DoorHandleEnum::class, nullable: true)]
 	public ?DoorHandleEnum $handle = null;
+
+	#[Column(type: Type::Int)]
+	public int $mullions = 1;
+
+	#[Column(type: Type::Int)]
+	public int $transoms = 0;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $sillBoard = null;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]

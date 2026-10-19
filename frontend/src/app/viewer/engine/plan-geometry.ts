@@ -331,7 +331,7 @@ export function hasLeaves(opening: Opening): boolean {
 
 /**
  * The leaves of an opening. A door's one leaf hangs on its `hinge` edge, a double door's two and a walkable
- * French window's two sashes on its jambs; they swing into `side` (default left) and, closed, lie flush with
+ * French window's two sashes on its jambs (one on `hinge` without a mullion); they swing into `side` (default left) and, closed, lie flush with
  * that wall face (a sash inside the window frame). A sliding door's leaf hangs in front of the `side` face, a
  * pocket door's in the wall; both slide open towards `hinge` until they clear the opening. Passages and other
  * windows have none.
@@ -393,12 +393,18 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
             if (opening.walkable !== true) {
                 return [];
             }
-            const width = (opening.width - 2 * WindowFrameBar) / 2;
             const across = swing * (WindowFrameBar / 2 - SashThickness / 2);
-            const sash = {...base, motion: 'swing' as const, across, width, thickness: SashThickness};
+            const start = opening.offset + WindowFrameBar;
+            const end = opening.offset + opening.width - WindowFrameBar;
+            if (opening.mullions === 0) {
+                // One sash, hung on `hinge`.
+                const sash = {...base, motion: 'swing' as const, across, width: end - start, thickness: SashThickness};
+                return [towardsEnd ? {...sash, along: end, closed: -1} : {...sash, along: start, closed: 1}];
+            }
+            const sash = {...base, motion: 'swing' as const, across, width: (end - start) / 2, thickness: SashThickness};
             return [
-                {...sash, along: opening.offset + WindowFrameBar, closed: 1},
-                {...sash, index: 1, along: opening.offset + opening.width - WindowFrameBar, closed: -1},
+                {...sash, along: start, closed: 1},
+                {...sash, index: 1, along: end, closed: -1},
             ];
         }
     }
@@ -795,25 +801,9 @@ export function wallFaces(wall: WallLine, ends: WallEnds = SquareEnds): {left: [
  * very sharp angles stay square. Walls without a joint are left out of the map.
  */
 export function wallJoints(walls: readonly WallLine[]): Map<number, WallEnds> {
-    interface End {
-        wall: WallLine;
-        atStart: boolean;
-        point: Vec2;
-    }
-    const ends: End[] = walls.flatMap((wall) => [
-        {wall, atStart: true, point: {x: wall.startX, y: wall.startY}},
-        {wall, atStart: false, point: {x: wall.endX, y: wall.endY}},
-    ]);
     const result = new Map<number, WallEnds>();
 
-    for (const end of ends) {
-        const others = ends.filter(
-            (o) => o.wall.id !== end.wall.id && Math.hypot(o.point.x - end.point.x, o.point.y - end.point.y) <= JointTolerance,
-        );
-        if (others.length !== 1 || wallFrame(end.wall).length === 0 || wallFrame(others[0].wall).length === 0) {
-            continue;
-        }
-        const other = others[0];
+    for (const {end, other} of cornerEnds(walls)) {
         // Unit vectors from the corner into each wall.
         const a = intoWall(end);
         const b = intoWall(other);
@@ -842,9 +832,79 @@ export function wallJoints(walls: readonly WallLine[]): Map<number, WallEnds> {
         result.set(end.wall.id, faces);
     }
     return result;
+}
 
-    function intoWall(end: End): Vec2 {
-        const frame = wallFrame(end.wall);
-        return end.atStart ? frame.dir : {x: -frame.dir.x, y: -frame.dir.y};
+interface WallEnd<W extends WallLine> {
+    wall: W;
+    atStart: boolean;
+    point: Vec2;
+}
+
+/** Wall ends meeting exactly one other wall end, each with that other end (so every pair comes up twice). */
+function cornerEnds<W extends WallLine>(walls: readonly W[]): {end: WallEnd<W>; other: WallEnd<W>}[] {
+    const ends: WallEnd<W>[] = walls.flatMap((wall) => [
+        {wall, atStart: true, point: {x: wall.startX, y: wall.startY}},
+        {wall, atStart: false, point: {x: wall.endX, y: wall.endY}},
+    ]);
+    return ends.flatMap((end) => {
+        const others = ends.filter(
+            (o) => o.wall.id !== end.wall.id && Math.hypot(o.point.x - end.point.x, o.point.y - end.point.y) <= JointTolerance,
+        );
+        if (others.length !== 1 || wallFrame(end.wall).length === 0 || wallFrame(others[0].wall).length === 0) {
+            return [];
+        }
+        return [{end, other: others[0]}];
+    });
+}
+
+/** Unit vector from a wall end into the wall. */
+function intoWall(end: WallEnd<WallLine>): Vec2 {
+    const frame = wallFrame(end.wall);
+    return end.atStart ? frame.dir : {x: -frame.dir.x, y: -frame.dir.y};
+}
+
+/** The corner windows at a wall's ends: the id of the window that turns the corner there, or null. */
+export interface WallCorners {
+    start: number | null;
+    end: number | null;
+}
+
+export const NoCorners: WallCorners = {start: null, end: null};
+
+/** How close (mm) a window's edge must come to its wall's end to reach it. */
+const CornerWindowTolerance = 2;
+
+/**
+ * Corner windows: where two walls meet at an angle and each has a window reaching that end, their heights
+ * overlapping, the windows meet without a post. The walls already leave the corner open there (no piece of
+ * either wall reaches into it at the windows' height). Walls without one are left out of the map.
+ */
+export function cornerWindows(walls: readonly Wall[]): Map<number, WallCorners> {
+    const result = new Map<number, WallCorners>();
+    const windowAt = (end: WallEnd<Wall>): Opening | undefined => {
+        const length = wallFrame(end.wall).length;
+        return end.wall.openings.find(
+            (o) =>
+                o.type === 'Window' &&
+                (end.atStart ? o.offset <= CornerWindowTolerance : o.offset + o.width >= length - CornerWindowTolerance),
+        );
+    };
+
+    for (const {end, other} of cornerEnds(walls)) {
+        const a = intoWall(end);
+        const b = intoWall(other);
+        const mine = windowAt(end);
+        const theirs = windowAt(other);
+        if (Math.abs(a.x * b.y - a.y * b.x) < 1e-3 || mine === undefined || theirs === undefined) {
+            continue;
+        }
+        const bottom = Math.max(mine.sillHeight, theirs.sillHeight);
+        const top = Math.min(mine.sillHeight + mine.height, theirs.sillHeight + theirs.height);
+        if (top > bottom) {
+            const corners = result.get(end.wall.id) ?? {...NoCorners};
+            corners[end.atStart ? 'start' : 'end'] = mine.id;
+            result.set(end.wall.id, corners);
+        }
     }
+    return result;
 }

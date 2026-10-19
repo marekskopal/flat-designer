@@ -98,15 +98,15 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertSame(2, $projectBody['latestVersion']);
 	}
 
-	public function testRestoreOfSnapshotWithoutDoorStyleUsesDefaults(): void
+	public function testRestoreOfSnapshotWithoutNewOpeningFieldsUsesDefaults(): void
 	{
 		$user = Fixture::createUser();
 		$project = Fixture::createProject($user);
 		Fixture::furnishFloor(Fixture::firstFloor($project));
 		$versionId = $this->saveVersion($user, $project->id);
-		// Snapshots saved before doors had a frame style and handle.
+		// Snapshots saved before doors had a frame style and handle, and windows divisions.
 		Fixture::service(DatabaseInterface::class)->getPdo()->exec(sprintf(
-			"UPDATE project_versions SET snapshot = REPLACE(REPLACE(snapshot, '\"frameStyle\":\"Architrave\",', ''), ',\"handle\":\"Knob\"', '') WHERE id = %d",
+			"UPDATE project_versions SET snapshot = REPLACE(REPLACE(REPLACE(snapshot, '\"frameStyle\":\"Architrave\",', ''), ',\"handle\":\"Knob\"', ''), ',\"mullions\":1,\"transoms\":0,\"sillBoard\":null', '') WHERE id = %d",
 			$versionId,
 		));
 
@@ -127,7 +127,8 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertIsArray($scene['walls'][0]);
 		self::assertIsList($scene['walls'][0]['openings']);
 		self::assertIsArray($scene['walls'][0]['openings'][0]);
-		self::assertSame(['Lining', null], [$scene['walls'][0]['openings'][0]['frameStyle'], $scene['walls'][0]['openings'][0]['handle']]);
+		$door = $scene['walls'][0]['openings'][0];
+		self::assertSame(['Lining', null, 1, 0], [$door['frameStyle'], $door['handle'], $door['mullions'], $door['transoms']]);
 	}
 
 	public function testVersionsOfOtherProjectsAreNotFound(): void

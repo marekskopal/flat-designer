@@ -45,6 +45,11 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
   and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
   the type's default).
+- Windows have `mullions` (vertical bars; 1, two panes, is the default) and `transoms`, plus an optional `sillBoard`
+  (the inner board's reach past the wall face on `side`, the interior; exterior walls also get an outer sill). A
+  walkable window has one sash on `hinge` (mullions 0) or two. Corner windows have no stored field:
+  `cornerWindows()` finds two windows that reach the shared end of an L-joint at overlapping heights, and
+  `buildWall()` drops their corner jambs. The wall pieces already leave such a corner open.
 - Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
   allows the owner or an admin and answers 404 otherwise.
 - Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.

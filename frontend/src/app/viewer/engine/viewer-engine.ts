@@ -17,6 +17,7 @@ import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, 
 import {
     alongWall,
     Bounds,
+    cornerWindows,
     edgeMidpoints,
     entranceWalkStart,
     insertVertex,
@@ -36,6 +37,7 @@ import {
     Vec2,
     WalkStart,
     wallColliders,
+    WallCorners,
     WallEnds,
     wallFaces,
     wallFrame,
@@ -239,6 +241,8 @@ export class ViewerEngine {
     private sectionHeight: number | null = null;
     private ceilingsVisible = true;
     private joints = new Map<number, WallEnds>();
+    /** Corner windows by wall id (`cornerWindows()`), as the walls were built. */
+    private corners = new Map<number, WallCorners>();
     private bounds: Bounds = {minX: 0, minY: 0, maxX: 1, maxY: 1};
     private insetLeft = 0;
     private tween: CameraTween | null = null;
@@ -384,6 +388,7 @@ export class ViewerEngine {
         this.parts.ceilings.visible = this.ceilingsVisible;
         content.add(this.parts.root);
         this.joints = wallJoints(scene.walls);
+        this.corners = cornerWindows(scene.walls);
 
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         const definitions = definitionLibrary(scene.definitions);
@@ -443,20 +448,26 @@ export class ViewerEngine {
         const wallsChanged = walls.removed.length > 0 || walls.changed.length > 0;
         if (wallsChanged) {
             const joints = wallJoints(scene.walls);
+            const corners = cornerWindows(scene.walls);
             const changedIds = new Set(walls.changed.map((w) => w.id));
             for (const id of walls.removed) {
                 this.removeWall(id);
             }
             for (const wall of scene.walls) {
-                // A moved wall also changes the mitres of the walls it meets.
-                if (changedIds.has(wall.id) || !sameJson(this.joints.get(wall.id), joints.get(wall.id))) {
+                // A moved wall also changes the mitres of the walls it meets, a window the corner windows.
+                if (
+                    changedIds.has(wall.id) ||
+                    !sameJson(this.joints.get(wall.id), joints.get(wall.id)) ||
+                    !sameJson(this.corners.get(wall.id), corners.get(wall.id))
+                ) {
                     this.removeWall(wall.id);
-                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id));
+                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id));
                     parts.walls.set(wall.id, group);
                     parts.root.add(group);
                 }
             }
             this.joints = joints;
+            this.corners = corners;
             this.disposeObject(parts.slab);
             parts.slab = buildSlab(scene.walls, materials);
             parts.root.add(parts.slab);
@@ -1797,7 +1808,7 @@ export class ViewerEngine {
             return;
         }
         const walls = scene.walls.map((w) => (w.id === wall.id ? wall : w));
-        const group = buildWall(wall, materials, parts.sectionMaterial, wallJoints(walls).get(wall.id));
+        const group = buildWall(wall, materials, parts.sectionMaterial, wallJoints(walls).get(wall.id), cornerWindows(walls).get(wall.id));
         const original = parts.walls.get(wall.id);
         this.setPreview(original === undefined ? [] : [original], [group]);
 
@@ -2083,6 +2094,7 @@ export class ViewerEngine {
         this.walls.clear();
         this.openings.clear();
         this.joints.clear();
+        this.corners.clear();
     }
 }
 

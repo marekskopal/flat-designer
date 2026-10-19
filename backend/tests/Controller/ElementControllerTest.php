@@ -284,6 +284,29 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame('Changed door "Sliding door" (type)', $changes['change']['summary']);
 	}
 
+	public function testWindowsHaveDivisionsAndSillBoardsDoorsDoNot(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 6000, 'endY' => 0, 'thickness' => 300]);
+		$wallId = self::id($wall);
+
+		$window = $this->create('openings', ['wallId' => $wallId, 'type' => 'Window', 'offset' => 100]);
+		self::assertSame([1, 0, null], [$window['mullions'], $window['transoms'], $window['sillBoard']]);
+		$divided = $this->jsonBody(
+			$this->edit('PATCH', 'openings', self::id($window), ['mullions' => 3, 'transoms' => 1, 'sillBoard' => 40]),
+		);
+		self::assertIsArray($divided['element']);
+		self::assertSame([3, 1, 40], [$divided['element']['mullions'], $divided['element']['transoms'], $divided['element']['sillBoard']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['mullions' => 9])->getStatusCode());
+
+		// A walkable window has one or two sashes.
+		$french = ['wallId' => $wallId, 'type' => 'Window', 'offset' => 2000, 'sillHeight' => 0, 'height' => 2200, 'walkable' => true];
+		self::assertSame(422, $this->edit('POST', 'openings', body: $french + ['mullions' => 2])->getStatusCode());
+		self::assertSame(0, $this->create('openings', $french + ['mullions' => 0])['mullions']);
+
+		$door = $this->create('openings', ['wallId' => $wallId, 'type' => 'Door', 'offset' => 4000, 'mullions' => 4, 'sillBoard' => 40]);
+		self::assertSame([1, 0, null], [$door['mullions'], $door['transoms'], $door['sillBoard']]);
+	}
+
 	public function testSlidingAndPocketDoorsNeedWallBesideThem(): void
 	{
 		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'thickness' => 150]);

@@ -25,10 +25,16 @@ use FlatDesigner\Service\Editor\FieldReader;
  * Doors, passages and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must
  * fit within the wall's length and height and must not overlap another opening of that wall. A sliding or
  * pocket door also needs the wall beside it, towards `hinge`, free for its open leaf (a pocket door a wall
- * thick enough for the pocket). Only a window down to the floor can be `walkable`.
+ * thick enough for the pocket). Only a window down to the floor can be `walkable`, with one or two sashes.
  */
 final readonly class OpeningHandler implements ElementHandler
 {
+	public const int MaxMullions = 8;
+
+	public const int MaxTransoms = 4;
+
+	public const int MaxSillBoard = 300;
+
 	public function __construct(private OpeningRepository $openingRepository, private WallRepository $wallRepository)
 	{
 	}
@@ -41,7 +47,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle'];
+		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard'];
 	}
 
 	/** @return list<string> */
@@ -69,6 +75,9 @@ final readonly class OpeningHandler implements ElementHandler
 				'walkable' => false,
 				'frameStyle' => DoorFrameStyleEnum::Lining->value,
 				'handle' => null,
+				'mullions' => 1,
+				'transoms' => 0,
+				'sillBoard' => null,
 			];
 		}
 
@@ -89,6 +98,9 @@ final readonly class OpeningHandler implements ElementHandler
 			'walkable' => false,
 			'frameStyle' => $type === OpeningTypeEnum::Passage ? DoorFrameStyleEnum::None->value : DoorFrameStyleEnum::Lining->value,
 			'handle' => null,
+			'mullions' => 1,
+			'transoms' => 0,
+			'sillBoard' => null,
 		];
 	}
 
@@ -154,6 +166,10 @@ final readonly class OpeningHandler implements ElementHandler
 		if ($walkable && ($type !== OpeningTypeEnum::Window || $sillHeight !== 0)) {
 			throw EditException::invalid('Only a window down to the floor (sill height 0) can be walkable.');
 		}
+		$window = self::windowFields($type, $fields);
+		if ($walkable && $window['mullions'] > 1) {
+			throw EditException::invalid('A walkable window has one or two sashes (mullions 0 or 1).');
+		}
 
 		return [
 			'wallId' => $wall->id,
@@ -166,7 +182,27 @@ final readonly class OpeningHandler implements ElementHandler
 			'entrance' => $fields->bool('entrance'),
 			'walkable' => $walkable,
 			'frameStyle' => ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
-		] + self::leafFields($type, $hinge, $width, $fields);
+		] + self::leafFields($type, $hinge, $width, $fields) + $window;
+	}
+
+	/**
+	 * The fields of a window's glazing: `mullions` (vertical bars, default 1 = two panes), `transoms` (horizontal
+	 * bars) and `sillBoard` (how far the inner sill board reaches past the wall face, mm; none: no boards). Doors
+	 * keep the defaults.
+	 *
+	 * @return array{mullions: int, transoms: int, sillBoard: int|null}
+	 */
+	private static function windowFields(OpeningTypeEnum $type, FieldReader $fields): array
+	{
+		if ($type !== OpeningTypeEnum::Window) {
+			return ['mullions' => 1, 'transoms' => 0, 'sillBoard' => null];
+		}
+
+		return [
+			'mullions' => $fields->raw('mullions') === null ? 1 : $fields->int('mullions', 0, self::MaxMullions),
+			'transoms' => $fields->raw('transoms') === null ? 0 : $fields->int('transoms', 0, self::MaxTransoms),
+			'sillBoard' => $fields->nullableInt('sillBoard', 0, self::MaxSillBoard),
+		];
 	}
 
 	/**
@@ -247,6 +283,9 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->walkable = $fields->bool('walkable');
 		$opening->frameStyle = $fields->enum('frameStyle', DoorFrameStyleEnum::class);
 		$opening->handle = $fields->nullableEnum('handle', DoorHandleEnum::class);
+		$opening->mullions = $fields->int('mullions', 0, self::MaxMullions);
+		$opening->transoms = $fields->int('transoms', 0, self::MaxTransoms);
+		$opening->sillBoard = $fields->nullableInt('sillBoard', 0, self::MaxSillBoard);
 		$this->openingRepository->persist($opening);
 	}
 

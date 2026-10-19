@@ -28,6 +28,9 @@ final readonly class OpeningDto
 		public bool $walkable,
 		public DoorFrameStyleEnum $frameStyle,
 		public ?DoorHandleEnum $handle,
+		public int $mullions,
+		public int $transoms,
+		public ?int $sillBoard,
 	) {
 	}
 
@@ -48,6 +51,9 @@ final readonly class OpeningDto
 			walkable: $opening->walkable,
 			frameStyle: $opening->frameStyle,
 			handle: $opening->handle,
+			mullions: $opening->mullions,
+			transoms: $opening->transoms,
+			sillBoard: $opening->sillBoard,
 		);
 	}
 }

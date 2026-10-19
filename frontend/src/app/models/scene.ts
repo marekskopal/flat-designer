@@ -111,6 +111,14 @@ export interface Opening {
     frameStyle?: DoorFrameStyle;
     /** Null: the type's default, a lever (a pull on sliding and pocket doors). */
     handle?: DoorHandle | null;
+    /**
+     * Window: vertical glazing bars (1, two panes, when missing: older snapshots) and horizontal ones; a walkable
+     * window has one sash without a mullion. `sillBoard`: how far the inner sill board reaches past the wall face
+     * on `side` (the interior), mm; null: none.
+     */
+    mullions?: number;
+    transoms?: number;
+    sillBoard?: number | null;
 }
 
 export interface Wall {

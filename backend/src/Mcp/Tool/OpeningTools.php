@@ -13,7 +13,7 @@ use Mcp\Schema\ToolAnnotations;
 /** Doors, passages and windows in walls. */
 final readonly class OpeningTools
 {
-	private const array Clearable = ['leafWidth', 'hinge', 'side', 'handle'];
+	private const array Clearable = ['leafWidth', 'hinge', 'side', 'handle', 'sillBoard'];
 
 	public function __construct(private ToolContext $context, private SceneEditor $editor)
 	{
@@ -33,6 +33,9 @@ final readonly class OpeningTools
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
 	 * @param string|null $frameStyle doors: "Lining" (default) | "Architrave" (lining with casings) | "Flush" (hidden frame) | "None" (bare hole, a passage's default)
 	 * @param string|null $handle doors with a leaf: "Lever" | "Knob" | "Pull" | "None"; none given: a lever, a pull on sliding and pocket doors
+	 * @param int|null $mullions window: vertical glazing bars, 0–8 (default 1 = two panes; a walkable window 0 = one sash, 1 = two)
+	 * @param int|null $transoms window: horizontal glazing bars, 0–4 (default 0)
+	 * @param int|null $sillBoard window: how far the inner sill board reaches past the wall face on `side` (the interior, default Left), mm; exterior walls also get an outer sill. Default none. Two windows meeting at a wall corner, both reaching that wall end, form a corner window by themselves.
 	 */
 	#[McpTool(
 		name: 'add_opening',
@@ -55,6 +58,9 @@ final readonly class OpeningTools
 		?bool $walkable = null,
 		?string $frameStyle = null,
 		?string $handle = null,
+		?int $mullions = null,
+		?int $transoms = null,
+		?int $sillBoard = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -75,6 +81,9 @@ final readonly class OpeningTools
 				'walkable' => $walkable,
 				'frameStyle' => $frameStyle,
 				'handle' => $handle,
+				'mullions' => $mullions,
+				'transoms' => $transoms,
+				'sillBoard' => $sillBoard,
 			]),
 		);
 	}
@@ -89,7 +98,10 @@ final readonly class OpeningTools
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
 	 * @param string|null $frameStyle doors: "Lining" | "Architrave" | "Flush" | "None"
 	 * @param string|null $handle doors with a leaf: "Lever" | "Knob" | "Pull" | "None"
-	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle)
+	 * @param int|null $mullions window: vertical glazing bars, 0–8
+	 * @param int|null $transoms window: horizontal glazing bars, 0–4
+	 * @param int|null $sillBoard window: inner sill board's reach past the wall face, mm
+	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard"
 	 */
 	#[McpTool(
 		name: 'update_opening',
@@ -112,6 +124,9 @@ final readonly class OpeningTools
 		?bool $walkable = null,
 		?string $frameStyle = null,
 		?string $handle = null,
+		?int $mullions = null,
+		?int $transoms = null,
+		?int $sillBoard = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -133,6 +148,9 @@ final readonly class OpeningTools
 				'walkable' => $walkable,
 				'frameStyle' => $frameStyle,
 				'handle' => $handle,
+				'mullions' => $mullions,
+				'transoms' => $transoms,
+				'sillBoard' => $sillBoard,
 			], $clear, self::Clearable),
 		);
 	}

@@ -4,17 +4,20 @@ import * as THREE from 'three';
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
 import {
+    cornerWindows,
     DoorFrameWidth,
     isDoor,
     Leaf,
     LeafOpenAngle,
     MM,
+    NoCorners,
     openingLeaves,
     polygonBounds,
     polygonSignedArea,
     SlidingDoorOverlap,
     SquareEnds,
     tileOrigin,
+    WallCorners,
     WallEnds,
     wallFrame,
     WallGap,
@@ -76,8 +79,9 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     }
 
     const joints = wallJoints(scene.walls);
+    const corners = cornerWindows(scene.walls);
     for (const wall of scene.walls) {
-        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id));
+        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id));
         parts.walls.set(wall.id, group);
         root.add(group);
     }
@@ -164,9 +168,16 @@ function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Mesh {
 /**
  * Wall group in wall-local coordinates: x along the centre line from the start, y up, z across with
  * −z on the left of the wall direction. Solid pieces leave the openings empty; doors and windows are
- * added into them. `ends` mitres the end pieces where the wall meets another one in a corner.
+ * added into them. `ends` mitres the end pieces where the wall meets another one in a corner; `corners` names
+ * the corner windows at its ends (`cornerWindows()`).
  */
-export function buildWall(wall: Wall, materials: MaterialLibrary, sectionMaterial: THREE.Material, ends: WallEnds = SquareEnds): THREE.Group {
+export function buildWall(
+    wall: Wall,
+    materials: MaterialLibrary,
+    sectionMaterial: THREE.Material,
+    ends: WallEnds = SquareEnds,
+    corners: WallCorners = NoCorners,
+): THREE.Group {
     const frame = wallFrame(wall);
     const group = new THREE.Group();
     group.name = `wall:${wall.name}`;
@@ -188,7 +199,7 @@ export function buildWall(wall: Wall, materials: MaterialLibrary, sectionMateria
     }
 
     for (const opening of wall.openings) {
-        group.add(isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials));
+        group.add(isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners));
     }
 
     return group;
@@ -391,48 +402,123 @@ function doorHandles(opening: Opening, leaf: Leaf, material: THREE.Material): TH
     });
 }
 
-function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
+/** Depth of a window frame, centred on the wall's centre line, m. */
+const WindowFrameDepth = 0.08;
+/** Sill boards: thickness, overhang past the opening on each side, and the outer sill's reach past the wall face (mm). */
+const SillBoardThickness = 20;
+const SillBoardOverhang = 30;
+const OuterSillReach = 40;
+
+/**
+ * A window: frame, glazing divided by `mullions` and `transoms` (or a walkable window's sashes) and sill boards.
+ * At a corner (`corners`), the frame runs on to the wall's end without a jamb and the glass meets the other
+ * window's at the corner.
+ */
+function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, corners: WallCorners): THREE.Group {
     const group = new THREE.Group();
     group.name = `window:${opening.name}`;
     group.userData = {openingId: opening.id};
     const frameMaterial = materials.byCode('window-frame-anthracite');
     const glassMaterial = materials.byCode('glass');
     const from = opening.offset * MM;
-    const width = opening.width * MM;
+    const to = (opening.offset + opening.width) * MM;
     const bottom = opening.sillHeight * MM;
     const height = opening.height * MM;
     const bar = WindowFrameBar * MM;
-    const depth = 0.08;
+    const depth = WindowFrameDepth;
     const z = -depth / 2;
+    const cornerStart = corners.start === opening.id;
+    const cornerEnd = corners.end === opening.id;
+    // The head and bottom of a corner window reach past the corner by half the frame depth to meet the other's.
+    const frameFrom = cornerStart ? from - depth / 2 : from;
+    const frameTo = cornerEnd ? to + depth / 2 : to;
 
-    group.add(boxAt(frameMaterial, from, bottom, z, bar, height, depth));
-    group.add(boxAt(frameMaterial, from + width - bar, bottom, z, bar, height, depth));
-    group.add(boxAt(frameMaterial, from, bottom + height - bar, z, width, bar, depth));
-    group.add(boxAt(frameMaterial, from, bottom, z, width, 0.04, depth));
+    if (!cornerStart) {
+        group.add(boxAt(frameMaterial, from, bottom, z, bar, height, depth));
+    }
+    if (!cornerEnd) {
+        group.add(boxAt(frameMaterial, to - bar, bottom, z, bar, height, depth));
+    }
+    group.add(boxAt(frameMaterial, frameFrom, bottom + height - bar, z, frameTo - frameFrom, bar, depth));
+    group.add(boxAt(frameMaterial, frameFrom, bottom, z, frameTo - frameFrom, 0.04, depth));
+    for (const board of sillBoards(opening, wall, cornerStart, cornerEnd, materials)) {
+        group.add(board);
+    }
 
+    const transoms = opening.transoms ?? 0;
     const leaves = openingLeaves(opening, wall.thickness);
     if (leaves.length > 0) {
-        // Walkable: two sashes hinged on the jambs, closed by default.
+        // Walkable: sashes hinged on the jambs, closed by default.
         for (const leaf of leaves) {
-            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, frameMaterial, glassMaterial));
+            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, frameMaterial, glassMaterial));
         }
         return group;
     }
 
-    // French window with two sashes.
-    group.add(boxAt(frameMaterial, from + width / 2 - bar / 2, bottom, z, bar, height, depth));
-
-    const paneWidth = width / 2 - 1.5 * bar;
-    for (const paneFrom of [from + bar, from + width / 2 + bar / 2]) {
-        const pane = boxAt(glassMaterial, paneFrom, bottom + 0.04, -0.004, paneWidth, height - bar - 0.04, 0.008, false);
-        group.add(pane);
+    // Fixed glazing: one pane behind a grid of bars, evenly spaced between the jambs (or the corner).
+    const glassFrom = cornerStart ? from : from + bar;
+    const glassTo = cornerEnd ? to : to - bar;
+    const glassBottom = bottom + 0.04;
+    const glassTop = bottom + height - bar;
+    group.add(boxAt(glassMaterial, glassFrom, glassBottom, -0.004, glassTo - glassFrom, glassTop - glassBottom, 0.008, false));
+    const columns = (opening.mullions ?? 1) + 1;
+    for (let i = 1; i < columns; i++) {
+        const x = glassFrom + ((glassTo - glassFrom) * i) / columns;
+        group.add(boxAt(frameMaterial, x - bar / 2, glassBottom, z, bar, glassTop - glassBottom, depth));
+    }
+    for (let i = 1; i <= transoms; i++) {
+        const y = glassBottom + ((glassTop - glassBottom) * i) / (transoms + 1);
+        group.add(boxAt(frameMaterial, glassFrom, y - bar / 2, z, glassTo - glassFrom, bar, depth));
     }
 
     return group;
 }
 
-/** A glazed sash of a walkable French window: frame bars around a pane, pivoting like a door leaf. */
-function buildSash(leaf: Leaf, bottom: number, height: number, frameMaterial: THREE.Material, glassMaterial: THREE.Material): THREE.Group {
+/**
+ * Sill boards under a window with a sill: the inner board on `side` (the interior) reaching `sillBoard` past the
+ * wall face, and on an exterior wall an outer sill on the other face. None without `sillBoard`. At a corner end
+ * the boards run on to meet the other window's: the outer one round the corner, the inner one to the glass.
+ */
+function sillBoards(opening: Opening, wall: Wall, cornerStart: boolean, cornerEnd: boolean, materials: MaterialLibrary): THREE.Mesh[] {
+    if (opening.sillBoard === null || opening.sillBoard === undefined || opening.sillHeight === 0) {
+        return [];
+    }
+    const from = opening.offset * MM;
+    const to = (opening.offset + opening.width) * MM;
+    const top = opening.sillHeight * MM;
+    const face = (wall.thickness / 2) * MM;
+    const frameFace = WindowFrameDepth / 2;
+    const overhang = SillBoardOverhang * MM;
+    const thickness = SillBoardThickness * MM;
+    // Plan across is local −z: the interior on the left of the wall is −z.
+    const inside = opening.side === 'Right' ? 1 : -1;
+    const board = (sign: number, reach: number, outer: boolean, material: THREE.Material, drop: number): THREE.Mesh => {
+        const edge = face + reach;
+        const corner = outer ? edge : 0;
+        const start = cornerStart ? from - corner : from - overhang;
+        const end = cornerEnd ? to + corner : to + overhang;
+        const z = sign > 0 ? frameFace : -edge;
+        return boxAt(material, start, top - thickness - drop, z, end - start, thickness, edge - frameFace);
+    };
+    const boards = [board(inside, opening.sillBoard * MM, false, materials.plain('#eeebe5', 0.6, 0), 0)];
+    if (wall.type === 'Exterior') {
+        boards.push(board(-inside, OuterSillReach * MM, true, materials.plain('#6f6f6c', 0.45, 0.4), 0.02));
+    }
+    return boards;
+}
+
+/**
+ * A glazed sash of a walkable French window: frame bars around a pane, divided by `transoms`, pivoting like a door
+ * leaf.
+ */
+function buildSash(
+    leaf: Leaf,
+    bottom: number,
+    height: number,
+    transoms: number,
+    frameMaterial: THREE.Material,
+    glassMaterial: THREE.Material,
+): THREE.Group {
     const sash = leafPivot(leaf, 0);
     sash.position.y = bottom;
     const width = leaf.width * MM;
@@ -444,6 +530,10 @@ function buildSash(leaf: Leaf, bottom: number, height: number, frameMaterial: TH
     sash.add(boxAt(frameMaterial, bar, 0, z, width - 2 * bar, bar, thickness));
     sash.add(boxAt(frameMaterial, bar, height - bar, z, width - 2 * bar, bar, thickness));
     sash.add(boxAt(glassMaterial, bar, bar, -0.004, width - 2 * bar, height - 2 * bar, 0.008, false));
+    for (let i = 1; i <= transoms; i++) {
+        const y = bar + ((height - 2 * bar) * i) / (transoms + 1);
+        sash.add(boxAt(frameMaterial, bar, y - bar / 2, z, width - 2 * bar, bar, thickness));
+    }
     // Handle on the inner face of the free edge.
     const handle = boxAt(frameMaterial, width - bar / 2 - 0.01, 1.05 - bottom, 0, 0.02, 0.14, 0.02);
     handle.position.z = -leaf.swing * (thickness / 2 + 0.015);
