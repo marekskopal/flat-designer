@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
+use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
+use FlatDesigner\Service\Editor\Element\OpeningLook;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
@@ -23,6 +25,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(ItemHandler::class)]
 #[CoversClass(WallHandler::class)]
 #[CoversClass(OpeningHandler::class)]
+#[CoversClass(OpeningLook::class)]
 #[CoversClass(RoomHandler::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
@@ -305,6 +308,69 @@ final class ElementControllerTest extends EditorTestCase
 
 		$door = $this->create('openings', ['wallId' => $wallId, 'type' => 'Door', 'offset' => 4000, 'mullions' => 4, 'sillBoard' => 40]);
 		self::assertSame([1, 0, null], [$door['mullions'], $door['transoms'], $door['sillBoard']]);
+	}
+
+	public function testDoorLeafStylesAndWindowPanelsAndShutters(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 6000, 'endY' => 0, 'thickness' => 300]);
+		$wallId = self::id($wall);
+		$timber = Fixture::service(MaterialRepository::class)->findByCode('kitchen-oak');
+		self::assertNotNull($timber);
+
+		$door = $this->create('openings', ['wallId' => $wallId, 'type' => 'Door', 'offset' => 100]);
+		self::assertSame(['Flush', 2], [$door['leafStyle'], $door['leafPanels']]);
+		$panelled = $this->jsonBody($this->edit('PATCH', 'openings', self::id($door), ['leafStyle' => 'Panelled', 'leafPanels' => 4]));
+		self::assertIsArray($panelled['element']);
+		self::assertSame(['Panelled', 4], [$panelled['element']['leafStyle'], $panelled['element']['leafPanels']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['leafPanels' => 7])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['leafStyle' => 'Carved'])->getStatusCode());
+		// Doors have no shutters or panel; a passage no leaf to style.
+		$plain = $this->jsonBody($this->edit('PATCH', 'openings', self::id($door), ['shutters' => 'Louvred', 'panelHeight' => 500]));
+		self::assertIsArray($plain['element']);
+		self::assertSame([null, null], [$plain['element']['shutters'], $plain['element']['panelHeight']]);
+		$passage = $this->create('openings', ['wallId' => $wallId, 'type' => 'Passage', 'offset' => 1200, 'leafStyle' => 'Glazed']);
+		self::assertSame('Flush', $passage['leafStyle']);
+
+		$french = [
+			'wallId' => $wallId,
+			'type' => 'Window',
+			'offset' => 2500,
+			'sillHeight' => 0,
+			'height' => 2400,
+			'walkable' => true,
+			'panelHeight' => 600,
+			'shutters' => 'Louvred',
+			'shutterMaterialId' => $timber->id,
+		];
+		$window = $this->create('openings', $french);
+		self::assertSame(
+			[600, 'Louvred', $timber->id, false],
+			[$window['panelHeight'], $window['shutters'], $window['shutterMaterialId'], $window['shuttersClosed']],
+		);
+		$closed = $this->jsonBody($this->edit('PATCH', 'openings', self::id($window), ['shuttersClosed' => true]));
+		self::assertIsArray($closed['element']);
+		self::assertTrue($closed['element']['shuttersClosed']);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['panelHeight' => 2300])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['shutterMaterialId' => 999999])->getStatusCode());
+
+		// Without shutters, their material and state go too; undo brings them back.
+		$bare = $this->jsonBody($this->edit('PATCH', 'openings', self::id($window), ['shutters' => null]));
+		self::assertIsArray($bare['element']);
+		self::assertSame(
+			[null, null, false],
+			[$bare['element']['shutters'], $bare['element']['shutterMaterialId'], $bare['element']['shuttersClosed']],
+		);
+		$this->undo();
+		$openings = $this->sceneList('walls')[0]['openings'];
+		self::assertIsList($openings);
+		$restored = array_values(
+			array_filter($openings, static fn (mixed $o): bool => is_array($o) && $o['id'] === $window['id']),
+		)[0] ?? null;
+		self::assertIsArray($restored);
+		self::assertSame(
+			['Louvred', $timber->id, true],
+			[$restored['shutters'], $restored['shutterMaterialId'], $restored['shuttersClosed']],
+		);
 	}
 
 	public function testSlidingAndPocketDoorsNeedWallBesideThem(): void

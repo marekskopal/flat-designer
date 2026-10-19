@@ -118,8 +118,9 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south.
 - Walls are centre lines with a thickness. Openings are positioned by their offset along the wall from its start.
 - Openings are doors (single, double, sliding, pocket), passages without a door, and windows. Doors have a frame style
-  (lining, architrave, flush, none) and a handle (lever, knob, pull, none). Windows are divided by mullions and
-  transoms, can have sill boards, and two windows meeting at a wall corner form a corner window.
+  (lining, architrave, flush, none), a handle (lever, knob, pull, none) and a flush, panelled or glazed leaf. Windows
+  are divided by mullions and transoms, can have sill boards, a solid lower panel and louvred or solid exterior
+  shutters, and two windows meeting at a wall corner form a corner window.
 
 ## AI agents (MCP)
 

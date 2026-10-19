@@ -13,7 +13,7 @@ use Mcp\Schema\ToolAnnotations;
 /** Doors, passages and windows in walls. */
 final readonly class OpeningTools
 {
-	private const array Clearable = ['leafWidth', 'hinge', 'side', 'handle', 'sillBoard'];
+	private const array Clearable = ['leafWidth', 'hinge', 'side', 'handle', 'sillBoard', 'panelHeight', 'shutters', 'shutterMaterialId'];
 
 	public function __construct(private ToolContext $context, private SceneEditor $editor)
 	{
@@ -36,6 +36,12 @@ final readonly class OpeningTools
 	 * @param int|null $mullions window: vertical glazing bars, 0–8 (default 1 = two panes; a walkable window 0 = one sash, 1 = two)
 	 * @param int|null $transoms window: horizontal glazing bars, 0–4 (default 0)
 	 * @param int|null $sillBoard window: how far the inner sill board reaches past the wall face on `side` (the interior, default Left), mm; exterior walls also get an outer sill. Default none. Two windows meeting at a wall corner, both reaching that wall end, form a corner window by themselves.
+	 * @param string|null $leafStyle doors with a leaf: "Flush" (default, a plain slab) | "Panelled" (raised panels in stiles and rails) | "Glazed" (glass panes in a frame)
+	 * @param int|null $leafPanels Panelled / Glazed leaves: panels or panes stacked up the leaf, 1–6 (default 2)
+	 * @param int|null $panelHeight window: solid lower panel of the glazing, mm from the sill (a French window's panelled bottom); default none
+	 * @param string|null $shutters window: exterior shutters, two leaves on the outer face (opposite `side`): "Louvred" | "Solid"; default none
+	 * @param int|null $shutterMaterialId window with shutters: material of the shutters (list_materials; default painted timber)
+	 * @param bool|null $shuttersClosed window with shutters: closed across the window (default false: folded back against the wall)
 	 */
 	#[McpTool(
 		name: 'add_opening',
@@ -61,6 +67,12 @@ final readonly class OpeningTools
 		?int $mullions = null,
 		?int $transoms = null,
 		?int $sillBoard = null,
+		?string $leafStyle = null,
+		?int $leafPanels = null,
+		?int $panelHeight = null,
+		?string $shutters = null,
+		?int $shutterMaterialId = null,
+		?bool $shuttersClosed = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -84,6 +96,12 @@ final readonly class OpeningTools
 				'mullions' => $mullions,
 				'transoms' => $transoms,
 				'sillBoard' => $sillBoard,
+				'leafStyle' => $leafStyle,
+				'leafPanels' => $leafPanels,
+				'panelHeight' => $panelHeight,
+				'shutters' => $shutters,
+				'shutterMaterialId' => $shutterMaterialId,
+				'shuttersClosed' => $shuttersClosed,
 			]),
 		);
 	}
@@ -101,7 +119,13 @@ final readonly class OpeningTools
 	 * @param int|null $mullions window: vertical glazing bars, 0–8
 	 * @param int|null $transoms window: horizontal glazing bars, 0–4
 	 * @param int|null $sillBoard window: inner sill board's reach past the wall face, mm
-	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard"
+	 * @param string|null $leafStyle doors with a leaf: "Flush" | "Panelled" | "Glazed"
+	 * @param int|null $leafPanels Panelled / Glazed leaves: panels or panes, 1–6
+	 * @param int|null $panelHeight window: solid lower panel, mm from the sill
+	 * @param string|null $shutters window: "Louvred" | "Solid" exterior shutters
+	 * @param int|null $shutterMaterialId window with shutters: their material
+	 * @param bool|null $shuttersClosed window with shutters: closed (true) or folded back (false)
+	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard", "panelHeight", "shutters", "shutterMaterialId"
 	 */
 	#[McpTool(
 		name: 'update_opening',
@@ -127,6 +151,12 @@ final readonly class OpeningTools
 		?int $mullions = null,
 		?int $transoms = null,
 		?int $sillBoard = null,
+		?string $leafStyle = null,
+		?int $leafPanels = null,
+		?int $panelHeight = null,
+		?string $shutters = null,
+		?int $shutterMaterialId = null,
+		?bool $shuttersClosed = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -151,6 +181,12 @@ final readonly class OpeningTools
 				'mullions' => $mullions,
 				'transoms' => $transoms,
 				'sillBoard' => $sillBoard,
+				'leafStyle' => $leafStyle,
+				'leafPanels' => $leafPanels,
+				'panelHeight' => $panelHeight,
+				'shutters' => $shutters,
+				'shutterMaterialId' => $shutterMaterialId,
+				'shuttersClosed' => $shuttersClosed,
 			], $clear, self::Clearable),
 		);
 	}
