@@ -241,8 +241,9 @@ final readonly class ProjectSnapshotService
 					hinge: $hinge === null ? null : OpeningHingeEnum::from($hinge),
 					side: $side === null ? null : OpeningSideEnum::from($side),
 				));
-				// Snapshots taken before the flag existed have no entrance.
+				// Snapshots taken before the flags existed have neither.
 				$restored->entrance = $opening->raw('entrance') === true;
+				$restored->walkable = $opening->raw('walkable') === true;
 				$this->openingRepository->persist($restored);
 			}
 		}

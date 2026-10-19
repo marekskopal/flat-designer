@@ -21,7 +21,8 @@ use FlatDesigner\Service\Editor\FieldReader;
 
 /**
  * Doors and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must fit
- * within the wall's length and height and must not overlap another opening of that wall.
+ * within the wall's length and height and must not overlap another opening of that wall. Only a window
+ * down to the floor can be `walkable`.
  */
 final readonly class OpeningHandler implements ElementHandler
 {
@@ -37,7 +38,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance'];
+		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable'];
 	}
 
 	/** @return list<string> */
@@ -62,6 +63,7 @@ final readonly class OpeningHandler implements ElementHandler
 				'hinge' => null,
 				'side' => null,
 				'entrance' => false,
+				'walkable' => false,
 			];
 		}
 
@@ -77,6 +79,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'hinge' => OpeningHingeEnum::Start->value,
 			'side' => OpeningSideEnum::Left->value,
 			'entrance' => false,
+			'walkable' => false,
 		];
 	}
 
@@ -132,10 +135,16 @@ final readonly class OpeningHandler implements ElementHandler
 			}
 		}
 
+		$type = $fields->enum('type', OpeningTypeEnum::class);
+		$walkable = $fields->bool('walkable');
+		if ($walkable && ($type !== OpeningTypeEnum::Window || $sillHeight !== 0)) {
+			throw EditException::invalid('Only a window down to the floor (sill height 0) can be walkable.');
+		}
+
 		return [
 			'wallId' => $wall->id,
 			'name' => $fields->string('name', 255),
-			'type' => $fields->enum('type', OpeningTypeEnum::class)->value,
+			'type' => $type->value,
 			'offset' => $offset,
 			'width' => $width,
 			'height' => $height,
@@ -144,6 +153,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'hinge' => $fields->nullableEnum('hinge', OpeningHingeEnum::class)?->value,
 			'side' => $fields->nullableEnum('side', OpeningSideEnum::class)?->value,
 			'entrance' => $fields->bool('entrance'),
+			'walkable' => $walkable,
 		];
 	}
 
@@ -203,6 +213,7 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->hinge = $fields->nullableEnum('hinge', OpeningHingeEnum::class);
 		$opening->side = $fields->nullableEnum('side', OpeningSideEnum::class);
 		$opening->entrance = $fields->bool('entrance');
+		$opening->walkable = $fields->bool('walkable');
 		$this->openingRepository->persist($opening);
 	}
 

@@ -8,6 +8,7 @@ import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRend
 
 import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
+import {leafObjects, LeafStates} from './doors';
 import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
 import {
@@ -17,6 +18,7 @@ import {
     entranceWalkStart,
     insertVertex,
     isSimplePolygon,
+    leafColliders,
     MM,
     moveWallEnds,
     polygonBounds,
@@ -54,6 +56,9 @@ const TweenDuration = 900;
 /** Framing of a floor with nothing on it yet (plan mm). */
 const EmptyFloorBounds: Bounds = {minX: 0, minY: 0, maxX: 10000, maxY: 10000};
 const OrbitFov = 45;
+
+/** How far away a door can be opened in the walkthrough, metres from the eye. */
+const DoorReach = 2.2;
 
 /** Snap grid for dragged elements, mm (Shift: whole mm, no snapping). */
 const DragSnap = 10;
@@ -98,6 +103,12 @@ type Drag = DragBase &
         | {kind: 'vertex'; room: Room; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
     );
 
+/** The door (or walkable French window) the walker looks at, and whether it is open or opening. */
+export interface DoorAim {
+    openingId: number;
+    open: boolean;
+}
+
 /** Objects shown instead of the originals while a drag (or its commit) is in progress. */
 interface Preview {
     hidden: THREE.Object3D[];
@@ -124,6 +135,8 @@ export class ViewerEngine {
     public onWalkthroughEnd: () => void = () => undefined;
     /** The walkthrough captured the mouse, or lost it / was refused it (the walker has to click the view). */
     public onWalkthroughLock: (locked: boolean) => void = () => undefined;
+    /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
+    public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -157,6 +170,11 @@ export class ViewerEngine {
     private items = new Map<number, THREE.Object3D>();
     private walls = new Map<number, THREE.Object3D>();
     private openings = new Map<number, THREE.Object3D>();
+    /** Door leaves and French window sashes (`userData.leaf`), swung by `leafStates`. */
+    private leaves: THREE.Object3D[] = [];
+    private readonly leafStates = new LeafStates();
+    /** The door in view during a walk, as last reported to `onWalkthroughAim`. */
+    private aim: DoorAim | null = null;
     private selection: Selection | null = null;
     private editMode = false;
     private drag: Drag | null = null;
@@ -248,7 +266,14 @@ export class ViewerEngine {
             }
             this.setView('overview', false);
         }
+        if (this.walkthrough === null) {
+            this.leafStates.reset(scene.walls);
+        } else {
+            this.leafStates.sync(scene.walls);
+        }
+        this.leafStates.apply(this.leaves);
         this.walkthrough?.setColliders(wallColliders(scene.walls));
+        this.updateLeafColliders();
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
         this.setPicked(this.picked);
@@ -405,8 +430,10 @@ export class ViewerEngine {
     private indexWalls(): void {
         this.walls.clear();
         this.openings.clear();
+        this.leaves = [];
         this.parts?.walls.forEach((group, id) => {
             this.walls.set(id, group);
+            this.leaves.push(...leafObjects(group));
             group.traverse((object) => {
                 const openingId = (object.userData as Record<string, unknown>)['openingId'];
                 if (typeof openingId === 'number') {
@@ -567,7 +594,15 @@ export class ViewerEngine {
             this.onWalkthroughEnd();
         };
         walkthrough.onLockChange = (locked): void => this.onWalkthroughLock(locked);
+        walkthrough.onUse = (): void => this.toggleDoor(this.aim?.openingId ?? null);
         this.walkthrough = walkthrough;
+        // Every door starts closed but the entrance, open at once: swinging open it could sweep the walker aside.
+        this.leafStates.closeAll();
+        if (start.openingId !== undefined) {
+            this.leafStates.setOpen(start.openingId, true, false);
+        }
+        this.leafStates.apply(this.leaves);
+        this.updateLeafColliders();
         walkthrough.lock();
     }
 
@@ -588,6 +623,9 @@ export class ViewerEngine {
         }
         this.walkthrough.dispose();
         this.walkthrough = null;
+        this.setAim(null);
+        // Back to the display state: doors open, French windows closed.
+        this.leafStates.reset(this.sceneData?.walls ?? [], true);
         this.camera.fov = OrbitFov;
         this.camera.updateProjectionMatrix();
         // Orbit around a point ahead of the walker, so the hand-over does not jerk the view.
@@ -758,8 +796,13 @@ export class ViewerEngine {
         const now = performance.now();
         const dt = (now - this.lastFrame) / 1000;
         this.lastFrame = now;
+        if (this.leafStates.update(dt)) {
+            this.leafStates.apply(this.leaves);
+            this.updateLeafColliders();
+        }
         if (this.walkthrough !== null) {
             this.walkthrough.update(dt);
+            this.updateAim();
             this.renderer.render(this.scene, this.camera);
             return;
         }
@@ -830,8 +873,15 @@ export class ViewerEngine {
     private readonly handlePointerDown = (event: PointerEvent): void => {
         this.pointerDown.set(event.clientX, event.clientY);
         if (this.walkthrough !== null) {
-            // The lock was refused or lost without ending the walk: a click captures the mouse again.
-            this.walkthrough.lock();
+            if (this.walkthrough.isLocked()) {
+                // Looking around with the mouse: a click opens or closes the door in view.
+                if (event.button === 0) {
+                    this.toggleDoor(this.aim?.openingId ?? null);
+                }
+            } else {
+                // The lock was refused or lost without ending the walk: a click captures the mouse again.
+                this.walkthrough.lock();
+            }
             return;
         }
         if (!this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null) {
@@ -1063,7 +1113,14 @@ export class ViewerEngine {
             this.commit(drag);
             return;
         }
-        if (this.walkthrough !== null || this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > DragThreshold) {
+        if (this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > DragThreshold) {
+            return;
+        }
+        if (this.walkthrough !== null) {
+            // Touch walk: tapping a door within reach opens or closes it (the mouse uses the view centre instead).
+            if (event.pointerType !== 'mouse') {
+                this.toggleDoor(this.doorAt(this.toNdc(event)));
+            }
             return;
         }
         if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
@@ -1350,11 +1407,52 @@ export class ViewerEngine {
     }
 
     private pick(event: MouseEvent): THREE.Intersection | undefined {
-        this.raycaster.setFromCamera(this.toNdc(event), this.camera);
+        return this.pickAt(this.toNdc(event));
+    }
+
+    /** The nearest visible object at a screen point (NDC), up to `far` metres from the camera. */
+    private pickAt(ndc: THREE.Vector2, far = Infinity): THREE.Intersection | undefined {
+        this.raycaster.setFromCamera(ndc, this.camera);
+        this.raycaster.far = far;
         const hits = this.content === null ? [] : this.raycaster.intersectObject(this.content, true);
+        this.raycaster.far = Infinity;
         const clip = this.renderer.clippingPlanes[0];
 
         return hits.find((h) => isVisible(h.object) && (clip === undefined || clip.distanceToPoint(h.point) >= 0));
+    }
+
+    /** The door or walkable French window within reach at a screen point (NDC), unless something else is in front. */
+    private doorAt(ndc: THREE.Vector2): number | null {
+        const selection = selectionOf(this.pickAt(ndc, DoorReach)?.object ?? null);
+        return selection?.kind === 'opening' && this.leafStates.has(selection.id) ? selection.id : null;
+    }
+
+    /** Opens or closes a door (nothing for null). */
+    private toggleDoor(openingId: number | null): void {
+        if (openingId !== null) {
+            this.leafStates.toggle(openingId);
+            this.updateAim();
+        }
+    }
+
+    /** Follows the door at the centre of the walker's view. */
+    private updateAim(): void {
+        const openingId = this.doorAt(new THREE.Vector2(0, 0));
+        this.setAim(openingId === null ? null : {openingId, open: this.leafStates.isOpen(openingId)});
+    }
+
+    private setAim(aim: DoorAim | null): void {
+        if (aim?.openingId !== this.aim?.openingId || aim?.open !== this.aim?.open) {
+            this.aim = aim;
+            this.onWalkthroughAim(aim);
+        }
+    }
+
+    /** The walker bumps into door leaves and sashes as they are swung now. */
+    private updateLeafColliders(): void {
+        if (this.walkthrough !== null && this.sceneData !== null) {
+            this.walkthrough.setLeafColliders(leafColliders(this.sceneData.walls, (id) => this.leafStates.swing(id)));
+        }
     }
 
     private toNdc(event: MouseEvent): THREE.Vector2 {

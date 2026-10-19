@@ -89,6 +89,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'hinge', label: 'Hinge', type: 'select', options: ['Start', 'End'], nullable: true, half: true},
         {key: 'side', label: 'Swing side', type: 'select', options: ['Left', 'Right'], nullable: true, half: true},
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool'},
+        {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
     ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},

@@ -90,9 +90,14 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   lock (WASD/arrows, Shift runs, Esc — i.e. losing the lock — returns to the 3D overview). Without a fine pointer
   (`walkthroughTouchMode()`) a finger drags the view and `WalkPadComponent` (corner arrows, held as virtual W/A/S/D keys,
   plus a "Back to 3D" button) stands in for the keyboard. It collides in plan mm
-  against `wallColliders()` (wall pieces at floor level; doors are gaps, windows solid), items do not block.
-  It starts a step inside the door flagged `openings.entrance` (`entranceWalkStart()`; fallback: a door in an
-  exterior wall, then the largest indoor room).
+  against `wallColliders()` (wall pieces at floor level; doors and `walkable` windows are gaps, other windows solid) and
+  `leafColliders()` (each door leaf / French window sash as a thin wall at its current angle), items do not block.
+  Doors open and close (session only): `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots tagged
+  `userData.leaf`) and the colliders, `LeafStates` (`doors.ts`) animates them; E, a click (view centre, `DoorReach`)
+  or a tap toggles the door in view. Outside the walk doors show open and French windows closed; a walk starts with
+  all closed but the entrance. `openings.walkable` (a window with sill 0 only, sashes swing into `side`) makes a
+  French window a way out. It starts a step inside the door flagged `openings.entrance` (`entranceWalkStart()`;
+  fallback: a door in an exterior wall, then the largest indoor room).
 - Share links (`ShareLink`, `ShareLinkProvider`): a guest view of one floor at `/s/{token}` (no sign-in; the
   public `GET /api/shares/{token}` is open via `AuthorizationMiddleware::OpenRoutePrefixes`, `jwtInterceptor` sends
   no token there). Creating a link saves a version ("Shared: <name>"); refreshing it (`POST …/share-links/{id}/refresh`, MCP

@@ -17,7 +17,7 @@ import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
 
 import {Selection} from './engine/selection';
-import {EditHandler, ViewerEngine, ViewPreset} from './engine/viewer-engine';
+import {DoorAim, EditHandler, ViewerEngine, ViewPreset} from './engine/viewer-engine';
 
 /** A click on the view: the element (or group) under the pointer, `additive` for Shift+click. */
 export interface SelectEvent {
@@ -68,6 +68,8 @@ export class ViewerComponent {
     public readonly walkthroughEnded = output();
     /** Whether the walkthrough has the mouse captured. */
     public readonly walkthroughLocked = output<boolean>();
+    /** The door the walker looks at (within reach) and whether it is open; null when none. */
+    public readonly walkthroughAim = output<DoorAim | null>();
     /** A scene was built (a new floor starts at the overview; set another view from here). */
     public readonly loaded = output<Scene>();
 
@@ -82,6 +84,7 @@ export class ViewerComponent {
             engine.onEdit = (selection, fields): Promise<boolean> => this.editHandler()(selection, fields);
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
+            engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.

@@ -135,6 +135,20 @@ final class Fixture
 		));
 		$door->entrance = true;
 		self::service(OpeningRepository::class)->persist($door);
+		$frenchWindow = self::stamp(new Opening(
+			wall: $wall,
+			name: 'French window',
+			type: OpeningTypeEnum::Window,
+			offset: 2500,
+			width: 1200,
+			height: 2200,
+			sillHeight: 0,
+			leafWidth: null,
+			hinge: null,
+			side: null,
+		));
+		$frenchWindow->walkable = true;
+		self::service(OpeningRepository::class)->persist($frenchWindow);
 
 		$items = self::service(ItemRepository::class);
 		$items->persist(self::stamp(new Item(

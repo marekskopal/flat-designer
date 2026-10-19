@@ -281,6 +281,25 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertTrue($walls[0]['openings'][0]['entrance']);
 	}
 
+	public function testOnlyWindowsDownToTheFloorAreWalkable(): void
+	{
+		$wall = $this->create('walls', []);
+		$door = $this->create('openings', ['wallId' => self::id($wall)]);
+		$window = $this->create('openings', ['wallId' => self::id($wall), 'type' => 'Window', 'offset' => 1500]);
+		self::assertFalse($window['walkable']);
+
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['walkable' => true])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['walkable' => true])->getStatusCode());
+		$this->edit('PATCH', 'openings', self::id($window), ['walkable' => true, 'sillHeight' => 0, 'height' => 2200]);
+		// Raising the sill again needs the flag cleared.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['sillHeight' => 300])->getStatusCode());
+
+		$walls = $this->sceneList('walls');
+		self::assertIsList($walls[0]['openings']);
+		self::assertIsArray($walls[0]['openings'][1]);
+		self::assertTrue($walls[0]['openings'][1]['walkable']);
+	}
+
 	public function testDeletingWallHidesItsOpenings(): void
 	{
 		$wall = $this->create('walls', []);

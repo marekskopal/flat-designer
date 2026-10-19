@@ -20,7 +20,7 @@ const SectorThreshold = Math.cos((67.5 * Math.PI) / 180);
     selector: 'fd-walk-pad',
     template: `
         <div class="bar" role="status">
-            <span>Drag the view to look around</span>
+            <span>Drag the view to look around · tap a door to open it</span>
             <button type="button" class="bar__exit" (click)="viewer().endWalkthrough()">Back to 3D</button>
         </div>
         <div

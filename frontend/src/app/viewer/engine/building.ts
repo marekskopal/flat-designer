@@ -4,7 +4,11 @@ import * as THREE from 'three';
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
 import {
+    DoorFrameWidth,
+    Leaf,
+    LeafOpenAngle,
     MM,
+    openingLeaves,
     polygonBounds,
     polygonSignedArea,
     SquareEnds,
@@ -16,13 +20,13 @@ import {
     wallJoints,
     WallPiece,
     wallPieces,
+    WindowFrameBar,
 } from './plan-geometry';
 import {alignTiles} from './tiling';
 
 const SlabThickness = 300;
-const FrameWidth = 50;
-const LeafThickness = 40;
-const DoorOpenAngle = THREE.MathUtils.degToRad(80);
+/** Bars of a French window sash, mm. */
+const SashBar = 55;
 
 /** Colour of wall cores revealed by the section plane (classic poché). */
 const SectionColor = '#3d3a36';
@@ -289,7 +293,7 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     const from = opening.offset * MM;
     const width = opening.width * MM;
     const height = opening.height * MM;
-    const lining = FrameWidth * MM * 0.6;
+    const lining = DoorFrameWidth * MM * 0.6;
     const liningDepth = t + 0.02;
 
     // Lining: two jambs and a head, slightly proud of both wall faces.
@@ -297,34 +301,22 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     group.add(boxAt(frameMaterial, from + width - lining, 0, -liningDepth / 2, lining, height, liningDepth));
     group.add(boxAt(frameMaterial, from, height - lining, -liningDepth / 2, width, lining, liningDepth));
 
-    const leafWidth = (opening.leafWidth ?? opening.width - 2 * FrameWidth) * MM;
     const leafHeight = Math.min(1970, opening.height - 20) * MM;
-    const clearance = (width - leafWidth) / 2;
-    const hingeAtEnd = opening.hinge === 'End';
-    const towardsLeft = opening.side !== 'Right';
-
-    // Leaf rotates about the hinge into the swing side: closed along ±x, open towards ∓z.
-    const closed = hingeAtEnd ? -1 : 1;
-    const across = towardsLeft ? -1 : 1;
-    const dirX = closed * Math.cos(DoorOpenAngle);
-    const dirZ = across * Math.sin(DoorOpenAngle);
-    const hingeX = hingeAtEnd ? from + width - clearance : from + clearance;
-    const hingeZ = (across * t) / 2;
-
-    const leaf = new THREE.Group();
-    leaf.position.set(hingeX, 0.008, hingeZ);
-    leaf.rotation.y = Math.atan2(-dirZ, dirX);
-    const panel = boxAt(frameMaterial, 0, 0, -LeafThickness * MM / 2, leafWidth, leafHeight, LeafThickness * MM);
-    leaf.add(panel);
-
-    // Lever handles on both faces near the free edge.
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
-    for (const face of [-1, 1]) {
-        const handle = boxAt(handleMaterial, leafWidth - 0.16, 1.03, 0, 0.12, 0.018, 0.018);
-        handle.position.z = face * (LeafThickness * MM / 2 + 0.03);
-        leaf.add(handle);
+    for (const leaf of openingLeaves(opening, wall.thickness)) {
+        const leafGroup = leafPivot(leaf, LeafOpenAngle);
+        const leafWidth = leaf.width * MM;
+        const leafThickness = leaf.thickness * MM;
+        leafGroup.add(boxAt(frameMaterial, 0, 0, -leafThickness / 2, leafWidth, leafHeight, leafThickness));
+
+        // Lever handles on both faces near the free edge.
+        for (const face of [-1, 1]) {
+            const handle = boxAt(handleMaterial, leafWidth - 0.16, 1.03, 0, 0.12, 0.018, 0.018);
+            handle.position.z = face * (leafThickness / 2 + 0.03);
+            leafGroup.add(handle);
+        }
+        group.add(leafGroup);
     }
-    group.add(leaf);
 
     return group;
 }
@@ -339,7 +331,7 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary): 
     const width = opening.width * MM;
     const bottom = opening.sillHeight * MM;
     const height = opening.height * MM;
-    const bar = 0.07;
+    const bar = WindowFrameBar * MM;
     const depth = 0.08;
     const z = -depth / 2;
 
@@ -347,6 +339,16 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary): 
     group.add(boxAt(frameMaterial, from + width - bar, bottom, z, bar, height, depth));
     group.add(boxAt(frameMaterial, from, bottom + height - bar, z, width, bar, depth));
     group.add(boxAt(frameMaterial, from, bottom, z, width, 0.04, depth));
+
+    const leaves = openingLeaves(opening, wall.thickness);
+    if (leaves.length > 0) {
+        // Walkable: two sashes hinged on the jambs, closed by default.
+        for (const leaf of leaves) {
+            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, frameMaterial, glassMaterial));
+        }
+        return group;
+    }
+
     // French window with two sashes.
     group.add(boxAt(frameMaterial, from + width / 2 - bar / 2, bottom, z, bar, height, depth));
 
@@ -357,4 +359,43 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary): 
     }
 
     return group;
+}
+
+/** A glazed sash of a walkable French window: frame bars around a pane, pivoting like a door leaf. */
+function buildSash(leaf: Leaf, bottom: number, height: number, frameMaterial: THREE.Material, glassMaterial: THREE.Material): THREE.Group {
+    const sash = leafPivot(leaf, 0);
+    sash.position.y = bottom;
+    const width = leaf.width * MM;
+    const thickness = leaf.thickness * MM;
+    const bar = SashBar * MM;
+    const z = -thickness / 2;
+    sash.add(boxAt(frameMaterial, 0, 0, z, bar, height, thickness));
+    sash.add(boxAt(frameMaterial, width - bar, 0, z, bar, height, thickness));
+    sash.add(boxAt(frameMaterial, bar, 0, z, width - 2 * bar, bar, thickness));
+    sash.add(boxAt(frameMaterial, bar, height - bar, z, width - 2 * bar, bar, thickness));
+    sash.add(boxAt(glassMaterial, bar, bar, -0.004, width - 2 * bar, height - 2 * bar, 0.008, false));
+    // Handle on the inner face of the free edge.
+    const handle = boxAt(frameMaterial, width - bar / 2 - 0.01, 1.05 - bottom, 0, 0.02, 0.14, 0.02);
+    handle.position.z = -leaf.swing * (thickness / 2 + 0.015);
+    sash.add(handle);
+    return sash;
+}
+
+/**
+ * The group a leaf or sash turns in: at its hinge in the wall's local frame (x along, −z towards the wall's
+ * left), tagged `userData.leaf` so `setLeafAngle` can swing it. Children are built along +x from the hinge.
+ */
+function leafPivot(leaf: Leaf, angle: number): THREE.Group {
+    const pivot = new THREE.Group();
+    pivot.position.set(leaf.along * MM, 0.008, -leaf.across * MM);
+    pivot.userData = {leaf};
+    setLeafAngle(pivot, angle);
+    return pivot;
+}
+
+/** Swings a leaf built by `buildWall` (an object with `userData.leaf`) to `angle` radians (0 closed). */
+export function setLeafAngle(pivot: THREE.Object3D, angle: number): void {
+    const leaf = (pivot.userData as {leaf: Leaf}).leaf;
+    // Plan across is local −z: the leaf points along (closed · cos, −swing · sin) in local x / z.
+    pivot.rotation.y = Math.atan2(leaf.swing * Math.sin(angle), leaf.closed * Math.cos(angle));
 }

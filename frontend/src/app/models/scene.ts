@@ -91,6 +91,11 @@ export interface Opening {
     side: 'Left' | 'Right' | null;
     /** Main door of the floor: a walkthrough starts just inside it. */
     entrance: boolean;
+    /**
+     * Window down to the floor whose sashes open in the walkthrough, so it can be walked through. Missing in
+     * snapshots saved before the flag existed.
+     */
+    walkable?: boolean;
 }
 
 export interface Wall {

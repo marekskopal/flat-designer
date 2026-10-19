@@ -6,6 +6,7 @@ import {VariantsComponent} from '@app/editor/variants.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
+import {DoorAim} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
@@ -61,6 +62,8 @@ export class SharedViewerPageComponent {
     /** No mouse to capture: the walk shows on-screen arrows instead of the keyboard hint. */
     protected readonly touchWalk = walkthroughTouchMode();
     protected readonly walkLocked = signal(false);
+    /** The door in view during the walk (E opens or closes it). */
+    protected readonly doorAim = signal<DoorAim | null>(null);
     /** The link opens in the walk, which needs a click to capture the mouse: a button asks for it. */
     protected readonly walkPrompt = signal(false);
     /** The guest hid the panel to see more of the floor (on a phone it covers the lower part of the screen). */
@@ -149,6 +152,7 @@ export class SharedViewerPageComponent {
     protected onWalkthroughEnded(): void {
         this.walking.set(false);
         this.walkLocked.set(false);
+        this.doorAim.set(null);
         const view = this.fallbackView();
         this.activeView.set(view);
         this.labelsVisible.set(true);

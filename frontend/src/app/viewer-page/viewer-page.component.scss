@@ -352,6 +352,28 @@
     color: $color-text;
 }
 
+// Where E and clicks aim during the walk; grows into a ring over a door within reach.
+.walk-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border: 1px solid rgb(0 0 0 / 35%);
+    border-radius: 50%;
+    background: rgb(255 255 255 / 85%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: width 0.12s, height 0.12s, background-color 0.12s;
+}
+
+.walk-crosshair--door {
+    width: 18px;
+    height: 18px;
+    border: 2px solid $color-accent;
+    background: transparent;
+}
+
 .panel--editing {
     overflow-y: auto;
 }

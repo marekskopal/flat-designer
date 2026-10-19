@@ -13,6 +13,7 @@
     [editHandler]="applyDrag"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
+    (walkthroughAim)="doorAim.set($event)"
 />
 
 @if (walking() && touchWalk) {
@@ -22,11 +23,17 @@
         @if (!walkLocked()) {
             <strong class="walk-hint__prompt">Click the view to look around</strong>
         }
+        @if (doorAim(); as aim) {
+            <strong class="walk-hint__prompt">{{ aim.open ? 'Close' : 'Open' }} with <kbd>E</kbd> or a click</strong>
+        }
         <span>
-            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around ·
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around · <kbd>E</kbd> open/close ·
             <kbd>Esc</kbd> back to 3D
         </span>
     </div>
+    @if (walkLocked()) {
+        <span class="walk-crosshair" [class.walk-crosshair--door]="doorAim() !== null" aria-hidden="true"></span>
+    }
 }
 
 @if (sharing() !== null && !walking()) {

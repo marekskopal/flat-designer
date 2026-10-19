@@ -28,8 +28,9 @@ final readonly class OpeningTools
 	 * @param int|null $sillHeight mm above the floor (door 0, window default 900)
 	 * @param int|null $leafWidth door leaf width, mm
 	 * @param string|null $hinge door: which edge carries the leaf, "Start" (nearer the wall start) | "End"
-	 * @param string|null $side door: side the leaf swings to, "Left" | "Right" when walking from wall start to end
+	 * @param string|null $side door (or walkable window): side the leaf (sashes) swings to, "Left" | "Right" when walking from wall start to end
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
+	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
 	 */
 	#[McpTool(
 		name: 'add_opening',
@@ -49,6 +50,7 @@ final readonly class OpeningTools
 		?string $hinge = null,
 		?string $side = null,
 		?bool $entrance = null,
+		?bool $walkable = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -66,6 +68,7 @@ final readonly class OpeningTools
 				'hinge' => $hinge,
 				'side' => $side,
 				'entrance' => $entrance,
+				'walkable' => $walkable,
 			]),
 		);
 	}
@@ -74,8 +77,9 @@ final readonly class OpeningTools
 	 * @param string|null $type "Door" | "Window"
 	 * @param int|null $offset mm from the wall's start point
 	 * @param string|null $hinge "Start" | "End"
-	 * @param string|null $side "Left" | "Right"
+	 * @param string|null $side "Left" | "Right" (door leaf or walkable window sashes)
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
+	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
 	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side"
 	 */
 	#[McpTool(name: 'update_opening', description: 'Change a door or window (it stays on its wall). Only the given fields change.')]
@@ -93,6 +97,7 @@ final readonly class OpeningTools
 		?string $hinge = null,
 		?string $side = null,
 		?bool $entrance = null,
+		?bool $walkable = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -111,6 +116,7 @@ final readonly class OpeningTools
 				'hinge' => $hinge,
 				'side' => $side,
 				'entrance' => $entrance,
+				'walkable' => $walkable,
 			], $clear, self::Clearable),
 		);
 	}

@@ -6,7 +6,9 @@ import {
     entranceWalkStart,
     insertVertex,
     isSimplePolygon,
+    leafColliders,
     moveWallEnds,
+    openingLeaves,
     pointInPolygon,
     polygonCentroid,
     polygonSignedArea,
@@ -181,6 +183,54 @@ describe('wall collisions', () => {
     });
 });
 
+describe('door leaves', () => {
+    // The same wall with a door hinged at its start, swinging to the left (+y), and a walkable French window.
+    const door = {...opening(1000, 900, 2020), id: 1, hinge: 'Start', side: 'Left'} as Opening;
+    const frenchWindow = {...opening(2500, 1200, 2200), id: 2, type: 'Window', walkable: true} as Opening;
+    const wall = {startX: 0, startY: 0, endX: 4000, endY: 0, thickness: 200, height: 2600, openings: [door, frenchWindow]} as Wall;
+    const radius = 250;
+    const collide = (point: {x: number; y: number}, openness: number): {x: number; y: number} =>
+        collideCircle(point, radius, [...wallColliders([wall]), ...leafColliders([wall], () => openness)]);
+
+    it('hangs a door leaf on its hinge, flush with the face it swings to', () => {
+        expect(openingLeaves(door, 200)).toEqual([{openingId: 1, index: 0, along: 1050, across: 80, closed: 1, swing: 1, width: 800, thickness: 40}]);
+        const mirrored = openingLeaves({...door, hinge: 'End', side: 'Right'}, 200)[0];
+        expect([mirrored.along, mirrored.across, mirrored.closed, mirrored.swing]).toEqual([1850, -80, -1, -1]);
+    });
+
+    it('gives a walkable French window two sashes on its jambs and other windows none', () => {
+        expect(openingLeaves(frenchWindow, 200).map((l) => [l.along, l.closed, l.width])).toEqual([[2570, 1, 530], [3630, -1, 530]]);
+        expect(openingLeaves({...frenchWindow, walkable: false}, 200)).toEqual([]);
+    });
+
+    it('leaves a gap for walkable French windows', () => {
+        expect(wallColliders([wall]).map((c) => [c.from, c.to])).toEqual([[0, 1000], [1900, 2500], [3700, 4000]]);
+    });
+
+    it('blocks the doorway with a closed leaf', () => {
+        const p = collide({x: 1450, y: 0}, 0);
+        expect(p.x).toBeCloseTo(1450);
+        expect(p.y).toBeCloseTo(60 - radius);
+    });
+
+    it('leaves the doorway free when open', () => {
+        expect(collide({x: 1450, y: 0}, 1)).toEqual({x: 1450, y: 0});
+    });
+
+    it('blocks along the diagonal of a half-open leaf', () => {
+        const leaf = leafColliders([wall], () => 0.5)[0];
+        expect(Math.atan2(leaf.frame.dir.y, leaf.frame.dir.x)).toBeCloseTo((40 * Math.PI) / 180);
+        const p = collide({x: 1450, y: 500}, 0.5);
+        const across = (p.x - leaf.frame.start.x) * leaf.frame.normal.x + (p.y - leaf.frame.start.y) * leaf.frame.normal.y;
+        expect(across).toBeCloseTo(20 + radius);
+    });
+
+    it('opens a French window only with its sashes', () => {
+        expect(collide({x: 3100, y: 0}, 0).y).toBeLessThan(-150);
+        expect(collide({x: 3100, y: 0}, 1)).toEqual({x: 3100, y: 0});
+    });
+});
+
 describe('entranceWalkStart', () => {
     const room = (type: Room['type'], polygon: PlanPoint[]): Room =>
         ({
@@ -210,10 +260,11 @@ describe('entranceWalkStart', () => {
         expect(start?.direction.y).toBeCloseTo(0);
     });
 
-    it('prefers the flagged entrance to other exterior doors', () => {
-        const flagged = {...opening(2500, 1000, 2100), entrance: true};
+    it('prefers the flagged entrance to other exterior doors, and names it', () => {
+        const flagged = {...opening(2500, 1000, 2100), id: 7, entrance: true};
         const start = entranceWalkStart([wall([opening(500, 900, 2100), flagged])], [flat]);
         expect(start?.position.y).toBeCloseTo(3000);
+        expect(start?.openingId).toBe(7);
     });
 
     it('needs a door: French windows and interior doors alone give no entrance', () => {

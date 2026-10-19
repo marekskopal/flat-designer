@@ -23,6 +23,7 @@ final readonly class OpeningDto
 		public ?OpeningHingeEnum $hinge,
 		public ?OpeningSideEnum $side,
 		public bool $entrance,
+		public bool $walkable,
 	) {
 	}
 
@@ -40,6 +41,7 @@ final readonly class OpeningDto
 			hinge: $opening->hinge,
 			side: $opening->side,
 			entrance: $opening->entrance,
+			walkable: $opening->walkable,
 		);
 	}
 }

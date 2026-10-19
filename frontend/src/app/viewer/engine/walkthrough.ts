@@ -24,6 +24,8 @@ const BackwardKeys = ['KeyS', 'ArrowDown'];
 const LeftKeys = ['KeyA', 'ArrowLeft'];
 const RightKeys = ['KeyD', 'ArrowRight'];
 const MoveKeys = new Set([...ForwardKeys, ...BackwardKeys, ...LeftKeys, ...RightKeys]);
+/** Opens or closes the door the walker looks at. */
+const UseKey = 'KeyE';
 
 /**
  * Without a mouse (phones, tablets) there is no pointer lock: a finger drags the view around and on-screen arrows
@@ -35,7 +37,9 @@ export function walkthroughTouchMode(): boolean {
 
 /**
  * First-person walk through the floor: WASD / arrows move (Shift runs), the mouse looks around while the
- * pointer is locked to the canvas. Positions are plan millimetres; the walker collides with the walls.
+ * pointer is locked to the canvas. Positions are plan millimetres; the walker collides with the walls and
+ * with door leaves and sashes, whose colliders change as they swing (`setLeafColliders()`). E asks to open or
+ * close the door in view (`onUse`).
  * Esc ends it: the browser releases the pointer lock (the key itself never reaches the page while locked),
  * or, before the lock was acquired, the keydown arrives here. In touch mode (`walkthroughTouchMode()`) a finger
  * dragging the canvas looks around, and `end()` stands in for Esc.
@@ -45,6 +49,8 @@ export class Walkthrough {
     public onExit: () => void = () => undefined;
     /** The pointer lock was acquired or lost (or refused: the walker has to click the view). */
     public onLockChange: (locked: boolean) => void = () => undefined;
+    /** E was pressed: open or close the door in view. */
+    public onUse: () => void = () => undefined;
 
     private readonly keys = new Set<string>();
     /** Keys held on the on-screen arrows. */
@@ -55,6 +61,7 @@ export class Walkthrough {
     private lookPointer: {id: number; x: number; y: number} | null = null;
     private position: Vec2;
     private yaw: number;
+    private leafColliders: readonly WallCollider[] = [];
     private pitch = 0;
     private locked = false;
     private active = true;
@@ -62,12 +69,12 @@ export class Walkthrough {
     public constructor(
         private readonly camera: THREE.PerspectiveCamera,
         private readonly element: HTMLElement,
-        private colliders: readonly WallCollider[],
+        private wallColliders: readonly WallCollider[],
         start: Vec2,
         yaw: number,
     ) {
         this.document = element.ownerDocument;
-        this.position = collideCircle(start, BodyRadius, colliders);
+        this.position = collideCircle(start, BodyRadius, wallColliders);
         this.yaw = yaw;
         this.applyCamera();
 
@@ -98,9 +105,14 @@ export class Walkthrough {
 
     /** Walls changed (a live update of the floor). */
     public setColliders(colliders: readonly WallCollider[]): void {
-        this.colliders = colliders;
-        this.position = collideCircle(this.position, BodyRadius, colliders);
-        this.applyCamera();
+        this.wallColliders = colliders;
+        this.collide();
+    }
+
+    /** Door leaves and sashes moved; one swinging into the walker pushes them aside. */
+    public setLeafColliders(colliders: readonly WallCollider[]): void {
+        this.leafColliders = colliders;
+        this.collide();
     }
 
     /** Keys held on the on-screen arrows (codes as in `KeyboardEvent.code`), replacing the previous ones. */
@@ -131,9 +143,10 @@ export class Walkthrough {
         const dx = ((forward * -sin + strafe * cos) / length) * distance;
         const dy = ((forward * cos + strafe * sin) / length) * distance;
 
+        const colliders = this.colliders();
         const steps = Math.ceil(distance / MaxStep);
         for (let i = 0; i < steps; i++) {
-            this.position = collideCircle({x: this.position.x + dx / steps, y: this.position.y + dy / steps}, BodyRadius, this.colliders);
+            this.position = collideCircle({x: this.position.x + dx / steps, y: this.position.y + dy / steps}, BodyRadius, colliders);
         }
         this.applyCamera();
     }
@@ -163,6 +176,15 @@ export class Walkthrough {
         }
     }
 
+    private colliders(): readonly WallCollider[] {
+        return this.leafColliders.length === 0 ? this.wallColliders : [...this.wallColliders, ...this.leafColliders];
+    }
+
+    private collide(): void {
+        this.position = collideCircle(this.position, BodyRadius, this.colliders());
+        this.applyCamera();
+    }
+
     private applyCamera(): void {
         this.camera.position.set(this.position.x * MM, EyeHeight * MM, -this.position.y * MM);
         this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
@@ -174,6 +196,12 @@ export class Walkthrough {
             return;
         }
         if (event.ctrlKey || event.metaKey || event.altKey) {
+            return;
+        }
+        if (event.code === UseKey) {
+            if (!event.repeat) {
+                this.onUse();
+            }
             return;
         }
         this.keys.add(event.code);

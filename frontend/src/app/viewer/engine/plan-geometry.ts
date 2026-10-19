@@ -254,7 +254,10 @@ export interface WallCollider {
     halfThickness: number;
 }
 
-/** Floor-level footprints of the walls; doors leave gaps, windows count as solid wall. */
+/**
+ * Floor-level footprints of the walls; doors and walkable French windows leave gaps (their leaves are
+ * `leafColliders`), other windows count as solid wall.
+ */
 export function wallColliders(walls: readonly Wall[]): WallCollider[] {
     const colliders: WallCollider[] = [];
     for (const wall of walls) {
@@ -262,7 +265,7 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
         if (!(frame.length > 0)) {
             continue;
         }
-        const doors = wall.openings.filter((o) => o.type === 'Door');
+        const doors = wall.openings.filter(hasLeaves);
         for (const piece of wallPieces(frame.length, wall.height, doors)) {
             if (piece.bottom < WalkableStep) {
                 colliders.push({frame, from: piece.from, to: piece.to, halfThickness: wall.thickness / 2});
@@ -270,6 +273,105 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
         }
     }
     return colliders;
+}
+
+/** Door frame on each side of a door leaf, mm; the leaf fills the rest of the opening unless `leafWidth` says otherwise. */
+export const DoorFrameWidth = 50;
+export const DoorLeafThickness = 40;
+/** Frame bar around a French window; its sashes hinge on the inside of it (mm). */
+export const WindowFrameBar = 70;
+export const SashThickness = 60;
+/** How far a door leaf or sash opens, radians. */
+export const LeafOpenAngle = (80 * Math.PI) / 180;
+
+/**
+ * A swinging door leaf or French window sash, on its wall's centre-line frame (mm). At angle `a` (0 closed,
+ * `LeafOpenAngle` open) it runs from the hinge along `closed · cos a` and across `swing · sin a`.
+ */
+export interface Leaf {
+    openingId: number;
+    /** Index of the sash (0, 1) of a French window; 0 for a door. */
+    index: number;
+    /** The hinge axis: mm along the wall from its start, mm across it (+ towards `normal`). */
+    along: number;
+    across: number;
+    /** From the hinge to the free edge when closed: +1 towards the wall end, −1 towards its start. */
+    closed: 1 | -1;
+    /** Side it swings into: +1 the left of the wall direction (`normal`), −1 the right. */
+    swing: 1 | -1;
+    width: number;
+    thickness: number;
+}
+
+/** Doors and walkable French windows: openings that open and can be walked through. */
+export function hasLeaves(opening: Opening): boolean {
+    return opening.type === 'Door' || opening.walkable === true;
+}
+
+/**
+ * The leaves of an opening: a door's one leaf on its `hinge` edge, or a walkable French window's two sashes
+ * hinged on its jambs; both swing into `side` (default left). Closed, a leaf lies flush with that wall face
+ * (a sash inside the window frame). Other windows have none.
+ */
+export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
+    const swing: Leaf['swing'] = opening.side === 'Right' ? -1 : 1;
+    if (opening.type === 'Door') {
+        const width = opening.leafWidth ?? opening.width - 2 * DoorFrameWidth;
+        const clearance = (opening.width - width) / 2;
+        const atEnd = opening.hinge === 'End';
+        return [{
+            openingId: opening.id,
+            index: 0,
+            along: atEnd ? opening.offset + opening.width - clearance : opening.offset + clearance,
+            across: swing * (wallThickness / 2 - DoorLeafThickness / 2),
+            closed: atEnd ? -1 : 1,
+            swing,
+            width,
+            thickness: DoorLeafThickness,
+        }];
+    }
+    if (opening.walkable !== true) {
+        return [];
+    }
+    const width = (opening.width - 2 * WindowFrameBar) / 2;
+    const across = swing * (WindowFrameBar / 2 - SashThickness / 2);
+    const sash = {openingId: opening.id, across, swing, width, thickness: SashThickness};
+    return [
+        {...sash, index: 0, along: opening.offset + WindowFrameBar, closed: 1},
+        {...sash, index: 1, along: opening.offset + opening.width - WindowFrameBar, closed: -1},
+    ];
+}
+
+/** Footprint of a leaf at `angle` (radians) as a thin wall from its hinge along the leaf. */
+export function leafCollider(frame: WallFrame, leaf: Leaf, angle: number): WallCollider {
+    const along = leaf.closed * Math.cos(angle);
+    const across = leaf.swing * Math.sin(angle);
+    const dir = {x: frame.dir.x * along + frame.normal.x * across, y: frame.dir.y * along + frame.normal.y * across};
+    return {
+        frame: {
+            start: pointOnWall(frame, leaf.along, leaf.across),
+            dir,
+            normal: {x: -dir.y, y: dir.x},
+            length: leaf.width,
+            angle: Math.atan2(dir.y, dir.x),
+        },
+        from: 0,
+        to: leaf.width,
+        halfThickness: leaf.thickness / 2,
+    };
+}
+
+/** Footprints of all door leaves and sashes; `openness` (0 closed … 1 open) of an opening sets their angle. */
+export function leafColliders(walls: readonly Wall[], openness: (openingId: number) => number): WallCollider[] {
+    return walls.flatMap((wall) => {
+        const frame = wallFrame(wall);
+        if (!(frame.length > 0)) {
+            return [];
+        }
+        return wall.openings.flatMap((opening) =>
+            openingLeaves(opening, wall.thickness).map((leaf) => leafCollider(frame, leaf, openness(opening.id) * LeafOpenAngle)),
+        );
+    });
 }
 
 /**
@@ -321,6 +423,8 @@ export function collideCircle(point: Vec2, radius: number, colliders: readonly W
 export interface WalkStart {
     position: Vec2;
     direction: Vec2;
+    /** The entrance door it starts at, if any. */
+    openingId?: number;
 }
 
 /** How far inside the entrance a walk starts, measured from the wall face (mm). */
@@ -348,7 +452,11 @@ export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]
         sides.find((s) => rooms.some((r) => pointInPolygon(s.position, r.polygon))) ??
         sides[0];
 
-    return {position: inside.position, direction: {x: frame.normal.x * inside.sign, y: frame.normal.y * inside.sign}};
+    return {
+        position: inside.position,
+        direction: {x: frame.normal.x * inside.sign, y: frame.normal.y * inside.sign},
+        openingId: door.opening.id,
+    };
 }
 
 /** Where a dragged point ended up and what it snapped to (for feedback). */

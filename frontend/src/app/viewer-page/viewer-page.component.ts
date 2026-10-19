@@ -27,7 +27,7 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {Selection} from '@app/viewer/engine/selection';
-import {ViewPreset} from '@app/viewer/engine/viewer-engine';
+import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
@@ -123,6 +123,8 @@ export class ViewerPageComponent {
     protected readonly touchWalk = walkthroughTouchMode();
     /** The walk has the mouse captured; otherwise the walker is asked to click the view. */
     protected readonly walkLocked = signal(false);
+    /** The door in view during the walk (E opens or closes it). */
+    protected readonly doorAim = signal<DoorAim | null>(null);
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly sectionSlider = signal(SectionMax);
@@ -254,6 +256,7 @@ export class ViewerPageComponent {
     protected onWalkthroughEnded(): void {
         this.walking.set(false);
         this.walkLocked.set(false);
+        this.doorAim.set(null);
         this.activeView.set('overview');
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);

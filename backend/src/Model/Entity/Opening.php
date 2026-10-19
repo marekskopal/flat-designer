@@ -20,7 +20,8 @@ use MarekSkopal\ORM\Enum\Type;
  * of the opening, measured along the centre line. For doors, `hinge` says which edge (nearer the
  * wall start or end) carries the leaf and `side` which side of the wall (left/right when walking
  * from start to end) it swings into; `leafWidth` is the nominal door leaf width. `entrance` marks the
- * main door of the floor (where a walkthrough starts).
+ * main door of the floor (where a walkthrough starts); `walkable` a window down to the floor (French
+ * window) whose two sashes open in the walkthrough (into `side`), so it can be walked through like a door.
  */
 #[Entity(repositoryClass: OpeningRepository::class)]
 class Opening extends AEntity
@@ -31,6 +32,9 @@ class Opening extends AEntity
 
 	#[Column(type: Type::Boolean)]
 	public bool $entrance = false;
+
+	#[Column(type: Type::Boolean)]
+	public bool $walkable = false;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]

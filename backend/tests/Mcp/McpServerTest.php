@@ -151,6 +151,14 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($window['element']);
 		self::assertSame(900, $window['element']['sillHeight']);
 
+		$frenchWindow = $this->client->call(
+			'update_opening',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'openingId' => $window['element']['id'], 'sillHeight' => 0, 'height' => 2200, 'walkable' => true],
+		);
+		self::assertIsArray($frenchWindow);
+		self::assertIsArray($frenchWindow['element']);
+		self::assertTrue($frenchWindow['element']['walkable']);
+
 		$cabinet = $this->client->call(
 			'add_item',
 			['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'BaseCabinet', 'x' => 300, 'y' => 2610, 'rotation' => 180, 'params' => ['plinth' => 100, 'handle' => 'horizontal']],
@@ -172,8 +180,8 @@ final class McpServerTest extends IntegrationTestCase
 		$changes = $this->jsonList(
 			$this->request('GET', sprintf('/api/projects/%d/changes', $this->project->id), authenticatedAs: $this->user),
 		);
-		self::assertSame(['Claude Code', 'Claude Code', 'Claude Code'], array_column($changes, 'actorName'));
-		self::assertSame(['Agent', 'Agent', 'Agent'], array_column($changes, 'actorType'));
+		self::assertSame(['Claude Code', 'Claude Code', 'Claude Code', 'Claude Code'], array_column($changes, 'actorName'));
+		self::assertSame(['Agent', 'Agent', 'Agent', 'Agent'], array_column($changes, 'actorType'));
 	}
 
 	public function testDomainErrorsReachTheAgentAsToolErrors(): void
