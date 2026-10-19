@@ -1,5 +1,5 @@
 /** Live update of a project, pushed by the server after a committed change (see ProjectUpdatePublisher). */
-export type ProjectUpdate = ProjectChange | DefinitionChange;
+export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange;
 
 /** A committed change of the project (an edit, undo, restore, a new floor…). */
 export interface ProjectChange {
@@ -23,5 +23,14 @@ export interface DefinitionChange {
     projectId: number;
     definitionId: number;
     /** Browser tab that saved the definition. */
+    originClientId: string | null;
+}
+
+/** A material of the global catalogue was changed (by an admin): everything using it looks different, the revision is the same. */
+export interface MaterialChange {
+    type: 'materialChanged';
+    projectId: number;
+    materialId: number;
+    /** Browser tab that changed it (null for agents). */
     originClientId: string | null;
 }

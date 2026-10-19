@@ -66,6 +66,10 @@ projects, admins see all. Architecture mirrors `../ukolio` (same author), trimme
   becomes the schema; JSON objects need `#[Schema(definition: …)]`). Domain `RuntimeException`s reach the
   agent as tool errors (`ToolErrorTranslatingReferenceHandler`). `tests/Mcp/McpServerTest` drives the
   server over JSON-RPC.
+- Materials are a global catalogue (seeded by migrations); admins add and change them with MCP `add_material` /
+  `update_material` (`MaterialService`: code permanent — definitions name slot defaults by it — texture never set, no
+  revision). A change publishes `materialChanged` to every project; the viewer reloads the scene. Tests keep the seeded
+  materials and drop those with `created_by_id`.
 - Live updates: `ProjectRevisionService::bump()` marks the project in `ProjectUpdatePublisher`; the worker
   publishes after `frankenphp_finish_request()` (only revisions that were committed) to the private
   Mercure topic `flat-designer/projects/{id}`. Subscribers get a cookie from `/api/realtime/subscription`

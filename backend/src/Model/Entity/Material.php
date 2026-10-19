@@ -9,13 +9,15 @@ use FlatDesigner\Model\Repository\MaterialRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
+use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
  * PBR surface description. `pattern` selects how the viewer lays the surface out (planks, tiles, wood
  * grain…). `texture` is an optional image of one plank or tile (path under the frontend's assets/); the
  * viewer composes the floor or wall from it at `tileWidth` × `tileHeight` mm. Without a texture the
- * pattern is drawn procedurally from `color`.
+ * pattern is drawn procedurally from `color`. Global: admins add and change them (`MaterialService`); the code is
+ * permanent, furniture definitions refer to it.
  */
 #[Entity(repositoryClass: MaterialRepository::class)]
 class Material extends AEntity
@@ -39,6 +41,8 @@ class Material extends AEntity
 		public ?int $tileWidth,
 		#[Column(type: Type::Int, nullable: true)]
 		public ?int $tileHeight,
+		#[ManyToOne(entityClass: User::class, nullable: true)]
+		public ?User $createdBy = null,
 	) {
 	}
 }

@@ -21,7 +21,8 @@ use const JSON_THROW_ON_ERROR;
  * bump); the worker calls `flush()` after the response is sent, so updates go out only once the change is
  * committed. Each update carries the revision as committed plus the newest change's summary and actor.
  * An edited furniture definition (`markDefinitionChanged()`) sends `definitionChanged` to every project with items
- * drawn from it: their look changes although no project revision does.
+ * drawn from it: their look changes although no project revision does. A changed material (`markMaterialChanged()`) sends
+ * `materialChanged` to every project: the catalogue is global and used from too many places to look them up.
  *
  * Topics are private: only subscribers whose cookie grants the topic (`MercureCookieIssuer`) get them.
  */
@@ -34,6 +35,9 @@ final class ProjectUpdatePublisher
 
 	/** @var array<int, true> furniture definitions edited in the current request */
 	private array $changedDefinitions = [];
+
+	/** @var array<int, true> materials changed in the current request */
+	private array $changedMaterials = [];
 
 	public function __construct(
 		private readonly HubInterface $hub,
@@ -61,23 +65,39 @@ final class ProjectUpdatePublisher
 		$this->changedDefinitions[$definitionId] = true;
 	}
 
+	public function markMaterialChanged(int $materialId): void
+	{
+		$this->changedMaterials[$materialId] = true;
+	}
+
 	/** Forgets marks of a request that is not going to be flushed (the worker resets before each request). */
 	public function reset(): void
 	{
 		$this->changed = [];
 		$this->changedDefinitions = [];
+		$this->changedMaterials = [];
 	}
 
 	public function flush(): void
 	{
 		$changed = $this->changed;
 		$definitions = array_keys($this->changedDefinitions);
+		$materials = array_keys($this->changedMaterials);
 		$this->changed = [];
 		$this->changedDefinitions = [];
+		$this->changedMaterials = [];
 
 		foreach ($definitions as $definitionId) {
 			try {
 				$this->publishDefinition($definitionId);
+			} catch (Throwable $e) {
+				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
+			}
+		}
+
+		foreach ($materials as $materialId) {
+			try {
+				$this->publishMaterial($materialId);
 			} catch (Throwable $e) {
 				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
 			}
@@ -128,6 +148,18 @@ final class ProjectUpdatePublisher
 				'type' => 'definitionChanged',
 				'projectId' => $projectId,
 				'definitionId' => $definitionId,
+				'originClientId' => $this->originContext->get(),
+			], JSON_THROW_ON_ERROR), private: true));
+		}
+	}
+
+	private function publishMaterial(int $materialId): void
+	{
+		foreach ($this->projectRepository->findAllIds() as $projectId) {
+			$this->hub->publish(new Update(self::topic($projectId), json_encode([
+				'type' => 'materialChanged',
+				'projectId' => $projectId,
+				'materialId' => $materialId,
 				'originClientId' => $this->originContext->get(),
 			], JSON_THROW_ON_ERROR), private: true));
 		}

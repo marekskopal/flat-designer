@@ -13,6 +13,7 @@ use FlatDesigner\Mcp\Tool\FloorTools;
 use FlatDesigner\Mcp\Tool\FurnitureTools;
 use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
+use FlatDesigner\Mcp\Tool\MaterialTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
 use FlatDesigner\Mcp\Tool\ShareLinkTools;
@@ -21,6 +22,8 @@ use FlatDesigner\Mcp\Tool\WallTools;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Material\MaterialService;
+use FlatDesigner\Tests\Support\AppHarness;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
 use FlatDesigner\Tests\Support\McpClient;
@@ -44,6 +47,8 @@ use stdClass;
 #[CoversClass(VariantTools::class)]
 #[CoversClass(WallTools::class)]
 #[CoversClass(OpeningTools::class)]
+#[CoversClass(MaterialTools::class)]
+#[CoversClass(MaterialService::class)]
 final class McpServerTest extends IntegrationTestCase
 {
 	private User $user;
@@ -72,6 +77,7 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame([
 			'add_floor',
 			'add_item',
+			'add_material',
 			'add_opening',
 			'add_room',
 			'add_variant',
@@ -113,6 +119,7 @@ final class McpServerTest extends IntegrationTestCase
 			'ungroup',
 			'update_furniture_definition',
 			'update_item',
+			'update_material',
 			'update_opening',
 			'update_room',
 			'update_share_link',
@@ -466,6 +473,93 @@ final class McpServerTest extends IntegrationTestCase
 			$isError,
 		);
 		self::assertSame('Only admins manage global furniture.', $message);
+	}
+
+	public function testAdminsManageMaterials(): void
+	{
+		$oak = [
+			'code' => 'oak-veneer',
+			'name' => 'Oak veneer, natural',
+			'pattern' => 'Wood',
+			'color' => '#C49A6C',
+			'roughness' => 0.55,
+		];
+		$isError = false;
+		self::assertSame('Only admins manage materials.', $this->client->call('add_material', $oak, $isError));
+		self::assertTrue($isError);
+
+		$admin = new McpClient(OAuthFlow::accessToken(Fixture::createAdmin(), 'Claude Code'));
+		$admin->initialize();
+		$added = $admin->call('add_material', $oak);
+		self::assertIsArray($added);
+		self::assertIsInt($added['id']);
+		self::assertSame(
+			['oak-veneer', '#c49a6c', 0.55, 0, false, null],
+			[$added['code'], $added['color'], $added['roughness'], $added['metalness'], $added['textured'], $added['tileWidth']],
+		);
+		$listed = $this->client->call('list_materials');
+		self::assertIsList($listed);
+		self::assertContains($added, $listed);
+
+		$message = $admin->call('add_material', $oak, $isError);
+		self::assertTrue($isError);
+		self::assertSame(sprintf('Material code "oak-veneer" exists (id %d).', $added['id']), $message);
+		foreach ([
+			[['color' => 'brown'], 'Field "color" must be #rrggbb, e.g. "#f2f1ed".'],
+			[['roughness' => 2], 'Field "roughness" must be between 0 and 1.'],
+			[['code' => 'Oak Veneer'], 'Field "code" must be kebab-case'],
+			[['code' => 'oak-tiles', 'tileWidth' => 300], 'Fields "tileWidth" and "tileHeight" go together.'],
+		] as [$change, $error]) {
+			$message = $admin->call('add_material', [...$oak, 'code' => 'oak-2', ...$change], $isError);
+			self::assertTrue($isError);
+			self::assertIsString($message);
+			self::assertStringStartsWith($error, $message);
+		}
+
+		// The new material is usable right away: as an item material and as a slot default of a definition.
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$item = $this->client->call(
+			'add_item',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'Box', 'x' => 1000, 'y' => 1000, 'materialId' => $added['id']],
+		);
+		self::assertIsArray($item);
+		self::assertIsArray($item['element']);
+		self::assertSame($added['id'], $item['element']['materialId']);
+		$definition = $this->client->call('create_furniture_definition', [
+			'name' => 'Oak shelf',
+			'definition' => [
+				'format' => 1,
+				'size' => ['width' => 600, 'depth' => 300, 'height' => 18],
+				'materialSlots' => [['key' => 'board', 'default' => 'oak-veneer']],
+				'parts' => [['type' => 'board', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D', 'material' => 'board']],
+			]]);
+		self::assertIsArray($definition);
+		self::assertSame('Oak shelf', $definition['name']);
+
+		self::assertSame(
+			'Only admins manage materials.',
+			$this->client->call('update_material', ['materialId' => $added['id'], 'color' => '#000000'], $isError),
+		);
+		AppHarness::mercureHub()->updates = [];
+		$updated = $admin->call(
+			'update_material',
+			['materialId' => $added['id'], 'color' => '#A07850', 'pattern' => 'Planks', 'tileWidth' => 180, 'tileHeight' => 1200],
+		);
+		self::assertIsArray($updated);
+		self::assertSame(
+			['oak-veneer', 'Oak veneer, natural', 'Planks', '#a07850', 0.55, 180, 1200],
+			[$updated['code'], $updated['name'], $updated['pattern'], $updated['color'], $updated['roughness'], $updated['tileWidth'], $updated['tileHeight']],
+		);
+		self::assertSame(
+			[['type' => 'materialChanged', 'projectId' => $this->project->id, 'materialId' => $added['id'], 'originClientId' => null]],
+			AppHarness::mercureHub()->messages(),
+		);
+		$message = $admin->call('update_material', ['materialId' => $added['id'], 'clear' => ['tileWidth']], $isError);
+		self::assertTrue($isError);
+		self::assertSame('Fields "tileWidth" and "tileHeight" go together.', $message);
+		$cleared = $admin->call('update_material', ['materialId' => $added['id'], 'clear' => ['tileWidth', 'tileHeight']]);
+		self::assertIsArray($cleared);
+		self::assertSame([null, null], [$cleared['tileWidth'], $cleared['tileHeight']]);
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void

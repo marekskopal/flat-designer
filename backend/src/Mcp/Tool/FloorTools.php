@@ -44,28 +44,6 @@ final readonly class FloorTools
 		];
 	}
 
-	/** @return list<array{id: int, code: string, name: string, pattern: string, color: string}> */
-	#[McpTool(
-		name: 'list_materials',
-		description: 'The material catalogue (ids for materialId, floorMaterialId, wall finishes).',
-		annotations: new ToolAnnotations(readOnlyHint: true),
-	)]
-	public function listMaterials(): array
-	{
-		$materials = [];
-		foreach ($this->sceneProvider->getMaterials() as $material) {
-			$materials[] = [
-				'id' => $material->id,
-				'code' => $material->code,
-				'name' => $material->name,
-				'pattern' => $material->pattern->value,
-				'color' => $material->color,
-			];
-		}
-
-		return $materials;
-	}
-
 	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}> */
 	#[McpTool(
 		name: 'list_item_kinds',

@@ -20,6 +20,14 @@ final class ProjectRepository extends ARepository
 		return $this->select()->orderBy('updated_at', 'DESC')->fetchAll();
 	}
 
+	/** @return list<int> */
+	public function findAllIds(): array
+	{
+		$rows = $this->select()->columns(['id'])->fetchAssocAll();
+
+		return array_map(static fn (array $row): int => is_numeric($row['id']) ? (int) $row['id'] : 0, $rows);
+	}
+
 	/** @return list<Project> */
 	public function findByOwner(int $ownerId): array
 	{

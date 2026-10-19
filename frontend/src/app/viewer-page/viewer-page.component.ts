@@ -210,6 +210,11 @@ export class ViewerPageComponent {
             void this.editor.loadDefinitions();
             return;
         }
+        if (update.type === 'materialChanged') {
+            // The reloaded scene carries the changed catalogue; the engine rebuilds everything when materials differ.
+            this.data.reload();
+            return;
+        }
         if (update.revision > (this.scene()?.revision ?? -1)) {
             this.data.reload();
             void this.editor.loadChanges();

@@ -89,7 +89,7 @@ final class AppHarness
 		return self::app()->dbContext->getDatabase()->getPdo();
 	}
 
-	/** Empties every table except `PreservedTables` and clears the ORM identity map. */
+	/** Empties every table except `PreservedTables` (but drops materials added by tests) and clears the ORM identity map. */
 	public static function resetState(): void
 	{
 		$pdo = self::pdo();
@@ -100,6 +100,7 @@ final class AppHarness
 		foreach (self::$tables as $table) {
 			$pdo->exec('TRUNCATE TABLE `' . $table . '`');
 		}
+		$pdo->exec('DELETE FROM materials WHERE created_by_id IS NOT NULL');
 		$pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
 		self::app()->dbContext->resetOrmState();

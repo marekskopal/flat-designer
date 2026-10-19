@@ -81,7 +81,7 @@ function parseUpdate(data: string): ProjectUpdate | null {
     try {
         const parsed: unknown = JSON.parse(data);
         const type = typeof parsed === 'object' && parsed !== null ? (parsed as ProjectUpdate).type : null;
-        return type === 'projectChanged' || type === 'definitionChanged' ? (parsed as ProjectUpdate) : null;
+        return type === 'projectChanged' || type === 'definitionChanged' || type === 'materialChanged' ? (parsed as ProjectUpdate) : null;
     } catch {
         return null;
     }
