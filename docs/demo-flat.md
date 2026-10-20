@@ -186,3 +186,62 @@ Legend: **have** = an existing kind, definition, material or opening option. **F
 - **FD-47** Materials: terrazzo, exposed brick, charcoal herringbone tiles (a new pattern), matt black fronts, black
   compact worktop, oak veneer.
 - **FD-48** Door and window leaf styles: panelled leaves, French doors with panelled lower parts, exterior shutters.
+
+## Result (FD-45)
+
+The flat was modelled by Claude Code over the flat-designer MCP server only. The human part was creating the empty
+project and importing the plan, photos and poster with `make import-files`. Positions came from the plan underlay,
+read with `get_project_file` and small local measuring scripts.
+
+| | |
+| --- | --- |
+| Wall-clock time, first tool call to the last change | 22 minutes (2026-10-20, 18:32 to 18:54 UTC) |
+| MCP tool calls | about 190 (counted by hand; reads included) |
+| Logged changes (`list_changes`) | 212 |
+| Walls, openings, rooms | 27, 13, 11 |
+| Items | 89: 70 from furniture definitions, 13 models, 6 built-in kinds |
+| Groups, variant sets | 8 groups, 1 set ("Kitchen open / closed") |
+| Versions | 4 phase versions and 2 saved by the share link |
+
+### Phases
+
+1. Underlay calibrated from the scale bar, then the walls (`add_walls`) and the rooms (`detect_room`). Version 1.
+2. Doors, French windows with panels, transoms and shutters, light-well windows, balconies and railings. Version 2.
+3. Finishes: oak planks, terrazzo, herringbone band, black kitchen ceiling, brick vaults with beams, skirting.
+4. The kitchen (6 base modules, 4 wall cabinets, worktop, backsplashes, hob, sink, oak end panels) as one group, and
+   **Oak sliding panels**, a project definition of six `slidingDoor` leaves on a ceiling track with an `open`
+   parameter. The two states are the variants of "Kitchen open / closed".
+5. Furniture from the plan, grouped per piece: master bed with bedside tables and lamp, wardrobes, sofa with cushions,
+   nesting side tables, dining set, single beds, desk, vanity with basin and mirror, WC, shower screen. Version 3.
+6. Six pendants with swagged cables, seven downlights in the dropped ceiling, the reading lamp's light, the LED strip,
+   switches and sockets, decor (poster leaning in the dining corner, rugs, books, plants, kettle, bowl). Version 4.
+7. Saved views "Photo 01" to "Photo 12" at the photos' cameras (with the kitchen variant each photo shows), "Plan
+   with dimensions" and "Living room at night". One share link (3D, plan and walk) with a start camera.
+
+### Compared with the photos
+
+The shell, heights, vaults, service box, kitchen, sliding panels and bathroom wall match the photos closely
+(photos 02 and 12 side by side with their saved views). Placing the poster outside the dining room was caught
+in the comparison and fixed. These mismatches remain, each logged as a task:
+
+- **FD-51** The planks run along the plan axes, not along the diagonal.
+- **FD-52** Wall finishes are per room, so the shower walls are herringbone instead of terrazzo.
+- **FD-53** Missing product models: vessel basin, black taps, close-coupled WC, rain shower, extractor, Cesca and
+  butterfly chairs, TMM lamp. Stand-ins are named "… stand-in".
+- **FD-54** Saved views have no lens setting, so they show less than the wide-angle photos.
+- **FD-56** The dropped ceiling's curved edge is a polyline shared with the floor edge.
+- **FD-57** Bedroom 3's trapezoid wardrobe is a rectangle.
+- **FD-55** Under `make dev`, live updates do not arrive (the dev proxy has no Mercure route).
+
+The open variant stacks the sliding leaves at both ends of the run in front of the end cabinets. The real panels
+slide into pockets, which the model does not have.
+
+### Persistence
+
+The demo is kept as data, not as a seed migration. Its plan, photos and poster are unlicensed, and its product models
+are third-party downloads, so all of them stay out of git in `source_files/demo/`. A seed could not restore the
+underlay, the poster or the model items, and their ids change on every import.
+
+- The final version's snapshot is exported to `source_files/demo/work/demo-flat-version-6.json`.
+- To rebuild it after `make reset-db`, import the files and models again and let an agent model the flat from this
+  file, as above. The phases and the inventory are the recipe.
