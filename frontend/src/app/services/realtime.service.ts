@@ -77,11 +77,13 @@ export class RealtimeService {
     }
 }
 
+const UpdateTypes: readonly string[] = ['projectChanged', 'definitionChanged', 'materialChanged', 'detailsChanged'] satisfies ProjectUpdate['type'][];
+
 function parseUpdate(data: string): ProjectUpdate | null {
     try {
         const parsed: unknown = JSON.parse(data);
         const type = typeof parsed === 'object' && parsed !== null ? (parsed as ProjectUpdate).type : null;
-        return type === 'projectChanged' || type === 'definitionChanged' || type === 'materialChanged' ? (parsed as ProjectUpdate) : null;
+        return type !== null && UpdateTypes.includes(type) ? (parsed as ProjectUpdate) : null;
     } catch {
         return null;
     }

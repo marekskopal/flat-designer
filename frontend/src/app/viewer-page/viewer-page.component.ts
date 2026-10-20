@@ -339,8 +339,17 @@ export class ViewerPageComponent {
     }
 
     private onProjectUpdate(update: ProjectUpdate): void {
-        // Own edits are applied already; a saved version does not change.
-        if (update.originClientId === originClientId || this.version() !== null) {
+        // Own edits are applied already.
+        if (update.originClientId === originClientId) {
+            return;
+        }
+        if (update.type === 'detailsChanged') {
+            // The name in the header, also over a saved version; the reloaded scene is the same.
+            this.data.reload();
+            return;
+        }
+        // A saved version does not change.
+        if (this.version() !== null) {
             return;
         }
         if (update.type === 'definitionChanged') {

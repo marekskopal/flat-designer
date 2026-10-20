@@ -62,20 +62,20 @@ export class ProjectDetailComponent {
     public constructor() {
         effect(() => void this.load(this.projectId()));
 
-        // Floors and versions changed elsewhere (another tab, an agent) show up without a reload.
+        // Floors, versions and details changed elsewhere (another tab, an agent) show up without a reload.
         const realtime = inject(RealtimeService);
         toObservable(this.projectId)
             .pipe(
                 switchMap((projectId) => realtime.projectUpdates(projectId)),
                 filter(
                     (update) =>
-                        update.type === 'projectChanged' &&
                         update.originClientId !== originClientId &&
-                        update.revision > (this.project()?.revision ?? -1),
+                        (update.type === 'detailsChanged' ||
+                            (update.type === 'projectChanged' && update.revision > (this.project()?.revision ?? -1))),
                 ),
                 takeUntilDestroyed(),
             )
-            .subscribe((update) => void this.load(update.projectId));
+            .subscribe((update) => void (update.type === 'detailsChanged' ? this.loadDetails(update.projectId) : this.load(update.projectId)));
     }
 
     protected editDetails(project: Project): void {
@@ -205,6 +205,14 @@ export class ProjectDetailComponent {
             this.project.set(project);
             this.versions.set(versions);
             this.shareLinks.set(shareLinks);
+        } catch {
+            // The error interceptor shows the toast.
+        }
+    }
+
+    private async loadDetails(projectId: number): Promise<void> {
+        try {
+            this.project.set(await this.projectService.get(projectId));
         } catch {
             // The error interceptor shows the toast.
         }

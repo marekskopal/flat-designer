@@ -16,6 +16,7 @@ use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
+use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
 use MarekSkopal\ORM\ORM;
 
 /** Projects and who may see them: the owner, and admins (all projects). */
@@ -29,6 +30,7 @@ final readonly class ProjectProvider
 		private ProjectVersionRepository $projectVersionRepository,
 		private ProjectFileProvider $projectFileProvider,
 		private ModelAssetRepository $modelRepository,
+		private ProjectUpdatePublisher $updatePublisher,
 		private ORM $orm,
 	) {
 	}
@@ -66,11 +68,16 @@ final readonly class ProjectProvider
 		});
 	}
 
+	/** Unchanged details are not a change: nothing is saved or announced. */
 	public function update(Project $project, ProjectInputDto $input): Project
 	{
+		$before = [$project->name, $project->address, $project->description];
 		$project->name = self::name($input->name);
 		self::applyDetails($project, $input);
-		$this->touch($project);
+		if ($before !== [$project->name, $project->address, $project->description]) {
+			$this->touch($project);
+			$this->updatePublisher->markDetailsChanged($project->id);
+		}
 
 		return $project;
 	}
