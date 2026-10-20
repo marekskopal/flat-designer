@@ -1,0 +1,219 @@
+{
+ "name": "Bed with bedding",
+ "description": "Platform bed of boards with a mattress, duvet and pillows, an optional headboard and a throw at the foot.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1600,
+   "depth": 2100,
+   "height": 900
+  },
+  "parameters": [
+   {
+    "key": "headboard",
+    "label": "Headboard",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "pillows",
+    "label": "Pillows",
+    "type": "int",
+    "default": 2,
+    "min": 0,
+    "max": 4
+   },
+   {
+    "key": "duvet",
+    "label": "Duvet",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "throw",
+    "label": "Throw at the foot",
+    "type": "bool",
+    "default": false
+   },
+   {
+    "key": "baseHeight",
+    "label": "Base height",
+    "type": "int",
+    "default": 280,
+    "min": 120,
+    "max": 450,
+    "unit": "mm"
+   },
+   {
+    "key": "mattressHeight",
+    "label": "Mattress",
+    "type": "int",
+    "default": 220,
+    "min": 100,
+    "max": 350,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "head": "headboard ? 50 : 0",
+   "top": "baseHeight + mattressHeight",
+   "pillowW": "(W - 120) / max(pillows, 1)"
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "oak-veneer"
+   },
+   {
+    "key": "mattress",
+    "label": "Mattress",
+    "default": "fabric-linen-white"
+   },
+   {
+    "key": "bedding",
+    "label": "Bedding",
+    "default": "fabric-linen-white"
+   },
+   {
+    "key": "throw",
+    "label": "Throw",
+    "default": "fabric-wool-ochre"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Headboard",
+    "when": "headboard",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": 50,
+    "material": "frame",
+    "grain": "horizontal",
+    "edges": [
+     "top",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Base top",
+    "x": 0,
+    "y": "baseHeight - 18",
+    "z": "head",
+    "w": "W",
+    "h": 18,
+    "d": "D - head",
+    "material": "frame",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Base side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 18)",
+    "y": 60,
+    "z": "head",
+    "w": 18,
+    "h": "baseHeight - 78",
+    "d": "D - head",
+    "material": "frame",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Base foot",
+    "x": 18,
+    "y": 60,
+    "z": "D - 18",
+    "w": "W - 36",
+    "h": "baseHeight - 78",
+    "d": 18,
+    "material": "frame",
+    "grain": "horizontal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Foot",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 * (W - 100) + 30",
+    "y": 0,
+    "z": "head + floor(i / 2) * (D - head - 100) + 30",
+    "w": 40,
+    "h": 60,
+    "d": 40,
+    "material": "frame"
+   },
+   {
+    "type": "cushion",
+    "name": "Mattress",
+    "x": 20,
+    "y": "baseHeight",
+    "z": "head + 10",
+    "w": "W - 40",
+    "h": "mattressHeight",
+    "d": "D - head - 20",
+    "radius": 40,
+    "material": "mattress"
+   },
+   {
+    "type": "cushion",
+    "name": "Duvet",
+    "when": "duvet",
+    "x": 5,
+    "y": "top - 110",
+    "z": "head + 480",
+    "w": "W - 10",
+    "h": 140,
+    "d": "D - head - 480",
+    "radius": 60,
+    "material": "bedding"
+   },
+   {
+    "type": "cushion",
+    "name": "Pillow",
+    "repeat": {
+     "count": "pillows"
+    },
+    "x": "60 + i * pillowW + 20",
+    "y": "top",
+    "z": "head + 60",
+    "w": "pillowW - 40",
+    "h": 130,
+    "d": 420,
+    "radius": 60,
+    "material": "bedding"
+   },
+   {
+    "type": "cushion",
+    "name": "Throw",
+    "when": "throw",
+    "x": 0,
+    "y": "top + (duvet ? 30 : 0)",
+    "z": "D - 650",
+    "w": "W",
+    "h": 25,
+    "d": 500,
+    "radius": 10,
+    "material": "throw"
+   }
+  ]
+ }
+}

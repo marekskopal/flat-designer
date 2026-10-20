@@ -18,6 +18,26 @@ final class ItemRepository extends ARepository
 			->fetchAll();
 	}
 
+	/**
+	 * The items (not deleted) of the floors drawn from a furniture definition, in one query.
+	 *
+	 * @param list<int> $floorIds
+	 * @return list<Item>
+	 */
+	public function findWithDefinitionOnFloors(array $floorIds): array
+	{
+		if ($floorIds === []) {
+			return [];
+		}
+
+		return $this->select()
+			->where(['floor_id', 'IN', $floorIds])
+			->where(['deleted_at' => null])
+			->where(['definition_id', '!=', null])
+			->orderBy('id', 'ASC')
+			->fetchAll();
+	}
+
 	/** @return list<Item> the group's members, not deleted */
 	public function findByGroup(int $groupId): array
 	{

@@ -15,7 +15,17 @@ use Mcp\Schema\ToolAnnotations;
 /** Rooms: floor areas with their finishes. */
 final readonly class RoomTools
 {
-	private const array Clearable = ['ceilingHeight', 'floorMaterialId', 'tileOriginX', 'tileOriginY'];
+	private const array Clearable = [
+		'ceilingHeight',
+		'floorMaterialId',
+		'tileOriginX',
+		'tileOriginY',
+		'ceilingMaterialId',
+		'vaultSpacing',
+		'beamMaterialId',
+		'skirtingHeight',
+		'skirtingMaterialId',
+	];
 
 	private const array WallFinishesSchema = [
 		'type' => ['array', 'null'],
@@ -93,6 +103,15 @@ final readonly class RoomTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes horizontal bands around the room's walls, mm above the floor (e.g. tiling 0–1200)
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross; floor tiles, wall bands and tiled items share the grid
 	 * @param int|null $tileOriginY plan y (mm) of that point
+	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)
+	 * @param int|null $vaultSpacing vaulted ceiling: mm between the beams (300–3000); the vaults' crowns are at ceilingHeight. Default none: a flat ceiling
+	 * @param int|null $vaultAngle vaulted ceiling: direction the beams run, degrees counter-clockwise from plan x (0 = beams running east–west)
+	 * @param int|null $vaultRise vaulted ceiling: rise of each vault from its springing to its crown, mm (default 130)
+	 * @param int|null $beamWidth vaulted ceiling: width of the beams, mm (default 80)
+	 * @param int|null $beamDrop vaulted ceiling: how far the beams hang below the vaults' springing, mm (default 30)
+	 * @param int|null $beamMaterialId vaulted ceiling: material of the beams (default white paint)
+	 * @param int|null $skirtingHeight skirting boards along the room's walls (doors left free), mm high (20–400); default none
+	 * @param int|null $skirtingMaterialId material of the skirting (default white)
 	 */
 	#[McpTool(name: 'add_room', description: 'Add a room (floor area) to a floor.')]
 	public function addRoom(
@@ -108,6 +127,15 @@ final readonly class RoomTools
 		?array $wallFinishes = null,
 		?int $tileOriginX = null,
 		?int $tileOriginY = null,
+		?int $ceilingMaterialId = null,
+		?int $vaultSpacing = null,
+		?int $vaultAngle = null,
+		?int $vaultRise = null,
+		?int $beamWidth = null,
+		?int $beamDrop = null,
+		?int $beamMaterialId = null,
+		?int $skirtingHeight = null,
+		?int $skirtingMaterialId = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -123,6 +151,15 @@ final readonly class RoomTools
 				'wallFinishes' => $wallFinishes,
 				'tileOriginX' => $tileOriginX,
 				'tileOriginY' => $tileOriginY,
+				'ceilingMaterialId' => $ceilingMaterialId,
+				'vaultSpacing' => $vaultSpacing,
+				'vaultAngle' => $vaultAngle,
+				'vaultRise' => $vaultRise,
+				'beamWidth' => $beamWidth,
+				'beamDrop' => $beamDrop,
+				'beamMaterialId' => $beamMaterialId,
+				'skirtingHeight' => $skirtingHeight,
+				'skirtingMaterialId' => $skirtingMaterialId,
 			]),
 		);
 	}
@@ -133,7 +170,16 @@ final readonly class RoomTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes replaces all bands; [] removes them
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross (floor, wall bands and tiled items share the grid)
 	 * @param int|null $tileOriginY plan y (mm) of that point
-	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId", "tileOriginX", "tileOriginY"
+	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)
+	 * @param int|null $vaultSpacing vaulted ceiling: mm between the beams (300–3000); the vaults' crowns are at ceilingHeight. Default none: a flat ceiling
+	 * @param int|null $vaultAngle vaulted ceiling: direction the beams run, degrees counter-clockwise from plan x (0 = beams running east–west)
+	 * @param int|null $vaultRise vaulted ceiling: rise of each vault from its springing to its crown, mm (default 130)
+	 * @param int|null $beamWidth vaulted ceiling: width of the beams, mm (default 80)
+	 * @param int|null $beamDrop vaulted ceiling: how far the beams hang below the vaults' springing, mm (default 30)
+	 * @param int|null $beamMaterialId vaulted ceiling: material of the beams (default white paint)
+	 * @param int|null $skirtingHeight skirting boards along the room's walls (doors left free), mm high (20–400); default none
+	 * @param int|null $skirtingMaterialId material of the skirting (default white)
+	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId", "tileOriginX", "tileOriginY", "ceilingMaterialId", "vaultSpacing" (a flat ceiling again), "beamMaterialId", "skirtingHeight", "skirtingMaterialId"
 	 */
 	#[McpTool(name: 'update_room', description: 'Change a room. Only the given fields change.')]
 	public function updateRoom(
@@ -150,6 +196,15 @@ final readonly class RoomTools
 		?array $wallFinishes = null,
 		?int $tileOriginX = null,
 		?int $tileOriginY = null,
+		?int $ceilingMaterialId = null,
+		?int $vaultSpacing = null,
+		?int $vaultAngle = null,
+		?int $vaultRise = null,
+		?int $beamWidth = null,
+		?int $beamDrop = null,
+		?int $beamMaterialId = null,
+		?int $skirtingHeight = null,
+		?int $skirtingMaterialId = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -167,6 +222,15 @@ final readonly class RoomTools
 				'wallFinishes' => $wallFinishes,
 				'tileOriginX' => $tileOriginX,
 				'tileOriginY' => $tileOriginY,
+				'ceilingMaterialId' => $ceilingMaterialId,
+				'vaultSpacing' => $vaultSpacing,
+				'vaultAngle' => $vaultAngle,
+				'vaultRise' => $vaultRise,
+				'beamWidth' => $beamWidth,
+				'beamDrop' => $beamDrop,
+				'beamMaterialId' => $beamMaterialId,
+				'skirtingHeight' => $skirtingHeight,
+				'skirtingMaterialId' => $skirtingMaterialId,
 			], $clear, self::Clearable),
 		);
 	}

@@ -5,6 +5,7 @@ import {AlertService} from '@app/services/alert.service';
 import {FurnitureService} from '@app/services/furniture.service';
 
 import {NewDefinitionTemplate} from './furniture-template';
+import {ModelLibraryComponent} from './model-library.component';
 
 /**
  * The furniture definitions one can use: global ones and my library; with `?projectId=` also that project's own (and
@@ -12,7 +13,7 @@ import {NewDefinitionTemplate} from './furniture-template';
  */
 @Component({
     selector: 'fd-furniture-library',
-    imports: [RouterLink],
+    imports: [RouterLink, ModelLibraryComponent],
     templateUrl: './furniture-library.component.html',
     styleUrl: './furniture-library.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

@@ -2,10 +2,15 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
-import {PlanPoint, Scene} from '@app/models/scene';
-import {EditorApiService, GroupMove, WallDraft} from '@app/services/editor-api.service';
+import {ModelAsset} from '@app/models/model-asset';
+import {ImageMimeTypes, ProjectFile} from '@app/models/project';
+import {PlanPoint, Scene, Underlay} from '@app/models/scene';
+import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {ModelAssetService} from '@app/services/model-asset.service';
+import {ProjectService} from '@app/services/project.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
+import {Vec2} from '@app/viewer/engine/plan-geometry';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
 
 import {patchScene} from './scene-patch';
@@ -38,15 +43,28 @@ export class EditorStore {
     public readonly busy = signal(false);
     public readonly changes = signal<Change[]>([]);
     public readonly itemKinds = signal<ItemKindInfo[]>([]);
+    /** 3D models the project's items may use (global, the project's own, its owner's library). */
+    public readonly models = signal<ModelAsset[]>([]);
     /** Furniture definitions the project's items may use (global, the project's own, its owner's library). */
     public readonly definitions = signal<FurnitureDefinition[]>([]);
+    /** The project's image files, for pictures of Custom items (their `image` parameters). */
+    public readonly images = signal<ProjectFile[]>([]);
     /** What a click in the top view does: select and drag, draw walls, or outline a room. */
     public readonly tool = signal<EditorTool>('select');
     /** Type, thickness and height of the walls drawn next. */
     public readonly wallDraft = signal<WallDraft>({type: 'Interior', thickness: 100, height: 2600});
+    /** The plan image under the top view is shown. */
+    public readonly underlayVisible = signal(true);
+    /**
+     * Calibrating the underlay: two points are being clicked ('picking'), or both are there (plan mm, as the image
+     * lies now) and wait for their real distance.
+     */
+    public readonly calibration = signal<'picking' | {a: Vec2; b: Vec2} | null>(null);
 
     private readonly api = inject(EditorApiService);
     private readonly furniture = inject(FurnitureService);
+    private readonly modelAssets = inject(ModelAssetService);
+    private readonly projects = inject(ProjectService);
     private context: EditorContext | null = null;
 
     public connect(context: EditorContext): void {
@@ -57,12 +75,15 @@ export class EditorStore {
         this.enabled.set(enabled);
         if (!enabled) {
             this.tool.set('select');
+            this.calibration.set(null);
         }
         if (enabled) {
             await Promise.all([
                 this.loadChanges(),
                 this.itemKinds().length === 0 ? this.loadItemKinds() : Promise.resolve(),
                 this.loadDefinitions(),
+                this.loadModels(),
+                this.loadImages(),
             ]);
         }
     }
@@ -98,6 +119,52 @@ export class EditorStore {
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
             this.selection.set({kind: 'room', id});
+        }
+    }
+
+    /** Sets the floor's underlay; resolves true when it was saved. */
+    public async saveUnderlay(input: UnderlayInput): Promise<boolean> {
+        const saved = await this.underlayRequest((c) => this.api.setUnderlay(c.projectId(), c.floorId(), input, revisionOf(c)));
+        if (saved !== null) {
+            this.underlayVisible.set(true);
+        }
+        return saved !== null;
+    }
+
+    public async removeUnderlay(): Promise<void> {
+        await this.underlayRequest(async (c) => ({underlay: null, ...(await this.api.removeUnderlay(c.projectId(), c.floorId(), revisionOf(c)))}));
+        this.calibration.set(null);
+    }
+
+    /**
+     * An underlay request with the scene's revision as `If-Match`: the answer is patched into the scene, a 409 (someone
+     * changed the floor meanwhile) reloads it. Not an element change: there is nothing to log or undo.
+     */
+    private async underlayRequest(
+        request: (context: EditorContext) => Promise<{underlay: Underlay | null; revision: number}>,
+    ): Promise<{underlay: Underlay | null; revision: number} | null> {
+        const context = this.context;
+        if (context === null || this.busy()) {
+            return null;
+        }
+        this.busy.set(true);
+        try {
+            const result = await request(context);
+            const scene = context.scene();
+            if (scene === null) {
+                context.reload();
+            } else {
+                context.setScene({...scene, underlay: result.underlay, revision: result.revision});
+            }
+            return result;
+        } catch (e: unknown) {
+            // Other errors have been shown by the error interceptor.
+            if (e instanceof HttpErrorResponse && e.status === 409) {
+                context.reload();
+            }
+            return null;
+        } finally {
+            this.busy.set(false);
         }
     }
 
@@ -244,10 +311,34 @@ export class EditorStore {
         }
     }
 
+    public async loadModels(): Promise<void> {
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        try {
+            this.models.set(await this.modelAssets.list(context.projectId()));
+        } catch {
+            // The error interceptor shows the toast.
+        }
+    }
+
+    public async loadImages(): Promise<void> {
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        try {
+            this.images.set((await this.projects.listFiles(context.projectId())).filter((f) => ImageMimeTypes.includes(f.mimeType)));
+        } catch {
+            // The error interceptor shows the toast.
+        }
+    }
+
     private async loadItemKinds(): Promise<void> {
         try {
-            // Custom items need a furniture definition, picked elsewhere than the plain kinds.
-            this.itemKinds.set((await this.api.itemKinds()).filter((k) => k.kind !== 'Custom'));
+            // Custom and Model items need a furniture definition or a 3D model, picked elsewhere than the plain kinds.
+            this.itemKinds.set((await this.api.itemKinds()).filter((k) => k.kind !== 'Custom' && k.kind !== 'Model'));
         } catch {
             // The error interceptor shows the toast.
         }

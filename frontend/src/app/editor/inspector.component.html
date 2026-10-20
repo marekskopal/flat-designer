@@ -33,6 +33,13 @@
                         }
                     </select>
                 }
+                @case ('model') {
+                    <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
+                        @for (choice of modelChoices(); track choice.id) {
+                            <option [value]="choice.id" [disabled]="choice.id === ''" [selected]="'' + choice.id === value(def)">{{ choice.name }}</option>
+                        }
+                    </select>
+                }
                 @case ('room') {
                     <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
                         <option value="" [selected]="value(def) === ''">—</option>
@@ -79,7 +86,9 @@
                         [depth]="size('depth')"
                         [height]="size('height')"
                         [materials]="materials()"
+                        [images]="images()"
                         [disabled]="disabled()"
+                        (imagesRefresh)="imagesRefresh.emit()"
                         (paramsChange)="commitValue(def, $event)"
                     />
                 }

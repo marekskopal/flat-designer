@@ -10,14 +10,18 @@ use FlatDesigner\Dto\ShareLinkDto;
 use FlatDesigner\Dto\ShareLinkInputDto;
 use FlatDesigner\Dto\ShareSettingsDto;
 use FlatDesigner\Model\Entity\Enum\ShareViewEnum;
+use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Project;
+use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\ShareLinkRepository;
 use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
+use stdClass;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -28,14 +32,19 @@ use const JSON_THROW_ON_ERROR;
 final readonly class ShareLinkProvider
 {
 	private const int MaxNameLength = 100;
-	private const int MinSectionHeight = 900;
-	private const int MaxSectionHeight = 2700;
+
+	/** The wall cut a view may start with, mm above the floor (saved views use the same range). */
+	public const int MinSectionHeight = 900;
+	public const int MaxSectionHeight = 2700;
 
 	public function __construct(
 		private ShareLinkRepository $shareLinkRepository,
 		private FloorRepository $floorRepository,
 		private ProjectVersionProvider $versionProvider,
 		private ProjectSnapshotService $snapshotService,
+		private ProjectFileProvider $fileProvider,
+		private ModelAssetRepository $modelRepository,
+		private SharedAssetIds $assetIds,
 		private ORM $orm,
 	) {
 	}
@@ -128,16 +137,74 @@ final readonly class ShareLinkProvider
 	/** The guest's view of a link; null when the token is unknown or the link expired. */
 	public function findSharedView(string $token): ?SharedViewDto
 	{
-		$link = $this->shareLinkRepository->findOneByToken($token);
-		if ($link === null || $link->isExpired(new DateTimeImmutable())) {
+		$shared = $this->sharedScene($token);
+		if ($shared === null) {
 			return null;
 		}
-		$scene = $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
-		if ($scene === null) {
-			return null;
-		}
+		[$link, $scene] = $shared;
 
 		return new SharedViewDto(name: $link->name, projectName: $link->project->name, settings: self::readSettings($link), scene: $scene);
+	}
+
+	/** A 3D model a guest's view draws (listed in its scene's `models`); null for any other. */
+	public function findSharedModel(string $token, int $modelId): ?ModelAsset
+	{
+		$shared = $this->sharedAssets($token);
+
+		return $shared !== null && in_array($modelId, $shared[1]['models'], true) ? $this->modelRepository->findById($modelId) : null;
+	}
+
+	/** An image file a guest's view shows as a picture (listed in its scene's `pictures`); null for any other. */
+	public function findSharedPicture(string $token, int $fileId): ?ProjectFile
+	{
+		$shared = $this->sharedAssets($token);
+		$file = $shared !== null && in_array($fileId, $shared[1]['pictures'], true)
+			? $this->fileProvider->find($shared[0]->project, $fileId)
+			: null;
+
+		return $file !== null && $this->fileProvider->isImage($file) ? $file : null;
+	}
+
+	/** The link of a token while it works (known, not expired); null otherwise. */
+	private function activeLink(string $token): ?ShareLink
+	{
+		$link = $this->shareLinkRepository->findOneByToken($token);
+
+		return $link === null || $link->isExpired(new DateTimeImmutable()) ? null : $link;
+	}
+
+	/**
+	 * The link and its frozen floor scene; null when the token is unknown, the link expired or the floor is gone.
+	 *
+	 * @return array{ShareLink, stdClass}|null
+	 */
+	private function sharedScene(string $token): ?array
+	{
+		$link = $this->activeLink($token);
+		$scene = $link === null ? null : $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
+
+		return $link === null || $scene === null ? null : [$link, $scene];
+	}
+
+	/**
+	 * The link and the ids of the models and pictures its floor draws, without decoding the snapshot each time.
+	 *
+	 * @return array{ShareLink, array{models: list<int>, pictures: list<int>}}|null
+	 */
+	private function sharedAssets(string $token): ?array
+	{
+		$link = $this->activeLink($token);
+		if ($link === null) {
+			return null;
+		}
+		$version = $link->version;
+		$ids = $this->assetIds->of(
+			$version->id,
+			$link->floorId,
+			fn (): ?stdClass => $this->snapshotService->getFloorScene($version->snapshot, $link->floorId),
+		);
+
+		return $ids === null ? null : [$link, $ids];
 	}
 
 	/** @param string|null $baseUrl the app's origin, to include the link's URL */

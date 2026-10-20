@@ -1,0 +1,81 @@
+{
+ "name": "Light switch (rocker)",
+ "description": "A flush wall switch with one rocker, or two side by side. Elevation: its bottom edge, usually 1050 mm.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 80,
+   "depth": 10,
+   "height": 80
+  },
+  "parameters": [
+   {
+    "key": "rockers",
+    "label": "Rockers",
+    "type": "select",
+    "default": "single",
+    "options": [
+     "single",
+     "double"
+    ]
+   }
+  ],
+  "derived": {
+   "n": "rockers == 'double' ? 2 : 1",
+   "inner": "W - 16",
+   "rw": "(inner - (n - 1) * 2) / n"
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "plastic-white-gloss"
+   },
+   {
+    "key": "rocker",
+    "label": "Rocker",
+    "default": "plastic-white-gloss"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Frame",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D - 2",
+    "material": "frame",
+    "edges": [
+     "left",
+     "right",
+     "top",
+     "bottom"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Rocker",
+    "repeat": {
+     "count": "n"
+    },
+    "x": "8 + i * (rw + 2)",
+    "y": 8,
+    "z": "D - 3",
+    "w": "rw",
+    "h": "H - 16",
+    "d": 3,
+    "material": "rocker",
+    "tilt": 3,
+    "tiltY": {
+     "expr": "H / 2"
+    },
+    "tiltZ": {
+     "expr": "D - 3"
+    }
+   }
+  ]
+ }
+}

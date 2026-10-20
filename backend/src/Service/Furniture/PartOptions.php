@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Furniture;
 
 use FlatDesigner\Service\Furniture\Expression\Expression;
 use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use stdClass;
 
 /**
  * The options of a part (grain, edges, handle, …: the keys besides `PartEntry::Keys`), literal or written as
@@ -91,8 +92,21 @@ final readonly class PartOptions
 		}
 	}
 
+	/** Whole numbers as integers, also inside lists and records (a cable's path from a list parameter). */
 	private static function plain(mixed $value): mixed
 	{
+		if (is_array($value)) {
+			return array_map(self::plain(...), $value);
+		}
+		if ($value instanceof stdClass) {
+			$record = new stdClass();
+			foreach (get_object_vars($value) as $field => $item) {
+				$record->{$field} = self::plain($item);
+			}
+
+			return $record;
+		}
+
 		return is_float($value) && floor($value) === $value && abs($value) <= 2 ** 53 ? (int) $value : $value;
 	}
 }

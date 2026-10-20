@@ -9,21 +9,25 @@ use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Mcp\Server\EmptyObjectSchemaValidator;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
+use FlatDesigner\Mcp\Tool\FileTools;
 use FlatDesigner\Mcp\Tool\FloorTools;
 use FlatDesigner\Mcp\Tool\FurnitureTools;
 use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\MaterialTools;
+use FlatDesigner\Mcp\Tool\ModelTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
 use FlatDesigner\Mcp\Tool\RoomTools;
 use FlatDesigner\Mcp\Tool\ShareLinkTools;
+use FlatDesigner\Mcp\Tool\UnderlayTools;
 use FlatDesigner\Mcp\Tool\VariantTools;
 use FlatDesigner\Mcp\Tool\WallTools;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Material\MaterialService;
+use FlatDesigner\Service\Project\ImagePreviewService;
 use FlatDesigner\Tests\Support\AppHarness;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
@@ -32,6 +36,7 @@ use FlatDesigner\Tests\Support\OAuthFlow;
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 use stdClass;
+use const JSON_THROW_ON_ERROR;
 
 /** Drives the MCP server end to end over JSON-RPC, as Claude Code or claude.ai would. */
 #[CoversClass(McpController::class)]
@@ -50,7 +55,11 @@ use stdClass;
 #[CoversClass(RoomTools::class)]
 #[CoversClass(OpeningTools::class)]
 #[CoversClass(MaterialTools::class)]
+#[CoversClass(ModelTools::class)]
 #[CoversClass(MaterialService::class)]
+#[CoversClass(FileTools::class)]
+#[CoversClass(UnderlayTools::class)]
+#[CoversClass(ImagePreviewService::class)]
 final class McpServerTest extends IntegrationTestCase
 {
 	private User $user;
@@ -97,6 +106,7 @@ final class McpServerTest extends IntegrationTestCase
 			'delete_room',
 			'delete_share_link',
 			'delete_variant_set',
+			'delete_view',
 			'delete_wall',
 			'detect_room',
 			'duplicate_group',
@@ -106,20 +116,27 @@ final class McpServerTest extends IntegrationTestCase
 			'get_floor',
 			'get_furniture_definition',
 			'get_project',
+			'get_project_file',
 			'get_room_schedule',
 			'list_changes',
 			'list_furniture_definitions',
 			'list_item_kinds',
 			'list_materials',
+			'list_models',
+			'list_project_files',
 			'list_projects',
 			'list_share_links',
 			'list_versions',
+			'list_views',
 			'move_group',
 			'redo',
 			'refresh_share_link',
+			'remove_floor_underlay',
 			'rename_group',
 			'rename_variant_set',
 			'save_version',
+			'save_view',
+			'set_floor_underlay',
 			'switch_variant',
 			'undo',
 			'ungroup',
@@ -536,7 +553,7 @@ final class McpServerTest extends IntegrationTestCase
 	public function testAdminsManageMaterials(): void
 	{
 		$oak = [
-			'code' => 'oak-veneer',
+			'code' => 'walnut-veneer',
 			'name' => 'Oak veneer, natural',
 			'pattern' => 'Wood',
 			'color' => '#C49A6C',
@@ -552,7 +569,7 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($added);
 		self::assertIsInt($added['id']);
 		self::assertSame(
-			['oak-veneer', '#c49a6c', 0.55, 0, false, null],
+			['walnut-veneer', '#c49a6c', 0.55, 0, false, null],
 			[$added['code'], $added['color'], $added['roughness'], $added['metalness'], $added['textured'], $added['tileWidth']],
 		);
 		$listed = $this->client->call('list_materials');
@@ -561,7 +578,7 @@ final class McpServerTest extends IntegrationTestCase
 
 		$message = $admin->call('add_material', $oak, $isError);
 		self::assertTrue($isError);
-		self::assertSame(sprintf('Material code "oak-veneer" exists (id %d).', $added['id']), $message);
+		self::assertSame(sprintf('Material code "walnut-veneer" exists (id %d).', $added['id']), $message);
 		foreach ([
 			[['color' => 'brown'], 'Field "color" must be #rrggbb, e.g. "#f2f1ed".'],
 			[['roughness' => 2], 'Field "roughness" must be between 0 and 1.'],
@@ -588,7 +605,7 @@ final class McpServerTest extends IntegrationTestCase
 			'definition' => [
 				'format' => 1,
 				'size' => ['width' => 600, 'depth' => 300, 'height' => 18],
-				'materialSlots' => [['key' => 'board', 'default' => 'oak-veneer']],
+				'materialSlots' => [['key' => 'board', 'default' => 'walnut-veneer']],
 				'parts' => [['type' => 'board', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D', 'material' => 'board']],
 			]]);
 		self::assertIsArray($definition);
@@ -605,7 +622,7 @@ final class McpServerTest extends IntegrationTestCase
 		);
 		self::assertIsArray($updated);
 		self::assertSame(
-			['oak-veneer', 'Oak veneer, natural', 'Planks', '#a07850', 0.55, 180, 1200],
+			['walnut-veneer', 'Oak veneer, natural', 'Planks', '#a07850', 0.55, 180, 1200],
 			[$updated['code'], $updated['name'], $updated['pattern'], $updated['color'], $updated['roughness'], $updated['tileWidth'], $updated['tileHeight']],
 		);
 		self::assertSame(
@@ -724,6 +741,121 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertTrue($isError);
 		self::assertIsString($message);
 		self::assertStringContainsString('mirrorDoors', $message);
+	}
+
+	public function testReadsAPlanAndCalibratesTheUnderlay(): void
+	{
+		$image = imagecreatetruecolor(2000, 1000);
+		self::assertNotFalse($image);
+		ob_start();
+		imagepng($image);
+		$uploaded = $this->upload(
+			str_replace('{projectId:number}', (string) $this->project->id, Routes::ProjectFiles->value),
+			'Propuesta.png',
+			(string) ob_get_clean(),
+			$this->user,
+		);
+		$fileId = $this->jsonBody($uploaded)['id'];
+		self::assertIsInt($fileId);
+		$floorId = Fixture::firstFloor($this->project)->id;
+
+		$files = $this->client->call('list_project_files', ['projectId' => $this->project->id]);
+		self::assertIsList($files);
+		self::assertSame([['Propuesta.png', 'image/png']], array_map(
+			static fn (mixed $file): array => is_array($file) ? [$file['filename'], $file['mimeType']] : [],
+			$files,
+		));
+
+		// A zoomed crop with a grid comes back scaled to maxSize, as a PNG.
+		$result = $this->client->request('tools/call', [
+			'name' => 'get_project_file',
+			'arguments' => [
+				'projectId' => $this->project->id,
+				'fileId' => $fileId,
+				'cropX' => 1000,
+				'cropY' => 200,
+				'cropWidth' => 800,
+				'cropHeight' => 400,
+				'maxSize' => 400,
+				'grid' => 100,
+			]]);
+		self::assertIsList($result['content']);
+		self::assertIsArray($result['content'][0]);
+		self::assertIsString($result['content'][0]['text']);
+		self::assertFalse($result['isError'] ?? false, $result['content'][0]['text']);
+		self::assertSame(
+			['fileId' => $fileId, 'filename' => 'Propuesta.png', 'widthPx' => 2000, 'heightPx' => 1000, 'crop' => ['x' => 1000, 'y' => 200, 'width' => 800, 'height' => 400], 'scale' => 0.5],
+			json_decode($result['content'][0]['text'], true, 512, JSON_THROW_ON_ERROR),
+		);
+		self::assertIsArray($result['content'][1]);
+		self::assertSame('image', $result['content'][1]['type']);
+		self::assertSame('image/png', $result['content'][1]['mimeType']);
+		self::assertIsString($result['content'][1]['data']);
+		$size = getimagesizefromstring((string) base64_decode($result['content'][1]['data'], true));
+		self::assertNotFalse($size);
+		self::assertSame([400, 200], [$size[0], $size[1]]);
+
+		$isError = false;
+		$message = $this->client->call('get_project_file', ['projectId' => $this->project->id, 'fileId' => $fileId, 'grid' => 2], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('grid', $message);
+		// A crop lying entirely outside the image is refused rather than cut to a sliver.
+		$message = $this->client->call(
+			'get_project_file',
+			['projectId' => $this->project->id, 'fileId' => $fileId, 'cropX' => 2500, 'cropY' => 0, 'cropWidth' => 300, 'cropHeight' => 300],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('outside', $message);
+		// Points are [px, py, x, y] lists, but the REST body's objects (which the schema check lets through) work too.
+		$asObjects = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $fileId,
+			'points' => [['px' => 1193, 'py' => 285, 'x' => 0, 'y' => 0], ['px' => 1328, 'py' => 285, 'x' => 1000, 'y' => 0]],
+		], $isError);
+		self::assertFalse($isError);
+		self::assertIsArray($asObjects);
+		self::assertEqualsWithDelta(7.407, $asObjects['scale'], 0.001);
+		$message = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $fileId,
+			'points' => [[1193, 285, 0, 0], [1328, 285]],
+		], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('"points"', $message);
+
+		// The scale bar: 1 m from pixel (1193, 285) to (1328, 285); its left end goes to the plan origin.
+		$underlay = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $fileId,
+			'points' => [[1193, 285, 0, 0], [1328, 285, 1000, 0]],
+			'opacity' => 0.4,
+		]);
+		self::assertIsArray($underlay);
+		self::assertEqualsWithDelta(7.407, $underlay['scale'], 0.001);
+		self::assertEquals(
+			[0.0, 0.4, 2000, 1000],
+			[$underlay['rotation'], $underlay['opacity'], $underlay['widthPx'], $underlay['heightPx']],
+		);
+
+		$floor = $this->client->call('get_floor', ['projectId' => $this->project->id, 'floorId' => $floorId]);
+		self::assertIsArray($floor);
+		self::assertEquals($underlay, $floor['underlay']);
+
+		self::assertSame(
+			['removed' => true],
+			$this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]),
+		);
+		self::assertSame(
+			['removed' => false],
+			$this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]),
+		);
 	}
 
 	public function testRequestsWithoutAValidTokenAreRejected(): void

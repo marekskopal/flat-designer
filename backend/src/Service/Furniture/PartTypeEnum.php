@@ -31,6 +31,34 @@ enum PartTypeEnum: string
 	case Appliance = 'appliance';
 	/** A sliding door leaf: a frame in the `profile` slot's material around an infill in the part's, or a `mirror`. */
 	case SlidingDoor = 'slidingDoor';
+	/**
+	 * Upholstery (seat and back cushions, a mattress, a duvet, pillows): the box with its edges rounded by `radius` mm
+	 * (default 40; 0 is square; the viewer draws at most half the box's smallest side). Not a board, so the cut list
+	 * counts it among the other parts.
+	 */
+	case Cushion = 'cushion';
+	/**
+	 * A picture (a print, poster or photo): the box in the part's material with the item's `image` file on its front
+	 * (+z) face, cropped to fill it. Without an image the front is plain. Bought, so the cut list counts it among the
+	 * other parts.
+	 */
+	case Picture = 'picture';
+	/**
+	 * A light source at the centre of its box: a `point` light, or a `spot` shining down within `angle` degrees (the
+	 * whole cone, default 60). `lumens` (default 800) and `kelvin` (colour temperature, default 2700, warm white) set its
+	 * output; `shadow` lets it cast shadows (costly, so the viewer allows only a few). `bulb` draws what glows while it
+	 * is on: a `sphere` filling the box (a bare bulb), a `disc` on the box's bottom face (a downlight) or nothing (inside
+	 * a shade). Not in the cut list's boards.
+	 */
+	case Light = 'light';
+	/**
+	 * A pendant's cable, as thick as the box's smaller side across: from the bottom centre of its box up to the top
+	 * centre (the ceiling hook), then along `path` (points {x, z} in the parts' frame, e.g. from a list parameter) to the
+	 * ceiling rose, sagging `sag` mm (default 0) between the points, with a ceiling rose `rose` mm across (default 0,
+	 * none) at its end. With `ceiling` (default true) the cable runs on the real ceiling of the item's room (flat or
+	 * vaulted) instead of at the top of the box.
+	 */
+	case Cable = 'cable';
 	/** No part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`. */
 	case Assembly = 'assembly';
 
@@ -54,6 +82,8 @@ enum PartTypeEnum: string
 		'bool' => 'Must be true or false.',
 		'slot' => 'Must be the key of one of the materialSlots.',
 		'number' => 'Must be a number, 0 or more.',
+		'image' => 'Must be an image parameter\'s value: a file id or null.',
+		'points' => 'Must be a list of points {x, z} (mm), e.g. from a list parameter.',
 	];
 
 	/** @return list<string> */
@@ -121,6 +151,8 @@ enum PartTypeEnum: string
 			'mm' => is_int($value) && $value > 0,
 			'color' => is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value) === 1,
 			'bool' => is_bool($value),
+			'image' => $value === null || is_int($value) && $value > 0,
+			'points' => self::isPointList($value),
 			default => is_string($value),
 		};
 	}
@@ -159,8 +191,37 @@ enum PartTypeEnum: string
 			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Tilt,
 			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Tilt,
 			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Tilt,
+			self::Cushion => ['radius' => 'number'] + self::Tilt,
+			self::Picture => ['image' => 'image'] + self::Tilt,
+			self::Light => [
+				'kind' => ['point', 'spot'],
+				'lumens' => 'number',
+				'kelvin' => 'number',
+				'angle' => 'number',
+				'shadow' => 'bool',
+				'bulb' => ['none', 'sphere', 'disc'],
+			],
+			self::Cable => ['path' => 'points', 'ceiling' => 'bool', 'sag' => 'number', 'rose' => 'number'],
 			self::Assembly => [],
 		};
+	}
+
+	private static function isPointList(mixed $value): bool
+	{
+		if (!is_array($value) || !array_is_list($value)) {
+			return false;
+		}
+		foreach ($value as $point) {
+			// A literal point is an array, an evaluated record an object.
+			$fields = is_object($point) ? get_object_vars($point) : (is_array($point) ? $point : []);
+			$x = $fields['x'] ?? null;
+			$z = $fields['z'] ?? null;
+			if (!(is_int($x) || is_float($x)) || !(is_int($z) || is_float($z))) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	private static function isSideList(mixed $value): bool

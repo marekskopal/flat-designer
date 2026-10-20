@@ -39,12 +39,19 @@ final readonly class FlatDesignerServer
 		Editing a definition changes every item drawn from it, in all projects. Kitchen cabinets, worktops,
 		wardrobes, chairs and tables are such definitions; the built-in kinds of the same furniture (marked
 		replacedBy in list_item_kinds) are kept only for older items, so add new furniture from the definitions.
+		Bought products (design chairs, lamps, taps, a WC, plants) are 3D models the user uploaded: list_models,
+		then add_item(kind: "Model", modelId) at the model's proportions.
 		get_cut_list lists the boards of a project's custom-made furniture; get_room_schedule lists the rooms'
 		areas, perimeters and clear heights with the indoor and outdoor totals.
 
 		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
 		outer walls, open runs for partitions ending on other walls), then add each room with
 		detect_room(x, y) at a point inside it: its outline follows the inner wall faces.
+
+		To work from a plan or photos the user uploaded, list them with list_project_files and look at them
+		with get_project_file (crop into a region and add a pixel grid to read positions exactly). Lay the plan
+		under the floor with set_floor_underlay, calibrated from two points you know (a dimensioned wall, the
+		scale bar), then convert pixel positions to plan mm with its placement to place walls and openings.
 
 		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.

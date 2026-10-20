@@ -1,0 +1,138 @@
+{
+ "name": "Bedside table",
+ "description": "Small cabinet on four tapered legs with a top, a drawer (or an open shelf) and a back.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 450,
+   "depth": 400,
+   "height": 520
+  },
+  "parameters": [
+   {
+    "key": "drawer",
+    "label": "Drawer",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "legHeight",
+    "label": "Legs",
+    "type": "int",
+    "default": 220,
+    "min": 0,
+    "max": 350,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "t": "18",
+   "body": "H - legHeight"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Body",
+    "default": "oak-veneer"
+   },
+   {
+    "key": "front",
+    "label": "Drawer front",
+    "default": "oak-veneer"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Top",
+    "x": 0,
+    "y": "H - t",
+    "z": 0,
+    "w": "W",
+    "h": "t",
+    "d": "D",
+    "material": "body",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Bottom",
+    "x": "t",
+    "y": "legHeight",
+    "z": 0,
+    "w": "W - 2 * t",
+    "h": "t",
+    "d": "D",
+    "material": "body",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": "legHeight",
+    "z": 0,
+    "w": "t",
+    "h": "body - t",
+    "d": "D",
+    "material": "body",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "t",
+    "y": "legHeight + t",
+    "z": 0,
+    "w": "W - 2 * t",
+    "h": "body - 2 * t",
+    "d": 8,
+    "material": "body"
+   },
+   {
+    "type": "front",
+    "name": "Drawer front",
+    "when": "drawer",
+    "x": "t + 2",
+    "y": "H - t - 2 - min(160, body - 2 * t - 4)",
+    "z": "D - t",
+    "w": "W - 2 * t - 4",
+    "h": "min(160, body - 2 * t - 4)",
+    "d": "t",
+    "material": "front",
+    "kind": "drawer",
+    "handle": "none",
+    "grain": "horizontal"
+   },
+   {
+    "type": "taperedLeg",
+    "name": "Leg",
+    "when": "legHeight > 0",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 * (W - 40)",
+    "y": 0,
+    "z": "floor(i / 2) * (D - 40)",
+    "w": 40,
+    "h": "legHeight",
+    "d": 40,
+    "bottomSize": 22,
+    "material": "body"
+   }
+  ]
+ }
+}

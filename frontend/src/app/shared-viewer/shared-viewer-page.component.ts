@@ -5,6 +5,7 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
+import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {DoorAim} from '@app/viewer/engine/viewer-engine';
@@ -40,6 +41,10 @@ export class SharedViewerPageComponent {
     protected readonly viewLabels = ShareViewLabels;
 
     private readonly shares = inject(ShareService);
+    private readonly modelAssets = inject(ModelAssetService);
+    /** The 3D models of the shared scene, through the share link (no sign-in). */
+    protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.sharedContent(this.token(), modelId);
+    protected readonly pictureFetcher = (fileId: number): Promise<Blob> => this.shares.sharedPicture(this.token(), fileId);
 
     private readonly data = resource({
         params: () => ({token: this.token()}),
@@ -74,6 +79,12 @@ export class SharedViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
+    /** After dark; the lights follow it (on at night) until switched by hand. */
+    protected readonly night = signal(false);
+    private readonly lightsChoice = signal<boolean | null>(null);
+    protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
+    /** Presentation quality, for screenshots: slower, so off while working. */
+    protected readonly presentation = signal(false);
     /** The measure tool, in the plan view (when the link offers it). */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -109,6 +120,9 @@ export class SharedViewerPageComponent {
         this.ceilingsVisible.set(settings.ceilings);
         this.labelsVisible.set(settings.labels);
         this.dimensionsVisible.set(settings.dimensions);
+        this.night.set(settings.night ?? false);
+        this.presentation.set(settings.presentation ?? false);
+        this.lightsChoice.set(null);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
         this.measuring.set(false);
         const view = settings.initialView === 'walkthrough' ? this.fallbackView() : settings.initialView;
@@ -213,5 +227,14 @@ export class SharedViewerPageComponent {
 
     protected onSectionInput(event: Event): void {
         this.sectionSlider.set(Number((event.target as HTMLInputElement).value));
+    }
+
+    protected toggleNight(): void {
+        this.night.set(!this.night());
+        this.lightsChoice.set(null);
+    }
+
+    protected toggleLights(): void {
+        this.lightsChoice.set(!this.lightsOn());
     }
 }

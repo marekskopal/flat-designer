@@ -1,5 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {DefinitionField, DefinitionParameter, FurnitureDefinitionBody} from '@app/models/furniture';
+import {ProjectFile} from '@app/models/project';
 import {Material} from '@app/models/scene';
 
 import {Params} from './cabinet-params';
@@ -39,9 +40,13 @@ export class CustomParamsComponent {
     public readonly depth = input.required<number>();
     public readonly height = input.required<number>();
     public readonly materials = input<Material[]>([]);
+    /** The project's image files, for `image` parameters. */
+    public readonly images = input<ProjectFile[]>([]);
     public readonly disabled = input(false);
 
     public readonly paramsChange = output<Params>();
+    /** The image picker was opened: the host may refresh `images` (files uploaded since). */
+    public readonly imagesRefresh = output<void>();
 
     protected readonly parameters = computed(() => this.definition()?.parameters ?? []);
     protected readonly slots = computed(() => {
@@ -95,6 +100,18 @@ export class CustomParamsComponent {
     protected setBool(parameter: DefinitionParameter, event: Event): void {
         const checked = (event.target as HTMLInputElement).checked;
         this.emit(withValue(this.params(), parameter.key, checked === parameter.default ? undefined : checked));
+    }
+
+    /** The file id the item holds while `images` does not list it (deleted since, or uploaded after the list was read). */
+    protected unlistedImage(parameter: DefinitionParameter): number | null {
+        const value = this.value(parameter);
+        return typeof value === 'number' && !this.images().some((f) => f.id === value) ? value : null;
+    }
+
+    /** An image parameter: a file id, or none (no picture). */
+    protected setImage(parameter: DefinitionParameter, event: Event): void {
+        const value = (event.target as HTMLSelectElement).value;
+        this.emit(withValue(this.params(), parameter.key, value === '' ? undefined : Number(value)));
     }
 
     protected setSelect(parameter: DefinitionParameter, event: Event): void {

@@ -9,9 +9,12 @@ use FlatDesigner\Service\Furniture\FurnitureSeeds;
 use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Migrations\SeedDecorCatalogueMigration;
 use Migrations\SeedFlat50FurnitureDefinitionsMigration;
+use Migrations\SeedFurnitureCatalogueMigration;
 use Migrations\SeedFurnitureDefinitionsMigration;
 use Migrations\SeedHallStandFittingDefinitionsMigration;
+use Migrations\SeedLightingCatalogueMigration;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -37,6 +40,9 @@ final class FurnitureSeedTest extends IntegrationTestCase
 			...SeedFurnitureDefinitionsMigration::Files,
 			...SeedFlat50FurnitureDefinitionsMigration::Files,
 			...SeedHallStandFittingDefinitionsMigration::Files,
+			...SeedFurnitureCatalogueMigration::Files,
+			...SeedDecorCatalogueMigration::Files,
+			...SeedLightingCatalogueMigration::Files,
 		];
 		sort($listed);
 		self::assertSame(array_unique($listed), $listed, 'A file is listed by more than one migration.');

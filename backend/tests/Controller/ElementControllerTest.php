@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
+use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
+use FlatDesigner\Service\Editor\Element\OpeningLook;
+use FlatDesigner\Service\Editor\Element\RoomCeiling;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
@@ -23,7 +26,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(ItemHandler::class)]
 #[CoversClass(WallHandler::class)]
 #[CoversClass(OpeningHandler::class)]
+#[CoversClass(OpeningLook::class)]
 #[CoversClass(RoomHandler::class)]
+#[CoversClass(RoomCeiling::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
 #[CoversClass(WardrobeParamsValidator::class)]
@@ -307,6 +312,69 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame([1, 0, null], [$door['mullions'], $door['transoms'], $door['sillBoard']]);
 	}
 
+	public function testDoorLeafStylesAndWindowPanelsAndShutters(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 6000, 'endY' => 0, 'thickness' => 300]);
+		$wallId = self::id($wall);
+		$timber = Fixture::service(MaterialRepository::class)->findByCode('kitchen-oak');
+		self::assertNotNull($timber);
+
+		$door = $this->create('openings', ['wallId' => $wallId, 'type' => 'Door', 'offset' => 100]);
+		self::assertSame(['Flush', 2], [$door['leafStyle'], $door['leafPanels']]);
+		$panelled = $this->jsonBody($this->edit('PATCH', 'openings', self::id($door), ['leafStyle' => 'Panelled', 'leafPanels' => 4]));
+		self::assertIsArray($panelled['element']);
+		self::assertSame(['Panelled', 4], [$panelled['element']['leafStyle'], $panelled['element']['leafPanels']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['leafPanels' => 7])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['leafStyle' => 'Carved'])->getStatusCode());
+		// Doors have no shutters or panel; a passage no leaf to style.
+		$plain = $this->jsonBody($this->edit('PATCH', 'openings', self::id($door), ['shutters' => 'Louvred', 'panelHeight' => 500]));
+		self::assertIsArray($plain['element']);
+		self::assertSame([null, null], [$plain['element']['shutters'], $plain['element']['panelHeight']]);
+		$passage = $this->create('openings', ['wallId' => $wallId, 'type' => 'Passage', 'offset' => 1200, 'leafStyle' => 'Glazed']);
+		self::assertSame('Flush', $passage['leafStyle']);
+
+		$french = [
+			'wallId' => $wallId,
+			'type' => 'Window',
+			'offset' => 2500,
+			'sillHeight' => 0,
+			'height' => 2400,
+			'walkable' => true,
+			'panelHeight' => 600,
+			'shutters' => 'Louvred',
+			'shutterMaterialId' => $timber->id,
+		];
+		$window = $this->create('openings', $french);
+		self::assertSame(
+			[600, 'Louvred', $timber->id, false],
+			[$window['panelHeight'], $window['shutters'], $window['shutterMaterialId'], $window['shuttersClosed']],
+		);
+		$closed = $this->jsonBody($this->edit('PATCH', 'openings', self::id($window), ['shuttersClosed' => true]));
+		self::assertIsArray($closed['element']);
+		self::assertTrue($closed['element']['shuttersClosed']);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['panelHeight' => 2300])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($window), ['shutterMaterialId' => 999999])->getStatusCode());
+
+		// Without shutters, their material and state go too; undo brings them back.
+		$bare = $this->jsonBody($this->edit('PATCH', 'openings', self::id($window), ['shutters' => null]));
+		self::assertIsArray($bare['element']);
+		self::assertSame(
+			[null, null, false],
+			[$bare['element']['shutters'], $bare['element']['shutterMaterialId'], $bare['element']['shuttersClosed']],
+		);
+		$this->undo();
+		$openings = $this->sceneList('walls')[0]['openings'];
+		self::assertIsList($openings);
+		$restored = array_values(
+			array_filter($openings, static fn (mixed $o): bool => is_array($o) && $o['id'] === $window['id']),
+		)[0] ?? null;
+		self::assertIsArray($restored);
+		self::assertSame(
+			['Louvred', $timber->id, true],
+			[$restored['shutters'], $restored['shutterMaterialId'], $restored['shuttersClosed']],
+		);
+	}
+
 	public function testSlidingAndPocketDoorsNeedWallBesideThem(): void
 	{
 		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'thickness' => 150]);
@@ -420,6 +488,62 @@ final class ElementControllerTest extends EditorTestCase
 
 		self::assertSame([], $this->sceneList('walls'));
 		self::assertSame(422, $this->edit('POST', 'openings', body: ['wallId' => self::id($wall)])->getStatusCode());
+	}
+
+	public function testRoomCeilingsVaultsAndSkirting(): void
+	{
+		$materials = Fixture::service(MaterialRepository::class);
+		$brick = $materials->findByCode('kitchen-oak');
+		self::assertNotNull($brick);
+		$polygon = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+
+		$room = $this->create('rooms', ['name' => 'Living', 'polygon' => $polygon]);
+		self::assertSame([null, null, null], [$room['ceilingMaterialId'], $room['vaultSpacing'], $room['skirtingHeight']]);
+
+		$vaulted = $this->jsonBody($this->edit('PATCH', 'rooms', self::id($room), [
+			'ceilingHeight' => 2920,
+			'ceilingMaterialId' => $brick->id,
+			'vaultSpacing' => 550,
+			'vaultAngle' => 270,
+			'skirtingHeight' => 70,
+		]));
+		self::assertIsArray($vaulted['element']);
+		$element = $vaulted['element'];
+		self::assertSame(
+			[$brick->id, 550, 90, 130, 80, 30, null, 70, null],
+			[
+				$element['ceilingMaterialId'],
+				$element['vaultSpacing'],
+				$element['vaultAngle'],
+				$element['vaultRise'],
+				$element['beamWidth'],
+				$element['beamDrop'],
+				$element['beamMaterialId'],
+				$element['skirtingHeight'],
+				$element['skirtingMaterialId'],
+			],
+		);
+
+		// Beams must fit between each other, and leave head room under them.
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['beamWidth' => 600])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['vaultRise' => 600, 'beamDrop' => 600])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['vaultSpacing' => 100])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['skirtingHeight' => 5])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['ceilingMaterialId' => 999999])->getStatusCode());
+
+		// An open-air room has no ceiling to vault; skirting stays.
+		$terrace = $this->jsonBody($this->edit('PATCH', 'rooms', self::id($room), ['ceilingHeight' => null]));
+		self::assertIsArray($terrace['element']);
+		self::assertSame(
+			[null, null, null, 70],
+			[$terrace['element']['ceilingMaterialId'], $terrace['element']['vaultSpacing'], $terrace['element']['beamMaterialId'], $terrace['element']['skirtingHeight']],
+		);
+		$this->undo();
+		$restored = array_values(
+			array_filter($this->sceneList('rooms'), static fn (array $r): bool => $r['id'] === $room['id']),
+		)[0] ?? null;
+		self::assertIsArray($restored);
+		self::assertSame([550, 90, $brick->id], [$restored['vaultSpacing'], $restored['vaultAngle'], $restored['ceilingMaterialId']]);
 	}
 
 	public function testRoomPolygonIsValidated(): void

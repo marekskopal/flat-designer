@@ -7,6 +7,7 @@ namespace FlatDesigner\Service\Editor;
 use Closure;
 use FlatDesigner\Dto\ChangeDto;
 use FlatDesigner\Dto\EditResultDto;
+use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ChangeOperationEnum;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
@@ -34,14 +35,24 @@ final readonly class SceneEditor
 	) {
 	}
 
-	/** @param array<string, mixed> $fields any subset of the type's editable fields; the rest are defaults */
-	public function create(User $user, Floor $floor, ElementTypeEnum $type, array $fields, ?int $baseRevision = null): EditResultDto
+	/**
+	 * @param array<string, mixed> $fields any subset of the type's editable fields; the rest are defaults
+	 * @param AEntity|null $source the element a copy is made from, checked against like an update's current state
+	 */
+	public function create(
+		User $user,
+		Floor $floor,
+		ElementTypeEnum $type,
+		array $fields,
+		?int $baseRevision = null,
+		?AEntity $source = null,
+	): EditResultDto
 	{
 		$handler = $this->handlers->get($type);
 
-		return $this->transaction(function () use ($user, $floor, $handler, $fields, $baseRevision): EditResultDto {
+		return $this->transaction(function () use ($user, $floor, $handler, $fields, $baseRevision, $source): EditResultDto {
 			$revision = $this->revisionService->bump($floor->project, $baseRevision);
-			$state = $handler->normalize($floor, self::editable($handler->fields(), $fields) + $handler->defaults($fields), null);
+			$state = $handler->normalize($floor, self::editable($handler->fields(), $fields) + $handler->defaults($fields), $source);
 			$element = $handler->create($floor, $state);
 			$after = $handler->state($element);
 			$change = $this->changeRecorder->record(
@@ -168,7 +179,10 @@ final readonly class SceneEditor
 			$copy['x'] += GroupEditor::DuplicateShift;
 		}
 
-		return $this->create($user, $floor, $type, self::editable($handler->fields(), $fields) + $copy, $baseRevision);
+		// An item's copy is checked against the source: what the source shows (a picture file deleted since) stays allowed.
+		$source = $type === ElementTypeEnum::Item ? $element : null;
+
+		return $this->create($user, $floor, $type, self::editable($handler->fields(), $fields) + $copy, $baseRevision, $source);
 	}
 
 	/**

@@ -28,6 +28,15 @@ final readonly class RoomDto
 		public array $wallFinishes,
 		public ?int $tileOriginX,
 		public ?int $tileOriginY,
+		public ?int $ceilingMaterialId,
+		public ?int $vaultSpacing,
+		public int $vaultAngle,
+		public int $vaultRise,
+		public int $beamWidth,
+		public int $beamDrop,
+		public ?int $beamMaterialId,
+		public ?int $skirtingHeight,
+		public ?int $skirtingMaterialId,
 	) {
 	}
 
@@ -52,6 +61,15 @@ final readonly class RoomDto
 			),
 			tileOriginX: $room->tileOriginX,
 			tileOriginY: $room->tileOriginY,
+			ceilingMaterialId: $room->ceilingMaterial?->id,
+			vaultSpacing: $room->vaultSpacing,
+			vaultAngle: $room->vaultAngle,
+			vaultRise: $room->vaultRise,
+			beamWidth: $room->beamWidth,
+			beamDrop: $room->beamDrop,
+			beamMaterialId: $room->beamMaterial?->id,
+			skirtingHeight: $room->skirtingHeight,
+			skirtingMaterialId: $room->skirtingMaterial?->id,
 		);
 	}
 }

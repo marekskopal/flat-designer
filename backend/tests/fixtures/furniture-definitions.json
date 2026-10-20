@@ -9880,6 +9880,741 @@
     "code": "limit",
     "path": "parts"
    }
+  },
+  {
+   "name": "cushions keep their radius, evaluated per copy",
+   "size": {
+    "width": 2000,
+    "depth": 900,
+    "height": 800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [
+     {
+      "key": "seats",
+      "label": "Seats",
+      "type": "int",
+      "default": 2,
+      "min": 1,
+      "max": 4
+     }
+    ],
+    "parts": [
+     {
+      "type": "cushion",
+      "name": "Seat",
+      "repeat": {
+       "count": "seats"
+      },
+      "x": "i * W / seats",
+      "y": 400,
+      "z": 200,
+      "w": "W / seats",
+      "h": 150,
+      "d": 700,
+      "radius": {
+       "expr": "40 + i * 20"
+      }
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "Seat",
+     "type": "cushion",
+     "index": 0,
+     "x": 0,
+     "y": 400,
+     "z": 200,
+     "w": 1000,
+     "h": 150,
+     "d": 700,
+     "material": null,
+     "props": {
+      "radius": 40
+     }
+    },
+    {
+     "name": "Seat",
+     "type": "cushion",
+     "index": 1,
+     "x": 1000,
+     "y": 400,
+     "z": 200,
+     "w": 1000,
+     "h": 150,
+     "d": 700,
+     "material": null,
+     "props": {
+      "radius": 60
+     }
+    }
+   ]
+  },
+  {
+   "name": "material picked per copy and sizes varied by hash",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 200,
+     "height": 260
+    },
+    "materialSlots": [
+     {
+      "key": "red"
+     },
+     {
+      "key": "blue"
+     },
+     {
+      "key": "cream"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Book",
+      "repeat": {
+       "count": 4
+      },
+      "material": {
+       "expr": "hash(i) < 0.33 ? 'red' : hash(i) < 0.66 ? 'blue' : 'cream'"
+      },
+      "x": "i * 30",
+      "y": 0,
+      "z": 0,
+      "w": "28 - round(hash(i, 1) * 8)",
+      "h": "200 + round(hash(i, 2) * 60)",
+      "d": "D"
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 200,
+    "height": 260
+   },
+   "parts": [
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 0,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 28,
+     "h": 204,
+     "d": 200,
+     "material": "red",
+     "props": {}
+    },
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 1,
+     "x": 30,
+     "y": 0,
+     "z": 0,
+     "w": 26,
+     "h": 226,
+     "d": 200,
+     "material": "blue",
+     "props": {}
+    },
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 2,
+     "x": 60,
+     "y": 0,
+     "z": 0,
+     "w": 21,
+     "h": 220,
+     "d": 200,
+     "material": "red",
+     "props": {}
+    },
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 3,
+     "x": 90,
+     "y": 0,
+     "z": 0,
+     "w": 27,
+     "h": 252,
+     "d": 200,
+     "material": "blue",
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "material expression naming no slot",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 200,
+     "height": 260
+    },
+    "materialSlots": [
+     {
+      "key": "red"
+     },
+     {
+      "key": "blue"
+     },
+     {
+      "key": "cream"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Book",
+      "repeat": {
+       "count": 4
+      },
+      "material": {
+       "expr": "i == 2 ? 'green' : 'red'"
+      },
+      "x": "i * 30",
+      "y": 0,
+      "z": 0,
+      "w": "28 - round(hash(i, 1) * 8)",
+      "h": "200 + round(hash(i, 2) * 60)",
+      "d": "D"
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 200,
+    "height": 260
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].material"
+   }
+  },
+  {
+   "name": "picture without an image",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image"
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "parts": [
+    {
+     "name": "Frame",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 700,
+     "h": 1000,
+     "d": 20,
+     "material": "frame",
+     "props": {}
+    },
+    {
+     "name": "Print",
+     "type": "picture",
+     "index": null,
+     "x": 30,
+     "y": 30,
+     "z": 20,
+     "w": 640,
+     "h": 940,
+     "d": 2,
+     "material": null,
+     "props": {
+      "image": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "picture showing the item's image file",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image"
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "values": {
+    "poster": 12
+   },
+   "parts": [
+    {
+     "name": "Frame",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 700,
+     "h": 1000,
+     "d": 20,
+     "material": "frame",
+     "props": {}
+    },
+    {
+     "name": "Print",
+     "type": "picture",
+     "index": null,
+     "x": 30,
+     "y": 30,
+     "z": 20,
+     "w": 640,
+     "h": 940,
+     "d": 2,
+     "material": null,
+     "props": {
+      "image": 12
+     }
+    }
+   ]
+  },
+  {
+   "name": "image value not a file id",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image"
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "values": {
+    "poster": 0
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.poster"
+   }
+  },
+  {
+   "name": "image parameter with a default",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image",
+      "default": 5
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].default"
+   }
+  },
+  {
+   "name": "pendant: a light and a cable whose path comes from a list parameter",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 120,
+     "height": 1500
+    },
+    "parameters": [
+     {
+      "key": "path",
+      "label": "Cable path",
+      "type": "list",
+      "fields": [
+       {
+        "key": "x",
+        "type": "int",
+        "default": 0
+       },
+       {
+        "key": "z",
+        "type": "int",
+        "default": 0
+       }
+      ],
+      "default": []
+     }
+    ],
+    "parts": [
+     {
+      "type": "light",
+      "name": "Bulb",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "W",
+      "d": "D",
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     },
+     {
+      "type": "cable",
+      "name": "Cable",
+      "x": "W / 2 - 4",
+      "y": "W",
+      "z": "D / 2 - 4",
+      "w": 8,
+      "h": "H - W",
+      "d": 8,
+      "path": {
+       "expr": "path"
+      },
+      "sag": 80
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 120,
+    "height": 1500
+   },
+   "values": {
+    "path": [
+     {
+      "x": 900,
+      "z": 60
+     },
+     {
+      "x": 900,
+      "z": -800
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "Bulb",
+     "type": "light",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 120,
+     "h": 120,
+     "d": 120,
+     "material": null,
+     "props": {
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     }
+    },
+    {
+     "name": "Cable",
+     "type": "cable",
+     "index": null,
+     "x": 56,
+     "y": 120,
+     "z": 56,
+     "w": 8,
+     "h": 1380,
+     "d": 8,
+     "material": null,
+     "props": {
+      "path": [
+       {
+        "x": 900,
+        "z": 60
+       },
+       {
+        "x": 900,
+        "z": -800
+       }
+      ],
+      "sag": 80
+     }
+    }
+   ]
+  },
+  {
+   "name": "pendant hanging straight: an empty path",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 120,
+     "height": 1500
+    },
+    "parameters": [
+     {
+      "key": "path",
+      "label": "Cable path",
+      "type": "list",
+      "fields": [
+       {
+        "key": "x",
+        "type": "int",
+        "default": 0
+       },
+       {
+        "key": "z",
+        "type": "int",
+        "default": 0
+       }
+      ],
+      "default": []
+     }
+    ],
+    "parts": [
+     {
+      "type": "light",
+      "name": "Bulb",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "W",
+      "d": "D",
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     },
+     {
+      "type": "cable",
+      "name": "Cable",
+      "x": "W / 2 - 4",
+      "y": "W",
+      "z": "D / 2 - 4",
+      "w": 8,
+      "h": "H - W",
+      "d": 8,
+      "path": {
+       "expr": "path"
+      },
+      "sag": 80
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 120,
+    "height": 1500
+   },
+   "parts": [
+    {
+     "name": "Bulb",
+     "type": "light",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 120,
+     "h": 120,
+     "d": 120,
+     "material": null,
+     "props": {
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     }
+    },
+    {
+     "name": "Cable",
+     "type": "cable",
+     "index": null,
+     "x": 56,
+     "y": 120,
+     "z": 56,
+     "w": 8,
+     "h": 1380,
+     "d": 8,
+     "material": null,
+     "props": {
+      "path": [],
+      "sag": 80
+     }
+    }
+   ]
   }
  ]
 }

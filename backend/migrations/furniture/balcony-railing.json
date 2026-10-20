@@ -1,0 +1,88 @@
+{
+ "name": "Balcony railing",
+ "description": "Wrought-iron balcony railing of round bar: posts at the ends, top and bottom rails and balusters.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2000,
+   "depth": 40,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "spacing",
+    "label": "Baluster spacing",
+    "type": "int",
+    "default": 110,
+    "min": 80,
+    "max": 200,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "count": "max(floor((W - 2 * D) / spacing), 1)",
+   "pitch": "(W - 2 * D) / count"
+  },
+  "materialSlots": [
+   {
+    "key": "metal",
+    "label": "Metal",
+    "default": "iron-wrought"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Post",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - D)",
+    "y": 0,
+    "z": 0,
+    "w": "D",
+    "h": "H - D",
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Top rail",
+    "axis": "x",
+    "x": 0,
+    "y": "H - D",
+    "z": 0,
+    "w": "W",
+    "h": "D",
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Bottom rail",
+    "axis": "x",
+    "x": "D",
+    "y": 80,
+    "z": "D / 2 - 10",
+    "w": "W - 2 * D",
+    "h": 20,
+    "d": 20,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Baluster",
+    "repeat": {
+     "count": "count"
+    },
+    "x": "D + (i + 0.5) * pitch - 7",
+    "y": 100,
+    "z": "D / 2 - 7",
+    "w": 14,
+    "h": "H - D - 100",
+    "d": 14,
+    "material": "metal"
+   }
+  ]
+ }
+}

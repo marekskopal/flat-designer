@@ -2,9 +2,14 @@
     #viewerRef
     class="viewer"
     [scene]="scene()"
+    [modelFetcher]="modelFetcher"
+    [pictureFetcher]="pictureFetcher"
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
+    [night]="night()"
+    [lightsOn]="lightsOn()"
+    [presentation]="presentation()"
     [measuring]="measuring()"
     [sectionHeight]="sectionHeight()"
     [insetLeft]="walking() || panelHidden() ? 0 : panelInset"
@@ -117,6 +122,18 @@
             <label class="toggle">
                 <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
                 <span>Dimensions (Plan)</span>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" [checked]="night()" (change)="toggleNight()" />
+                <span>Night</span>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" [checked]="lightsOn()" (change)="toggleLights()" />
+                <span>Lights on</span>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" [checked]="presentation()" (change)="presentation.set(!presentation())" />
+                <span>Presentation quality</span>
             </label>
             <label class="slider">
                 <span class="slider__label">

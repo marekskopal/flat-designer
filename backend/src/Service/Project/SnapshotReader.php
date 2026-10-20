@@ -26,6 +26,14 @@ final readonly class SnapshotReader
 		return ($this->data[$key] ?? null) === null ? null : $this->int($key);
 	}
 
+	/** A JSON number; whole numbers are encoded without a fraction, so ints are accepted too. */
+	public function number(string $key): float
+	{
+		$value = $this->data[$key] ?? null;
+
+		return is_int($value) || is_float($value) ? (float) $value : throw $this->invalid($key, 'a number');
+	}
+
 	public function string(string $key): string
 	{
 		$value = $this->data[$key] ?? null;

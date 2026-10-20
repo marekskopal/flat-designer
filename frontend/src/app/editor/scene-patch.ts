@@ -33,9 +33,13 @@ function patchElements(scene: Scene, change: Change, element: Record<string, unk
     switch (change.elementType) {
         case 'Item': {
             const item = element as unknown as Item | null;
-            // The result carries the item only, not a furniture definition the scene does not have yet.
+            // The result carries the item only, not a furniture definition or model the scene does not have yet.
             const definitionId = item?.definitionId ?? null;
             if (definitionId !== null && !(scene.definitions ?? []).some((d) => d.id === definitionId)) {
+                return null;
+            }
+            const modelId = item?.modelId ?? null;
+            if (modelId !== null && !(scene.models ?? []).some((m) => m.id === modelId)) {
                 return null;
             }
             return {...scene, items: upsert(scene.items, id, item)};

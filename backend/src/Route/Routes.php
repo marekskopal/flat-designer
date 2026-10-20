@@ -43,6 +43,7 @@ enum Routes: string
 	case ProjectFloors = '/api/projects/{projectId:number}/floors';
 	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
 	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
+	case ProjectFloorUnderlay = '/api/projects/{projectId:number}/floors/{floorId:number}/underlay';
 	case ProjectFloorElements = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms}';
 	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups|variant-sets}/{elementId:number}';
 	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|groups|variant-sets}/{elementId:number}/duplicate';
@@ -67,11 +68,18 @@ enum Routes: string
 	case ProjectFiles = '/api/projects/{projectId:number}/files';
 	case ProjectFile = '/api/projects/{projectId:number}/files/{fileId:number}';
 	case ProjectFileContent = '/api/projects/{projectId:number}/files/{fileId:number}/content';
+	case ProjectViews = '/api/projects/{projectId:number}/views';
+	case ProjectView = '/api/projects/{projectId:number}/views/{viewId:number}';
 	case ProjectShareLinks = '/api/projects/{projectId:number}/share-links';
 	case ProjectShareLink = '/api/projects/{projectId:number}/share-links/{shareLinkId:number}';
 	case ProjectShareLinkRefresh = '/api/projects/{projectId:number}/share-links/{shareLinkId:number}/refresh';
 
 	/** Public: a guest opening a share link. */
 	case Share = '/api/shares/{token:[a-f0-9]+}';
+	case ShareModelContent = '/api/shares/{token:[a-f0-9]+}/models/{modelId:number}/content';
+	case SharePictureContent = '/api/shares/{token:[a-f0-9]+}/pictures/{fileId:number}/content';
+	case Models = '/api/models';
+	case Model = '/api/models/{modelId:number}';
+	case ModelContent = '/api/models/{modelId:number}/content';
 	case ProjectVersionRestore = '/api/projects/{projectId:number}/versions/{versionId:number}/restore';
 }

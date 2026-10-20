@@ -14,22 +14,27 @@ import {
     viewChild,
 } from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
-import {RouterLink} from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
+import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ProjectUpdate} from '@app/models/realtime';
+import {SavedView, SavedViewSettings} from '@app/models/saved-view';
 import {PlanPoint, Room, RoomType} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
+import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
+import {SavedViewService} from '@app/services/saved-view.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {ToolStatus} from '@app/viewer/engine/drawing';
 import {MeasureStatus} from '@app/viewer/engine/measure';
+import {decodeImage} from '@app/viewer/engine/pictures';
 import {Selection} from '@app/viewer/engine/selection';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
@@ -37,6 +42,8 @@ import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 import {switchMap} from 'rxjs';
+
+import {CaptureTarget, SavedViewsComponent} from './saved-views.component';
 
 /** Section heights offered by the slider (mm); the top value means "no cut". */
 const SectionMin = 900;
@@ -52,6 +59,7 @@ interface ViewOption {
     label: string;
 }
 
+/** An image file decoded for use as a texture. */
 const optionalId = (value: string | number | null | undefined): number | null =>
     value === null || value === undefined || value === '' ? null : Number(value);
 
@@ -71,18 +79,23 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         ShareLinkFormComponent,
         DrawHudComponent,
         MeasureHudComponent,
+        UnderlayPanelComponent,
+        SavedViewsComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    host: {'(document:keydown)': 'onKeydown($event)'},
+    // `data-view-ready`: the saved view of the URL is shown with all its models and pictures (for the screenshot script).
+    host: {'(document:keydown)': 'onKeydown($event)', '[attr.data-view-ready]': 'viewReady() ? "" : null'},
 })
 export class ViewerPageComponent {
     public readonly projectId = input.required({transform: numberAttribute});
     public readonly floorId = input.required({transform: numberAttribute});
     /** Id of the saved version to show (query parameter), null for the working copy. */
     public readonly version = input(null, {transform: optionalId});
+    /** Id of a saved view to show once the floor is loaded (query parameter). */
+    public readonly view = input(null, {transform: optionalId});
 
     /** Panel width plus its margins, so the 3D view frames the model beside it. */
     protected readonly panelInset = 332;
@@ -95,6 +108,11 @@ export class ViewerPageComponent {
     ];
 
     protected readonly editor = inject(EditorStore);
+    private readonly modelAssets = inject(ModelAssetService);
+    /** The 3D models of `Model` items, with the user's sign-in. */
+    protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.content(modelId);
+    // Quietly: a saved version may show a file deleted since, and then the picture stays plain.
+    protected readonly pictureFetcher = (fileId: number): Promise<Blob> => this.projects.downloadFile(this.projectId(), fileId, {quiet: true});
     private readonly projects = inject(ProjectService);
     private readonly alerts = inject(AlertService);
 
@@ -112,6 +130,50 @@ export class ViewerPageComponent {
     });
 
     protected readonly scene = computed(() => (this.data.hasValue() ? this.data.value().scene : null));
+    /** The variants a saved view shows, locally (the project keeps its own), until the scene's next revision. */
+    private readonly variantOverride = signal<{revision: number; variants: Record<string, number>} | null>(null);
+    /** The scene as shown: with the variants of the applied saved view. */
+    protected readonly viewedScene = computed(() => {
+        const scene = this.scene();
+        const override = this.variantOverride();
+        if (scene === null || override === null || override.revision !== (scene.revision ?? -1)) {
+            return scene;
+        }
+        const variantSets = (scene.variantSets ?? []).map((set) => {
+            const groupId = override.variants[String(set.id)];
+            return groupId === undefined ? set : {...set, activeGroupId: groupId};
+        });
+        return {...scene, variantSets};
+    });
+    private readonly savedViewService = inject(SavedViewService);
+    private readonly router = inject(Router);
+    private readonly savedViewList = resource({
+        params: () => ({projectId: this.projectId()}),
+        loader: async ({params}) => this.savedViewService.list(params.projectId),
+    });
+    protected readonly savedViews = computed(() => (this.savedViewList.hasValue() ? this.savedViewList.value() : []));
+    protected readonly viewBusy = signal(false);
+    /** The saved view of the URL is shown and its models and pictures have loaded. */
+    protected readonly viewReady = signal(false);
+    /** The saved view of the URL already applied (it is applied once per floor load). */
+    private appliedViewKey: string | null = null;
+    /** The floor the engine has built: a view applied before would lose its camera to the first framing. */
+    private readonly builtFloorId = signal<number | null>(null);
+    private readonly underlayFileId = computed(() => this.scene()?.underlay?.fileId ?? null);
+    /** The decoded image of the floor's underlay. */
+    private readonly underlayFile = resource({
+        params: () => {
+            const fileId = this.underlayFileId();
+            return fileId === null ? undefined : {projectId: this.projectId(), fileId};
+        },
+        // Quietly: a saved version may point at a file deleted since, and then just shows no underlay.
+        loader: async ({params}) => decodeImage(await this.projects.downloadFile(params.projectId, params.fileId, {quiet: true})),
+    });
+    protected readonly underlayImage = computed(() =>
+        this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,
+    );
+    /** The measure tool is on, for measuring or to pick the underlay's calibration points. */
+    protected readonly measureActive = computed(() => this.measuring() || this.editor.calibration() !== null);
     protected readonly project = computed(() => (this.data.hasValue() ? this.data.value().project : null));
     protected readonly viewedVersion = computed(() => (this.data.hasValue() ? this.data.value().version : null));
     /** Floors to switch between: those of the viewed version, or of the working copy. */
@@ -146,6 +208,12 @@ export class ViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
+    /** After dark; the lights follow it (on at night) until switched by hand. */
+    protected readonly night = signal(false);
+    private readonly lightsChoice = signal<boolean | null>(null);
+    protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
+    /** Presentation quality, for screenshots: slower, so off while working. */
+    protected readonly presentation = signal(false);
     /** The measure tool (top view only); an edit tool turns it off and the other way round. */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -178,6 +246,8 @@ export class ViewerPageComponent {
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
+            night: this.night(),
+            presentation: this.presentation(),
         };
     });
     /** For the editor panel: where new elements are placed. */
@@ -228,6 +298,38 @@ export class ViewerPageComponent {
             }
         });
 
+        // Calibration points are clicked in the top view, with the measure tool.
+        effect(() => {
+            if (this.editor.calibration() === 'picking') {
+                untracked(() => {
+                    this.editor.setTool('select');
+                    this.measuring.set(false);
+                    if (this.activeView() !== 'top') {
+                        this.setView('top');
+                    }
+                });
+            }
+        });
+        // The saved view of the URL, once its floor and the list are loaded.
+        effect(() => {
+            const id = this.view();
+            const floorId = this.builtFloorId();
+            const view = this.savedViews().find((v) => v.id === id);
+            if (id === null || floorId === null || view === undefined || view.floorId !== floorId) {
+                return;
+            }
+            const key = `${id}:${floorId}`;
+            if (key !== this.appliedViewKey) {
+                this.appliedViewKey = key;
+                untracked(() => this.showSavedView(view));
+            }
+        });
+        // Editing works on the project's own variants.
+        effect(() => {
+            if (this.editor.enabled()) {
+                untracked(() => this.variantOverride.set(null));
+            }
+        });
         // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
         effect(() => {
             this.floorId();
@@ -262,7 +364,7 @@ export class ViewerPageComponent {
         }
     }
 
-    protected setView(mode: ViewMode): void {
+    protected setView(mode: ViewMode, animate = true): void {
         if (mode !== 'top') {
             this.measuring.set(false);
         }
@@ -274,7 +376,7 @@ export class ViewerPageComponent {
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
         this.sectionSlider.set(mode === 'top' ? PlanSectionHeight : SectionMax);
-        this.viewer().setView(mode);
+        this.viewer().setView(mode, animate);
     }
 
     private startWalkthrough(): void {
@@ -320,9 +422,11 @@ export class ViewerPageComponent {
         if (this.walking() || target?.closest('input, textarea, select') != null || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
-        if (event.key === 'd' || event.key === 'D') {
+        if ((event.key === 'd' || event.key === 'D') && this.editor.calibration() === null) {
             event.preventDefault();
             this.toggleMeasuring();
+        } else if (event.key === 'Escape' && this.editor.calibration() !== null) {
+            this.editor.calibration.set(null);
         } else if (event.key === 'Escape' && this.measuring()) {
             this.measuring.set(false);
         }
@@ -376,5 +480,162 @@ export class ViewerPageComponent {
 
     protected onSectionInput(event: Event): void {
         this.sectionSlider.set(Number((event.target as HTMLInputElement).value));
+    }
+
+    protected toggleNight(): void {
+        this.night.set(!this.night());
+        this.lightsChoice.set(null);
+    }
+
+    protected toggleLights(): void {
+        this.lightsChoice.set(!this.lightsOn());
+    }
+
+    /** Shows a saved view: on its floor (the URL carries it there), its view mode, display, variants and camera. */
+    protected applySavedView(view: SavedView): void {
+        if (view.floorId !== this.floorId()) {
+            void this.router.navigate(['/projects', this.projectId(), 'floors', view.floorId], {queryParams: {view: view.id}});
+            return;
+        }
+        this.showSavedView(view);
+    }
+
+    protected async saveView(name: string): Promise<void> {
+        const existing = this.savedViews().find((v) => v.name === name);
+        await this.storeView(existing ?? null, name);
+    }
+
+    protected async overwriteView(view: SavedView): Promise<void> {
+        await this.storeView(view, view.name);
+    }
+
+    protected async removeView(view: SavedView): Promise<void> {
+        if (!window.confirm(`Delete the view "${view.name}"?`)) {
+            return;
+        }
+        await this.viewRequest(() => this.savedViewService.delete(this.projectId(), view.id));
+    }
+
+    /** The view as a 1600 × 1000 PNG at 2× in the presentation quality: downloaded, or saved among the project's files. */
+    protected async captureView(target: CaptureTarget): Promise<void> {
+        const scene = this.scene();
+        if (scene === null) {
+            return;
+        }
+        this.viewBusy.set(true);
+        try {
+            const blob = await this.viewer().capture(1600, 1000, 2);
+            const name = `${scene.floor.name} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}.png`.replace(/[\\/:]/g, '-');
+            if (target === 'file') {
+                await this.projects.uploadFile(this.projectId(), new File([blob], name, {type: 'image/png'}));
+                this.alerts.success(`Saved "${name}" among the project's files.`);
+            } else {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = name;
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+        } catch (e) {
+            this.alerts.error(e instanceof Error ? e.message : 'The view could not be captured.');
+        } finally {
+            this.viewBusy.set(false);
+        }
+    }
+
+    private showSavedView(view: SavedView): void {
+        const settings = view.settings;
+        const scene = this.scene();
+        this.viewReady.set(false);
+        if (this.walking()) {
+            this.viewer().endWalkthrough();
+        }
+        this.measuring.set(false);
+        this.setView(settings.view, false);
+        this.ceilingsVisible.set(settings.ceilings);
+        this.labelsVisible.set(settings.labels);
+        this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
+        this.dimensionsVisible.set(settings.dimensions);
+        this.night.set(settings.night);
+        this.lightsChoice.set(settings.lightsOn);
+        this.presentation.set(settings.presentation);
+        const hasVariants = Object.keys(settings.variants).length > 0;
+        this.variantOverride.set(scene !== null && hasVariants ? {revision: scene.revision ?? -1, variants: settings.variants} : null);
+        if (settings.view === 'overview' && settings.camera !== null) {
+            this.viewer().setCameraPose(settings.camera, false);
+        }
+        void this.markReadyWhenLoaded();
+    }
+
+    /** Ready once no model or picture has been loading for a few checks in a row (a rebuild may start new loads). */
+    private async markReadyWhenLoaded(): Promise<void> {
+        let quiet = 0;
+        while (quiet < 3) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+            quiet = this.viewer().pendingAssets() === 0 ? quiet + 1 : 0;
+        }
+        this.viewReady.set(true);
+    }
+
+    /** What the panel shows now, as a saved view's settings. */
+    private currentViewSettings(): SavedViewSettings | null {
+        const scene = this.viewedScene();
+        if (scene === null) {
+            return null;
+        }
+        const view = this.activeView();
+        const variants: Record<string, number> = {};
+        for (const set of scene.variantSets ?? []) {
+            if (set.activeGroupId !== null) {
+                variants[String(set.id)] = set.activeGroupId;
+            }
+        }
+        return {
+            // A walk is kept as the same shot in the 3D view.
+            view: view === 'top' ? 'top' : 'overview',
+            camera: view === 'top' ? null : this.viewer().cameraPose(),
+            ceilings: this.ceilingsVisible(),
+            labels: this.labelsVisible(),
+            sectionHeight: this.sectionHeight(),
+            dimensions: this.dimensionsVisible(),
+            night: this.night(),
+            lightsOn: this.lightsChoice(),
+            presentation: this.presentation(),
+            variants,
+        };
+    }
+
+    private async storeView(existing: SavedView | null, name: string): Promise<void> {
+        const settings = this.currentViewSettings();
+        if (settings === null) {
+            return;
+        }
+        const body = {floorId: this.floorId(), name, settings};
+        await this.viewRequest(() =>
+            existing === null
+                ? this.savedViewService.create(this.projectId(), body)
+                : this.savedViewService.update(this.projectId(), existing.id, body),
+        );
+    }
+
+    private async viewRequest(request: () => Promise<unknown>): Promise<void> {
+        this.viewBusy.set(true);
+        try {
+            await request();
+            this.savedViewList.reload();
+        } catch {
+            // The error interceptor shows the toast.
+        } finally {
+            this.viewBusy.set(false);
+        }
+    }
+
+    /** The engine built a scene (also a live reload of the same floor). */
+    protected onSceneBuilt(scene: {floor: {id: number}}): void {
+        if (this.builtFloorId() !== scene.floor.id) {
+            this.appliedViewKey = null;
+        }
+        this.builtFloorId.set(scene.floor.id);
     }
 }

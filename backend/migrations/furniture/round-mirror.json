@@ -1,0 +1,64 @@
+{
+ "name": "Round mirror",
+ "description": "Round wall mirror in a frame; the diameter is the smaller of the item's width and height.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 600,
+   "depth": 30,
+   "height": 600
+  },
+  "parameters": [
+   {
+    "key": "frame",
+    "label": "Frame width",
+    "type": "int",
+    "default": 20,
+    "min": 0,
+    "max": 80,
+    "unit": "mm"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "matt-black"
+   },
+   {
+    "key": "mirror",
+    "label": "Mirror",
+    "default": "mirror"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Frame",
+    "axis": "z",
+    "x": "(W - dia) / 2",
+    "y": "(H - dia) / 2",
+    "z": 0,
+    "w": "dia",
+    "h": "dia",
+    "d": "D - 4",
+    "material": "frame"
+   },
+   {
+    "type": "cylinder",
+    "name": "Mirror",
+    "axis": "z",
+    "x": "(W - dia) / 2 + frame",
+    "y": "(H - dia) / 2 + frame",
+    "z": "D - 6",
+    "w": "dia - 2 * frame",
+    "h": "dia - 2 * frame",
+    "d": 6,
+    "material": "mirror"
+   }
+  ],
+  "derived": {
+   "dia": "min(W, H)"
+  }
+ }
+}

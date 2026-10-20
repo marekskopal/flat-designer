@@ -44,12 +44,17 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
   `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
   and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
-  the type's default).
+  the type's default). Doors with a leaf have a `leafStyle` (Flush, Panelled, Glazed) with `leafPanels` panels or
+  panes (`leafPanels()` in `viewer/engine/opening-looks.ts`). These rules, and the window ones below, are in
+  `OpeningLook`.
 - Windows have `mullions` (vertical bars; 1, two panes, is the default) and `transoms`, plus an optional `sillBoard`
   (the inner board's reach past the wall face on `side`, the interior; exterior walls also get an outer sill). A
   walkable window has one sash on `hinge` (mullions 0) or two. Corner windows have no stored field:
   `cornerWindows()` finds two windows that reach the shared end of an L-joint at overlapping heights, and
   `buildWall()` drops their corner jambs. The wall pieces already leave such a corner open.
+- A window may have a solid lower `panelHeight` (mm from the sill) and exterior `shutters` (Louvred or Solid, in
+  `shutterMaterialId`, null for painted timber). They are two leaves on the face opposite `side`. They lie folded back
+  against the wall beside the window unless `shuttersClosed`. Shutters do not take part in the walkthrough.
 - Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
   allows the owner or an admin and answers 404 otherwise.
 - Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.
@@ -130,6 +135,19 @@ format is the text in `FurnitureTools::Format`.
 - Seeding: global definitions come from `backend/migrations/furniture/*.json`. The seed migrations list their files,
   and `FurnitureSeeds` reads them. Both test suites build them, and `custom/parity.spec.ts` checks the sample project's
   definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against the built-in kinds.
+- Per-copy variety: `hash(n, seed?)` gives a fixed pseudo-random 0 ≤ x < 1 (32-bit integer mixing, identical in both
+  twins), and a part's `material` may be `{"expr": …}` choosing a slot per copy, e.g. book spines.
+- Pictures: a parameter of type `image` (no default) holds the id of an image file of the item's project, and a
+  `picture` part shows it on its front face through its `image` option (cropped to fill, `coverUvs()`).
+  `CustomItemValidator` checks the file (`ImageParameters`). The scene lists the files in `pictures`, so share guests
+  may load them (`SharePictureContent`). The viewer loads them through `PictureLibrary` (`viewer/engine/pictures.ts`,
+  the pages' `pictureFetcher`) and rebuilds the items once an image has loaded.
+- The global catalogue also has a sofa, a bed with bedding, a bedside table, a round table, a walk-in shower screen,
+  a round mirror and a balcony railing (`SeedFurnitureCatalogueMigration`), and decor (`SeedDecorCatalogueMigration`):
+  a framed picture (it can lean against the wall), rugs, books, curtains, roller and venetian blinds and a scatter
+  cushion. Curtains and blinds are furniture placed at a window, not fields of the opening. Upholstery uses the `cushion` part, a
+  box with rounded edges (`radius`), which the cut list counts among the other parts. Round tops and mirrors are
+  `cylinder` parts.
 - Built-in furniture kinds: a conversion migration turned the sample project's built-in furniture into Custom items
   in place, keeping the same ids (`BuiltInFurnitureConverter` maps params to values; `down()` maps them back). The
   built-in kinds stay for saved versions and old changes. `ItemKindCatalog` marks them `replacedBy`, and the Add menu
@@ -148,9 +166,27 @@ format is the text in `FurnitureTools::Format`.
 
 - `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`. Each one builds
   the item body in its local frame.
-- Custom-made furniture is a furniture definition, not a new kind. A new item kind (a bought product or a building
-  element) needs the PHP enum, a migration extending the `items.kind` column enum, the TS `ItemKind` union and a
-  builder.
+- Custom-made furniture is a furniture definition and a bought product is a model (see below); neither is a new kind.
+  A new item kind (e.g. a building element) needs the PHP enum, a migration extending the `items.kind` column enum,
+  the TS `ItemKind` union and a builder.
+
+## Product models
+
+- `ModelAsset` rows (`/api/models`, soft-deleted) are uploaded glTF binaries (`.glb`) stored in S3, scoped like
+  furniture definitions (global for admins, a user's library, a project's own; `ModelAssetProvider::isUsableIn`).
+  `GlbReader` rejects what the viewer cannot decode (Draco, Basis) and `GltfBounds` sizes the model from the accessor
+  bounds through the node transforms, normalizing quantized (`KHR_mesh_quantization`) positions.
+- A `Model` item has `items.model_id` (`ItemModelLink`). It starts at the model's size and name. The viewer
+  (`viewer/engine/models.ts`: `ModelLibrary` with GLTFLoader and the meshopt decoder) scales the model evenly to fit
+  the item's box. While loading, or if the model is missing, a box stands in.
+- The scene and snapshots carry `models` (the ones its items use). A restore keeps a model the project may still use,
+  otherwise the item draws a box. Share guests load models through `ShareModelContent`, but only those of their
+  scene.
+- `make import-models DIR=… [PROJECT=…]` (`models:import`) uploads every `*.glb` with an optional `<name>.json`
+  sidecar (`name`, `license`, `author`, `sourceUrl`). **Third-party models are never committed.** Keep them in the
+  gitignored `source_files/` (the demo's CC0 Poly Haven models are in `source_files/demo/models/`, optimised with
+  `npx @gltf-transform/cli optimize --compress meshopt --texture-compress webp --texture-size 1024`) and import
+  them.
 
 ## Materials and tiling
 
@@ -161,10 +197,74 @@ format is the text in `FurnitureTools::Format`.
   ones with `created_by_id`.
 - Textures of real products are cut from reference photos into `frontend/src/assets/textures/`, one plank or tile per
   image. The material's `tile_width` / `tile_height` give its real size.
+- Patterns without photos are drawn on canvas in `materials.ts`: wood, planks, tiles, grass and gravel, plus
+  `Terrazzo` (chips, with slab joints at the tile size), `Brick` (stretcher bond, `tile_width` × `tile_height` per
+  brick) and `Herringbone`. A herringbone tile's length is rounded to a whole multiple of its width, and the texture
+  is drawn axis-aligned and turned 45°. Tiles, terrazzo and herringbone go on the room's tile grid; bricks keep
+  their surface's UVs, which on a vaulted ceiling run along and across the beams.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
   grid.
+- Ceilings and skirting are room fields (rules in `RoomCeiling`). A room has a `ceilingMaterialId`. With
+  `vaultSpacing`, its ceiling is vaulted: sine arches `vaultRise` high spring between beams spaced at whole
+  multiples of `vaultSpacing` from the plan origin, so neighbouring rooms line up. The beams run at `vaultAngle`,
+  and the crowns are at `ceilingHeight`. Beams are `beamWidth` wide, hang `beamDrop` below the springing and are in
+  `beamMaterialId`. `skirtingHeight` / `skirtingMaterialId` add skirting along the walls, except at doorways.
+  The geometry is in `viewer/engine/ceilings.ts`; it is TS only, as the backend does not need it.
+- Where rooms meet without a wall and their ceilings differ in height, `ceilingSteps()` closes the gap with an
+  upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
+  beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
+
+## Lighting
+
+- Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with
+  `lumens`, `kelvin`, optional `shadow` and a `bulb` that glows (a bare bulb, a downlight's lens, or none inside a
+  shade). A `cable` part is a pendant's cable: up to the hook, then along `path` to the ceiling rose. It is fixed to
+  the real ceiling of the item's room (`ceilingHeightAt()` in `ceilings.ts`, vaults and beams included) and hangs
+  between the fixings, sagging by `sag`.
+- `viewer/engine/lights.ts` builds the three.js lights (`createFixtureLight()`) and switches them
+  (`applyFixtureLights()`). Lights that are off keep intensity 0, so toggling them does not recompile shaders. At most
+  `MaxFixtureShadows` lights cast shadows. `LumenScale` maps lumens to the scene's units, where the sun is 2.4, and
+  `WhiteBalance` pulls the kelvin colours towards white, as a camera would. LED strips and `led` parts are fixtures
+  too.
+- `ViewerEngine.setLighting(night, lightsOn)`: at night the sun is gone (along with its shadow pass), the sky is faint
+  and the background dark. The pages' Display has Night and Lights on; lights follow Night until switched by hand.
+  `ShareSettingsDto.night` starts a share link at night.
+- Seeded definitions (`SeedLightingCatalogueMigration`): a bare-bulb pendant with a cable path, a recessed downlight,
+  a light source to group with the lamps of the model library, a Schuko socket, a rocker switch, a data socket and a
+  plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge.
+
+## Render quality
+
+- `ViewerEngine.setQuality('fast' | 'presentation')`: fast (the default) renders straight to the canvas. Presentation
+  (`viewer/engine/presentation.ts`, `PresentationPipeline`) renders through an `EffectComposer`: the scene, GTAO
+  ambient occlusion, the output pass (tone mapping and colour space, so the renderer's are not applied twice) and SMAA.
+  It renders at a pixel ratio of at least 2 and gives the sun a larger, softer shadow map (8192, capped by the GPU).
+  The handle and measure overlay still draws after it, on the canvas.
+- The pages' Display has "Presentation quality"; `ShareSettingsDto.presentation` opens a share link with it. The
+  screenshot capture (FD-44) is meant to use it.
+
+## Saved views and screenshots
+
+- `SavedView` (`saved_views`, `SavedViewProvider`, REST `…/views`, MCP `list_views` / `save_view` (replaces a view of
+  the same name) / `delete_view`): a named view of one floor. `settings` (`SavedViewSettingsDto`) holds the view mode
+  (`overview` or `top`; an eye-level shot is a 3D camera at eye height, and saving during a walk keeps it as one), the
+  camera, the display options (night, lights, quality) and the variant per set. Views are not elements: no revision,
+  no undo. They go with their floor; snapshots carry them (`views`, `SnapshotViewRestorer`), and a restore remaps
+  their floor, sets and groups.
+- The viewer page's Saved views section applies, saves, replaces and deletes views. A view's variants are shown
+  locally (`variantOverride`, until the scene's next revision); the project's active variants do not change.
+  `?view=<id>` applies a view once the engine has built its floor. Once no model or picture is loading, the page
+  sets `data-view-ready`.
+- Capture PNG: `ViewerEngine.capture()` renders 1600 × 1000 at 2× in the presentation quality, off the visible size
+  and without the panel inset, and downloads it or saves it as a project file. Room labels are HTML, so they are not
+  in it.
+- `make screenshots PROJECT=… EMAIL=… PASSWORD=… [VIEWS=… ROOM=…]` (`frontend/scripts/screenshots.mjs`, Playwright)
+  writes the saved views of the project whose name starts with `VIEWS`, the editor with `ROOM`'s inspector open, the
+  project page, cut list, furniture library, furniture editor and a share link to `docs/screenshots/`, with the app's
+  UI and the plan underlay hidden. With `cwebp` on the PATH it saves WebP 1600 px wide. The README tour uses the demo
+  flat's "Tour · …" views; keep the unlicensed poster and plan out of them.
 
 ## Walkthrough
 
@@ -201,6 +301,24 @@ format is the text in `FurnitureTools::Format`.
   in the top view. It is independent of edit mode, takes clicks before the editor tools, and the pages turn it off
   when an edit tool is picked. It snaps to wall ends and to face corners and faces (`wallFaces()` with the
   `wallJoints()` mitres). Esc first clears the measurement, then ends the tool.
+
+## Plan underlays
+
+- A floor may have one `FloorUnderlay` (`floor_underlays`): an image project file laid under the top view for tracing.
+  Pixel (px, py), with py counted down from the top, lies at plan `x + scale·(px·cos r + py·sin r)`,
+  `y + scale·(px·sin r − py·cos r)`. It goes with the floor and with its file (both cascade).
+- `UnderlayService` sets it (placement given, or calibrated from two pixel/plan point pairs by `placementFromPoints()`,
+  twinned in `viewer/engine/underlay.ts`) and removes it. Both bump the revision, but it is not an element: there is no
+  `SceneEditor`, no change log and no undo. REST `PUT|DELETE …/floors/{id}/underlay`, MCP `set_floor_underlay` /
+  `remove_floor_underlay`.
+- The scene carries `underlay`, so versions keep it. `SnapshotUnderlayRestorer` restores it while the file still exists.
+- Viewer: `buildUnderlay()` draws the image over the plan at its opacity (no depth test), only while `isTopDown()`.
+  `UnderlayPanelComponent` (edit mode) picks the image and sets its placement. Calibrate… uses the measure tool without
+  snapping (`EditorStore.calibration`, `ViewerEngine.setCalibrating()`), then `calibrateUnderlay()` applies the real
+  distance and an optional axis. Images only; PDF pages have to be uploaded as images.
+- MCP `list_project_files` / `get_project_file` let an agent read uploaded plans and photos. Images come back as image
+  content, optionally cropped, scaled to `maxSize` and overlaid with a labelled pixel `grid` (`ImagePreviewService`,
+  which needs PHP gd).
 
 ## Share links
 

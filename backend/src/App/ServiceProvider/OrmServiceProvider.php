@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace FlatDesigner\App\ServiceProvider;
 
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FloorUnderlay;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
+use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\OAuthAuthorization;
 use FlatDesigner\Model\Entity\OAuthClient;
 use FlatDesigner\Model\Entity\Opening;
@@ -17,15 +19,18 @@ use FlatDesigner\Model\Entity\ProjectChange;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\SavedView;
 use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
+use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\OAuthAuthorizationRepository;
 use FlatDesigner\Model\Repository\OAuthClientRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
@@ -34,6 +39,7 @@ use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\SavedViewRepository;
 use FlatDesigner\Model\Repository\ShareLinkRepository;
 use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
@@ -61,10 +67,13 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ProjectFileRepository::class,
 			ProjectChangeRepository::class,
 			ShareLinkRepository::class,
+			SavedViewRepository::class,
 			OAuthClientRepository::class,
 			OAuthAuthorizationRepository::class,
 			FloorRepository::class,
+			FloorUnderlayRepository::class,
 			MaterialRepository::class,
+			ModelAssetRepository::class,
 			FurnitureDefinitionRepository::class,
 			RoomRepository::class,
 			WallRepository::class,
@@ -91,10 +100,13 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ProjectFileRepository::class, ProjectFile::class);
 		$this->addRepository($container, $orm, ProjectChangeRepository::class, ProjectChange::class);
 		$this->addRepository($container, $orm, ShareLinkRepository::class, ShareLink::class);
+		$this->addRepository($container, $orm, SavedViewRepository::class, SavedView::class);
 		$this->addRepository($container, $orm, OAuthClientRepository::class, OAuthClient::class);
 		$this->addRepository($container, $orm, OAuthAuthorizationRepository::class, OAuthAuthorization::class);
 		$this->addRepository($container, $orm, FloorRepository::class, Floor::class);
+		$this->addRepository($container, $orm, FloorUnderlayRepository::class, FloorUnderlay::class);
 		$this->addRepository($container, $orm, MaterialRepository::class, Material::class);
+		$this->addRepository($container, $orm, ModelAssetRepository::class, ModelAsset::class);
 		$this->addRepository($container, $orm, FurnitureDefinitionRepository::class, FurnitureDefinition::class);
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);

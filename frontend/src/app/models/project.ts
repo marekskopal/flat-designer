@@ -44,6 +44,9 @@ export interface ProjectVersionDetail {
     floors: Floor[];
 }
 
+/** Files the viewer can draw as an image: an underlay, or a picture of a `Custom` item. */
+export const ImageMimeTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
 export interface ProjectFile {
     id: number;
     filename: string;

@@ -1,0 +1,87 @@
+{
+ "name": "Books",
+ "description": "A row of books on a shelf: spines of varying width, height, depth and colour (fixed per item; change variety for another row).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 600,
+   "depth": 220,
+   "height": 280
+  },
+  "parameters": [
+   {
+    "key": "spine",
+    "label": "Average spine",
+    "type": "int",
+    "default": 32,
+    "min": 12,
+    "max": 80,
+    "unit": "mm"
+   },
+   {
+    "key": "variety",
+    "label": "Variety",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 999
+   }
+  ],
+  "derived": {
+   "n": "clamp(floor(W / spine), 1, 100)",
+   "pitch": "W / n",
+   "s": "variety * 1000"
+  },
+  "materialSlots": [
+   {
+    "key": "navy",
+    "label": "Navy",
+    "default": "book-cloth-navy"
+   },
+   {
+    "key": "oxblood",
+    "label": "Oxblood",
+    "default": "book-cloth-oxblood"
+   },
+   {
+    "key": "ochre",
+    "label": "Ochre",
+    "default": "book-cloth-ochre"
+   },
+   {
+    "key": "cream",
+    "label": "Cream",
+    "default": "book-cloth-cream"
+   },
+   {
+    "key": "green",
+    "label": "Green",
+    "default": "book-cloth-green"
+   },
+   {
+    "key": "grey",
+    "label": "Grey",
+    "default": "book-cloth-grey"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Book",
+    "repeat": {
+     "count": "n"
+    },
+    "x": "i * pitch",
+    "y": 0,
+    "z": "round(hash(s + i, 3) * D * 0.2)",
+    "w": "max(pitch - 1 - round(hash(s + i, 1) * pitch * 0.3), 4)",
+    "h": "H - round(hash(s + i, 2) * H * 0.3)",
+    "d": "D - round(hash(s + i, 3) * D * 0.2)",
+    "material": {
+     "expr": "hash(s + i, 4) < 0.167 ? 'navy' : hash(s + i, 4) < 0.333 ? 'oxblood' : hash(s + i, 4) < 0.5 ? 'ochre' : hash(s + i, 4) < 0.667 ? 'cream' : hash(s + i, 4) < 0.833 ? 'green' : 'grey'"
+    },
+    "grain": "vertical"
+   }
+  ]
+ }
+}

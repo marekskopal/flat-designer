@@ -25,26 +25,38 @@ abstract class IntegrationTestCase extends TestCase
 		Fixture::reset();
 	}
 
-	/** Multipart POST with one `file` field, like a browser upload. */
-	protected function upload(string $path, string $filename, string $content, User $authenticatedAs): ResponseInterface
+	/**
+	 * Multipart POST with one `file` field, like a browser upload, and other form `$fields`.
+	 *
+	 * @param array<string, string> $fields
+	 */
+	protected function upload(string $path, string $filename, string $content, User $authenticatedAs, array $fields = []): ResponseInterface
 	{
 		$stream = (new StreamFactory())->createStream($content);
 		$request = (new ServerRequest([], [], $path, 'POST'))
+			->withParsedBody($fields)
 			->withUploadedFiles(['file' => new UploadedFile($stream, strlen($content), UPLOAD_ERR_OK, $filename, 'text/html')])
 			->withHeader('Authorization', 'Bearer ' . Fixture::accessTokenFor($authenticatedAs));
 
 		return AppHarness::handle($request);
 	}
 
-	/** @param array<string, mixed>|null $body */
+	/**
+	 * @param array<string, mixed>|null $body
+	 * @param array<string, string> $headers
+	 */
 	protected function request(
 		string $method,
 		string $path,
 		?array $body = null,
 		?User $authenticatedAs = null,
 		?string $bearerToken = null,
+		array $headers = [],
 	): ResponseInterface {
 		$request = new ServerRequest([], [], $path, $method);
+		foreach ($headers as $name => $value) {
+			$request = $request->withHeader($name, $value);
+		}
 		parse_str((string) parse_url($path, PHP_URL_QUERY), $query);
 		if ($query !== []) {
 			$request = $request->withQueryParams($query);

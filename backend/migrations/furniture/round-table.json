@@ -1,0 +1,100 @@
+{
+ "name": "Round table",
+ "description": "Round side, coffee or dining table: a round top on a pedestal with a foot disc, or on four legs.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 560,
+   "depth": 560,
+   "height": 500
+  },
+  "parameters": [
+   {
+    "key": "base",
+    "label": "Base",
+    "type": "select",
+    "default": "pedestal",
+    "options": [
+     "pedestal",
+     "legs"
+    ]
+   },
+   {
+    "key": "top",
+    "label": "Top thickness",
+    "type": "int",
+    "default": 25,
+    "min": 12,
+    "max": 60,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "foot": "min(W, D) * 0.55"
+  },
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Top",
+    "default": "oak-veneer"
+   },
+   {
+    "key": "base",
+    "label": "Base",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Top",
+    "x": 0,
+    "y": "H - top",
+    "z": 0,
+    "w": "W",
+    "h": "top",
+    "d": "D",
+    "material": "top"
+   },
+   {
+    "type": "cylinder",
+    "name": "Pedestal",
+    "when": "base == 'pedestal'",
+    "x": "W / 2 - 25",
+    "y": 15,
+    "z": "D / 2 - 25",
+    "w": 50,
+    "h": "H - top - 15",
+    "d": 50,
+    "material": "base"
+   },
+   {
+    "type": "cylinder",
+    "name": "Foot disc",
+    "when": "base == 'pedestal'",
+    "x": "(W - foot) / 2",
+    "y": 0,
+    "z": "(D - foot) / 2",
+    "w": "foot",
+    "h": 15,
+    "d": "foot",
+    "material": "base"
+   },
+   {
+    "type": "cylinder",
+    "name": "Leg",
+    "when": "base == 'legs'",
+    "repeat": {
+     "count": 4
+    },
+    "x": "W / 2 - 15 + (i % 2 * 2 - 1) * W * 0.28",
+    "y": 0,
+    "z": "D / 2 - 15 + (floor(i / 2) * 2 - 1) * D * 0.28",
+    "w": 30,
+    "h": "H - top",
+    "d": 30,
+    "material": "base"
+   }
+  ]
+ }
+}

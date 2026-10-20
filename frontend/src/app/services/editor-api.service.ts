@@ -1,7 +1,7 @@
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
-import {PlanPoint, WallType} from '@app/models/scene';
+import {PlanPoint, Underlay, WallType} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
@@ -27,6 +27,16 @@ export interface GroupMove {
     dx?: number;
     dy?: number;
     rotation?: number;
+}
+
+/** A floor's underlay to set: the image and the placement fields that change (left out: kept). */
+export interface UnderlayInput {
+    fileId: number;
+    x?: number;
+    y?: number;
+    scale?: number;
+    rotation?: number;
+    opacity?: number;
 }
 
 /** The editing endpoints. `baseRevision` goes out as `If-Match`, so a stale edit fails with 409. */
@@ -142,6 +152,26 @@ export class EditorApiService {
 
     public async changes(projectId: number, limit = 30): Promise<Change[]> {
         return firstValueFrom(this.http.get<Change[]>(`${environment.apiUrl}/projects/${projectId}/changes`, {params: {limit}}));
+    }
+
+    /** Sets the plan image under the floor's top view (not an element: no undo, no `If-Match`). */
+    public async setUnderlay(
+        projectId: number,
+        floorId: number,
+        input: UnderlayInput,
+        baseRevision?: number,
+    ): Promise<{underlay: Underlay; revision: number}> {
+        return firstValueFrom(
+            this.http.put<{underlay: Underlay; revision: number}>(this.underlayUrl(projectId, floorId), input, {headers: ifMatch(baseRevision)}),
+        );
+    }
+
+    public async removeUnderlay(projectId: number, floorId: number, baseRevision?: number): Promise<{revision: number}> {
+        return firstValueFrom(this.http.delete<{revision: number}>(this.underlayUrl(projectId, floorId), {headers: ifMatch(baseRevision)}));
+    }
+
+    private underlayUrl(projectId: number, floorId: number): string {
+        return `${environment.apiUrl}/projects/${projectId}/floors/${floorId}/underlay`;
     }
 
     public async itemKinds(): Promise<ItemKindInfo[]> {

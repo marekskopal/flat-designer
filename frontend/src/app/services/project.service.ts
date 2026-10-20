@@ -1,5 +1,6 @@
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpContext} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
+import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {CutList} from '@app/models/cut-list';
 import {FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
 import {RoomSchedule} from '@app/models/room-schedule';
@@ -93,8 +94,13 @@ export class ProjectService {
     }
 
     /** Fetched with the auth header, so it can't be a plain link; use an object URL to show or save it. */
-    public async downloadFile(projectId: number, fileId: number): Promise<Blob> {
-        return firstValueFrom(this.http.get(`${projectsUrl}/${projectId}/files/${fileId}/content`, {responseType: 'blob'}));
+    public async downloadFile(projectId: number, fileId: number, options: {quiet?: boolean} = {}): Promise<Blob> {
+        return firstValueFrom(
+            this.http.get(`${projectsUrl}/${projectId}/files/${fileId}/content`, {
+                responseType: 'blob',
+                context: new HttpContext().set(SkipErrorToast, options.quiet === true),
+            }),
+        );
     }
 
     public async deleteFile(projectId: number, fileId: number): Promise<void> {

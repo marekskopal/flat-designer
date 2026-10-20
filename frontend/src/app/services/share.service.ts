@@ -36,6 +36,16 @@ export class ShareService {
         await firstValueFrom(this.http.delete<void>(`${projectsUrl}/${projectId}/share-links/${shareLinkId}`));
     }
 
+    /** An image a share link's scene shows as a picture, for its guests (no sign-in); quiet when it is gone. */
+    public async sharedPicture(token: string, fileId: number): Promise<Blob> {
+        return firstValueFrom(
+            this.http.get(`${sharesUrl}/${token}/pictures/${fileId}/content`, {
+                responseType: 'blob',
+                context: new HttpContext().set(SkipErrorToast, true),
+            }),
+        );
+    }
+
     /** The guest page shows its own error (unknown or expired link), so no toast. */
     public async getShared(token: string): Promise<SharedView> {
         return firstValueFrom(this.http.get<SharedView>(`${sharesUrl}/${token}`, {context: new HttpContext().set(SkipErrorToast, true)}));

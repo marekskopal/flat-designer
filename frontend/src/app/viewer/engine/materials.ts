@@ -116,7 +116,8 @@ export class MaterialLibrary {
         if (dto.pattern !== 'Plain') {
             material.map = this.texture(dto, grain);
         }
-        if (dto.pattern === 'Tiles' && tileLayout(dto) !== null) {
+        // Laid tiles and slabs go on the room's tile grid (`alignTiles`); bricks keep the UVs of their surface.
+        if ((dto.pattern === 'Tiles' || dto.pattern === 'Terrazzo' || dto.pattern === 'Herringbone') && tileLayout(dto) !== null) {
             this.tiles.add(material);
         }
         if (dto.code.startsWith('led')) {
@@ -159,6 +160,10 @@ export class MaterialLibrary {
             texture = this.imageTexture(dto, layout);
         } else if (layout !== null) {
             texture = proceduralLayoutTexture(dto, layout);
+            if (dto.pattern === 'Herringbone') {
+                // Drawn with the tiles along the axes; the wall shows them at 45°.
+                texture.rotation = Math.PI / 4;
+            }
         } else {
             texture = new THREE.CanvasTexture(drawPattern(dto));
             const repeat = 1 / (PatternTileSize[dto.pattern] ?? 1);
@@ -185,8 +190,8 @@ export class MaterialLibrary {
      */
     private imageTexture(dto: MaterialDto, layout: ImageLayout): THREE.CanvasTexture {
         const canvas = document.createElement('canvas');
-        canvas.width = Math.round(layout.width / LayoutMmPerPixel);
-        canvas.height = Math.round(layout.height / LayoutMmPerPixel);
+        canvas.width = Math.round(layout.width / (layout.mmPerPixel ?? LayoutMmPerPixel));
+        canvas.height = Math.round(layout.height / (layout.mmPerPixel ?? LayoutMmPerPixel));
         const ctx = canvas.getContext('2d');
         if (ctx !== null) {
             ctx.fillStyle = dto.color;
@@ -234,6 +239,8 @@ interface ImageLayout {
     height: number;
     /** Draws the layout; `image` is the photo of one piece, or null to draw the pieces from the base colour. */
     draw(ctx: CanvasRenderingContext2D, image: HTMLImageElement | null, rng: () => number): void;
+    /** Canvas resolution, when finer than `LayoutMmPerPixel` (small chips, narrow joints). */
+    mmPerPixel?: number;
 }
 
 /** Layout of planks or tiles of a known size; planks need the photo, tiles can be drawn without it. */
@@ -257,6 +264,32 @@ function tileLayout(dto: MaterialDto): ImageLayout | null {
                     drawPlankLayout(ctx, image, rng, columns, rows, tileWidth, tileHeight);
                 }
             },
+        };
+    }
+    if (dto.pattern === 'Terrazzo') {
+        // 2 × 2 slabs: chips are scattered across the patch and cut by the faint joints like real slabs.
+        return {
+            width: 2 * tileWidth,
+            height: 2 * tileHeight,
+            mmPerPixel: 1,
+            draw: (ctx, _image, rng): void => drawTerrazzo(ctx, rng, tileWidth, tileHeight, dto.color),
+        };
+    }
+    if (dto.pattern === 'Brick') {
+        // Stretcher bond, 4 bricks across and 8 courses up, so the colour variation does not repeat too soon.
+        return {
+            width: 4 * tileWidth,
+            height: 8 * tileHeight,
+            draw: (ctx, _image, rng): void => drawBricks(ctx, rng, tileWidth, tileHeight, dto.color),
+        };
+    }
+    if (dto.pattern === 'Herringbone') {
+        const length = herringboneLength(tileWidth, tileHeight);
+        return {
+            width: 2 * length,
+            height: 2 * length,
+            mmPerPixel: 1,
+            draw: (ctx, _image, rng): void => drawHerringbone(ctx, rng, length, tileHeight, dto.color),
         };
     }
     if (dto.pattern === 'Tiles') {
@@ -357,8 +390,8 @@ function drawPiece(
 
 function proceduralLayoutTexture(dto: MaterialDto, layout: ImageLayout): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(layout.width / LayoutMmPerPixel);
-    canvas.height = Math.round(layout.height / LayoutMmPerPixel);
+    canvas.width = Math.round(layout.width / (layout.mmPerPixel ?? LayoutMmPerPixel));
+    canvas.height = Math.round(layout.height / (layout.mmPerPixel ?? LayoutMmPerPixel));
     const ctx = canvas.getContext('2d');
     if (ctx !== null) {
         layout.draw(ctx, null, seededRandom(dto.id * 7919));
@@ -366,6 +399,129 @@ function proceduralLayoutTexture(dto: MaterialDto, layout: ImageLayout): THREE.C
     const texture = new THREE.CanvasTexture(canvas);
     texture.repeat.set(1000 / layout.width, 1000 / layout.height);
     return texture;
+}
+
+/**
+ * Polished terrazzo: a light base with stone chips of 1–14 mm in greys, black, white and a little ochre, and faint
+ * joints between 2 × 2 slabs. Drawn at 1 mm per pixel; chips crossing the patch edge wrap round, so it tiles.
+ */
+function drawTerrazzo(ctx: CanvasRenderingContext2D, rng: () => number, slabWidth: number, slabHeight: number, color: string): void {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const base = new THREE.Color(color);
+    ctx.fillStyle = `#${base.getHexString()}`;
+    ctx.fillRect(0, 0, width, height);
+    // Cloudy variation of the binder.
+    for (let i = 0; i < 40; i++) {
+        ctx.globalAlpha = 0.06;
+        ctx.fillStyle = `#${shade(base, (rng() - 0.5) * 0.12).getHexString()}`;
+        ctx.beginPath();
+        ctx.arc(rng() * width, rng() * height, 60 + rng() * 220, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const palette = ['#2b2b2c', '#4a4a4b', '#77777a', '#9c9a96', '#bdbab3', '#f6f4ef', '#fbfaf7', '#b48a5c', '#8c8580'];
+    const chips = Math.round((width * height) / 70);
+    for (let i = 0; i < chips; i++) {
+        // Mostly small grains, some larger chips.
+        const size = rng() < 0.85 ? 1 + rng() * 3 : 4 + rng() * 10;
+        const x = rng() * width;
+        const y = rng() * height;
+        const angle = rng() * Math.PI;
+        const squash = 0.5 + rng() * 0.5;
+        ctx.fillStyle = palette[Math.floor(rng() * palette.length)];
+        // A chip crossing the right or top edge reappears at the left or bottom, so the patch tiles.
+        const shiftsX = x + size > width ? [0, -width] : [0];
+        const shiftsY = y + size > height ? [0, -height] : [0];
+        for (const dx of shiftsX) {
+            for (const dy of shiftsY) {
+                ctx.beginPath();
+                ctx.ellipse(x + dx, y + dy, size / 2, (size / 2) * squash, angle, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    ctx.fillStyle = 'rgba(80, 76, 70, 0.35)';
+    for (let i = 0; i < 2; i++) {
+        ctx.fillRect(i * slabWidth, 0, 1, height);
+        ctx.fillRect(0, i * slabHeight, width, 1);
+    }
+}
+
+/** Handmade bricks in stretcher bond with recessed mortar joints, each brick its own shade and a little speckle. */
+function drawBricks(ctx: CanvasRenderingContext2D, rng: () => number, brickLength: number, brickHeight: number, color: string): void {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const length = brickLength / LayoutMmPerPixel;
+    const course = brickHeight / LayoutMmPerPixel;
+    const joint = Math.max(1, Math.round(10 / LayoutMmPerPixel));
+    const base = new THREE.Color(color);
+    ctx.fillStyle = '#c9bba5';
+    ctx.fillRect(0, 0, width, height);
+    const courses = Math.round(height / course);
+    const bricks = Math.round(width / length);
+    for (let row = 0; row < courses; row++) {
+        const offset = row % 2 === 0 ? 0 : length / 2;
+        for (let i = -1; i < bricks; i++) {
+            const x = i * length + offset;
+            const tone = shade(base, (rng() - 0.5) * 0.3);
+            // Some bricks fired darker, some paler.
+            ctx.fillStyle = `#${(rng() < 0.15 ? shade(tone, -0.25) : tone).getHexString()}`;
+            ctx.fillRect(x + joint / 2, row * course + joint / 2, length - joint, course - joint);
+            for (let k = 0; k < 40; k++) {
+                ctx.fillStyle = `#${shade(tone, (rng() - 0.5) * 0.35).getHexString()}`;
+                ctx.globalAlpha = 0.5;
+                ctx.fillRect(x + joint / 2 + rng() * (length - joint), row * course + joint / 2 + rng() * (course - joint), 2, 2);
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
+}
+
+/** The tile length of a herringbone, rounded to a whole multiple of the width so that the pattern closes. */
+export function herringboneLength(length: number, width: number): number {
+    return Math.max(2, Math.round(length / width)) * width;
+}
+
+/**
+ * The tiles of an axis-aligned herringbone over a patch of `2 · length` × `2 · length` (mm), which tiles seamlessly:
+ * staircases of a horizontal tile and a vertical one, repeated along (w, w) and (l + w, w − l). Rectangles are
+ * x, y, width, height, overlapping the patch edges.
+ */
+export function herringboneTiles(length: number, width: number): [number, number, number, number][] {
+    const size = 2 * length;
+    const tiles: [number, number, number, number][] = [];
+    const reach = Math.ceil((size + length) / width) + 2;
+    for (let a = -reach; a <= reach; a++) {
+        for (let b = -4; b <= 4; b++) {
+            const x = a * width + b * (length + width);
+            const y = a * width + b * (width - length);
+            const horizontal: [number, number, number, number] = [x, y, length, width];
+            const vertical: [number, number, number, number] = [x + length, y + width - length, width, length];
+            for (const tile of [horizontal, vertical]) {
+                if (tile[0] < size && tile[0] + tile[2] > 0 && tile[1] < size && tile[1] + tile[3] > 0) {
+                    tiles.push(tile);
+                }
+            }
+        }
+    }
+    return tiles;
+}
+
+/** Glazed tiles in a herringbone, each a slightly different shade, with light grout. Drawn at 1 mm per pixel. */
+function drawHerringbone(ctx: CanvasRenderingContext2D, rng: () => number, length: number, width: number, color: string): void {
+    const base = new THREE.Color(color);
+    ctx.fillStyle = '#8f8c86';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const grout = 1.5;
+    for (const [x, y, w, h] of herringboneTiles(length, width)) {
+        const tone = shade(base, (rng() - 0.5) * 0.12);
+        ctx.fillStyle = `#${tone.getHexString()}`;
+        ctx.fillRect(x + grout / 2, y + grout / 2, w - grout, h - grout);
+        // A soft glaze highlight along one edge.
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.fillRect(x + grout / 2, y + grout / 2, w > h ? w - grout : 3, w > h ? 3 : h - grout);
+    }
 }
 
 /** Base colour with fine random speckle (concrete, stone). */

@@ -11,7 +11,9 @@ import {MeasureStatus} from './engine/measure';
         @let s = status();
         <div class="hud" role="status">
             @if (s.points === 0) {
-                <strong class="hud__prompt">Click the first point to measure from</strong>
+                <strong class="hud__prompt">
+                    {{ calibrating() ? 'Click the first calibration point on the plan image' : 'Click the first point to measure from' }}
+                </strong>
             } @else {
                 @if (s.distance !== null) {
                     <span class="hud__value">
@@ -24,7 +26,11 @@ import {MeasureStatus} from './engine/measure';
                 }
             }
             <span class="hud__keys">
-                Snaps to wall ends, corners and faces · <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> clears, again ends
+                @if (calibrating()) {
+                    No snapping · <kbd>Esc</kbd> cancels the calibration
+                } @else {
+                    Snaps to wall ends, corners and faces · <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> clears, again ends
+                }
             </span>
         </div>
     `,
@@ -82,5 +88,7 @@ import {MeasureStatus} from './engine/measure';
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MeasureHudComponent {
+    /** The points calibrate the plan underlay (no snapping). */
+    public readonly calibrating = input(false);
     public readonly status = input.required<MeasureStatus>();
 }

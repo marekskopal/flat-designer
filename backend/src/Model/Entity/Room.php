@@ -20,6 +20,12 @@ use MarekSkopal\ORM\Enum\Type;
  * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left
  * free. Above the bands the walls keep their own material. `tileOriginX/Y` is a plan point where tile joints
  * cross: the floor tiles, the wall bands and tiled items of the room share that grid (null: the plan origin).
+ *
+ * The ceiling is in `ceilingMaterial` (null: white plaster). With `vaultSpacing` it is vaulted: shallow vaults
+ * `vaultRise` high spring between parallel beams `vaultSpacing` apart, running at `vaultAngle` degrees
+ * (counter-clockwise from plan x). Their crowns are at `ceilingHeight`; the beams, `beamWidth` wide, hang `beamDrop`
+ * below the springing, in `beamMaterial` (null: white paint). `skirtingHeight` (null: none) puts skirting boards
+ * in `skirtingMaterial` along the room's walls, leaving the doors free.
  */
 #[Entity(repositoryClass: RoomRepository::class)]
 class Room extends AEntity
@@ -33,6 +39,33 @@ class Room extends AEntity
 
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $tileOriginY = null;
+
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $ceilingMaterial = null;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $vaultSpacing = null;
+
+	#[Column(type: Type::Int)]
+	public int $vaultAngle = 0;
+
+	#[Column(type: Type::Int)]
+	public int $vaultRise = 130;
+
+	#[Column(type: Type::Int)]
+	public int $beamWidth = 80;
+
+	#[Column(type: Type::Int)]
+	public int $beamDrop = 30;
+
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $beamMaterial = null;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $skirtingHeight = null;
+
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $skirtingMaterial = null;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

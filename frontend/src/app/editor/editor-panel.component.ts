@@ -145,6 +145,14 @@ export class EditorPanelComponent {
             }
             return this.freshCustom(first.id);
         }
+        if (change.value === 'Model') {
+            const first = this.editor.models()[0];
+            if (first === undefined) {
+                this.alerts.error('There is no 3D model to use; upload one under Furniture.');
+                return null;
+            }
+            return {kind: 'Model', modelId: first.id, name: first.name, width: first.width, depth: first.depth, height: first.height};
+        }
         return element['kind'] === 'Custom' ? {kind: change.value, definitionId: null, params: {}} : {kind: change.value};
     }
 
@@ -189,6 +197,8 @@ export class EditorPanelComponent {
             void this.editor.create('item', {kind: choice.slice(5), x: at.x, y: at.y, roomId: room?.id ?? null});
         } else if (choice.startsWith('custom:')) {
             void this.editor.create('item', {kind: 'Custom', definitionId: Number(choice.slice(7)), x: at.x, y: at.y, roomId: room?.id ?? null});
+        } else if (choice.startsWith('model:')) {
+            void this.editor.create('item', {kind: 'Model', modelId: Number(choice.slice(6)), x: at.x, y: at.y, roomId: room?.id ?? null});
         } else if (choice === 'wall') {
             void this.editor.create('wall', {
                 startX: center.x - NewWallLength / 2,

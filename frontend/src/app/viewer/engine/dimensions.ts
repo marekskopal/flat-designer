@@ -2,7 +2,7 @@ import {Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {CSS2DObject} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import {MM, polygonSignedArea, Vec2, wallGapsAlongEdge} from './plan-geometry';
+import {counterClockwise, MM, Vec2, wallGapsAlongEdge} from './plan-geometry';
 
 /** Distance of a room edge's overall dimension from the wall face, mm (inside the room). */
 export const DimensionOffset = 300;
@@ -30,7 +30,7 @@ export interface DimensionLine {
 export function roomDimensions(rooms: readonly Pick<Room, 'polygon'>[], walls: readonly Wall[]): DimensionLine[] {
     const lines: DimensionLine[] = [];
     for (const room of rooms) {
-        const ccw = polygonSignedArea(room.polygon) >= 0 ? room.polygon : [...room.polygon].reverse();
+        const ccw = counterClockwise(room.polygon);
         ccw.forEach(([x, y], i) => {
             const [nx, ny] = ccw[(i + 1) % ccw.length];
             const a = {x, y};

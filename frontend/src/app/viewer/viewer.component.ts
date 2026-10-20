@@ -2,6 +2,7 @@ import {
     afterNextRender,
     ChangeDetectionStrategy,
     Component,
+    computed,
     DestroyRef,
     effect,
     ElementRef,
@@ -18,6 +19,9 @@ import {environment} from '@environments/environment';
 
 import {EditorTool, ToolStatus} from './engine/drawing';
 import {MeasureStatus} from './engine/measure';
+import {ModelFetcher} from './engine/models';
+import {PictureFetcher} from './engine/pictures';
+import {Vec2} from './engine/plan-geometry';
 import {Selection} from './engine/selection';
 import {DoorAim, EditHandler, ViewerEngine, ViewPreset, WallDraftShape} from './engine/viewer-engine';
 
@@ -55,8 +59,24 @@ export class ViewerComponent {
     public readonly labelsVisible = input(true);
     /** Dimension lines along the room edges, in the top view. */
     public readonly dimensionsVisible = input(false);
+    /** After dark: no daylight. */
+    public readonly night = input(false);
+    /** The flat's lights (light parts, LED strips) are on. */
+    public readonly lightsOn = input(false);
+    /** Presentation quality (ambient occlusion, antialiasing, supersampling) instead of the fast one. */
+    public readonly presentation = input(false);
     /** The measure tool: clicks in the top view place two points and show their distance (before any edit tool). */
     public readonly measuring = input(false);
+    /** How the 3D models of `Model` items are fetched; null leaves them as placeholders. */
+    public readonly modelFetcher = input<ModelFetcher | null>(null);
+    /** How the images of `picture` parts are fetched; null leaves them plain. */
+    public readonly pictureFetcher = input<PictureFetcher | null>(null);
+    /** The decoded image of the scene's underlay file (null while loading, or none). */
+    public readonly underlayImage = input<TexImageSource | null>(null);
+    /** The underlay in the top view. */
+    public readonly underlayVisible = input(true);
+    /** With `measuring`: the two points clicked next calibrate the underlay (`calibrated`). */
+    public readonly calibrating = input(false);
     /** Section plane height in mm; null shows everything. */
     public readonly sectionHeight = input<number | null>(null);
     public readonly selection = input<Selection | null>(null);
@@ -90,8 +110,12 @@ export class ViewerComponent {
     public readonly toolStatus = output<ToolStatus | null>();
     /** The readout of the measure tool (null when it is off). */
     public readonly measureStatus = output<MeasureStatus | null>();
+    /** Both calibration points were clicked: where they lie on the underlay as placed now (plan mm). */
+    public readonly calibrated = output<{a: Vec2; b: Vec2}>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
+    /** Rebuilt only when the underlay itself changes, not with every edit of the floor. */
+    private readonly underlay = computed(() => this.scene()?.underlay ?? null, {equal: (a, b) => JSON.stringify(a) === JSON.stringify(b)});
     /** Created after the first render, once the host element has its size. */
     private readonly engine = signal<ViewerEngine | null>(null);
 
@@ -107,6 +131,7 @@ export class ViewerComponent {
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
             engine.onMeasureStatus = (status): void => this.measureStatus.emit(status);
+            engine.onCalibrate = (a, b): void => this.calibrated.emit({a, b});
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -130,7 +155,24 @@ export class ViewerComponent {
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
+        effect(() => this.engine()?.setLighting(this.night(), this.lightsOn()));
+        effect(() => this.engine()?.setQuality(this.presentation() ? 'presentation' : 'fast'));
+        effect(() => {
+            const fetcher = this.modelFetcher();
+            if (fetcher !== null) {
+                this.engine()?.setModelFetcher(fetcher);
+            }
+        });
+        effect(() => {
+            const fetcher = this.pictureFetcher();
+            if (fetcher !== null) {
+                this.engine()?.setPictureFetcher(fetcher);
+            }
+        });
         effect(() => this.engine()?.setMeasuring(this.measuring()));
+        effect(() => this.engine()?.setCalibrating(this.calibrating()));
+        effect(() => this.engine()?.setUnderlay(this.underlay(), this.underlayImage()));
+        effect(() => this.engine()?.setUnderlayVisible(this.underlayVisible()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));
@@ -184,6 +226,17 @@ export class ViewerComponent {
     /** Where the camera looks, in plan mm (placement of new elements). */
     public viewCenter(): {x: number; y: number} {
         return this.engine()?.viewCenter() ?? {x: 0, y: 0};
+    }
+
+    /** Models and pictures still loading (0 without an engine yet). */
+    public pendingAssets(): number {
+        return this.engine()?.pendingAssets() ?? 0;
+    }
+
+    /** The view as a PNG (see `ViewerEngine.capture()`). */
+    public capture(width: number, height: number, pixelRatio = 2): Promise<Blob> {
+        const engine = this.engine();
+        return engine === null ? Promise.reject(new Error('The viewer is not ready.')) : engine.capture(width, height, pixelRatio);
     }
 
     /** The 3D camera in plan mm; null before the engine starts. */

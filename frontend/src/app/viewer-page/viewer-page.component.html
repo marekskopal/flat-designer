@@ -1,17 +1,26 @@
 <fd-viewer
     #viewerRef
     class="viewer"
-    [scene]="scene()"
+    [scene]="viewedScene()"
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
-    [measuring]="measuring()"
+    [night]="night()"
+    [lightsOn]="lightsOn()"
+    [presentation]="presentation()"
+    [measuring]="measureActive()"
+    [calibrating]="editor.calibration() !== null"
+    [underlayImage]="underlayImage()"
+    [modelFetcher]="modelFetcher"
+    [pictureFetcher]="pictureFetcher"
+    [underlayVisible]="editor.underlayVisible()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
     [editMode]="editor.enabled()"
     [insetLeft]="walking() ? 0 : panelInset"
     (selected)="onSelected($event)"
+    (loaded)="onSceneBuilt($event)"
     [editHandler]="applyDrag"
     [tool]="editor.tool()"
     [wallDraft]="editor.wallDraft()"
@@ -19,6 +28,7 @@
     (roomDetect)="detectRoom($event)"
     (toolStatus)="toolStatus.set($event)"
     (measureStatus)="measureStatus.set($event)"
+    (calibrated)="editor.calibration.set($event)"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
@@ -26,7 +36,7 @@
 
 @if (measureStatus(); as status) {
     @if (!walking()) {
-        <fd-measure-hud [status]="status" />
+        <fd-measure-hud [status]="status" [calibrating]="editor.calibration() !== null" />
     }
 } @else if (toolStatus(); as status) {
     @if (editor.enabled() && !walking()) {
@@ -136,6 +146,7 @@
 
     @if (editor.enabled() && !walking() && scene(); as s) {
         <fd-editor-panel [scene]="s" [viewCenter]="viewCenter" />
+        <fd-underlay-panel [scene]="s" [projectId]="projectId()" />
     }
 
     <section class="panel__section">
@@ -161,10 +172,25 @@
         }
     </section>
 
+    <section class="panel__section" [hidden]="editor.enabled() || walking()">
+        <h2 class="section-title">Saved views</h2>
+        <fd-saved-views
+            [views]="savedViews()"
+            [floorId]="floorId()"
+            [busy]="viewBusy()"
+            [canSave]="version() === null"
+            (apply)="applySavedView($event)"
+            (save)="saveView($event)"
+            (overwrite)="overwriteView($event)"
+            (remove)="removeView($event)"
+            (capture)="captureView($event)"
+        />
+    </section>
+
     @if (hasVariants() && scene(); as s) {
         <section class="panel__section">
             <h2 class="section-title">Variants</h2>
-            <fd-variants [scene]="s" [readonly]="!canEdit()" [editing]="editor.enabled()" />
+            <fd-variants [scene]="viewedScene() ?? s" [readonly]="!canEdit()" [editing]="editor.enabled()" />
         </section>
     }
 
@@ -182,6 +208,24 @@
             <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
             <span>Dimensions (Plan)</span>
         </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="night()" (change)="toggleNight()" />
+            <span>Night</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="lightsOn()" (change)="toggleLights()" />
+            <span>Lights on</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="presentation()" (change)="presentation.set(!presentation())" />
+            <span>Presentation quality</span>
+        </label>
+        @if (scene()?.underlay) {
+            <label class="toggle">
+                <input type="checkbox" [checked]="editor.underlayVisible()" (change)="editor.underlayVisible.set(!editor.underlayVisible())" />
+                <span>Plan underlay</span>
+            </label>
+        }
         <label class="slider">
             <span class="slider__label">
                 Wall cut

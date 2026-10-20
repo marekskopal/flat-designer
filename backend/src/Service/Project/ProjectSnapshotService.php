@@ -9,11 +9,13 @@ use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
+use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
@@ -33,6 +35,7 @@ use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
+use FlatDesigner\Service\Editor\Element\ItemModelLink;
 use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
 use FlatDesigner\Service\Provider\SceneProvider;
 use JsonException;
@@ -45,11 +48,15 @@ use const JSON_THROW_ON_ERROR;
  *
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
- * [VariantSetDto], definitions: [SceneDefinitionDto]}]}` (`groups` / `variantSets` / `definitions` missing in snapshots
- * taken before they existed) — each floor entry plus the materials is exactly the viewer's `SceneDto`, so a version is
- * rendered without touching the working copy, with the furniture definitions as they were. Ids inside are those of the
- * working copy at the time and only link entries together, except definition ids: a restore links an item to the live
- * definition of that id while the project may still use it, otherwise to a project copy of the stored one.
+ * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int]}],
+ * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` missing in snapshots taken before they
+ * existed; `pictures` lists the files the items show, so that share guests may load them) — each floor entry plus the materials is
+ * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
+ * definitions as they were. Ids inside are those of the working copy at the time and only link entries together,
+ * except definition ids: a restore links an item to the live definition of that id while the project may still use
+ * it, otherwise to a project copy of the stored one; the underlay's file id, kept while the file exists; and model ids,
+ * kept while the model exists (its file is not in the snapshot).
  */
 final readonly class ProjectSnapshotService
 {
@@ -66,6 +73,9 @@ final readonly class ProjectSnapshotService
 		private ItemGroupRepository $groupRepository,
 		private VariantSetRepository $variantSetRepository,
 		private SnapshotDefinitionRestorer $definitionRestorer,
+		private SnapshotUnderlayRestorer $underlayRestorer,
+		private SnapshotViewRestorer $viewRestorer,
+		private ItemModelLink $modelLink,
 	) {
 	}
 
@@ -82,6 +92,9 @@ final readonly class ProjectSnapshotService
 				'groups' => $scene->groups,
 				'variantSets' => $scene->variantSets,
 				'definitions' => $scene->definitions,
+				'underlay' => $scene->underlay,
+				'models' => $scene->models,
+				'pictures' => $scene->pictures,
 			];
 		}
 
@@ -91,6 +104,7 @@ final readonly class ProjectSnapshotService
 				'project' => ['name' => $project->name, 'address' => $project->address, 'description' => $project->description],
 				'materials' => $this->sceneProvider->getMaterials(),
 				'floors' => $floors,
+				'views' => $this->viewRestorer->snapshot($project),
 			],
 			JSON_THROW_ON_ERROR,
 		);
@@ -139,6 +153,8 @@ final readonly class ProjectSnapshotService
 	public function restore(Project $project, string $snapshot): void
 	{
 		$data = $this->read($snapshot);
+		// The views go with the floors; a snapshot from before saved views keeps the current ones.
+		$currentViews = $this->viewRestorer->keep($project, $data);
 
 		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
 			// Rooms, walls, openings, items, groups and variant sets go with it (ON DELETE CASCADE).
@@ -151,12 +167,20 @@ final readonly class ProjectSnapshotService
 		}
 		/** @var array<int, FurnitureDefinition|null> $definitions by id in the snapshot, shared by all floors */
 		$definitions = [];
+		/** @var array<int, Floor> $floorIds new floors by their id in the snapshot */
+		$floorIds = [];
+		/** @var array<int, VariantSet> $allSetIds */
+		$allSetIds = [];
+		/** @var array<int, ItemGroup> $allGroupIds */
+		$allGroupIds = [];
 
 		foreach ($data->objects('floors') as $entry) {
 			$floorData = $entry->object('floor');
 			$floor = $this->stamp(new Floor(project: $project, name: $floorData->string('name'), level: $floorData->int('level')));
 			$this->floorRepository->persist($floor);
+			$floorIds[$floorData->int('id')] = $floor;
 
+			$this->underlayRestorer->restore($project, $floor, $entry);
 			$roomIds = $this->restoreRooms($floor, $entry->objects('rooms'), $materials);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
@@ -168,13 +192,12 @@ final readonly class ProjectSnapshotService
 				$definitions,
 			);
 			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds, $groupIds, $definitions);
-			// The active variants, once the groups have their new ids.
-			foreach ($sets as $data) {
-				$set = $setIds[$data->int('id')];
-				$set->activeGroupId = ($groupIds[$data->nullableInt('activeGroupId') ?? 0] ?? null)?->id;
-				$this->variantSetRepository->persist($set);
-			}
+			$this->activateVariants($sets, $setIds, $groupIds);
+			$allSetIds += $setIds;
+			$allGroupIds += $groupIds;
 		}
+
+		$this->viewRestorer->restore($project, $data, $currentViews, $floorIds, $allSetIds, $allGroupIds);
 	}
 
 	/**
@@ -200,6 +223,16 @@ final readonly class ProjectSnapshotService
 			// Snapshots taken before the tile origin existed have none.
 			$room->tileOriginX = $data->nullableInt('tileOriginX');
 			$room->tileOriginY = $data->nullableInt('tileOriginY');
+			// Nor ceilings and skirting before they had their own fields.
+			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
+			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
+			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
+			$room->vaultRise = $data->nullableInt('vaultRise') ?? 130;
+			$room->beamWidth = $data->nullableInt('beamWidth') ?? 80;
+			$room->beamDrop = $data->nullableInt('beamDrop') ?? 30;
+			$room->beamMaterial = $materials[$data->nullableInt('beamMaterialId') ?? 0] ?? null;
+			$room->skirtingHeight = $data->nullableInt('skirtingHeight');
+			$room->skirtingMaterial = $materials[$data->nullableInt('skirtingMaterialId') ?? 0] ?? null;
 			$this->roomRepository->persist($room);
 			$restored[$data->int('id')] = $room;
 		}
@@ -255,8 +288,31 @@ final readonly class ProjectSnapshotService
 				$restored->mullions = $opening->nullableInt('mullions') ?? 1;
 				$restored->transoms = $opening->nullableInt('transoms') ?? 0;
 				$restored->sillBoard = $opening->nullableInt('sillBoard');
+				// And openings before leaf styles and shutters.
+				$restored->leafStyle = DoorLeafStyleEnum::tryFrom($opening->nullableString('leafStyle') ?? '') ?? DoorLeafStyleEnum::Flush;
+				$restored->leafPanels = $opening->nullableInt('leafPanels') ?? 2;
+				$restored->panelHeight = $opening->nullableInt('panelHeight');
+				$restored->shutters = ShutterStyleEnum::tryFrom($opening->nullableString('shutters') ?? '');
+				$restored->shutterMaterial = $materials[$opening->nullableInt('shutterMaterialId') ?? 0] ?? null;
+				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
 				$this->openingRepository->persist($restored);
 			}
+		}
+	}
+
+	/**
+	 * The active variants, once the groups have their new ids.
+	 *
+	 * @param list<SnapshotReader> $sets
+	 * @param array<int, VariantSet> $setIds
+	 * @param array<int, ItemGroup> $groupIds
+	 */
+	private function activateVariants(array $sets, array $setIds, array $groupIds): void
+	{
+		foreach ($sets as $data) {
+			$set = $setIds[$data->int('id')];
+			$set->activeGroupId = ($groupIds[$data->nullableInt('activeGroupId') ?? 0] ?? null)?->id;
+			$this->variantSetRepository->persist($set);
 		}
 	}
 
@@ -321,8 +377,9 @@ final readonly class ProjectSnapshotService
 				params: $params === null || $params === [] ? null : json_encode($params, JSON_THROW_ON_ERROR),
 			));
 			$item->group = $groupIds[$data->nullableInt('groupId') ?? 0] ?? null;
-			// Snapshots taken before Custom items existed have no definition ids.
+			// Snapshots taken before Custom items existed have no definition ids, before Model items no model ids.
 			$item->definition = $definitions[$data->nullableInt('definitionId') ?? 0] ?? null;
+			$item->model = $this->modelLink->forProject($floor->project, $data->nullableInt('modelId'));
 			$this->itemRepository->persist($item);
 		}
 	}

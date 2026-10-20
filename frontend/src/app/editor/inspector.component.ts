@@ -1,6 +1,8 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
-import {Group, Material, Room, SceneDefinition} from '@app/models/scene';
+import {ModelAsset} from '@app/models/model-asset';
+import {ProjectFile} from '@app/models/project';
+import {Group, Material, Room, SceneDefinition, SceneModel} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CabinetParamsComponent} from './cabinet-params.component';
@@ -34,9 +36,17 @@ export class InspectorComponent {
     public readonly definitions = input<FurnitureDefinition[]>([]);
     /** The definitions the scene's Custom items use (also ones no longer offered). */
     public readonly sceneDefinitions = input<SceneDefinition[]>([]);
+    /** 3D models a Model item may be switched to (the project's choice). */
+    public readonly models = input<ModelAsset[]>([]);
+    /** The models the scene's Model items draw (also ones no longer offered). */
+    public readonly sceneModels = input<SceneModel[]>([]);
+    /** The project's image files, for the pictures of a Custom item. */
+    public readonly images = input<ProjectFile[]>([]);
     public readonly disabled = input(false);
 
     public readonly fieldChange = output<FieldChange>();
+    /** The image picker of a Custom item was opened: the host may refresh `images`. */
+    public readonly imagesRefresh = output<void>();
 
     protected readonly fields = computed(() => ElementFields[this.kind()].filter((def) => def.when?.(this.element()) ?? true));
     protected readonly errors = signal<Record<string, string>>({});
@@ -51,6 +61,16 @@ export class InspectorComponent {
             return choices;
         }
         const own = this.sceneDefinitions().find((d) => d.id === id);
+        return [own !== undefined ? {id: own.id, name: `${own.name} (not offered)`} : {id: '', name: '— none —'}, ...choices];
+    });
+    /** The models to pick from, with the item's own first when it is not among them (deleted, another library). */
+    protected readonly modelChoices = computed((): {id: number | ''; name: string}[] => {
+        const choices: {id: number | ''; name: string}[] = this.models().map((m) => ({id: m.id, name: m.name}));
+        const id = this.element()['modelId'];
+        if (choices.some((c) => c.id === id)) {
+            return choices;
+        }
+        const own = this.sceneModels().find((m) => m.id === id);
         return [own !== undefined ? {id: own.id, name: `${own.name} (not offered)`} : {id: '', name: '— none —'}, ...choices];
     });
     /** The body of the item's furniture definition. */

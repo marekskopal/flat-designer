@@ -1,11 +1,15 @@
 import {MaterialSlot} from '@app/models/furniture';
-import {Item, SceneDefinition} from '@app/models/scene';
+import {Item, Room, SceneDefinition} from '@app/models/scene';
 import * as THREE from 'three';
+import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
+import {ceilingHeightAt} from '../ceilings';
 import {taperedLeg} from '../furniture';
 import {buildAppliance, buildHandle} from '../kitchen';
+import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
+import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {evaluateDefinition, ResolvedPart} from './definition';
 
@@ -36,14 +40,27 @@ const CylinderSegments = 24;
 /** A sliding door's frame, as on the built-in wardrobe. */
 const SlidingProfileWidth = 22;
 const SlidingInfillThickness = 8;
+/** A cable on the ceiling is sampled this often (mm), so that it follows a vault and sags smoothly. */
+const CableStep = 50;
+/** Height of a ceiling rose, mm. */
+const RoseHeight = 22;
+/** A picture's face stands this far (mm) in front of its box, clear of z-fighting. */
+const PictureFaceOffset = 0.5;
 
 /**
  * Body of a `Custom` item from its furniture definition, in the item-local frame of `buildItem()` (bottom centre origin, x
  * along the width, +z out of the front); the parts' frame (left-bottom-back corner origin) is shifted by half the width
  * and depth. When the definition is missing or does not evaluate at the item's size, a translucent red box of the item
- * size stands in, with the reason in `userData.definitionError`. Null for other kinds.
+ * size stands in, with the reason in `userData.definitionError`. `picture` parts show their image from `pictures` (plain
+ * while it loads, or without a library); `cable` parts run on the ceiling of the item's `room`. Null for other kinds.
  */
-export function buildCustomItemBody(item: Item, materials: MaterialLibrary, definitions: DefinitionLibrary): THREE.Group | null {
+export function buildCustomItemBody(
+    item: Item,
+    materials: MaterialLibrary,
+    definitions: DefinitionLibrary,
+    pictures: PictureLibrary | null = null,
+    room?: Room,
+): THREE.Group | null {
     if (item.kind !== 'Custom') {
         return null;
     }
@@ -60,7 +77,7 @@ export function buildCustomItemBody(item: Item, materials: MaterialLibrary, defi
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
-            const mesh = tilted(buildPart(part, item, material, materials), part);
+            const mesh = tilted(buildPart(part, item, material, materials, pictures, room), part);
             mesh.name = `part:${part.name}`;
             mesh.userData['partName'] = part.name;
             mesh.position.x -= (item.width / 2) * MM;
@@ -102,6 +119,8 @@ function buildPart(
     item: Item,
     material: (grain: GrainDirection, slot?: string | null) => THREE.Material,
     materials: MaterialLibrary,
+    pictures: PictureLibrary | null,
+    room: Room | undefined,
 ): THREE.Object3D {
     const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
     switch (part.type) {
@@ -121,12 +140,20 @@ function buildPart(
             return buildFront(part, item, material(grain), materials);
         case 'cylinder':
             return buildCylinder(part, material('vertical'));
+        case 'cushion':
+            return buildCushion(part, material('vertical'));
         case 'taperedLeg':
             return buildTaperedLeg(part, item, material('vertical'));
         case 'glass':
             return box(part, glassMaterial());
         case 'led':
             return buildLed(part, material('vertical'));
+        case 'picture':
+            return buildPicture(part, material(grain), pictures);
+        case 'light':
+            return buildLight(part);
+        case 'cable':
+            return buildCable(part, item, material('vertical'), room);
         default:
             return box(part, material(grain));
     }
@@ -151,6 +178,133 @@ function buildBoard(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     return mesh;
+}
+
+/**
+ * A light source at the centre of its box (see `lights.ts`), with what glows while it is on: a bare bulb filling the
+ * box, a downlight's lens on its bottom face, or nothing.
+ */
+function buildLight(part: ResolvedPart): THREE.Group {
+    const number = (key: string, fallback: number): number => (typeof part.props[key] === 'number' ? part.props[key] : fallback);
+    const kelvin = number('kelvin', 2700);
+    const kind: FixtureKind = part.props['kind'] === 'spot' ? 'spot' : 'point';
+    const group = new THREE.Group();
+    const centre = new THREE.Vector3((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d / 2) * MM);
+    const shadow = part.props['shadow'] === true;
+    const light = createFixtureLight({kind, lumens: number('lumens', 800), kelvin, angle: number('angle', 60), shadow});
+    light.position.copy(centre);
+    group.add(light);
+    const bulb = part.props['bulb'];
+    if (bulb === 'sphere') {
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16), bulbMaterial(kelvin));
+        mesh.scale.set(part.w * MM, part.h * MM, part.d * MM);
+        mesh.position.copy(centre);
+        markBulb(mesh);
+        group.add(mesh);
+        // The bulb glows by itself and would block its own light: it casts no shadow.
+        mesh.userData['castsNoShadow'] = true;
+    } else if (bulb === 'disc') {
+        const mesh = new THREE.Mesh(new THREE.CircleGeometry(Math.min(part.w, part.d) * 0.5 * MM, 32), bulbMaterial(kelvin));
+        mesh.rotation.x = Math.PI / 2;
+        mesh.position.set(centre.x, part.y * MM - 0.0002, centre.z);
+        markBulb(mesh);
+        mesh.userData['castsNoShadow'] = true;
+        group.add(mesh);
+    }
+    return group;
+}
+
+/**
+ * A pendant's cable: up from the bottom centre of its box to the hook at its top centre, then along `path` to the
+ * ceiling rose, hanging between the points with a sag of `sag` mm. With `ceiling` (default) and a room, the hook, the
+ * points and the rose are fixed to the room's real ceiling, also a vault, and the cable drapes over what hangs lower
+ * between them (a beam).
+ */
+function buildCable(part: ResolvedPart, item: Item, material: THREE.Material, room: Room | undefined): THREE.Group {
+    const group = new THREE.Group();
+    const radius = Math.max(Math.min(part.w, part.d) / 2, 1);
+    const sag = typeof part.props['sag'] === 'number' ? Math.max(part.props['sag'], 0) : 0;
+    const rose = typeof part.props['rose'] === 'number' ? Math.max(part.props['rose'], 0) : 0;
+    const onCeiling = part.props['ceiling'] !== false && room !== undefined;
+    const hook = {x: part.x + part.w / 2, z: part.z + part.d / 2};
+    const path = Array.isArray(part.props['path']) ? (part.props['path'] as {x?: unknown; z?: unknown}[]) : [];
+    const given = path.filter((p) => typeof p.x === 'number' && typeof p.z === 'number');
+    const points = [hook, ...given.map((p) => ({x: p.x as number, z: p.z as number}))];
+    // The ceiling's height over a point of the parts' frame, in the parts' frame (mm above the item's bottom).
+    const top = part.y + part.h;
+    const ceiling = (p: {x: number; z: number}): number => {
+        if (!onCeiling) {
+            return top;
+        }
+        const plan = partsPointToPlan(item, p.x, p.z);
+        const height = ceilingHeightAt(room, plan.x, plan.y);
+        return height === null ? top : height - item.z;
+    };
+
+    const vertices = [new THREE.Vector3(hook.x, part.y, hook.z), new THREE.Vector3(hook.x, ceiling(hook) - radius, hook.z)];
+    for (let i = 1; i < points.length; i++) {
+        const a = points[i - 1];
+        const b = points[i];
+        // Hanging freely between its fixings (a sagging chord), but never above the ceiling: over a beam it drapes.
+        const ya = ceiling(a) - radius;
+        const yb = ceiling(b) - radius;
+        const steps = Math.max(Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / CableStep), 1);
+        for (let s = 1; s <= steps; s++) {
+            const t = s / steps;
+            const p = {x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t};
+            const hanging = ya + (yb - ya) * t - sag * 4 * t * (1 - t);
+            vertices.push(new THREE.Vector3(p.x, Math.min(hanging, ceiling(p) - radius), p.z));
+        }
+    }
+    const curve = new THREE.CurvePath<THREE.Vector3>();
+    for (let i = 1; i < vertices.length; i++) {
+        curve.add(new THREE.LineCurve3(vertices[i - 1].clone().multiplyScalar(MM), vertices[i].clone().multiplyScalar(MM)));
+    }
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(vertices.length * 2, 8), radius * MM, 8, false), material));
+
+    if (rose > 0) {
+        const end = points[points.length - 1];
+        const height = ceiling(end);
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry((rose / 2) * MM, (rose / 2) * MM, RoseHeight * MM, CylinderSegments), material);
+        mesh.position.set(end.x * MM, (height - RoseHeight / 2) * MM, end.z * MM);
+        group.add(mesh);
+    }
+    return group;
+}
+
+/**
+ * A point of the parts' frame (mm from the item's left-back corner, x along the width, z towards the front) on the plan:
+ * the item frame turned counter-clockwise by its rotation, with the front facing south at 0.
+ */
+export function partsPointToPlan(item: Item, x: number, z: number): {x: number; y: number} {
+    const lx = x - item.width / 2;
+    const lz = z - item.depth / 2;
+    const theta = THREE.MathUtils.degToRad(item.rotation);
+    // Scene x = plan x, scene z = −plan y; the item turns about scene y.
+    const sx = lx * Math.cos(theta) + lz * Math.sin(theta);
+    const sz = -lx * Math.sin(theta) + lz * Math.cos(theta);
+    return {x: item.x + sx, y: item.y - sz};
+}
+
+/**
+ * A picture: its box in the part's material with the image of `props.image` (a file id) on the front face, cropped to
+ * fill it. The face is tagged `userData.pictureId`, so the item is rebuilt once the image has loaded.
+ */
+function buildPicture(part: ResolvedPart, material: THREE.Material, pictures: PictureLibrary | null): THREE.Group {
+    const group = new THREE.Group();
+    group.add(box(part, material));
+    const fileId = typeof part.props['image'] === 'number' ? part.props['image'] : null;
+    const texture = fileId === null || pictures === null ? null : pictures.texture(fileId);
+    const image = texture?.image as {width?: number; height?: number} | undefined;
+    const geometry = new THREE.PlaneGeometry(part.w * MM, part.h * MM);
+    const [u0, v0, u1, v1] = coverUvs((image?.width ?? 1) / (image?.height ?? 1), part.w / part.h);
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v1, u1, v1, u0, v0, u1, v0], 2));
+    // Without an image (none chosen, loading or unreadable) the face is the part's material, like the box.
+    const face = new THREE.Mesh(geometry, texture === null ? material : new THREE.MeshStandardMaterial({map: texture, roughness: 0.85}));
+    face.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d + PictureFaceOffset) * MM);
+    face.userData['pictureId'] = fileId;
+    group.add(face);
+    return group;
 }
 
 /** The material darkened by `shade` (0–1), as a plinth in the shadow under the fronts; unchanged without one. */
@@ -232,10 +386,26 @@ function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh
     } else if (axis === 'z') {
         mesh.rotation.x = Math.PI / 2;
     }
+    return centredInBox(mesh, part);
+}
+
+/** A mesh built around its own origin, placed at the centre of the part's box, casting and taking shadows. */
+function centredInBox(mesh: THREE.Mesh, part: ResolvedPart): THREE.Mesh {
     mesh.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d / 2) * MM);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     return mesh;
+}
+
+/** Default rounding of a cushion's edges, mm. */
+const CushionRadius = 40;
+
+/** Upholstery: the part's box with its edges rounded by `radius` (0 square; at most half its smallest side, so the box stays its size). */
+function buildCushion(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
+    const wanted = typeof part.props['radius'] === 'number' ? part.props['radius'] : CushionRadius;
+    const radius = Math.max(0, Math.min(wanted, part.w / 2, part.h / 2, part.d / 2) - 0.5);
+    const geometry = new RoundedBoxGeometry(part.w * MM, part.h * MM, part.d * MM, 4, radius * MM);
+    return centredInBox(new THREE.Mesh(geometry, material), part);
 }
 
 /**
@@ -261,6 +431,7 @@ function buildLed(part: ResolvedPart, material: THREE.Material): THREE.Group {
     const intensity = typeof part.props['intensity'] === 'number' ? part.props['intensity'] : 5;
     const light = new THREE.RectAreaLight(color, intensity, part.w * MM, Math.max(part.d * MM, 0.02));
     light.rotation.x = -Math.PI / 2;
+    markFixtureLight(light, intensity);
     light.position.set((part.x + part.w / 2) * MM, part.y * MM, (part.z + part.d / 2) * MM);
     group.add(light);
     return group;

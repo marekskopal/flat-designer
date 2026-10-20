@@ -1,0 +1,92 @@
+{
+ "name": "Socket outlet (Schuko)",
+ "description": "A flush wall socket, one to four gangs side by side in one frame (make it 71 mm wide per gang plus 9). Elevation: its bottom edge, usually 300 mm (above a worktop 1100).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 80,
+   "depth": 10,
+   "height": 80
+  },
+  "parameters": [
+   {
+    "key": "gangs",
+    "label": "Gangs",
+    "type": "int",
+    "default": 1,
+    "min": 1,
+    "max": 4
+   }
+  ],
+  "derived": {
+   "pitch": "(W - 9) / gangs",
+   "dia": "min(pitch, H) * 0.62"
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "plastic-white-gloss"
+   },
+   {
+    "key": "insert",
+    "label": "Insert",
+    "default": "furniture-white-matt"
+   },
+   {
+    "key": "pins",
+    "label": "Pin holes",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Frame",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D - 2",
+    "material": "frame",
+    "edges": [
+     "left",
+     "right",
+     "top",
+     "bottom"
+    ]
+   },
+   {
+    "type": "cylinder",
+    "name": "Socket",
+    "repeat": {
+     "count": "gangs"
+    },
+    "axis": "z",
+    "x": "4.5 + i * pitch + (pitch - dia) / 2",
+    "y": "(H - dia) / 2",
+    "z": "D - 2",
+    "w": "dia",
+    "h": "dia",
+    "d": 1,
+    "material": "insert"
+   },
+   {
+    "type": "cylinder",
+    "name": "Pin hole",
+    "repeat": {
+     "count": "gangs * 2"
+    },
+    "axis": "z",
+    "x": "4.5 + floor(i / 2) * pitch + pitch / 2 + (i % 2 == 0 ? -12 : 7)",
+    "y": "H / 2 - 2.5",
+    "z": "D - 1",
+    "w": 5,
+    "h": 5,
+    "d": 1,
+    "material": "pins"
+   }
+  ]
+ }
+}

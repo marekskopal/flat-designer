@@ -39,6 +39,20 @@
                     </select>
                 </label>
             }
+            @case ('image') {
+                <label class="cell">
+                    <span class="cell__label">{{ label(parameter) }} <span class="cell__unit">image</span></span>
+                    <select class="input input--compact" [disabled]="disabled()" (focus)="imagesRefresh.emit()" (change)="setImage(parameter, $event)">
+                        <option value="" [selected]="value(parameter) === undefined || value(parameter) === null">None</option>
+                        @for (file of images(); track file.id) {
+                            <option [value]="file.id" [selected]="file.id === value(parameter)">{{ file.filename }}</option>
+                        }
+                        @if (unlistedImage(parameter); as fileId) {
+                            <option [value]="fileId" disabled selected>File #{{ fileId }} (not among the project's images)</option>
+                        }
+                    </select>
+                </label>
+            }
             @case ('list') {
                 @let rows = items(parameter);
                 <div class="list">

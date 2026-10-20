@@ -16,6 +16,13 @@
                     }
                 </optgroup>
             }
+            @if (editor.models().length > 0) {
+                <optgroup label="Products (3D models)">
+                    @for (model of editor.models(); track model.id) {
+                        <option [value]="'model:' + model.id" [title]="model.description">{{ model.name }}</option>
+                    }
+                </optgroup>
+            }
             @if (oldKinds().length > 0) {
                 <optgroup label="Built-in (old)">
                     @for (kind of oldKinds(); track kind.kind) {
@@ -101,8 +108,12 @@
             [groups]="groups()"
             [definitions]="editor.definitions()"
             [sceneDefinitions]="scene().definitions ?? []"
+            [models]="editor.models()"
+            [sceneModels]="scene().models ?? []"
+            [images]="editor.images()"
             [disabled]="editor.busy()"
             (fieldChange)="onFieldChange($event)"
+            (imagesRefresh)="editor.loadImages()"
         />
         @if (s.kind === 'group') {
             <ul class="members">

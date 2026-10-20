@@ -5,6 +5,7 @@ FROM dunglas/frankenphp:1.13.1-php8.5.11-alpine AS php
 COPY --from=php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
 
 RUN install-php-extensions \
+    gd \
     pdo_mysql \
     opcache
 

@@ -22,6 +22,7 @@ export type FieldType =
     | 'cabinet'
     | 'wardrobe'
     | 'definition'
+    | 'model'
     | 'custom';
 
 /** Opening types in the order of the inspector and the Add menu. */
@@ -54,7 +55,7 @@ export interface FieldDef {
 const ItemKinds = [
     'BaseCabinet', 'WallCabinet', 'TallCabinet', 'Worktop', 'Backsplash', 'Sink', 'Hob', 'LedStrip', 'Box',
     'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence', 'Wardrobe',
-    'Chair', 'Table', 'Custom',
+    'Chair', 'Table', 'Custom', 'Model',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
@@ -65,6 +66,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'kind', label: 'Kind', type: 'select', options: ItemKinds},
         {key: 'definitionId', label: 'Furniture', type: 'definition', when: isCustom},
+        {key: 'modelId', label: 'Product (3D model)', type: 'model', when: (item) => item['kind'] === 'Model'},
         {key: 'x', label: 'X', type: 'int', unit: 'mm', half: true},
         {key: 'y', label: 'Y', type: 'int', unit: 'mm', half: true},
         {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
@@ -152,6 +154,52 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             nullable: true,
             when: (element) => element['type'] === 'Window',
         },
+        {
+            key: 'leafStyle',
+            label: 'Leaf',
+            type: 'select',
+            options: ['Flush', 'Panelled', 'Glazed'],
+            half: true,
+            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Passage',
+        },
+        {
+            key: 'leafPanels',
+            label: 'Panels / panes',
+            type: 'int',
+            half: true,
+            when: (element) => element['leafStyle'] === 'Panelled' || element['leafStyle'] === 'Glazed',
+        },
+        {
+            key: 'panelHeight',
+            label: 'Solid lower panel (from the sill)',
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            when: (element) => element['type'] === 'Window',
+        },
+        {
+            key: 'shutters',
+            label: 'Shutters (outside)',
+            type: 'select',
+            options: ['Louvred', 'Solid'],
+            nullable: true,
+            half: true,
+            when: (element) => element['type'] === 'Window',
+        },
+        {
+            key: 'shutterMaterialId',
+            label: 'Shutter material',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: (element) => element['type'] === 'Window' && element['shutters'] != null,
+        },
+        {
+            key: 'shuttersClosed',
+            label: 'Shutters closed',
+            type: 'bool',
+            when: (element) => element['type'] === 'Window' && element['shutters'] != null,
+        },
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
     ],
@@ -161,6 +209,29 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'type', label: 'Type', type: 'select', options: RoomTypes, half: true},
         {key: 'ceilingHeight', label: 'Ceiling height', type: 'int', unit: 'mm', nullable: true},
         {key: 'floorMaterialId', label: 'Floor material', type: 'material', nullable: true},
+        {key: 'ceilingMaterialId', label: 'Ceiling material', type: 'material', nullable: true, when: (room) => room['ceilingHeight'] != null},
+        {
+            key: 'vaultSpacing',
+            label: 'Vaulted ceiling: beams every',
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            when: (room) => room['ceilingHeight'] != null,
+        },
+        {key: 'vaultAngle', label: 'Beams run at', type: 'int', unit: '°', half: true, when: (room) => room['vaultSpacing'] != null},
+        {key: 'vaultRise', label: 'Vault rise', type: 'int', unit: 'mm', half: true, when: (room) => room['vaultSpacing'] != null},
+        {key: 'beamWidth', label: 'Beam width', type: 'int', unit: 'mm', half: true, when: (room) => room['vaultSpacing'] != null},
+        {key: 'beamDrop', label: 'Beam below vaults', type: 'int', unit: 'mm', half: true, when: (room) => room['vaultSpacing'] != null},
+        {key: 'beamMaterialId', label: 'Beam material', type: 'material', nullable: true, when: (room) => room['vaultSpacing'] != null},
+        {key: 'skirtingHeight', label: 'Skirting', type: 'int', unit: 'mm', nullable: true, half: true},
+        {
+            key: 'skirtingMaterialId',
+            label: 'Skirting material',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: (room) => room['skirtingHeight'] != null,
+        },
         {key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
         {key: 'wallFinishes', label: 'Wall finishes [{materialId, bottom, top}] (JSON)', type: 'json'},
         {key: 'tileOriginX', label: 'Tile joints cross at x', type: 'int', unit: 'mm', nullable: true, half: true},
@@ -209,6 +280,7 @@ export function parseFieldValue(def: FieldDef, raw: string): ParsedValue {
         case 'room':
         case 'group':
         case 'definition':
+        case 'model':
             return {ok: true, value: Number(text)};
         case 'json':
             try {

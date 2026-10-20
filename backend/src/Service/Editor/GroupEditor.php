@@ -173,7 +173,7 @@ final readonly class GroupEditor
 				'groupId' => $copy->id,
 				'x' => $item->x + $dx,
 				'y' => $item->y + $dy,
-			] + $fields, null));
+			] + $fields, $item));
 		}
 
 		return $copy;

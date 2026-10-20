@@ -2,13 +2,15 @@ import {readdirSync, readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 import {FurnitureDefinitionBody} from '@app/models/furniture';
-import {Item, Material, SceneDefinition} from '@app/models/scene';
+import {Item, Material, Room, SceneDefinition} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {buildItem} from '../items';
+import {applyFixtureLights, LumenScale} from '../lights';
 import {MaterialLibrary} from '../materials';
-import {buildCustomItemBody, changedDefinitionIds, definitionLibrary, partMaterial} from './custom';
+import {PictureLibrary} from '../pictures';
+import {buildCustomItemBody, changedDefinitionIds, definitionLibrary, partMaterial, partsPointToPlan} from './custom';
 import {evaluateDefinition} from './definition';
 
 /** The global definitions seeded by the backend (backend/migrations/furniture); vitest runs in frontend/. */
@@ -91,8 +93,9 @@ describe('seeded definitions', () => {
 
         expect(body?.userData['definitionError']).toBeUndefined();
         expect(parts.length).toBeGreaterThan(0);
-        // One mesh per part, plus the handles of fronts.
-        expect(meshes(body as THREE.Group).length).toBeGreaterThanOrEqual(parts.length);
+        // One mesh per part, plus the handles of fronts; a light inside a shade (no bulb) draws none.
+        const drawn = parts.filter((p) => p.type !== 'light' || p.props['bulb'] === 'sphere' || p.props['bulb'] === 'disc');
+        expect(meshes(body as THREE.Group).length).toBeGreaterThanOrEqual(drawn.length);
     });
 });
 
@@ -161,6 +164,33 @@ describe('new part types and options', () => {
         expect(plain.slice(0, 4).map(color)).toEqual(['#c0c0c0', '#c0c0c0', '#c0c0c0', '#c0c0c0']);
         expect(color(plain[4])).toBe('#b08850');
         expect(color(meshes(build(body([{...door, mirror: true}], slots)))[4])).toBe('#d8dde0');
+    });
+
+    it('rounds a cushion by its radius, at most half its smallest side, keeping the box', () => {
+        const bounds = (mesh: THREE.Mesh): THREE.Vector3 => {
+            mesh.geometry.computeBoundingBox();
+            return mesh.geometry.boundingBox!.getSize(new THREE.Vector3());
+        };
+        const seat = {type: 'cushion', x: 0, y: 400, z: 0, w: 600, h: 150, d: 400};
+        const [rounded] = meshes(build(body([seat])));
+        // The box stays the part's size; the mesh sits at the part's centre, shifted to the item centre.
+        expect(bounds(rounded).toArray().map((v) => Math.round(v * 1000))).toEqual([600, 150, 400]);
+        expect(rounded.position.toArray().map((v) => Math.round(v * 1000))).toEqual([0, 475, 0]);
+        // A corner vertex of a square-edged cushion is at the box corner; a rounded one is pulled in by the radius.
+        const corner = (mesh: THREE.Mesh): number => {
+            const position = mesh.geometry.getAttribute('position');
+            let nearest = Infinity;
+            for (let i = 0; i < position.count; i++) {
+                nearest = Math.min(nearest, Math.hypot(position.getX(i) - 0.3, position.getY(i) - 0.075, position.getZ(i) - 0.2));
+            }
+            return nearest;
+        };
+        const [square] = meshes(build(body([{...seat, radius: 0}])));
+        expect(corner(square)).toBeLessThan(0.001);
+        // The default 40 mm pulls the corner in; a radius above half the height (75) is clamped to it.
+        expect(corner(rounded)).toBeGreaterThan(0.02);
+        const [clamped] = meshes(build(body([{...seat, radius: 500}])));
+        expect(bounds(clamped).toArray().map((v) => Math.round(v * 1000))).toEqual([600, 150, 400]);
     });
 
     it('darkens a shaded board and narrows a board to its back width', () => {
@@ -241,5 +271,126 @@ describe('changedDefinitionIds', () => {
         const edited = sceneDefinition(2, shelf, '2026-10-18T11:00:00+00:00');
         const after = definitionLibrary([sceneDefinition(1, shelf), edited, sceneDefinition(4, shelf)]);
         expect([...changedDefinitionIds(before, after)].sort()).toEqual([2, 3, 4]);
+    });
+});
+
+describe('picture parts', () => {
+    const poster: FurnitureDefinitionBody = {
+        format: 1,
+        size: {width: 700, depth: 30, height: 1000},
+        parameters: [{key: 'poster', label: 'Picture', type: 'image'}],
+        parts: [{type: 'picture', name: 'Print', x: 0, y: 0, z: 0, w: 'W', h: 'H', d: 'D', image: {expr: 'poster'}}],
+    };
+    const definitions = definitionLibrary([sceneDefinition(3, poster)]);
+    const size = {width: 700, depth: 30, height: 1000};
+    /** A library that has loaded a 2:1 landscape image as file 12. */
+    const library = {
+        texture: (fileId: number): THREE.Texture | null =>
+            fileId === 12 ? Object.assign(new THREE.Texture(), {image: {width: 200, height: 100}}) : null,
+    } as unknown as PictureLibrary;
+    const face = (group: THREE.Object3D): THREE.Mesh => {
+        let found: THREE.Mesh | null = null;
+        group.traverse((o) => {
+            if (o instanceof THREE.Mesh && o.userData['pictureId'] !== undefined) {
+                found = o;
+            }
+        });
+        return found as unknown as THREE.Mesh;
+    };
+
+    it('shows the image on the front face, cropped to fill it', () => {
+        const body = buildCustomItemBody(customItem(3, size, {values: {poster: 12}}), materials(), definitions, library) as THREE.Group;
+        const front = face(body);
+        expect(front.userData['pictureId']).toBe(12);
+        expect((front.material as THREE.MeshStandardMaterial).map).not.toBeNull();
+        // A 2:1 image on a 0.7:1 face keeps its middle 35 %.
+        const u = front.geometry.getAttribute('uv');
+        expect(u.getX(0)).toBeCloseTo(0.325, 6);
+        expect(u.getX(1)).toBeCloseTo(0.675, 6);
+        // Half a millimetre in front of its box (in the part's frame).
+        expect(front.position.z).toBeCloseTo(0.0305, 9);
+    });
+
+    it('is plain without an image, or while it loads', () => {
+        for (const params of [{}, {values: {poster: 99}}]) {
+            const front = face(buildCustomItemBody(customItem(3, size, params), materials(), definitions, library) as THREE.Group);
+            expect((front.material as THREE.MeshStandardMaterial).map).toBeNull();
+        }
+    });
+});
+
+describe('light and cable parts', () => {
+    const pendant: FurnitureDefinitionBody = {
+        format: 1,
+        size: {width: 140, depth: 140, height: 900},
+        parts: [
+            {
+                type: 'light',
+                name: 'Bulb',
+                x: 0,
+                y: 0,
+                z: 0,
+                w: 'W',
+                h: 'W',
+                d: 'D',
+                kind: 'point',
+                lumens: 400,
+                kelvin: 2200,
+                bulb: 'sphere',
+                shadow: true,
+            },
+            {type: 'cable', name: 'Cable', x: 'W / 2 - 3', y: 'W', z: 'D / 2 - 3', w: 6, h: 'H - W', d: 6, path: [{x: 1070, z: 70}], rose: 90},
+        ],
+    };
+    const definitions = definitionLibrary([sceneDefinition(4, pendant)]);
+    const size = {width: 140, depth: 140, height: 900};
+    const flat = (ceilingHeight: number): Room => ({
+        id: 1,
+        code: 'R',
+        name: 'Living',
+        type: 'Living',
+        polygon: [[0, 0], [5000, 0], [5000, 5000], [0, 5000]],
+        area: 0,
+        ceilingHeight,
+        floorMaterialId: null,
+        wallFinishes: [],
+        tileOriginX: null,
+        tileOriginY: null,
+    });
+    const item = (z: number): Item => ({...customItem(4, size), x: 1000, y: 1000, z});
+
+    it('gives a point light of the lumens, off until the engine switches it on', () => {
+        const body = buildCustomItemBody(item(1600), materials(), definitions, null, flat(2600)) as THREE.Group;
+        const lights: THREE.PointLight[] = [];
+        body.traverse((o) => o instanceof THREE.PointLight && lights.push(o));
+        expect(lights).toHaveLength(1);
+        expect(lights[0].intensity).toBe(0);
+        expect(applyFixtureLights(body, true)).toBe(1);
+        expect(lights[0].power).toBeCloseTo(400 * LumenScale, 6);
+        expect(lights[0].castShadow).toBe(true);
+        applyFixtureLights(body, false);
+        expect(lights[0].intensity).toBe(0);
+    });
+
+    it('runs the cable up to the room ceiling and along its path to the rose', () => {
+        const top = (room: Room): number => {
+            const body = buildCustomItemBody(item(1600), materials(), definitions, null, room) as THREE.Group;
+            const box = new THREE.Box3().setFromObject(body);
+            return Math.round(box.max.y / 0.001);
+        };
+        // The item's bottom is at 1600: a 2600 ceiling is 1000 above it, a 3000 one 1400, whatever the item's height.
+        expect(top(flat(2600))).toBe(1000);
+        expect(top(flat(3000))).toBe(1400);
+    });
+});
+
+describe('partsPointToPlan', () => {
+    it('turns the parts frame with the item: its front faces south at 0°, east at 90°', () => {
+        const item = {...customItem(1, {width: 1000, depth: 400, height: 800}), x: 2000, y: 3000};
+        // The front-right corner (x = W, z = D).
+        expect(partsPointToPlan({...item, rotation: 0}, 1000, 400)).toEqual({x: 2500, y: 2800});
+        const turned = partsPointToPlan({...item, rotation: 90}, 1000, 400);
+        expect(turned.x).toBeCloseTo(2200, 6);
+        expect(turned.y).toBeCloseTo(3500, 6);
     });
 });

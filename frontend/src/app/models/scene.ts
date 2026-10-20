@@ -3,12 +3,14 @@ import {FurnitureDefinitionBody} from './furniture';
 // Mirrors the backend DTOs (FlatDesigner\Dto). All lengths are millimetres in plan coordinates:
 // origin at the inner south-west corner of the floor, x east, y north.
 
-export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel';
+export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
 export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
+export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
+export type ShutterStyle = 'Louvred' | 'Solid';
 export type ItemKind =
     | 'BaseCabinet'
     | 'WallCabinet'
@@ -32,7 +34,9 @@ export type ItemKind =
     | 'Chair'
     | 'Table'
     /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
-    | 'Custom';
+    | 'Custom'
+    /** A bought product drawn from a 3D model (`modelId`, in the scene's `models`), scaled to fit the item's box. */
+    | 'Model';
 
 export type PlanPoint = [number, number];
 
@@ -81,6 +85,22 @@ export interface Room {
     /** Plan point (mm) where tile joints cross; floor tiles, wall bands and tiled items share the grid. Null: plan origin. */
     tileOriginX: number | null;
     tileOriginY: number | null;
+    /** Ceiling surface; null: white plaster (also when missing, in older versions). */
+    ceilingMaterialId?: number | null;
+    /**
+     * Vaulted ceiling: shallow vaults `vaultRise` high between parallel beams `vaultSpacing` apart, running at
+     * `vaultAngle` degrees (counter-clockwise from plan x). The crowns are at `ceilingHeight`; the beams, `beamWidth`
+     * wide, hang `beamDrop` below the springing, in `beamMaterialId` (null: white paint). Null spacing: flat.
+     */
+    vaultSpacing?: number | null;
+    vaultAngle?: number;
+    vaultRise?: number;
+    beamWidth?: number;
+    beamDrop?: number;
+    beamMaterialId?: number | null;
+    /** Skirting boards along the room's walls (doors left free), mm high; null: none. */
+    skirtingHeight?: number | null;
+    skirtingMaterialId?: number | null;
 }
 
 /**
@@ -119,6 +139,18 @@ export interface Opening {
     mullions?: number;
     transoms?: number;
     sillBoard?: number | null;
+    /** Door leaves: a plain slab, raised panels or glass panes (`leafPanels` of them, stacked). Missing in older snapshots: Flush. */
+    leafStyle?: DoorLeafStyle;
+    leafPanels?: number;
+    /** Window: solid lower panel of the glazing, mm from the sill; null: glass down to the bottom rail. */
+    panelHeight?: number | null;
+    /**
+     * Window: exterior shutters, two leaves on the outer face (opposite `side`), in `shutterMaterialId` (null: painted
+     * timber), folded back against the wall unless `shuttersClosed`.
+     */
+    shutters?: ShutterStyle | null;
+    shutterMaterialId?: number | null;
+    shuttersClosed?: boolean;
 }
 
 export interface Wall {
@@ -187,6 +219,8 @@ export interface Item {
     kind: ItemKind;
     /** The furniture definition of a `Custom` item. */
     definitionId: number | null;
+    /** The 3D model of a `Model` item; missing in versions saved before models existed. */
+    modelId?: number | null;
     name: string;
     x: number;
     y: number;
@@ -229,6 +263,43 @@ export interface Scene {
     variantSets?: VariantSet[];
     /** The furniture definitions of the `Custom` items (also deleted ones still in use); absent in older versions. */
     definitions?: SceneDefinition[];
+    /** The plan image under the top view, for tracing; absent in older versions. */
+    underlay?: Underlay | null;
+    /** The 3D models of the `Model` items; absent in older versions. */
+    models?: SceneModel[];
+    /** The project files the `Custom` items show as pictures; absent in older versions. */
+    pictures?: number[];
+}
+
+/** A 3D model as the scene carries it: its native size (mm) to scale it by, and its credits. */
+export interface SceneModel {
+    id: number;
+    name: string;
+    width: number;
+    depth: number;
+    height: number;
+    license: string;
+    author: string;
+    sourceUrl: string;
+    /** Changes when the model is edited; the file itself never changes. */
+    updatedAt: string;
+}
+
+/** How an underlay image lies in the plan: its top-left pixel at (x, y), `scale` mm per pixel, turned `rotation` degrees counter-clockwise. */
+export interface UnderlayPlacement {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+}
+
+/** A plan image (a project file) laid under a floor's top view. */
+export interface Underlay extends UnderlayPlacement {
+    fileId: number;
+    filename: string;
+    widthPx: number;
+    heightPx: number;
+    opacity: number;
 }
 
 /** A furniture definition as the scene carries it; `updatedAt` changes whenever it is edited. */

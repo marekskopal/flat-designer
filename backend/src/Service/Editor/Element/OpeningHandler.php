@@ -9,10 +9,12 @@ use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Wall;
@@ -25,7 +27,8 @@ use FlatDesigner\Service\Editor\FieldReader;
  * Doors, passages and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must
  * fit within the wall's length and height and must not overlap another opening of that wall. A sliding or
  * pocket door also needs the wall beside it, towards `hinge`, free for its open leaf (a pocket door a wall
- * thick enough for the pocket). Only a window down to the floor can be `walkable`, with one or two sashes.
+ * thick enough for the pocket). Only a window down to the floor can be `walkable`, with one or two sashes. Leaf
+ * styles are for doors with a leaf; a solid lower panel and shutters for windows.
  */
 final readonly class OpeningHandler implements ElementHandler
 {
@@ -35,8 +38,22 @@ final readonly class OpeningHandler implements ElementHandler
 
 	public const int MaxSillBoard = 300;
 
-	public function __construct(private OpeningRepository $openingRepository, private WallRepository $wallRepository)
-	{
+	/** The look of a plain opening: flush leaves, glass down to the bottom rail, no shutters. */
+	private const array DefaultStyle = [
+		'leafStyle' => 'Flush',
+		'leafPanels' => 2,
+		'panelHeight' => null,
+		'shutters' => null,
+		'shutterMaterialId' => null,
+		'shuttersClosed' => false,
+	];
+
+	public function __construct(
+		private OpeningRepository $openingRepository,
+		private WallRepository $wallRepository,
+		private MaterialResolver $materialResolver,
+		private OpeningLook $look,
+	) {
 	}
 
 	public function type(): ElementTypeEnum
@@ -47,7 +64,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard'];
+		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard', 'leafStyle', 'leafPanels', 'panelHeight', 'shutters', 'shutterMaterialId', 'shuttersClosed'];
 	}
 
 	/** @return list<string> */
@@ -78,7 +95,7 @@ final readonly class OpeningHandler implements ElementHandler
 				'mullions' => 1,
 				'transoms' => 0,
 				'sillBoard' => null,
-			];
+			] + self::DefaultStyle;
 		}
 
 		$type = OpeningTypeEnum::tryFrom(is_string($fields['type'] ?? null) ? $fields['type'] : '') ?? OpeningTypeEnum::Door;
@@ -101,7 +118,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'mullions' => 1,
 			'transoms' => 0,
 			'sillBoard' => null,
-		];
+		] + self::DefaultStyle;
 	}
 
 	public function find(Floor $floor, int $id): ?Opening
@@ -182,7 +199,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'entrance' => $fields->bool('entrance'),
 			'walkable' => $walkable,
 			'frameStyle' => ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
-		] + self::leafFields($type, $hinge, $width, $fields) + $window;
+		] + self::leafFields($type, $hinge, $width, $fields) + $window + $this->look->fields($type, $height, $fields);
 	}
 
 	/**
@@ -286,6 +303,12 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->mullions = $fields->int('mullions', 0, self::MaxMullions);
 		$opening->transoms = $fields->int('transoms', 0, self::MaxTransoms);
 		$opening->sillBoard = $fields->nullableInt('sillBoard', 0, self::MaxSillBoard);
+		$opening->leafStyle = $fields->enum('leafStyle', DoorLeafStyleEnum::class);
+		$opening->leafPanels = $fields->int('leafPanels', 1, OpeningLook::MaxLeafPanels);
+		$opening->panelHeight = $fields->nullableInt('panelHeight', 0, State::MaxSize);
+		$opening->shutters = $fields->nullableEnum('shutters', ShutterStyleEnum::class);
+		$opening->shutterMaterial = $this->materialResolver->resolve($fields->nullableId('shutterMaterialId'));
+		$opening->shuttersClosed = $fields->bool('shuttersClosed');
 		$this->openingRepository->persist($opening);
 	}
 

@@ -8,16 +8,22 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\AdminUserUpdateDto;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Service\Admin\Exception\AdminUserException;
+use FlatDesigner\Service\Project\ProjectFileProvider;
 use FlatDesigner\Validator\UserFieldValidator;
 
 /** User management for admins. Guards against locking everyone out (last admin, self-delete). */
 final readonly class AdminUserService
 {
-	public function __construct(private UserRepository $userRepository, private ProjectRepository $projectRepository)
-	{
+	public function __construct(
+		private UserRepository $userRepository,
+		private ProjectRepository $projectRepository,
+		private ModelAssetRepository $modelRepository,
+		private ProjectFileProvider $projectFileProvider,
+	) {
 	}
 
 	/** @return list<User> */
@@ -64,7 +70,10 @@ final readonly class AdminUserService
 			throw new AdminUserException(sprintf('%s owns %d project(s); delete them first.', $target->name, $projects));
 		}
 
+		// The models of the user's library go with the row (ON DELETE CASCADE); then their stored files.
+		$storageKeys = $this->modelRepository->storageKeysOfUser($target->id);
 		$this->userRepository->delete($target);
+		$this->projectFileProvider->deleteStoredObjects($storageKeys);
 	}
 
 	private function applyEmail(User $target, string $email): void

@@ -44,6 +44,7 @@ final readonly class ItemHandler implements ElementHandler
 		private ItemKindCatalog $catalog,
 		private FurnitureDefinitionRepository $definitionRepository,
 		private CustomItemValidator $customValidator,
+		private ItemModelLink $modelLink,
 	) {
 	}
 
@@ -55,7 +56,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'groupId', 'kind', 'definitionId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
 	}
 
 	/** @return list<string> */
@@ -78,12 +79,19 @@ final readonly class ItemHandler implements ElementHandler
 			$name = $definition->name;
 			$size = self::definitionSize($definition) + $size;
 		}
+		// A Model item at its model's own size.
+		$model = $kind === ItemKindEnum::Model ? $this->modelLink->find($fields['modelId'] ?? null) : null;
+		if ($model !== null) {
+			$name = $model->name;
+			$size = ['width' => $model->width, 'depth' => $model->depth, 'height' => $model->height] + $size;
+		}
 
 		return [
 			'roomId' => null,
 			'groupId' => null,
 			'kind' => ItemKindEnum::Box->value,
 			'definitionId' => null,
+			'modelId' => null,
 			'name' => $name,
 			'x' => 0,
 			'y' => 0,
@@ -133,6 +141,12 @@ final readonly class ItemHandler implements ElementHandler
 		$depth = $fields->int('depth', 1, State::MaxSize);
 		$height = $fields->int('height', 1, State::MaxSize);
 		$params = self::params($fields->raw('params'));
+		if ($kind !== ItemKindEnum::Custom && $definition !== null) {
+			// Switching away from Custom: the definition and the params that belonged to it go.
+			$definitionId = null;
+			$definition = null;
+			$params = [];
+		}
 		CabinetParamsValidator::validate($kind, $params, $width, $height);
 		WardrobeParamsValidator::validate($kind, $params, $height);
 		ChairParamsValidator::validate($kind, $params, $width, $height);
@@ -145,6 +159,12 @@ final readonly class ItemHandler implements ElementHandler
 			'groupId' => $groupId,
 			'kind' => $kind->value,
 			'definitionId' => $definitionId,
+			'modelId' => $this->modelLink->validate(
+				$floor,
+				$kind,
+				$fields->nullableId('modelId'),
+				$current instanceof Item ? $current : null,
+			),
 			'name' => $fields->string('name', 255),
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
 			'y' => $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit),
@@ -157,6 +177,7 @@ final readonly class ItemHandler implements ElementHandler
 			'params' => $params,
 		];
 		$this->customValidator->validate(
+			$floor->project,
 			$kind,
 			$definition,
 			$params,
@@ -167,6 +188,7 @@ final readonly class ItemHandler implements ElementHandler
 				array_intersect_key($this->state($current), array_flip(self::CustomGeometry)),
 				array_intersect_key($state, array_flip(self::CustomGeometry)),
 			),
+			$current instanceof Item && $current->params !== null ? (JsonDecoder::decodeObject($current->params)['values'] ?? null) : null,
 		);
 
 		return $state;
@@ -223,6 +245,7 @@ final readonly class ItemHandler implements ElementHandler
 		$item->kind = $fields->enum('kind', ItemKindEnum::class);
 		$definitionId = $fields->nullableId('definitionId');
 		$item->definition = $definitionId === null ? null : $this->definitionRepository->findById($definitionId);
+		$item->model = $this->modelLink->find($fields->nullableId('modelId'));
 		$item->name = $fields->string('name', 255);
 		$item->x = $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit);
 		$item->y = $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit);

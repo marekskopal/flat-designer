@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {Item, PlanPoint, Room, Scene, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -6,14 +6,17 @@ import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.j
 import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import {addRoom, buildBuilding, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
+import {addRoom, buildBuilding, buildCeilingSteps, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
-import {buildItem} from './items';
+import {buildItem, ItemAssets} from './items';
+import {applyFixtureLights} from './lights';
 import {MaterialLibrary} from './materials';
 import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
+import {ModelFetcher, ModelLibrary} from './models';
+import {PictureFetcher, PictureLibrary} from './pictures';
 import {
     alongWall,
     Bounds,
@@ -43,8 +46,10 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
+import {PresentationPipeline, PresentationPixelRatio, RenderQuality, sunShadowMapSize, SunShadowRadius} from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
 
@@ -60,6 +65,11 @@ interface CameraTween {
 }
 
 const BackgroundColor = '#e8e4dd';
+/** The sky after dark. */
+const NightBackgroundColor = '#1b2029';
+/** Daylight (sun, sky, reflections) by day and by night: at night only a faint blue sky light is left. */
+const Daylight = {sun: 2.4, sky: 1.4, environment: 0.45};
+const Nightlight = {sun: 0, sky: 0.05, environment: 0.03};
 const HighlightColor = '#d9822b';
 const TweenDuration = 900;
 /** Framing of a floor with nothing on it yet (plan mm). */
@@ -171,13 +181,23 @@ export class ViewerEngine {
     public onToolStatus: (status: ToolStatus | null) => void = () => undefined;
     /** The readout of the measure tool changed; null when it is off. */
     public onMeasureStatus: (status: MeasureStatus | null) => void = () => undefined;
+    /** Both calibration points were clicked (plan mm, where they lie on the underlay as placed now). */
+    public onCalibrate: (a: Vec2, b: Vec2) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
     private readonly scene = new THREE.Scene();
     private readonly camera = new THREE.PerspectiveCamera(OrbitFov, 1, 0.05, 300);
     private readonly controls: OrbitControls;
-    private readonly sun = new THREE.DirectionalLight('#fff3e0', 2.4);
+    private readonly sun = new THREE.DirectionalLight('#fff3e0', Daylight.sun);
+    private readonly sky = new THREE.HemisphereLight('#fbf8f2', '#a9a196', Daylight.sky);
+    /** After dark: no sun, the flat lit by its own lights. */
+    private night = false;
+    /** The fixture lights (light parts, LED strips) are on. */
+    private lightsOn = false;
+    private quality: RenderQuality = 'fast';
+    /** The post-processing of the presentation quality; null in the fast one. */
+    private presentation: PresentationPipeline | null = null;
     private readonly sectionPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 10);
     private readonly resizeObserver: ResizeObserver;
     private readonly raycaster = new THREE.Raycaster();
@@ -206,6 +226,15 @@ export class ViewerEngine {
     /** The measure tool: on in any top view (edit mode or not), a click places the points. */
     private measuring = false;
     private measurement: Measurement = NoMeasurement;
+    /** The measure tool picks the two calibration points of the underlay: no snapping, and both are reported. */
+    private calibrating = false;
+    /** The plan image under the top view, shown there only. */
+    private underlay: THREE.Mesh | null = null;
+    /** Loads the 3D models of `Model` items; none until the host supplies a fetcher. */
+    private modelLibrary: ModelLibrary | null = null;
+    private pictureLibrary: PictureLibrary | null = null;
+    private underlayImage: TexImageSource | null = null;
+    private underlayVisible = true;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -314,13 +343,18 @@ export class ViewerEngine {
         this.clearPreview();
         this.loads++;
         const previous = this.sceneData;
+        // Pictures of files deleted since go plain, and a fresh scene listing a file lets a failed load try again: their
+        // items are redrawn. Models the same way.
+        const changedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
+        const changedModels = new Set(this.modelLibrary?.sync((scene.models ?? []).map((m) => m.id)) ?? []);
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
-            this.applyChanges(previous, scene);
+            this.applyChanges(previous, scene, changedPictures, changedModels);
         } else {
             this.build(scene);
         }
         this.sceneData = scene;
         this.showVariants(scene);
+        this.applyLights();
 
         const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
@@ -392,8 +426,9 @@ export class ViewerEngine {
 
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         const definitions = definitionLibrary(scene.definitions);
+        const assets = this.itemAssets(scene);
         for (const item of scene.items) {
-            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions);
+            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, assets);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -408,8 +443,11 @@ export class ViewerEngine {
         this.indexWalls();
     }
 
-    /** Rebuilds what differs between two states of the shown floor. */
-    private applyChanges(previous: Scene, scene: Scene): void {
+    /**
+     * Rebuilds what differs between two states of the shown floor, and the items whose picture or model changed in the
+     * libraries (dropped, or failed and listed again).
+     */
+    private applyChanges(previous: Scene, scene: Scene, changedPictures: ReadonlySet<number>, changedModels: ReadonlySet<number>): void {
         const parts = this.parts;
         const materials = this.materials;
         const content = this.content;
@@ -428,7 +466,9 @@ export class ViewerEngine {
             (i) =>
                 changedItems.has(i.id) ||
                 (i.roomId !== null && changedRooms.has(i.roomId)) ||
-                (i.definitionId !== null && changedDefinitions.has(i.definitionId)),
+                (i.definitionId !== null && changedDefinitions.has(i.definitionId)) ||
+                this.showsPicture(i, changedPictures) ||
+                (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -438,8 +478,9 @@ export class ViewerEngine {
             this.items.delete(id);
         }
         const roomsById = new Map(scene.rooms.map((room) => [room.id, room]));
+        const assets = this.itemAssets(scene);
         for (const item of rebuiltItems) {
-            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions);
+            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions, assets);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -483,8 +524,14 @@ export class ViewerEngine {
             this.labels.set(room.id, label);
             content.add(label);
         }
+        if (wallsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
+            // Steps between ceilings depend on the neighbouring rooms and on which edges have walls.
+            this.disposeObject(parts.ceilingSteps);
+            parts.ceilingSteps = buildCeilingSteps(scene.rooms, scene.walls, materials);
+            parts.ceilings.add(parts.ceilingSteps);
+        }
         if (wallsChanged) {
-            // Wall finishes leave the doors free, so they follow the walls of unchanged rooms too.
+            // Wall finishes and skirting leave the doors free, so they follow the walls of unchanged rooms too.
             for (const room of scene.rooms) {
                 const roomParts = parts.rooms.get(room.id);
                 if (roomParts === undefined || changedRooms.has(room.id) || roomParts.finishes === null) {
@@ -541,10 +588,68 @@ export class ViewerEngine {
     }
 
     /** Takes an object out of the scene and frees its geometry (and materials the library does not share). */
+    private itemAssets(scene: Scene): ItemAssets {
+        return {models: new Map((scene.models ?? []).map((m) => [m.id, m])), modelLibrary: this.modelLibrary, pictures: this.pictureLibrary};
+    }
+
+    /** Draws the `Model` items of a model that finished loading (all of them with null), in place of their placeholders. */
+    private rebuildModelItems(modelId: number | null): void {
+        this.rebuildItems((item) => item.kind === 'Model' && (modelId === null || item.modelId === modelId));
+    }
+
+    /** Draws the items showing an image that finished loading (all pictures with null), in place of plain ones. */
+    private rebuildPictureItems(fileId: number | null): void {
+        this.rebuildItems((item) => this.showsPicture(item, fileId === null ? null : new Set([fileId])));
+    }
+
+    /** Whether the item as drawn has a picture of one of the files (of any file with null); only Custom items have them. */
+    private showsPicture(item: Item, fileIds: ReadonlySet<number> | null): boolean {
+        if (item.kind !== 'Custom' || fileIds?.size === 0) {
+            return false;
+        }
+        let shows = false;
+        this.items.get(item.id)?.traverse((o) => {
+            const id = o.userData['pictureId'] as number | null | undefined;
+            shows ||= typeof id === 'number' && (fileIds === null || fileIds.has(id));
+        });
+        return shows;
+    }
+
+    private rebuildItems(rebuild: (item: Item) => boolean): void {
+        const scene = this.sceneData;
+        const content = this.content;
+        const materials = this.materials;
+        if (scene === null || content === null || materials === null) {
+            return;
+        }
+        const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
+        const definitions = definitionLibrary(scene.definitions);
+        const hidden = hiddenItemIds(scene);
+        const assets = this.itemAssets(scene);
+        for (const item of scene.items) {
+            if (!rebuild(item)) {
+                continue;
+            }
+            const previous = this.items.get(item.id);
+            if (previous !== undefined) {
+                this.disposeObject(previous);
+            }
+            const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, assets);
+            object.visible = !hidden.has(item.id);
+            this.items.set(item.id, object);
+            content.add(object);
+        }
+        this.applyLights();
+        if (this.selection?.kind === 'item' || this.selection?.kind === 'group') {
+            this.setSelection(this.selection);
+        }
+    }
+
     private disposeObject(object: THREE.Object3D): void {
         object.removeFromParent();
         object.traverse((o) => {
-            if (o instanceof THREE.Mesh) {
+            // Model instances share their geometry and materials with the model library's template.
+            if (o instanceof THREE.Mesh && o.userData['shared'] !== true) {
                 (o.geometry as THREE.BufferGeometry).dispose();
                 for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
                     if (this.materials?.owns(material) !== true && material !== this.parts?.sectionMaterial) {
@@ -673,6 +778,70 @@ export class ViewerEngine {
     }
 
     /** Dimension lines along the room edges, split at doors and windows; drawn in the top view only. */
+    /**
+     * Day or night, and whether the fixture lights are on. At night the sun is gone and the sky almost dark; the lights
+     * keep their shaders when switched off (intensity 0), so toggling compiles nothing.
+     */
+    /**
+     * Fast for working, or presentation for screenshots and shared views: ambient occlusion and SMAA through a
+     * post-processing pipeline, a supersampled canvas, a larger and softer sun shadow. The fast quality stays the
+     * default; switching rebuilds the shadow map, nothing of the scene.
+     */
+    public setQuality(quality: RenderQuality): void {
+        if (quality === this.quality) {
+            return;
+        }
+        this.quality = quality;
+        this.presentation?.dispose();
+        this.presentation = null;
+        const device = window.devicePixelRatio;
+        const pixelRatio = quality === 'presentation' ? Math.max(device, PresentationPixelRatio) : Math.min(device, 2);
+        this.renderer.setPixelRatio(pixelRatio);
+        if (quality === 'presentation') {
+            this.presentation = new PresentationPipeline(this.renderer, this.scene, this.camera);
+        }
+        const size = sunShadowMapSize(quality, this.renderer.capabilities.maxTextureSize);
+        this.sun.shadow.mapSize.set(size, size);
+        this.sun.shadow.radius = SunShadowRadius[quality];
+        // A new size needs a new map.
+        this.sun.shadow.map?.dispose();
+        this.sun.shadow.map = null;
+        this.resize();
+    }
+
+    public getQuality(): RenderQuality {
+        return this.quality;
+    }
+
+    /** The scene into the canvas: directly, or through the presentation pipeline. */
+    private renderMain(): void {
+        if (this.presentation !== null) {
+            this.presentation.render();
+        } else {
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+
+    public setLighting(night: boolean, lightsOn: boolean): void {
+        this.night = night;
+        this.lightsOn = lightsOn;
+        const daylight = night ? Nightlight : Daylight;
+        this.sun.intensity = daylight.sun;
+        // No sun, no shadow pass for it.
+        this.sun.castShadow = !night;
+        this.sky.intensity = daylight.sky;
+        this.sky.color.set(night ? '#5a6f99' : '#fbf8f2');
+        this.scene.environmentIntensity = daylight.environment;
+        this.scene.background = new THREE.Color(night ? NightBackgroundColor : BackgroundColor);
+        this.applyLights();
+    }
+
+    private applyLights(): void {
+        if (this.content !== null) {
+            applyFixtureLights(this.content, this.lightsOn);
+        }
+    }
+
     public setDimensionsVisible(visible: boolean): void {
         this.dimensionsVisible = visible;
     }
@@ -704,6 +873,58 @@ export class ViewerEngine {
         this.measurement = NoMeasurement;
         this.updateMeasure();
         return true;
+    }
+
+    /** How the 3D models of `Model` items are fetched (with the page's sign-in, or through a share link). */
+    public setModelFetcher(fetcher: ModelFetcher): void {
+        this.modelLibrary?.dispose();
+        this.modelLibrary = new ModelLibrary(fetcher);
+        this.modelLibrary.onLoaded = (modelId): void => this.rebuildModelItems(modelId);
+        if (this.sceneData !== null) {
+            this.rebuildModelItems(null);
+        }
+    }
+
+    public setPictureFetcher(fetcher: PictureFetcher): void {
+        this.pictureLibrary?.dispose();
+        this.pictureLibrary = new PictureLibrary(fetcher);
+        this.pictureLibrary.onLoaded = (fileId): void => this.rebuildPictureItems(fileId);
+        if (this.sceneData !== null) {
+            this.rebuildPictureItems(null);
+        }
+    }
+
+    /**
+     * The plan image under the top view, drawn over the plan at its opacity; null (or no image yet) removes it.
+     * The image is the decoded file of `underlay.fileId`.
+     */
+    public setUnderlay(underlay: Underlay | null, image: TexImageSource | null): void {
+        if (this.underlay !== null && underlay !== null && image === this.underlayImage) {
+            // The same image moved or faded: no new texture upload.
+            updateUnderlay(this.underlay, underlay);
+            return;
+        }
+        if (this.underlay !== null) {
+            disposeUnderlay(this.underlay);
+            this.underlay = null;
+        }
+        this.underlayImage = image;
+        if (underlay !== null && image !== null) {
+            this.underlay = buildUnderlay(underlay, image);
+            this.underlay.visible = false;
+            this.scene.add(this.underlay);
+        }
+    }
+
+    public setUnderlayVisible(visible: boolean): void {
+        this.underlayVisible = visible;
+    }
+
+    /** With the measure tool on: the two points clicked next calibrate the underlay (`onCalibrate`), without snapping. */
+    public setCalibrating(on: boolean): void {
+        this.calibrating = on;
+        this.measurement = NoMeasurement;
+        this.updateMeasure();
     }
 
     /** Cuts everything above `height` (mm) away; `null` shows the full height. */
@@ -743,13 +964,50 @@ export class ViewerEngine {
         }
     }
 
-    /** The orbit camera in plan mm (where a tween is heading, if one runs), e.g. to save it in a share link. */
+    /**
+     * The camera in plan mm (where a tween is heading, if one runs), e.g. to save it in a share link or a view. During a
+     * walk it is the walker's eye, looking 2 m ahead: the same shot as a 3D view.
+     */
     public cameraPose(): CameraPose {
         const toPlan = (v: THREE.Vector3): CameraPoint => ({x: Math.round(v.x / MM), y: Math.round(-v.z / MM), z: Math.round(v.y / MM)});
+        if (this.walkthrough !== null) {
+            const ahead = this.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(2).add(this.camera.position);
+            return {position: toPlan(this.camera.position), target: toPlan(ahead)};
+        }
         return {
             position: toPlan(this.tween?.toPosition ?? this.camera.position),
             target: toPlan(this.tween?.toTarget ?? this.controls.target),
         };
+    }
+
+    /** Models and pictures still loading: a screenshot waits for 0. */
+    public pendingAssets(): number {
+        return (this.modelLibrary?.pending() ?? 0) + (this.pictureLibrary?.pending() ?? 0);
+    }
+
+    /**
+     * The view as a PNG of `width` × `height` CSS pixels at `pixelRatio`, rendered off the visible size (the panel inset is
+     * left out, so the floor is framed in the whole image). The room labels are HTML over the canvas and not in it.
+     */
+    public capture(width: number, height: number, pixelRatio = 2, quality: RenderQuality = 'presentation'): Promise<Blob> {
+        const previousQuality = this.quality;
+        this.setQuality(quality);
+        const previousRatio = this.renderer.getPixelRatio();
+        this.renderer.setPixelRatio(pixelRatio);
+        this.renderer.setSize(width, height, false);
+        this.camera.aspect = width / height;
+        this.camera.clearViewOffset();
+        this.camera.updateProjectionMatrix();
+        this.presentation?.setSize(width, height, pixelRatio);
+        this.renderMain();
+        // The drawing buffer is read now, before the browser composites (and clears) it.
+        const blob = new Promise<Blob>((resolve, reject) =>
+            this.renderer.domElement.toBlob((b) => (b === null ? reject(new Error('The view could not be captured.')) : resolve(b)), 'image/png'),
+        );
+        this.renderer.setPixelRatio(previousRatio);
+        this.setQuality(previousQuality);
+        this.resize();
+        return blob;
     }
 
     public setCameraPose(pose: CameraPose, animate = true): void {
@@ -869,6 +1127,7 @@ export class ViewerEngine {
 
     public dispose(): void {
         this.renderer.setAnimationLoop(null);
+        this.presentation?.dispose();
         this.resizeObserver.disconnect();
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
@@ -880,6 +1139,9 @@ export class ViewerEngine {
         this.walkthrough = null;
         this.clearContent();
         this.removeDimensions();
+        this.setUnderlay(null, null);
+        this.modelLibrary?.dispose();
+        this.pictureLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
         this.measureLabel.element.remove();
         this.handles.clear();
@@ -899,17 +1161,18 @@ export class ViewerEngine {
         // Soft image-based lighting for reflections on glass, steel and glossy fronts.
         const pmrem = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-        this.scene.environmentIntensity = 0.45;
+        this.scene.environmentIntensity = Daylight.environment;
         pmrem.dispose();
 
-        this.scene.add(new THREE.HemisphereLight('#fbf8f2', '#a9a196', 1.4));
+        this.scene.add(this.sky);
 
         // Afternoon sun from the south-west, entering through the living-room windows.
         this.sun.castShadow = true;
-        this.sun.shadow.mapSize.set(4096, 4096);
+        const shadowSize = sunShadowMapSize('fast', this.renderer.capabilities.maxTextureSize);
+        this.sun.shadow.mapSize.set(shadowSize, shadowSize);
         this.sun.shadow.bias = -0.0004;
         this.sun.shadow.normalBias = 0.02;
-        this.sun.shadow.radius = 3;
+        this.sun.shadow.radius = SunShadowRadius.fast;
         this.scene.add(this.sun, this.sun.target);
 
         const ground = new THREE.Mesh(
@@ -995,7 +1258,7 @@ export class ViewerEngine {
         if (this.walkthrough !== null) {
             this.walkthrough.update(dt);
             this.updateAim();
-            this.renderer.render(this.scene, this.camera);
+            this.renderMain();
             // Labels are not rendered in the walk; their last positions would float over the view.
             this.labelRenderer.domElement.style.display = 'none';
             return;
@@ -1025,8 +1288,11 @@ export class ViewerEngine {
                 alignDimensionLabels(this.dimensions, this.camera, this.container.clientWidth, this.container.clientHeight);
             }
         }
+        if (this.underlay !== null) {
+            this.underlay.visible = this.underlayVisible && topDown;
+        }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
-        this.renderer.render(this.scene, this.camera);
+        this.renderMain();
         this.renderOverlay();
         this.labelRenderer.render(this.scene, this.camera);
         // The renderer stacks labels by distance; the measured distance stays above the room labels.
@@ -1079,6 +1345,7 @@ export class ViewerEngine {
         }
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
+        this.presentation?.setSize(width, height, this.renderer.getPixelRatio());
         this.labelRenderer.setSize(width, height);
     }
 
@@ -1344,10 +1611,18 @@ export class ViewerEngine {
             return;
         }
         if (this.measuring) {
+            if (this.calibrating && this.measurement.b !== null) {
+                // Both calibration points are placed and reported; the panel takes it from here (or cancels).
+                return;
+            }
             const point = event.button === 0 && this.isTopDown() ? this.planPointOn(event, FloorPlane) : null;
             if (point !== null) {
                 this.measurement = measureClick(this.measurement, this.snapMeasure(point, event.shiftKey).point);
                 this.updateMeasure();
+                const {a, b} = this.measurement;
+                if (this.calibrating && a !== null && b !== null) {
+                    this.onCalibrate(a, b);
+                }
             }
             return;
         }
@@ -1491,8 +1766,8 @@ export class ViewerEngine {
             return;
         }
         const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
-        // Esc clears a measurement first; without one it is the page's (turning the tool off).
-        if (event.key === 'Escape' && this.measuring && !typing && this.clearMeasurement()) {
+        // Esc clears a measurement first; without one it is the page's (turning the tool off, or cancelling a calibration).
+        if (event.key === 'Escape' && this.measuring && !typing && !this.calibrating && this.clearMeasurement()) {
             event.stopPropagation();
             return;
         }
@@ -1549,7 +1824,8 @@ export class ViewerEngine {
 
     private snapMeasure(point: Vec2, free: boolean): SnapResult {
         const from = this.measurement.b === null ? this.measurement.a : null;
-        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        // Calibration points are features of the image, which the drawn walls would only pull them away from.
+        const radius = free || this.calibrating ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
         return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from});
     }
 

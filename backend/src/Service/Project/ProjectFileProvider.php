@@ -9,6 +9,7 @@ use finfo;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use FlatDesigner\Service\Storage\FileStorageInterface;
@@ -25,10 +26,21 @@ final readonly class ProjectFileProvider
 {
 	private const int MaxFilenameLength = 200;
 
+	/** Files whose content is read as text (`readText`). */
+	private const array TextMimeTypes = ['text/plain', 'text/csv', 'application/json'];
+
+	private const int MaxTextBytes = 200000;
+
+	/** Images the viewer draws (an underlay, a picture): what browsers decode, and what the image tools read. */
+	public const array ImageMimeTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
 	public function __construct(
 		private ProjectFileRepository $projectFileRepository,
+		private FloorUnderlayRepository $underlayRepository,
+		private ShownPictures $shownPictures,
 		private FileStorageInterface $fileStorage,
 		private S3Config $s3Config,
+		private ProjectRevisionService $revisionService,
 	) {
 	}
 
@@ -87,10 +99,66 @@ final readonly class ProjectFileProvider
 		return $this->fileStorage->get($file->storageKey);
 	}
 
+	public function isText(ProjectFile $file): bool
+	{
+		return in_array($file->mimeType, self::TextMimeTypes, true);
+	}
+
+	/**
+	 * The pixel size of an image's bytes.
+	 *
+	 * @param string $what names the image in the error, e.g. `File "plan.png"`
+	 * @return array{int, int} width and height
+	 */
+	public static function imageSize(string $bytes, string $what): array
+	{
+		$size = getimagesizefromstring($bytes);
+		if ($size === false || $size[0] < 1 || $size[1] < 1) {
+			throw new ProjectException(sprintf('%s could not be read as an image.', $what));
+		}
+
+		return [$size[0], $size[1]];
+	}
+
+	/** A raster image the viewer draws (`ImageMimeTypes`): an underlay or a picture. */
+	public function isImage(ProjectFile $file): bool
+	{
+		return in_array($file->mimeType, self::ImageMimeTypes, true);
+	}
+
+	/** A raster image the image tools can read (gd decodes more than browsers do); SVG is a document, never served as one. */
+	public function isRasterImage(ProjectFile $file): bool
+	{
+		return str_starts_with($file->mimeType, 'image/') && $file->mimeType !== 'image/svg+xml';
+	}
+
+	/** The content of a text file (plain, CSV, JSON) of a sensible size. */
+	public function readText(ProjectFile $file): string
+	{
+		if (!$this->isText($file)) {
+			throw new ProjectException(sprintf('File "%s" is %s, not a text file.', $file->filename, $file->mimeType));
+		}
+		if ($file->size > self::MaxTextBytes) {
+			throw new ProjectException(
+				sprintf('File "%s" is larger than %d kB of text.', $file->filename, intdiv(self::MaxTextBytes, 1000)),
+			);
+		}
+
+		return $this->readContent($file);
+	}
+
+	/**
+	 * The floor underlays laid from the file go with it (ON DELETE CASCADE), and items showing it as a picture keep its id
+	 * but draw a plain one; either way open viewers are told to reload.
+	 */
 	public function delete(ProjectFile $file): void
 	{
+		$shown = $this->underlayRepository->findByFile($file->id) !== [] || $this->shownPictures->isShownIn($file->project, $file->id);
 		$this->projectFileRepository->delete($file);
 		$this->fileStorage->delete($file->storageKey);
+		if ($shown) {
+			$this->revisionService->bump($file->project);
+		}
 	}
 
 	/** @return list<string> storage keys of all files of the project, to delete after the project rows */

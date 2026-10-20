@@ -27,6 +27,7 @@ enum FunctionEnum: string
 	case Field = 'field';
 	case Share = 'share';
 	case Offsets = 'offsets';
+	case Hash = 'hash';
 
 	/** @return array{int, int|null} the least and most arguments (null = any number) */
 	public function arity(): array
@@ -37,7 +38,7 @@ enum FunctionEnum: string
 			self::Clamp => [3, 3],
 			self::Contains, self::Field => [2, 2],
 			self::Share => [2, 3],
-			self::Offsets => [1, 2],
+			self::Offsets, self::Hash => [1, 2],
 		};
 	}
 
@@ -83,7 +84,42 @@ enum FunctionEnum: string
 			self::Field => ListFunctions::field($list(0), Values::string($arguments[1] ?? null, $context)),
 			self::Share => ListFunctions::share($list(0), $number(1), array_key_exists(2, $arguments) ? $number(2) : 0.0),
 			self::Offsets => ListFunctions::offsets($list(0), array_key_exists(1, $arguments) ? $number(1) : 0.0),
+			self::Hash => self::hash($number(0), array_key_exists(1, $arguments) ? $number(1) : 0.0),
 		};
+	}
+
+	/**
+	 * A fixed pseudo-random number from 0 up to (not including) 1 for whole numbers `n` and `seed` (rounded half away
+	 * from zero, taken modulo 2^32), e.g. book spines varying by their repeat index. 32-bit integer mixing, so that the
+	 * TS twin gets the very same numbers.
+	 */
+	public static function hash(float $n, float $seed): float
+	{
+		$x = self::uint32($n) ^ self::multiply(self::uint32($seed, 1), 0x9E3779B9);
+		$x = self::multiply($x ^ ($x >> 16), 0x7FEB352D);
+		$x = self::multiply($x ^ ($x >> 15), 0x846CA68B);
+
+		return ($x ^ ($x >> 16)) / 4294967296;
+	}
+
+	/** The whole number (plus `$add`) modulo 2^32. */
+	private static function uint32(float $value, int $add = 0): int
+	{
+		$whole = round($value) + $add;
+		if (!is_finite($whole) || abs($whole) > 2 ** 53) {
+			throw new ExpressionException(ExpressionErrorEnum::Type, 'Function "hash" needs whole numbers up to 2^53.');
+		}
+
+		return (int) fmod(fmod($whole, 4294967296.0) + 4294967296.0, 4294967296.0);
+	}
+
+	/** The low 32 bits of a 32 × 32-bit product, without overflowing PHP's 64-bit integers. */
+	private static function multiply(int $a, int $b): int
+	{
+		$low = ($a & 0xFFFF) * $b;
+		$high = ($a >> 16) * $b & 0xFFFF;
+
+		return $low + ($high << 16) & 0xFFFFFFFF;
 	}
 
 	/**

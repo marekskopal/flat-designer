@@ -13,4 +13,7 @@ enum MaterialPatternEnum: string
 	case Glass = 'Glass';
 	case Grass = 'Grass';
 	case Gravel = 'Gravel';
+	case Terrazzo = 'Terrazzo';
+	case Brick = 'Brick';
+	case Herringbone = 'Herringbone';
 }

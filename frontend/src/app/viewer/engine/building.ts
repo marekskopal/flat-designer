@@ -1,10 +1,23 @@
 import {Opening, Room, Scene, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 
+import {
+    ceilingSteps,
+    clipToBand,
+    roomBeams,
+    skirtingPieces,
+    vaultBreaks,
+    vaultFrame,
+    vaultHeight,
+    VaultProfile,
+    vaultProfile,
+} from './ceilings';
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
+import {exteriorSign, freeBeside, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
 import {
     cornerWindows,
+    counterClockwise,
     DoorFrameWidth,
     isDoor,
     Leaf,
@@ -13,7 +26,6 @@ import {
     NoCorners,
     openingLeaves,
     polygonBounds,
-    polygonSignedArea,
     SlidingDoorOverlap,
     SquareEnds,
     tileOrigin,
@@ -40,6 +52,8 @@ export interface BuildingParts {
     root: THREE.Group;
     /** Ceilings, toggled separately so the dollhouse view can look in from above. */
     ceilings: THREE.Group;
+    /** The faces between rooms' ceilings of different heights where they meet without a wall (in `ceilings`). */
+    ceilingSteps: THREE.Group;
     slab: THREE.Mesh;
     /** Per room: its floor mesh (for picking and highlighting), ceiling and wall finishes, keyed by room id. */
     rooms: Map<number, RoomParts>;
@@ -51,7 +65,9 @@ export interface BuildingParts {
 
 export interface RoomParts {
     floor: THREE.Mesh;
-    ceiling: THREE.Mesh | null;
+    /** The ceiling surface, with the beams of a vaulted one. */
+    ceiling: THREE.Group | null;
+    /** Wall finishes and skirting. */
     finishes: THREE.Group | null;
 }
 
@@ -67,6 +83,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     const parts: BuildingParts = {
         root,
         ceilings,
+        ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
         slab: buildSlab(scene.walls, materials),
         rooms: new Map(),
         walls: new Map(),
@@ -86,6 +103,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root.add(group);
     }
 
+    ceilings.add(parts.ceilingSteps);
     root.add(ceilings);
     return parts;
 }
@@ -95,7 +113,7 @@ export function buildRoom(room: Room, walls: readonly Wall[], materials: Materia
     return {
         floor: buildFloor(room, materials),
         ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials),
-        finishes: room.wallFinishes.length > 0 ? buildWallFinishes(room, walls, materials) : null,
+        finishes: room.wallFinishes.length > 0 || room.skirtingHeight != null ? buildWallFinishes(room, walls, materials) : null,
     };
 }
 
@@ -154,15 +172,102 @@ export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
     return floor;
 }
 
-function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Mesh {
-    const geometry = new THREE.ShapeGeometry(roomShape(room));
-    geometry.rotateX(-Math.PI / 2);
-    // Faces up after the rotation, so only its back side is visible from inside the room.
-    const ceiling = new THREE.Mesh(geometry, materials.plain('#f7f6f3', 0.95, 0, THREE.BackSide));
-    ceiling.position.y = (room.ceilingHeight ?? 0) * MM;
-    ceiling.receiveShadow = true;
-    ceiling.name = `ceiling:${room.code}`;
-    return ceiling;
+/** Strips across each vault of a vaulted ceiling, enough for a smooth arch. */
+const VaultSegments = 8;
+
+/**
+ * The ceiling: a flat surface at the ceiling height, or vaults arching between beams (in their own material, white
+ * paint by default). Faces down, seen from inside the room.
+ */
+function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Group {
+    const group = new THREE.Group();
+    group.name = `ceiling:${room.code}`;
+    const material = room.ceilingMaterialId == null ? materials.plain('#f7f6f3', 0.95) : materials.get(room.ceilingMaterialId);
+    const profile = vaultProfile(room);
+    group.add(ceilingSurface(room, profile, material));
+    if (profile === null) {
+        return group;
+    }
+
+    const beamMaterial = room.beamMaterialId == null ? materials.plain('#f4f2ee', 0.8) : materials.get(room.beamMaterialId);
+    const springing = profile.crown - profile.rise;
+    // Down to `beamDrop` under the springing, up into the vaults so no gap shows beside them.
+    const bottom = (springing - (room.beamDrop ?? 30)) * MM;
+    const height = (room.beamDrop ?? 30) * MM + (profile.rise / 2) * MM;
+    const width = profile.beamWidth * MM;
+    for (const beam of roomBeams(room, profile)) {
+        const length = Math.hypot(beam.end.x - beam.start.x, beam.end.y - beam.start.y) * MM;
+        const holder = new THREE.Group();
+        holder.position.set(beam.start.x * MM, 0, -beam.start.y * MM);
+        holder.rotation.y = Math.atan2(beam.end.y - beam.start.y, beam.end.x - beam.start.x);
+        holder.add(boxAt(beamMaterial, 0, bottom, -width / 2, length, height, width));
+        group.add(holder);
+    }
+    return group;
+}
+
+/**
+ * The ceiling's surface over the room's outline: one flat piece, or strips across the beams lifted to the vault
+ * profile. UVs are metres along and across the beams.
+ */
+function ceilingSurface(room: Room, profile: VaultProfile | null, material: THREE.Material): THREE.Mesh {
+    const frame = vaultFrame(room.vaultAngle ?? 0);
+    const along = (p: {x: number; y: number}): number => p.x * frame.u.x + p.y * frame.u.y;
+    const across = (p: {x: number; y: number}): number => p.x * frame.v.x + p.y * frame.v.y;
+    const outline = counterClockwise(room.polygon).map(([x, y]) => ({x, y}));
+    let strips = [outline];
+    if (profile !== null) {
+        const vs = outline.map(across);
+        const breaks = vaultBreaks(Math.min(...vs), Math.max(...vs), profile, VaultSegments);
+        strips = breaks.slice(1).map((hi, i) => clipToBand(outline, frame.v, breaks[i], hi));
+    }
+
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (const strip of strips.filter((s) => s.length >= 3)) {
+        const base = positions.length / 3;
+        for (const p of strip) {
+            const height = profile === null ? (room.ceilingHeight ?? 0) : vaultHeight(across(p), profile);
+            positions.push(p.x * MM, height * MM, -p.y * MM);
+            uvs.push(along(p) * MM, across(p) * MM);
+        }
+        // Counter-clockwise in plan is clockwise seen from below once plan y becomes −z: the faces look down.
+        for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(strip.map((p) => new THREE.Vector2(p.x, p.y)), [])) {
+            indices.push(base + i, base + k, base + j);
+        }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const surface = new THREE.Mesh(geometry, material);
+    surface.receiveShadow = true;
+    return surface;
+}
+
+/** Upright faces closing the step between ceilings of different heights in an open plan (`ceilingSteps`). */
+export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
+    const group = new THREE.Group();
+    group.name = 'ceiling-steps';
+    const material = materials.plain('#f7f6f3', 0.95, 0, THREE.DoubleSide);
+    for (const step of ceilingSteps(rooms, walls)) {
+        const geometry = new THREE.BufferGeometry();
+        const corners = [
+            [step.a.x, step.bottom, step.a.y],
+            [step.b.x, step.bottom, step.b.y],
+            [step.b.x, step.top, step.b.y],
+            [step.a.x, step.top, step.a.y],
+        ].flatMap(([x, h, y]) => [x * MM, h * MM, -y * MM]);
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(corners, 3));
+        geometry.setIndex([0, 1, 2, 0, 2, 3]);
+        geometry.computeVertexNormals();
+        const face = new THREE.Mesh(geometry, material);
+        face.receiveShadow = true;
+        group.add(face);
+    }
+    return group;
 }
 
 /**
@@ -229,9 +334,12 @@ function wallPieceMesh(material: THREE.Material, piece: WallPiece, length: numbe
 }
 
 const LiningThickness = 8;
+/** Thickness of skirting boards, mm. */
+const SkirtingThickness = 15;
 
 /**
- * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band. Door
+ * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band, and skirting
+ * boards along the walls (`skirtingPieces`: not across open edges or doorways). Door
  * openings on the edge stay free; UVs continue across pieces from the room corner and the floor, and tiles
  * are then put on the room's tile grid (`alignTiles`), the one its floor uses.
  */
@@ -241,7 +349,8 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     group.userData = {roomId: room.id};
     group.name = `finishes:${room.code}`;
     // Counter-clockwise, so the room interior is on the left of every edge.
-    const polygon = polygonSignedArea(room.polygon) >= 0 ? room.polygon : [...room.polygon].reverse();
+    const polygon = counterClockwise(room.polygon);
+    const skirtingMaterial = room.skirtingMaterialId == null ? materials.plain('#f4f2ee', 0.6) : materials.get(room.skirtingMaterialId);
 
     polygon.forEach(([ax, ay], i) => {
         const [bx, by] = polygon[(i + 1) % polygon.length];
@@ -254,6 +363,15 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         // Mirror local z so +z points into the room and the box's +z face (u along +x) is the visible one.
         edge.scale.z = -1;
 
+        const skirting = room.skirtingHeight ?? null;
+        for (const [from, to] of skirting === null ? [] : skirtingPieces({x: ax, y: ay}, {x: bx, y: by}, walls)) {
+            // In front of a finish band reaching the floor (tiling), otherwise on the wall face.
+            const inset = room.wallFinishes.some((band) => band.bottom <= 0) ? LiningThickness * MM : 0;
+            const width = (to - from) * MM;
+            const height = (skirting ?? 0) * MM;
+            const mesh = boxAt(skirtingMaterial, from * MM, 0, inset, width, height, SkirtingThickness * MM);
+            edge.add(mesh);
+        }
         for (const band of room.wallFinishes) {
             const bandGaps = gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top));
             const material = materials.get(band.materialId);
@@ -312,10 +430,15 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
 
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
     for (const leaf of openingLeaves(opening, wall.thickness)) {
-        // A sliding leaf covers the opening's head too; the others stop short of the lining.
-        const leafHeight = (opening.type === 'SlidingDoor' ? opening.height + SlidingDoorOverlap : Math.min(1970, opening.height - 20)) * MM;
+        // A sliding leaf covers the opening's head too; the others stop short of the frame head (and the floor).
+        const leafHeight =
+            opening.type === 'SlidingDoor'
+                ? (opening.height + SlidingDoorOverlap) * MM
+                : (opening.height - LeafGap) * MM - doorHeadDepth(opening);
         const pivot = leafPivot(leaf, 1);
-        pivot.add(boxAt(frameMaterial, 0, 0, (-leaf.thickness * MM) / 2, leaf.width * MM, leafHeight, leaf.thickness * MM));
+        for (const part of doorLeaf(opening, leaf, leafHeight, frameMaterial, materials.byCode('glass'))) {
+            pivot.add(part);
+        }
         for (const handle of doorHandles(opening, leaf, handleMaterial)) {
             pivot.add(handle);
         }
@@ -332,6 +455,79 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     return group;
 }
 
+/** Raised panels: a bead round each rectangle (mm, in the slab's frame) and a field inside it, a few mm proud of the given faces. */
+const PanelBead = 0.02;
+const PanelBeadDepth = 0.006;
+const PanelFieldInset = 0.045;
+const PanelFieldDepth = 0.003;
+
+/**
+ * The relief of panels on a slab `thickness` m thick, centred on z = 0: on its +z face (`faces` 1), −z face (−1) or
+ * both.
+ */
+function panelRelief(rects: readonly PanelRect[], thickness: number, faces: readonly (1 | -1)[], material: THREE.Material): THREE.Mesh[] {
+    const parts: THREE.Mesh[] = [];
+    for (const rect of rects) {
+        const x = rect.x * MM;
+        const y = rect.y * MM;
+        const w = rect.width * MM;
+        const h = rect.height * MM;
+        for (const face of faces) {
+            const z = face > 0 ? thickness / 2 : -thickness / 2 - PanelBeadDepth;
+            parts.push(
+                boxAt(material, x, y, z, w, PanelBead, PanelBeadDepth),
+                boxAt(material, x, y + h - PanelBead, z, w, PanelBead, PanelBeadDepth),
+                boxAt(material, x, y + PanelBead, z, PanelBead, h - 2 * PanelBead, PanelBeadDepth),
+                boxAt(material, x + w - PanelBead, y + PanelBead, z, PanelBead, h - 2 * PanelBead, PanelBeadDepth),
+            );
+            if (w > 2 * PanelFieldInset && h > 2 * PanelFieldInset) {
+                const fieldZ = face > 0 ? thickness / 2 : -thickness / 2 - PanelFieldDepth;
+                const inset = PanelFieldInset;
+                parts.push(boxAt(material, x + inset, y + inset, fieldZ, w - 2 * inset, h - 2 * inset, PanelFieldDepth));
+            }
+        }
+    }
+    return parts;
+}
+
+/**
+ * A door leaf by its `leafStyle`, in its pivot's frame (x from the hinge, centred on z = 0): a flush slab, a slab
+ * with raised panels on both faces, or stiles and rails round glass panes.
+ */
+function doorLeaf(opening: Opening, leaf: Leaf, height: number, material: THREE.Material, glass: THREE.Material): THREE.Mesh[] {
+    const width = leaf.width * MM;
+    const t = leaf.thickness * MM;
+    const style = opening.leafStyle ?? 'Flush';
+    const rects = style === 'Flush' ? [] : leafPanels(leaf.width, height / MM, opening.leafPanels ?? 2);
+    const slab = (): THREE.Mesh => boxAt(material, 0, 0, -t / 2, width, height, t);
+    if (rects.length === 0) {
+        return [slab()];
+    }
+    if (style === 'Panelled') {
+        return [slab(), ...panelRelief(rects, t, [-1, 1], material)];
+    }
+    // Glazed: the frame round the panes, and the panes.
+    const stile = LeafStile * MM;
+    const parts = [boxAt(material, 0, 0, -t / 2, stile, height, t), boxAt(material, width - stile, 0, -t / 2, stile, height, t)];
+    let below = 0;
+    for (const rect of rects) {
+        parts.push(boxAt(material, stile, below, -t / 2, width - 2 * stile, rect.y * MM - below, t));
+        parts.push(boxAt(glass, rect.x * MM, rect.y * MM, -0.004, rect.width * MM, rect.height * MM, 0.008, false));
+        below = (rect.y + rect.height) * MM;
+    }
+    parts.push(boxAt(material, stile, below, -t / 2, width - 2 * stile, height - below, t));
+    return parts;
+}
+
+/** Clearance of a swinging leaf under the frame head, mm. */
+const LeafGap = 10;
+
+/** How far the frame head of a door comes down into the opening (m), by its `frameStyle`; nothing for a bare hole. */
+function doorHeadDepth(opening: Opening): number {
+    const style = opening.frameStyle ?? 'Lining';
+    return style === 'None' ? 0 : DoorFrameWidth * MM * (style === 'Flush' ? 0.4 : 0.6);
+}
+
 /** Jambs and head of a door frame by its style (none for `None`), plus casings on both faces for `Architrave`. */
 function doorFrame(opening: Opening, wallThickness: number, material: THREE.Material): THREE.Mesh[] {
     const style = opening.frameStyle ?? 'Lining';
@@ -342,7 +538,7 @@ function doorFrame(opening: Opening, wallThickness: number, material: THREE.Mate
     const width = opening.width * MM;
     const height = opening.height * MM;
     // A lining is slightly proud of both wall faces; a flush frame is thinner and level with them.
-    const lining = DoorFrameWidth * MM * (style === 'Flush' ? 0.4 : 0.6);
+    const lining = doorHeadDepth(opening);
     const depth = wallThickness * MM + (style === 'Flush' ? 0 : 0.02);
     const parts = [
         boxAt(material, from, 0, -depth / 2, lining, height, depth),
@@ -449,17 +645,28 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
     const leaves = openingLeaves(opening, wall.thickness);
     if (leaves.length > 0) {
         // Walkable: sashes hinged on the jambs, closed by default.
+        const panel = opening.panelHeight == null ? null : opening.panelHeight * MM - 0.04;
         for (const leaf of leaves) {
-            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, frameMaterial, glassMaterial));
+            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, panel, frameMaterial, glassMaterial));
+        }
+        for (const part of shutters(opening, wall, materials)) {
+            group.add(part);
         }
         return group;
     }
 
-    // Fixed glazing: one pane behind a grid of bars, evenly spaced between the jambs (or the corner).
+    // Fixed glazing: one pane behind a grid of bars, evenly spaced between the jambs (or the corner), above a
+    // solid lower panel when there is one.
     const glassFrom = cornerStart ? from : from + bar;
     const glassTo = cornerEnd ? to : to - bar;
-    const glassBottom = bottom + 0.04;
+    let glassBottom = bottom + 0.04;
     const glassTop = bottom + height - bar;
+    if (opening.panelHeight != null && opening.panelHeight * MM > 0.04 + bar) {
+        const panelTop = bottom + opening.panelHeight * MM;
+        group.add(boxAt(frameMaterial, glassFrom, glassBottom, -depth * 0.3, glassTo - glassFrom, panelTop - glassBottom, depth * 0.6));
+        group.add(boxAt(frameMaterial, glassFrom, panelTop, z, glassTo - glassFrom, bar, depth));
+        glassBottom = panelTop + bar;
+    }
     group.add(boxAt(glassMaterial, glassFrom, glassBottom, -0.004, glassTo - glassFrom, glassTop - glassBottom, 0.008, false));
     const columns = (opening.mullions ?? 1) + 1;
     for (let i = 1; i < columns; i++) {
@@ -470,8 +677,63 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
         const y = glassBottom + ((glassTop - glassBottom) * i) / (transoms + 1);
         group.add(boxAt(frameMaterial, glassFrom, y - bar / 2, z, glassTo - glassFrom, bar, depth));
     }
+    for (const part of shutters(opening, wall, materials)) {
+        group.add(part);
+    }
 
     return group;
+}
+
+/** Shutters: leaf thickness and its gap off the wall face, frame members and louvre slats of a louvred leaf (m). */
+const ShutterThickness = 0.03;
+const ShutterGap = 0.003;
+const ShutterStile = 0.05;
+const ShutterRail = 0.07;
+const ShutterSlatPitch = 45;
+const ShutterSlatTilt = 0.6;
+
+/**
+ * Exterior shutters of a window (`shutters`): two leaves on the outer face, across the window when
+ * `shuttersClosed`, else folded back flat against the wall beside it. Louvred leaves have tilted slats in a frame,
+ * solid ones raised panels on their outer face.
+ */
+function shutters(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Object3D[] {
+    if (opening.shutters == null) {
+        return [];
+    }
+    const material = opening.shutterMaterialId == null ? materials.plain('#6b4f37', 0.7, 0) : materials.get(opening.shutterMaterialId);
+    const sign = exteriorSign(opening);
+    const face = (wall.thickness / 2) * MM;
+    // The leaves' centre plane, just off the outer face.
+    const centre = sign * (face + ShutterGap + ShutterThickness / 2);
+    const bottom = opening.sillHeight * MM;
+    const height = opening.height * MM;
+    const t = ShutterThickness;
+    return shutterLeaves(opening, opening.shuttersClosed === true, freeBeside(opening, wall)).map((leaf) => {
+        const group = new THREE.Group();
+        group.position.set(leaf.from * MM, bottom, centre);
+        const width = (leaf.to - leaf.from) * MM;
+        if (opening.shutters === 'Solid') {
+            group.add(boxAt(material, 0, 0, -t / 2, width, height, t));
+            for (const part of panelRelief(leafPanels(leaf.to - leaf.from, height / MM, 2), t, [sign], material)) {
+                group.add(part);
+            }
+            return group;
+        }
+        group.add(boxAt(material, 0, 0, -t / 2, ShutterStile, height, t));
+        group.add(boxAt(material, width - ShutterStile, 0, -t / 2, ShutterStile, height, t));
+        group.add(boxAt(material, ShutterStile, 0, -t / 2, width - 2 * ShutterStile, ShutterRail, t));
+        group.add(boxAt(material, ShutterStile, height - ShutterRail, -t / 2, width - 2 * ShutterStile, ShutterRail, t));
+        for (const y of louvreSlats(height / MM, ShutterRail / MM, ShutterSlatPitch)) {
+            // A thin blade across the leaf's thickness, its outer edge lower to shed rain outwards.
+            const slat = new THREE.Mesh(worldUvBox(width - 2 * ShutterStile, 0.008, t * 1.2), material);
+            slat.position.set(width / 2, y * MM, 0);
+            slat.rotation.x = sign * ShutterSlatTilt;
+            slat.castShadow = true;
+            group.add(slat);
+        }
+        return group;
+    });
 }
 
 /**
@@ -516,6 +778,7 @@ function buildSash(
     bottom: number,
     height: number,
     transoms: number,
+    panel: number | null,
     frameMaterial: THREE.Material,
     glassMaterial: THREE.Material,
 ): THREE.Group {
@@ -529,9 +792,20 @@ function buildSash(
     sash.add(boxAt(frameMaterial, width - bar, 0, z, bar, height, thickness));
     sash.add(boxAt(frameMaterial, bar, 0, z, width - 2 * bar, bar, thickness));
     sash.add(boxAt(frameMaterial, bar, height - bar, z, width - 2 * bar, bar, thickness));
-    sash.add(boxAt(glassMaterial, bar, bar, -0.004, width - 2 * bar, height - 2 * bar, 0.008, false));
+    // A solid lower panel up to `panel` (from the sash bottom), with a rail above it and raised fields on both faces.
+    let glassBottom = bar;
+    if (panel !== null && panel > 2 * bar && panel < height - 2 * bar) {
+        sash.add(boxAt(frameMaterial, bar, bar, -thickness * 0.3, width - 2 * bar, panel - bar, thickness * 0.6));
+        const field = {x: bar / MM, y: bar / MM, width: (width - 2 * bar) / MM, height: (panel - bar) / MM};
+        for (const part of panelRelief([field], thickness * 0.6, [-1, 1], frameMaterial)) {
+            sash.add(part);
+        }
+        sash.add(boxAt(frameMaterial, bar, panel, z, width - 2 * bar, bar, thickness));
+        glassBottom = panel + bar;
+    }
+    sash.add(boxAt(glassMaterial, bar, glassBottom, -0.004, width - 2 * bar, height - bar - glassBottom, 0.008, false));
     for (let i = 1; i <= transoms; i++) {
-        const y = bar + ((height - 2 * bar) * i) / (transoms + 1);
+        const y = glassBottom + ((height - bar - glassBottom) * i) / (transoms + 1);
         sash.add(boxAt(frameMaterial, bar, y - bar / 2, z, width - 2 * bar, bar, thickness));
     }
     // Handle on the inner face of the free edge.
