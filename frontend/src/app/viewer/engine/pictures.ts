@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+import {AssetLoader} from './asset-loader';
+
 /** Fetches an image file of the project (with the viewer's sign-in, or through a share link). */
 export type PictureFetcher = (fileId: number) => Promise<Blob>;
 
@@ -9,24 +11,38 @@ export type PictureFetcher = (fileId: number) => Promise<Blob>;
  * Framework-free; the host supplies the fetcher.
  */
 export class PictureLibrary {
-    /** An image finished loading (or failed): rebuild the items that show it. */
-    public onLoaded: (fileId: number) => void = () => undefined;
+    /** A failed image leaves its pictures plain, as they are: nothing to redraw. */
+    private readonly textures: AssetLoader<THREE.Texture>;
 
-    private readonly textures = new Map<number, THREE.Texture>();
-    private readonly failed = new Set<number>();
-    private readonly loading = new Set<number>();
-    private disposed = false;
+    public constructor(fetch: PictureFetcher) {
+        this.textures = new AssetLoader(
+            (fileId) =>
+                fetch(fileId)
+                    .then((blob) => decodeImage(blob))
+                    .then((image) => {
+                        const texture = new THREE.Texture(image);
+                        texture.colorSpace = THREE.SRGBColorSpace;
+                        texture.anisotropy = 4;
+                        texture.needsUpdate = true;
+                        return texture;
+                    }),
+            (texture) => texture.dispose(),
+            false,
+        );
+    }
 
-    public constructor(private readonly fetch: PictureFetcher) {}
+    /** An image finished loading: rebuild the items that show it. */
+    public set onLoaded(listener: (fileId: number) => void) {
+        this.textures.onLoaded = listener;
+    }
 
     /** The image as a texture, or null while it loads or after it failed. */
     public texture(fileId: number): THREE.Texture | null {
-        const texture = this.textures.get(fileId);
-        if (texture === undefined) {
-            this.load(fileId);
-            return null;
-        }
-        return texture;
+        return this.textures.get(fileId);
+    }
+
+    public hasFailed(fileId: number): boolean {
+        return this.textures.hasFailed(fileId);
     }
 
     /**
@@ -34,59 +50,12 @@ export class PictureLibrary {
      * failed load of a listed file may be tried again. Returns the ids whose texture was dropped, to redraw their items.
      */
     public sync(shown: Iterable<number>): number[] {
-        const listed = new Set(shown);
-        const dropped: number[] = [];
-        for (const [fileId, texture] of this.textures) {
-            if (!listed.has(fileId)) {
-                texture.dispose();
-                this.textures.delete(fileId);
-                dropped.push(fileId);
-            }
-        }
-        for (const fileId of listed) {
-            this.failed.delete(fileId);
-        }
-        return dropped;
-    }
-
-    public hasFailed(fileId: number): boolean {
-        return this.failed.has(fileId);
+        return this.textures.sync(shown);
     }
 
     /** Frees the textures; loads still under way are dropped when they finish. */
     public dispose(): void {
-        this.disposed = true;
-        for (const texture of this.textures.values()) {
-            texture.dispose();
-        }
-        this.textures.clear();
-    }
-
-    private load(fileId: number): void {
-        if (this.loading.has(fileId) || this.failed.has(fileId)) {
-            return;
-        }
-        this.loading.add(fileId);
-        this.fetch(fileId)
-            .then((blob) => decodeImage(blob))
-            .then((image) => {
-                if (this.disposed) {
-                    return;
-                }
-                const texture = new THREE.Texture(image);
-                texture.colorSpace = THREE.SRGBColorSpace;
-                texture.anisotropy = 4;
-                texture.needsUpdate = true;
-                this.textures.set(fileId, texture);
-            })
-            .catch(() => this.failed.add(fileId))
-            .finally(() => {
-                this.loading.delete(fileId);
-                // A failed file leaves its pictures as they are (plain already): nothing to redraw.
-                if (!this.disposed && this.textures.has(fileId)) {
-                    this.onLoaded(fileId);
-                }
-            });
+        this.textures.dispose();
     }
 }
 

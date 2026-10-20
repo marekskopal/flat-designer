@@ -104,6 +104,22 @@ final readonly class ProjectFileProvider
 		return in_array($file->mimeType, self::TextMimeTypes, true);
 	}
 
+	/**
+	 * The pixel size of an image's bytes.
+	 *
+	 * @param string $what names the image in the error, e.g. `File "plan.png"`
+	 * @return array{int, int} width and height
+	 */
+	public static function imageSize(string $bytes, string $what): array
+	{
+		$size = getimagesizefromstring($bytes);
+		if ($size === false || $size[0] < 1 || $size[1] < 1) {
+			throw new ProjectException(sprintf('%s could not be read as an image.', $what));
+		}
+
+		return [$size[0], $size[1]];
+	}
+
 	/** A raster image the viewer draws (`ImageMimeTypes`): an underlay or a picture. */
 	public function isImage(ProjectFile $file): bool
 	{

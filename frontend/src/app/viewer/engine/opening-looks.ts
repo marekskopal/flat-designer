@@ -1,4 +1,4 @@
-import {Opening} from '@app/models/scene';
+import {Opening, Wall} from '@app/models/scene';
 
 /** A rectangle in a leaf's or sash's own frame: x from its hinge edge, y up from its bottom, mm. */
 export interface PanelRect {
@@ -43,22 +43,41 @@ export interface ShutterLeaf {
 
 /**
  * The two leaves of a window's shutters, each half the opening wide and hinged on a jamb: across the opening when
- * closed, otherwise folded back flat against the wall beside it.
+ * closed, otherwise folded back flat against the wall beside it. A leaf folds back only into `free` (the wall between
+ * the neighbouring openings, or its ends; mm along the wall): one that would hang past them stays closed.
  */
-export function shutterLeaves(opening: Pick<Opening, 'offset' | 'width'>, closed: boolean): [ShutterLeaf, ShutterLeaf] {
+export function shutterLeaves(
+    opening: Pick<Opening, 'offset' | 'width'>,
+    closed: boolean,
+    free: [number, number] = [-Infinity, Infinity],
+): [ShutterLeaf, ShutterLeaf] {
     const from = opening.offset;
     const to = opening.offset + opening.width;
     const half = opening.width / 2;
-    if (closed) {
-        return [
-            {from, to: from + half, hinge: from},
-            {from: to - half, to, hinge: to},
-        ];
+    const left: ShutterLeaf = closed || from - half < free[0] ? {from, to: from + half, hinge: from} : {from: from - half, to: from, hinge: from};
+    const right: ShutterLeaf = closed || to + half > free[1] ? {from: to - half, to, hinge: to} : {from: to, to: to + half, hinge: to};
+    return [left, right];
+}
+
+/** The wall free beside an opening, mm along the wall: up to its neighbouring openings, or the wall's ends. */
+export function freeBeside(
+    opening: Pick<Opening, 'id' | 'offset' | 'width'>,
+    wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'openings'>,
+): [number, number] {
+    const length = Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY);
+    let from = 0;
+    let to = length;
+    for (const other of wall.openings) {
+        if (other.id === opening.id) {
+            continue;
+        }
+        if (other.offset + other.width <= opening.offset) {
+            from = Math.max(from, other.offset + other.width);
+        } else if (other.offset >= opening.offset + opening.width) {
+            to = Math.min(to, other.offset);
+        }
     }
-    return [
-        {from: from - half, to: from, hinge: from},
-        {from: to, to: to + half, hinge: to},
-    ];
+    return [from, to];
 }
 
 /**

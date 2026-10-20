@@ -141,6 +141,12 @@ final readonly class ItemHandler implements ElementHandler
 		$depth = $fields->int('depth', 1, State::MaxSize);
 		$height = $fields->int('height', 1, State::MaxSize);
 		$params = self::params($fields->raw('params'));
+		if ($kind !== ItemKindEnum::Custom && $definition !== null) {
+			// Switching away from Custom: the definition and the params that belonged to it go.
+			$definitionId = null;
+			$definition = null;
+			$params = [];
+		}
 		CabinetParamsValidator::validate($kind, $params, $width, $height);
 		WardrobeParamsValidator::validate($kind, $params, $height);
 		ChairParamsValidator::validate($kind, $params, $width, $height);

@@ -30,11 +30,7 @@ final readonly class ImagePreviewService
 	 */
 	public function render(string $bytes, string $mimeType, ?array $crop, int $maxSize, ?int $grid): array
 	{
-		$size = getimagesizefromstring($bytes);
-		if ($size === false || $size[0] < 1 || $size[1] < 1) {
-			throw new ProjectException('The file could not be read as an image.');
-		}
-		[$width, $height] = [$size[0], $size[1]];
+		[$width, $height] = ProjectFileProvider::imageSize($bytes, 'The file');
 		if ($maxSize < self::MinMaxSize || $maxSize > self::MaxMaxSize) {
 			throw new ProjectException(sprintf('maxSize must be between %d and %d.', self::MinMaxSize, self::MaxMaxSize));
 		}

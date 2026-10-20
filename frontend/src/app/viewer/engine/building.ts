@@ -14,7 +14,7 @@ import {
 } from './ceilings';
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
-import {exteriorSign, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
+import {exteriorSign, freeBeside, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
 import {
     cornerWindows,
     counterClockwise,
@@ -709,7 +709,7 @@ function shutters(opening: Opening, wall: Wall, materials: MaterialLibrary): THR
     const bottom = opening.sillHeight * MM;
     const height = opening.height * MM;
     const t = ShutterThickness;
-    return shutterLeaves(opening, opening.shuttersClosed === true).map((leaf) => {
+    return shutterLeaves(opening, opening.shuttersClosed === true, freeBeside(opening, wall)).map((leaf) => {
         const group = new THREE.Group();
         group.position.set(leaf.from * MM, bottom, centre);
         const width = (leaf.to - leaf.from) * MM;

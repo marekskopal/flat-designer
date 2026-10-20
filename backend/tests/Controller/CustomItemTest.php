@@ -56,8 +56,11 @@ final class CustomItemTest extends EditorTestCase
 		$read = $this->jsonBody($this->request('GET', self::definitionPath($definitionId), authenticatedAs: $this->user));
 		self::assertSame(1, $read['itemCount']);
 
-		// Other kinds have no definition and the scene lists only what its items use.
+		// Other kinds have no definition (one given is dropped, like a model) and the scene lists only what its items use.
 		self::assertNull($this->create('items', ['kind' => 'Box'])['definitionId']);
+		self::assertNull(
+			$this->create('items', ['kind' => 'Box', 'definitionId' => $definitionId, 'params' => ['values' => []]])['definitionId'],
+		);
 		self::assertCount(1, $this->sceneList('definitions'));
 	}
 
@@ -71,7 +74,6 @@ final class CustomItemTest extends EditorTestCase
 		yield 'other params' => [['params' => ['handle' => 'none']], 'Custom item params take only "values" and "materials", not "handle".'];
 		yield 'too narrow for its parts' => [['width' => 30], 'parts[1].w: "Shelf" gets a width of -6 mm.'];
 		yield 'no definition' => [['definitionId' => null], 'A Custom item needs a definitionId.'];
-		yield 'definition on another kind' => [['kind' => 'Box'], 'Only a Custom item has a definitionId.'];
 	}
 
 	/** @param array<string, mixed> $fields */
