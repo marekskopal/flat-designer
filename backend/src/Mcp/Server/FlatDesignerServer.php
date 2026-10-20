@@ -53,11 +53,14 @@ final readonly class FlatDesignerServer
 		under the floor with set_floor_underlay, calibrated from two points you know (a dimensioned wall, the
 		scale bar), then convert pixel positions to plan mm with its placement to place walls and openings.
 
-		Typical flow: list_projects → get_project (floors, revision) → get_floor (rooms, walls with openings,
+		Typical flow: list_projects (or create_project for a new one: it starts with a ground floor, and
+		add_floor adds more storeys) → get_project (floors, revision) → get_floor (rooms, walls with openings,
 		items, all with ids) → list_item_kinds / list_materials when adding things → add_*/update_*/delete_*.
-		update_* tools change only the fields you pass. Every change is logged under your client's name and
-		shows up live in the user's viewer; undo/redo revert your own changes only. Before a larger
-		redesign, call save_version so the user can go back.
+		update_* tools change only the fields you pass; update_project renames a project or sets or clears
+		its address and description. Every change of a floor is logged under your client's name and shows
+		up live in the user's viewer; undo/redo revert your own changes only. Before a larger redesign,
+		call save_version so the user can go back. delete_project cannot be undone: ask the user before
+		calling it.
 		TEXT;
 
 	private const int PaginationLimit = 200;
