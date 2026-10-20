@@ -38,6 +38,30 @@ final class GlbReaderTest extends TestCase
 		self::assertSame(['width' => 600, 'depth' => 300, 'height' => 400], GlbReader::size($inMm));
 	}
 
+	public function testQuantizedPositionsAreNormalized(): void
+	{
+		// As `gltf-transform optimize` writes it: int16 positions in -1..1, the node scale and offset restore metres.
+		$bytes = Glb::pack([
+			'asset' => ['version' => '2.0'],
+			'extensionsUsed' => ['KHR_mesh_quantization'],
+			'extensionsRequired' => ['KHR_mesh_quantization'],
+			'scenes' => [['nodes' => [0]]],
+			'nodes' => [['mesh' => 0, 'scale' => [0.25, 0.4, 0.1], 'translation' => [0, 0.4, 0]]],
+			'meshes' => [['primitives' => [['attributes' => ['POSITION' => 0]]]]],
+			'accessors' => [
+				[
+					'componentType' => 5122,
+					'normalized' => true,
+					'count' => 8,
+					'type' => 'VEC3',
+					'min' => [-32767, -32768, -32767],
+					'max' => [32767, 32767, 32767],
+				]],
+		]);
+
+		self::assertSame(['width' => 500, 'depth' => 200, 'height' => 800], GlbReader::size($bytes));
+	}
+
 	public function testRejectsWhatTheViewerCannotDraw(): void
 	{
 		$cases = [

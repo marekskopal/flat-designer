@@ -13,6 +13,9 @@ final readonly class GltfBounds
 {
 	private const int MaxDepth = 32;
 
+	/** The largest value of each integer component type, which a normalized accessor maps to 1. */
+	private const array NormalizedMax = [5120 => 127, 5121 => 255, 5122 => 32767, 5123 => 65535];
+
 	/**
 	 * @param array<string, mixed> $gltf
 	 * @return array{width: int, depth: int, height: int}
@@ -84,13 +87,9 @@ final readonly class GltfBounds
 			if ($bounds === null) {
 				continue;
 			}
-			[$min, $max] = $bounds;
-			foreach ([$min[0], $max[0]] as $x) {
-				foreach ([$min[1], $max[1]] as $y) {
-					foreach ([$min[2], $max[2]] as $z) {
-						$corners[] = [$x, $y, $z];
-					}
-				}
+			// Bits 0, 1 and 2 of the corner number pick the max of x, y and z.
+			for ($corner = 0; $corner < 8; $corner++) {
+				$corners[] = [$bounds[$corner & 1][0], $bounds[$corner >> 1 & 1][1], $bounds[$corner >> 2 & 1][2]];
 			}
 		}
 
@@ -108,8 +107,24 @@ final readonly class GltfBounds
 		$accessor = is_int($index) ? (self::list($gltf, 'accessors')[$index] ?? null) : null;
 		$min = is_array($accessor) ? Matrix4::vector($accessor['min'] ?? null) : null;
 		$max = is_array($accessor) ? Matrix4::vector($accessor['max'] ?? null) : null;
+		if ($min === null || $max === null) {
+			return null;
+		}
+		// Quantized models (KHR_mesh_quantization) keep normalized integers; their node scale expects them in -1..1.
+		$type = $accessor['componentType'] ?? null;
+		$scale = ($accessor['normalized'] ?? false) === true && is_int($type) ? (self::NormalizedMax[$type] ?? null) : null;
 
-		return $min === null || $max === null ? null : [$min, $max];
+		return $scale === null ? [$min, $max] : [self::normalized($min, $scale), self::normalized($max, $scale)];
+	}
+
+	/**
+	 * @param array{float, float, float} $vector
+	 * @return array{float, float, float}
+	 */
+	private static function normalized(array $vector, int $scale): array
+	{
+		// Signed types reach one value further down than up, which still reads as -1.
+		return [max($vector[0] / $scale, -1.0), max($vector[1] / $scale, -1.0), max($vector[2] / $scale, -1.0)];
 	}
 
 	/**
