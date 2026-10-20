@@ -12,7 +12,8 @@ use LogicException;
  * One entry of a definition's `parts` (or of an assembly's), read with all its expressions parsed; `resolve()` makes
  * its parts for a scope of variables, the copies of its `repeat` (`PartRepeat`) evaluated per scope. An `assembly`
  * places its `parts` in its own box, where they also see `AW`, `AH`, `AD` (its size).
- * An option written `{"expr": "…"}` is evaluated per copy; a whole number stays whole.
+ * An option written `{"expr": "…"}` is evaluated per copy; a whole number stays whole. So may `material` be, e.g. book
+ * spines picking one of several slots by `hash(i)`; it must come out as a slot key.
  *
  * @phpstan-import-type Value from Values
  */
@@ -33,17 +34,19 @@ final readonly class PartEntry
 	/**
 	 * @param array<string, Expression> $geometry
 	 * @param list<self> $children the parts of an assembly
+	 * @param list<string> $slots the material slot keys, for a `material` expression
 	 */
 	private function __construct(
 		public string $path,
 		public string $type,
 		public string $name,
-		public ?string $material,
+		public string|Expression|null $material,
 		private ?PartRepeat $repeat,
 		private Expression $when,
 		private array $geometry,
 		private PartOptions $options,
 		private array $children,
+		private array $slots,
 	) {
 	}
 
@@ -66,10 +69,7 @@ final readonly class PartEntry
 		if (!is_string($name)) {
 			throw DefinitionException::invalid($path . '.name', 'Must be a string.');
 		}
-		$material = $entry['material'] ?? null;
-		if ($material !== null && !in_array($material, $slots, true)) {
-			throw DefinitionException::invalid($path . '.material', 'Must be the key of one of the materialSlots.');
-		}
+		$material = self::readMaterial($entry['material'] ?? null, $path . '.material', $slots);
 		$repeat = array_key_exists('repeat', $entry) ? PartRepeat::read($entry['repeat'], $path . '.repeat') : null;
 		$when = Expressions::compile($entry['when'] ?? true, $path . '.when', true);
 
@@ -83,7 +83,7 @@ final readonly class PartEntry
 		$options = PartOptions::read($entry, $path, $type === self::Assembly, $slots);
 		$children = $type === self::Assembly ? self::children($entry['parts'] ?? null, $path . '.parts', $slots, $depth, $collector) : [];
 
-		return new self($path, $type, $name, $material, $repeat, $when, $geometry, $options, $children);
+		return new self($path, $type, $name, $material, $repeat, $when, $geometry, $options, $children, $slots);
 	}
 
 	/**
@@ -122,11 +122,43 @@ final readonly class PartEntry
 				w: $mm['w'],
 				h: $mm['h'],
 				d: $mm['d'],
-				material: $this->material,
+				material: $this->material($scope),
 				props: self::placed($this->options->evaluate($scope), $offset),
 				path: $this->path,
 			));
 		}
+	}
+
+	/**
+	 * A slot key, or `{"expr": …}` choosing one per copy.
+	 *
+	 * @param list<string> $slots
+	 */
+	private static function readMaterial(mixed $material, string $path, array $slots): string|Expression|null
+	{
+		if (PartOptions::isExpression($material) && is_array($material)) {
+			return Expressions::compile($material['expr'], $path);
+		}
+		if ($material !== null && (!is_string($material) || !in_array($material, $slots, true))) {
+			throw DefinitionException::invalid($path, 'Must be the key of one of the materialSlots.');
+		}
+
+		return $material;
+	}
+
+	/** @param array<string, Value> $scope */
+	private function material(array $scope): ?string
+	{
+		if (!$this->material instanceof Expression) {
+			return $this->material;
+		}
+		$path = $this->path . '.material';
+		$key = Expressions::run($this->material, $scope, $path);
+		if (!is_string($key) || !in_array($key, $this->slots, true)) {
+			throw DefinitionException::invalid($path, 'Must come out as the key of one of the materialSlots.');
+		}
+
+		return $key;
 	}
 
 	/**

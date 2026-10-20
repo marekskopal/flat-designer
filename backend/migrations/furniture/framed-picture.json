@@ -1,0 +1,188 @@
+{
+ "name": "Framed picture",
+ "description": "A print, poster or photo (a project image) in a frame with an optional mount; hangs on the wall, or leans against it by lean degrees (then give the item enough depth).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 700,
+   "depth": 30,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "picture",
+    "label": "Picture",
+    "type": "image"
+   },
+   {
+    "key": "frame",
+    "label": "Frame width",
+    "type": "int",
+    "default": 25,
+    "min": 0,
+    "max": 100,
+    "unit": "mm"
+   },
+   {
+    "key": "mount",
+    "label": "Mount width",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 200,
+    "unit": "mm"
+   },
+   {
+    "key": "lean",
+    "label": "Lean against the wall",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 20,
+    "unit": "°"
+   }
+  ],
+  "derived": {
+   "t": "min(D, 25)",
+   "z0": "D - t",
+   "f": "frame",
+   "m": "mount"
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "matt-black"
+   },
+   {
+    "key": "mount",
+    "label": "Mount",
+    "default": "paper-white"
+   },
+   {
+    "key": "paper",
+    "label": "Paper",
+    "default": "paper-white"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Frame left",
+    "when": "f > 0",
+    "x": 0,
+    "y": 0,
+    "z": "z0",
+    "w": "f",
+    "h": "H",
+    "d": "t",
+    "material": "frame",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Frame right",
+    "when": "f > 0",
+    "x": "W - f",
+    "y": 0,
+    "z": "z0",
+    "w": "f",
+    "h": "H",
+    "d": "t",
+    "material": "frame",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Frame bottom",
+    "when": "f > 0",
+    "x": "f",
+    "y": 0,
+    "z": "z0",
+    "w": "W - 2 * f",
+    "h": "f",
+    "d": "t",
+    "material": "frame",
+    "grain": "horizontal",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Frame top",
+    "when": "f > 0",
+    "x": "f",
+    "y": "H - f",
+    "z": "z0",
+    "w": "W - 2 * f",
+    "h": "f",
+    "d": "t",
+    "material": "frame",
+    "grain": "horizontal",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "f",
+    "y": "f",
+    "z": "z0",
+    "w": "W - 2 * f",
+    "h": "H - 2 * f",
+    "d": "max(t - 8, 1)",
+    "material": "mount",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   },
+   {
+    "type": "picture",
+    "name": "Picture",
+    "x": "f + m",
+    "y": "f + m",
+    "z": "z0 + max(t - 8, 1)",
+    "w": "W - 2 * (f + m)",
+    "h": "H - 2 * (f + m)",
+    "d": 1,
+    "image": {
+     "expr": "picture"
+    },
+    "material": "paper",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   }
+  ]
+ }
+}

@@ -3,10 +3,12 @@ import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
+import {ImageMimeTypes, ProjectFile} from '@app/models/project';
 import {PlanPoint, Scene, Underlay} from '@app/models/scene';
 import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
+import {ProjectService} from '@app/services/project.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {Vec2} from '@app/viewer/engine/plan-geometry';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
@@ -45,6 +47,8 @@ export class EditorStore {
     public readonly models = signal<ModelAsset[]>([]);
     /** Furniture definitions the project's items may use (global, the project's own, its owner's library). */
     public readonly definitions = signal<FurnitureDefinition[]>([]);
+    /** The project's image files, for pictures of Custom items (their `image` parameters). */
+    public readonly images = signal<ProjectFile[]>([]);
     /** What a click in the top view does: select and drag, draw walls, or outline a room. */
     public readonly tool = signal<EditorTool>('select');
     /** Type, thickness and height of the walls drawn next. */
@@ -60,6 +64,7 @@ export class EditorStore {
     private readonly api = inject(EditorApiService);
     private readonly furniture = inject(FurnitureService);
     private readonly modelAssets = inject(ModelAssetService);
+    private readonly projects = inject(ProjectService);
     private context: EditorContext | null = null;
 
     public connect(context: EditorContext): void {
@@ -78,6 +83,7 @@ export class EditorStore {
                 this.itemKinds().length === 0 ? this.loadItemKinds() : Promise.resolve(),
                 this.loadDefinitions(),
                 this.loadModels(),
+                this.loadImages(),
             ]);
         }
     }
@@ -312,6 +318,18 @@ export class EditorStore {
         }
         try {
             this.models.set(await this.modelAssets.list(context.projectId()));
+        } catch {
+            // The error interceptor shows the toast.
+        }
+    }
+
+    public async loadImages(): Promise<void> {
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        try {
+            this.images.set((await this.projects.listFiles(context.projectId())).filter((f) => ImageMimeTypes.includes(f.mimeType)));
         } catch {
             // The error interceptor shows the toast.
         }

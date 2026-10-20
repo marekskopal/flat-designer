@@ -44,6 +44,7 @@ export class SharedViewerPageComponent {
     private readonly modelAssets = inject(ModelAssetService);
     /** The 3D models of the shared scene, through the share link (no sign-in). */
     protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.sharedContent(this.token(), modelId);
+    protected readonly pictureFetcher = (fileId: number): Promise<Blob> => this.shares.sharedPicture(this.token(), fileId);
 
     private readonly data = resource({
         params: () => ({token: this.token()}),

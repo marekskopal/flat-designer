@@ -48,8 +48,9 @@ use const JSON_THROW_ON_ERROR;
  *
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
- * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto]}]}` (`groups` /
- * `variantSets` / `definitions` / `underlay` / `models` missing in snapshots taken before they existed) — each floor entry plus the materials is
+ * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int]}]}`
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` missing in snapshots taken before they
+ * existed; `pictures` lists the files the items show, so that share guests may load them) — each floor entry plus the materials is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
  * definitions as they were. Ids inside are those of the working copy at the time and only link entries together,
  * except definition ids: a restore links an item to the live definition of that id while the project may still use
@@ -91,6 +92,7 @@ final readonly class ProjectSnapshotService
 				'definitions' => $scene->definitions,
 				'underlay' => $scene->underlay,
 				'models' => $scene->models,
+				'pictures' => $scene->pictures,
 			];
 		}
 

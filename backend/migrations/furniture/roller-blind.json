@@ -1,0 +1,78 @@
+{
+ "name": "Roller blind",
+ "description": "A fabric roller blind on a tube, rolled down by a percentage.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1200,
+   "depth": 60,
+   "height": 1500
+  },
+  "parameters": [
+   {
+    "key": "down",
+    "label": "Rolled down",
+    "type": "int",
+    "default": 40,
+    "min": 0,
+    "max": 100,
+    "unit": "%"
+   }
+  ],
+  "derived": {
+   "tube": "min(D, 45)",
+   "drop": "round((H - tube) * down / 100)"
+  },
+  "materialSlots": [
+   {
+    "key": "fabric",
+    "label": "Fabric",
+    "default": "fabric-linen-white"
+   },
+   {
+    "key": "tube",
+    "label": "Tube and bar",
+    "default": "aluminium-brushed"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Tube",
+    "axis": "x",
+    "x": 0,
+    "y": "H - tube",
+    "z": "(D - tube) / 2",
+    "w": "W",
+    "h": "tube",
+    "d": "tube",
+    "material": "tube"
+   },
+   {
+    "type": "board",
+    "name": "Blind",
+    "when": "drop > 0",
+    "x": 10,
+    "y": "H - tube / 2 - drop",
+    "z": "D / 2",
+    "w": "W - 20",
+    "h": "drop",
+    "d": 1,
+    "material": "fabric"
+   },
+   {
+    "type": "cylinder",
+    "name": "Bottom bar",
+    "when": "drop > 0",
+    "axis": "x",
+    "x": 10,
+    "y": "H - tube / 2 - drop - 8",
+    "z": "D / 2 - 6",
+    "w": "W - 20",
+    "h": 12,
+    "d": 12,
+    "material": "tube"
+   }
+  ]
+ }
+}

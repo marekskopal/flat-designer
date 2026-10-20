@@ -1,5 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {DefinitionField, DefinitionParameter, FurnitureDefinitionBody} from '@app/models/furniture';
+import {ProjectFile} from '@app/models/project';
 import {Material} from '@app/models/scene';
 
 import {Params} from './cabinet-params';
@@ -39,6 +40,8 @@ export class CustomParamsComponent {
     public readonly depth = input.required<number>();
     public readonly height = input.required<number>();
     public readonly materials = input<Material[]>([]);
+    /** The project's image files, for `image` parameters. */
+    public readonly images = input<ProjectFile[]>([]);
     public readonly disabled = input(false);
 
     public readonly paramsChange = output<Params>();
@@ -95,6 +98,12 @@ export class CustomParamsComponent {
     protected setBool(parameter: DefinitionParameter, event: Event): void {
         const checked = (event.target as HTMLInputElement).checked;
         this.emit(withValue(this.params(), parameter.key, checked === parameter.default ? undefined : checked));
+    }
+
+    /** An image parameter: a file id, or none (no picture). */
+    protected setImage(parameter: DefinitionParameter, event: Event): void {
+        const value = (event.target as HTMLSelectElement).value;
+        this.emit(withValue(this.params(), parameter.key, value === '' ? undefined : Number(value)));
     }
 
     protected setSelect(parameter: DefinitionParameter, event: Event): void {

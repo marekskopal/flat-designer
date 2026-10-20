@@ -110,6 +110,7 @@
             [sceneDefinitions]="scene().definitions ?? []"
             [models]="editor.models()"
             [sceneModels]="scene().models ?? []"
+            [images]="editor.images()"
             [disabled]="editor.busy()"
             (fieldChange)="onFieldChange($event)"
         />

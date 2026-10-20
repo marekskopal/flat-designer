@@ -44,7 +44,7 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 
 	/** `Routes::Share` as a pattern: share links are read by guests, the token in the path is the credential. */
 	/** The guest read of a share link, and the models its scene draws. */
-	private const string ShareRoutePattern = '#^/api/shares/[a-f0-9]+(/models/\d+/content)?$#';
+	private const string ShareRoutePattern = '#^/api/shares/[a-f0-9]+(/(models|pictures)/\d+/content)?$#';
 
 	public function __construct(
 		private TokenService $tokenService,

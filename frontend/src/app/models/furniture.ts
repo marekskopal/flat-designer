@@ -17,6 +17,8 @@ export type DefinitionParameter =
     | {key: string; label?: string; type: 'int'; default: number; min?: number; max?: number; unit?: string}
     | {key: string; label?: string; type: 'bool'; default: boolean}
     | {key: string; label?: string; type: 'select'; default: string; options: string[]}
+    /** The id of an image file of the project (see `ProjectFile`); no default. */
+    | {key: string; label?: string; type: 'image'; default?: null}
     | {
           key: string;
           label?: string;

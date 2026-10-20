@@ -11,10 +11,11 @@ import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
-import {buildItem, ItemModels} from './items';
+import {buildItem, ItemAssets} from './items';
 import {MaterialLibrary} from './materials';
 import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
 import {ModelFetcher, ModelLibrary} from './models';
+import {PictureFetcher, PictureLibrary} from './pictures';
 import {
     alongWall,
     Bounds,
@@ -216,6 +217,7 @@ export class ViewerEngine {
     private underlay: THREE.Mesh | null = null;
     /** Loads the 3D models of `Model` items; none until the host supplies a fetcher. */
     private modelLibrary: ModelLibrary | null = null;
+    private pictureLibrary: PictureLibrary | null = null;
     private underlayImage: TexImageSource | null = null;
     private underlayVisible = true;
     private highlight: THREE.Mesh | null = null;
@@ -405,7 +407,7 @@ export class ViewerEngine {
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         const definitions = definitionLibrary(scene.definitions);
         for (const item of scene.items) {
-            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, this.itemModels(scene));
+            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, this.itemAssets(scene));
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -451,7 +453,7 @@ export class ViewerEngine {
         }
         const roomsById = new Map(scene.rooms.map((room) => [room.id, room]));
         for (const item of rebuiltItems) {
-            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions, this.itemModels(scene));
+            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions, this.itemAssets(scene));
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -559,12 +561,28 @@ export class ViewerEngine {
     }
 
     /** Takes an object out of the scene and frees its geometry (and materials the library does not share). */
-    private itemModels(scene: Scene): ItemModels {
-        return {byId: new Map((scene.models ?? []).map((m) => [m.id, m])), library: this.modelLibrary};
+    private itemAssets(scene: Scene): ItemAssets {
+        return {models: new Map((scene.models ?? []).map((m) => [m.id, m])), modelLibrary: this.modelLibrary, pictures: this.pictureLibrary};
     }
 
     /** Draws the `Model` items of a model that finished loading (all of them with null), in place of their placeholders. */
     private rebuildModelItems(modelId: number | null): void {
+        this.rebuildItems((item) => item.kind === 'Model' && (modelId === null || item.modelId === modelId));
+    }
+
+    /** Draws the items showing an image that finished loading (all pictures with null), in place of plain ones. */
+    private rebuildPictureItems(fileId: number | null): void {
+        this.rebuildItems((item) => {
+            let shows = false;
+            this.items.get(item.id)?.traverse((o) => {
+                const id = o.userData['pictureId'] as number | null | undefined;
+                shows ||= typeof id === 'number' && (fileId === null || id === fileId);
+            });
+            return shows;
+        });
+    }
+
+    private rebuildItems(rebuild: (item: Item) => boolean): void {
         const scene = this.sceneData;
         const content = this.content;
         const materials = this.materials;
@@ -575,14 +593,14 @@ export class ViewerEngine {
         const definitions = definitionLibrary(scene.definitions);
         const hidden = hiddenItemIds(scene);
         for (const item of scene.items) {
-            if (item.kind !== 'Model' || (modelId !== null && item.modelId !== modelId)) {
+            if (!rebuild(item)) {
                 continue;
             }
             const previous = this.items.get(item.id);
             if (previous !== undefined) {
                 this.disposeObject(previous);
             }
-            const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, this.itemModels(scene));
+            const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, this.itemAssets(scene));
             object.visible = !hidden.has(item.id);
             this.items.set(item.id, object);
             content.add(object);
@@ -765,6 +783,15 @@ export class ViewerEngine {
         this.modelLibrary.onLoaded = (modelId): void => this.rebuildModelItems(modelId);
         if (this.sceneData !== null) {
             this.rebuildModelItems(null);
+        }
+    }
+
+    public setPictureFetcher(fetcher: PictureFetcher): void {
+        this.pictureLibrary?.dispose();
+        this.pictureLibrary = new PictureLibrary(fetcher);
+        this.pictureLibrary.onLoaded = (fileId): void => this.rebuildPictureItems(fileId);
+        if (this.sceneData !== null) {
+            this.rebuildPictureItems(null);
         }
     }
 
@@ -977,6 +1004,7 @@ export class ViewerEngine {
         this.removeDimensions();
         this.setUnderlay(null, null);
         this.modelLibrary?.dispose();
+        this.pictureLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
         this.measureLabel.element.remove();
         this.handles.clear();

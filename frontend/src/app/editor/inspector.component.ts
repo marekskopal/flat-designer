@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
+import {ProjectFile} from '@app/models/project';
 import {Group, Material, Room, SceneDefinition, SceneModel} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
@@ -39,6 +40,8 @@ export class InspectorComponent {
     public readonly models = input<ModelAsset[]>([]);
     /** The models the scene's Model items draw (also ones no longer offered). */
     public readonly sceneModels = input<SceneModel[]>([]);
+    /** The project's image files, for the pictures of a Custom item. */
+    public readonly images = input<ProjectFile[]>([]);
     public readonly disabled = input(false);
 
     public readonly fieldChange = output<FieldChange>();

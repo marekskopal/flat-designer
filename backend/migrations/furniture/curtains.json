@@ -1,0 +1,112 @@
+{
+ "name": "Curtains",
+ "description": "Curtains on a rod: one panel or a pair, drawn open by a percentage (folds gather towards the sides).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1600,
+   "depth": 120,
+   "height": 2500
+  },
+  "parameters": [
+   {
+    "key": "panels",
+    "label": "Panels",
+    "type": "select",
+    "default": "pair",
+    "options": [
+     "pair",
+     "single"
+    ]
+   },
+   {
+    "key": "open",
+    "label": "Open",
+    "type": "int",
+    "default": 70,
+    "min": 0,
+    "max": 100,
+    "unit": "%"
+   },
+   {
+    "key": "fold",
+    "label": "Fold width",
+    "type": "int",
+    "default": 90,
+    "min": 40,
+    "max": 200,
+    "unit": "mm"
+   },
+   {
+    "key": "rod",
+    "label": "Rod",
+    "type": "bool",
+    "default": true
+   }
+  ],
+  "derived": {
+   "count": "panels == 'pair' ? 2 : 1",
+   "pw": "max(W / count * (1 - open / 100 * 0.8), fold * 2)",
+   "n": "clamp(floor(pw / fold * 1.4), 2, 50)",
+   "fw": "pw / n",
+   "fd": "min(D - 30, fw * 1.6)",
+   "drop": "H - 40"
+  },
+  "materialSlots": [
+   {
+    "key": "fabric",
+    "label": "Fabric",
+    "default": "fabric-linen-white"
+   },
+   {
+    "key": "rod",
+    "label": "Rod",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Rod",
+    "when": "rod",
+    "axis": "x",
+    "x": 0,
+    "y": "H - 25",
+    "z": "D - 25",
+    "w": "W",
+    "h": 25,
+    "d": 25,
+    "material": "rod"
+   },
+   {
+    "type": "cylinder",
+    "name": "Fold",
+    "repeat": {
+     "count": "n"
+    },
+    "x": "i * fw",
+    "y": 0,
+    "z": "(D - fd) / 2 + (i % 2) * fd * 0.15",
+    "w": "fw * 1.05",
+    "h": "drop",
+    "d": "fd * 0.85",
+    "material": "fabric"
+   },
+   {
+    "type": "cylinder",
+    "name": "Fold",
+    "when": "count == 2",
+    "repeat": {
+     "count": "n"
+    },
+    "x": "W - pw + i * fw - fw * 0.05",
+    "y": 0,
+    "z": "(D - fd) / 2 + (i % 2) * fd * 0.15",
+    "w": "fw * 1.05",
+    "h": "drop",
+    "d": "fd * 0.85",
+    "material": "fabric"
+   }
+  ]
+ }
+}

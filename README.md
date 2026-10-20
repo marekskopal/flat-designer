@@ -16,7 +16,7 @@ All geometry is generated from parameters. The project contains no 3D model file
   snapping, keyboard shortcuts and undo/redo of your own changes. Changes use optimistic locking and are
   recorded in an activity log.
 - **Furniture definitions**: parametric custom furniture (cabinets, wardrobes, worktops, tables, sofas, beds with
-  bedding, mirrors, railings, …) defined
+  bedding, mirrors, railings, rugs, curtains, blinds, books, framed pictures showing your own images, …) defined
   as JSON with parameters, material slots and parts. Definitions can be global, part of a user's library or
   belong to one project. They are edited with a JSON editor that shows a live preview.
 - **Product models**: bought products (chairs, lamps, taps, plants) as glTF binary models (`.glb`, also

@@ -834,6 +834,54 @@
   {
    "expression": "share(sizes, 760, 10, 1)",
    "error": "arity"
+  },
+  {
+   "expression": "hash(0)",
+   "result": 0.007765133399516344
+  },
+  {
+   "expression": "hash(1)",
+   "result": 0.6444021118804812
+  },
+  {
+   "expression": "hash(1, 2)",
+   "result": 0.43895627348683774
+  },
+  {
+   "expression": "hash(-3)",
+   "result": 0.6246587368659675
+  },
+  {
+   "expression": "hash(2.5) == hash(3)",
+   "result": true
+  },
+  {
+   "expression": "hash(-0.5, -0.5) == hash(-1, -1)",
+   "result": true
+  },
+  {
+   "expression": "hash(4294967301) == hash(5)",
+   "result": true
+  },
+  {
+   "expression": "round(hash(shelves) * 1000)",
+   "result": 418
+  },
+  {
+   "expression": "hash()",
+   "error": "arity"
+  },
+  {
+   "expression": "hash(1, 2, 3)",
+   "error": "arity"
+  },
+  {
+   "expression": "hash('a')",
+   "error": "type"
+  },
+  {
+   "expression": "hash(W * W * W * W * W * W)",
+   "error": "type"
   }
  ]
 }

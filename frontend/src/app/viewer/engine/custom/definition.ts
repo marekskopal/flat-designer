@@ -87,7 +87,8 @@ export function evaluateDefinition(definition: unknown, size: ItemSize, values: 
     return readParts(body['parts'], variables, slots);
 }
 
-type ParameterType = 'int' | 'bool' | 'select' | 'list';
+/** `image`: the id of an image file of the item's project, or null (the default); `picture` parts show it. */
+type ParameterType = 'int' | 'bool' | 'select' | 'list' | 'image';
 
 export interface Parameter {
     key: string;
@@ -128,6 +129,8 @@ export function acceptValue(parameter: Parameter, value: unknown): Value | null 
             return typeof value === 'boolean' ? value : null;
         case 'select':
             return typeof value === 'string' && parameter.options.includes(value) ? value : null;
+        case 'image':
+            return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
         case 'list':
             return null;
     }
@@ -144,6 +147,8 @@ export function describeParameter(parameter: Parameter): string {
             return 'true or false';
         case 'select':
             return `one of "${parameter.options.join('", "')}"`;
+        case 'image':
+            return 'the id of an image file of the project, or null';
         case 'list': {
             const counted = parameter.minItems === null && parameter.maxItems === null;
             const range = counted ? '' : `${parameter.minItems ?? 0} to ${parameter.maxItems ?? 'any'} `;
@@ -157,7 +162,7 @@ export function parameterValue(parameter: Parameter, value: unknown, path: strin
     if (parameter.type === 'list') {
         return listValue(parameter, value, path, code);
     }
-    if (value === null && parameter.optional) {
+    if (value === null && (parameter.optional || parameter.type === 'image')) {
         return null;
     }
     const accepted = acceptValue(parameter, value);
@@ -177,11 +182,16 @@ function readParameter(definition: unknown, path: string, taken: Map<string, Par
         throw invalid(`${path}.key`, NameRule);
     }
     const type = fields['type'];
-    if (type !== 'int' && type !== 'bool' && type !== 'select' && (field || type !== 'list')) {
+    if (type !== 'int' && type !== 'bool' && type !== 'select' && (field || (type !== 'list' && type !== 'image'))) {
         throw invalid(
             `${path}.type`,
-            field ? 'Must be "int", "bool" or "select" (a field cannot be a list).' : 'Must be "int", "bool", "select" or "list".',
+            field
+                ? 'Must be "int", "bool" or "select" (a field cannot be a list or an image).'
+                : 'Must be "int", "bool", "select", "list" or "image".',
         );
+    }
+    if (type === 'image' && (fields['default'] ?? null) !== null) {
+        throw invalid(`${path}.default`, 'An image parameter has no default (null): the item picks a file.');
     }
     const parameter: Parameter = {
         key,
@@ -449,13 +459,15 @@ class PartEntry {
         private readonly path: string,
         private readonly type: string,
         private readonly name: string,
-        private readonly material: string | null,
+        /** A slot key, or `OptionExpression` for a `{"expr": …}` choosing one per copy. */
+        private readonly material: string | OptionExpression | null,
         private readonly repeat: PartRepeat | null,
         private readonly when: Expression,
         private readonly geometry: Map<GeometryKey, Expression>,
         /** Literal values, or `OptionExpression` for `{"expr": …}` ones. */
         private readonly options: Map<string, unknown>,
         private readonly children: PartEntry[],
+        private readonly slots: string[],
     ) {}
 
     /** Reads `parts[n]` (at `depth`, 1 for the top level) with the parts of an assembly. */
@@ -471,8 +483,9 @@ class PartEntry {
         if (typeof name !== 'string') {
             throw invalid(`${path}.name`, 'Must be a string.');
         }
-        const material = data['material'] ?? null;
-        if (material !== null && !slots.includes(material as string)) {
+        const literal = data['material'] ?? null;
+        const material = isOptionExpression(literal) ? new OptionExpression(compile(literal.expr, `${path}.material`)) : literal;
+        if (material !== null && !(material instanceof OptionExpression) && !slots.includes(material as string)) {
             throw invalid(`${path}.material`, 'Must be the key of one of the materialSlots.');
         }
         const repeat = Object.hasOwn(data, 'repeat') ? PartRepeat.read(data['repeat'], `${path}.repeat`) : null;
@@ -487,7 +500,7 @@ class PartEntry {
         const assembly = type === Assembly;
         const options = readPartOptions(data, path, assembly);
         const children = assembly ? readChildren(data['parts'], `${path}.parts`, slots, depth, collector) : [];
-        return new PartEntry(path, type, name, material as string | null, repeat, when, geometry, options, children);
+        return new PartEntry(path, type, name, material as string | OptionExpression | null, repeat, when, geometry, options, children, slots);
     }
 
     /** Adds the parts of this entry for the variables, its box shifted by the offset (mm) of the assemblies around it. */
@@ -517,7 +530,7 @@ class PartEntry {
                     w: mm.w,
                     h: mm.h,
                     d: mm.d,
-                    material: this.material,
+                    material: this.materialOf(scope),
                     props: placed(this.evaluateOptions(scope), offset),
                 },
                 this.path,
@@ -536,6 +549,18 @@ class PartEntry {
             }
         }
         return mm;
+    }
+
+    private materialOf(scope: Variables): string | null {
+        if (!(this.material instanceof OptionExpression)) {
+            return this.material;
+        }
+        const path = `${this.path}.material`;
+        const key = run(this.material.expression, scope, path);
+        if (typeof key !== 'string' || !this.slots.includes(key)) {
+            throw invalid(path, 'Must come out as the key of one of the materialSlots.');
+        }
+        return key;
     }
 
     private evaluateOptions(scope: Variables): Record<string, unknown> {

@@ -14,6 +14,7 @@ use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use FlatDesigner\Service\Project\ProjectFileProvider;
 use FlatDesigner\Service\Project\ProjectProvider;
+use FlatDesigner\Service\Project\ShareLinkProvider;
 use FlatDesigner\Service\Request\RequestService;
 use Laminas\Diactoros\Response;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -53,6 +54,7 @@ final readonly class ProjectFileController
 	public function __construct(
 		private ProjectProvider $projectProvider,
 		private ProjectFileProvider $projectFileProvider,
+		private ShareLinkProvider $shareLinkProvider,
 		private RequestService $requestService,
 	) {
 	}
@@ -108,10 +110,21 @@ final readonly class ProjectFileController
 	public function actionGetFileContent(ServerRequestInterface $request, int $projectId, int $fileId): ResponseInterface
 	{
 		$file = $this->findFile($request, $projectId, $fileId);
-		if ($file === null) {
-			return new NotFoundResponse(self::NotFound);
-		}
 
+		return $file === null ? new NotFoundResponse(self::NotFound) : $this->content($file);
+	}
+
+	/** For share guests, without sign-in: an image their view shows as a picture. */
+	#[RouteGet(Routes::SharePictureContent->value)]
+	public function actionGetSharePictureContent(ServerRequestInterface $request, string $token, int $fileId): ResponseInterface
+	{
+		$file = $this->shareLinkProvider->findSharedPicture($token, $fileId);
+
+		return $file === null ? new NotFoundResponse(self::NotFound) : $this->content($file);
+	}
+
+	private function content(ProjectFile $file): ResponseInterface
+	{
 		return new Response(
 			(new StreamFactory())->createStream($this->projectFileProvider->readContent($file)),
 			200,

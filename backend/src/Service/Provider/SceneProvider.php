@@ -33,6 +33,8 @@ use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
+use FlatDesigner\Service\Furniture\ImageParameters;
+use FlatDesigner\Service\Json\JsonDecoder;
 
 /** Builds the viewer's scene of one floor of the working copy. */
 final readonly class SceneProvider
@@ -67,9 +69,17 @@ final readonly class SceneProvider
 		$items = $this->itemRepository->findByFloor($floor->id);
 		$definitions = [];
 		$models = [];
+		$pictures = [];
 		foreach ($items as $item) {
 			if ($item->definition !== null) {
 				$definitions[$item->definition->id] = $item->definition;
+				$params = $item->params === null ? [] : JsonDecoder::decodeObject($item->params);
+				foreach (ImageParameters::fileIds(
+					JsonDecoder::decodeObject($item->definition->definition),
+					$params['values'] ?? null,
+				) as $fileId) {
+					$pictures[$fileId] = $fileId;
+				}
 			}
 			if ($item->model !== null) {
 				$models[$item->model->id] = $item->model;
@@ -77,6 +87,7 @@ final readonly class SceneProvider
 		}
 		ksort($definitions);
 		ksort($models);
+		ksort($pictures);
 		$underlay = $this->underlayRepository->findByFloor($floor->id);
 
 		return new SceneDto(
@@ -97,6 +108,7 @@ final readonly class SceneProvider
 			),
 			underlay: $underlay === null ? null : UnderlayDto::fromEntity($underlay),
 			models: array_map(fn (ModelAsset $model): SceneModelDto => SceneModelDto::fromEntity($model), array_values($models)),
+			pictures: array_values($pictures),
 		);
 	}
 

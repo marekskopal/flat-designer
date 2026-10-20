@@ -7,6 +7,7 @@ import {taperedLeg} from '../furniture';
 import {buildAppliance, buildHandle} from '../kitchen';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
+import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {evaluateDefinition, ResolvedPart} from './definition';
 
@@ -37,14 +38,24 @@ const CylinderSegments = 24;
 /** A sliding door's frame, as on the built-in wardrobe. */
 const SlidingProfileWidth = 22;
 const SlidingInfillThickness = 8;
+/** A picture's face stands this far (mm) in front of its box, clear of z-fighting. */
+const PictureFaceOffset = 0.5;
+/** The paper of a picture without an image (none chosen, loading or unreadable). */
+const PlainPaper = '#ece8e0';
 
 /**
  * Body of a `Custom` item from its furniture definition, in the item-local frame of `buildItem()` (bottom centre origin, x
  * along the width, +z out of the front); the parts' frame (left-bottom-back corner origin) is shifted by half the width
  * and depth. When the definition is missing or does not evaluate at the item's size, a translucent red box of the item
- * size stands in, with the reason in `userData.definitionError`. Null for other kinds.
+ * size stands in, with the reason in `userData.definitionError`. `picture` parts show their image from `pictures` (plain
+ * while it loads, or without a library). Null for other kinds.
  */
-export function buildCustomItemBody(item: Item, materials: MaterialLibrary, definitions: DefinitionLibrary): THREE.Group | null {
+export function buildCustomItemBody(
+    item: Item,
+    materials: MaterialLibrary,
+    definitions: DefinitionLibrary,
+    pictures: PictureLibrary | null = null,
+): THREE.Group | null {
     if (item.kind !== 'Custom') {
         return null;
     }
@@ -61,7 +72,7 @@ export function buildCustomItemBody(item: Item, materials: MaterialLibrary, defi
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
-            const mesh = tilted(buildPart(part, item, material, materials), part);
+            const mesh = tilted(buildPart(part, item, material, materials, pictures), part);
             mesh.name = `part:${part.name}`;
             mesh.userData['partName'] = part.name;
             mesh.position.x -= (item.width / 2) * MM;
@@ -103,6 +114,7 @@ function buildPart(
     item: Item,
     material: (grain: GrainDirection, slot?: string | null) => THREE.Material,
     materials: MaterialLibrary,
+    pictures: PictureLibrary | null,
 ): THREE.Object3D {
     const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
     switch (part.type) {
@@ -130,6 +142,8 @@ function buildPart(
             return box(part, glassMaterial());
         case 'led':
             return buildLed(part, material('vertical'));
+        case 'picture':
+            return buildPicture(part, material(grain), pictures);
         default:
             return box(part, material(grain));
     }
@@ -154,6 +168,30 @@ function buildBoard(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     return mesh;
+}
+
+/**
+ * A picture: its box in the part's material with the image of `props.image` (a file id) on the front face, cropped to
+ * fill it. The face is tagged `userData.pictureId`, so the item is rebuilt once the image has loaded.
+ */
+function buildPicture(part: ResolvedPart, material: THREE.Material, pictures: PictureLibrary | null): THREE.Group {
+    const group = new THREE.Group();
+    group.add(box(part, material));
+    const fileId = typeof part.props['image'] === 'number' ? part.props['image'] : null;
+    const texture = fileId === null || pictures === null ? null : pictures.texture(fileId);
+    const image = texture?.image as {width?: number; height?: number} | undefined;
+    const geometry = new THREE.PlaneGeometry(part.w * MM, part.h * MM);
+    const [u0, v0, u1, v1] = coverUvs((image?.width ?? 1) / (image?.height ?? 1), part.w / part.h);
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v1, u1, v1, u0, v0, u1, v0], 2));
+    const face = new THREE.Mesh(
+        geometry,
+        new THREE.MeshStandardMaterial(texture === null ? {color: PlainPaper, roughness: 0.9} : {map: texture, roughness: 0.85}),
+    );
+    face.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d + PictureFaceOffset) * MM);
+    face.userData['pictureId'] = fileId;
+    face.userData['pictureLoaded'] = texture !== null;
+    group.add(face);
+    return group;
 }
 
 /** The material darkened by `shade` (0–1), as a plinth in the shadow under the fronts; unchanged without one. */
