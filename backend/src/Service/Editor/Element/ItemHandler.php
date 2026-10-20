@@ -171,6 +171,7 @@ final readonly class ItemHandler implements ElementHandler
 			'params' => $params,
 		];
 		$this->customValidator->validate(
+			$floor->project,
 			$kind,
 			$definition,
 			$params,

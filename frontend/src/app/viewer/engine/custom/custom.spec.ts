@@ -8,6 +8,7 @@ import {describe, expect, it} from 'vitest';
 
 import {buildItem} from '../items';
 import {MaterialLibrary} from '../materials';
+import {PictureLibrary} from '../pictures';
 import {buildCustomItemBody, changedDefinitionIds, definitionLibrary, partMaterial} from './custom';
 import {evaluateDefinition} from './definition';
 
@@ -268,5 +269,50 @@ describe('changedDefinitionIds', () => {
         const edited = sceneDefinition(2, shelf, '2026-10-18T11:00:00+00:00');
         const after = definitionLibrary([sceneDefinition(1, shelf), edited, sceneDefinition(4, shelf)]);
         expect([...changedDefinitionIds(before, after)].sort()).toEqual([2, 3, 4]);
+    });
+});
+
+describe('picture parts', () => {
+    const poster: FurnitureDefinitionBody = {
+        format: 1,
+        size: {width: 700, depth: 30, height: 1000},
+        parameters: [{key: 'poster', label: 'Picture', type: 'image'}],
+        parts: [{type: 'picture', name: 'Print', x: 0, y: 0, z: 0, w: 'W', h: 'H', d: 'D', image: {expr: 'poster'}}],
+    };
+    const definitions = definitionLibrary([sceneDefinition(3, poster)]);
+    const size = {width: 700, depth: 30, height: 1000};
+    /** A library that has loaded a 2:1 landscape image as file 12. */
+    const library = {
+        texture: (fileId: number): THREE.Texture | null =>
+            fileId === 12 ? Object.assign(new THREE.Texture(), {image: {width: 200, height: 100}}) : null,
+    } as unknown as PictureLibrary;
+    const face = (group: THREE.Object3D): THREE.Mesh => {
+        let found: THREE.Mesh | null = null;
+        group.traverse((o) => {
+            if (o instanceof THREE.Mesh && o.userData['pictureId'] !== undefined) {
+                found = o;
+            }
+        });
+        return found as unknown as THREE.Mesh;
+    };
+
+    it('shows the image on the front face, cropped to fill it', () => {
+        const body = buildCustomItemBody(customItem(3, size, {values: {poster: 12}}), materials(), definitions, library) as THREE.Group;
+        const front = face(body);
+        expect(front.userData['pictureId']).toBe(12);
+        expect((front.material as THREE.MeshStandardMaterial).map).not.toBeNull();
+        // A 2:1 image on a 0.7:1 face keeps its middle 35 %.
+        const u = front.geometry.getAttribute('uv');
+        expect(u.getX(0)).toBeCloseTo(0.325, 6);
+        expect(u.getX(1)).toBeCloseTo(0.675, 6);
+        // Half a millimetre in front of its box (in the part's frame).
+        expect(front.position.z).toBeCloseTo(0.0305, 9);
+    });
+
+    it('is plain without an image, or while it loads', () => {
+        for (const params of [{}, {values: {poster: 99}}]) {
+            const front = face(buildCustomItemBody(customItem(3, size, params), materials(), definitions, library) as THREE.Group);
+            expect((front.material as THREE.MeshStandardMaterial).map).toBeNull();
+        }
     });
 });

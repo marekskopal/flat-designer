@@ -70,7 +70,28 @@ const Functions: Readonly<Record<string, FunctionDef>> = {
     field: {arity: [2, 2], apply: ([l, name], c) => list(l, c).map((item) => fieldOf(record(item, c), string(name, c)))},
     share: {arity: [2, 3], apply: ([l, total, gap], c) => share(list(l, c), number(total, c), gap === undefined ? 0 : number(gap, c), c)},
     offsets: {arity: [1, 2], apply: ([l, gap], c) => offsets(list(l, c), gap === undefined ? 0 : number(gap, c), c)},
+    hash: {arity: [1, 2], apply: ([n, seed]) => hash(uint32(n), uint32(seed === undefined ? 0 : seed, 1))},
 };
+
+/**
+ * A fixed pseudo-random number from 0 up to (not including) 1 for whole numbers `n` and `seed` (rounded half away from
+ * zero, modulo 2^32), e.g. book spines varying by their repeat index. 32-bit integer mixing, as in the PHP twin.
+ */
+function hash(n: number, seedPlusOne: number): number {
+    let x = (n ^ Math.imul(seedPlusOne, 0x9e3779b9)) >>> 0;
+    x = Math.imul(x ^ (x >>> 16), 0x7feb352d) >>> 0;
+    x = Math.imul(x ^ (x >>> 15), 0x846ca68b) >>> 0;
+    return ((x ^ (x >>> 16)) >>> 0) / 4294967296;
+}
+
+/** The whole number (plus `add`) modulo 2^32, for `hash`. */
+function uint32(value: Value, add = 0): number {
+    const whole = roundHalfAway(number(value, 'Function "hash"')) + add;
+    if (!Number.isFinite(whole) || Math.abs(whole) > 2 ** 53) {
+        throw new ExpressionError('type', 'Function "hash" needs whole numbers up to 2^53.');
+    }
+    return ((whole % 4294967296) + 4294967296) % 4294967296;
+}
 
 type Node =
     | {kind: 'literal'; value: Value}

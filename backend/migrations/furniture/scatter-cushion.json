@@ -1,0 +1,51 @@
+{
+ "name": "Scatter cushion",
+ "description": "A plump cushion for a sofa or a bed, leaning back by lean degrees.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 450,
+   "depth": 180,
+   "height": 450
+  },
+  "parameters": [
+   {
+    "key": "lean",
+    "label": "Lean back",
+    "type": "int",
+    "default": 15,
+    "min": 0,
+    "max": 60,
+    "unit": "°"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "fabric",
+    "label": "Fabric",
+    "default": "fabric-velvet-green"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cushion",
+    "name": "Cushion",
+    "x": 0,
+    "y": 0,
+    "z": "D - 140",
+    "w": "W",
+    "h": "H",
+    "d": 140,
+    "radius": 60,
+    "material": "fabric",
+    "tilt": {
+     "expr": "lean"
+    },
+    "tiltY": 0,
+    "tiltZ": {
+     "expr": "D"
+    }
+   }
+  ]
+ }
+}

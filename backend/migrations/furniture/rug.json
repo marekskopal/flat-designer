@@ -1,0 +1,105 @@
+{
+ "name": "Rug",
+ "description": "A rug with rounded corners, or round (its diameter the smaller of width and depth), with an optional border in a second colour.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2000,
+   "depth": 1400,
+   "height": 12
+  },
+  "parameters": [
+   {
+    "key": "shape",
+    "label": "Shape",
+    "type": "select",
+    "default": "rectangle",
+    "options": [
+     "rectangle",
+     "round"
+    ]
+   },
+   {
+    "key": "border",
+    "label": "Border width",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 400,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "dia": "min(W, D)",
+   "round": "shape == 'round'"
+  },
+  "materialSlots": [
+   {
+    "key": "rug",
+    "label": "Rug",
+    "default": "rug-wool-cream"
+   },
+   {
+    "key": "border",
+    "label": "Border",
+    "default": "rug-jute"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cushion",
+    "name": "Rug",
+    "when": "!round",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "radius": 4,
+    "material": {
+     "expr": "border > 0 ? 'border' : 'rug'"
+    }
+   },
+   {
+    "type": "cushion",
+    "name": "Field",
+    "when": "!round && border > 0",
+    "x": "border",
+    "y": 1,
+    "z": "border",
+    "w": "W - 2 * border",
+    "h": "H",
+    "d": "D - 2 * border",
+    "radius": 3,
+    "material": "rug"
+   },
+   {
+    "type": "cylinder",
+    "name": "Rug",
+    "when": "round",
+    "x": "(W - dia) / 2",
+    "y": 0,
+    "z": "(D - dia) / 2",
+    "w": "dia",
+    "h": "H",
+    "d": "dia",
+    "material": {
+     "expr": "border > 0 ? 'border' : 'rug'"
+    }
+   },
+   {
+    "type": "cylinder",
+    "name": "Field",
+    "when": "round && border > 0",
+    "x": "(W - dia) / 2 + border",
+    "y": 1,
+    "z": "(D - dia) / 2 + border",
+    "w": "dia - 2 * border",
+    "h": "H",
+    "d": "dia - 2 * border",
+    "material": "rug"
+   }
+  ]
+ }
+}

@@ -1,0 +1,96 @@
+{
+ "name": "Venetian blind",
+ "description": "A venetian blind: a head rail and slats tilted by an angle, let down by a percentage.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1200,
+   "depth": 50,
+   "height": 1500
+  },
+  "parameters": [
+   {
+    "key": "down",
+    "label": "Let down",
+    "type": "int",
+    "default": 100,
+    "min": 0,
+    "max": 100,
+    "unit": "%"
+   },
+   {
+    "key": "angle",
+    "label": "Slat angle",
+    "type": "int",
+    "default": 30,
+    "min": -80,
+    "max": 80,
+    "unit": "°"
+   },
+   {
+    "key": "slat",
+    "label": "Slat width",
+    "type": "int",
+    "default": 25,
+    "min": 15,
+    "max": 50,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "rail": 30,
+   "pitch": "slat * 0.85",
+   "n": "clamp(floor((H - rail) * down / 100 / pitch), 0, 100)"
+  },
+  "materialSlots": [
+   {
+    "key": "slats",
+    "label": "Slats",
+    "default": "furniture-white-matt"
+   },
+   {
+    "key": "rail",
+    "label": "Head rail",
+    "default": "furniture-white-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Head rail",
+    "x": 0,
+    "y": "H - rail",
+    "z": "(D - min(D, 40)) / 2",
+    "w": "W",
+    "h": "rail",
+    "d": "min(D, 40)",
+    "material": "rail",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Slat",
+    "repeat": {
+     "count": "n"
+    },
+    "x": 5,
+    "y": "H - rail - (i + 1) * pitch",
+    "z": "(D - slat) / 2",
+    "w": "W - 10",
+    "h": 1,
+    "d": "slat",
+    "material": "slats",
+    "grain": "horizontal",
+    "tilt": {
+     "expr": "angle"
+    },
+    "tiltY": {
+     "expr": "H - rail - (i + 1) * pitch"
+    },
+    "tiltZ": {
+     "expr": "D / 2"
+    }
+   }
+  ]
+ }
+}

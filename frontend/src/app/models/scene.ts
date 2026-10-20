@@ -267,6 +267,8 @@ export interface Scene {
     underlay?: Underlay | null;
     /** The 3D models of the `Model` items; absent in older versions. */
     models?: SceneModel[];
+    /** The project files the `Custom` items show as pictures; absent in older versions. */
+    pictures?: number[];
 }
 
 /** A 3D model as the scene carries it: its native size (mm) to scale it by, and its credits. */

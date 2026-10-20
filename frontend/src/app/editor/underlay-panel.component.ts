@@ -1,14 +1,13 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, resource, signal, untracked} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {ImageMimeTypes} from '@app/models/project';
 import {Scene, Underlay} from '@app/models/scene';
 import {UnderlayInput} from '@app/services/editor-api.service';
 import {ProjectService} from '@app/services/project.service';
 import {calibrateUnderlay} from '@app/viewer/engine/underlay';
 
 import {EditorStore} from './editor.store';
-
-const ImageTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 /** Direction the two calibration points run in reality: as clicked, along x or along y. */
 type CalibrationDirection = 'keep' | 'horizontal' | 'vertical';
@@ -34,7 +33,7 @@ export class UnderlayPanelComponent {
     protected readonly underlay = computed(() => this.scene().underlay ?? null);
     protected readonly images = resource({
         params: () => ({projectId: this.projectId()}),
-        loader: async ({params}) => (await this.projects.listFiles(params.projectId)).filter((f) => ImageTypes.includes(f.mimeType)),
+        loader: async ({params}) => (await this.projects.listFiles(params.projectId)).filter((f) => ImageMimeTypes.includes(f.mimeType)),
     });
     protected readonly imageFiles = computed(() => (this.images.hasValue() ? this.images.value() : []));
     protected readonly points = computed(() => {
@@ -56,10 +55,13 @@ export class UnderlayPanelComponent {
         // (a live update from an agent or another tab) makes them meaningless.
         const placementOf = (underlay: Underlay | null): string =>
             underlay === null ? '' : JSON.stringify([underlay.fileId, underlay.x, underlay.y, underlay.scale, underlay.rotation]);
-        let placement = placementOf(untracked(this.underlay));
+        // Null until the effect first runs: inputs are not set yet in the constructor.
+        let placement: string | null = null;
         effect(() => {
             const current = placementOf(this.underlay());
-            if (current !== placement) {
+            if (placement === null) {
+                placement = current;
+            } else if (current !== placement) {
                 placement = current;
                 untracked(() => {
                     if (this.editor.calibration() !== null) {

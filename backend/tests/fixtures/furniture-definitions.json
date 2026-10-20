@@ -9951,6 +9951,445 @@
      }
     }
    ]
+  },
+  {
+   "name": "material picked per copy and sizes varied by hash",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 200,
+     "height": 260
+    },
+    "materialSlots": [
+     {
+      "key": "red"
+     },
+     {
+      "key": "blue"
+     },
+     {
+      "key": "cream"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Book",
+      "repeat": {
+       "count": 4
+      },
+      "material": {
+       "expr": "hash(i) < 0.33 ? 'red' : hash(i) < 0.66 ? 'blue' : 'cream'"
+      },
+      "x": "i * 30",
+      "y": 0,
+      "z": 0,
+      "w": "28 - round(hash(i, 1) * 8)",
+      "h": "200 + round(hash(i, 2) * 60)",
+      "d": "D"
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 200,
+    "height": 260
+   },
+   "parts": [
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 0,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 28,
+     "h": 204,
+     "d": 200,
+     "material": "red",
+     "props": {}
+    },
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 1,
+     "x": 30,
+     "y": 0,
+     "z": 0,
+     "w": 26,
+     "h": 226,
+     "d": 200,
+     "material": "blue",
+     "props": {}
+    },
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 2,
+     "x": 60,
+     "y": 0,
+     "z": 0,
+     "w": 21,
+     "h": 220,
+     "d": 200,
+     "material": "red",
+     "props": {}
+    },
+    {
+     "name": "Book",
+     "type": "board",
+     "index": 3,
+     "x": 90,
+     "y": 0,
+     "z": 0,
+     "w": 27,
+     "h": 252,
+     "d": 200,
+     "material": "blue",
+     "props": {}
+    }
+   ]
+  },
+  {
+   "name": "material expression naming no slot",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 200,
+     "height": 260
+    },
+    "materialSlots": [
+     {
+      "key": "red"
+     },
+     {
+      "key": "blue"
+     },
+     {
+      "key": "cream"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Book",
+      "repeat": {
+       "count": 4
+      },
+      "material": {
+       "expr": "i == 2 ? 'green' : 'red'"
+      },
+      "x": "i * 30",
+      "y": 0,
+      "z": 0,
+      "w": "28 - round(hash(i, 1) * 8)",
+      "h": "200 + round(hash(i, 2) * 60)",
+      "d": "D"
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 200,
+    "height": 260
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].material"
+   }
+  },
+  {
+   "name": "picture without an image",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image"
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "parts": [
+    {
+     "name": "Frame",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 700,
+     "h": 1000,
+     "d": 20,
+     "material": "frame",
+     "props": {}
+    },
+    {
+     "name": "Print",
+     "type": "picture",
+     "index": null,
+     "x": 30,
+     "y": 30,
+     "z": 20,
+     "w": 640,
+     "h": 940,
+     "d": 2,
+     "material": null,
+     "props": {
+      "image": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "picture showing the item's image file",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image"
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "values": {
+    "poster": 12
+   },
+   "parts": [
+    {
+     "name": "Frame",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 700,
+     "h": 1000,
+     "d": 20,
+     "material": "frame",
+     "props": {}
+    },
+    {
+     "name": "Print",
+     "type": "picture",
+     "index": null,
+     "x": 30,
+     "y": 30,
+     "z": 20,
+     "w": 640,
+     "h": 940,
+     "d": 2,
+     "material": null,
+     "props": {
+      "image": 12
+     }
+    }
+   ]
+  },
+  {
+   "name": "image value not a file id",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image"
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "values": {
+    "poster": 0
+   },
+   "error": {
+    "code": "invalidValue",
+    "path": "values.poster"
+   }
+  },
+  {
+   "name": "image parameter with a default",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 700,
+     "depth": 30,
+     "height": 1000
+    },
+    "parameters": [
+     {
+      "key": "poster",
+      "label": "Picture",
+      "type": "image",
+      "default": 5
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "frame"
+     }
+    ],
+    "parts": [
+     {
+      "type": "board",
+      "name": "Frame",
+      "material": "frame",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": 20
+     },
+     {
+      "type": "picture",
+      "name": "Print",
+      "x": 30,
+      "y": 30,
+      "z": 20,
+      "w": "W - 60",
+      "h": "H - 60",
+      "d": 2,
+      "image": {
+       "expr": "poster"
+      }
+     }
+    ]
+   },
+   "size": {
+    "width": 700,
+    "depth": 30,
+    "height": 1000
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parameters[0].default"
+   }
   }
  ]
 }

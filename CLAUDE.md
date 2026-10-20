@@ -135,8 +135,17 @@ format is the text in `FurnitureTools::Format`.
 - Seeding: global definitions come from `backend/migrations/furniture/*.json`. The seed migrations list their files,
   and `FurnitureSeeds` reads them. Both test suites build them, and `custom/parity.spec.ts` checks the sample project's
   definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against the built-in kinds.
+- Per-copy variety: `hash(n, seed?)` gives a fixed pseudo-random 0 ≤ x < 1 (32-bit integer mixing, identical in both
+  twins), and a part's `material` may be `{"expr": …}` choosing a slot per copy, e.g. book spines.
+- Pictures: a parameter of type `image` (no default) holds the id of an image file of the item's project, and a
+  `picture` part shows it on its front face through its `image` option (cropped to fill, `coverUvs()`).
+  `CustomItemValidator` checks the file (`ImageParameters`). The scene lists the files in `pictures`, so share guests
+  may load them (`SharePictureContent`). The viewer loads them through `PictureLibrary` (`viewer/engine/pictures.ts`,
+  the pages' `pictureFetcher`) and rebuilds the items once an image has loaded.
 - The global catalogue also has a sofa, a bed with bedding, a bedside table, a round table, a walk-in shower screen,
-  a round mirror and a balcony railing (`SeedFurnitureCatalogueMigration`). Upholstery uses the `cushion` part, a
+  a round mirror and a balcony railing (`SeedFurnitureCatalogueMigration`), and decor (`SeedDecorCatalogueMigration`):
+  a framed picture (it can lean against the wall), rugs, books, curtains, roller and venetian blinds and a scatter
+  cushion. Curtains and blinds are furniture placed at a window, not fields of the opening. Upholstery uses the `cushion` part, a
   box with rounded edges (`radius`), which the cut list counts among the other parts. Round tops and mirrors are
   `cylinder` parts.
 - Built-in furniture kinds: a conversion migration turned the sample project's built-in furniture into Custom items

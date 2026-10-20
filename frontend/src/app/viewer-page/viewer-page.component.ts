@@ -114,6 +114,8 @@ export class ViewerPageComponent {
     private readonly modelAssets = inject(ModelAssetService);
     /** The 3D models of `Model` items, with the user's sign-in. */
     protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.content(modelId);
+    // Quietly: a saved version may show a file deleted since, and then the picture stays plain.
+    protected readonly pictureFetcher = (fileId: number): Promise<Blob> => this.projects.downloadFile(this.projectId(), fileId, {quiet: true});
     private readonly projects = inject(ProjectService);
     private readonly alerts = inject(AlertService);
 

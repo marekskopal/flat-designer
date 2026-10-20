@@ -48,13 +48,7 @@ final readonly class DefinitionParameter
 		if ($key === null) {
 			throw DefinitionException::invalid($path . '.key', Names::Rule);
 		}
-		$type = is_string($definition['type'] ?? null) ? ParameterTypeEnum::tryFrom($definition['type']) : null;
-		if ($type === null || $field && $type === ParameterTypeEnum::List) {
-			throw DefinitionException::invalid(
-				$path . '.type',
-				$field ? 'Must be "int", "bool" or "select" (a field cannot be a list).' : 'Must be "int", "bool", "select" or "list".',
-			);
-		}
+		$type = ParameterInput::type($definition, $path, $field);
 
 		$parameter = new self(
 			key: $key,
@@ -85,7 +79,7 @@ final readonly class DefinitionParameter
 		if ($this->type === ParameterTypeEnum::List) {
 			return ListValues::read($this, $value, $path, $error);
 		}
-		if ($value === null && $this->optional) {
+		if ($value === null && ($this->optional || $this->type === ParameterTypeEnum::Image)) {
 			return null;
 		}
 
@@ -101,6 +95,7 @@ final readonly class DefinitionParameter
 				&& ($this->max === null || $value <= $this->max) ? (float) $value : null,
 			ParameterTypeEnum::Bool => is_bool($value) ? $value : null,
 			ParameterTypeEnum::Select => is_string($value) && in_array($value, $this->options, true) ? $value : null,
+			ParameterTypeEnum::Image => is_int($value) && $value > 0 ? (float) $value : null,
 			ParameterTypeEnum::List => null,
 		};
 	}
@@ -115,6 +110,7 @@ final readonly class DefinitionParameter
 			),
 			ParameterTypeEnum::Bool => 'true or false',
 			ParameterTypeEnum::Select => sprintf('one of "%s"', implode('", "', $this->options)),
+			ParameterTypeEnum::Image => 'the id of an image file of the project, or null',
 			ParameterTypeEnum::List => sprintf(
 				'a list of %s{%s}',
 				$this->minItems === null && $this->maxItems === null ? '' : sprintf(

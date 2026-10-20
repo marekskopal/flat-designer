@@ -28,6 +28,7 @@ final readonly class DefinitionValidator
 		'bool' => [],
 		'select' => ['options'],
 		'list' => ['fields', 'minItems', 'maxItems'],
+		'image' => [],
 	];
 
 	private const array SlotKeys = ['key', 'label', 'default'];

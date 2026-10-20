@@ -37,6 +37,12 @@ enum PartTypeEnum: string
 	 * counts it among the other parts.
 	 */
 	case Cushion = 'cushion';
+	/**
+	 * A picture (a print, poster or photo): the box in the part's material with the item's `image` file on its front
+	 * (+z) face, cropped to fill it. Without an image the front is plain. Bought, so the cut list counts it among the
+	 * other parts.
+	 */
+	case Picture = 'picture';
 	/** No part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`. */
 	case Assembly = 'assembly';
 
@@ -60,6 +66,7 @@ enum PartTypeEnum: string
 		'bool' => 'Must be true or false.',
 		'slot' => 'Must be the key of one of the materialSlots.',
 		'number' => 'Must be a number, 0 or more.',
+		'image' => 'Must be an image parameter\'s value: a file id or null.',
 	];
 
 	/** @return list<string> */
@@ -127,6 +134,7 @@ enum PartTypeEnum: string
 			'mm' => is_int($value) && $value > 0,
 			'color' => is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value) === 1,
 			'bool' => is_bool($value),
+			'image' => $value === null || is_int($value) && $value > 0,
 			default => is_string($value),
 		};
 	}
@@ -166,6 +174,7 @@ enum PartTypeEnum: string
 			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Tilt,
 			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Tilt,
 			self::Cushion => ['radius' => 'number'] + self::Tilt,
+			self::Picture => ['image' => 'image'] + self::Tilt,
 			self::Assembly => [],
 		};
 	}
