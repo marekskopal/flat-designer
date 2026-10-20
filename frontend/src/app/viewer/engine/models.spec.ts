@@ -52,6 +52,22 @@ const library = (state: 'loaded' | 'loading' | 'failed'): ModelLibrary =>
 
 const models = new Map([[7, model]]);
 
+describe('ModelLibrary', () => {
+    it('drops a load that finishes after it was disposed', async () => {
+        let fail: (reason: Error) => void = () => undefined;
+        const real = new ModelLibrary(() => new Promise<ArrayBuffer>((_, reject) => (fail = reject)));
+        const loaded: number[] = [];
+        real.onLoaded = (id): void => {
+            loaded.push(id);
+        };
+        expect(real.instance(model)).toBeNull();
+        real.dispose();
+        fail(new Error('gone'));
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(loaded).toEqual([]);
+    });
+});
+
 describe('buildModelItemBody', () => {
     it('is null for other kinds', () => {
         expect(buildModelItemBody(item({kind: 'Box'}), models, library('loaded'))).toBeNull();

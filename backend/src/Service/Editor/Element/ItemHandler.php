@@ -153,7 +153,12 @@ final readonly class ItemHandler implements ElementHandler
 			'groupId' => $groupId,
 			'kind' => $kind->value,
 			'definitionId' => $definitionId,
-			'modelId' => $this->modelLink->validate($floor, $kind, $fields->nullableId('modelId')),
+			'modelId' => $this->modelLink->validate(
+				$floor,
+				$kind,
+				$fields->nullableId('modelId'),
+				$current instanceof Item ? $current : null,
+			),
 			'name' => $fields->string('name', 255),
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
 			'y' => $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit),

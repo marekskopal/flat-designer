@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Editor\Element;
 
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Repository\ModelAssetRepository;
@@ -36,13 +37,20 @@ final readonly class ItemModelLink
 		return $model !== null && ModelAssetProvider::isUsableIn($model, $project) ? $model : null;
 	}
 
-	/** The model id the item keeps: the given one for a `Model` item, none for other kinds. */
-	public function validate(Floor $floor, ItemKindEnum $kind, ?int $modelId): ?int
+	/**
+	 * The model id the item keeps: the given one for a `Model` item, none for other kinds. A Model item that has lost its
+	 * model (a restore could not link it, or the row went with its owner) draws a box and can still be moved or renamed.
+	 */
+	public function validate(Floor $floor, ItemKindEnum $kind, ?int $modelId, ?Item $current): ?int
 	{
 		if ($kind !== ItemKindEnum::Model) {
 			return null;
 		}
 		if ($modelId === null) {
+			if ($current?->kind === ItemKindEnum::Model && $current->model === null) {
+				return null;
+			}
+
 			throw EditException::invalid('A Model item needs a modelId (see list_models).');
 		}
 		$model = $this->modelRepository->findById($modelId);

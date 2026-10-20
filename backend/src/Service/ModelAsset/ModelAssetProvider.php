@@ -190,15 +190,18 @@ final readonly class ModelAssetProvider
 	private function assertWritable(User $user, ModelAsset $model): void
 	{
 		if (!$this->canWrite($user, $model)) {
-			throw new ModelAssetException('Only admins manage global models.', 403);
+			throw new ModelAssetException('Only an admin (global models) or the owner may change a model.', 403);
 		}
 	}
 
 	private static function text(string $value, int $maxLength, string $label, bool $required = false): string
 	{
 		$value = trim($value);
-		if ($required && $value === '' || mb_strlen($value) > $maxLength) {
-			throw new ModelAssetException(sprintf('%s is %s at most %d characters.', $label, $required ? 'required,' : '', $maxLength));
+		if ($required && $value === '') {
+			throw new ModelAssetException(sprintf('%s is required.', $label));
+		}
+		if (mb_strlen($value) > $maxLength) {
+			throw new ModelAssetException(sprintf('%s is at most %d characters.', $label, $maxLength));
 		}
 
 		return $value;
