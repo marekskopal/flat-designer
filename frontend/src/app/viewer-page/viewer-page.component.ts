@@ -26,6 +26,7 @@ import {ProjectUpdate} from '@app/models/realtime';
 import {PlanPoint, Room, RoomType} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
+import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
@@ -110,6 +111,9 @@ export class ViewerPageComponent {
     ];
 
     protected readonly editor = inject(EditorStore);
+    private readonly modelAssets = inject(ModelAssetService);
+    /** The 3D models of `Model` items, with the user's sign-in. */
+    protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.content(modelId);
     private readonly projects = inject(ProjectService);
     private readonly alerts = inject(AlertService);
 

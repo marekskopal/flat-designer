@@ -31,6 +31,10 @@ class Item extends AEntity
 	#[ManyToOne(entityClass: FurnitureDefinition::class, nullable: true)]
 	public ?FurnitureDefinition $definition = null;
 
+	/** For a `Model` item, the 3D model it draws. */
+	#[ManyToOne(entityClass: ModelAsset::class, nullable: true)]
+	public ?ModelAsset $model = null;
+
 	/** The piece of furniture the item is part of; a deleted group is not shown (undo brings it back). */
 	#[ManyToOne(entityClass: ItemGroup::class, nullable: true)]
 	public ?ItemGroup $group = null;

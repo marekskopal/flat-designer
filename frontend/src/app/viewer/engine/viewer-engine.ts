@@ -11,9 +11,10 @@ import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
-import {buildItem} from './items';
+import {buildItem, ItemModels} from './items';
 import {MaterialLibrary} from './materials';
 import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
+import {ModelFetcher, ModelLibrary} from './models';
 import {
     alongWall,
     Bounds,
@@ -213,6 +214,8 @@ export class ViewerEngine {
     private calibrating = false;
     /** The plan image under the top view, shown there only. */
     private underlay: THREE.Mesh | null = null;
+    /** Loads the 3D models of `Model` items; none until the host supplies a fetcher. */
+    private modelLibrary: ModelLibrary | null = null;
     private underlayImage: TexImageSource | null = null;
     private underlayVisible = true;
     private highlight: THREE.Mesh | null = null;
@@ -402,7 +405,7 @@ export class ViewerEngine {
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         const definitions = definitionLibrary(scene.definitions);
         for (const item of scene.items) {
-            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions);
+            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, this.itemModels(scene));
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -448,7 +451,7 @@ export class ViewerEngine {
         }
         const roomsById = new Map(scene.rooms.map((room) => [room.id, room]));
         for (const item of rebuiltItems) {
-            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions);
+            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions, this.itemModels(scene));
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -556,10 +559,44 @@ export class ViewerEngine {
     }
 
     /** Takes an object out of the scene and frees its geometry (and materials the library does not share). */
+    private itemModels(scene: Scene): ItemModels {
+        return {byId: new Map((scene.models ?? []).map((m) => [m.id, m])), library: this.modelLibrary};
+    }
+
+    /** Draws the `Model` items of a model that finished loading (all of them with null), in place of their placeholders. */
+    private rebuildModelItems(modelId: number | null): void {
+        const scene = this.sceneData;
+        const content = this.content;
+        const materials = this.materials;
+        if (scene === null || content === null || materials === null) {
+            return;
+        }
+        const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
+        const definitions = definitionLibrary(scene.definitions);
+        const hidden = hiddenItemIds(scene);
+        for (const item of scene.items) {
+            if (item.kind !== 'Model' || (modelId !== null && item.modelId !== modelId)) {
+                continue;
+            }
+            const previous = this.items.get(item.id);
+            if (previous !== undefined) {
+                this.disposeObject(previous);
+            }
+            const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, this.itemModels(scene));
+            object.visible = !hidden.has(item.id);
+            this.items.set(item.id, object);
+            content.add(object);
+        }
+        if (this.selection?.kind === 'item' || this.selection?.kind === 'group') {
+            this.setSelection(this.selection);
+        }
+    }
+
     private disposeObject(object: THREE.Object3D): void {
         object.removeFromParent();
         object.traverse((o) => {
-            if (o instanceof THREE.Mesh) {
+            // Model instances share their geometry and materials with the model library's template.
+            if (o instanceof THREE.Mesh && o.userData['shared'] !== true) {
                 (o.geometry as THREE.BufferGeometry).dispose();
                 for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
                     if (this.materials?.owns(material) !== true && material !== this.parts?.sectionMaterial) {
@@ -719,6 +756,16 @@ export class ViewerEngine {
         this.measurement = NoMeasurement;
         this.updateMeasure();
         return true;
+    }
+
+    /** How the 3D models of `Model` items are fetched (with the page's sign-in, or through a share link). */
+    public setModelFetcher(fetcher: ModelFetcher): void {
+        this.modelLibrary?.dispose();
+        this.modelLibrary = new ModelLibrary(fetcher);
+        this.modelLibrary.onLoaded = (modelId): void => this.rebuildModelItems(modelId);
+        if (this.sceneData !== null) {
+            this.rebuildModelItems(null);
+        }
     }
 
     /**
@@ -929,6 +976,7 @@ export class ViewerEngine {
         this.clearContent();
         this.removeDimensions();
         this.setUnderlay(null, null);
+        this.modelLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
         this.measureLabel.element.remove();
         this.handles.clear();

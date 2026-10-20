@@ -2,9 +2,11 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
+import {ModelAsset} from '@app/models/model-asset';
 import {PlanPoint, Scene, Underlay} from '@app/models/scene';
 import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {ModelAssetService} from '@app/services/model-asset.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {Vec2} from '@app/viewer/engine/plan-geometry';
 import {ElementKind, Selection} from '@app/viewer/engine/selection';
@@ -39,6 +41,8 @@ export class EditorStore {
     public readonly busy = signal(false);
     public readonly changes = signal<Change[]>([]);
     public readonly itemKinds = signal<ItemKindInfo[]>([]);
+    /** 3D models the project's items may use (global, the project's own, its owner's library). */
+    public readonly models = signal<ModelAsset[]>([]);
     /** Furniture definitions the project's items may use (global, the project's own, its owner's library). */
     public readonly definitions = signal<FurnitureDefinition[]>([]);
     /** What a click in the top view does: select and drag, draw walls, or outline a room. */
@@ -55,6 +59,7 @@ export class EditorStore {
 
     private readonly api = inject(EditorApiService);
     private readonly furniture = inject(FurnitureService);
+    private readonly modelAssets = inject(ModelAssetService);
     private context: EditorContext | null = null;
 
     public connect(context: EditorContext): void {
@@ -72,6 +77,7 @@ export class EditorStore {
                 this.loadChanges(),
                 this.itemKinds().length === 0 ? this.loadItemKinds() : Promise.resolve(),
                 this.loadDefinitions(),
+                this.loadModels(),
             ]);
         }
     }
@@ -299,10 +305,22 @@ export class EditorStore {
         }
     }
 
+    public async loadModels(): Promise<void> {
+        const context = this.context;
+        if (context === null) {
+            return;
+        }
+        try {
+            this.models.set(await this.modelAssets.list(context.projectId()));
+        } catch {
+            // The error interceptor shows the toast.
+        }
+    }
+
     private async loadItemKinds(): Promise<void> {
         try {
-            // Custom items need a furniture definition, picked elsewhere than the plain kinds.
-            this.itemKinds.set((await this.api.itemKinds()).filter((k) => k.kind !== 'Custom'));
+            // Custom and Model items need a furniture definition or a 3D model, picked elsewhere than the plain kinds.
+            this.itemKinds.set((await this.api.itemKinds()).filter((k) => k.kind !== 'Custom' && k.kind !== 'Model'));
         } catch {
             // The error interceptor shows the toast.
         }

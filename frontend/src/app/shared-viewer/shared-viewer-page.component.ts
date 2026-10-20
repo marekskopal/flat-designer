@@ -5,6 +5,7 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
+import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {DoorAim} from '@app/viewer/engine/viewer-engine';
@@ -40,6 +41,9 @@ export class SharedViewerPageComponent {
     protected readonly viewLabels = ShareViewLabels;
 
     private readonly shares = inject(ShareService);
+    private readonly modelAssets = inject(ModelAssetService);
+    /** The 3D models of the shared scene, through the share link (no sign-in). */
+    protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.sharedContent(this.token(), modelId);
 
     private readonly data = resource({
         params: () => ({token: this.token()}),

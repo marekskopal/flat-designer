@@ -157,9 +157,27 @@ format is the text in `FurnitureTools::Format`.
 
 - `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`. Each one builds
   the item body in its local frame.
-- Custom-made furniture is a furniture definition, not a new kind. A new item kind (a bought product or a building
-  element) needs the PHP enum, a migration extending the `items.kind` column enum, the TS `ItemKind` union and a
-  builder.
+- Custom-made furniture is a furniture definition and a bought product is a model (see below); neither is a new kind.
+  A new item kind (e.g. a building element) needs the PHP enum, a migration extending the `items.kind` column enum,
+  the TS `ItemKind` union and a builder.
+
+## Product models
+
+- `ModelAsset` rows (`/api/models`, soft-deleted) are uploaded glTF binaries (`.glb`) stored in S3, scoped like
+  furniture definitions (global for admins, a user's library, a project's own; `ModelAssetProvider::isUsableIn`).
+  `GlbReader` rejects what the viewer cannot decode (Draco, Basis) and `GltfBounds` sizes the model from the accessor
+  bounds through the node transforms, normalizing quantized (`KHR_mesh_quantization`) positions.
+- A `Model` item has `items.model_id` (`ItemModelLink`). It starts at the model's size and name. The viewer
+  (`viewer/engine/models.ts`: `ModelLibrary` with GLTFLoader and the meshopt decoder) scales the model evenly to fit
+  the item's box. While loading, or if the model is missing, a box stands in.
+- The scene and snapshots carry `models` (the ones its items use). A restore keeps a model the project may still use,
+  otherwise the item draws a box. Share guests load models through `ShareModelContent`, but only those of their
+  scene.
+- `make import-models DIR=… [PROJECT=…]` (`models:import`) uploads every `*.glb` with an optional `<name>.json`
+  sidecar (`name`, `license`, `author`, `sourceUrl`). **Third-party models are never committed.** Keep them in the
+  gitignored `source_files/` (the demo's CC0 Poly Haven models are in `source_files/demo/models/`, optimised with
+  `npx @gltf-transform/cli optimize --compress meshopt --texture-compress webp --texture-size 1024`) and import
+  them.
 
 ## Materials and tiling
 

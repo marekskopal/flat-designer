@@ -19,6 +19,9 @@ All geometry is generated from parameters. The project contains no 3D model file
   bedding, mirrors, railings, …) defined
   as JSON with parameters, material slots and parts. Definitions can be global, part of a user's library or
   belong to one project. They are edited with a JSON editor that shows a live preview.
+- **Product models**: bought products (chairs, lamps, taps, plants) as glTF binary models (`.glb`, also
+  meshopt-compressed), uploaded to the library with their licence, author and source and placed as `Model` items
+  that scale the model to fit their box.
 - **Measurements**: a room schedule (net area, perimeter, clear height and volume per room, indoor and outdoor
   totals) on the project page, room labels with area and height, dimension lines of the rooms in the plan view
   (split at doors and windows), and a measure tool that snaps to wall ends, corners and faces.
@@ -68,6 +71,16 @@ To import reference files (plans, renders, photos) into a project:
 ```sh
 make import-files DIR=path/to/files PROJECT=1
 ```
+
+To upload a directory of `.glb` models (global, or a project's own with `PROJECT`), each with an optional
+`<name>.json` sidecar holding `name`, `license`, `author` and `sourceUrl`:
+
+```sh
+make import-models DIR=path/to/models [PROJECT=1]
+```
+
+The repository ships no third-party models. Keep downloaded ones outside git (e.g. in the ignored
+`source_files/`) and upload them into the app.
 
 ### Configuration
 
@@ -128,7 +141,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 
 The backend is an MCP server at `/mcp` (Streamable HTTP, OAuth 2.1 with dynamic client registration and PKCE).
 Agents can read projects and floors, add, change and delete rooms, walls, openings and items, manage groups,
-variants, share links, versions and furniture definitions, get cut lists and room schedules, and undo or redo their own changes.
+variants, share links, versions and furniture definitions, list product models, get cut lists and room schedules, and undo or redo their own changes.
 Agent changes are logged under the client's name and appear live in open viewers.
 
 Connect Claude Code:
@@ -160,6 +173,7 @@ Every endpoint except health, authentication, OAuth and public share links requi
 | `/api/projects/{id}/cut-list` | Cut list of the project's custom furniture |
 | `/api/projects/{id}/room-schedule` | Room areas, perimeters and clear heights with indoor and outdoor totals (also per floor) |
 | `/api/furniture-definitions` | Furniture definitions (CRUD, copy, validate) |
+| `/api/models`, `/api/models/{id}/content` | Product models (upload, list, rename, delete, the `.glb` file) |
 | `/api/materials`, `/api/item-kinds` | Catalogues |
 | `/api/realtime/subscription` | Cookie for the Mercure live-update stream |
 | `/api/admin/users` | User management (admins only) |

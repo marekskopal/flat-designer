@@ -52,6 +52,7 @@ final readonly class ItemKindCatalog
 		'Wardrobe' => ['description' => 'Built-in wardrobe with sliding doors on two tracks in aluminium frames; the item material is the carcass and door panels.', 'width' => 2400, 'depth' => 600, 'height' => 2400, 'z' => 0, 'params' => self::WardrobeParams],
 		'Chair' => ['description' => 'Solid wood chair with tapered legs and a two-rail back; front facing the rotation direction, the item material is the wood.', 'width' => 400, 'depth' => 395, 'height' => 885, 'z' => 0, 'params' => self::ChairParams],
 		'Custom' => ['description' => 'Custom piece of furniture drawn from a furniture definition (definitionId, see list_furniture_definitions; create one with create_furniture_definition); the size defaults to the definition\'s.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => self::CustomParams],
+		'Model' => ['description' => 'A bought product (a chair, a lamp, a tap, a plant) drawn from a 3D model (modelId, see list_models), scaled evenly to fit the item\'s box, standing on its bottom and facing its front (rotation as for any item); the size defaults to the model\'s own.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => 'none'],
 		'Table' => ['description' => 'Solid wood table: a top of boards along the width, tapered legs and an apron; the item material is the wood.', 'width' => 1320, 'depth' => 700, 'height' => 780, 'z' => 0, 'params' => 'none'],
 	];
 

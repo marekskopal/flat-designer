@@ -25,11 +25,16 @@ abstract class IntegrationTestCase extends TestCase
 		Fixture::reset();
 	}
 
-	/** Multipart POST with one `file` field, like a browser upload. */
-	protected function upload(string $path, string $filename, string $content, User $authenticatedAs): ResponseInterface
+	/**
+	 * Multipart POST with one `file` field, like a browser upload, and other form `$fields`.
+	 *
+	 * @param array<string, string> $fields
+	 */
+	protected function upload(string $path, string $filename, string $content, User $authenticatedAs, array $fields = []): ResponseInterface
 	{
 		$stream = (new StreamFactory())->createStream($content);
 		$request = (new ServerRequest([], [], $path, 'POST'))
+			->withParsedBody($fields)
 			->withUploadedFiles(['file' => new UploadedFile($stream, strlen($content), UPLOAD_ERR_OK, $filename, 'text/html')])
 			->withHeader('Authorization', 'Bearer ' . Fixture::accessTokenFor($authenticatedAs));
 

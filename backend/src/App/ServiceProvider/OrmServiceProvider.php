@@ -10,6 +10,7 @@ use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
+use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\OAuthAuthorization;
 use FlatDesigner\Model\Entity\OAuthClient;
 use FlatDesigner\Model\Entity\Opening;
@@ -28,6 +29,7 @@ use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
+use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\OAuthAuthorizationRepository;
 use FlatDesigner\Model\Repository\OAuthClientRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
@@ -68,6 +70,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			FloorRepository::class,
 			FloorUnderlayRepository::class,
 			MaterialRepository::class,
+			ModelAssetRepository::class,
 			FurnitureDefinitionRepository::class,
 			RoomRepository::class,
 			WallRepository::class,
@@ -99,6 +102,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, FloorRepository::class, Floor::class);
 		$this->addRepository($container, $orm, FloorUnderlayRepository::class, FloorUnderlay::class);
 		$this->addRepository($container, $orm, MaterialRepository::class, Material::class);
+		$this->addRepository($container, $orm, ModelAssetRepository::class, ModelAsset::class);
 		$this->addRepository($container, $orm, FurnitureDefinitionRepository::class, FurnitureDefinition::class);
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);
