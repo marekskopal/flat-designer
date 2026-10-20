@@ -328,8 +328,10 @@ export class ViewerEngine {
         this.clearPreview();
         this.loads++;
         const previous = this.sceneData;
+        // Pictures of files deleted since go plain; a fresh scene listing a file lets a failed load try again.
+        const droppedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
-            this.applyChanges(previous, scene);
+            this.applyChanges(previous, scene, droppedPictures);
         } else {
             this.build(scene);
         }
@@ -422,8 +424,8 @@ export class ViewerEngine {
         this.indexWalls();
     }
 
-    /** Rebuilds what differs between two states of the shown floor. */
-    private applyChanges(previous: Scene, scene: Scene): void {
+    /** Rebuilds what differs between two states of the shown floor, and the items showing a `droppedPictures` file. */
+    private applyChanges(previous: Scene, scene: Scene, droppedPictures: ReadonlySet<number>): void {
         const parts = this.parts;
         const materials = this.materials;
         const content = this.content;
@@ -442,7 +444,8 @@ export class ViewerEngine {
             (i) =>
                 changedItems.has(i.id) ||
                 (i.roomId !== null && changedRooms.has(i.roomId)) ||
-                (i.definitionId !== null && changedDefinitions.has(i.definitionId)),
+                (i.definitionId !== null && changedDefinitions.has(i.definitionId)) ||
+                this.showsPicture(i, droppedPictures),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -572,14 +575,20 @@ export class ViewerEngine {
 
     /** Draws the items showing an image that finished loading (all pictures with null), in place of plain ones. */
     private rebuildPictureItems(fileId: number | null): void {
-        this.rebuildItems((item) => {
-            let shows = false;
-            this.items.get(item.id)?.traverse((o) => {
-                const id = o.userData['pictureId'] as number | null | undefined;
-                shows ||= typeof id === 'number' && (fileId === null || id === fileId);
-            });
-            return shows;
+        this.rebuildItems((item) => this.showsPicture(item, fileId === null ? null : new Set([fileId])));
+    }
+
+    /** Whether the item as drawn has a picture of one of the files (of any file with null); only Custom items have them. */
+    private showsPicture(item: Item, fileIds: ReadonlySet<number> | null): boolean {
+        if (item.kind !== 'Custom' || fileIds?.size === 0) {
+            return false;
+        }
+        let shows = false;
+        this.items.get(item.id)?.traverse((o) => {
+            const id = o.userData['pictureId'] as number | null | undefined;
+            shows ||= typeof id === 'number' && (fileIds === null || fileIds.has(id));
         });
+        return shows;
     }
 
     private rebuildItems(rebuild: (item: Item) => boolean): void {

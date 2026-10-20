@@ -45,6 +45,8 @@ export class CustomParamsComponent {
     public readonly disabled = input(false);
 
     public readonly paramsChange = output<Params>();
+    /** The image picker was opened: the host may refresh `images` (files uploaded since). */
+    public readonly imagesRefresh = output<void>();
 
     protected readonly parameters = computed(() => this.definition()?.parameters ?? []);
     protected readonly slots = computed(() => {
@@ -98,6 +100,12 @@ export class CustomParamsComponent {
     protected setBool(parameter: DefinitionParameter, event: Event): void {
         const checked = (event.target as HTMLInputElement).checked;
         this.emit(withValue(this.params(), parameter.key, checked === parameter.default ? undefined : checked));
+    }
+
+    /** The file id the item holds while `images` does not list it (deleted since, or uploaded after the list was read). */
+    protected unlistedImage(parameter: DefinitionParameter): number | null {
+        const value = this.value(parameter);
+        return typeof value === 'number' && !this.images().some((f) => f.id === value) ? value : null;
     }
 
     /** An image parameter: a file id, or none (no picture). */

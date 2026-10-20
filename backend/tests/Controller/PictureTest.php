@@ -84,6 +84,7 @@ final class PictureTest extends IntegrationTestCase
 		self::assertGreaterThan($framed['revision'], $scene['revision']);
 		$itemPath = $items . '/' . $framed['element']['id'];
 		self::assertSame(200, $this->request('PATCH', $itemPath, ['width' => 600], $user)->getStatusCode());
+		self::assertSame(201, $this->request('POST', $itemPath . '/duplicate', [], $user)->getStatusCode());
 		self::assertSame(422, $this->request('PATCH', $itemPath, ['params' => ['values' => ['poster' => $text]]], $user)->getStatusCode());
 		self::assertSame(200, $this->request('PATCH', $itemPath, ['params' => ['values' => ['poster' => null]]], $user)->getStatusCode());
 	}

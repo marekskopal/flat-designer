@@ -29,6 +29,26 @@ export class PictureLibrary {
         return texture;
     }
 
+    /**
+     * Follows the scene's list of shown files: textures of files no longer listed are dropped (deleted since), and a
+     * failed load of a listed file may be tried again. Returns the ids whose texture was dropped, to redraw their items.
+     */
+    public sync(shown: Iterable<number>): number[] {
+        const listed = new Set(shown);
+        const dropped: number[] = [];
+        for (const [fileId, texture] of this.textures) {
+            if (!listed.has(fileId)) {
+                texture.dispose();
+                this.textures.delete(fileId);
+                dropped.push(fileId);
+            }
+        }
+        for (const fileId of listed) {
+            this.failed.delete(fileId);
+        }
+        return dropped;
+    }
+
     public hasFailed(fileId: number): boolean {
         return this.failed.has(fileId);
     }
@@ -62,7 +82,8 @@ export class PictureLibrary {
             .catch(() => this.failed.add(fileId))
             .finally(() => {
                 this.loading.delete(fileId);
-                if (!this.disposed) {
+                // A failed file leaves its pictures as they are (plain already): nothing to redraw.
+                if (!this.disposed && this.textures.has(fileId)) {
                     this.onLoaded(fileId);
                 }
             });

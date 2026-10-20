@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Project;
 
+use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\ProjectFileRepository;
@@ -32,25 +32,15 @@ final readonly class ShownPictures
 	 */
 	public function byItems(Project $project, array $items): array
 	{
-		$ids = $this->referenced($items);
-		if ($ids === []) {
-			return [];
-		}
-		$existing = array_map(static fn (ProjectFile $file): int => $file->id, $this->fileRepository->findByProject($project->id));
-
-		return array_values(array_intersect($ids, $existing));
+		return $this->fileRepository->findIdsInProject($project->id, $this->referenced($items));
 	}
 
 	/** Whether any item of the project (on any floor) shows the file. */
 	public function isShownIn(Project $project, int $fileId): bool
 	{
-		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
-			if (in_array($fileId, $this->referenced($this->itemRepository->findByFloor($floor->id)), true)) {
-				return true;
-			}
-		}
+		$floorIds = array_map(static fn (Floor $floor): int => $floor->id, $this->floorRepository->findByProject($project->id));
 
-		return false;
+		return in_array($fileId, $this->referenced($this->itemRepository->findOnFloors($floorIds)), true);
 	}
 
 	/**
