@@ -235,6 +235,16 @@ format is the text in `FurnitureTools::Format`.
   a light source to group with the lamps of the model library, a Schuko socket, a rocker switch, a data socket and a
   plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge.
 
+## Render quality
+
+- `ViewerEngine.setQuality('fast' | 'presentation')`: fast (the default) renders straight to the canvas. Presentation
+  (`viewer/engine/presentation.ts`, `PresentationPipeline`) renders through an `EffectComposer`: the scene, GTAO
+  ambient occlusion, the output pass (tone mapping and colour space, so the renderer's are not applied twice) and SMAA.
+  It renders at a pixel ratio of at least 2 and gives the sun a larger, softer shadow map (8192, capped by the GPU).
+  The handle and measure overlay still draws after it, on the canvas.
+- The pages' Display has "Presentation quality"; `ShareSettingsDto.presentation` opens a share link with it. The
+  screenshot capture (FD-44) is meant to use it.
+
 ## Walkthrough
 
 - View → Walk is implemented in `viewer/engine/walkthrough.ts`: first person at an eye height of 1630 mm with pointer

@@ -31,6 +31,8 @@ export interface ShareSettings {
     dimensions: boolean;
     /** Opens after dark, lit by the flat's lights; missing in links saved before the night view. */
     night?: boolean;
+    /** Opens in the presentation quality; missing in older links. */
+    presentation?: boolean;
 }
 
 export interface ShareLink {
