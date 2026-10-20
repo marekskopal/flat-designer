@@ -104,10 +104,16 @@ final readonly class ProjectFileProvider
 		return in_array($file->mimeType, self::TextMimeTypes, true);
 	}
 
-	/** A raster image the viewer and the image tools can draw (`ImageMimeTypes`; SVG is a document, never served as one). */
+	/** A raster image the viewer draws (`ImageMimeTypes`): an underlay or a picture. */
 	public function isImage(ProjectFile $file): bool
 	{
 		return in_array($file->mimeType, self::ImageMimeTypes, true);
+	}
+
+	/** A raster image the image tools can read (gd decodes more than browsers do); SVG is a document, never served as one. */
+	public function isRasterImage(ProjectFile $file): bool
+	{
+		return str_starts_with($file->mimeType, 'image/') && $file->mimeType !== 'image/svg+xml';
 	}
 
 	/** The content of a text file (plain, CSV, JSON) of a sensible size. */

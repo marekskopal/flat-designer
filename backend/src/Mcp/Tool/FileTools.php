@@ -73,7 +73,7 @@ final readonly class FileTools
 		if ($this->projectFileProvider->isText($file)) {
 			return [new TextContent($this->projectFileProvider->readText($file))];
 		}
-		if (!$this->projectFileProvider->isImage($file)) {
+		if (!$this->projectFileProvider->isRasterImage($file)) {
 			throw new RuntimeException(sprintf(
 				'File "%s" is %s; only images and text files can be read. Upload a PDF page as an image.',
 				$file->filename,

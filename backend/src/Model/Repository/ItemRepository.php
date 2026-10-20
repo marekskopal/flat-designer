@@ -18,6 +18,25 @@ final class ItemRepository extends ARepository
 			->fetchAll();
 	}
 
+	/**
+	 * The items (not deleted) of the floors, in one query.
+	 *
+	 * @param list<int> $floorIds
+	 * @return list<Item>
+	 */
+	public function findOnFloors(array $floorIds): array
+	{
+		if ($floorIds === []) {
+			return [];
+		}
+
+		return $this->select()
+			->where(['floor_id', 'IN', $floorIds])
+			->where(['deleted_at' => null])
+			->orderBy('id', 'ASC')
+			->fetchAll();
+	}
+
 	/** @return list<Item> the group's members, not deleted */
 	public function findByGroup(int $groupId): array
 	{

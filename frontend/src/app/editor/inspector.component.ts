@@ -45,6 +45,8 @@ export class InspectorComponent {
     public readonly disabled = input(false);
 
     public readonly fieldChange = output<FieldChange>();
+    /** The image picker of a Custom item was opened: the host may refresh `images`. */
+    public readonly imagesRefresh = output<void>();
 
     protected readonly fields = computed(() => ElementFields[this.kind()].filter((def) => def.when?.(this.element()) ?? true));
     protected readonly errors = signal<Record<string, string>>({});

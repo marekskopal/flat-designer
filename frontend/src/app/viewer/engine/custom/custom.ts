@@ -40,8 +40,6 @@ const SlidingProfileWidth = 22;
 const SlidingInfillThickness = 8;
 /** A picture's face stands this far (mm) in front of its box, clear of z-fighting. */
 const PictureFaceOffset = 0.5;
-/** The paper of a picture without an image (none chosen, loading or unreadable). */
-const PlainPaper = '#ece8e0';
 
 /**
  * Body of a `Custom` item from its furniture definition, in the item-local frame of `buildItem()` (bottom centre origin, x
@@ -183,13 +181,10 @@ function buildPicture(part: ResolvedPart, material: THREE.Material, pictures: Pi
     const geometry = new THREE.PlaneGeometry(part.w * MM, part.h * MM);
     const [u0, v0, u1, v1] = coverUvs((image?.width ?? 1) / (image?.height ?? 1), part.w / part.h);
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v1, u1, v1, u0, v0, u1, v0], 2));
-    const face = new THREE.Mesh(
-        geometry,
-        new THREE.MeshStandardMaterial(texture === null ? {color: PlainPaper, roughness: 0.9} : {map: texture, roughness: 0.85}),
-    );
+    // Without an image (none chosen, loading or unreadable) the face is the part's material, like the box.
+    const face = new THREE.Mesh(geometry, texture === null ? material : new THREE.MeshStandardMaterial({map: texture, roughness: 0.85}));
     face.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d + PictureFaceOffset) * MM);
     face.userData['pictureId'] = fileId;
-    face.userData['pictureLoaded'] = texture !== null;
     group.add(face);
     return group;
 }

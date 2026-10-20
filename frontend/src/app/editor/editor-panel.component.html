@@ -113,6 +113,7 @@
             [images]="editor.images()"
             [disabled]="editor.busy()"
             (fieldChange)="onFieldChange($event)"
+            (imagesRefresh)="editor.loadImages()"
         />
         @if (s.kind === 'group') {
             <ul class="members">
