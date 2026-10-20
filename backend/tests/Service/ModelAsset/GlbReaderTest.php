@@ -70,6 +70,12 @@ final class GlbReaderTest extends TestCase
 			'truncated' => substr(Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]), 0, 40),
 			'draco' => Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [], ['extensionsRequired' => ['KHR_draco_mesh_compression']]),
 			'no mesh' => Glb::pack(['asset' => ['version' => '2.0'], 'scenes' => [['nodes' => []]]]),
+			'no scene' => Glb::pack([
+				'asset' => ['version' => '2.0'],
+				'nodes' => [['mesh' => 0]],
+				'meshes' => [['primitives' => [['attributes' => ['POSITION' => 0]]]]],
+				'accessors' => [['componentType' => 5126, 'count' => 8, 'type' => 'VEC3', 'min' => [0, 0, 0], 'max' => [1, 1, 1]]],
+			]),
 		];
 		foreach ($cases as $name => $bytes) {
 			try {

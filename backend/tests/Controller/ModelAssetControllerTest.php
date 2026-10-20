@@ -7,6 +7,7 @@ namespace FlatDesigner\Tests\Controller;
 use FlatDesigner\Controller\ModelAssetController;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Editor\Element\ItemModelLink;
 use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
@@ -139,6 +140,43 @@ final class ModelAssetControllerTest extends IntegrationTestCase
 		$restored = $this->scene($user, $project, $floors[0]['id']);
 		self::assertIsList($restored['items']);
 		self::assertContains($tap, array_column($restored['items'], 'modelId'));
+	}
+
+	public function testAnItemThatLostItsModelCanStillBeMoved(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		$lamp = $this->projectModel($user, $project, 'Lamp', Glb::box([-0.2, 0.0, -0.2], [0.2, 1.6, 0.2]));
+		$items = str_replace(
+			['{projectId:number}', '{floorId:number}', '{elementType:items|walls|openings|rooms}'],
+			[(string) $project->id, (string) $floor->id, 'items'],
+			Routes::ProjectFloorElements->value,
+		);
+		$created = $this->jsonBody($this->request('POST', $items, ['kind' => 'Model', 'modelId' => $lamp, 'x' => 500, 'y' => 500], $user));
+		self::assertIsArray($created['element']);
+		$itemId = $created['element']['id'];
+		self::assertIsInt($itemId);
+		self::assertIsInt($created['revision']);
+
+		// The row went (with its owner, say): the item draws a box but is not stuck.
+		$repository = Fixture::service(ItemRepository::class);
+		$item = $repository->findOnFloor($floor->id, $itemId);
+		self::assertNotNull($item);
+		$item->model = null;
+		$repository->persist($item);
+
+		$moved = $this->request(
+			'PATCH',
+			$items . '/' . $itemId,
+			['x' => 1500],
+			$user,
+			headers: ['If-Match' => (string) $created['revision']],
+		);
+		self::assertSame(200, $moved->getStatusCode());
+		$element = $this->jsonBody($moved)['element'];
+		self::assertIsArray($element);
+		self::assertSame([1500, null], [$element['x'], $element['modelId']]);
 	}
 
 	public function testShareGuestsLoadTheModelsOfTheirScene(): void

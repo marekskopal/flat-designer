@@ -24,10 +24,13 @@ final readonly class GltfBounds
 	{
 		$scenes = self::list($gltf, 'scenes');
 		$scene = $scenes[is_int($gltf['scene'] ?? null) ? $gltf['scene'] : 0] ?? null;
-		$roots = is_array($scene) ? self::list($scene, 'nodes') : array_keys(self::list($gltf, 'nodes'));
+		if (!is_array($scene)) {
+			// The viewer draws the default scene; nodes outside any scene are not drawn.
+			throw new ModelAssetException('The model has no scene to draw.');
+		}
 
 		$box = null;
-		foreach ($roots as $root) {
+		foreach (self::list($scene, 'nodes') as $root) {
 			if (is_int($root)) {
 				$box = self::nodeBox($gltf, $root, Matrix4::identity(), $box, 0);
 			}

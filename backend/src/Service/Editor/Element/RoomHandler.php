@@ -166,15 +166,7 @@ final readonly class RoomHandler implements ElementHandler
 		$room->wallFinishes = $wallFinishes === [] || $wallFinishes === null ? null : json_encode($wallFinishes, JSON_THROW_ON_ERROR);
 		$room->tileOriginX = $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit);
 		$room->tileOriginY = $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit);
-		$room->ceilingMaterial = $this->materialResolver->resolve($fields->nullableId('ceilingMaterialId'));
-		$room->vaultSpacing = $fields->nullableInt('vaultSpacing', 1, State::MaxSize);
-		$room->vaultAngle = $fields->int('vaultAngle', 0, 179);
-		$room->vaultRise = $fields->int('vaultRise', 0, State::MaxSize);
-		$room->beamWidth = $fields->int('beamWidth', 0, State::MaxSize);
-		$room->beamDrop = $fields->int('beamDrop', 0, State::MaxSize);
-		$room->beamMaterial = $this->materialResolver->resolve($fields->nullableId('beamMaterialId'));
-		$room->skirtingHeight = $fields->nullableInt('skirtingHeight', 1, State::MaxSize);
-		$room->skirtingMaterial = $this->materialResolver->resolve($fields->nullableId('skirtingMaterialId'));
+		$this->ceiling->apply($room, $fields);
 		$this->roomRepository->persist($room);
 	}
 

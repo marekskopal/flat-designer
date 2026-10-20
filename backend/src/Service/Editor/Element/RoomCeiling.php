@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Editor\Element;
 
+use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 
@@ -82,6 +83,20 @@ final readonly class RoomCeiling
 			'beamDrop' => $drop,
 			'beamMaterialId' => $this->material($fields, 'beamMaterialId'),
 		] + $skirting;
+	}
+
+	/** Writes a state that `fields()` normalized into the room. */
+	public function apply(Room $room, FieldReader $fields): void
+	{
+		$room->ceilingMaterial = $this->materialResolver->resolve($fields->nullableId('ceilingMaterialId'));
+		$room->vaultSpacing = $fields->nullableInt('vaultSpacing', self::MinVaultSpacing, self::MaxVaultSpacing);
+		$room->vaultAngle = $fields->int('vaultAngle', 0, 179);
+		$room->vaultRise = $fields->int('vaultRise', 0, self::MaxVaultRise);
+		$room->beamWidth = $fields->int('beamWidth', 0, self::MaxBeamWidth);
+		$room->beamDrop = $fields->int('beamDrop', 0, self::MaxBeamDrop);
+		$room->beamMaterial = $this->materialResolver->resolve($fields->nullableId('beamMaterialId'));
+		$room->skirtingHeight = $fields->nullableInt('skirtingHeight', self::MinSkirting, self::MaxSkirting);
+		$room->skirtingMaterial = $this->materialResolver->resolve($fields->nullableId('skirtingMaterialId'));
 	}
 
 	private function material(FieldReader $fields, string $key): ?int

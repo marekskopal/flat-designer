@@ -2,6 +2,7 @@ import {Item, SceneModel} from '@app/models/scene';
 import * as THREE from 'three';
 import {MeshoptDecoder} from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {clone as cloneWithSkeleton} from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 import {MM} from './plan-geometry';
 
@@ -21,6 +22,7 @@ export class ModelLibrary {
     private readonly failed = new Set<number>();
     private readonly loading = new Set<number>();
     private readonly loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+    private disposed = false;
 
     public constructor(private readonly fetch: ModelFetcher) {}
 
@@ -31,7 +33,8 @@ export class ModelLibrary {
             this.load(model.id);
             return null;
         }
-        const instance = template.clone(true);
+        // Not Object3D.clone(): a skinned mesh's clone has to get the cloned bones, not the template's.
+        const instance = cloneWithSkeleton(template);
         instance.traverse((o) => {
             if (o instanceof THREE.Mesh) {
                 o.userData['shared'] = true;
@@ -46,7 +49,9 @@ export class ModelLibrary {
         return this.failed.has(modelId);
     }
 
+    /** Frees the templates; loads still under way are dropped when they finish. */
     public dispose(): void {
+        this.disposed = true;
         for (const template of this.templates.values()) {
             template.traverse((o) => {
                 if (o instanceof THREE.Mesh) {
@@ -72,11 +77,17 @@ export class ModelLibrary {
         this.loading.add(modelId);
         this.fetch(modelId)
             .then((bytes) => this.loader.parseAsync(bytes, ''))
-            .then((gltf) => this.templates.set(modelId, centred(gltf.scene)))
+            .then((gltf) => {
+                if (!this.disposed) {
+                    this.templates.set(modelId, centred(gltf.scene));
+                }
+            })
             .catch(() => this.failed.add(modelId))
             .finally(() => {
                 this.loading.delete(modelId);
-                this.onLoaded(modelId);
+                if (!this.disposed) {
+                    this.onLoaded(modelId);
+                }
             });
     }
 }
