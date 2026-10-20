@@ -135,6 +135,10 @@ format is the text in `FurnitureTools::Format`.
 - Seeding: global definitions come from `backend/migrations/furniture/*.json`. The seed migrations list their files,
   and `FurnitureSeeds` reads them. Both test suites build them, and `custom/parity.spec.ts` checks the sample project's
   definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against the built-in kinds.
+- The global catalogue also has a sofa, a bed with bedding, a bedside table, a round table, a walk-in shower screen,
+  a round mirror and a balcony railing (`SeedFurnitureCatalogueMigration`). Upholstery uses the `cushion` part, a
+  box with rounded edges (`radius`), which the cut list counts among the other parts. Round tops and mirrors are
+  `cylinder` parts.
 - Built-in furniture kinds: a conversion migration turned the sample project's built-in furniture into Custom items
   in place, keeping the same ids (`BuiltInFurnitureConverter` maps params to values; `down()` maps them back). The
   built-in kinds stay for saved versions and old changes. `ItemKindCatalog` marks them `replacedBy`, and the Add menu

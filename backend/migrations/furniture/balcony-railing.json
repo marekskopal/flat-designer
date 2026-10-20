@@ -1,0 +1,86 @@
+{
+ "name": "Balcony railing",
+ "description": "Wrought-iron balcony railing: posts at the ends, top and bottom rails and round balusters.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2000,
+   "depth": 40,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "spacing",
+    "label": "Baluster spacing",
+    "type": "int",
+    "default": 110,
+    "min": 80,
+    "max": 200,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "count": "max(floor((W - 80) / spacing), 1)",
+   "pitch": "(W - 80) / count"
+  },
+  "materialSlots": [
+   {
+    "key": "metal",
+    "label": "Metal",
+    "default": "iron-wrought"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Post",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 40)",
+    "y": 0,
+    "z": 0,
+    "w": 40,
+    "h": "H - 40",
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "board",
+    "name": "Top rail",
+    "x": 0,
+    "y": "H - 40",
+    "z": 0,
+    "w": "W",
+    "h": 40,
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "board",
+    "name": "Bottom rail",
+    "x": 40,
+    "y": 80,
+    "z": 5,
+    "w": "W - 80",
+    "h": 20,
+    "d": "D - 10",
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Baluster",
+    "repeat": {
+     "count": "count"
+    },
+    "x": "40 + (i + 0.5) * pitch - 7",
+    "y": 100,
+    "z": "D / 2 - 7",
+    "w": 14,
+    "h": "H - 140",
+    "d": 14,
+    "material": "metal"
+   }
+  ]
+ }
+}

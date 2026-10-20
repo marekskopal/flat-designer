@@ -1,0 +1,139 @@
+{
+ "name": "Sofa",
+ "description": "Upholstered sofa: a base on legs, seat and back cushions per seat, and optional arms.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2100,
+   "depth": 900,
+   "height": 800
+  },
+  "parameters": [
+   {
+    "key": "seats",
+    "label": "Seats",
+    "type": "int",
+    "default": 3,
+    "min": 1,
+    "max": 4
+   },
+   {
+    "key": "arms",
+    "label": "Arms",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "seatHeight",
+    "label": "Seat height",
+    "type": "int",
+    "default": 430,
+    "min": 380,
+    "max": 520,
+    "unit": "mm"
+   },
+   {
+    "key": "legHeight",
+    "label": "Legs",
+    "type": "int",
+    "default": 120,
+    "min": 40,
+    "max": 150,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "arm": "arms ? 180 : 0",
+   "inner": "W - 2 * arm",
+   "seatW": "inner / seats",
+   "deck": "seatHeight - 150",
+   "backD": "220"
+  },
+  "materialSlots": [
+   {
+    "key": "upholstery",
+    "label": "Upholstery",
+    "default": "fabric-linen-grey"
+   },
+   {
+    "key": "legs",
+    "label": "Legs",
+    "default": "solid-ash-honey"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cushion",
+    "name": "Base",
+    "x": "arm",
+    "y": "legHeight",
+    "z": 0,
+    "w": "inner",
+    "h": "deck - legHeight",
+    "d": "D",
+    "radius": 20,
+    "material": "upholstery"
+   },
+   {
+    "type": "cushion",
+    "name": "Seat cushion",
+    "repeat": {
+     "count": "seats"
+    },
+    "x": "arm + i * seatW",
+    "y": "deck",
+    "z": "backD",
+    "w": "seatW",
+    "h": 150,
+    "d": "D - backD",
+    "radius": 50,
+    "material": "upholstery"
+   },
+   {
+    "type": "cushion",
+    "name": "Back cushion",
+    "repeat": {
+     "count": "seats"
+    },
+    "x": "arm + i * seatW",
+    "y": "deck",
+    "z": 0,
+    "w": "seatW",
+    "h": "H - deck",
+    "d": "backD",
+    "radius": 60,
+    "material": "upholstery"
+   },
+   {
+    "type": "cushion",
+    "name": "Arm",
+    "when": "arms",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - arm)",
+    "y": "legHeight",
+    "z": 0,
+    "w": "arm",
+    "h": "seatHeight + 200 - legHeight",
+    "d": "D",
+    "radius": 50,
+    "material": "upholstery"
+   },
+   {
+    "type": "cylinder",
+    "name": "Leg",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 * (W - 80) + 20",
+    "y": 0,
+    "z": "floor(i / 2) * (D - 80) + 20",
+    "w": 40,
+    "h": "legHeight",
+    "d": 40,
+    "material": "legs"
+   }
+  ]
+ }
+}

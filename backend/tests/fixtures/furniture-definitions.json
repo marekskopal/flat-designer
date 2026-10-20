@@ -9880,6 +9880,77 @@
     "code": "limit",
     "path": "parts"
    }
+  },
+  {
+   "name": "cushions keep their radius, evaluated per copy",
+   "size": {
+    "width": 2000,
+    "depth": 900,
+    "height": 800
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [
+     {
+      "key": "seats",
+      "label": "Seats",
+      "type": "int",
+      "default": 2,
+      "min": 1,
+      "max": 4
+     }
+    ],
+    "parts": [
+     {
+      "type": "cushion",
+      "name": "Seat",
+      "repeat": {
+       "count": "seats"
+      },
+      "x": "i * W / seats",
+      "y": 400,
+      "z": 200,
+      "w": "W / seats",
+      "h": 150,
+      "d": 700,
+      "radius": {
+       "expr": "40 + i * 20"
+      }
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "Seat",
+     "type": "cushion",
+     "index": 0,
+     "x": 0,
+     "y": 400,
+     "z": 200,
+     "w": 1000,
+     "h": 150,
+     "d": 700,
+     "material": null,
+     "props": {
+      "radius": 40
+     }
+    },
+    {
+     "name": "Seat",
+     "type": "cushion",
+     "index": 1,
+     "x": 1000,
+     "y": 400,
+     "z": 200,
+     "w": 1000,
+     "h": 150,
+     "d": 700,
+     "material": null,
+     "props": {
+      "radius": 60
+     }
+    }
+   ]
   }
  ]
 }

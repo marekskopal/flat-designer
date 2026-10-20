@@ -15,7 +15,8 @@ All geometry is generated from parameters. The project contains no 3D model file
   draw runs of walls with snapping and typed lengths, and add a room by clicking inside the walls around it;
   snapping, keyboard shortcuts and undo/redo of your own changes. Changes use optimistic locking and are
   recorded in an activity log.
-- **Furniture definitions**: parametric custom furniture (cabinets, wardrobes, worktops, tables, …) defined
+- **Furniture definitions**: parametric custom furniture (cabinets, wardrobes, worktops, tables, sofas, beds with
+  bedding, mirrors, railings, …) defined
   as JSON with parameters, material slots and parts. Definitions can be global, part of a user's library or
   belong to one project. They are edited with a JSON editor that shows a live preview.
 - **Measurements**: a room schedule (net area, perimeter, clear height and volume per room, indoor and outdoor

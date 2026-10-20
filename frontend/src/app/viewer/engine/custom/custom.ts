@@ -1,6 +1,7 @@
 import {MaterialSlot} from '@app/models/furniture';
 import {Item, SceneDefinition} from '@app/models/scene';
 import * as THREE from 'three';
+import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 import {taperedLeg} from '../furniture';
 import {buildAppliance, buildHandle} from '../kitchen';
@@ -121,6 +122,8 @@ function buildPart(
             return buildFront(part, item, material(grain), materials);
         case 'cylinder':
             return buildCylinder(part, material('vertical'));
+        case 'cushion':
+            return buildCushion(part, material('vertical'));
         case 'taperedLeg':
             return buildTaperedLeg(part, item, material('vertical'));
         case 'glass':
@@ -232,6 +235,21 @@ function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh
     } else if (axis === 'z') {
         mesh.rotation.x = Math.PI / 2;
     }
+    mesh.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d / 2) * MM);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+/** Default rounding of a cushion's edges, mm. */
+const CushionRadius = 40;
+
+/** Upholstery: the part's box with its edges rounded by `radius` (at most half its smallest side). */
+function buildCushion(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
+    const wanted = typeof part.props['radius'] === 'number' ? part.props['radius'] : CushionRadius;
+    const radius = Math.max(0, Math.min(wanted, part.w / 2, part.h / 2, part.d / 2) - 0.5);
+    const geometry = new RoundedBoxGeometry(part.w * MM, part.h * MM, part.d * MM, 4, radius * MM);
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d / 2) * MM);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
