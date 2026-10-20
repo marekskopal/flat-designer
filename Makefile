@@ -65,11 +65,12 @@ import-models:
 	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console models:import /import $(if $(PROJECT),--project=$(PROJECT))
 
 ## Capture the README screenshots of a project's saved views and pages into docs/screenshots (needs the running stack):
-## make screenshots PROJECT=4 EMAIL=you@example.com PASSWORD=… [URL=http://localhost:4400]
+## make screenshots PROJECT=4 EMAIL=you@example.com PASSWORD=… [VIEWS="Tour ·"] [ROOM=Kitchen] [URL=http://localhost:4400]
+## (VIEWS: only the saved views whose name starts with it; ROOM: the room shown in the editor shot; WebP with cwebp)
 screenshots:
 	cd frontend && pnpm exec playwright install chromium >/dev/null && \
-		FD_PROJECT=$(PROJECT) FD_EMAIL=$(EMAIL) FD_PASSWORD=$(PASSWORD) FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) \
-		node scripts/screenshots.mjs
+		FD_PROJECT=$(PROJECT) FD_EMAIL=$(EMAIL) FD_PASSWORD=$(PASSWORD) FD_VIEWS="$(VIEWS)" FD_ROOM="$(ROOM)" \
+		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) node scripts/screenshots.mjs
 
 ## Install backend + frontend dependencies on the host (for linting, tests, ng serve)
 install:
