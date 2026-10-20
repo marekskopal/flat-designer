@@ -260,9 +260,11 @@ format is the text in `FurnitureTools::Format`.
 - Capture PNG: `ViewerEngine.capture()` renders 1600 × 1000 at 2× in the presentation quality, off the visible size
   and without the panel inset, and downloads it or saves it as a project file. Room labels are HTML, so they are not
   in it.
-- `make screenshots PROJECT=… EMAIL=… PASSWORD=…` (`frontend/scripts/screenshots.mjs`, Playwright) writes every saved
-  view of the project, plus the project page, cut list, furniture library, furniture editor and a share link, to
-  `docs/screenshots/`, with the app's UI.
+- `make screenshots PROJECT=… EMAIL=… PASSWORD=… [VIEWS=… ROOM=…]` (`frontend/scripts/screenshots.mjs`, Playwright)
+  writes the saved views of the project whose name starts with `VIEWS`, the editor with `ROOM`'s inspector open, the
+  project page, cut list, furniture library, furniture editor and a share link to `docs/screenshots/`, with the app's
+  UI and the plan underlay hidden. With `cwebp` on the PATH it saves WebP 1600 px wide. The README tour uses the demo
+  flat's "Tour · …" views; keep the unlicensed poster and plan out of them.
 
 ## Walkthrough
 

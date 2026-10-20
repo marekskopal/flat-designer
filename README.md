@@ -3,45 +3,153 @@
 A web application for designing flats and houses in 3D. Projects consist of one or more floors with rooms,
 walls, doors and windows, finishes and furniture. Custom-made furniture is described as data: parametric
 furniture definitions whose parts are sized by expressions. The application produces the 3D model, a floor plan,
-a first-person walkthrough and a cut list from them.
+a first-person walkthrough and a cut list from them, and AI agents can do all of it over MCP.
 
-All geometry is generated from parameters. The project contains no 3D model files.
+![A flat in Barcelona, cut away at 2.2 m](docs/screenshots/view-tour-01-cut-away.webp)
 
-## Features
+All geometry is generated from parameters. The repository contains no 3D model files: bought products are glTF
+models you upload into the app. The screenshots show the demo flat, which an AI agent modelled over MCP (see
+[Built over MCP by an AI agent](#built-over-mcp-by-an-ai-agent)).
 
-- **3D viewer**: dollhouse overview, architectural plan view (section cut at 1.3 m, adjustable), and a
-  first-person walkthrough with collisions and doors you can open (keyboard and pointer lock, or touch controls).
-- **Editor**: select and edit rooms, walls, openings and items in an inspector; drag them in the plan view;
-  draw runs of walls with snapping and typed lengths, and add a room by clicking inside the walls around it;
-  snapping, keyboard shortcuts and undo/redo of your own changes. Changes use optimistic locking and are
-  recorded in an activity log.
-- **Furniture definitions**: parametric custom furniture (cabinets, wardrobes, worktops, tables, sofas, beds with
-  bedding, mirrors, railings, rugs, curtains, blinds, books, framed pictures showing your own images, …) defined
-  as JSON with parameters, material slots and parts. Definitions can be global, part of a user's library or
-  belong to one project. They are edited with a JSON editor that shows a live preview.
-- **Lighting**: pendants whose cables run along the (vaulted) ceiling, downlights and lamp lights with lumens and
-  colour temperature, a night view lit by the flat's own lights, and sockets, switches and plumbing points.
-- **Product models**: bought products (chairs, lamps, taps, plants) as glTF binary models (`.glb`, also
-  meshopt-compressed), uploaded to the library with their licence, author and source and placed as `Model` items
-  that scale the model to fit their box.
-- **Measurements**: a room schedule (net area, perimeter, clear height and volume per room, indoor and outdoor
-  totals) on the project page, room labels with area and height, dimension lines of the rooms in the plan view
-  (split at doors and windows), and a measure tool that snaps to wall ends, corners and faces.
-- **Cut list**: boards and fronts by material, thickness and grain direction, with edge banding and per-material
-  totals.
-- **Groups and variants**: group items into pieces of furniture, and compare alternatives as variants and
-  switch between them.
-- **Materials and finishes**: a shared material catalogue with procedural or photo textures, floor materials,
-  wall finish bands and tile grids aligned across floors, walls and tiled items, ceiling materials, vaulted
-  ceilings between beams, and skirting boards.
+## Feature tour
+
+### Floor plan with dimensions
+
+![Plan view with dimension lines](docs/screenshots/view-tour-02-plan.webp)
+
+The plan view cuts the walls at 1.3 m (adjustable) and draws every room edge's dimension line, split at doors and
+windows. A measure tool snaps to wall ends, corners and faces, and a calibrated image of a plan can lie underneath.
+
+### Room schedule
+
+![Project page with the room schedule](docs/screenshots/project.webp)
+
+The project page lists each room's net area, perimeter, clear height and volume, with indoor and outdoor totals.
+Floors, versions, share links and project files are managed here too.
+
+### Eye-level views and the walkthrough
+
+![Eye-level view along the corridor](docs/screenshots/view-tour-09-eye-level.webp)
+
+Walk through the flat in first person with collisions and doors you can open, using the keyboard and the mouse or
+touch controls. Saved views keep eye-level shots like this one, with their camera and display options.
+
+### Kitchens and built-ins
+
+![The kitchen with its sliding panels open](docs/screenshots/view-tour-03-kitchen-open.webp)
+
+Cabinets, worktops, end panels and appliances come from furniture definitions with parameters for fronts, handles
+and materials. The oak sliding panels are a definition the agent wrote for this flat.
+
+### Variants
+
+![The same kitchen with the panels closed](docs/screenshots/view-tour-04-kitchen-closed.webp)
+
+Group items into pieces of furniture and keep alternatives as variants of a set, here "Kitchen open / closed".
+Switching variants is one click, and saved views and share links remember the one they show.
+
+### Materials, finishes and ceilings
+
+![Living room with brick vaults, oak floor and furniture](docs/screenshots/view-tour-05-living-room.webp)
+
+A shared material catalogue with procedural and photo textures: planks, tiles, terrazzo, brick and herringbone on
+one tile grid per room. Ceilings can be vaulted between beams, with skirting, French windows, shutters and railings.
+
+### Furniture, textiles and product models
+
+![Master bedroom with bed, bedding and a reading lamp](docs/screenshots/view-tour-06-master-bedroom.webp)
+
+Beds with bedding, sofas, rugs, curtains, books and framed pictures are definitions. Bought products such as the
+lamp, chairs and plants are uploaded glTF models that scale to fit their box.
+
+### Bathrooms
+
+![Bathroom with shower screen, vanity, round mirror and herringbone tiles](docs/screenshots/view-tour-07-bathroom.webp)
+
+Wall finish bands, tile grids and sanitary ware: a walk-in shower screen, a wall-hung vanity, a round mirror and
+a WC. Doors have panelled, flush or glazed leaves, frame styles and handles.
+
+### Lighting at night
+
+![Living room at night, lit by its pendants](docs/screenshots/view-tour-08-night.webp)
+
+Pendants whose cables follow the vaulted ceiling, downlights and lamp lights have lumens and a colour
+temperature. The night view switches off the sun and lights the flat with its own fixtures.
+
+### Editor
+
+![Editor with the kitchen's inspector open](docs/screenshots/editor.webp)
+
+Select rooms, walls, openings and items and edit them in the inspector, drag them in the plan, draw runs of walls
+with snapping, and outline a room by clicking inside it. Every change is logged, and you can undo your own.
+
+### Furniture definitions
+
+![Furniture definition editor with a live preview](docs/screenshots/furniture-editor.webp)
+
+A definition is JSON: parameters, material slots and parts sized by expressions of the item's width, depth and
+height. The editor previews it live, and the form on the right is generated from its parameters.
+
+### Cut list
+
+![Cut list of the project's custom furniture](docs/screenshots/cut-list.webp)
+
+Boards and fronts of the custom furniture, listed by material, thickness and grain direction with edge banding,
+plus area and banding totals per material. It prints as a sheet for the workshop.
+
+### Share links
+
+![Guest view of a share link](docs/screenshots/share-link.webp)
+
+A read-only guest view of a floor, without an account, with the allowed views, a start camera and display options.
+Guests can orbit, read the plan, walk through and switch variants.
+
+### And also
+
 - **Versions**: immutable snapshots of a project that can be restored at any time.
-- **Share links**: a read-only guest view of a floor, with configurable views, start camera and display options.
+- **Saved views and screenshots**: named cameras with display options and variants. `make screenshots` captures
+  them (these images are made that way), and the viewer saves a PNG at presentation quality.
+- **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
-- **Project files**: upload plans, renders and photos to S3-compatible storage.
-- **AI agents (MCP)**: a built-in MCP server lets agents such as Claude read and edit projects, with the
-  same validation and history as the UI.
-- **Accounts**: sign-up, JWT authentication, `Admin` and `User` roles. Users own their projects; admins
-  see all projects and manage users.
+- **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.
+- **AI agents (MCP)**: a built-in MCP server lets agents such as Claude read and edit projects, with the same
+  validation and history as the UI.
+- **Accounts**: sign-up, JWT authentication, `Admin` and `User` roles. Users own their projects; admins see all
+  projects and manage users.
+
+## Built over MCP by an AI agent
+
+The demo flat in the screenshots was modelled by Claude Code through the app's MCP tools alone, with no clicks in
+the editor. It is modelled after the *Refurbishment of an Apartment in Barcelona* by Allaround Lab (2017), photos
+by José Hevia. The original plan and photos are not part of this repository, and the images here are our own
+renders.
+
+The input was the published plan, a section and twelve photos uploaded as project files, plus a written
+inventory of the flat ([docs/demo-flat.md](docs/demo-flat.md)). The agent worked in phases and saved a version
+after each one:
+
+1. Read the plan with `get_project_file` and calibrate it as an underlay from the scale bar (`set_floor_underlay`).
+2. Draw the facade, shell and partitions as runs of walls (`add_walls`) and outline the rooms (`detect_room`).
+3. Add doors, French windows with shutters, light-well windows, balconies and railings.
+4. Set the finishes: oak and terrazzo floors, brick vaults between beams, a dropped ceiling, tiles and skirting.
+5. Build the kitchen from definitions, and write a new definition for its oak sliding panels, with an open and a
+   closed variant.
+6. Furnish every room from the plan, grouping each piece of furniture. Bought products are uploaded models.
+7. Add the lights, switches, sockets and decor, then save views at the photos' camera positions and create a
+   share link.
+8. Compare the views with the photos, fix what was wrong, and log what the app cannot do yet as tasks.
+
+| | |
+| --- | --- |
+| Time | 22 minutes |
+| MCP tool calls | about 190 |
+| Logged changes | 212 |
+| Walls, openings, rooms | 27, 13, 11 |
+| Items | 89 in 8 groups, 1 variant set |
+
+The product models are CC0 models from [Poly Haven](https://polyhaven.com), uploaded into the app and not part of
+this repository. Where no model matched (the Cesca and butterfly chairs, the vessel basin, black taps), the
+demo uses stand-ins.
 
 ## Tech stack
 
@@ -84,11 +192,15 @@ make import-models DIR=path/to/models [PROJECT=1]
 The repository ships no third-party models. Keep downloaded ones outside git (e.g. in the ignored
 `source_files/`) and upload them into the app.
 
-To refresh the screenshots in `docs/screenshots/` from a project's saved views (the stack must be running):
+To refresh the screenshots in `docs/screenshots/` from a project's saved views, the editor and the pages around
+the viewer (the stack must be running; with `cwebp` installed they are saved as WebP):
 
 ```sh
-make screenshots PROJECT=4 EMAIL=you@example.com PASSWORD=…
+make screenshots PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·" ROOM=Kitchen
 ```
+
+`VIEWS` keeps only the saved views whose name starts with it, and `ROOM` is the room selected for the editor shot.
+The plan underlay is hidden in the screenshots.
 
 ### Configuration
 
@@ -132,7 +244,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 | `backend/tests/` | PHPUnit unit and integration tests; shared fixtures for the expression language |
 | `frontend/src/app/` | Angular pages and components (`editor`, `furniture`, `projects`, `viewer-page`, `share`, …) |
 | `frontend/src/app/viewer/engine/` | Framework-free three.js engine: building, items, furniture definitions, walkthrough |
-| `docs/` | Design notes and plans |
+| `docs/` | Design notes and plans; `screenshots/` holds the README images |
 
 ## Conventions
 
