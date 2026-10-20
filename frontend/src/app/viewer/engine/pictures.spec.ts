@@ -30,7 +30,8 @@ describe('PictureLibrary.sync', () => {
 
         // Still listed: the next request tries again. Not listed any more: a loaded texture goes.
         (library as unknown as {textures: {assets: Map<number, THREE.Texture>}}).textures.assets.set(7, new THREE.Texture());
-        expect(library.sync([5])).toEqual([7]);
+        // Dropped first, then the failed one listed again.
+        expect(library.sync([5])).toEqual([7, 5]);
         expect(library.hasFailed(5)).toBe(false);
         expect(library.texture(5)).toBeNull();
         expect(calls).toEqual([5, 5]);

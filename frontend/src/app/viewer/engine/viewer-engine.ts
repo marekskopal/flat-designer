@@ -343,12 +343,12 @@ export class ViewerEngine {
         this.clearPreview();
         this.loads++;
         const previous = this.sceneData;
-        // Pictures of files deleted since go plain; a fresh scene listing a file lets a failed load try again. Models
-        // no longer drawn are freed the same way.
-        const droppedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
-        this.modelLibrary?.sync((scene.models ?? []).map((m) => m.id));
+        // Pictures of files deleted since go plain, and a fresh scene listing a file lets a failed load try again: their
+        // items are redrawn. Models the same way.
+        const changedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
+        const changedModels = new Set(this.modelLibrary?.sync((scene.models ?? []).map((m) => m.id)) ?? []);
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
-            this.applyChanges(previous, scene, droppedPictures);
+            this.applyChanges(previous, scene, changedPictures, changedModels);
         } else {
             this.build(scene);
         }
@@ -443,8 +443,11 @@ export class ViewerEngine {
         this.indexWalls();
     }
 
-    /** Rebuilds what differs between two states of the shown floor, and the items showing a `droppedPictures` file. */
-    private applyChanges(previous: Scene, scene: Scene, droppedPictures: ReadonlySet<number>): void {
+    /**
+     * Rebuilds what differs between two states of the shown floor, and the items whose picture or model changed in the
+     * libraries (dropped, or failed and listed again).
+     */
+    private applyChanges(previous: Scene, scene: Scene, changedPictures: ReadonlySet<number>, changedModels: ReadonlySet<number>): void {
         const parts = this.parts;
         const materials = this.materials;
         const content = this.content;
@@ -464,7 +467,8 @@ export class ViewerEngine {
                 changedItems.has(i.id) ||
                 (i.roomId !== null && changedRooms.has(i.roomId)) ||
                 (i.definitionId !== null && changedDefinitions.has(i.definitionId)) ||
-                this.showsPicture(i, droppedPictures),
+                this.showsPicture(i, changedPictures) ||
+                (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);

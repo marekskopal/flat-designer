@@ -55,6 +55,9 @@ final readonly class ImagePreviewService
 			));
 		}
 
+		if ($grid !== null) {
+			self::checkGrid($grid, $scale);
+		}
 		$image = self::resample($bytes, $crop, $scale);
 		if ($grid !== null) {
 			self::drawGrid($image, $crop, $scale, $grid);
@@ -119,13 +122,8 @@ final readonly class ImagePreviewService
 		return ['x' => $x, 'y' => $y, 'width' => $right - $x, 'height' => $bottom - $y];
 	}
 
-	/**
-	 * Lines every `grid` source pixels, labelled with their source coordinate along the top and left edges; every
-	 * fifth line is stronger.
-	 *
-	 * @param array{x: int, y: int, width: int, height: int} $crop
-	 */
-	private static function drawGrid(GdImage $image, array $crop, float $scale, int $grid): void
+	/** A grid of `$grid` px has to come out readable; checked before the image is decoded, which is the expensive part. */
+	private static function checkGrid(int $grid, float $scale): void
 	{
 		if ($grid < 1 || $grid * $scale < self::MinGridSpacing) {
 			throw new ProjectException(sprintf(
@@ -134,6 +132,16 @@ final readonly class ImagePreviewService
 				self::MinGridSpacing,
 			));
 		}
+	}
+
+	/**
+	 * Lines every `grid` source pixels, labelled with their source coordinate along the top and left edges; every
+	 * fifth line is stronger.
+	 *
+	 * @param array{x: int, y: int, width: int, height: int} $crop
+	 */
+	private static function drawGrid(GdImage $image, array $crop, float $scale, int $grid): void
+	{
 		$light = (int) imagecolorallocatealpha($image, 230, 40, 40, 80);
 		$strong = (int) imagecolorallocatealpha($image, 230, 40, 40, 30);
 		$label = (int) imagecolorallocate($image, 190, 0, 0);

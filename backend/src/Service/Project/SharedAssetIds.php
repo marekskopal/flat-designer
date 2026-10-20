@@ -8,7 +8,7 @@ use stdClass;
 
 /**
  * The models and pictures a shared floor draws, remembered per snapshot: a guest's viewer asks for each asset in its
- * own request, and decoding the whole version for every one is wasteful. Keyed by a hash of the snapshot, which never
+ * own request, and decoding the whole version for every one is wasteful. Keyed by the version's id: a version never
  * changes once saved, so the cache cannot go stale; the worker keeps it across requests.
  */
 final class SharedAssetIds
@@ -22,9 +22,9 @@ final class SharedAssetIds
 	 * @param callable(): ?stdClass $scene decodes the floor scene when it is not remembered yet
 	 * @return array{models: list<int>, pictures: list<int>}|null null when the floor is gone from the snapshot
 	 */
-	public function of(string $snapshot, int $floorId, callable $scene): ?array
+	public function of(int $versionId, int $floorId, callable $scene): ?array
 	{
-		$key = md5($snapshot) . ':' . $floorId;
+		$key = $versionId . ':' . $floorId;
 		if (!isset($this->entries[$key])) {
 			$decoded = $scene();
 			if ($decoded === null) {
@@ -37,6 +37,12 @@ final class SharedAssetIds
 		}
 
 		return $this->entries[$key];
+	}
+
+	/** Forgets everything, for tests that reuse version ids. */
+	public function clear(): void
+	{
+		$this->entries = [];
 	}
 
 	/** @return list<int> the ids of a list of objects */

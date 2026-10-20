@@ -195,11 +195,11 @@ final readonly class ShareLinkProvider
 		if ($link === null) {
 			return null;
 		}
-		$snapshot = $link->version->snapshot;
+		$version = $link->version;
 		$ids = $this->assetIds->of(
-			$snapshot,
+			$version->id,
 			$link->floorId,
-			fn (): ?stdClass => $this->snapshotService->getFloorScene($snapshot, $link->floorId),
+			fn (): ?stdClass => $this->snapshotService->getFloorScene($version->snapshot, $link->floorId),
 		);
 
 		return $ids === null ? null : [$link, $ids];

@@ -9,6 +9,8 @@ export class AssetLoader<T> {
     private readonly assets = new Map<number, T>();
     private readonly failed = new Set<number>();
     private readonly loading = new Set<number>();
+    /** The ids the scene uses, from the last `sync()`; null before one. */
+    private listed: Set<number> | null = null;
     private disposed = false;
 
     /**
@@ -37,23 +39,27 @@ export class AssetLoader<T> {
     }
 
     /**
-     * Follows the scene's list of used assets: those no longer listed are released (deleted since), and a failed load
-     * of a listed one may be tried again. Returns the ids released, to redraw their items.
+     * Follows the scene's list of used assets: those no longer listed are released (deleted since; one still loading
+     * is released when it arrives), and a failed load of a listed one may be tried again. Returns the ids whose state
+     * changed either way, so that their items are redrawn (and ask again).
      */
     public sync(used: Iterable<number>): number[] {
         const listed = new Set(used);
-        const dropped: number[] = [];
+        this.listed = listed;
+        const changed: number[] = [];
         for (const [id, asset] of this.assets) {
             if (!listed.has(id)) {
                 this.free(asset);
                 this.assets.delete(id);
-                dropped.push(id);
+                changed.push(id);
             }
         }
         for (const id of listed) {
-            this.failed.delete(id);
+            if (this.failed.delete(id)) {
+                changed.push(id);
+            }
         }
-        return dropped;
+        return changed;
     }
 
     /** Releases the assets; loads still under way are dropped when they finish. */
@@ -73,7 +79,8 @@ export class AssetLoader<T> {
         let loaded = false;
         this.load(id)
             .then((asset) => {
-                if (this.disposed) {
+                if (this.disposed || (this.listed !== null && !this.listed.has(id))) {
+                    // Gone meanwhile: nothing uses it any more.
                     this.free(asset);
                     return;
                 }

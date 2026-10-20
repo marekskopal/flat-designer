@@ -8,6 +8,7 @@ use FlatDesigner\App\Application;
 use FlatDesigner\App\ApplicationFactory;
 use FlatDesigner\Mcp\McpUserContext;
 use FlatDesigner\Service\Actor\ActorContext;
+use FlatDesigner\Service\Project\SharedAssetIds;
 use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
 use FlatDesigner\Service\Storage\FileStorageInterface;
 use League\Container\Container;
@@ -105,6 +106,9 @@ final class AppHarness
 
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
+		$assetIds = self::container()->get(SharedAssetIds::class);
+		assert($assetIds instanceof SharedAssetIds);
+		$assetIds->clear();
 		self::mercureHub()->updates = [];
 
 		self::resetRequestContexts();

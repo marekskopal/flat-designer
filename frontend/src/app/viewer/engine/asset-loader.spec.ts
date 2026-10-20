@@ -49,9 +49,21 @@ describe('AssetLoader', () => {
             loader.get(7);
             await tick();
             expect(loaded).toEqual(notify ? [7] : []);
-            loader.sync([7]);
+            expect(loader.sync([7])).toEqual([7]);
             expect(loader.hasFailed(7)).toBe(false);
         }
+    });
+
+    it('releases an asset that leaves the scene while it is still loading', async () => {
+        let resolve: (asset: string) => void = () => undefined;
+        const freed: string[] = [];
+        const loader = new AssetLoader<string>(() => new Promise((r) => (resolve = r)), (asset) => freed.push(asset), false);
+        loader.get(9);
+        expect(loader.sync([])).toEqual([]);
+        resolve('late');
+        await tick();
+        expect(freed).toEqual(['late']);
+        expect(loader.get(9)).toBeNull();
     });
 
     it('drops and frees a load that finishes after disposal', async () => {

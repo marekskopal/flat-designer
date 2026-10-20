@@ -55,7 +55,7 @@ export class ModelLibrary {
         return this.templates.hasFailed(modelId);
     }
 
-    /** Follows the scene's models: templates no longer used are freed, a failed listed one may load again. */
+    /** Follows the scene's models: templates no longer used are freed, a failed listed one loads again. Returns the ids changed. */
     public sync(modelIds: Iterable<number>): number[] {
         return this.templates.sync(modelIds);
     }

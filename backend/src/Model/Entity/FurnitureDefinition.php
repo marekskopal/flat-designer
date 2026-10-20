@@ -7,6 +7,7 @@ namespace FlatDesigner\Model\Entity;
 use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
 use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
+use FlatDesigner\Service\Furniture\ScopedAsset;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
@@ -18,7 +19,7 @@ use MarekSkopal\ORM\Enum\Type;
  * library, `project` = one project, neither = global. Items will reference it live, so it is soft-deleted.
  */
 #[Entity(repositoryClass: FurnitureDefinitionRepository::class)]
-class FurnitureDefinition extends AEntity
+class FurnitureDefinition extends AEntity implements ScopedAsset
 {
 	/** Set when deleted; the row stays so items using it keep rendering, but it cannot be picked any more. */
 	#[Column(type: Type::Timestamp, nullable: true)]
