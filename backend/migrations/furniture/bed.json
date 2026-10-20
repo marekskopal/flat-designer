@@ -1,6 +1,6 @@
 {
  "name": "Bed with bedding",
- "description": "Platform bed with a mattress, duvet and pillows, an optional headboard and a throw at the foot.",
+ "description": "Platform bed of boards with a mattress, duvet and pillows, an optional headboard and a throw at the foot.",
  "definition": {
   "format": 1,
   "size": {
@@ -102,13 +102,48 @@
    },
    {
     "type": "board",
-    "name": "Base",
+    "name": "Base top",
     "x": 0,
-    "y": 60,
+    "y": "baseHeight - 18",
     "z": "head",
     "w": "W",
-    "h": "baseHeight - 60",
+    "h": 18,
     "d": "D - head",
+    "material": "frame",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Base side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 18)",
+    "y": 60,
+    "z": "head",
+    "w": 18,
+    "h": "baseHeight - 78",
+    "d": "D - head",
+    "material": "frame",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Base foot",
+    "x": 18,
+    "y": 60,
+    "z": "D - 18",
+    "w": "W - 36",
+    "h": "baseHeight - 78",
+    "d": 18,
     "material": "frame",
     "grain": "horizontal"
    },

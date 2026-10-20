@@ -163,6 +163,33 @@ describe('new part types and options', () => {
         expect(color(meshes(build(body([{...door, mirror: true}], slots)))[4])).toBe('#d8dde0');
     });
 
+    it('rounds a cushion by its radius, at most half its smallest side, keeping the box', () => {
+        const bounds = (mesh: THREE.Mesh): THREE.Vector3 => {
+            mesh.geometry.computeBoundingBox();
+            return mesh.geometry.boundingBox!.getSize(new THREE.Vector3());
+        };
+        const seat = {type: 'cushion', x: 0, y: 400, z: 0, w: 600, h: 150, d: 400};
+        const [rounded] = meshes(build(body([seat])));
+        // The box stays the part's size; the mesh sits at the part's centre, shifted to the item centre.
+        expect(bounds(rounded).toArray().map((v) => Math.round(v * 1000))).toEqual([600, 150, 400]);
+        expect(rounded.position.toArray().map((v) => Math.round(v * 1000))).toEqual([0, 475, 0]);
+        // A corner vertex of a square-edged cushion is at the box corner; a rounded one is pulled in by the radius.
+        const corner = (mesh: THREE.Mesh): number => {
+            const position = mesh.geometry.getAttribute('position');
+            let nearest = Infinity;
+            for (let i = 0; i < position.count; i++) {
+                nearest = Math.min(nearest, Math.hypot(position.getX(i) - 0.3, position.getY(i) - 0.075, position.getZ(i) - 0.2));
+            }
+            return nearest;
+        };
+        const [square] = meshes(build(body([{...seat, radius: 0}])));
+        expect(corner(square)).toBeLessThan(0.001);
+        // The default 40 mm pulls the corner in; a radius above half the height (75) is clamped to it.
+        expect(corner(rounded)).toBeGreaterThan(0.02);
+        const [clamped] = meshes(build(body([{...seat, radius: 500}])));
+        expect(bounds(clamped).toArray().map((v) => Math.round(v * 1000))).toEqual([600, 150, 400]);
+    });
+
     it('darkens a shaded board and narrows a board to its back width', () => {
         const slots = [{key: 'carcass', default: 'kitchen-oak'}];
         const plinth = {type: 'board', x: 0, y: 0, z: 0, w: 600, h: 100, d: 400, material: 'carcass', shade: 0.5};

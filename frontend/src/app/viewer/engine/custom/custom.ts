@@ -235,6 +235,11 @@ function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh
     } else if (axis === 'z') {
         mesh.rotation.x = Math.PI / 2;
     }
+    return centredInBox(mesh, part);
+}
+
+/** A mesh built around its own origin, placed at the centre of the part's box, casting and taking shadows. */
+function centredInBox(mesh: THREE.Mesh, part: ResolvedPart): THREE.Mesh {
     mesh.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d / 2) * MM);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -244,16 +249,12 @@ function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh
 /** Default rounding of a cushion's edges, mm. */
 const CushionRadius = 40;
 
-/** Upholstery: the part's box with its edges rounded by `radius` (at most half its smallest side). */
+/** Upholstery: the part's box with its edges rounded by `radius` (0 square; at most half its smallest side, so the box stays its size). */
 function buildCushion(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     const wanted = typeof part.props['radius'] === 'number' ? part.props['radius'] : CushionRadius;
     const radius = Math.max(0, Math.min(wanted, part.w / 2, part.h / 2, part.d / 2) - 0.5);
     const geometry = new RoundedBoxGeometry(part.w * MM, part.h * MM, part.d * MM, 4, radius * MM);
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set((part.x + part.w / 2) * MM, (part.y + part.h / 2) * MM, (part.z + part.d / 2) * MM);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    return mesh;
+    return centredInBox(new THREE.Mesh(geometry, material), part);
 }
 
 /**

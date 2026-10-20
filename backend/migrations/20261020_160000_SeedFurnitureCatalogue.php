@@ -24,27 +24,31 @@ final class SeedFurnitureCatalogueMigration extends Migration
 		'balcony-railing.json',
 	];
 
-	private const array Codes = ['fabric-linen-grey', 'fabric-linen-white', 'fabric-wool-ochre', 'iron-wrought'];
+	/** code => [name, colour, roughness, metalness] */
+	private const array Materials = [
+		'fabric-linen-grey' => ['Upholstery fabric, grey linen', '#9a958d', 0.97, 0.0],
+		'fabric-linen-white' => ['Bedding, white linen', '#efece6', 0.95, 0.0],
+		'fabric-wool-ochre' => ['Throw, ochre wool', '#b98b4a', 1.0, 0.0],
+		'iron-wrought' => ['Wrought iron, painted black (railings)', '#262626', 0.55, 0.6],
+	];
 
 	public function up(): void
 	{
 		$now = date('Y-m-d H:i:s');
-		$material = static fn (string $code, string $name, string $color, float $roughness, float $metalness): array => [
-			'code' => $code,
-			'name' => $name,
-			'pattern' => 'Plain',
-			'color' => $color,
-			'roughness' => $roughness,
-			'metalness' => $metalness,
-			'created_at' => $now,
-			'updated_at' => $now,
-		];
-		$this->table('materials')->insert([
-			$material('fabric-linen-grey', 'Upholstery fabric, grey linen', '#9a958d', 0.97, 0.0),
-			$material('fabric-linen-white', 'Bedding, white linen', '#efece6', 0.95, 0.0),
-			$material('fabric-wool-ochre', 'Throw, ochre wool', '#b98b4a', 1.0, 0.0),
-			$material('iron-wrought', 'Wrought iron, painted black (railings)', '#262626', 0.55, 0.6),
-		]);
+		$rows = [];
+		foreach (self::Materials as $code => [$name, $color, $roughness, $metalness]) {
+			$rows[] = [
+				'code' => $code,
+				'name' => $name,
+				'pattern' => 'Plain',
+				'color' => $color,
+				'roughness' => $roughness,
+				'metalness' => $metalness,
+				'created_at' => $now,
+				'updated_at' => $now,
+			];
+		}
+		$this->table('materials')->insert($rows);
 		FurnitureSeeds::insert($this->databaseProvider->getDatabase()->getPdo(), self::Files);
 	}
 
@@ -52,7 +56,7 @@ final class SeedFurnitureCatalogueMigration extends Migration
 	{
 		$pdo = $this->databaseProvider->getDatabase()->getPdo();
 		FurnitureSeeds::delete($pdo, self::Files);
-		$codes = implode(', ', array_map(static fn (string $code): string => "'" . $code . "'", self::Codes));
+		$codes = implode(', ', array_map(static fn (string $code): string => "'" . $code . "'", array_keys(self::Materials)));
 		$pdo->exec('DELETE FROM materials WHERE code IN (' . $codes . ')');
 	}
 }
