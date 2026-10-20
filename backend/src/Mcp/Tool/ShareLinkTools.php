@@ -31,13 +31,13 @@ final readonly class ShareLinkTools
 		'default' => null,
 	];
 
-	private const array PointSchema = [
+	public const array PointSchema = [
 		'type' => 'object',
 		'properties' => ['x' => ['type' => 'integer'], 'y' => ['type' => 'integer'], 'z' => ['type' => 'integer']],
 		'required' => ['x', 'y', 'z'],
 	];
 
-	private const array CameraSchema = [
+	public const array CameraSchema = [
 		'type' => ['object', 'null'],
 		'description' => 'where the 3D view starts, plan mm (z = height above the floor): camera position and the point it looks at, '
 			. 'e.g. {"position": {"x": 1500, "y": -2500, "z": 5500}, "target": {"x": 4500, "y": 3000, "z": 500}}; '

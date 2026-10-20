@@ -964,13 +964,50 @@ export class ViewerEngine {
         }
     }
 
-    /** The orbit camera in plan mm (where a tween is heading, if one runs), e.g. to save it in a share link. */
+    /**
+     * The camera in plan mm (where a tween is heading, if one runs), e.g. to save it in a share link or a view. During a
+     * walk it is the walker's eye, looking 2 m ahead: the same shot as a 3D view.
+     */
     public cameraPose(): CameraPose {
         const toPlan = (v: THREE.Vector3): CameraPoint => ({x: Math.round(v.x / MM), y: Math.round(-v.z / MM), z: Math.round(v.y / MM)});
+        if (this.walkthrough !== null) {
+            const ahead = this.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(2).add(this.camera.position);
+            return {position: toPlan(this.camera.position), target: toPlan(ahead)};
+        }
         return {
             position: toPlan(this.tween?.toPosition ?? this.camera.position),
             target: toPlan(this.tween?.toTarget ?? this.controls.target),
         };
+    }
+
+    /** Models and pictures still loading: a screenshot waits for 0. */
+    public pendingAssets(): number {
+        return (this.modelLibrary?.pending() ?? 0) + (this.pictureLibrary?.pending() ?? 0);
+    }
+
+    /**
+     * The view as a PNG of `width` × `height` CSS pixels at `pixelRatio`, rendered off the visible size (the panel inset is
+     * left out, so the floor is framed in the whole image). The room labels are HTML over the canvas and not in it.
+     */
+    public capture(width: number, height: number, pixelRatio = 2, quality: RenderQuality = 'presentation'): Promise<Blob> {
+        const previousQuality = this.quality;
+        this.setQuality(quality);
+        const previousRatio = this.renderer.getPixelRatio();
+        this.renderer.setPixelRatio(pixelRatio);
+        this.renderer.setSize(width, height, false);
+        this.camera.aspect = width / height;
+        this.camera.clearViewOffset();
+        this.camera.updateProjectionMatrix();
+        this.presentation?.setSize(width, height, pixelRatio);
+        this.renderMain();
+        // The drawing buffer is read now, before the browser composites (and clears) it.
+        const blob = new Promise<Blob>((resolve, reject) =>
+            this.renderer.domElement.toBlob((b) => (b === null ? reject(new Error('The view could not be captured.')) : resolve(b)), 'image/png'),
+        );
+        this.renderer.setPixelRatio(previousRatio);
+        this.setQuality(previousQuality);
+        this.resize();
+        return blob;
     }
 
     public setCameraPose(pose: CameraPose, animate = true): void {

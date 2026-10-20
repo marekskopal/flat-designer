@@ -32,8 +32,10 @@ use const JSON_THROW_ON_ERROR;
 final readonly class ShareLinkProvider
 {
 	private const int MaxNameLength = 100;
-	private const int MinSectionHeight = 900;
-	private const int MaxSectionHeight = 2700;
+
+	/** The wall cut a view may start with, mm above the floor (saved views use the same range). */
+	public const int MinSectionHeight = 900;
+	public const int MaxSectionHeight = 2700;
 
 	public function __construct(
 		private ShareLinkRepository $shareLinkRepository,

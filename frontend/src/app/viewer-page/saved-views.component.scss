@@ -1,0 +1,88 @@
+@use 'variables' as *;
+
+.views {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 0 $space-8;
+    padding: 0;
+    list-style: none;
+}
+
+.view {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.view__apply {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: baseline;
+    gap: $space-8;
+    padding: 6px $space-8;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font: inherit;
+    font-size: $font-size-13;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+    }
+}
+
+.view__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.view__floor {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: $color-text-muted;
+}
+
+.icon {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+        color: $color-text;
+    }
+}
+
+.icon--danger:hover:not(:disabled) {
+    color: $color-danger;
+}
+
+.save,
+.capture {
+    display: flex;
+    gap: $space-8;
+}
+
+.save {
+    margin-bottom: $space-8;
+
+    .input {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.capture .btn {
+    flex: 1;
+}

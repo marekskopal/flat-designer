@@ -45,6 +45,10 @@ export class PictureLibrary {
         return this.textures.hasFailed(fileId);
     }
 
+    public pending(): number {
+        return this.textures.pending();
+    }
+
     /**
      * Follows the scene's list of shown files: textures of files no longer listed are dropped (deleted since), and a
      * failed load of a listed file is tried again. Returns the ids changed either way, to redraw their items.

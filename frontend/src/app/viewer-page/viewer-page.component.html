@@ -1,7 +1,7 @@
 <fd-viewer
     #viewerRef
     class="viewer"
-    [scene]="scene()"
+    [scene]="viewedScene()"
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
@@ -20,6 +20,7 @@
     [editMode]="editor.enabled()"
     [insetLeft]="walking() ? 0 : panelInset"
     (selected)="onSelected($event)"
+    (loaded)="onSceneBuilt($event)"
     [editHandler]="applyDrag"
     [tool]="editor.tool()"
     [wallDraft]="editor.wallDraft()"
@@ -171,10 +172,25 @@
         }
     </section>
 
+    <section class="panel__section" [hidden]="editor.enabled() || walking()">
+        <h2 class="section-title">Saved views</h2>
+        <fd-saved-views
+            [views]="savedViews()"
+            [floorId]="floorId()"
+            [busy]="viewBusy()"
+            [canSave]="version() === null"
+            (apply)="applySavedView($event)"
+            (save)="saveView($event)"
+            (overwrite)="overwriteView($event)"
+            (remove)="removeView($event)"
+            (capture)="captureView($event)"
+        />
+    </section>
+
     @if (hasVariants() && scene(); as s) {
         <section class="panel__section">
             <h2 class="section-title">Variants</h2>
-            <fd-variants [scene]="s" [readonly]="!canEdit()" [editing]="editor.enabled()" />
+            <fd-variants [scene]="viewedScene() ?? s" [readonly]="!canEdit()" [editing]="editor.enabled()" />
         </section>
     }
 

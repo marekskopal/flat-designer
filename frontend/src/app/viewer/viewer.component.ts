@@ -228,6 +228,17 @@ export class ViewerComponent {
         return this.engine()?.viewCenter() ?? {x: 0, y: 0};
     }
 
+    /** Models and pictures still loading (0 without an engine yet). */
+    public pendingAssets(): number {
+        return this.engine()?.pendingAssets() ?? 0;
+    }
+
+    /** The view as a PNG (see `ViewerEngine.capture()`). */
+    public capture(width: number, height: number, pixelRatio = 2): Promise<Blob> {
+        const engine = this.engine();
+        return engine === null ? Promise.reject(new Error('The viewer is not ready.')) : engine.capture(width, height, pixelRatio);
+    }
+
     /** The 3D camera in plan mm; null before the engine starts. */
     public cameraPose(): CameraPose | null {
         return this.engine()?.cameraPose() ?? null;

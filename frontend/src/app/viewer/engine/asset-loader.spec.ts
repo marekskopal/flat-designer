@@ -23,7 +23,9 @@ describe('AssetLoader', () => {
 
         expect(loader.get(5)).toBeNull();
         expect(loader.get(5)).toBeNull();
+        expect(loader.pending()).toBe(1);
         await tick();
+        expect(loader.pending()).toBe(0);
         expect(loader.get(5)).toBe('asset 5');
         expect(calls).toEqual([5]);
         expect(loaded).toEqual([5]);

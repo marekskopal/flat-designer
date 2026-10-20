@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db env ssl-cert admin import-files import-models install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db env ssl-cert admin import-files import-models screenshots install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -63,6 +63,13 @@ import-files:
 ## Upload the .glb models of a directory (with optional <name>.json credits): make import-models DIR=… [PROJECT=…]
 import-models:
 	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console models:import /import $(if $(PROJECT),--project=$(PROJECT))
+
+## Capture the README screenshots of a project's saved views and pages into docs/screenshots (needs the running stack):
+## make screenshots PROJECT=4 EMAIL=you@example.com PASSWORD=… [URL=http://localhost:4400]
+screenshots:
+	cd frontend && pnpm exec playwright install chromium >/dev/null && \
+		FD_PROJECT=$(PROJECT) FD_EMAIL=$(EMAIL) FD_PASSWORD=$(PASSWORD) FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) \
+		node scripts/screenshots.mjs
 
 ## Install backend + frontend dependencies on the host (for linting, tests, ng serve)
 install:
