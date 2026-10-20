@@ -34,6 +34,11 @@ export class AssetLoader<T> {
         return asset;
     }
 
+    /** How many assets are still loading. */
+    public pending(): number {
+        return this.loading.size;
+    }
+
     public hasFailed(id: number): boolean {
         return this.failed.has(id);
     }

@@ -1,0 +1,43 @@
+@if (views().length > 0) {
+    <ul class="views">
+        @for (view of views(); track view.id) {
+            <li class="view">
+                <button type="button" class="view__apply" [disabled]="busy()" [title]="'Show ' + view.name" (click)="apply.emit(view)">
+                    <span class="view__name">{{ view.name }}</span>
+                    @if (view.floorId !== floorId()) {
+                        <span class="view__floor">{{ view.floorName }}</span>
+                    }
+                </button>
+                @if (canSave()) {
+                    <button type="button" class="icon" title="Replace with the current view" [disabled]="busy()" (click)="overwrite.emit(view)">↻</button>
+                    <button type="button" class="icon icon--danger" title="Delete" [disabled]="busy()" (click)="remove.emit(view)">×</button>
+                }
+            </li>
+        }
+    </ul>
+}
+@if (canSave()) {
+    <form class="save" (submit)="submit($event)">
+        <input
+            class="input input--compact"
+            type="text"
+            name="name"
+            placeholder="Name of the current view"
+            aria-label="View name"
+            maxlength="100"
+            [value]="name()"
+            (input)="name.set($any($event.target).value)"
+        />
+        <button type="submit" class="btn btn--ghost" [disabled]="busy() || name().trim() === ''">Save</button>
+    </form>
+}
+<div class="capture">
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" title="1600 × 1000 at 2×, in the presentation quality" (click)="capture.emit('download')">
+        Capture PNG
+    </button>
+    @if (canSave()) {
+        <button type="button" class="btn btn--ghost" [disabled]="busy()" title="Save the capture among the project's files" (click)="capture.emit('file')">
+            To files
+        </button>
+    }
+</div>

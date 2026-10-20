@@ -245,6 +245,25 @@ format is the text in `FurnitureTools::Format`.
 - The pages' Display has "Presentation quality"; `ShareSettingsDto.presentation` opens a share link with it. The
   screenshot capture (FD-44) is meant to use it.
 
+## Saved views and screenshots
+
+- `SavedView` (`saved_views`, `SavedViewProvider`, REST `…/views`, MCP `list_views` / `save_view` (replaces a view of
+  the same name) / `delete_view`): a named view of one floor. `settings` (`SavedViewSettingsDto`) holds the view mode
+  (`overview` or `top`; an eye-level shot is a 3D camera at eye height, and saving during a walk keeps it as one), the
+  camera, the display options (night, lights, quality) and the variant per set. Views are not elements: no revision,
+  no undo. They go with their floor; snapshots carry them (`views`, `SnapshotViewRestorer`), and a restore remaps
+  their floor, sets and groups.
+- The viewer page's Saved views section applies, saves, replaces and deletes views. A view's variants are shown
+  locally (`variantOverride`, until the scene's next revision); the project's active variants do not change.
+  `?view=<id>` applies a view once the engine has built its floor. Once no model or picture is loading, the page
+  sets `data-view-ready`.
+- Capture PNG: `ViewerEngine.capture()` renders 1600 × 1000 at 2× in the presentation quality, off the visible size
+  and without the panel inset, and downloads it or saves it as a project file. Room labels are HTML, so they are not
+  in it.
+- `make screenshots PROJECT=… EMAIL=… PASSWORD=…` (`frontend/scripts/screenshots.mjs`, Playwright) writes every saved
+  view of the project, plus the project page, cut list, furniture library, furniture editor and a share link, to
+  `docs/screenshots/`, with the app's UI.
+
 ## Walkthrough
 
 - View → Walk is implemented in `viewer/engine/walkthrough.ts`: first person at an eye height of 1630 mm with pointer

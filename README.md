@@ -84,6 +84,12 @@ make import-models DIR=path/to/models [PROJECT=1]
 The repository ships no third-party models. Keep downloaded ones outside git (e.g. in the ignored
 `source_files/`) and upload them into the app.
 
+To refresh the screenshots in `docs/screenshots/` from a project's saved views (the stack must be running):
+
+```sh
+make screenshots PROJECT=4 EMAIL=you@example.com PASSWORD=…
+```
+
 ### Configuration
 
 All settings are in `.env`. `.env.example` documents each variable. The most important ones:
@@ -171,6 +177,7 @@ Every endpoint except health, authentication, OAuth and public share links requi
 | `/api/projects/{id}/{changes,undo,redo}` | Activity log and undo/redo |
 | `/api/projects/{id}/versions` | Saved versions and restore |
 | `/api/projects/{id}/share-links`, `/api/shares/{token}` | Share links and the public guest view |
+| `/api/projects/{id}/views` | Saved views (camera, display, variants of a floor) |
 | `/api/projects/{id}/files` | Project files |
 | `/api/projects/{id}/cut-list` | Cut list of the project's custom furniture |
 | `/api/projects/{id}/room-schedule` | Room areas, perimeters and clear heights with indoor and outdoor totals (also per floor) |
