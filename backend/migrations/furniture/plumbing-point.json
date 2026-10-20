@@ -1,0 +1,120 @@
+{
+ "name": "Plumbing point",
+ "description": "A water or waste connection coming out of the wall: a cold and/or hot supply stub with a coloured cap, or a waste pipe. Elevation: the pipe's bottom.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 160,
+   "depth": 60,
+   "height": 50
+  },
+  "parameters": [
+   {
+    "key": "kind",
+    "label": "Kind",
+    "type": "select",
+    "default": "pair",
+    "options": [
+     "pair",
+     "cold",
+     "hot",
+     "waste"
+    ]
+   }
+  ],
+  "derived": {
+   "pipe": 15,
+   "cold": "kind == 'pair' || kind == 'cold'",
+   "hot": "kind == 'pair' || kind == 'hot'"
+  },
+  "materialSlots": [
+   {
+    "key": "pipe",
+    "label": "Pipe",
+    "default": "copper"
+   },
+   {
+    "key": "coldCap",
+    "label": "Cold cap",
+    "default": "plastic-blue"
+   },
+   {
+    "key": "hotCap",
+    "label": "Hot cap",
+    "default": "plastic-red"
+   },
+   {
+    "key": "waste",
+    "label": "Waste pipe",
+    "default": "plastic-grey"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Cold pipe",
+    "when": "cold",
+    "axis": "z",
+    "x": "kind == 'pair' ? W * 0.25 - pipe / 2 : (W - pipe) / 2",
+    "y": 0,
+    "z": 0,
+    "w": "pipe",
+    "h": "pipe",
+    "d": "D - 12",
+    "material": "pipe"
+   },
+   {
+    "type": "cylinder",
+    "name": "Cold cap",
+    "when": "cold",
+    "axis": "z",
+    "x": "kind == 'pair' ? W * 0.25 - 11 : W / 2 - 11",
+    "y": -3.5,
+    "z": "D - 12",
+    "w": 22,
+    "h": 22,
+    "d": 12,
+    "material": "coldCap"
+   },
+   {
+    "type": "cylinder",
+    "name": "Hot pipe",
+    "when": "hot",
+    "axis": "z",
+    "x": "kind == 'pair' ? W * 0.75 - pipe / 2 : (W - pipe) / 2",
+    "y": 0,
+    "z": 0,
+    "w": "pipe",
+    "h": "pipe",
+    "d": "D - 12",
+    "material": "pipe"
+   },
+   {
+    "type": "cylinder",
+    "name": "Hot cap",
+    "when": "hot",
+    "axis": "z",
+    "x": "kind == 'pair' ? W * 0.75 - 11 : W / 2 - 11",
+    "y": -3.5,
+    "z": "D - 12",
+    "w": 22,
+    "h": 22,
+    "d": 12,
+    "material": "hotCap"
+   },
+   {
+    "type": "cylinder",
+    "name": "Waste pipe",
+    "when": "kind == 'waste'",
+    "axis": "z",
+    "x": "(W - min(H, W)) / 2",
+    "y": 0,
+    "z": 0,
+    "w": "min(H, W)",
+    "h": "min(H, W)",
+    "d": "D",
+    "material": "waste"
+   }
+  ]
+ }
+}

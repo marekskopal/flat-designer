@@ -29,6 +29,8 @@ export interface ShareSettings {
     sectionHeight: number | null;
     /** Dimension lines of the rooms in the top view. */
     dimensions: boolean;
+    /** Opens after dark, lit by the flat's lights; missing in links saved before the night view. */
+    night?: boolean;
 }
 
 export interface ShareLink {

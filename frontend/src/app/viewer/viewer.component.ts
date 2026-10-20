@@ -59,6 +59,10 @@ export class ViewerComponent {
     public readonly labelsVisible = input(true);
     /** Dimension lines along the room edges, in the top view. */
     public readonly dimensionsVisible = input(false);
+    /** After dark: no daylight. */
+    public readonly night = input(false);
+    /** The flat's lights (light parts, LED strips) are on. */
+    public readonly lightsOn = input(false);
     /** The measure tool: clicks in the top view place two points and show their distance (before any edit tool). */
     public readonly measuring = input(false);
     /** How the 3D models of `Model` items are fetched; null leaves them as placeholders. */
@@ -149,6 +153,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
+        effect(() => this.engine()?.setLighting(this.night(), this.lightsOn()));
         effect(() => {
             const fetcher = this.modelFetcher();
             if (fetcher !== null) {

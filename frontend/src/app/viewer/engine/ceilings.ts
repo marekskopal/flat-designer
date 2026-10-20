@@ -45,6 +45,21 @@ export function vaultHeight(v: number, profile: VaultProfile): number {
 }
 
 /**
+ * Height (mm) of the room's ceiling surface at a plan point: its ceiling height, or on a vaulted ceiling the vault
+ * there, or the underside of a beam. Null for an open-air room.
+ */
+export function ceilingHeightAt(room: Room, x: number, y: number): number | null {
+    const profile = vaultProfile(room);
+    if (profile === null) {
+        return room.ceilingHeight;
+    }
+    const v = dot({x, y}, vaultFrame(room.vaultAngle ?? 0).v);
+    const inBay = v - Math.floor(v / profile.spacing) * profile.spacing;
+    const onBeam = inBay <= profile.beamWidth / 2 || inBay >= profile.spacing - profile.beamWidth / 2;
+    return onBeam ? profile.crown - profile.rise - (room.beamDrop ?? 30) : vaultHeight(v, profile);
+}
+
+/**
  * Where the ceiling surface is cut into strips across the beams between `from` and `to` (mm along v): at the
  * edges of every beam and `segments` times across each vault, so that straight strips follow the arches.
  */

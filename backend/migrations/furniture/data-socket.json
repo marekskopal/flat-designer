@@ -1,0 +1,67 @@
+{
+ "name": "Data socket (RJ45)",
+ "description": "A flush wall socket for network or TV cables, one or two ports. Elevation: its bottom edge.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 80,
+   "depth": 10,
+   "height": 80
+  },
+  "parameters": [
+   {
+    "key": "ports",
+    "label": "Ports",
+    "type": "int",
+    "default": 2,
+    "min": 1,
+    "max": 2
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "plastic-white-gloss"
+   },
+   {
+    "key": "port",
+    "label": "Port",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Frame",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D - 2",
+    "material": "frame",
+    "edges": [
+     "left",
+     "right",
+     "top",
+     "bottom"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Port",
+    "repeat": {
+     "count": "ports"
+    },
+    "x": "W / 2 - 8 + (ports == 2 ? (i == 0 ? -12 : 12) : 0)",
+    "y": "H / 2 - 7",
+    "z": "D - 1",
+    "w": 16,
+    "h": 14,
+    "d": 1,
+    "material": "port"
+   }
+  ]
+ }
+}

@@ -19,12 +19,12 @@ final class ItemRepository extends ARepository
 	}
 
 	/**
-	 * The items (not deleted) of the floors, in one query.
+	 * The items (not deleted) of the floors drawn from a furniture definition, in one query.
 	 *
 	 * @param list<int> $floorIds
 	 * @return list<Item>
 	 */
-	public function findOnFloors(array $floorIds): array
+	public function findWithDefinitionOnFloors(array $floorIds): array
 	{
 		if ($floorIds === []) {
 			return [];
@@ -33,6 +33,7 @@ final class ItemRepository extends ARepository
 		return $this->select()
 			->where(['floor_id', 'IN', $floorIds])
 			->where(['deleted_at' => null])
+			->where(['definition_id', '!=', null])
 			->orderBy('id', 'ASC')
 			->fetchAll();
 	}

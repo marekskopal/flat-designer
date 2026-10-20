@@ -39,7 +39,7 @@ export function buildItem(
     assets: ItemAssets = NoAssets,
 ): THREE.Object3D {
     const object =
-        buildCustomItemBody(item, materials, definitions, assets.pictures) ??
+        buildCustomItemBody(item, materials, definitions, assets.pictures, room) ??
         buildModelItemBody(item, assets.models, assets.modelLibrary) ??
         buildKitchenItemBody(item, materials) ??
         buildSanitaryItemBody(item, materials) ??
@@ -53,7 +53,8 @@ export function buildItem(
     alignTiles(object, tileOrigin(room), materials);
     object.traverse((o) => {
         if (o instanceof THREE.Mesh) {
-            o.castShadow = true;
+            // A glowing bulb would block its own light.
+            o.castShadow = o.userData['castsNoShadow'] !== true;
             o.receiveShadow = true;
         }
     });

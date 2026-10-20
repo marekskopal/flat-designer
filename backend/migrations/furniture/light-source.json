@@ -1,0 +1,93 @@
+{
+ "name": "Light source",
+ "description": "The light of a lamp from the model library: put it inside the shade (group it with the lamp). A point light, or a spot shining down; it can glow as a small bulb.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 60,
+   "depth": 60,
+   "height": 60
+  },
+  "parameters": [
+   {
+    "key": "kind",
+    "label": "Kind",
+    "type": "select",
+    "default": "point",
+    "options": [
+     "point",
+     "spot"
+    ]
+   },
+   {
+    "key": "lumens",
+    "label": "Light output",
+    "type": "int",
+    "default": 600,
+    "min": 0,
+    "max": 5000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 2700,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   },
+   {
+    "key": "angle",
+    "label": "Beam angle (spot)",
+    "type": "int",
+    "default": 90,
+    "min": 10,
+    "max": 160,
+    "unit": "°"
+   },
+   {
+    "key": "glow",
+    "label": "Visible bulb",
+    "type": "bool",
+    "default": false
+   },
+   {
+    "key": "shadow",
+    "label": "Casts shadows",
+    "type": "bool",
+    "default": false
+   }
+  ],
+  "parts": [
+   {
+    "type": "light",
+    "name": "Light",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "kind": {
+     "expr": "kind"
+    },
+    "angle": {
+     "expr": "angle"
+    },
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "shadow": {
+     "expr": "shadow"
+    },
+    "bulb": {
+     "expr": "glow ? 'sphere' : 'none'"
+    }
+   }
+  ]
+ }
+}

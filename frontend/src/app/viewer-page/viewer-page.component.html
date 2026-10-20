@@ -5,6 +5,8 @@
     [ceilingsVisible]="ceilingsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
+    [night]="night()"
+    [lightsOn]="lightsOn()"
     [measuring]="measureActive()"
     [calibrating]="editor.calibration() !== null"
     [underlayImage]="underlayImage()"
@@ -188,6 +190,14 @@
         <label class="toggle">
             <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
             <span>Dimensions (Plan)</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="night()" (change)="toggleNight()" />
+            <span>Night</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="lightsOn()" (change)="toggleLights()" />
+            <span>Lights on</span>
         </label>
         @if (scene()?.underlay) {
             <label class="toggle">

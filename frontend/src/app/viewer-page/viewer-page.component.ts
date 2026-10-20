@@ -171,6 +171,10 @@ export class ViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
+    /** After dark; the lights follow it (on at night) until switched by hand. */
+    protected readonly night = signal(false);
+    private readonly lightsChoice = signal<boolean | null>(null);
+    protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
     /** The measure tool (top view only); an edit tool turns it off and the other way round. */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -203,6 +207,7 @@ export class ViewerPageComponent {
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
+            night: this.night(),
         };
     });
     /** For the editor panel: where new elements are placed. */
@@ -415,5 +420,14 @@ export class ViewerPageComponent {
 
     protected onSectionInput(event: Event): void {
         this.sectionSlider.set(Number((event.target as HTMLInputElement).value));
+    }
+
+    protected toggleNight(): void {
+        this.night.set(!this.night());
+        this.lightsChoice.set(null);
+    }
+
+    protected toggleLights(): void {
+        this.lightsChoice.set(!this.lightsOn());
     }
 }

@@ -1,7 +1,18 @@
 import {Opening, Room, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
-import {beamSpans, ceilingSteps, clipToBand, roomBeams, skirtingPieces, vaultBreaks, vaultFrame, vaultHeight, wallSpansAlongEdge} from './ceilings';
+import {
+    beamSpans,
+    ceilingHeightAt,
+    ceilingSteps,
+    clipToBand,
+    roomBeams,
+    skirtingPieces,
+    vaultBreaks,
+    vaultFrame,
+    vaultHeight,
+    wallSpansAlongEdge,
+} from './ceilings';
 
 const room = (id: number, polygon: Room['polygon'], ceilingHeight: number | null, extra: Partial<Room> = {}): Room => ({
     id,
@@ -136,5 +147,23 @@ describe('ceilingSteps', () => {
     it('draws nothing where a wall stands between them or the ceilings are level', () => {
         expect(ceilingSteps([living, corridor], [wall(1, [3050, -100], [3050, 3100])])).toEqual([]);
         expect(ceilingSteps([living, {...corridor, ceilingHeight: 2920}], [])).toEqual([]);
+    });
+});
+
+describe('ceilingHeightAt', () => {
+    it('is the ceiling height of a flat room, and none for an open-air one', () => {
+        const flat = room(1, [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], 2600);
+        expect(ceilingHeightAt(flat, 1000, 1000)).toBe(2600);
+        expect(ceilingHeightAt({...flat, ceilingHeight: null}, 1000, 1000)).toBeNull();
+    });
+
+    it('follows the vaults and drops to the beams under them', () => {
+        // Beams along x every 550 (at y = 0, 550, …), 80 wide, hanging 30 below the springing at 2790.
+        const vault = {vaultSpacing: 550, vaultAngle: 0, vaultRise: 130, beamWidth: 80, beamDrop: 30};
+        const vaulted = room(1, [[0, 0], [3000, 0], [3000, 3000], [0, 3000]], 2920, vault);
+        expect(ceilingHeightAt(vaulted, 1000, 275)).toBeCloseTo(2920, 6);
+        expect(ceilingHeightAt(vaulted, 1000, 550)).toBe(2760);
+        expect(ceilingHeightAt(vaulted, 1000, 100)).toBeGreaterThan(2790);
+        expect(ceilingHeightAt(vaulted, 1000, 100)).toBeLessThan(2920);
     });
 });
