@@ -34,7 +34,9 @@ export type ItemKind =
     | 'Chair'
     | 'Table'
     /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
-    | 'Custom';
+    | 'Custom'
+    /** A bought product drawn from a 3D model (`modelId`, in the scene's `models`), scaled to fit the item's box. */
+    | 'Model';
 
 export type PlanPoint = [number, number];
 
@@ -217,6 +219,8 @@ export interface Item {
     kind: ItemKind;
     /** The furniture definition of a `Custom` item. */
     definitionId: number | null;
+    /** The 3D model of a `Model` item; missing in versions saved before models existed. */
+    modelId?: number | null;
     name: string;
     x: number;
     y: number;
@@ -261,6 +265,22 @@ export interface Scene {
     definitions?: SceneDefinition[];
     /** The plan image under the top view, for tracing; absent in older versions. */
     underlay?: Underlay | null;
+    /** The 3D models of the `Model` items; absent in older versions. */
+    models?: SceneModel[];
+}
+
+/** A 3D model as the scene carries it: its native size (mm) to scale it by, and its credits. */
+export interface SceneModel {
+    id: number;
+    name: string;
+    width: number;
+    depth: number;
+    height: number;
+    license: string;
+    author: string;
+    sourceUrl: string;
+    /** Changes when the model is edited; the file itself never changes. */
+    updatedAt: string;
 }
 
 /** How an underlay image lies in the plan: its top-left pixel at (x, y), `scale` mm per pixel, turned `rotation` degrees counter-clockwise. */

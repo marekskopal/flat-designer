@@ -1,0 +1,51 @@
+<section class="card card--table">
+    <h2 class="section">Products (3D models)</h2>
+    <p class="intro intro--card">
+        Bought products — chairs, lamps, taps, plants — as glTF binary files (<code>.glb</code>). Items scale a model evenly to
+        fit their box. Credit third-party models with their licence, author and source.
+    </p>
+    <table class="table">
+        <tbody>
+            @for (model of models(); track model.id) {
+                <tr>
+                    <td class="table__strong">
+                        {{ model.name }}
+                        <span class="badge">{{ scopeLabels[model.scope] }}</span>
+                    </td>
+                    <td class="table__muted table__nowrap">{{ model.width }} × {{ model.depth }} × {{ model.height }} mm · {{ model.size / 1048576 | number: '1.1-1' }} MB</td>
+                    <td class="table__muted description">
+                        @if (model.license || model.author) {
+                            {{ model.license }}{{ model.license && model.author ? ' · ' : '' }}{{ model.author }}
+                        }
+                        @if (model.sourceUrl) {
+                            · <a [href]="model.sourceUrl" target="_blank" rel="noopener noreferrer">source</a>
+                        }
+                    </td>
+                    <td class="table__actions">
+                        @if (model.writable) {
+                            <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="delete(model)">Delete</button>
+                        }
+                    </td>
+                </tr>
+            } @empty {
+                <tr>
+                    <td colspan="4" class="table__empty">None yet.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <form #form class="upload" (submit)="$event.preventDefault(); upload(form)">
+        <input class="input" type="file" name="file" accept=".glb,model/gltf-binary" aria-label="Model file" required />
+        <input class="input" type="text" name="name" placeholder="Name (default: the file name)" aria-label="Name" />
+        <input class="input" type="text" name="license" placeholder="Licence, e.g. CC0" aria-label="Licence" />
+        <input class="input" type="text" name="author" placeholder="Author" aria-label="Author" />
+        <input class="input" type="url" name="sourceUrl" placeholder="Source address" aria-label="Source" />
+        <select class="input" name="scope" aria-label="Where">
+            @for (scope of scopes(); track scope) {
+                <option [value]="scope">{{ scopeLabels[scope] }}</option>
+            }
+        </select>
+        <button type="submit" class="btn btn--primary" [disabled]="busy()">Upload</button>
+    </form>
+</section>

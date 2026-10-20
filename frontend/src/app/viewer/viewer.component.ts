@@ -19,6 +19,7 @@ import {environment} from '@environments/environment';
 
 import {EditorTool, ToolStatus} from './engine/drawing';
 import {MeasureStatus} from './engine/measure';
+import {ModelFetcher} from './engine/models';
 import {Vec2} from './engine/plan-geometry';
 import {Selection} from './engine/selection';
 import {DoorAim, EditHandler, ViewerEngine, ViewPreset, WallDraftShape} from './engine/viewer-engine';
@@ -59,6 +60,8 @@ export class ViewerComponent {
     public readonly dimensionsVisible = input(false);
     /** The measure tool: clicks in the top view place two points and show their distance (before any edit tool). */
     public readonly measuring = input(false);
+    /** How the 3D models of `Model` items are fetched; null leaves them as placeholders. */
+    public readonly modelFetcher = input<ModelFetcher | null>(null);
     /** The decoded image of the scene's underlay file (null while loading, or none). */
     public readonly underlayImage = input<TexImageSource | null>(null);
     /** The underlay in the top view. */
@@ -143,6 +146,12 @@ export class ViewerComponent {
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
+        effect(() => {
+            const fetcher = this.modelFetcher();
+            if (fetcher !== null) {
+                this.engine()?.setModelFetcher(fetcher);
+            }
+        });
         effect(() => this.engine()?.setMeasuring(this.measuring()));
         effect(() => this.engine()?.setCalibrating(this.calibrating()));
         effect(() => this.engine()?.setUnderlay(this.underlay(), this.underlayImage()));

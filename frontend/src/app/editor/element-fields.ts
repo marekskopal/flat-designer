@@ -22,6 +22,7 @@ export type FieldType =
     | 'cabinet'
     | 'wardrobe'
     | 'definition'
+    | 'model'
     | 'custom';
 
 /** Opening types in the order of the inspector and the Add menu. */
@@ -54,7 +55,7 @@ export interface FieldDef {
 const ItemKinds = [
     'BaseCabinet', 'WallCabinet', 'TallCabinet', 'Worktop', 'Backsplash', 'Sink', 'Hob', 'LedStrip', 'Box',
     'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence', 'Wardrobe',
-    'Chair', 'Table', 'Custom',
+    'Chair', 'Table', 'Custom', 'Model',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
@@ -65,6 +66,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'kind', label: 'Kind', type: 'select', options: ItemKinds},
         {key: 'definitionId', label: 'Furniture', type: 'definition', when: isCustom},
+        {key: 'modelId', label: 'Product (3D model)', type: 'model', when: (item) => item['kind'] === 'Model'},
         {key: 'x', label: 'X', type: 'int', unit: 'mm', half: true},
         {key: 'y', label: 'Y', type: 'int', unit: 'mm', half: true},
         {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
@@ -278,6 +280,7 @@ export function parseFieldValue(def: FieldDef, raw: string): ParsedValue {
         case 'room':
         case 'group':
         case 'definition':
+        case 'model':
             return {ok: true, value: Number(text)};
         case 'json':
             try {

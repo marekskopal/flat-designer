@@ -11,6 +11,12 @@
     color: $color-text-muted;
 }
 
+.intro--card {
+    margin: 0;
+    padding: $space-12 $space-16;
+    border-bottom: 1px solid $color-border;
+}
+
 .card--table {
     padding: 0;
     overflow-x: auto;
@@ -54,6 +60,10 @@
     color: $color-text-muted;
 }
 
+.table__nowrap {
+    white-space: nowrap;
+}
+
 .description {
     width: 100%;
 }
@@ -79,7 +89,19 @@
 }
 
 @media (max-width: 640px) {
-    .description {
+    .table__nowrap {
+    white-space: nowrap;
+}
+
+.description {
         display: none;
     }
+}
+
+.upload {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: $space-8;
+    padding: $space-16;
+    border-top: 1px solid $color-border;
 }
