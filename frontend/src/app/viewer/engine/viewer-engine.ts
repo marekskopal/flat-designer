@@ -339,8 +339,10 @@ export class ViewerEngine {
         this.clearPreview();
         this.loads++;
         const previous = this.sceneData;
-        // Pictures of files deleted since go plain; a fresh scene listing a file lets a failed load try again.
+        // Pictures of files deleted since go plain; a fresh scene listing a file lets a failed load try again. Models
+        // no longer drawn are freed the same way.
         const droppedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
+        this.modelLibrary?.sync((scene.models ?? []).map((m) => m.id));
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
             this.applyChanges(previous, scene, droppedPictures);
         } else {
@@ -420,8 +422,9 @@ export class ViewerEngine {
 
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         const definitions = definitionLibrary(scene.definitions);
+        const assets = this.itemAssets(scene);
         for (const item of scene.items) {
-            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, this.itemAssets(scene));
+            const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, assets);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -467,8 +470,9 @@ export class ViewerEngine {
             this.items.delete(id);
         }
         const roomsById = new Map(scene.rooms.map((room) => [room.id, room]));
+        const assets = this.itemAssets(scene);
         for (const item of rebuiltItems) {
-            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions, this.itemAssets(scene));
+            const object = buildItem(item, materials, roomsById.get(item.roomId ?? 0), definitions, assets);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -613,6 +617,7 @@ export class ViewerEngine {
         const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
         const definitions = definitionLibrary(scene.definitions);
         const hidden = hiddenItemIds(scene);
+        const assets = this.itemAssets(scene);
         for (const item of scene.items) {
             if (!rebuild(item)) {
                 continue;
@@ -621,7 +626,7 @@ export class ViewerEngine {
             if (previous !== undefined) {
                 this.disposeObject(previous);
             }
-            const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, this.itemAssets(scene));
+            const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, assets);
             object.visible = !hidden.has(item.id);
             this.items.set(item.id, object);
             content.add(object);

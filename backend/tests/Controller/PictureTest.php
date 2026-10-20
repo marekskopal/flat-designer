@@ -87,6 +87,11 @@ final class PictureTest extends IntegrationTestCase
 		self::assertSame(201, $this->request('POST', $itemPath . '/duplicate', [], $user)->getStatusCode());
 		self::assertSame(422, $this->request('PATCH', $itemPath, ['params' => ['values' => ['poster' => $text]]], $user)->getStatusCode());
 		self::assertSame(200, $this->request('PATCH', $itemPath, ['params' => ['values' => ['poster' => null]]], $user)->getStatusCode());
+
+		// Another kind has no definition: switching drops it with its params, nothing to clear by hand.
+		$box = $this->jsonBody($this->request('PATCH', $itemPath, ['kind' => 'Box'], $user))['element'];
+		self::assertIsArray($box);
+		self::assertSame(['Box', null, []], [$box['kind'], $box['definitionId'], $box['params']]);
 	}
 
 	public function testShareGuestsLoadOnlyThePicturesOfTheirScene(): void

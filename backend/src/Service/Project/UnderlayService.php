@@ -177,12 +177,7 @@ final readonly class UnderlayService
 	/** @return array{int, int} */
 	private function imageSize(ProjectFile $file): array
 	{
-		$size = getimagesizefromstring($this->projectFileProvider->readContent($file));
-		if ($size === false || $size[0] < 1 || $size[1] < 1) {
-			throw new ProjectException(sprintf('File "%s" could not be read as an image.', $file->filename));
-		}
-
-		return [$size[0], $size[1]];
+		return ProjectFileProvider::imageSize($this->projectFileProvider->readContent($file), sprintf('File "%s"', $file->filename));
 	}
 
 	private static function normalizeAngle(float $degrees): float

@@ -13,6 +13,17 @@ describe('kelvinToColor', () => {
     });
 });
 
+describe('createFixtureLight', () => {
+    it('aims a spot straight down from wherever the fixture is placed', () => {
+        const fixture = createFixtureLight({kind: 'spot', lumens: 500, kelvin: 3000, angle: 60, shadow: false});
+        fixture.position.set(1.2, 2.5, -0.7);
+        fixture.updateMatrixWorld(true);
+        const spot = fixture.children.find((o) => o instanceof THREE.SpotLight) as THREE.SpotLight;
+        const target = spot.target.getWorldPosition(new THREE.Vector3());
+        expect(target.toArray().map((n) => Math.round(n * 1000) / 1000)).toEqual([1.2, 1.5, -0.7]);
+    });
+});
+
 describe('applyFixtureLights', () => {
     it('switches lights by intensity and gives shadows to the first few that ask', () => {
         const root = new THREE.Group();

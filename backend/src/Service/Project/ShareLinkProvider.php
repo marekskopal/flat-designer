@@ -42,6 +42,7 @@ final readonly class ShareLinkProvider
 		private ProjectSnapshotService $snapshotService,
 		private ProjectFileProvider $fileProvider,
 		private ModelAssetRepository $modelRepository,
+		private SharedAssetIds $assetIds,
 		private ORM $orm,
 	) {
 	}
@@ -146,21 +147,28 @@ final readonly class ShareLinkProvider
 	/** A 3D model a guest's view draws (listed in its scene's `models`); null for any other. */
 	public function findSharedModel(string $token, int $modelId): ?ModelAsset
 	{
-		$shared = $this->sharedScene($token);
-		$models = $shared === null || !is_array($shared[1]->models ?? null) ? [] : $shared[1]->models;
-		$drawn = array_filter($models, static fn (mixed $m): bool => is_object($m) && ($m->id ?? null) === $modelId) !== [];
+		$shared = $this->sharedAssets($token);
 
-		return $drawn ? $this->modelRepository->findById($modelId) : null;
+		return $shared !== null && in_array($modelId, $shared[1]['models'], true) ? $this->modelRepository->findById($modelId) : null;
 	}
 
 	/** An image file a guest's view shows as a picture (listed in its scene's `pictures`); null for any other. */
 	public function findSharedPicture(string $token, int $fileId): ?ProjectFile
 	{
-		$shared = $this->sharedScene($token);
-		$pictures = $shared === null || !is_array($shared[1]->pictures ?? null) ? [] : $shared[1]->pictures;
-		$file = in_array($fileId, $pictures, true) ? $this->fileProvider->find($shared[0]->project, $fileId) : null;
+		$shared = $this->sharedAssets($token);
+		$file = $shared !== null && in_array($fileId, $shared[1]['pictures'], true)
+			? $this->fileProvider->find($shared[0]->project, $fileId)
+			: null;
 
 		return $file !== null && $this->fileProvider->isImage($file) ? $file : null;
+	}
+
+	/** The link of a token while it works (known, not expired); null otherwise. */
+	private function activeLink(string $token): ?ShareLink
+	{
+		$link = $this->shareLinkRepository->findOneByToken($token);
+
+		return $link === null || $link->isExpired(new DateTimeImmutable()) ? null : $link;
 	}
 
 	/**
@@ -170,13 +178,31 @@ final readonly class ShareLinkProvider
 	 */
 	private function sharedScene(string $token): ?array
 	{
-		$link = $this->shareLinkRepository->findOneByToken($token);
-		if ($link === null || $link->isExpired(new DateTimeImmutable())) {
+		$link = $this->activeLink($token);
+		$scene = $link === null ? null : $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
+
+		return $link === null || $scene === null ? null : [$link, $scene];
+	}
+
+	/**
+	 * The link and the ids of the models and pictures its floor draws, without decoding the snapshot each time.
+	 *
+	 * @return array{ShareLink, array{models: list<int>, pictures: list<int>}}|null
+	 */
+	private function sharedAssets(string $token): ?array
+	{
+		$link = $this->activeLink($token);
+		if ($link === null) {
 			return null;
 		}
-		$scene = $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
+		$snapshot = $link->version->snapshot;
+		$ids = $this->assetIds->of(
+			$snapshot,
+			$link->floorId,
+			fn (): ?stdClass => $this->snapshotService->getFloorScene($snapshot, $link->floorId),
+		);
 
-		return $scene === null ? null : [$link, $scene];
+		return $ids === null ? null : [$link, $ids];
 	}
 
 	/** @param string|null $baseUrl the app's origin, to include the link's URL */

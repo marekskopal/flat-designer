@@ -4,6 +4,7 @@ import {MeshoptDecoder} from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {clone as cloneWithSkeleton} from 'three/examples/jsm/utils/SkeletonUtils.js';
 
+import {AssetLoader} from './asset-loader';
 import {MM} from './plan-geometry';
 
 /** Fetches the bytes of a model's `.glb` file (with the viewer's sign-in, or through a share link). */
@@ -11,26 +12,31 @@ export type ModelFetcher = (modelId: number) => Promise<ArrayBuffer>;
 
 /**
  * The 3D models of `Model` items, loaded once per model and shared by its items: the template's geometries, materials and
- * textures belong to the library (its instances' meshes are tagged `userData.shared`, so disposing an item leaves them),
- * and it disposes them with itself. Framework-free; the host supplies the fetcher.
+ * textures belong to the library (its instances' meshes are tagged `userData.shared`, so disposing an item leaves them).
+ * Framework-free; the host supplies the fetcher.
  */
 export class ModelLibrary {
+    private readonly gltf = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+    /** Also told of a failed model: its items then show that it is missing. */
+    private readonly templates: AssetLoader<THREE.Object3D>;
+
+    public constructor(fetch: ModelFetcher) {
+        this.templates = new AssetLoader(
+            (modelId) => fetch(modelId).then((bytes) => this.gltf.parseAsync(bytes, '')).then((gltf) => centred(gltf.scene)),
+            disposeTemplate,
+            true,
+        );
+    }
+
     /** A model finished loading (or failed): rebuild the items that draw it. */
-    public onLoaded: (modelId: number) => void = () => undefined;
-
-    private readonly templates = new Map<number, THREE.Object3D>();
-    private readonly failed = new Set<number>();
-    private readonly loading = new Set<number>();
-    private readonly loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    private disposed = false;
-
-    public constructor(private readonly fetch: ModelFetcher) {}
+    public set onLoaded(listener: (modelId: number) => void) {
+        this.templates.onLoaded = listener;
+    }
 
     /** The model drawn at its native size (centred on its footprint, standing on y = 0), or null while it loads or after it failed. */
     public instance(model: SceneModel): THREE.Object3D | null {
         const template = this.templates.get(model.id);
-        if (template === undefined) {
-            this.load(model.id);
+        if (template === null) {
             return null;
         }
         // Not Object3D.clone(): a skinned mesh's clone has to get the cloned bones, not the template's.
@@ -46,50 +52,35 @@ export class ModelLibrary {
     }
 
     public hasFailed(modelId: number): boolean {
-        return this.failed.has(modelId);
+        return this.templates.hasFailed(modelId);
+    }
+
+    /** Follows the scene's models: templates no longer used are freed, a failed listed one may load again. */
+    public sync(modelIds: Iterable<number>): number[] {
+        return this.templates.sync(modelIds);
     }
 
     /** Frees the templates; loads still under way are dropped when they finish. */
     public dispose(): void {
-        this.disposed = true;
-        for (const template of this.templates.values()) {
-            template.traverse((o) => {
-                if (o instanceof THREE.Mesh) {
-                    o.geometry.dispose();
-                    for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
-                        for (const value of Object.values(material)) {
-                            if (value instanceof THREE.Texture) {
-                                value.dispose();
-                            }
-                        }
-                        material.dispose();
+        this.templates.dispose();
+    }
+}
+
+/** Frees a template's geometries, materials and textures (its instances only share them). */
+function disposeTemplate(template: THREE.Object3D): void {
+    template.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+            o.geometry.dispose();
+            for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+                for (const value of Object.values(material)) {
+                    if (value instanceof THREE.Texture) {
+                        value.dispose();
                     }
                 }
-            });
+                material.dispose();
+            }
         }
-        this.templates.clear();
-    }
-
-    private load(modelId: number): void {
-        if (this.loading.has(modelId) || this.failed.has(modelId)) {
-            return;
-        }
-        this.loading.add(modelId);
-        this.fetch(modelId)
-            .then((bytes) => this.loader.parseAsync(bytes, ''))
-            .then((gltf) => {
-                if (!this.disposed) {
-                    this.templates.set(modelId, centred(gltf.scene));
-                }
-            })
-            .catch(() => this.failed.add(modelId))
-            .finally(() => {
-                this.loading.delete(modelId);
-                if (!this.disposed) {
-                    this.onLoaded(modelId);
-                }
-            });
-    }
+    });
 }
 
 /** The scene wrapped so that its bounding box stands on y = 0, centred on x and z. */

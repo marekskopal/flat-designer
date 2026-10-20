@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {exteriorSign, LeafBottomRail, leafPanels, LeafRail, LeafStile, louvreSlats, shutterLeaves} from './opening-looks';
+import {exteriorSign, freeBeside, LeafBottomRail, leafPanels, LeafRail, LeafStile, louvreSlats, shutterLeaves} from './opening-looks';
 
 describe('leafPanels', () => {
     it('stacks the panels between the stiles above the bottom rail, separated by rails', () => {
@@ -34,6 +34,24 @@ describe('shutterLeaves', () => {
             {from: 400, to: 1000, hinge: 1000},
             {from: 2200, to: 2800, hinge: 2200},
         ]);
+    });
+
+    it('keeps a leaf closed when there is no wall to fold it back onto', () => {
+        // 500 mm of wall on the left (not enough for a 600 leaf), plenty on the right.
+        expect(shutterLeaves(window, false, [500, 5000])).toEqual([
+            {from: 1000, to: 1600, hinge: 1000},
+            {from: 2200, to: 2800, hinge: 2200},
+        ]);
+    });
+});
+
+describe('freeBeside', () => {
+    it('runs from the previous opening to the next, or to the wall ends', () => {
+        const wall = {startX: 0, startY: 0, endX: 5000, endY: 0, openings: [] as {id: number; offset: number; width: number}[]};
+        const window = {id: 2, offset: 2000, width: 1000};
+        expect(freeBeside(window, wall as never)).toEqual([0, 5000]);
+        wall.openings = [{id: 1, offset: 200, width: 900}, window, {id: 3, offset: 4000, width: 800}];
+        expect(freeBeside(window, wall as never)).toEqual([1100, 4000]);
     });
 });
 
