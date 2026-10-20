@@ -10,15 +10,18 @@ use FlatDesigner\Dto\ShareLinkDto;
 use FlatDesigner\Dto\ShareLinkInputDto;
 use FlatDesigner\Dto\ShareSettingsDto;
 use FlatDesigner\Model\Entity\Enum\ShareViewEnum;
+use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\ShareLinkRepository;
 use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
+use stdClass;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -38,6 +41,7 @@ final readonly class ShareLinkProvider
 		private ProjectVersionProvider $versionProvider,
 		private ProjectSnapshotService $snapshotService,
 		private ProjectFileProvider $fileProvider,
+		private ModelAssetRepository $modelRepository,
 		private ORM $orm,
 	) {
 	}
@@ -130,30 +134,49 @@ final readonly class ShareLinkProvider
 	/** The guest's view of a link; null when the token is unknown or the link expired. */
 	public function findSharedView(string $token): ?SharedViewDto
 	{
-		$link = $this->shareLinkRepository->findOneByToken($token);
-		if ($link === null || $link->isExpired(new DateTimeImmutable())) {
+		$shared = $this->sharedScene($token);
+		if ($shared === null) {
 			return null;
 		}
-		$scene = $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
-		if ($scene === null) {
-			return null;
-		}
+		[$link, $scene] = $shared;
 
 		return new SharedViewDto(name: $link->name, projectName: $link->project->name, settings: self::readSettings($link), scene: $scene);
 	}
 
+	/** A 3D model a guest's view draws (listed in its scene's `models`); null for any other. */
+	public function findSharedModel(string $token, int $modelId): ?ModelAsset
+	{
+		$shared = $this->sharedScene($token);
+		$models = $shared === null || !is_array($shared[1]->models ?? null) ? [] : $shared[1]->models;
+		$drawn = array_filter($models, static fn (mixed $m): bool => is_object($m) && ($m->id ?? null) === $modelId) !== [];
+
+		return $drawn ? $this->modelRepository->findById($modelId) : null;
+	}
+
 	/** An image file a guest's view shows as a picture (listed in its scene's `pictures`); null for any other. */
 	public function findSharedPicture(string $token, int $fileId): ?ProjectFile
+	{
+		$shared = $this->sharedScene($token);
+		$pictures = $shared === null || !is_array($shared[1]->pictures ?? null) ? [] : $shared[1]->pictures;
+		$file = in_array($fileId, $pictures, true) ? $this->fileProvider->find($shared[0]->project, $fileId) : null;
+
+		return $file !== null && $this->fileProvider->isImage($file) ? $file : null;
+	}
+
+	/**
+	 * The link and its frozen floor scene; null when the token is unknown, the link expired or the floor is gone.
+	 *
+	 * @return array{ShareLink, stdClass}|null
+	 */
+	private function sharedScene(string $token): ?array
 	{
 		$link = $this->shareLinkRepository->findOneByToken($token);
 		if ($link === null || $link->isExpired(new DateTimeImmutable())) {
 			return null;
 		}
 		$scene = $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
-		$pictures = $scene === null || !is_array($scene->pictures ?? null) ? [] : $scene->pictures;
-		$file = in_array($fileId, $pictures, true) ? $this->fileProvider->find($link->project, $fileId) : null;
 
-		return $file !== null && $this->fileProvider->isImage($file) ? $file : null;
+		return $scene === null ? null : [$link, $scene];
 	}
 
 	/** @param string|null $baseUrl the app's origin, to include the link's URL */

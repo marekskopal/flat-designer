@@ -215,6 +215,29 @@ final class ModelAssetControllerTest extends IntegrationTestCase
 		self::assertSame(404, $this->request('GET', $path($unused))->getStatusCode());
 	}
 
+	public function testStoredFilesGoWithTheProjectOrTheLibraryOwner(): void
+	{
+		$admin = Fixture::createAdmin();
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$this->projectModel($user, $project, 'Tap', Glb::box([0.0, 0.0, 0.0], [0.1, 0.3, 0.1]));
+		$library = $this->jsonBody(
+			$this->upload(Routes::Models->value, 'lamp.glb', Glb::box([0.0, 0.0, 0.0], [0.2, 1.6, 0.2]), $user, ['name' => 'Lamp']),
+		);
+		self::assertIsInt($library['id']);
+		// A deleted model's file stays until its owner goes (items may still draw it).
+		self::assertSame(
+			200,
+			$this->request('DELETE', self::modelPath(Routes::Model, $library['id']), authenticatedAs: $user)->getStatusCode(),
+		);
+		self::assertCount(2, AppHarness::fileStorage()->objects);
+
+		$this->request('DELETE', str_replace('{projectId:number}', (string) $project->id, Routes::Project->value), authenticatedAs: $user);
+		self::assertCount(1, AppHarness::fileStorage()->objects);
+		$this->request('DELETE', str_replace('{userId:number}', (string) $user->id, Routes::AdminUser->value), authenticatedAs: $admin);
+		self::assertSame([], AppHarness::fileStorage()->objects);
+	}
+
 	private function projectModel(User $user, Project $project, string $name, string $bytes): int
 	{
 		$response = $this->upload(Routes::Models->value, 'model.glb', $bytes, $user, [

@@ -48,7 +48,7 @@ export class PictureLibrary {
         }
         this.loading.add(fileId);
         this.fetch(fileId)
-            .then((blob) => decode(blob))
+            .then((blob) => decodeImage(blob))
             .then((image) => {
                 if (this.disposed) {
                     return;
@@ -69,7 +69,8 @@ export class PictureLibrary {
     }
 }
 
-async function decode(blob: Blob): Promise<HTMLImageElement> {
+/** The blob as a decoded image element (the object URL is released again). */
+export async function decodeImage(blob: Blob): Promise<HTMLImageElement> {
     const url = URL.createObjectURL(blob);
     try {
         const image = new Image();

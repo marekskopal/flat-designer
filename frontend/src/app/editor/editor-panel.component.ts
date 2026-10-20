@@ -145,6 +145,14 @@ export class EditorPanelComponent {
             }
             return this.freshCustom(first.id);
         }
+        if (change.value === 'Model') {
+            const first = this.editor.models()[0];
+            if (first === undefined) {
+                this.alerts.error('There is no 3D model to use; upload one under Furniture.');
+                return null;
+            }
+            return {kind: 'Model', modelId: first.id, name: first.name, width: first.width, depth: first.depth, height: first.height};
+        }
         return element['kind'] === 'Custom' ? {kind: change.value, definitionId: null, params: {}} : {kind: change.value};
     }
 

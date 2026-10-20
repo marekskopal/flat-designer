@@ -12,6 +12,7 @@ use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
@@ -27,6 +28,7 @@ final readonly class ProjectProvider
 		private FloorRepository $floorRepository,
 		private ProjectVersionRepository $projectVersionRepository,
 		private ProjectFileProvider $projectFileProvider,
+		private ModelAssetRepository $modelRepository,
 		private ORM $orm,
 	) {
 	}
@@ -73,10 +75,11 @@ final readonly class ProjectProvider
 		return $project;
 	}
 
-	/** Floors with their content, versions and file rows go with it (ON DELETE CASCADE); then the stored files. */
+	/** Floors with their content, versions, file and model rows go with it (ON DELETE CASCADE); then the stored files. */
 	public function delete(Project $project): void
 	{
-		$storageKeys = $this->projectFileProvider->storageKeys($project);
+		$storageKeys = [
+			...$this->projectFileProvider->storageKeys($project), ...$this->modelRepository->storageKeysOfProject($project->id)];
 		$this->projectRepository->delete($project);
 		$this->projectFileProvider->deleteStoredObjects($storageKeys);
 	}

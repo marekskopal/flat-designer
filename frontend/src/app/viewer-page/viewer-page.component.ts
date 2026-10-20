@@ -32,6 +32,7 @@ import {RealtimeService} from '@app/services/realtime.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {ToolStatus} from '@app/viewer/engine/drawing';
 import {MeasureStatus} from '@app/viewer/engine/measure';
+import {decodeImage} from '@app/viewer/engine/pictures';
 import {Selection} from '@app/viewer/engine/selection';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
@@ -55,18 +56,6 @@ interface ViewOption {
 }
 
 /** An image file decoded for use as a texture. */
-async function decodeImage(blob: Blob): Promise<HTMLImageElement> {
-    const url = URL.createObjectURL(blob);
-    try {
-        const image = new Image();
-        image.src = url;
-        await image.decode();
-        return image;
-    } finally {
-        URL.revokeObjectURL(url);
-    }
-}
-
 const optionalId = (value: string | number | null | undefined): number | null =>
     value === null || value === undefined || value === '' ? null : Number(value);
 

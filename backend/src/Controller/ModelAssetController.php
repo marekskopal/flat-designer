@@ -154,10 +154,7 @@ final readonly class ModelAssetController
 	#[RouteGet(Routes::ShareModelContent->value)]
 	public function actionGetShareModelContent(ServerRequestInterface $request, string $token, int $modelId): ResponseInterface
 	{
-		$view = $this->shareLinkProvider->findSharedView($token);
-		$models = $view === null || !is_array($view->scene->models ?? null) ? [] : $view->scene->models;
-		$drawn = array_filter($models, static fn (mixed $m): bool => is_object($m) && ($m->id ?? null) === $modelId) !== [];
-		$model = $drawn ? $this->modelRepository->findById($modelId) : null;
+		$model = $this->shareLinkProvider->findSharedModel($token, $modelId);
 		if ($model === null) {
 			return new NotFoundResponse(self::NotFound);
 		}

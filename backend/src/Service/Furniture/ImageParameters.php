@@ -37,8 +37,18 @@ final readonly class ImageParameters
 	 */
 	public static function fileIds(array $definition, mixed $values): array
 	{
+		return self::fileIdsOf(self::keys($definition), $values);
+	}
+
+	/**
+	 * @param list<string> $keys the `image` parameter keys (`keys()`)
+	 * @param mixed $values the item's `params.values`
+	 * @return list<int>
+	 */
+	public static function fileIdsOf(array $keys, mixed $values): array
+	{
 		$ids = [];
-		foreach (self::keys($definition) as $key) {
+		foreach ($keys as $key) {
 			$value = is_array($values) ? ($values[$key] ?? null) : null;
 			if (is_int($value)) {
 				$ids[] = $value;

@@ -17,6 +17,29 @@ final class ModelAssetRepository extends ARepository
 	}
 
 	/**
+	 * The stored files of the project's models (deleted ones too), to remove after the project rows.
+	 *
+	 * @return list<string>
+	 */
+	public function storageKeysOfProject(int $projectId): array
+	{
+		return array_map(
+			static fn (ModelAsset $m): string => $m->storageKey,
+			$this->select()->where(['project_id' => $projectId])->fetchAll(),
+		);
+	}
+
+	/**
+	 * The stored files of the user's library (deleted ones too), to remove after the user row.
+	 *
+	 * @return list<string>
+	 */
+	public function storageKeysOfUser(int $userId): array
+	{
+		return array_map(static fn (ModelAsset $m): string => $m->storageKey, $this->select()->where(['user_id' => $userId])->fetchAll());
+	}
+
+	/**
 	 * Not deleted, by name: the global ones, the libraries of `$userIds` and the models of the project.
 	 *
 	 * @param list<int> $userIds

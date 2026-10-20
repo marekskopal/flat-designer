@@ -1,10 +1,8 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, effect, inject, input, resource, signal, untracked} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked} from '@angular/core';
 import {RouterLink} from '@angular/router';
-import {ImageMimeTypes} from '@app/models/project';
 import {Scene, Underlay} from '@app/models/scene';
 import {UnderlayInput} from '@app/services/editor-api.service';
-import {ProjectService} from '@app/services/project.service';
 import {calibrateUnderlay} from '@app/viewer/engine/underlay';
 
 import {EditorStore} from './editor.store';
@@ -28,14 +26,9 @@ export class UnderlayPanelComponent {
     public readonly projectId = input.required<number>();
 
     protected readonly editor = inject(EditorStore);
-    private readonly projects = inject(ProjectService);
 
     protected readonly underlay = computed(() => this.scene().underlay ?? null);
-    protected readonly images = resource({
-        params: () => ({projectId: this.projectId()}),
-        loader: async ({params}) => (await this.projects.listFiles(params.projectId)).filter((f) => ImageMimeTypes.includes(f.mimeType)),
-    });
-    protected readonly imageFiles = computed(() => (this.images.hasValue() ? this.images.value() : []));
+    protected readonly imageFiles = computed(() => this.editor.images());
     protected readonly points = computed(() => {
         const calibration = this.editor.calibration();
         return typeof calibration === 'object' ? calibration : null;
