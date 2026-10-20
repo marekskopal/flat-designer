@@ -47,7 +47,7 @@ export class PictureLibrary {
 
     /**
      * Follows the scene's list of shown files: textures of files no longer listed are dropped (deleted since), and a
-     * failed load of a listed file may be tried again. Returns the ids whose texture was dropped, to redraw their items.
+     * failed load of a listed file is tried again. Returns the ids changed either way, to redraw their items.
      */
     public sync(shown: Iterable<number>): number[] {
         return this.textures.sync(shown);

@@ -31,8 +31,30 @@ final readonly class GlbReader
 				implode(', ', $unsupported),
 			));
 		}
+		if (self::referencesFiles($gltf)) {
+			throw new ModelAssetException('The model refers to separate files (a .bin or images); export one self-contained .glb.');
+		}
 
 		return GltfBounds::size($gltf);
+	}
+
+	/**
+	 * Whether a buffer or image lives outside the file (a `uri` that is no data URI), which the viewer cannot fetch.
+	 *
+	 * @param array<string, mixed> $gltf
+	 */
+	private static function referencesFiles(array $gltf): bool
+	{
+		foreach (['buffers', 'images'] as $key) {
+			foreach (is_array($gltf[$key] ?? null) ? $gltf[$key] : [] as $entry) {
+				$uri = is_array($entry) ? ($entry['uri'] ?? null) : null;
+				if (is_string($uri) && !str_starts_with($uri, 'data:')) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/** @return array<string, mixed> the JSON chunk */

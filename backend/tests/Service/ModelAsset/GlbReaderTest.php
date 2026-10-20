@@ -70,6 +70,8 @@ final class GlbReaderTest extends TestCase
 			'truncated' => substr(Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0]), 0, 40),
 			'draco' => Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [], ['extensionsRequired' => ['KHR_draco_mesh_compression']]),
 			'no mesh' => Glb::pack(['asset' => ['version' => '2.0'], 'scenes' => [['nodes' => []]]]),
+			'separate .bin' => Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [], ['buffers' => [['byteLength' => 96, 'uri' => 'model.bin']]]),
+			'separate image' => Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [], ['images' => [['uri' => 'wood.png']]]),
 			'no scene' => Glb::pack([
 				'asset' => ['version' => '2.0'],
 				'nodes' => [['mesh' => 0]],

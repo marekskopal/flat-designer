@@ -7,6 +7,7 @@ namespace FlatDesigner\Model\Entity;
 use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
 use FlatDesigner\Model\Repository\ModelAssetRepository;
+use FlatDesigner\Service\Furniture\ScopedAsset;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
@@ -19,7 +20,7 @@ use MarekSkopal\ORM\Enum\Type;
  * one project, neither = global. `license`, `author` and `sourceUrl` credit third-party models. Soft-deleted.
  */
 #[Entity(repositoryClass: ModelAssetRepository::class)]
-class ModelAsset extends AEntity
+class ModelAsset extends AEntity implements ScopedAsset
 {
 	/** Set when deleted; the row and the file stay so items using it keep drawing it, but it cannot be picked any more. */
 	#[Column(type: Type::Timestamp, nullable: true)]

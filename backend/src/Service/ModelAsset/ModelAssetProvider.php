@@ -11,7 +11,8 @@ use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
+use FlatDesigner\Service\Furniture\ScopePolicy;
+use FlatDesigner\Service\Project\ProjectFileProvider;
 use FlatDesigner\Service\Project\ProjectProvider;
 use FlatDesigner\Service\Storage\FileStorageInterface;
 use FlatDesigner\Service\Storage\S3Config;
@@ -35,6 +36,7 @@ final readonly class ModelAssetProvider
 		private ProjectProvider $projectProvider,
 		private FileStorageInterface $fileStorage,
 		private S3Config $s3Config,
+		private ScopePolicy $scopePolicy,
 	) {
 	}
 
@@ -45,13 +47,7 @@ final readonly class ModelAssetProvider
 	 */
 	public function listVisible(User $user, ?Project $project): array
 	{
-		if ($project === null) {
-			return $this->modelRepository->findVisible([$user->id], null);
-		}
-		$owner = $project->owner;
-		$userIds = $owner !== null && FurnitureDefinitionProvider::canReadLibraryOf($user, $owner) ? [$owner->id] : [];
-
-		return $this->modelRepository->findVisible($userIds, $project->id);
+		return $this->modelRepository->findVisible(ScopePolicy::libraryOwnerIds($user, $project), $project?->id);
 	}
 
 	/** The model when the user may read it and it is not deleted; otherwise null, as if it did not exist. */
@@ -64,27 +60,18 @@ final readonly class ModelAssetProvider
 
 	public function canRead(User $user, ModelAsset $model): bool
 	{
-		return match ($model->scope()) {
-			FurnitureScopeEnum::Global => true,
-			FurnitureScopeEnum::User => $model->user !== null && FurnitureDefinitionProvider::canReadLibraryOf($user, $model->user),
-			FurnitureScopeEnum::Project => $model->project !== null
-				&& $this->projectProvider->findAccessible($user, $model->project->id) !== null,
-		};
+		return $this->scopePolicy->canRead($user, $model);
 	}
 
 	public function canWrite(User $user, ModelAsset $model): bool
 	{
-		return $model->scope() === FurnitureScopeEnum::Global ? $user->isAdmin() : $this->canRead($user, $model);
+		return $this->scopePolicy->canWrite($user, $model);
 	}
 
 	/** Whether items of the project may use it: global ones, the project owner's library and the project's own. */
 	public static function isUsableIn(ModelAsset $model, Project $project): bool
 	{
-		return match ($model->scope()) {
-			FurnitureScopeEnum::Global => true,
-			FurnitureScopeEnum::User => $project->owner !== null && $model->user?->id === $project->owner->id,
-			FurnitureScopeEnum::Project => $model->project?->id === $project->id,
-		};
+		return ScopePolicy::isUsableIn($model, $project);
 	}
 
 	/** Stores a new model from the bytes of a `.glb` file; its size is read from the file. */
@@ -220,8 +207,6 @@ final readonly class ModelAssetProvider
 
 	private static function filename(string $filename): string
 	{
-		$filename = trim(basename(str_replace('\\', '/', $filename)));
-
-		return mb_substr($filename === '' ? 'model.glb' : $filename, 0, 200);
+		return trim($filename) === '' ? 'model.glb' : ProjectFileProvider::cleanFilename($filename);
 	}
 }

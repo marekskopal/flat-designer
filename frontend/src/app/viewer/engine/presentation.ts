@@ -11,8 +11,12 @@ export type RenderQuality = 'fast' | 'presentation';
 /** Pixel ratio of the presentation quality: at least 2, so that a 1× display is supersampled too. */
 export const PresentationPixelRatio = 2;
 
-/** The sun's shadow map side in each quality (capped by the GPU's texture size). */
+/**
+ * The sun's shadow map side in each quality. The presentation's 8192 (256 MB of depth) is for GPUs reporting a texture
+ * size of 16384 or more (discrete ones); a phone or an integrated GPU reporting 8192 gets the fast size, which it can hold.
+ */
 export const SunShadowMapSize: Readonly<Record<RenderQuality, number>> = {fast: 4096, presentation: 8192};
+const LargeGpuTextureSize = 16384;
 
 /** How far the sun's shadow edges are blurred, in shadow-map texels: softer in the presentation quality. */
 export const SunShadowRadius: Readonly<Record<RenderQuality, number>> = {fast: 3, presentation: 4};
@@ -65,7 +69,8 @@ export class PresentationPipeline {
     }
 }
 
-/** The sun's shadow map side for the quality, as large as the GPU allows. */
+/** The sun's shadow map side for the quality, within what the GPU holds comfortably. */
 export function sunShadowMapSize(quality: RenderQuality, maxTextureSize: number): number {
-    return Math.min(SunShadowMapSize[quality], maxTextureSize);
+    const wanted = quality === 'presentation' && maxTextureSize < LargeGpuTextureSize ? SunShadowMapSize.fast : SunShadowMapSize[quality];
+    return Math.min(wanted, maxTextureSize);
 }

@@ -33,6 +33,7 @@ final readonly class FurnitureDefinitionProvider
 		private DefinitionValidator $validator,
 		private ItemRepository $itemRepository,
 		private ProjectUpdatePublisher $updatePublisher,
+		private ScopePolicy $scopePolicy,
 	) {
 	}
 
@@ -45,14 +46,7 @@ final readonly class FurnitureDefinitionProvider
 	 */
 	public function listVisible(User $user, ?Project $project): array
 	{
-		if ($project === null) {
-			return $this->definitionRepository->findVisible([$user->id], null);
-		}
-
-		$owner = $project->owner;
-		$userIds = $owner !== null && self::canReadLibraryOf($user, $owner) ? [$owner->id] : [];
-
-		return $this->definitionRepository->findVisible($userIds, $project->id);
+		return $this->definitionRepository->findVisible(ScopePolicy::libraryOwnerIds($user, $project), $project?->id);
 	}
 
 	/** The definition when the user may read it and it is not deleted; otherwise null, as if it did not exist. */
@@ -68,33 +62,18 @@ final readonly class FurnitureDefinitionProvider
 
 	public function canRead(User $user, FurnitureDefinition $definition): bool
 	{
-		return match ($definition->scope()) {
-			FurnitureScopeEnum::Global => true,
-			FurnitureScopeEnum::User => $definition->user !== null && self::canReadLibraryOf($user, $definition->user),
-			FurnitureScopeEnum::Project => $definition->project !== null
-				&& $this->projectProvider->findAccessible($user, $definition->project->id) !== null,
-		};
-	}
-
-	/** Its owner and admins — which, as project access is owner-or-admin too, covers whoever works on the owner's projects. */
-	public static function canReadLibraryOf(User $user, User $owner): bool
-	{
-		return $user->isAdmin() || $owner->id === $user->id;
+		return $this->scopePolicy->canRead($user, $definition);
 	}
 
 	/** Whether items of the project may use it: global ones, the project owner's library and the project's own. */
 	public static function isUsableIn(FurnitureDefinition $definition, Project $project): bool
 	{
-		return match ($definition->scope()) {
-			FurnitureScopeEnum::Global => true,
-			FurnitureScopeEnum::User => $project->owner !== null && $definition->user?->id === $project->owner->id,
-			FurnitureScopeEnum::Project => $definition->project?->id === $project->id,
-		};
+		return ScopePolicy::isUsableIn($definition, $project);
 	}
 
 	public function canWrite(User $user, FurnitureDefinition $definition): bool
 	{
-		return $definition->scope() === FurnitureScopeEnum::Global ? $user->isAdmin() : $this->canRead($user, $definition);
+		return $this->scopePolicy->canWrite($user, $definition);
 	}
 
 	public function create(User $author, FurnitureDefinitionInputDto $input): FurnitureDefinition
