@@ -216,6 +216,25 @@ format is the text in `FurnitureTools::Format`.
   upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
   beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
 
+## Lighting
+
+- Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with
+  `lumens`, `kelvin`, optional `shadow` and a `bulb` that glows (a bare bulb, a downlight's lens, or none inside a
+  shade). A `cable` part is a pendant's cable: up to the hook, then along `path` to the ceiling rose. It is fixed to
+  the real ceiling of the item's room (`ceilingHeightAt()` in `ceilings.ts`, vaults and beams included) and hangs
+  between the fixings, sagging by `sag`.
+- `viewer/engine/lights.ts` builds the three.js lights (`createFixtureLight()`) and switches them
+  (`applyFixtureLights()`). Lights that are off keep intensity 0, so toggling them does not recompile shaders. At most
+  `MaxFixtureShadows` lights cast shadows. `LumenScale` maps lumens to the scene's units, where the sun is 2.4, and
+  `WhiteBalance` pulls the kelvin colours towards white, as a camera would. LED strips and `led` parts are fixtures
+  too.
+- `ViewerEngine.setLighting(night, lightsOn)`: at night the sun is gone (along with its shadow pass), the sky is faint
+  and the background dark. The pages' Display has Night and Lights on; lights follow Night until switched by hand.
+  `ShareSettingsDto.night` starts a share link at night.
+- Seeded definitions (`SeedLightingCatalogueMigration`): a bare-bulb pendant with a cable path, a recessed downlight,
+  a light source to group with the lamps of the model library, a Schuko socket, a rocker switch, a data socket and a
+  plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge.
+
 ## Walkthrough
 
 - View → Walk is implemented in `viewer/engine/walkthrough.ts`: first person at an eye height of 1630 mm with pointer

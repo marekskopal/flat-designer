@@ -12,6 +12,7 @@ import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimension
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
 import {buildItem, ItemAssets} from './items';
+import {applyFixtureLights} from './lights';
 import {MaterialLibrary} from './materials';
 import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
 import {ModelFetcher, ModelLibrary} from './models';
@@ -63,6 +64,11 @@ interface CameraTween {
 }
 
 const BackgroundColor = '#e8e4dd';
+/** The sky after dark. */
+const NightBackgroundColor = '#1b2029';
+/** Daylight (sun, sky, reflections) by day and by night: at night only a faint blue sky light is left. */
+const Daylight = {sun: 2.4, sky: 1.4, environment: 0.45};
+const Nightlight = {sun: 0, sky: 0.05, environment: 0.03};
 const HighlightColor = '#d9822b';
 const TweenDuration = 900;
 /** Framing of a floor with nothing on it yet (plan mm). */
@@ -182,7 +188,12 @@ export class ViewerEngine {
     private readonly scene = new THREE.Scene();
     private readonly camera = new THREE.PerspectiveCamera(OrbitFov, 1, 0.05, 300);
     private readonly controls: OrbitControls;
-    private readonly sun = new THREE.DirectionalLight('#fff3e0', 2.4);
+    private readonly sun = new THREE.DirectionalLight('#fff3e0', Daylight.sun);
+    private readonly sky = new THREE.HemisphereLight('#fbf8f2', '#a9a196', Daylight.sky);
+    /** After dark: no sun, the flat lit by its own lights. */
+    private night = false;
+    /** The fixture lights (light parts, LED strips) are on. */
+    private lightsOn = false;
     private readonly sectionPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 10);
     private readonly resizeObserver: ResizeObserver;
     private readonly raycaster = new THREE.Raycaster();
@@ -337,6 +348,7 @@ export class ViewerEngine {
         }
         this.sceneData = scene;
         this.showVariants(scene);
+        this.applyLights();
 
         const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
@@ -614,6 +626,7 @@ export class ViewerEngine {
             this.items.set(item.id, object);
             content.add(object);
         }
+        this.applyLights();
         if (this.selection?.kind === 'item' || this.selection?.kind === 'group') {
             this.setSelection(this.selection);
         }
@@ -752,6 +765,30 @@ export class ViewerEngine {
     }
 
     /** Dimension lines along the room edges, split at doors and windows; drawn in the top view only. */
+    /**
+     * Day or night, and whether the fixture lights are on. At night the sun is gone and the sky almost dark; the lights
+     * keep their shaders when switched off (intensity 0), so toggling compiles nothing.
+     */
+    public setLighting(night: boolean, lightsOn: boolean): void {
+        this.night = night;
+        this.lightsOn = lightsOn;
+        const daylight = night ? Nightlight : Daylight;
+        this.sun.intensity = daylight.sun;
+        // No sun, no shadow pass for it.
+        this.sun.castShadow = !night;
+        this.sky.intensity = daylight.sky;
+        this.sky.color.set(night ? '#5a6f99' : '#fbf8f2');
+        this.scene.environmentIntensity = daylight.environment;
+        this.scene.background = new THREE.Color(night ? NightBackgroundColor : BackgroundColor);
+        this.applyLights();
+    }
+
+    private applyLights(): void {
+        if (this.content !== null) {
+            applyFixtureLights(this.content, this.lightsOn);
+        }
+    }
+
     public setDimensionsVisible(visible: boolean): void {
         this.dimensionsVisible = visible;
     }
@@ -1033,10 +1070,10 @@ export class ViewerEngine {
         // Soft image-based lighting for reflections on glass, steel and glossy fronts.
         const pmrem = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-        this.scene.environmentIntensity = 0.45;
+        this.scene.environmentIntensity = Daylight.environment;
         pmrem.dispose();
 
-        this.scene.add(new THREE.HemisphereLight('#fbf8f2', '#a9a196', 1.4));
+        this.scene.add(this.sky);
 
         // Afternoon sun from the south-west, entering through the living-room windows.
         this.sun.castShadow = true;

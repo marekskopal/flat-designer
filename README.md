@@ -19,6 +19,8 @@ All geometry is generated from parameters. The project contains no 3D model file
   bedding, mirrors, railings, rugs, curtains, blinds, books, framed pictures showing your own images, …) defined
   as JSON with parameters, material slots and parts. Definitions can be global, part of a user's library or
   belong to one project. They are edited with a JSON editor that shows a live preview.
+- **Lighting**: pendants whose cables run along the (vaulted) ceiling, downlights and lamp lights with lumens and
+  colour temperature, a night view lit by the flat's own lights, and sockets, switches and plumbing points.
 - **Product models**: bought products (chairs, lamps, taps, plants) as glTF binary models (`.glb`, also
   meshopt-compressed), uploaded to the library with their licence, author and source and placed as `Model` items
   that scale the model to fit their box.

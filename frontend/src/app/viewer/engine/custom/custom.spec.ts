@@ -2,14 +2,15 @@ import {readdirSync, readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 import {FurnitureDefinitionBody} from '@app/models/furniture';
-import {Item, Material, SceneDefinition} from '@app/models/scene';
+import {Item, Material, Room, SceneDefinition} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {buildItem} from '../items';
+import {applyFixtureLights, LumenScale} from '../lights';
 import {MaterialLibrary} from '../materials';
 import {PictureLibrary} from '../pictures';
-import {buildCustomItemBody, changedDefinitionIds, definitionLibrary, partMaterial} from './custom';
+import {buildCustomItemBody, changedDefinitionIds, definitionLibrary, partMaterial, partsPointToPlan} from './custom';
 import {evaluateDefinition} from './definition';
 
 /** The global definitions seeded by the backend (backend/migrations/furniture); vitest runs in frontend/. */
@@ -92,8 +93,9 @@ describe('seeded definitions', () => {
 
         expect(body?.userData['definitionError']).toBeUndefined();
         expect(parts.length).toBeGreaterThan(0);
-        // One mesh per part, plus the handles of fronts.
-        expect(meshes(body as THREE.Group).length).toBeGreaterThanOrEqual(parts.length);
+        // One mesh per part, plus the handles of fronts; a light inside a shade (no bulb) draws none.
+        const drawn = parts.filter((p) => p.type !== 'light' || p.props['bulb'] === 'sphere' || p.props['bulb'] === 'disc');
+        expect(meshes(body as THREE.Group).length).toBeGreaterThanOrEqual(drawn.length);
     });
 });
 
@@ -314,5 +316,81 @@ describe('picture parts', () => {
             const front = face(buildCustomItemBody(customItem(3, size, params), materials(), definitions, library) as THREE.Group);
             expect((front.material as THREE.MeshStandardMaterial).map).toBeNull();
         }
+    });
+});
+
+describe('light and cable parts', () => {
+    const pendant: FurnitureDefinitionBody = {
+        format: 1,
+        size: {width: 140, depth: 140, height: 900},
+        parts: [
+            {
+                type: 'light',
+                name: 'Bulb',
+                x: 0,
+                y: 0,
+                z: 0,
+                w: 'W',
+                h: 'W',
+                d: 'D',
+                kind: 'point',
+                lumens: 400,
+                kelvin: 2200,
+                bulb: 'sphere',
+                shadow: true,
+            },
+            {type: 'cable', name: 'Cable', x: 'W / 2 - 3', y: 'W', z: 'D / 2 - 3', w: 6, h: 'H - W', d: 6, path: [{x: 1070, z: 70}], rose: 90},
+        ],
+    };
+    const definitions = definitionLibrary([sceneDefinition(4, pendant)]);
+    const size = {width: 140, depth: 140, height: 900};
+    const flat = (ceilingHeight: number): Room => ({
+        id: 1,
+        code: 'R',
+        name: 'Living',
+        type: 'Living',
+        polygon: [[0, 0], [5000, 0], [5000, 5000], [0, 5000]],
+        area: 0,
+        ceilingHeight,
+        floorMaterialId: null,
+        wallFinishes: [],
+        tileOriginX: null,
+        tileOriginY: null,
+    });
+    const item = (z: number): Item => ({...customItem(4, size), x: 1000, y: 1000, z});
+
+    it('gives a point light of the lumens, off until the engine switches it on', () => {
+        const body = buildCustomItemBody(item(1600), materials(), definitions, null, flat(2600)) as THREE.Group;
+        const lights: THREE.PointLight[] = [];
+        body.traverse((o) => o instanceof THREE.PointLight && lights.push(o));
+        expect(lights).toHaveLength(1);
+        expect(lights[0].intensity).toBe(0);
+        expect(applyFixtureLights(body, true)).toBe(1);
+        expect(lights[0].power).toBeCloseTo(400 * LumenScale, 6);
+        expect(lights[0].castShadow).toBe(true);
+        applyFixtureLights(body, false);
+        expect(lights[0].intensity).toBe(0);
+    });
+
+    it('runs the cable up to the room ceiling and along its path to the rose', () => {
+        const top = (room: Room): number => {
+            const body = buildCustomItemBody(item(1600), materials(), definitions, null, room) as THREE.Group;
+            const box = new THREE.Box3().setFromObject(body);
+            return Math.round(box.max.y / 0.001);
+        };
+        // The item's bottom is at 1600: a 2600 ceiling is 1000 above it, a 3000 one 1400, whatever the item's height.
+        expect(top(flat(2600))).toBe(1000);
+        expect(top(flat(3000))).toBe(1400);
+    });
+});
+
+describe('partsPointToPlan', () => {
+    it('turns the parts frame with the item: its front faces south at 0°, east at 90°', () => {
+        const item = {...customItem(1, {width: 1000, depth: 400, height: 800}), x: 2000, y: 3000};
+        // The front-right corner (x = W, z = D).
+        expect(partsPointToPlan({...item, rotation: 0}, 1000, 400)).toEqual({x: 2500, y: 2800});
+        const turned = partsPointToPlan({...item, rotation: 90}, 1000, 400);
+        expect(turned.x).toBeCloseTo(2200, 6);
+        expect(turned.y).toBeCloseTo(3500, 6);
     });
 });

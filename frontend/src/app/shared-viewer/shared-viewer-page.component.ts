@@ -79,6 +79,10 @@ export class SharedViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
+    /** After dark; the lights follow it (on at night) until switched by hand. */
+    protected readonly night = signal(false);
+    private readonly lightsChoice = signal<boolean | null>(null);
+    protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
     /** The measure tool, in the plan view (when the link offers it). */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -114,6 +118,8 @@ export class SharedViewerPageComponent {
         this.ceilingsVisible.set(settings.ceilings);
         this.labelsVisible.set(settings.labels);
         this.dimensionsVisible.set(settings.dimensions);
+        this.night.set(settings.night ?? false);
+        this.lightsChoice.set(null);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
         this.measuring.set(false);
         const view = settings.initialView === 'walkthrough' ? this.fallbackView() : settings.initialView;
@@ -218,5 +224,14 @@ export class SharedViewerPageComponent {
 
     protected onSectionInput(event: Event): void {
         this.sectionSlider.set(Number((event.target as HTMLInputElement).value));
+    }
+
+    protected toggleNight(): void {
+        this.night.set(!this.night());
+        this.lightsChoice.set(null);
+    }
+
+    protected toggleLights(): void {
+        this.lightsChoice.set(!this.lightsOn());
     }
 }

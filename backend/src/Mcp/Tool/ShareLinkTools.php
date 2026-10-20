@@ -79,6 +79,7 @@ final readonly class ShareLinkTools
 	 * @param bool $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700); null = no cut
 	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
+	 * @param bool $night start at night: no daylight, the flat lit by its lights
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working; null = never
 	 */
 	#[McpTool(
@@ -99,6 +100,7 @@ final readonly class ShareLinkTools
 		bool $labels = true,
 		?int $sectionHeight = null,
 		bool $dimensions = false,
+		bool $night = false,
 		?string $expiresAt = null,
 	): ShareLinkDto {
 		$views ??= ['overview', 'top'];
@@ -110,6 +112,7 @@ final readonly class ShareLinkTools
 			'labels' => $labels,
 			'sectionHeight' => $sectionHeight,
 			'dimensions' => $dimensions,
+			'night' => $night,
 		]);
 		$link = $this->shareLinkProvider->create(
 			$this->context->user(),
@@ -128,6 +131,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700)
 	 * @param bool|null $dimensions show the dimension lines in the top view at the start
+	 * @param bool|null $night start at night (lit by the flat's lights)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
 	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "expiresAt" (never)
 	 */
@@ -149,6 +153,7 @@ final readonly class ShareLinkTools
 		?bool $labels = null,
 		?int $sectionHeight = null,
 		?bool $dimensions = null,
+		?bool $night = null,
 		?string $expiresAt = null,
 		?array $clear = null,
 	): ShareLinkDto {
@@ -164,6 +169,7 @@ final readonly class ShareLinkTools
 				'labels' => $labels,
 				'sectionHeight' => $sectionHeight,
 				'dimensions' => $dimensions,
+				'night' => $night,
 				'expiresAt' => $expiresAt,
 			],
 			$clear,

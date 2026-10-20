@@ -11,6 +11,7 @@ use FlatDesigner\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use const JSON_THROW_ON_ERROR;
 
 /** Runs the shared fixture tests/fixtures/furniture-definitions.json (also run by the frontend twin). */
 #[CoversClass(DefinitionEvaluator::class)]
@@ -52,7 +53,12 @@ final class DefinitionEvaluatorTest extends TestCase
 		}
 
 		$resolved = $evaluator->evaluate($definition, $size['width'], $size['depth'], $size['height'], $values);
-		self::assertSame($parts, array_map(static fn (ResolvedPart $part): array => $part->jsonSerialize(), $resolved));
+		// As JSON, as the twin sees it: an option evaluated from a list parameter holds records (objects).
+		$json = json_decode(
+			json_encode(array_map(static fn (ResolvedPart $part): array => $part->jsonSerialize(), $resolved), JSON_THROW_ON_ERROR),
+			true,
+		);
+		self::assertSame($parts, $json);
 	}
 
 	public function testMessageCarriesThePath(): void

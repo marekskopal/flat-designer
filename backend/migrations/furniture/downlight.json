@@ -1,0 +1,94 @@
+{
+ "name": "Downlight, recessed round",
+ "description": "A round downlight recessed in a (dropped) ceiling: a thin trim ring with a glowing lens, shining down. Give it the elevation of the ceiling minus its height.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 90,
+   "depth": 90,
+   "height": 4
+  },
+  "parameters": [
+   {
+    "key": "lumens",
+    "label": "Light output",
+    "type": "int",
+    "default": 550,
+    "min": 0,
+    "max": 3000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 3000,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   },
+   {
+    "key": "angle",
+    "label": "Beam angle",
+    "type": "int",
+    "default": 70,
+    "min": 10,
+    "max": 120,
+    "unit": "°"
+   },
+   {
+    "key": "shadow",
+    "label": "Casts shadows",
+    "type": "bool",
+    "default": false
+   }
+  ],
+  "derived": {
+   "lens": "round(min(W, D) * 0.72)"
+  },
+  "materialSlots": [
+   {
+    "key": "trim",
+    "label": "Trim",
+    "default": "plastic-white-gloss"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Trim",
+    "x": 0,
+    "y": "H - 3",
+    "z": 0,
+    "w": "W",
+    "h": 3,
+    "d": "D",
+    "material": "trim"
+   },
+   {
+    "type": "light",
+    "name": "Lens",
+    "x": "(W - lens) / 2",
+    "y": 0,
+    "z": "(D - lens) / 2",
+    "w": "lens",
+    "h": "H - 1",
+    "d": "lens",
+    "kind": "spot",
+    "angle": {
+     "expr": "angle"
+    },
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "shadow": {
+     "expr": "shadow"
+    },
+    "bulb": "disc"
+   }
+  ]
+ }
+}

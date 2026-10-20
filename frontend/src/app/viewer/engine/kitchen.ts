@@ -1,6 +1,7 @@
 import {CabinetParams, FrontSpec, Item} from '@app/models/scene';
 import * as THREE from 'three';
 
+import {markFixtureLight} from './lights';
 import {GrainDirection, MaterialLibrary} from './materials';
 import {boxAt} from './meshes';
 import {MM, stackFronts} from './plan-geometry';
@@ -329,6 +330,7 @@ function buildLedStrip(item: Item, materials: MaterialLibrary): THREE.Group {
     const intensity = typeof item.params['intensity'] === 'number' ? item.params['intensity'] : 5;
     const light = new THREE.RectAreaLight(color, intensity, w, 0.06);
     light.rotation.x = -Math.PI / 2;
+    markFixtureLight(light, intensity);
     group.add(light);
     return group;
 }

@@ -10390,6 +10390,231 @@
     "code": "invalid",
     "path": "parameters[0].default"
    }
+  },
+  {
+   "name": "pendant: a light and a cable whose path comes from a list parameter",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 120,
+     "height": 1500
+    },
+    "parameters": [
+     {
+      "key": "path",
+      "label": "Cable path",
+      "type": "list",
+      "fields": [
+       {
+        "key": "x",
+        "type": "int",
+        "default": 0
+       },
+       {
+        "key": "z",
+        "type": "int",
+        "default": 0
+       }
+      ],
+      "default": []
+     }
+    ],
+    "parts": [
+     {
+      "type": "light",
+      "name": "Bulb",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "W",
+      "d": "D",
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     },
+     {
+      "type": "cable",
+      "name": "Cable",
+      "x": "W / 2 - 4",
+      "y": "W",
+      "z": "D / 2 - 4",
+      "w": 8,
+      "h": "H - W",
+      "d": 8,
+      "path": {
+       "expr": "path"
+      },
+      "sag": 80
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 120,
+    "height": 1500
+   },
+   "values": {
+    "path": [
+     {
+      "x": 900,
+      "z": 60
+     },
+     {
+      "x": 900,
+      "z": -800
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "Bulb",
+     "type": "light",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 120,
+     "h": 120,
+     "d": 120,
+     "material": null,
+     "props": {
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     }
+    },
+    {
+     "name": "Cable",
+     "type": "cable",
+     "index": null,
+     "x": 56,
+     "y": 120,
+     "z": 56,
+     "w": 8,
+     "h": 1380,
+     "d": 8,
+     "material": null,
+     "props": {
+      "path": [
+       {
+        "x": 900,
+        "z": 60
+       },
+       {
+        "x": 900,
+        "z": -800
+       }
+      ],
+      "sag": 80
+     }
+    }
+   ]
+  },
+  {
+   "name": "pendant hanging straight: an empty path",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 120,
+     "depth": 120,
+     "height": 1500
+    },
+    "parameters": [
+     {
+      "key": "path",
+      "label": "Cable path",
+      "type": "list",
+      "fields": [
+       {
+        "key": "x",
+        "type": "int",
+        "default": 0
+       },
+       {
+        "key": "z",
+        "type": "int",
+        "default": 0
+       }
+      ],
+      "default": []
+     }
+    ],
+    "parts": [
+     {
+      "type": "light",
+      "name": "Bulb",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "W",
+      "d": "D",
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     },
+     {
+      "type": "cable",
+      "name": "Cable",
+      "x": "W / 2 - 4",
+      "y": "W",
+      "z": "D / 2 - 4",
+      "w": 8,
+      "h": "H - W",
+      "d": 8,
+      "path": {
+       "expr": "path"
+      },
+      "sag": 80
+     }
+    ]
+   },
+   "size": {
+    "width": 120,
+    "depth": 120,
+    "height": 1500
+   },
+   "parts": [
+    {
+     "name": "Bulb",
+     "type": "light",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 120,
+     "h": 120,
+     "d": 120,
+     "material": null,
+     "props": {
+      "kind": "point",
+      "lumens": 400,
+      "kelvin": 2200,
+      "bulb": "sphere"
+     }
+    },
+    {
+     "name": "Cable",
+     "type": "cable",
+     "index": null,
+     "x": 56,
+     "y": 120,
+     "z": 56,
+     "w": 8,
+     "h": 1380,
+     "d": 8,
+     "material": null,
+     "props": {
+      "path": [],
+      "sag": 80
+     }
+    }
+   ]
   }
  ]
 }
