@@ -260,7 +260,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 ## AI agents (MCP)
 
 The backend is an MCP server at `/mcp` (Streamable HTTP, OAuth 2.1 with dynamic client registration and PKCE).
-Agents can read projects and floors, add, change and delete rooms, walls, openings and items, manage groups,
+Agents can create, rename and delete projects, read projects and floors, add floors, add, change and delete rooms, walls, openings and items, manage groups,
 variants, share links, versions and furniture definitions, list product models, get cut lists and room schedules, and undo or redo their own changes.
 Agent changes are logged under the client's name and appear live in open viewers.
 

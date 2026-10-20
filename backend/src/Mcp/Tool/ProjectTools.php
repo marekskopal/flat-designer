@@ -8,6 +8,7 @@ use FlatDesigner\Dto\ChangeDto;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Dto\FloorInputDto;
 use FlatDesigner\Dto\ProjectDto;
+use FlatDesigner\Dto\ProjectInputDto;
 use FlatDesigner\Dto\ProjectVersionDto;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectChange;
@@ -22,6 +23,8 @@ use Mcp\Schema\ToolAnnotations;
 final readonly class ProjectTools
 {
 	private const int MaxChanges = 100;
+
+	private const array Clearable = ['address', 'description'];
 
 	public function __construct(
 		private ToolContext $context,
@@ -54,6 +57,62 @@ final readonly class ProjectTools
 	public function getProject(int $projectId): ProjectDto
 	{
 		return $this->projectProvider->toDto($this->context->project($projectId));
+	}
+
+	/**
+	 * @param string $name e.g. "Flat 12, Vinohrady"
+	 * @param string|null $address street address of the building
+	 * @param string|null $description free notes about the project
+	 */
+	#[McpTool(
+		name: 'create_project',
+		description: 'Create a project you own. It starts with one empty floor ("Ground floor", level 0); add more with add_floor.',
+	)]
+	public function createProject(string $name, ?string $address = null, ?string $description = null): ProjectDto
+	{
+		return $this->projectProvider->toDto(
+			$this->projectProvider->create($this->context->user(), new ProjectInputDto($name, $address, $description)),
+		);
+	}
+
+	/**
+	 * @param string|null $address street address of the building; an empty string clears it, as `clear` does
+	 * @param string|null $description free notes about the project; an empty string clears it, as `clear` does
+	 * @param list<string>|null $clear fields to set to none: "address", "description"
+	 */
+	#[McpTool(name: 'update_project', description: 'Change a project\'s name, address or description. Only the given fields change.')]
+	public function updateProject(
+		int $projectId,
+		?string $name = null,
+		?string $address = null,
+		?string $description = null,
+		?array $clear = null,
+	): ProjectDto {
+		$project = $this->context->project($projectId);
+		$cleared = array_keys(ToolContext::fields([], $clear, self::Clearable));
+		$input = new ProjectInputDto(
+			name: $name ?? $project->name,
+			address: in_array('address', $cleared, true) ? null : ($address ?? $project->address),
+			description: in_array('description', $cleared, true) ? null : ($description ?? $project->description),
+		);
+
+		return $this->projectProvider->toDto($this->projectProvider->update($project, $input));
+	}
+
+	#[McpTool(
+		name: 'delete_project',
+		description: 'Delete a project for good, with all its floors, versions, share links and files. This cannot be undone: '
+			. 'ask the user to confirm first, naming the project.',
+		annotations: new ToolAnnotations(destructiveHint: true),
+	)]
+	/** @return ProjectDto the deleted project */
+	public function deleteProject(int $projectId): ProjectDto
+	{
+		$project = $this->context->project($projectId);
+		$deleted = $this->projectProvider->toDto($project);
+		$this->projectProvider->delete($project);
+
+		return $deleted;
 	}
 
 	/**

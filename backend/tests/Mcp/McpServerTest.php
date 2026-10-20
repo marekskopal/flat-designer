@@ -97,12 +97,14 @@ final class McpServerTest extends IntegrationTestCase
 			'copy_furniture_definition',
 			'create_furniture_definition',
 			'create_group',
+			'create_project',
 			'create_share_link',
 			'create_variant_set',
 			'delete_furniture_definition',
 			'delete_group',
 			'delete_item',
 			'delete_opening',
+			'delete_project',
 			'delete_room',
 			'delete_share_link',
 			'delete_variant_set',
@@ -144,6 +146,7 @@ final class McpServerTest extends IntegrationTestCase
 			'update_item',
 			'update_material',
 			'update_opening',
+			'update_project',
 			'update_room',
 			'update_share_link',
 			'update_wall',
@@ -448,6 +451,62 @@ final class McpServerTest extends IntegrationTestCase
 
 		$this->client->call('delete_share_link', ['projectId' => $projectId, 'shareLinkId' => $link['id']]);
 		self::assertSame([], $this->client->call('list_share_links', ['projectId' => $projectId]));
+	}
+
+	public function testCreatesUpdatesAndDeletesProjects(): void
+	{
+		$created = $this->client->call('create_project', ['name' => ' Cottage ', 'address' => 'Lipová 3, Brno']);
+		self::assertIsArray($created);
+		self::assertIsInt($created['id']);
+		self::assertSame(['Cottage', 'Lipová 3, Brno', null], [$created['name'], $created['address'], $created['description']]);
+		self::assertIsList($created['floors']);
+		self::assertSame([['Ground floor', 0]], array_map(
+			static fn (mixed $floor): array => is_array($floor) ? [$floor['name'], $floor['level']] : [],
+			$created['floors'],
+		));
+		$listed = $this->client->call('list_projects');
+		self::assertIsList($listed);
+		self::assertEqualsCanonicalizing(['Cottage', 'Flat 12'], array_column($listed, 'name'));
+
+		// Only the given fields change; clear wins over a value given for the same field.
+		$updated = $this->client->call('update_project', ['projectId' => $created['id'], 'description' => 'Summer house']);
+		self::assertIsArray($updated);
+		self::assertSame(['Cottage', 'Lipová 3, Brno', 'Summer house'], [$updated['name'], $updated['address'], $updated['description']]);
+		$updated = $this->client->call(
+			'update_project',
+			['projectId' => $created['id'], 'name' => 'Cottage by the lake', 'address' => 'x', 'clear' => ['address']],
+		);
+		self::assertIsArray($updated);
+		self::assertSame(['Cottage by the lake', null, 'Summer house'], [$updated['name'], $updated['address'], $updated['description']]);
+
+		$isError = false;
+		self::assertSame(
+			'Project name is required (at most 255 characters).',
+			$this->client->call('update_project', ['projectId' => $created['id'], 'name' => '  '], $isError),
+		);
+		self::assertTrue($isError);
+		$message = $this->client->call('update_project', ['projectId' => $created['id'], 'clear' => ['name']], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringStartsWith('"name" cannot be cleared', $message);
+
+		// Someone else's project is not found, as in the app.
+		$stranger = new McpClient(OAuthFlow::accessToken(Fixture::createUser(name: 'Bob'), 'Claude Code'));
+		$stranger->initialize();
+		foreach (['update_project' => ['name' => 'Mine'], 'delete_project' => []] as $tool => $arguments) {
+			self::assertSame(
+				sprintf('Project %d not found. Use list_projects to see the available ones.', $created['id']),
+				$stranger->call($tool, ['projectId' => $created['id'], ...$arguments], $isError),
+			);
+			self::assertTrue($isError);
+		}
+
+		$deleted = $this->client->call('delete_project', ['projectId' => $created['id']]);
+		self::assertIsArray($deleted);
+		self::assertSame('Cottage by the lake', $deleted['name']);
+		$listed = $this->client->call('list_projects');
+		self::assertIsList($listed);
+		self::assertSame(['Flat 12'], array_column($listed, 'name'));
 	}
 
 	public function testDesignsCustomFurnitureAndPlacesIt(): void
