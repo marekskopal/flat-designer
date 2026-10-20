@@ -68,16 +68,24 @@ final class PictureTest extends IntegrationTestCase
 		self::assertSame(422, $this->request('POST', $items, $poster($text), $user)->getStatusCode());
 		self::assertSame(422, $this->request('POST', $items, $poster($other), $user)->getStatusCode());
 
-		$scene = $this->jsonBody($this->request(
-			'GET',
-			str_replace(
-				['{projectId:number}', '{floorId:number}'],
-				[(string) $project->id, (string) $floor->id],
-				Routes::ProjectFloorScene->value,
-			),
-			authenticatedAs: $user,
-		));
+		$scene = $this->scene($user, $project, $floor->id);
 		self::assertSame([$image], $scene['pictures']);
+		$framed = $this->jsonBody($this->request('POST', $items, $poster($image), $user));
+		self::assertIsArray($framed['element']);
+		self::assertIsInt($framed['element']['id']);
+		self::assertIsInt($framed['revision']);
+
+		// Deleting the file tells open viewers (the picture goes plain), and the item is not stuck: it can be resized,
+		// only a newly chosen file has to exist.
+		self::assertSame(200, $this->request('DELETE', self::filePath($project, $image), authenticatedAs: $user)->getStatusCode());
+		$scene = $this->scene($user, $project, $floor->id);
+		self::assertSame([], $scene['pictures']);
+		self::assertIsInt($scene['revision']);
+		self::assertGreaterThan($framed['revision'], $scene['revision']);
+		$itemPath = $items . '/' . $framed['element']['id'];
+		self::assertSame(200, $this->request('PATCH', $itemPath, ['width' => 600], $user)->getStatusCode());
+		self::assertSame(422, $this->request('PATCH', $itemPath, ['params' => ['values' => ['poster' => $text]]], $user)->getStatusCode());
+		self::assertSame(200, $this->request('PATCH', $itemPath, ['params' => ['values' => ['poster' => null]]], $user)->getStatusCode());
 	}
 
 	public function testShareGuestsLoadOnlyThePicturesOfTheirScene(): void
@@ -148,6 +156,29 @@ final class PictureTest extends IntegrationTestCase
 		self::assertIsInt($id);
 
 		return $id;
+	}
+
+	/** @return array<string, mixed> */
+	private function scene(User $user, Project $project, int $floorId): array
+	{
+		return $this->jsonBody($this->request(
+			'GET',
+			str_replace(
+				['{projectId:number}', '{floorId:number}'],
+				[(string) $project->id, (string) $floorId],
+				Routes::ProjectFloorScene->value,
+			),
+			authenticatedAs: $user,
+		));
+	}
+
+	private static function filePath(Project $project, int $fileId): string
+	{
+		return str_replace(
+			['{projectId:number}', '{fileId:number}'],
+			[(string) $project->id, (string) $fileId],
+			Routes::ProjectFile->value,
+		);
 	}
 
 	private static function itemsPath(Project $project, int $floorId): string

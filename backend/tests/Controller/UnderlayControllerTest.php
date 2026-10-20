@@ -120,6 +120,10 @@ final class UnderlayControllerTest extends IntegrationTestCase
 			headers: ['If-Match' => (string) ($set['revision'] - 1)],
 		);
 		self::assertSame(409, $stale->getStatusCode());
+		// Refused means not written.
+		$kept = $this->scene($user, $project, $floor->id)['underlay'];
+		self::assertIsArray($kept);
+		self::assertSame(0.5, $kept['opacity']);
 		$fresh = $this->request(
 			'PUT',
 			$path,
@@ -129,6 +133,7 @@ final class UnderlayControllerTest extends IntegrationTestCase
 		);
 		self::assertSame(200, $fresh->getStatusCode());
 		self::assertSame(409, $this->request('DELETE', $path, authenticatedAs: $user, headers: ['If-Match' => '1'])->getStatusCode());
+		self::assertNotNull($this->scene($user, $project, $floor->id)['underlay']);
 		self::assertSame(200, $this->request('DELETE', $path, authenticatedAs: $user)->getStatusCode());
 		self::assertNull($this->scene($user, $project, $floor->id)['underlay']);
 

@@ -11,6 +11,7 @@ use FlatDesigner\Model\Entity\FloorUnderlay;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
+use MarekSkopal\ORM\ORM;
 
 /**
  * The plan image under a floor's top view, for tracing. Setting or removing it bumps the project's revision (checked
@@ -19,9 +20,6 @@ use FlatDesigner\Service\Project\Exception\ProjectException;
  */
 final readonly class UnderlayService
 {
-	/** Images the viewer can draw as a texture. */
-	public const array ImageMimeTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-
 	/** mm per pixel of a new underlay that is neither placed nor calibrated: a 2000 px scan covers 20 m. */
 	private const float DefaultScale = 10.0;
 	private const float MinScale = 0.01;
@@ -33,6 +31,7 @@ final readonly class UnderlayService
 		private FloorUnderlayRepository $underlayRepository,
 		private ProjectFileProvider $projectFileProvider,
 		private ProjectRevisionService $revisionService,
+		private ORM $orm,
 	) {
 	}
 
@@ -49,7 +48,7 @@ final readonly class UnderlayService
 	{
 		$file = $this->projectFileProvider->find($floor->project, $input->fileId)
 			?? throw new ProjectException(sprintf('File %d is not a file of this project.', $input->fileId));
-		if (!in_array($file->mimeType, self::ImageMimeTypes, true)) {
+		if (!in_array($file->mimeType, ProjectFileProvider::ImageMimeTypes, true)) {
 			throw new ProjectException(sprintf(
 				'File "%s" is %s; an underlay must be an image (PNG, JPEG, WebP or GIF).',
 				$file->filename,
@@ -110,10 +109,14 @@ final readonly class UnderlayService
 			$underlay->opacity = $opacity;
 		}
 		$underlay->updatedAt = $now;
-		$this->underlayRepository->persist($underlay);
-		$this->revisionService->bump($floor->project, $baseRevision);
 
-		return $underlay;
+		// The revision first: a stale base is refused before anything is written.
+		return $this->orm->getTransactionProvider()->transaction(function () use ($floor, $underlay, $baseRevision): FloorUnderlay {
+			$this->revisionService->bump($floor->project, $baseRevision);
+			$this->underlayRepository->persist($underlay);
+
+			return $underlay;
+		});
 	}
 
 	/** Removes the floor's underlay; false when it had none. */
@@ -124,8 +127,10 @@ final readonly class UnderlayService
 			return false;
 		}
 
-		$this->underlayRepository->delete($underlay);
-		$this->revisionService->bump($floor->project, $baseRevision);
+		$this->orm->getTransactionProvider()->transaction(function () use ($floor, $underlay, $baseRevision): void {
+			$this->revisionService->bump($floor->project, $baseRevision);
+			$this->underlayRepository->delete($underlay);
+		});
 
 		return true;
 	}

@@ -31,9 +31,13 @@ final readonly class ProjectFileProvider
 
 	private const int MaxTextBytes = 200000;
 
+	/** Images the viewer draws (an underlay, a picture): what browsers decode, and what the image tools read. */
+	public const array ImageMimeTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
 	public function __construct(
 		private ProjectFileRepository $projectFileRepository,
 		private FloorUnderlayRepository $underlayRepository,
+		private ShownPictures $shownPictures,
 		private FileStorageInterface $fileStorage,
 		private S3Config $s3Config,
 		private ProjectRevisionService $revisionService,
@@ -100,10 +104,10 @@ final readonly class ProjectFileProvider
 		return in_array($file->mimeType, self::TextMimeTypes, true);
 	}
 
-	/** A raster image the viewer and the image tools can draw; SVG is not (it is a document, never served as one). */
+	/** A raster image the viewer and the image tools can draw (`ImageMimeTypes`; SVG is a document, never served as one). */
 	public function isImage(ProjectFile $file): bool
 	{
-		return str_starts_with($file->mimeType, 'image/') && $file->mimeType !== 'image/svg+xml';
+		return in_array($file->mimeType, self::ImageMimeTypes, true);
 	}
 
 	/** The content of a text file (plain, CSV, JSON) of a sensible size. */
@@ -121,13 +125,16 @@ final readonly class ProjectFileProvider
 		return $this->readContent($file);
 	}
 
-	/** The floor underlays laid from the file go with it (ON DELETE CASCADE), so open viewers are told to reload. */
+	/**
+	 * The floor underlays laid from the file go with it (ON DELETE CASCADE), and items showing it as a picture keep its id
+	 * but draw a plain one; either way open viewers are told to reload.
+	 */
 	public function delete(ProjectFile $file): void
 	{
-		$underlays = $this->underlayRepository->findByFile($file->id);
+		$shown = $this->underlayRepository->findByFile($file->id) !== [] || $this->shownPictures->isShownIn($file->project, $file->id);
 		$this->projectFileRepository->delete($file);
 		$this->fileStorage->delete($file->storageKey);
-		if ($underlays !== []) {
+		if ($shown) {
 			$this->revisionService->bump($file->project);
 		}
 	}

@@ -182,6 +182,7 @@ final readonly class ItemHandler implements ElementHandler
 				array_intersect_key($this->state($current), array_flip(self::CustomGeometry)),
 				array_intersect_key($state, array_flip(self::CustomGeometry)),
 			),
+			$current instanceof Item && $current->params !== null ? (JsonDecoder::decodeObject($current->params)['values'] ?? null) : null,
 		);
 
 		return $state;

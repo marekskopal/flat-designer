@@ -35,6 +35,8 @@ final readonly class CustomItemValidator
 	 * @param array<string, mixed> $params
 	 * @param bool $evaluate false when the definition, size and params are those the item already has: a later edit of
 	 *     the definition (its parts or material slots) must not block moving or renaming items that no longer fit it
+	 * @param mixed $currentValues the `params.values` the item has now: an image file it already shows is not checked
+	 *     again (deleted since, the picture is plain), only a newly chosen one
 	 */
 	public function validate(
 		Project $project,
@@ -45,6 +47,7 @@ final readonly class CustomItemValidator
 		int $depth,
 		int $height,
 		bool $evaluate,
+		mixed $currentValues = null,
 	): void {
 		if ($kind !== ItemKindEnum::Custom) {
 			if ($definition !== null) {
@@ -79,7 +82,8 @@ final readonly class CustomItemValidator
 			throw new EditException(sprintf('Furniture "%s" does not work out: %s', $definition->name, $e->getMessage()), 422, $e);
 		}
 
-		foreach (ImageParameters::fileIds($body, $values) as $fileId) {
+		$shown = ImageParameters::fileIds($body, $currentValues);
+		foreach (array_diff(ImageParameters::fileIds($body, $values), $shown) as $fileId) {
 			$file = $this->fileProvider->find($project, $fileId);
 			if ($file === null || !$this->fileProvider->isImage($file)) {
 				throw EditException::invalid(sprintf('File %d is not an image of this project (see list_project_files).', $fileId));
