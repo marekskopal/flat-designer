@@ -1,0 +1,54 @@
+{
+ "name": "Walk-in shower screen",
+ "description": "Fixed glass panel of a walk-in shower with a wall profile on one side.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1000,
+   "depth": 30,
+   "height": 2000
+  },
+  "parameters": [
+   {
+    "key": "profileSide",
+    "label": "Wall profile",
+    "type": "select",
+    "default": "left",
+    "options": [
+     "left",
+     "right"
+    ]
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "profile",
+    "label": "Profile",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "glass",
+    "name": "Glass",
+    "x": 0,
+    "y": 0,
+    "z": "D / 2 - 4",
+    "w": "W",
+    "h": "H",
+    "d": 8
+   },
+   {
+    "type": "board",
+    "name": "Wall profile",
+    "x": "profileSide == 'left' ? 0 : W - 20",
+    "y": 0,
+    "z": 0,
+    "w": 20,
+    "h": "H",
+    "d": "D",
+    "material": "profile"
+   }
+  ]
+ }
+}

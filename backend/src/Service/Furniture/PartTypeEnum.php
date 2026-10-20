@@ -31,6 +31,11 @@ enum PartTypeEnum: string
 	case Appliance = 'appliance';
 	/** A sliding door leaf: a frame in the `profile` slot's material around an infill in the part's, or a `mirror`. */
 	case SlidingDoor = 'slidingDoor';
+	/**
+	 * Upholstery (seat and back cushions, a mattress, a duvet, pillows): the box with its edges rounded by `radius` mm
+	 * (default 40, at most half its smallest side). Not a board, so the cut list counts it among the other parts.
+	 */
+	case Cushion = 'cushion';
 	/** No part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`. */
 	case Assembly = 'assembly';
 
@@ -159,6 +164,7 @@ enum PartTypeEnum: string
 			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Tilt,
 			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Tilt,
 			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Tilt,
+			self::Cushion => ['radius' => 'mm'] + self::Tilt,
 			self::Assembly => [],
 		};
 	}
