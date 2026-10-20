@@ -40,7 +40,7 @@ final readonly class ShownPictures
 	{
 		$floorIds = array_map(static fn (Floor $floor): int => $floor->id, $this->floorRepository->findByProject($project->id));
 
-		return in_array($fileId, $this->referenced($this->itemRepository->findOnFloors($floorIds)), true);
+		return in_array($fileId, $this->referenced($this->itemRepository->findWithDefinitionOnFloors($floorIds)), true);
 	}
 
 	/**
