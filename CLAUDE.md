@@ -339,6 +339,8 @@ format is the text in `FurnitureTools::Format`.
   `flat-designer/projects/{id}`.
 - Subscribers get a cookie from `/api/realtime/subscription` and listen on `/.well-known/mercure?match=<topic>`
   (Mercure protocol 1.0 uses `match`, not `topic`).
+- Project details (name, address, description) are not floor content: `ProjectProvider::update` sends `detailsChanged`
+  (`markDetailsChanged()`, no revision bump), and the project and viewer pages reload the project.
 - Each tab sends `X-Origin-Client-Id` so it can skip its own echoes. Tests record updates in `RecordingMercureHub`.
 
 ## MCP server

@@ -87,8 +87,10 @@ describe('RealtimeService', () => {
         source.emit(definitionChange);
         const materialChange = {type: 'materialChanged', projectId: 7, materialId: 3, originClientId: null} as const;
         source.emit(materialChange);
+        const detailsChange = {type: 'detailsChanged', projectId: 7, originClientId: null} as const;
+        source.emit(detailsChange);
         source.emit({type: 'somethingElse', projectId: 7});
-        expect(received).toEqual([update(7, 12), definitionChange, materialChange]);
+        expect(received).toEqual([update(7, 12), definitionChange, materialChange, detailsChange]);
 
         subscription.unsubscribe();
         expect(source.readyState).toBe(FakeEventSource.CLOSED);

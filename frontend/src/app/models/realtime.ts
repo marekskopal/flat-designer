@@ -1,5 +1,5 @@
 /** Live update of a project, pushed by the server after a committed change (see ProjectUpdatePublisher). */
-export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange;
+export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange | DetailsChange;
 
 /** A committed change of the project (an edit, undo, restore, a new floor…). */
 export interface ProjectChange {
@@ -23,6 +23,14 @@ export interface DefinitionChange {
     projectId: number;
     definitionId: number;
     /** Browser tab that saved the definition. */
+    originClientId: string | null;
+}
+
+/** The project's name, address or description changed: not floor content, so the revision is the same. */
+export interface DetailsChange {
+    type: 'detailsChanged';
+    projectId: number;
+    /** Browser tab that changed them (null for agents). */
     originClientId: string | null;
 }
 

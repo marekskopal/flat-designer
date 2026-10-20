@@ -122,6 +122,37 @@ final class RealtimeControllerTest extends EditorTestCase
 		);
 	}
 
+	public function testChangingTheProjectDetailsTellsItsSubscribers(): void
+	{
+		AppHarness::mercureHub()->updates = [];
+		$path = str_replace('{projectId:number}', (string) $this->project->id, Routes::Project->value);
+		$this->request('PUT', $path, ['name' => 'Flat 12 (renovated)', 'address' => null, 'description' => null], $this->user);
+
+		self::assertSame(
+			[['type' => 'detailsChanged', 'projectId' => $this->project->id, 'originClientId' => null]],
+			AppHarness::mercureHub()->messages(),
+		);
+
+		// Saving the same details again is not a change.
+		AppHarness::mercureHub()->updates = [];
+		$this->request('PUT', $path, ['name' => 'Flat 12 (renovated)', 'address' => null, 'description' => null], $this->user);
+		self::assertSame([], AppHarness::mercureHub()->updates);
+
+		// Agents' changes go out too; a rejected one sends nothing.
+		$client = new McpClient(OAuthFlow::accessToken($this->user, 'Claude Code'));
+		$client->initialize();
+		AppHarness::mercureHub()->updates = [];
+		$isError = false;
+		$client->call('update_project', ['projectId' => $this->project->id, 'name' => ' '], $isError);
+		self::assertTrue($isError);
+		self::assertSame([], AppHarness::mercureHub()->updates);
+		$client->call('update_project', ['projectId' => $this->project->id, 'description' => 'Second floor, left']);
+		self::assertSame(
+			[['type' => 'detailsChanged', 'projectId' => $this->project->id, 'originClientId' => null]],
+			AppHarness::mercureHub()->messages(),
+		);
+	}
+
 	/** @return list<string> */
 	private static function grantedTopics(string $cookie): array
 	{
