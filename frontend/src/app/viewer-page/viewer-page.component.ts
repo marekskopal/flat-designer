@@ -175,6 +175,8 @@ export class ViewerPageComponent {
     protected readonly night = signal(false);
     private readonly lightsChoice = signal<boolean | null>(null);
     protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
+    /** Presentation quality, for screenshots: slower, so off while working. */
+    protected readonly presentation = signal(false);
     /** The measure tool (top view only); an edit tool turns it off and the other way round. */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -208,6 +210,7 @@ export class ViewerPageComponent {
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
             night: this.night(),
+            presentation: this.presentation(),
         };
     });
     /** For the editor panel: where new elements are placed. */

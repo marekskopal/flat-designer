@@ -12,7 +12,7 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * What a share link shows: the view modes the guest may switch between, the one it opens in, the 3D camera
  * (only with the overview allowed; null = the default framing) and the display settings it starts with
  * (`sectionHeight` in mm, null = no wall cut; `dimensions` draws the plan's dimension lines; `night` shows the flat after
- * dark, lit by its lights). Stored as JSON in `ShareLink::$settings`.
+ * dark, lit by its lights; `presentation` renders in the presentation quality). Stored as JSON in `ShareLink::$settings`.
  */
 final readonly class ShareSettingsDto implements ArrayFactoryInterface
 {
@@ -26,6 +26,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 		public ?int $sectionHeight,
 		public bool $dimensions = false,
 		public bool $night = false,
+		public bool $presentation = false,
 	) {
 	}
 
@@ -44,6 +45,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 			dimensions: array_key_exists('dimensions', $data) && BodyReader::bool($data, 'dimensions'),
 			// Nor those saved before the night view.
 			night: array_key_exists('night', $data) && BodyReader::bool($data, 'night'),
+			presentation: array_key_exists('presentation', $data) && BodyReader::bool($data, 'presentation'),
 		);
 	}
 

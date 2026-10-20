@@ -46,6 +46,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
+import {PresentationPipeline, PresentationPixelRatio, RenderQuality, sunShadowMapSize, SunShadowRadius} from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
@@ -194,6 +195,9 @@ export class ViewerEngine {
     private night = false;
     /** The fixture lights (light parts, LED strips) are on. */
     private lightsOn = false;
+    private quality: RenderQuality = 'fast';
+    /** The post-processing of the presentation quality; null in the fast one. */
+    private presentation: PresentationPipeline | null = null;
     private readonly sectionPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 10);
     private readonly resizeObserver: ResizeObserver;
     private readonly raycaster = new THREE.Raycaster();
@@ -774,6 +778,46 @@ export class ViewerEngine {
      * Day or night, and whether the fixture lights are on. At night the sun is gone and the sky almost dark; the lights
      * keep their shaders when switched off (intensity 0), so toggling compiles nothing.
      */
+    /**
+     * Fast for working, or presentation for screenshots and shared views: ambient occlusion and SMAA through a
+     * post-processing pipeline, a supersampled canvas, a larger and softer sun shadow. The fast quality stays the
+     * default; switching rebuilds the shadow map, nothing of the scene.
+     */
+    public setQuality(quality: RenderQuality): void {
+        if (quality === this.quality) {
+            return;
+        }
+        this.quality = quality;
+        this.presentation?.dispose();
+        this.presentation = null;
+        const device = window.devicePixelRatio;
+        const pixelRatio = quality === 'presentation' ? Math.max(device, PresentationPixelRatio) : Math.min(device, 2);
+        this.renderer.setPixelRatio(pixelRatio);
+        if (quality === 'presentation') {
+            this.presentation = new PresentationPipeline(this.renderer, this.scene, this.camera);
+        }
+        const size = sunShadowMapSize(quality, this.renderer.capabilities.maxTextureSize);
+        this.sun.shadow.mapSize.set(size, size);
+        this.sun.shadow.radius = SunShadowRadius[quality];
+        // A new size needs a new map.
+        this.sun.shadow.map?.dispose();
+        this.sun.shadow.map = null;
+        this.resize();
+    }
+
+    public getQuality(): RenderQuality {
+        return this.quality;
+    }
+
+    /** The scene into the canvas: directly, or through the presentation pipeline. */
+    private renderMain(): void {
+        if (this.presentation !== null) {
+            this.presentation.render();
+        } else {
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+
     public setLighting(night: boolean, lightsOn: boolean): void {
         this.night = night;
         this.lightsOn = lightsOn;
@@ -1042,6 +1086,7 @@ export class ViewerEngine {
 
     public dispose(): void {
         this.renderer.setAnimationLoop(null);
+        this.presentation?.dispose();
         this.resizeObserver.disconnect();
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
@@ -1082,10 +1127,11 @@ export class ViewerEngine {
 
         // Afternoon sun from the south-west, entering through the living-room windows.
         this.sun.castShadow = true;
-        this.sun.shadow.mapSize.set(4096, 4096);
+        const shadowSize = sunShadowMapSize('fast', this.renderer.capabilities.maxTextureSize);
+        this.sun.shadow.mapSize.set(shadowSize, shadowSize);
         this.sun.shadow.bias = -0.0004;
         this.sun.shadow.normalBias = 0.02;
-        this.sun.shadow.radius = 3;
+        this.sun.shadow.radius = SunShadowRadius.fast;
         this.scene.add(this.sun, this.sun.target);
 
         const ground = new THREE.Mesh(
@@ -1171,7 +1217,7 @@ export class ViewerEngine {
         if (this.walkthrough !== null) {
             this.walkthrough.update(dt);
             this.updateAim();
-            this.renderer.render(this.scene, this.camera);
+            this.renderMain();
             // Labels are not rendered in the walk; their last positions would float over the view.
             this.labelRenderer.domElement.style.display = 'none';
             return;
@@ -1205,7 +1251,7 @@ export class ViewerEngine {
             this.underlay.visible = this.underlayVisible && topDown;
         }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
-        this.renderer.render(this.scene, this.camera);
+        this.renderMain();
         this.renderOverlay();
         this.labelRenderer.render(this.scene, this.camera);
         // The renderer stacks labels by distance; the measured distance stays above the room labels.
@@ -1258,6 +1304,7 @@ export class ViewerEngine {
         }
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
+        this.presentation?.setSize(width, height, this.renderer.getPixelRatio());
         this.labelRenderer.setSize(width, height);
     }
 

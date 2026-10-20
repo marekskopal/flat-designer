@@ -83,6 +83,8 @@ export class SharedViewerPageComponent {
     protected readonly night = signal(false);
     private readonly lightsChoice = signal<boolean | null>(null);
     protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
+    /** Presentation quality, for screenshots: slower, so off while working. */
+    protected readonly presentation = signal(false);
     /** The measure tool, in the plan view (when the link offers it). */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -119,6 +121,7 @@ export class SharedViewerPageComponent {
         this.labelsVisible.set(settings.labels);
         this.dimensionsVisible.set(settings.dimensions);
         this.night.set(settings.night ?? false);
+        this.presentation.set(settings.presentation ?? false);
         this.lightsChoice.set(null);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
         this.measuring.set(false);
