@@ -12,6 +12,7 @@ use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
+use FlatDesigner\Dto\SceneModelDto;
 use FlatDesigner\Dto\UnderlayDto;
 use FlatDesigner\Dto\VariantSetDto;
 use FlatDesigner\Dto\WallDto;
@@ -20,6 +21,7 @@ use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
+use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
@@ -64,12 +66,17 @@ final readonly class SceneProvider
 
 		$items = $this->itemRepository->findByFloor($floor->id);
 		$definitions = [];
+		$models = [];
 		foreach ($items as $item) {
 			if ($item->definition !== null) {
 				$definitions[$item->definition->id] = $item->definition;
 			}
+			if ($item->model !== null) {
+				$models[$item->model->id] = $item->model;
+			}
 		}
 		ksort($definitions);
+		ksort($models);
 		$underlay = $this->underlayRepository->findByFloor($floor->id);
 
 		return new SceneDto(
@@ -89,6 +96,7 @@ final readonly class SceneProvider
 				array_values($definitions),
 			),
 			underlay: $underlay === null ? null : UnderlayDto::fromEntity($underlay),
+			models: array_map(fn (ModelAsset $model): SceneModelDto => SceneModelDto::fromEntity($model), array_values($models)),
 		);
 	}
 

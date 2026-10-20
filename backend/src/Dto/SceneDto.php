@@ -15,6 +15,7 @@ final readonly class SceneDto
 	 * @param list<GroupDto> $groups
 	 * @param list<VariantSetDto> $variantSets
 	 * @param list<SceneDefinitionDto> $definitions the furniture definitions of the Custom items
+	 * @param list<SceneModelDto> $models the 3D models of the Model items
 	 */
 	public function __construct(
 		public FloorDto $floor,
@@ -29,6 +30,7 @@ final readonly class SceneDto
 		public array $definitions,
 		/** The plan image laid under the top view for tracing. */
 		public ?UnderlayDto $underlay = null,
+		public array $models = [],
 	)
 	{
 	}

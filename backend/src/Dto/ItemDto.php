@@ -19,6 +19,8 @@ final readonly class ItemDto
 		public ItemKindEnum $kind,
 		/** The furniture definition of a `Custom` item (in the scene's `definitions`). */
 		public ?int $definitionId,
+		/** The 3D model of a `Model` item (in the scene's `models`). */
+		public ?int $modelId,
 		public string $name,
 		public int $x,
 		public int $y,
@@ -43,6 +45,7 @@ final readonly class ItemDto
 			groupId: $item->group !== null && $item->group->deletedAt === null ? $item->group->id : null,
 			kind: $item->kind,
 			definitionId: $item->definition?->id,
+			modelId: $item->model?->id,
 			name: $item->name,
 			x: $item->x,
 			y: $item->y,

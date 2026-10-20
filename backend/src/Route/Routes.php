@@ -74,5 +74,9 @@ enum Routes: string
 
 	/** Public: a guest opening a share link. */
 	case Share = '/api/shares/{token:[a-f0-9]+}';
+	case ShareModelContent = '/api/shares/{token:[a-f0-9]+}/models/{modelId:number}/content';
+	case Models = '/api/models';
+	case Model = '/api/models/{modelId:number}';
+	case ModelContent = '/api/models/{modelId:number}/content';
 	case ProjectVersionRestore = '/api/projects/{projectId:number}/versions/{versionId:number}/restore';
 }

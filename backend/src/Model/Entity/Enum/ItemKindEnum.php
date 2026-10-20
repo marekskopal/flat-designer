@@ -29,4 +29,6 @@ enum ItemKindEnum: string
 	case Table = 'Table';
 	/** Drawn from a furniture definition (`Item::$definition`). */
 	case Custom = 'Custom';
+	/** A bought product drawn from a 3D model of the library (`items.model_id`), scaled to fit the item's box. */
+	case Model = 'Model';
 }

@@ -30,7 +30,7 @@ final readonly class FloorTools
 			. 'groups (items forming one piece of furniture, see create_group; a group with variantSetId is a variant) and '
 			. 'variantSets (alternatives of which activeGroupId is shown; hiddenItemIds lists the items of the other variants) and '
 			. 'definitions (the furniture definitions of the Custom items, see get_furniture_definition) and underlay (the '
-			. 'plan image under the top view, see set_floor_underlay). '
+			. 'plan image under the top view, see set_floor_underlay) and models (the 3D models of the Model items, see list_models). '
 			. 'All in mm. Material ids refer to list_materials.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
@@ -49,6 +49,7 @@ final readonly class FloorTools
 			'hiddenItemIds' => $scene->hiddenItemIds(),
 			'definitions' => $scene->definitions,
 			'underlay' => $scene->underlay,
+			'models' => $scene->models,
 		];
 	}
 

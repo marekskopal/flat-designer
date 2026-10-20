@@ -16,7 +16,7 @@ use Mcp\Schema\ToolAnnotations;
 /** Items: cabinets, appliances, sanitary ware, fences, … (see list_item_kinds). */
 final readonly class ItemTools
 {
-	private const array Clearable = ['roomId', 'groupId', 'materialId', 'definitionId'];
+	private const array Clearable = ['roomId', 'groupId', 'materialId', 'definitionId', 'modelId'];
 
 	/** A JSON object (PHP arrays would otherwise be advertised as JSON arrays). */
 	private const array ParamsSchema = [
@@ -96,6 +96,8 @@ final readonly class ItemTools
 	 * @param array<string, mixed>|null $params kind-specific options (see list_item_kinds)
 	 * @param int|null $definitionId for kind "Custom": the furniture definition (list_furniture_definitions); the size and name
 	 *     default to the definition's
+	 * @param int|null $modelId for kind "Model": the 3D model of a bought product (list_models); the size and name default to
+	 *     the model's
 	 */
 	#[McpTool(name: 'add_item', description: 'Add an item to a floor. Unspecified size and elevation come from the kind\'s defaults.')]
 	public function addItem(
@@ -116,6 +118,7 @@ final readonly class ItemTools
 		#[Schema(definition: self::ParamsSchema)]
 		?array $params = null,
 		?int $definitionId = null,
+		?int $modelId = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -136,6 +139,7 @@ final readonly class ItemTools
 				'materialId' => $materialId,
 				'params' => $params,
 				'definitionId' => $definitionId,
+				'modelId' => $modelId,
 			]),
 		);
 	}
@@ -150,12 +154,13 @@ final readonly class ItemTools
 	 * @param array<string, mixed>|null $params replaces all params of the item
 	 * @param int|null $definitionId another furniture definition of a Custom item (send params {} with it, the old values
 	 *     belong to the old one)
+	 * @param int|null $modelId another 3D model of a Model item (list_models)
 	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId",
-	 *     "definitionId" (with a kind other than Custom)
+	 *     "definitionId" (with a kind other than Custom), "modelId" (with a kind other than Model)
 	 */
 	#[McpTool(
 		name: 'update_item',
-		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId, materialId or definitionId.',
+		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId, materialId, definitionId or modelId.',
 	)]
 	public function updateItem(
 		int $projectId,
@@ -176,6 +181,7 @@ final readonly class ItemTools
 		#[Schema(definition: self::ParamsSchema)]
 		?array $params = null,
 		?int $definitionId = null,
+		?int $modelId = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -198,6 +204,7 @@ final readonly class ItemTools
 				'materialId' => $materialId,
 				'params' => $params,
 				'definitionId' => $definitionId,
+				'modelId' => $modelId,
 			], $clear, self::Clearable),
 		);
 	}

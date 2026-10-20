@@ -39,6 +39,8 @@ final readonly class FlatDesignerServer
 		Editing a definition changes every item drawn from it, in all projects. Kitchen cabinets, worktops,
 		wardrobes, chairs and tables are such definitions; the built-in kinds of the same furniture (marked
 		replacedBy in list_item_kinds) are kept only for older items, so add new furniture from the definitions.
+		Bought products (design chairs, lamps, taps, a WC, plants) are 3D models the user uploaded: list_models,
+		then add_item(kind: "Model", modelId) at the model's proportions.
 		get_cut_list lists the boards of a project's custom-made furniture; get_room_schedule lists the rooms'
 		areas, perimeters and clear heights with the indoor and outdoor totals.
 

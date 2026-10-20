@@ -44,6 +44,7 @@ final readonly class ItemHandler implements ElementHandler
 		private ItemKindCatalog $catalog,
 		private FurnitureDefinitionRepository $definitionRepository,
 		private CustomItemValidator $customValidator,
+		private ItemModelLink $modelLink,
 	) {
 	}
 
@@ -55,7 +56,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'groupId', 'kind', 'definitionId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
 	}
 
 	/** @return list<string> */
@@ -78,12 +79,19 @@ final readonly class ItemHandler implements ElementHandler
 			$name = $definition->name;
 			$size = self::definitionSize($definition) + $size;
 		}
+		// A Model item at its model's own size.
+		$model = $kind === ItemKindEnum::Model ? $this->modelLink->find($fields['modelId'] ?? null) : null;
+		if ($model !== null) {
+			$name = $model->name;
+			$size = ['width' => $model->width, 'depth' => $model->depth, 'height' => $model->height] + $size;
+		}
 
 		return [
 			'roomId' => null,
 			'groupId' => null,
 			'kind' => ItemKindEnum::Box->value,
 			'definitionId' => null,
+			'modelId' => null,
 			'name' => $name,
 			'x' => 0,
 			'y' => 0,
@@ -145,6 +153,7 @@ final readonly class ItemHandler implements ElementHandler
 			'groupId' => $groupId,
 			'kind' => $kind->value,
 			'definitionId' => $definitionId,
+			'modelId' => $this->modelLink->validate($floor, $kind, $fields->nullableId('modelId')),
 			'name' => $fields->string('name', 255),
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
 			'y' => $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit),
@@ -223,6 +232,7 @@ final readonly class ItemHandler implements ElementHandler
 		$item->kind = $fields->enum('kind', ItemKindEnum::class);
 		$definitionId = $fields->nullableId('definitionId');
 		$item->definition = $definitionId === null ? null : $this->definitionRepository->findById($definitionId);
+		$item->model = $this->modelLink->find($fields->nullableId('modelId'));
 		$item->name = $fields->string('name', 255);
 		$item->x = $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit);
 		$item->y = $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit);

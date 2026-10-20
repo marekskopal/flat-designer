@@ -35,6 +35,7 @@ use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
+use FlatDesigner\Service\Editor\Element\ItemModelLink;
 use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
 use FlatDesigner\Service\Provider\SceneProvider;
 use JsonException;
@@ -47,12 +48,13 @@ use const JSON_THROW_ON_ERROR;
  *
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
- * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null}]}` (`groups` / `variantSets` /
- * `definitions` / `underlay` missing in snapshots taken before they existed) — each floor entry plus the materials is
+ * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto]}]}` (`groups` /
+ * `variantSets` / `definitions` / `underlay` / `models` missing in snapshots taken before they existed) — each floor entry plus the materials is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
  * definitions as they were. Ids inside are those of the working copy at the time and only link entries together,
  * except definition ids: a restore links an item to the live definition of that id while the project may still use
- * it, otherwise to a project copy of the stored one; and the underlay's file id, kept while the file exists.
+ * it, otherwise to a project copy of the stored one; the underlay's file id, kept while the file exists; and model ids,
+ * kept while the model exists (its file is not in the snapshot).
  */
 final readonly class ProjectSnapshotService
 {
@@ -70,6 +72,7 @@ final readonly class ProjectSnapshotService
 		private VariantSetRepository $variantSetRepository,
 		private SnapshotDefinitionRestorer $definitionRestorer,
 		private SnapshotUnderlayRestorer $underlayRestorer,
+		private ItemModelLink $modelLink,
 	) {
 	}
 
@@ -87,6 +90,7 @@ final readonly class ProjectSnapshotService
 				'variantSets' => $scene->variantSets,
 				'definitions' => $scene->definitions,
 				'underlay' => $scene->underlay,
+				'models' => $scene->models,
 			];
 		}
 
@@ -344,8 +348,9 @@ final readonly class ProjectSnapshotService
 				params: $params === null || $params === [] ? null : json_encode($params, JSON_THROW_ON_ERROR),
 			));
 			$item->group = $groupIds[$data->nullableInt('groupId') ?? 0] ?? null;
-			// Snapshots taken before Custom items existed have no definition ids.
+			// Snapshots taken before Custom items existed have no definition ids, before Model items no model ids.
 			$item->definition = $definitions[$data->nullableInt('definitionId') ?? 0] ?? null;
+			$item->model = $this->modelLink->forProject($floor->project, $data->nullableInt('modelId'));
 			$this->itemRepository->persist($item);
 		}
 	}

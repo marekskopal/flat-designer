@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db env ssl-cert admin import-files install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db env ssl-cert admin import-files import-models install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -59,6 +59,10 @@ admin:
 ## Upload a directory to a project as its files: make import-files DIR=source_files PROJECT=1
 import-files:
 	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console files:import /import --project=$(PROJECT)
+
+## Upload the .glb models of a directory (with optional <name>.json credits): make import-models DIR=… [PROJECT=…]
+import-models:
+	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console models:import /import $(if $(PROJECT),--project=$(PROJECT))
 
 ## Install backend + frontend dependencies on the host (for linting, tests, ng serve)
 install:

@@ -15,6 +15,7 @@ use FlatDesigner\Mcp\Tool\FurnitureTools;
 use FlatDesigner\Mcp\Tool\GroupTools;
 use FlatDesigner\Mcp\Tool\ItemTools;
 use FlatDesigner\Mcp\Tool\MaterialTools;
+use FlatDesigner\Mcp\Tool\ModelTools;
 use FlatDesigner\Mcp\Tool\OpeningTools;
 use FlatDesigner\Mcp\Tool\ProjectTools;
 use FlatDesigner\Mcp\Tool\RoomTools;
@@ -54,6 +55,7 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(RoomTools::class)]
 #[CoversClass(OpeningTools::class)]
 #[CoversClass(MaterialTools::class)]
+#[CoversClass(ModelTools::class)]
 #[CoversClass(MaterialService::class)]
 #[CoversClass(FileTools::class)]
 #[CoversClass(UnderlayTools::class)]
@@ -119,6 +121,7 @@ final class McpServerTest extends IntegrationTestCase
 			'list_furniture_definitions',
 			'list_item_kinds',
 			'list_materials',
+			'list_models',
 			'list_project_files',
 			'list_projects',
 			'list_share_links',
