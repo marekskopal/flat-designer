@@ -1,14 +1,17 @@
 <section class="card card--table">
     <div class="card__header">
         <h2 class="card__title">Rooms</h2>
-        @if (schedule(); as s) {
-            <span class="totals">
-                {{ s.indoor.area | number: '1.2-2' }} m² indoor
-                @if (s.outdoor.rooms > 0) {
-                    · {{ s.outdoor.area | number: '1.2-2' }} m² outdoor
-                }
-            </span>
-        }
+        <div class="header-end">
+            @if (schedule(); as s) {
+                <span class="totals">
+                    {{ s.indoor.area | number: '1.2-2' }} m² indoor
+                    @if (s.outdoor.rooms > 0) {
+                        · {{ s.outdoor.area | number: '1.2-2' }} m² outdoor
+                    }
+                </span>
+            }
+            <a class="btn btn--ghost" [routerLink]="['/projects', projectId(), 'quantities']">Quantities &amp; cost</a>
+        </div>
     </div>
 
     @if (schedule(); as s) {

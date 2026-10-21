@@ -1,3 +1,6 @@
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+
 import {Opening, Room, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
@@ -13,6 +16,7 @@ import {
     vaultHeight,
     wallSpansAlongEdge,
 } from './ceilings';
+import {wallGapsAlongEdge} from './plan-geometry';
 
 const room = (id: number, polygon: Room['polygon'], ceilingHeight: number | null, extra: Partial<Room> = {}): Room => ({
     id,
@@ -132,6 +136,44 @@ describe('skirting', () => {
 
     it('skips edges without a wall', () => {
         expect(skirtingPieces({x: 0, y: 500}, {x: 4000, y: 500}, [wall(1, [0, 0], [4000, 0])])).toEqual([]);
+    });
+});
+
+interface WallSpansCase {
+    name: string;
+    edge: [[number, number], [number, number]];
+    walls: (Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'thickness'> & {
+        openings: Pick<Opening, 'offset' | 'width' | 'sillHeight' | 'height'>[];
+    })[];
+    spans: [number, number][];
+    gaps: {from: number; to: number; bottom: number; top: number}[];
+    skirting: [number, number][];
+}
+
+/** Shared with the backend twin (`WallFaceSpansTest`), which the quantities use. */
+const wallSpansFixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests/fixtures/wall-spans.json'), 'utf8')) as {
+    cases: WallSpansCase[];
+};
+
+describe('wall faces along an edge (shared fixture)', () => {
+    const near = (actual: number[][], expected: number[][]): void => {
+        expect(actual).toHaveLength(expected.length);
+        expected.forEach((values, i) => values.forEach((value, j) => expect(actual[i][j]).toBeCloseTo(value, 2)));
+    };
+
+    it.each(wallSpansFixture.cases)('$name', (testCase) => {
+        const [a, b] = testCase.edge.map(([x, y]) => ({x, y}));
+        const walls = testCase.walls.map((w, i): Wall => {
+            const openings = w.openings.map((o) => ({...door(o.offset, o.width), sillHeight: o.sillHeight, height: o.height}));
+            return {...wall(i + 1, [w.startX, w.startY], [w.endX, w.endY], openings), thickness: w.thickness};
+        });
+
+        near(wallSpansAlongEdge(a, b, walls), testCase.spans);
+        near(skirtingPieces(a, b, walls), testCase.skirting);
+        near(
+            wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top]),
+            testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top]),
+        );
     });
 });
 

@@ -294,6 +294,20 @@ format is the text in `FurnitureTools::Format`.
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Terraces and gardens
   (`RoomTypeEnum::isOutdoor()`) are totalled separately. Only PHP computes it, so there is no TS twin.
+- Quantities and cost: `Service/Quantities/QuantitiesService` (REST `…/quantities`, MCP `get_quantities`, page
+  `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
+  the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without
+  openings, along the wall faces on the room's edges; the ceiling (a vault's arc length and its beams) and skirting.
+  Façades (wall faces outside every room) are not counted, and open-air rooms get no paint. Materials with a tile size
+  and a pattern laid in pieces are counted in whole pieces plus `projects.waste_percent` (`Costing`).
+- Prices are per project (`ProjectMaterialPrice`, `MaterialPriceService`, REST `…/material-prices` replaces the list, MCP
+  `set_material_prices` merges): per m² and per running metre (skirting, edge banding), in `projects.currency`. A price
+  without a material prices a surface's default look (`QuantitySurfaceEnum::defaultMaterialName()`, e.g. a ceiling
+  without a material is white plaster). They are not floor content: no revision, no undo, not in snapshots; saving
+  sends `pricesChanged`.
+- The wall faces along a room edge exist twice: `WallFaceSpans` (PHP; `faces()` also says which wall) and
+  `wallSpansAlongEdge()` / `wallGapsAlongEdge()` / `skirtingPieces()` (TS), kept identical by
+  `backend/tests/fixtures/wall-spans.json`. **Always change both twins and add a fixture case in the same change.**
 - Dimension lines (`viewer/engine/dimensions.ts`, the Display toggle and `ShareSettings.dimensions`): every room edge
   gets a line offset into the room. Where `wallGapsAlongEdge()` finds openings, the edge also gets a chain of piers and
   openings. They show only while `isTopDown()`, and labels that are longer than their line on screen are hidden.

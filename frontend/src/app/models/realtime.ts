@@ -1,5 +1,5 @@
 /** Live update of a project, pushed by the server after a committed change (see ProjectUpdatePublisher). */
-export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange | DetailsChange;
+export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange | DetailsChange | PricesChange;
 
 /** A committed change of the project (an edit, undo, restore, a new floor…). */
 export interface ProjectChange {
@@ -40,5 +40,13 @@ export interface MaterialChange {
     projectId: number;
     materialId: number;
     /** Browser tab that changed it (null for agents). */
+    originClientId: string | null;
+}
+
+/** The project's price list (quantities and cost) was saved: not floor content, so the revision is the same. */
+export interface PricesChange {
+    type: 'pricesChanged';
+    projectId: number;
+    /** Browser tab that saved it (null for agents). */
     originClientId: string | null;
 }

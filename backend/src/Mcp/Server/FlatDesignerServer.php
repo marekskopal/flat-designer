@@ -42,7 +42,9 @@ final readonly class FlatDesignerServer
 		Bought products (design chairs, lamps, taps, a WC, plants) are 3D models the user uploaded: list_models,
 		then add_item(kind: "Model", modelId) at the model's proportions.
 		get_cut_list lists the boards of a project's custom-made furniture; get_room_schedule lists the rooms'
-		areas, perimeters and clear heights with the indoor and outdoor totals.
+		areas, perimeters and clear heights with the indoor and outdoor totals. get_quantities lists what to buy
+		(flooring, tiles, paint, ceilings, skirting, furniture boards) per room and material with a cost estimate
+		from the project's prices, which set_material_prices sets.
 
 		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
 		outer walls, open runs for partitions ending on other walls), then add each room with

@@ -21,6 +21,14 @@ class Project extends AEntity
 	#[Column(type: Type::Int, default: 0)]
 	public int $revision = 0;
 
+	/** ISO 4217 code of the prices in the quantities and cost estimate (`ProjectMaterialPrice`). */
+	#[Column(type: Type::String, size: 3, default: 'EUR')]
+	public string $currency = 'EUR';
+
+	/** Allowance for cuts and breakage added to tiles and planks counted in pieces, %. */
+	#[Column(type: Type::Int, default: 10)]
+	public int $wastePercent = 10;
+
 	public function __construct(
 		#[ManyToOne(entityClass: User::class, nullable: true)]
 		public ?User $owner,
