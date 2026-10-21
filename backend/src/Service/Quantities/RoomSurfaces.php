@@ -109,7 +109,7 @@ final class RoomSurfaces
 	/**
 	 * Skirting along the faces, except their doorways: the same as `WallFaceSpans::skirting()`, from the faces at hand.
 	 *
-	 * @param list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int}>}> $faces
+	 * @param list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}> $faces
 	 */
 	private function addSkirting(RoomDto $room, array $faces): void
 	{
@@ -128,7 +128,7 @@ final class RoomSurfaces
 		}
 	}
 
-	/** @param array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int}>} $face */
+	/** @param array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face */
 	private function addWallFace(RoomDto $room, array $face, ?float $wallTop): void
 	{
 		$top = $wallTop === null ? (float) $face['wall']->height : min((float) $face['wall']->height, $wallTop);
@@ -155,7 +155,7 @@ final class RoomSurfaces
 	/**
 	 * Area of the face between two heights, without its openings.
 	 *
-	 * @param array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int}>} $face
+	 * @param array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face
 	 */
 	private static function faceArea(array $face, float $bottom, float $top): float
 	{

@@ -67,6 +67,13 @@ describe('roomDimensions', () => {
         expect(lines.every((l) => l.a.x >= 0 && l.a.x <= 4000 && l.a.y >= 0 && l.a.y <= 3000)).toBe(true);
     });
 
+    it('gives no chain for a niche, which stays in the plan', () => {
+        const niche: Opening = {...door, id: 10, type: 'Niche', side: 'Left', depth: 100, sillHeight: 900, height: 600};
+        const lines = roomDimensions([room], [wall(1, [-150, -150], [4150, -150], [niche]), ...walls.slice(1)]);
+        expect(lines.filter((l) => l.a.y === ChainOffset)).toEqual([]);
+        expect(lines).toHaveLength(4);
+    });
+
     it('leaves out short edges', () => {
         const notched = {polygon: [[0, 0], [4000, 0], [4000, 3000], [100, 3000], [100, 2900], [0, 2900]] as PlanPoint[]};
 

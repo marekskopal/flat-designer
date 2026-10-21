@@ -7,7 +7,7 @@ namespace FlatDesigner\Model\Entity\Enum;
 /**
  * `Door`: one swinging leaf. `DoubleDoor`: two leaves hinged on the jambs. `SlidingDoor`: a leaf hung on a wall
  * face that slides along it. `PocketDoor`: a leaf sliding into a pocket inside the wall. `Passage`: a doorway
- * without a leaf.
+ * without a leaf. `Niche`: a recess `depth` deep into the `side` face, not through the wall.
  */
 enum OpeningTypeEnum: string
 {
@@ -17,11 +17,12 @@ enum OpeningTypeEnum: string
 	case PocketDoor = 'PocketDoor';
 	case Passage = 'Passage';
 	case Window = 'Window';
+	case Niche = 'Niche';
 
 	/** Every doorway, a passage included. */
 	public function isDoor(): bool
 	{
-		return $this !== self::Window;
+		return $this !== self::Window && $this !== self::Niche;
 	}
 
 	/** Doors with a leaf (or two). */
@@ -44,6 +45,7 @@ enum OpeningTypeEnum: string
 			self::PocketDoor => 'pocket door',
 			self::Passage => 'passage',
 			self::Window => 'window',
+			self::Niche => 'niche',
 		};
 	}
 }

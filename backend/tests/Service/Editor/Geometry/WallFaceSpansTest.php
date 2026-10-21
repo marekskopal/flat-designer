@@ -8,6 +8,7 @@ use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Service\Editor\Geometry\Spans;
@@ -26,11 +27,11 @@ final class WallFaceSpansTest extends TestCase
 
 	private const float Delta = 0.01;
 
-	/** @return iterable<string, array{array{float, float}, array{float, float}, list<WallDto>, list<array{float, float}>, list<array{from: float, to: float, bottom: int, top: int}>, list<array{float, float}>}> */
+	/** @return iterable<string, array{array{float, float}, array{float, float}, list<WallDto>, list<array{float, float}>, list<array{from: float, to: float, bottom: int, top: int, niche: bool}>, list<array{float, float}>}> */
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int}>, skirting: list<array{int|float, int|float}>}> $cases */
+		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int, niche?: bool}>, skirting: list<array{int|float, int|float}>}> $cases */
 		$cases = $fixture['cases'];
 		foreach ($cases as $case) {
 			$walls = [];
@@ -45,7 +46,13 @@ final class WallFaceSpansTest extends TestCase
 				$walls,
 				array_map($pair, $case['spans']),
 				array_map(
-					static fn (array $g): array => ['from' => (float) $g['from'], 'to' => (float) $g['to'], 'bottom' => $g['bottom'], 'top' => $g['top']],
+					static fn (array $g): array => [
+						'from' => (float) $g['from'],
+						'to' => (float) $g['to'],
+						'bottom' => $g['bottom'],
+						'top' => $g['top'],
+						'niche' => $g['niche'] ?? false,
+					],
 					$case['gaps'],
 				),
 				array_map($pair, $case['skirting']),
@@ -58,7 +65,7 @@ final class WallFaceSpansTest extends TestCase
 	 * @param array{float, float} $b
 	 * @param list<WallDto> $walls
 	 * @param list<array{float, float}> $spans
-	 * @param list<array{from: float, to: float, bottom: int, top: int}> $gaps
+	 * @param list<array{from: float, to: float, bottom: int, top: int, niche: bool}> $gaps
 	 * @param list<array{float, float}> $skirting
 	 */
 	#[DataProvider('cases')]
@@ -72,7 +79,10 @@ final class WallFaceSpansTest extends TestCase
 		foreach ($gaps as $i => $gap) {
 			self::assertEqualsWithDelta($gap['from'], $actualGaps[$i]['from'], self::Delta);
 			self::assertEqualsWithDelta($gap['to'], $actualGaps[$i]['to'], self::Delta);
-			self::assertSame([$gap['bottom'], $gap['top']], [$actualGaps[$i]['bottom'], $actualGaps[$i]['top']]);
+			self::assertSame(
+				[$gap['bottom'], $gap['top'], $gap['niche']],
+				[$actualGaps[$i]['bottom'], $actualGaps[$i]['top'], $actualGaps[$i]['niche']],
+			);
 		}
 
 		// The faces one by one cover the merged spans exactly once.
@@ -100,7 +110,7 @@ final class WallFaceSpansTest extends TestCase
 			static fn (array $face): array => [$face['wall']->id, $face['from'], $face['to']],
 			$faces,
 		));
-		self::assertSame([['from' => 500.0, 'to' => 1300.0, 'bottom' => 0, 'top' => 2000]], $faces[0]['gaps']);
+		self::assertSame([['from' => 500.0, 'to' => 1300.0, 'bottom' => 0, 'top' => 2000, 'niche' => false]], $faces[0]['gaps']);
 		self::assertSame([], $faces[1]['gaps']);
 	}
 
@@ -117,7 +127,7 @@ final class WallFaceSpansTest extends TestCase
 		}
 	}
 
-	/** @param array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int}>} $wall */
+	/** @param array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>} $wall */
 	private static function wall(int $id, array $wall): WallDto
 	{
 		$openings = [];
@@ -125,14 +135,16 @@ final class WallFaceSpansTest extends TestCase
 			$openings[] = new OpeningDto(
 				id: $id * 100 + $j,
 				name: 'Opening',
-				type: $o['sillHeight'] > 0 ? OpeningTypeEnum::Window : OpeningTypeEnum::Door,
+				type: isset($o['type'])
+					? OpeningTypeEnum::from($o['type'])
+					: ($o['sillHeight'] > 0 ? OpeningTypeEnum::Window : OpeningTypeEnum::Door),
 				offset: $o['offset'],
 				width: $o['width'],
 				height: $o['height'],
 				sillHeight: $o['sillHeight'],
 				leafWidth: null,
 				hinge: null,
-				side: null,
+				side: isset($o['side']) ? OpeningSideEnum::from($o['side']) : null,
 				entrance: false,
 				walkable: false,
 				frameStyle: DoorFrameStyleEnum::Lining,
@@ -146,6 +158,7 @@ final class WallFaceSpansTest extends TestCase
 				shutters: null,
 				shutterMaterialId: null,
 				shuttersClosed: false,
+				depth: isset($o['type']) && $o['type'] === 'Niche' ? 100 : null,
 			);
 		}
 

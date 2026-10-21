@@ -6,7 +6,7 @@ import {FurnitureDefinitionBody} from './furniture';
 export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
-export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window';
+export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
 export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
@@ -33,6 +33,10 @@ export type ItemKind =
     | 'Wardrobe'
     | 'Chair'
     | 'Table'
+    /** A structural pillar, square or round (`params.shape`). */
+    | 'Column'
+    /** A structural downstand beam along its width; z is its soffit. */
+    | 'Beam'
     /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
     | 'Custom'
     /** A bought product drawn from a 3D model (`modelId`, in the scene's `models`), scaled to fit the item's box. */
@@ -151,6 +155,8 @@ export interface Opening {
     shutters?: ShutterStyle | null;
     shutterMaterialId?: number | null;
     shuttersClosed?: boolean;
+    /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
+    depth?: number | null;
 }
 
 export interface Wall {

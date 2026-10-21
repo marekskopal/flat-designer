@@ -34,7 +34,7 @@ interface ElementHandler
 	 * @param array<string, mixed> $fields the client's fields (e.g. an item's kind picks its default size)
 	 * @return array<string, mixed>
 	 */
-	public function defaults(array $fields): array;
+	public function defaults(Floor $floor, array $fields): array;
 
 	/** The element on the floor, deleted or not. */
 	public function find(Floor $floor, int $id): ?AEntity;

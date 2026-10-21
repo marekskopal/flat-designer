@@ -143,10 +143,10 @@ interface WallSpansCase {
     name: string;
     edge: [[number, number], [number, number]];
     walls: (Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'thickness'> & {
-        openings: Pick<Opening, 'offset' | 'width' | 'sillHeight' | 'height'>[];
+        openings: (Pick<Opening, 'offset' | 'width' | 'sillHeight' | 'height'> & Partial<Pick<Opening, 'type' | 'side'>>)[];
     })[];
     spans: [number, number][];
-    gaps: {from: number; to: number; bottom: number; top: number}[];
+    gaps: {from: number; to: number; bottom: number; top: number; niche?: boolean}[];
     skirting: [number, number][];
 }
 
@@ -164,15 +164,17 @@ describe('wall faces along an edge (shared fixture)', () => {
     it.each(wallSpansFixture.cases)('$name', (testCase) => {
         const [a, b] = testCase.edge.map(([x, y]) => ({x, y}));
         const walls = testCase.walls.map((w, i): Wall => {
-            const openings = w.openings.map((o) => ({...door(o.offset, o.width), sillHeight: o.sillHeight, height: o.height}));
+            const openings = w.openings.map(
+                (o): Opening => ({...door(o.offset, o.width), ...o, depth: o.type === 'Niche' ? 100 : null}),
+            );
             return {...wall(i + 1, [w.startX, w.startY], [w.endX, w.endY], openings), thickness: w.thickness};
         });
 
         near(wallSpansAlongEdge(a, b, walls), testCase.spans);
         near(skirtingPieces(a, b, walls), testCase.skirting);
         near(
-            wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top]),
-            testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top]),
+            wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche ? 1 : 0]),
+            testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche === true ? 1 : 0]),
         );
     });
 });

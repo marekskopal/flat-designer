@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Editor\Geometry;
 
 use FlatDesigner\Dto\WallDto;
+use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
+use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 
 /**
  * Where a room edge runs along wall faces, and the openings on it. Twin of `wallSpansAlongEdge()`, `wallGapsAlongEdge()`
  * and `skirtingPieces()` in the viewer (`ceilings.ts`, `plan-geometry.ts`), kept identical by
  * `tests/fixtures/wall-spans.json`. A wall lies on the edge a → b when it runs parallel to it and its centre line is half
- * a thickness (± tolerance) away. Lengths are mm along the edge from a.
+ * a thickness (± tolerance) away. Lengths are mm along the edge from a. A niche is an opening of the face it is cut
+ * into only, flagged `niche` (it stays in the plan).
  */
 final class WallFaceSpans
 {
@@ -35,7 +38,7 @@ final class WallFaceSpans
 	 * @param array{float, float} $a
 	 * @param array{float, float} $b
 	 * @param list<WallDto> $walls
-	 * @return list<array{from: float, to: float, bottom: int, top: int}>
+	 * @return list<array{from: float, to: float, bottom: int, top: int, niche: bool}>
 	 */
 	public static function gaps(array $a, array $b, array $walls): array
 	{
@@ -72,7 +75,7 @@ final class WallFaceSpans
 	 * @param array{float, float} $a
 	 * @param array{float, float} $b
 	 * @param list<WallDto> $walls
-	 * @return list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int}>}>
+	 * @return list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}>
 	 */
 	public static function faces(array $a, array $b, array $walls): array
 	{
@@ -88,7 +91,7 @@ final class WallFaceSpans
 					$gapFrom = max($gap['from'], $from);
 					$gapTo = min($gap['to'], $to);
 					if ($gapTo > $gapFrom) {
-						$gaps[] = ['from' => $gapFrom, 'to' => $gapTo, 'bottom' => $gap['bottom'], 'top' => $gap['top']];
+						$gaps[] = ['from' => $gapFrom, 'to' => $gapTo, 'bottom' => $gap['bottom'], 'top' => $gap['top'], 'niche' => $gap['niche']];
 					}
 				}
 				$faces[] = ['wall' => $face['wall'], 'from' => $from, 'to' => $to, 'gaps' => $gaps];
@@ -103,7 +106,7 @@ final class WallFaceSpans
 	 * @param array{float, float} $a
 	 * @param array{float, float} $b
 	 * @param list<WallDto> $walls
-	 * @return list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int}>}>
+	 * @return list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}>
 	 */
 	private static function wallSpans(array $a, array $b, array $walls): array
 	{
@@ -122,9 +125,9 @@ final class WallFaceSpans
 			}
 			$wallDir = [($wall->endX - $wall->startX) / $wallLength, ($wall->endY - $wall->startY) / $wallLength];
 			$parallel = abs($dir[0] * $wallDir[1] - $dir[1] * $wallDir[0]) < 1e-3;
-			// Distance of a from the centre line, along the wall's normal.
-			$distance = abs(($a[0] - $wall->startX) * -$wallDir[1] + ($a[1] - $wall->startY) * $wallDir[0]);
-			if (!$parallel || abs($distance - $wall->thickness / 2) > self::Tolerance) {
+			// Distance of a from the centre line, along the wall's normal (positive on its left).
+			$normal = ($a[0] - $wall->startX) * -$wallDir[1] + ($a[1] - $wall->startY) * $wallDir[0];
+			if (!$parallel || abs(abs($normal) - $wall->thickness / 2) > self::Tolerance) {
 				continue;
 			}
 
@@ -133,7 +136,8 @@ final class WallFaceSpans
 			$from = max(min($t0, $t1) - $wall->thickness / 2, 0.0);
 			$to = min(max($t0, $t1) + $wall->thickness / 2, $length);
 
-			$gaps = self::openingGaps($wall, $wallDir, $along, $length);
+			$face = $normal > 0 ? OpeningSideEnum::Left : OpeningSideEnum::Right;
+			$gaps = self::openingGaps($wall, $face, $wallDir, $along, $length);
 
 			// A wall whose face misses the edge's extent still brings its openings, as in the viewer.
 			$spans[] = ['wall' => $wall, 'from' => $from, 'to' => $to, 'gaps' => $gaps];
@@ -143,24 +147,35 @@ final class WallFaceSpans
 	}
 
 	/**
-	 * The wall's openings projected onto the edge.
+	 * The wall's openings on its `face` projected onto the edge: all but the niches cut into the other face.
 	 *
 	 * @param array{float, float} $wallDir
 	 * @param callable(float, float): float $along position of a plan point along the edge
-	 * @return list<array{from: float, to: float, bottom: int, top: int}>
+	 * @return list<array{from: float, to: float, bottom: int, top: int, niche: bool}>
 	 */
-	private static function openingGaps(WallDto $wall, array $wallDir, callable $along, float $length): array
+	private static function openingGaps(WallDto $wall, OpeningSideEnum $face, array $wallDir, callable $along, float $length): array
 	{
 		$gaps = [];
 		foreach ($wall->openings as $opening) {
+			if ($opening->type === OpeningTypeEnum::Niche && ($opening->side ?? OpeningSideEnum::Left) !== $face) {
+				continue;
+			}
 			$g0 = $along($wall->startX + $wallDir[0] * $opening->offset, $wall->startY + $wallDir[1] * $opening->offset);
 			$end = $opening->offset + $opening->width;
 			$g1 = $along($wall->startX + $wallDir[0] * $end, $wall->startY + $wallDir[1] * $end);
 			$gapFrom = max(min($g0, $g1), 0.0);
 			$gapTo = min(max($g0, $g1), $length);
-			if ($gapTo > $gapFrom) {
-				$gaps[] = ['from' => $gapFrom, 'to' => $gapTo, 'bottom' => $opening->sillHeight, 'top' => $opening->sillHeight + $opening->height];
+			if ($gapTo <= $gapFrom) {
+				continue;
 			}
+
+			$gaps[] = [
+				'from' => $gapFrom,
+				'to' => $gapTo,
+				'bottom' => $opening->sillHeight,
+				'top' => $opening->sillHeight + $opening->height,
+				'niche' => $opening->type === OpeningTypeEnum::Niche,
+			];
 		}
 
 		return $gaps;

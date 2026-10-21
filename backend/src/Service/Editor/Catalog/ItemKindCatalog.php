@@ -53,14 +53,16 @@ final readonly class ItemKindCatalog
 		'Chair' => ['description' => 'Solid wood chair with tapered legs and a two-rail back; front facing the rotation direction, the item material is the wood.', 'width' => 400, 'depth' => 395, 'height' => 885, 'z' => 0, 'params' => self::ChairParams],
 		'Custom' => ['description' => 'Custom piece of furniture drawn from a furniture definition (definitionId, see list_furniture_definitions; create one with create_furniture_definition); the size defaults to the definition\'s.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => self::CustomParams],
 		'Model' => ['description' => 'A bought product (a chair, a lamp, a tap, a plant) drawn from a 3D model (modelId, see list_models), scaled evenly to fit the item\'s box, standing on its bottom and facing its front (rotation as for any item); the size defaults to the model\'s own.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => 'none'],
+		'Column' => ['description' => 'Structural column (pillar) standing on the floor, cut by the section plane like walls; with a roomId it reaches that room\'s ceiling (the springing of a vault); the item material is its finish (default white paint). A pilaster is a column against a wall face.', 'width' => 300, 'depth' => 300, 'height' => 2600, 'z' => 0, 'params' => 'shape: "rect" (default) | "round" (an upright cylinder filling width × depth; equal for a circle).'],
+		'Beam' => ['description' => 'Structural downstand beam along its width, cut by the section plane like walls; z is its soffit, so it hangs from a ceiling at z = ceiling height - height (with a roomId, a new beam starts there). It may cross room boundaries. The item material is its finish (default white paint).', 'width' => 3000, 'depth' => 100, 'height' => 130, 'z' => 2470, 'params' => 'none'],
 		'Table' => ['description' => 'Solid wood table: a top of boards along the width, tapered legs and an apron; the item material is the wood.', 'width' => 1320, 'depth' => 700, 'height' => 780, 'z' => 0, 'params' => 'none'],
 	];
 
 	/**
 	 * Every kind; `replacedBy` names the global furniture definition to use for new items instead of a built-in kind
-	 * (kept for older items and saved versions), null for the others.
+	 * (kept for older items and saved versions), null for the others; `structural` marks the building elements.
 	 *
-	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}>
+	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null, structural: bool}>
 	 */
 	public function all(): array
 	{
@@ -68,7 +70,7 @@ final readonly class ItemKindCatalog
 		foreach (ItemKindEnum::cases() as $case) {
 			$kinds[] = ['kind' => $case->value] + $this->get(
 				$case,
-			) + ['replacedBy' => BuiltInFurnitureConverter::Replaced[$case->value] ?? null];
+			) + ['replacedBy' => BuiltInFurnitureConverter::Replaced[$case->value] ?? null, 'structural' => $case->isStructural()];
 		}
 
 		return $kinds;

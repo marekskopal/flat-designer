@@ -39,14 +39,21 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
   Start or End of the opening; `side` is Left or Right of the wall direction.
-- Opening types (`OpeningTypeEnum`): `Door`, `DoubleDoor`, `SlidingDoor`, `PocketDoor`, `Passage` (no leaf) and
-  `Window`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
+- Opening types (`OpeningTypeEnum`): `Door`, `DoubleDoor`, `SlidingDoor`, `PocketDoor`, `Passage` (no leaf),
+  `Window` and `Niche`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
   `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
   `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
   and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
   the type's default). Doors with a leaf have a `leafStyle` (Flush, Panelled, Glazed) with `leafPanels` panels or
   panes (`leafPanels()` in `viewer/engine/opening-looks.ts`). These rules, and the window ones below, are in
   `OpeningLook`.
+- A niche is a recess `depth` deep (default half the wall) into its `side` face, leaving at least 30 mm of wall
+  behind it (`OpeningPlacement::nicheDepth()`, also checked when the wall changes). It is neither a door nor a gap
+  for the walkthrough. `wallPieces()` gives the piece behind it a `recess`; `buildWall()` draws it thinner and tags it
+  with the niche's `openingId`. The wall face twins (`WallFaceSpans` / `wallGapsAlongEdge()`) count a niche as an
+  opening of its own face only, flagged `niche` (dimension chains skip it). Niches from both faces may share a
+  stretch of wall while 30 mm stays between them (`OpeningPlacement::nichesFit()`, also checked by `WallHandler`). A wall offset is a full-height niche, a `Column` against the face, or collinear walls
+  of different thickness (room detection steps the outline; fixture cases `stepped` / `flushOuterFace`).
 - Windows have `mullions` (vertical bars; 1, two panes, is the default) and `transoms`, plus an optional `sillBoard`
   (the inner board's reach past the wall face on `side`, the interior; exterior walls also get an outer sill). A
   walkable window has one sash on `hinge` (mullions 0) or two. Corner windows have no stored field:
@@ -164,8 +171,15 @@ format is the text in `FurnitureTools::Format`.
 
 ## Item builders
 
-- `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and `furniture.ts`. Each one builds
-  the item body in its local frame.
+- `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts`, `furniture.ts` and `structure.ts`.
+  Each one builds the item body in its local frame.
+- Structural items (`ItemKindEnum::isStructural()`, `structural` in `list_item_kinds`): a `Column` (`params.shape`
+  rect or round) and a `Beam` along its width, z being its soffit. They are listed under Building in the Add menu.
+  `StructureSize` makes a new one in a room reach its ceiling or hang from it (a vault counts at its springing)
+  unless the client gives the height or z. `ElementHandler::defaults()` gets the floor for such lookups. Like wall pieces, their meshes have an
+  inside-out twin in `MaterialLibrary.sectionFill()`, so the section plane shows a solid cut. Columns block the
+  walkthrough (`columnColliders()`); a beam's body is tagged `ceilingPart` and hides with the ceilings. Quantities
+  do not count them yet.
 - Custom-made furniture is a furniture definition and a bought product is a model (see below); neither is a new kind.
   A new item kind (e.g. a building element) needs the PHP enum, a migration extending the `items.kind` column enum,
   the TS `ItemKind` union and a builder.

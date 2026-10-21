@@ -39,6 +39,7 @@ final readonly class OpeningDto
 		public ?ShutterStyleEnum $shutters,
 		public ?int $shutterMaterialId,
 		public bool $shuttersClosed,
+		public ?int $depth,
 	) {
 	}
 
@@ -68,6 +69,7 @@ final readonly class OpeningDto
 			shutters: $opening->shutters,
 			shutterMaterialId: $opening->shutterMaterial?->id,
 			shuttersClosed: $opening->shuttersClosed,
+			depth: $opening->depth,
 		);
 	}
 }

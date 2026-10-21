@@ -8,11 +8,13 @@ use FlatDesigner\Controller\ElementController;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\ChairParamsValidator;
+use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\OpeningLook;
 use FlatDesigner\Service\Editor\Element\RoomCeiling;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
+use FlatDesigner\Service\Editor\Element\StructureSize;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
@@ -29,10 +31,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(OpeningLook::class)]
 #[CoversClass(RoomHandler::class)]
 #[CoversClass(RoomCeiling::class)]
+#[CoversClass(StructureSize::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
 #[CoversClass(WardrobeParamsValidator::class)]
 #[CoversClass(ChairParamsValidator::class)]
+#[CoversClass(ColumnParamsValidator::class)]
 final class ElementControllerTest extends EditorTestCase
 {
 	public function testCreateItemFillsDefaultsLogsAndBumpsRevision(): void
@@ -180,6 +184,37 @@ final class ElementControllerTest extends EditorTestCase
 
 		foreach ([['seatHeight' => 885], ['seatHeight' => '460'], ['backWidth' => 401], ['backWidth' => 0]] as $invalid) {
 			$response = $this->edit('PATCH', 'items', self::id($chair), ['params' => $invalid]);
+			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
+		}
+	}
+
+	public function testColumnsAndBeamsFitTheCeilingOfTheirRoom(): void
+	{
+		$polygon = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+		$flat = $this->create('rooms', ['name' => 'Hall', 'polygon' => $polygon, 'ceilingHeight' => 2600]);
+		$vaulted = $this->create('rooms', ['name' => 'Living', 'polygon' => $polygon, 'ceilingHeight' => 2920, 'vaultSpacing' => 550]);
+
+		$column = $this->create('items', ['kind' => 'Column', 'roomId' => self::id($flat)]);
+		self::assertSame(
+			['Column', 0, 300, 300, 2600],
+			[$column['name'], $column['z'], $column['width'], $column['depth'], $column['height']],
+		);
+		$beam = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($vaulted)]);
+		self::assertSame([2920 - 130 - 130, 3000, 100, 130], [$beam['z'], $beam['width'], $beam['depth'], $beam['height']]);
+		$given = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($flat), 'height' => 200, 'z' => 2000]);
+		self::assertSame([2000, 200], [$given['z'], $given['height']]);
+		$tall = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($flat), 'height' => 300]);
+		self::assertSame([2300, 300], [$tall['z'], $tall['height']]);
+		$plinth = $this->create('items', ['kind' => 'Column', 'roomId' => self::id($flat), 'z' => 300]);
+		self::assertSame([300, 2600], [$plinth['z'], $plinth['height']]);
+		$outside = $this->create('items', ['kind' => 'Column']);
+		self::assertSame(2600, $outside['height']);
+
+		$round = $this->jsonBody($this->edit('PATCH', 'items', self::id($column), ['params' => ['shape' => 'round']]));
+		self::assertIsArray($round['element']);
+		self::assertSame(['shape' => 'round'], $round['element']['params']);
+		foreach ([['shape' => 'oval'], ['shape' => 1]] as $invalid) {
+			$response = $this->edit('PATCH', 'items', self::id($column), ['params' => $invalid]);
 			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
 		}
 	}
@@ -411,6 +446,63 @@ final class ElementControllerTest extends EditorTestCase
 		);
 		self::assertSame(200, $this->edit('PATCH', 'openings', self::id($sliding), ['type' => 'PocketDoor'])->getStatusCode());
 		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 90])->getStatusCode());
+	}
+
+	public function testNichesAreRecessesIntoOneFace(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0, 'thickness' => 200]);
+		$wallId = self::id($wall);
+
+		$niche = $this->create('openings', ['wallId' => $wallId, 'type' => 'Niche', 'offset' => 500, 'hinge' => 'End', 'handle' => 'Knob']);
+		self::assertSame(['Niche', 600, 600, 900, 100, 'Left', null, null, 'None'], [
+			$niche['name'],
+			$niche['width'],
+			$niche['height'],
+			$niche['sillHeight'],
+			$niche['depth'],
+			$niche['side'],
+			$niche['hinge'],
+			$niche['handle'],
+			$niche['frameStyle'],
+		]);
+
+		// At most the wall less 30 mm deep, never the entrance; the wall cannot get thinner than the niche needs.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($niche), ['depth' => 171])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($niche), ['entrance' => true])->getStatusCode());
+		$deep = $this->jsonBody($this->edit('PATCH', 'openings', self::id($niche), ['depth' => 170, 'side' => 'Right']));
+		self::assertIsArray($deep['element']);
+		self::assertSame([170, 'Right'], [$deep['element']['depth'], $deep['element']['side']]);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 190])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 250])->getStatusCode());
+
+		// Niches from both faces may share a stretch of wall while 30 mm stays between them.
+		$this->create(
+			'openings',
+			['wallId' => $wallId, 'type' => 'Niche', 'offset' => 2000, 'width' => 600, 'depth' => 100, 'side' => 'Left'],
+		);
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'openings',
+				body: ['wallId' => $wallId, 'type' => 'Niche', 'offset' => 2300, 'depth' => 130, 'side' => 'Right'],
+			)->getStatusCode(),
+		);
+		$back = $this->create('openings', ['wallId' => $wallId, 'type' => 'Niche', 'offset' => 2300, 'depth' => 120, 'side' => 'Right']);
+		self::assertSame(120, $back['depth']);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 240])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 260])->getStatusCode());
+
+		// Another type has no depth.
+		$window = $this->jsonBody($this->edit('PATCH', 'openings', self::id($niche), ['type' => 'Window']));
+		self::assertIsArray($window['element']);
+		self::assertNull($window['element']['depth']);
+
+		$thin = $this->create('walls', ['startX' => 0, 'startY' => 1000, 'endX' => 3000, 'endY' => 1000, 'thickness' => 30]);
+		self::assertSame(
+			422,
+			$this->edit('POST', 'openings', body: ['wallId' => self::id($thin), 'type' => 'Niche', 'offset' => 100])->getStatusCode(),
+		);
 	}
 
 	public function testMovingWallStartKeepsOpeningsInPlace(): void

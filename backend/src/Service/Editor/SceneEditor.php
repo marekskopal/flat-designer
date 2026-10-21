@@ -52,7 +52,11 @@ final readonly class SceneEditor
 
 		return $this->transaction(function () use ($user, $floor, $handler, $fields, $baseRevision, $source): EditResultDto {
 			$revision = $this->revisionService->bump($floor->project, $baseRevision);
-			$state = $handler->normalize($floor, self::editable($handler->fields(), $fields) + $handler->defaults($fields), $source);
+			$state = $handler->normalize(
+				$floor,
+				self::editable($handler->fields(), $fields) + $handler->defaults($floor, $fields),
+				$source,
+			);
 			$element = $handler->create($floor, $state);
 			$after = $handler->state($element);
 			$change = $this->changeRecorder->record(

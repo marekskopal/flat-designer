@@ -33,7 +33,12 @@ export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
     PocketDoor: 'Pocket door',
     Passage: 'Passage',
     Window: 'Window',
+    Niche: 'Niche',
 };
+
+/** Doors with a leaf (or two): not windows, passages or niches. */
+const hasLeaf = (element: Record<string, unknown>): boolean =>
+    element['type'] !== 'Window' && element['type'] !== 'Passage' && element['type'] !== 'Niche';
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -55,7 +60,7 @@ export interface FieldDef {
 const ItemKinds = [
     'BaseCabinet', 'WallCabinet', 'TallCabinet', 'Worktop', 'Backsplash', 'Sink', 'Hob', 'LedStrip', 'Box',
     'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence', 'Wardrobe',
-    'Chair', 'Table', 'Custom', 'Model',
+    'Chair', 'Table', 'Column', 'Beam', 'Custom', 'Model',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
@@ -116,11 +121,11 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             options: ['Start', 'End'],
             nullable: true,
             half: true,
-            when: (element) => element['type'] !== 'Passage',
+            when: (element) => element['type'] !== 'Passage' && element['type'] !== 'Niche',
         },
         {
             key: 'side',
-            label: 'Side (swing; sliding: hangs on; window: interior)',
+            label: 'Side (swing; sliding: hangs on; window: interior; niche: cut into)',
             type: 'select',
             options: ['Left', 'Right'],
             nullable: true,
@@ -133,7 +138,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'select',
             options: ['Lining', 'Architrave', 'Flush', 'None'],
             half: true,
-            when: (element) => element['type'] !== 'Window',
+            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche',
         },
         {
             key: 'handle',
@@ -142,7 +147,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             options: ['Lever', 'Knob', 'Pull', 'None'],
             nullable: true,
             half: true,
-            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Passage',
+            when: hasLeaf,
         },
         {key: 'mullions', label: 'Mullions (vertical bars)', type: 'int', half: true, when: (element) => element['type'] === 'Window'},
         {key: 'transoms', label: 'Transoms (horizontal bars)', type: 'int', half: true, when: (element) => element['type'] === 'Window'},
@@ -160,7 +165,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'select',
             options: ['Flush', 'Panelled', 'Glazed'],
             half: true,
-            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Passage',
+            when: hasLeaf,
         },
         {
             key: 'leafPanels',
@@ -200,7 +205,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'bool',
             when: (element) => element['type'] === 'Window' && element['shutters'] != null,
         },
-        {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool'},
+        {key: 'depth', label: 'Depth (into the wall)', type: 'int', unit: 'mm', when: (element) => element['type'] === 'Niche'},
+        {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool', when: (element) => element['type'] !== 'Niche'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
     ],
     room: [

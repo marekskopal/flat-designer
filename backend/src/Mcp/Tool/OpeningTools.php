@@ -21,14 +21,14 @@ final readonly class OpeningTools
 
 	/**
 	 * @param int $wallId wall to cut the opening into (from get_floor)
-	 * @param string $type "Door" (one swinging leaf) | "DoubleDoor" (two leaves hinged on the jambs) | "SlidingDoor" (leaf hung on a wall face, sliding along it) | "PocketDoor" (leaf sliding into the wall) | "Passage" (doorway without a leaf) | "Window"
+	 * @param string $type "Door" (one swinging leaf) | "DoubleDoor" (two leaves hinged on the jambs) | "SlidingDoor" (leaf hung on a wall face, sliding along it) | "PocketDoor" (leaf sliding into the wall) | "Passage" (doorway without a leaf) | "Window" | "Niche" (a recess into one face of the wall, `depth` deep; for a wall that steps back for its full height, a niche from the floor to the wall top)
 	 * @param int $offset mm from the wall's start point (along the centre line) to the near edge of the opening
-	 * @param int|null $width mm (door default 900, double door 1400, window 1200)
-	 * @param int|null $height mm (door default 1970, passage 2100, window 1200)
-	 * @param int|null $sillHeight mm above the floor (door 0, window default 900)
+	 * @param int|null $width mm (door default 900, double door 1400, window 1200, niche 600)
+	 * @param int|null $height mm (door default 1970, passage 2100, window 1200, niche 600)
+	 * @param int|null $sillHeight mm above the floor (door 0, window and niche default 900)
 	 * @param int|null $leafWidth Door: leaf width, mm; DoubleDoor: width of the leaf on `hinge` (none: equal halves)
 	 * @param string|null $hinge "Start" (the opening's edge nearer the wall start) | "End". Door: edge carrying the leaf; DoubleDoor: the wider leaf's edge; SlidingDoor/PocketDoor: the way the leaf slides open (the wall on that side must be free for it)
-	 * @param string|null $side "Left" | "Right" of the wall when walking from its start to end. Door/DoubleDoor/walkable window: where the leaves swing to; SlidingDoor: the face the leaf hangs on
+	 * @param string|null $side "Left" | "Right" of the wall when walking from its start to end. Door/DoubleDoor/walkable window: where the leaves swing to; SlidingDoor: the face the leaf hangs on; Niche: the face it is cut into (default Left)
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
 	 * @param string|null $frameStyle doors: "Lining" (default) | "Architrave" (lining with casings) | "Flush" (hidden frame) | "None" (bare hole, a passage's default)
@@ -42,10 +42,11 @@ final readonly class OpeningTools
 	 * @param string|null $shutters window: exterior shutters, two leaves on the outer face (opposite `side`): "Louvred" | "Solid"; default none
 	 * @param int|null $shutterMaterialId window with shutters: material of the shutters (list_materials; default painted timber)
 	 * @param bool|null $shuttersClosed window with shutters: closed across the window (default false: folded back against the wall)
+	 * @param int|null $depth niche: mm into the wall from its `side` face, leaving at least 30 mm of wall behind it (default half the wall thickness)
 	 */
 	#[McpTool(
 		name: 'add_opening',
-		description: 'Add a door, passage or window to a wall. It must fit within the wall and not overlap another opening.',
+		description: 'Add a door, passage, window or niche to a wall. It must fit within the wall and not overlap another opening.',
 	)]
 	public function addOpening(
 		int $projectId,
@@ -73,6 +74,7 @@ final readonly class OpeningTools
 		?string $shutters = null,
 		?int $shutterMaterialId = null,
 		?bool $shuttersClosed = null,
+		?int $depth = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -102,16 +104,17 @@ final readonly class OpeningTools
 				'shutters' => $shutters,
 				'shutterMaterialId' => $shutterMaterialId,
 				'shuttersClosed' => $shuttersClosed,
+				'depth' => $depth,
 			]),
 		);
 	}
 
 	/**
-	 * @param string|null $type "Door" | "DoubleDoor" | "SlidingDoor" | "PocketDoor" | "Passage" | "Window" (see add_opening)
+	 * @param string|null $type "Door" | "DoubleDoor" | "SlidingDoor" | "PocketDoor" | "Passage" | "Window" | "Niche" (see add_opening)
 	 * @param int|null $offset mm from the wall's start point
 	 * @param int|null $leafWidth Door: leaf width, mm; DoubleDoor: width of the leaf on `hinge`
 	 * @param string|null $hinge "Start" | "End" (see add_opening: hinge edge, or the way a sliding leaf opens)
-	 * @param string|null $side "Left" | "Right" (swing side of door leaves and walkable window sashes; the face a sliding door hangs on)
+	 * @param string|null $side "Left" | "Right" (swing side of door leaves and walkable window sashes; the face a sliding door hangs on or a niche is cut into)
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
 	 * @param string|null $frameStyle doors: "Lining" | "Architrave" | "Flush" | "None"
@@ -125,11 +128,12 @@ final readonly class OpeningTools
 	 * @param string|null $shutters window: "Louvred" | "Solid" exterior shutters
 	 * @param int|null $shutterMaterialId window with shutters: their material
 	 * @param bool|null $shuttersClosed window with shutters: closed (true) or folded back (false)
+	 * @param int|null $depth niche: mm into the wall from its `side` face (leaving at least 30 mm behind it)
 	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard", "panelHeight", "shutters", "shutterMaterialId"
 	 */
 	#[McpTool(
 		name: 'update_opening',
-		description: 'Change a door, passage or window (it stays on its wall). Only the given fields change.',
+		description: 'Change a door, passage, window or niche (it stays on its wall). Only the given fields change.',
 	)]
 	public function updateOpening(
 		int $projectId,
@@ -157,6 +161,7 @@ final readonly class OpeningTools
 		?string $shutters = null,
 		?int $shutterMaterialId = null,
 		?bool $shuttersClosed = null,
+		?int $depth = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -187,6 +192,7 @@ final readonly class OpeningTools
 				'shutters' => $shutters,
 				'shutterMaterialId' => $shutterMaterialId,
 				'shuttersClosed' => $shuttersClosed,
+				'depth' => $depth,
 			], $clear, self::Clearable),
 		);
 	}

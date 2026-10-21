@@ -67,7 +67,7 @@ final readonly class FloorTools
 			: $this->roomScheduleService->forFloor($this->context->floor($projectId, $floorId));
 	}
 
-	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}> */
+	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null, structural: bool}> */
 	#[McpTool(
 		name: 'list_item_kinds',
 		description: 'Item kinds you can add, each with a description, the default size (width × depth × height) and elevation z '

@@ -40,6 +40,7 @@ const NewOpeningWidths: Record<OpeningType, number> = {
     PocketDoor: 900,
     Passage: 900,
     Window: 1200,
+    Niche: 600,
 };
 
 /** Nudge steps for arrow keys, mm (Shift: coarse). */
@@ -96,8 +97,12 @@ export class EditorPanelComponent {
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
     });
 
-    /** Item kinds of the Add menu; the built-in furniture kinds a definition replaces go last, as "old". */
-    protected readonly currentKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy === null));
+    /**
+     * Item kinds of the Add menu; the built-in furniture kinds a definition replaces go last, as "old", and columns and
+     * beams under Building.
+     */
+    protected readonly currentKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy === null && !k.structural));
+    protected readonly structureKinds = computed(() => this.editor.itemKinds().filter((k) => k.structural));
     protected readonly oldKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy !== null));
 
     /** The furniture of the Add menu by where it comes from. */

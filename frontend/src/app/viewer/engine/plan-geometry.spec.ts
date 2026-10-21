@@ -1,11 +1,13 @@
-import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
+import {Item, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 import {
     collideCircle,
+    columnColliders,
     cornerWindows,
     edgeMidpoints,
     entranceWalkStart,
     insertVertex,
+    isDoor,
     isSimplePolygon,
     leafCollider,
     leafColliders,
@@ -43,6 +45,25 @@ describe('wallPieces', () => {
             {from: 2755, to: 3655, bottom: 2020, top: 2600},
             {from: 3655, to: 3871, bottom: 0, top: 2600},
         ]);
+    });
+
+    it('keeps the wall behind a niche, less its depth on the face it is cut into', () => {
+        const niche: Opening = {...opening(1000, 600, 600, 900), id: 7, type: 'Niche', side: 'Right', depth: 120};
+        expect(wallPieces(3000, 2600, [niche])).toEqual([
+            {from: 0, to: 1000, bottom: 0, top: 2600},
+            {from: 1000, to: 1600, bottom: 0, top: 900},
+            {from: 1000, to: 1600, bottom: 900, top: 1500, recess: {openingId: 7, side: 'Right', depth: 120}},
+            {from: 1000, to: 1600, bottom: 1500, top: 2600},
+            {from: 1600, to: 3000, bottom: 0, top: 2600},
+        ]);
+    });
+
+    it('treats a niche as neither a door nor a gap to walk through', () => {
+        const niche: Opening = {...opening(1000, 900, 2000), type: 'Niche', side: 'Left', depth: 100};
+        const wall = {startX: 0, startY: 0, endX: 3000, endY: 0, thickness: 200, height: 2600, openings: [niche]} as Wall;
+        expect(isDoor(niche)).toBe(false);
+        expect(openingLeaves(niche, 200)).toEqual([]);
+        expect(wallColliders([wall]).map((c) => [c.from, c.to])).toEqual([[0, 3000]]);
     });
 
     it('adds a parapet under a window and sorts openings', () => {
@@ -110,7 +131,7 @@ describe('wallGapsAlongEdge', () => {
 
     it('finds the door on the bathroom edge that runs along the wall face', () => {
         // Bathroom west edge, walked north → south as in a counter-clockwise polygon.
-        expect(wallGapsAlongEdge({x: 3871, y: 9906}, {x: 3871, y: 8045}, [wall])).toEqual([{from: 151, to: 951, bottom: 0, top: 2020}]);
+        expect(wallGapsAlongEdge({x: 3871, y: 9906}, {x: 3871, y: 8045}, [wall])).toEqual([{from: 151, to: 951, bottom: 0, top: 2020, niche: false}]);
     });
 
     it('ignores walls that are not on the edge', () => {
@@ -135,6 +156,23 @@ describe('pointInPolygon', () => {
         expect(pointInPolygon({x: 1000, y: 3500}, lShape)).toBe(true);
         expect(pointInPolygon({x: 3000, y: 3000}, lShape)).toBe(false);
         expect(pointInPolygon({x: -10, y: 1000}, lShape)).toBe(false);
+    });
+});
+
+describe('column collisions', () => {
+    const column = (fields: Partial<Item>): Item =>
+        ({kind: 'Column', x: 1000, y: 1000, z: 0, width: 400, depth: 200, height: 2600, rotation: 0, ...fields}) as Item;
+
+    it('blocks columns standing on the floor only', () => {
+        const items = [column({}), column({kind: 'Box'}), column({kind: 'Beam'}), column({z: 1200})];
+        expect(columnColliders(items)).toHaveLength(1);
+    });
+
+    it('keeps a walker off a turned column', () => {
+        // Turned 90°: 400 along y, 200 along x.
+        const colliders = columnColliders([column({rotation: 90})]);
+        expect(collideCircle({x: 1150, y: 1000}, 250, colliders).x).toBeCloseTo(1350);
+        expect(collideCircle({x: 1000, y: 1300}, 250, colliders).y).toBeCloseTo(1450);
     });
 });
 
