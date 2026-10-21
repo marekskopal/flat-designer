@@ -420,6 +420,90 @@
     "endY": -150,
     "thickness": 300
    }
+  ],
+  "stepped": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 2000,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 2000,
+    "startY": -150,
+    "endX": 4150,
+    "endY": -150,
+    "thickness": 100
+   },
+   {
+    "id": 3,
+    "startX": 4150,
+    "startY": -150,
+    "endX": 4150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 4,
+    "startX": 4150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 5,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   }
+  ],
+  "flushOuterFace": [
+   {
+    "id": 1,
+    "startX": -150,
+    "startY": -150,
+    "endX": 2000,
+    "endY": -150,
+    "thickness": 300
+   },
+   {
+    "id": 2,
+    "startX": 2000,
+    "startY": -250,
+    "endX": 4050,
+    "endY": -250,
+    "thickness": 100
+   },
+   {
+    "id": 3,
+    "startX": 4050,
+    "startY": -300,
+    "endX": 4050,
+    "endY": 3150,
+    "thickness": 100
+   },
+   {
+    "id": 4,
+    "startX": 4100,
+    "startY": 3150,
+    "endX": -150,
+    "endY": 3150,
+    "thickness": 300
+   },
+   {
+    "id": 5,
+    "startX": -150,
+    "startY": 3150,
+    "endX": -150,
+    "endY": -150,
+    "thickness": 300
+   }
   ]
  },
  "cases": [
@@ -746,6 +830,74 @@
     1500
    ],
    "error": "invalid"
+  },
+  {
+   "name": "collinear walls of different thickness step the outline",
+   "layout": "stepped",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     2000,
+     -100
+    ],
+    [
+     4000,
+     -100
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     2000,
+     0
+    ]
+   ]
+  },
+  {
+   "name": "walls flush on the outside step the outline inside",
+   "layout": "flushOuterFace",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     2000,
+     -200
+    ],
+    [
+     4000,
+     -200
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     2000,
+     0
+    ]
+   ]
   }
  ]
 }
