@@ -13,7 +13,7 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * (only with the overview allowed; null = the default framing) and the display settings it starts with
  * (`sectionHeight` in mm, null = no wall cut; `dimensions` draws the plan's dimension lines; `night` shows the flat after
  * dark, lit by its lights; `presentation` renders in the presentation quality) and whether the guest may download the
- * exports (`exports`: the plan as PDF or SVG). Stored as JSON in `ShareLink::$settings`.
+ * exports (`exports`: the plan as PDF or SVG, the 3D model as glTF). Stored as JSON in `ShareLink::$settings`.
  */
 final readonly class ShareSettingsDto implements ArrayFactoryInterface
 {

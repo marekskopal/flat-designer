@@ -233,6 +233,12 @@ export class ViewerComponent {
         return this.engine()?.pendingAssets() ?? 0;
     }
 
+    /** The shown floor as a binary glTF (see `ViewerEngine.exportGlb()`). */
+    public exportGlb(): Promise<Blob> {
+        const engine = this.engine();
+        return engine === null ? Promise.reject(new Error('The viewer is not ready.')) : engine.exportGlb();
+    }
+
     /** The view as a PNG (see `ViewerEngine.capture()`). */
     public capture(width: number, height: number, pixelRatio = 2): Promise<Blob> {
         const engine = this.engine();

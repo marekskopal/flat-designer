@@ -23,7 +23,7 @@ import {EditorPanelComponent} from '@app/editor/editor-panel.component';
 import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {downloadBlob, safeFilename} from '@app/export/download';
-import {PlanExportComponent} from '@app/export/plan-export.component';
+import {ExportComponent} from '@app/export/export.component';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
 import {PlanPoint, Room, RoomType} from '@app/models/scene';
@@ -82,7 +82,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         MeasureHudComponent,
         UnderlayPanelComponent,
         SavedViewsComponent,
-        PlanExportComponent,
+        ExportComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -263,6 +263,8 @@ export class ViewerPageComponent {
     protected readonly gardenArea = computed(() => this.areaOf((type) => type === 'Garden'));
 
     private readonly viewer = viewChild.required(ViewerComponent);
+    /** The shown floor as a binary glTF, for the exports. */
+    protected readonly exportGlb = (): Promise<Blob> => this.viewer().exportGlb();
 
     public constructor() {
         this.editor.connect({

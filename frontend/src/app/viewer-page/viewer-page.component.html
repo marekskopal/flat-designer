@@ -190,7 +190,7 @@
     @if (viewedScene(); as s) {
         <section class="panel__section" [hidden]="editor.enabled() || walking()">
             <h2 class="section-title">Export</h2>
-            <fd-plan-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" />
+            <fd-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" [glb]="exportGlb" />
         </section>
     }
 

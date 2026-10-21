@@ -26,7 +26,7 @@ export const LumenScale = 0.08;
  * How far a light's colour is pulled towards white: the viewer white-balances for warm light as a camera would, so a
  * 2200 K bulb looks warm rather than orange (the kelvin still orders warm and cool).
  */
-const WhiteBalance = 0.25;
+export const WhiteBalance = 0.25;
 
 /** Emissive intensity of a glowing bulb while its light is on. */
 const BulbGlow = 4;

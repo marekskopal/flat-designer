@@ -161,7 +161,7 @@
         @if (settings.exports !== false && scene(); as s) {
             <section class="panel__section">
                 <h2 class="section-title">Export</h2>
-                <fd-plan-export [scene]="s" [projectName]="shared()?.projectName ?? ''" />
+                <fd-export [scene]="s" [projectName]="shared()?.projectName ?? ''" [glb]="exportGlb" />
             </section>
         }
 

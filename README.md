@@ -112,16 +112,17 @@ the page totals the cost per room and for the whole project, furniture boards fr
 ![Guest view of a share link](docs/screenshots/share-link.webp)
 
 A read-only guest view of a floor, without an account, with the allowed views, a start camera and display options.
-Guests can orbit, read the plan, walk through and switch variants, and download the plan unless the link
-forbids it.
+Guests can orbit, read the plan, walk through and switch variants, and download the plan and 3D model unless
+the link forbids it.
 
 ### And also
 
 - **Versions**: immutable snapshots of a project that can be restored at any time.
 - **Saved views and screenshots**: named cameras with display options and variants. `make screenshots` captures
   them (these images are made that way), and the viewer saves a PNG at presentation quality.
-- **Plan export**: the floor plan on A4 at a standard scale (walls, door swings, windows, room areas, dimensions and
-  furniture footprints) as a PDF with the room schedule, or as an SVG.
+- **Exports**: the floor plan on A4 at a standard scale (walls, door swings, windows, room areas, dimensions and
+  furniture footprints) as a PDF with the room schedule, or as an SVG, and the floor as a 3D model (glTF) for
+  Blender or SketchUp.
 - **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
 - **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.

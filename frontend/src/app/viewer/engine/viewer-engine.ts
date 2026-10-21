@@ -22,6 +22,7 @@ import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
+import {exportTree, toGlb} from './gltf-export';
 import {buildItem, ItemAssets} from './items';
 import {applyFixtureLights} from './lights';
 import {MaterialLibrary} from './materials';
@@ -1016,6 +1017,22 @@ export class ViewerEngine {
         };
     }
 
+    /**
+     * The floor as shown, as a binary glTF: the building with its ceilings, the shown items and their lights, doors
+     * posed as now (see `exportTree()`). Waits for the models and pictures still loading (up to half a minute), so
+     * the file has them rather than their stand-ins.
+     */
+    public async exportGlb(): Promise<Blob> {
+        for (let waited = 0; this.pendingAssets() > 0 && waited < 200; waited++) {
+            await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+        if (this.content === null || this.sceneData === null || this.parts === null) {
+            throw new Error('The floor is not loaded yet.');
+        }
+        const glb = await toGlb(exportTree(this.content, this.sceneData, this.parts.sectionMaterial));
+        return new Blob([glb], {type: 'model/gltf-binary'});
+    }
+
     /** Models and pictures still loading: a screenshot waits for 0. */
     public pendingAssets(): number {
         return (this.modelLibrary?.pending() ?? 0) + (this.pictureLibrary?.pending() ?? 0);
@@ -1156,6 +1173,7 @@ export class ViewerEngine {
         }
         const material = new THREE.MeshBasicMaterial({color: HighlightColor, transparent: true, opacity: 0.22, depthWrite: false});
         this.highlight = new THREE.Mesh(target.geometry, material);
+        this.highlight.userData = {highlight: true};
         this.highlight.position.y = target.position.y + 0.002;
         this.highlight.renderOrder = 1;
         target.parent?.add(this.highlight);

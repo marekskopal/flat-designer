@@ -76,7 +76,7 @@ final readonly class ShareLinkTools
 	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
 	 * @param bool $night start at night: no daylight, the flat lit by its lights
 	 * @param bool $presentation render in the presentation quality (ambient occlusion, antialiasing; slower)
-	 * @param bool $exports let the guest download the plan (PDF, SVG)
+	 * @param bool $exports let the guest download the plan (PDF, SVG) and the 3D model (glTF)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working; null = never
 	 */
 	#[McpTool(
@@ -134,7 +134,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $dimensions show the dimension lines in the top view at the start
 	 * @param bool|null $night start at night (lit by the flat's lights)
 	 * @param bool|null $presentation render in the presentation quality
-	 * @param bool|null $exports let the guest download the plan (PDF, SVG)
+	 * @param bool|null $exports let the guest download the plan (PDF, SVG) and the 3D model (glTF)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
 	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "expiresAt" (never)
 	 */

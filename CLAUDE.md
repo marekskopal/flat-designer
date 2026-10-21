@@ -342,7 +342,7 @@ format is the text in `FurnitureTools::Format`.
   when an edit tool is picked. It snaps to wall ends and to face corners and faces (`wallFaces()` with the
   `wallJoints()` mitres). Esc first clears the measurement, then ends the tool.
 
-## Plan export
+## Exports
 
 - `viewer/engine/plan-drawing.ts` (framework-free; the geometry helpers, not a three.js scene) draws the floor as SVG text in paper mm: `planSheet()`
   is the plan on A4 at the largest of `PlanScales` that fits (`planLayout()` turns the paper for a tall plan), with a
@@ -356,9 +356,15 @@ format is the text in `FurnitureTools::Format`.
   meet). Text widths are estimated (`CharWidth`): room names wrap to the room, and dimensions and item names that
   would overlap text placed before them are left out.
 - `app/export/`: `sheetsPdf()` turns the sheets into PDF pages with `jspdf` and `svg2pdf.js` (loaded lazily) and
-  embeds Inter from `assets/fonts/` (SIL OFL; jsPDF's own fonts lack Czech letters). `PlanExportComponent` (Plan
-  PDF / Plan SVG) exports the scene as shown on the viewer page and the shared viewer page; `ShareSettingsDto.exports`
-  (missing in older links: allowed) lets a share link forbid it.
+  embeds Inter from `assets/fonts/` (SIL OFL; jsPDF's own fonts lack Czech letters). `ExportComponent` (Plan PDF,
+  Plan SVG, 3D glTF) exports the scene as shown on the viewer page and the shared viewer page;
+  `ShareSettingsDto.exports` (missing in older links: allowed) lets a share link forbid it.
+- glTF: `ViewerEngine.exportGlb()` writes the built floor through `GLTFExporter` (loaded lazily). `exportTree()`
+  (`viewer/engine/gltf-export.ts`) copies the content with the ceilings shown and leaves out the room labels, the
+  section-fill twins, the selection highlight and hidden variants; nodes are named after their elements and
+  `userData` is cleared. Doors keep their current pose. Every fixture light goes in as `KHR_lights_punctual`, on, in
+  candela and its real colour (`LumenScale` and `WhiteBalance` undone), spots turned to shine along −z; LED strips
+  (area lights) are left out. The export waits for the models and pictures still loading.
 
 ## Plan underlays
 

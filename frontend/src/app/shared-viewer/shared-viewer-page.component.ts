@@ -3,7 +3,7 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, resource, signal, viewChild} from '@angular/core';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
-import {PlanExportComponent} from '@app/export/plan-export.component';
+import {ExportComponent} from '@app/export/export.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {ModelAssetService} from '@app/services/model-asset.service';
@@ -27,7 +27,7 @@ const SectionMax = 2700;
  */
 @Component({
     selector: 'fd-shared-viewer-page',
-    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent, PlanExportComponent],
+    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent, ExportComponent],
     templateUrl: './shared-viewer-page.component.html',
     styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -93,6 +93,8 @@ export class SharedViewerPageComponent {
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
 
     private readonly viewer = viewChild.required(ViewerComponent);
+    /** The shown floor as a binary glTF, for the exports. */
+    protected readonly exportGlb = (): Promise<Blob> => this.viewer().exportGlb();
     /** The link's start state is applied once, when its floor is first built; another link starts over. */
     private started = false;
 
