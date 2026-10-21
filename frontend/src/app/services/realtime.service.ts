@@ -77,7 +77,13 @@ export class RealtimeService {
     }
 }
 
-const UpdateTypes: readonly string[] = ['projectChanged', 'definitionChanged', 'materialChanged', 'detailsChanged'] satisfies ProjectUpdate['type'][];
+const UpdateTypes: readonly string[] = [
+    'projectChanged',
+    'definitionChanged',
+    'materialChanged',
+    'detailsChanged',
+    'pricesChanged',
+] satisfies ProjectUpdate['type'][];
 
 function parseUpdate(data: string): ProjectUpdate | null {
     try {

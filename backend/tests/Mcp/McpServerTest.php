@@ -119,6 +119,7 @@ final class McpServerTest extends IntegrationTestCase
 			'get_furniture_definition',
 			'get_project',
 			'get_project_file',
+			'get_quantities',
 			'get_room_schedule',
 			'list_changes',
 			'list_furniture_definitions',
@@ -139,6 +140,7 @@ final class McpServerTest extends IntegrationTestCase
 			'save_version',
 			'save_view',
 			'set_floor_underlay',
+			'set_material_prices',
 			'switch_variant',
 			'undo',
 			'ungroup',
@@ -356,6 +358,19 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($schedule);
 		self::assertEquals(['rooms' => 1, 'area' => 12.0, 'perimeter' => 14.0], $schedule['indoor']);
 		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $schedule['outdoor']);
+
+		// Walls without a material are the default paint: 14 m around, 2.6 m high; the ceiling white plaster.
+		$prices = $this->client->call('set_material_prices', [
+			'projectId' => $this->project->id,
+			'prices' => [['surface' => 'Wall', 'pricePerArea' => 5], ['surface' => 'Ceiling', 'pricePerArea' => 10]],
+			'currency' => 'czk',
+		]);
+		self::assertIsArray($prices);
+		self::assertSame('CZK', $prices['currency']);
+		$quantities = $this->client->call('get_quantities', ['projectId' => $this->project->id]);
+		self::assertIsArray($quantities);
+		self::assertTrue($quantities['complete']);
+		self::assertEqualsWithDelta(14 * 2.6 * 5 + 12 * 10, $quantities['total'], 0.01);
 
 		$this->client->call('undo', ['projectId' => $this->project->id]);
 		$this->client->call('undo', ['projectId' => $this->project->id]);

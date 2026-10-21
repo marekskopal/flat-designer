@@ -39,25 +39,33 @@ final readonly class CutListService
 
 	public function forProject(Project $project): CutListDto
 	{
+		$floors = $this->floorRepository->findByProject($project->id);
+
+		return $this->forScenes(array_map(fn (Floor $floor): array => [$floor, $this->sceneProvider->getScene($floor)], $floors));
+	}
+
+	public function forFloor(Floor $floor): CutListDto
+	{
+		return $this->forScenes([[$floor, $this->sceneProvider->getScene($floor)]]);
+	}
+
+	/**
+	 * The cut list of floors whose scenes are built already (the quantities read them too).
+	 *
+	 * @param list<array{Floor, SceneDto}> $scenes
+	 */
+	public function forScenes(array $scenes): CutListDto
+	{
 		$list = new CutListAccumulator();
-		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
-			$this->addFloor($list, $floor);
+		foreach ($scenes as [$floor, $scene]) {
+			$this->addFloor($list, $floor, $scene);
 		}
 
 		return $list->result();
 	}
 
-	public function forFloor(Floor $floor): CutListDto
+	private function addFloor(CutListAccumulator $list, Floor $floor, SceneDto $scene): void
 	{
-		$list = new CutListAccumulator();
-		$this->addFloor($list, $floor);
-
-		return $list->result();
-	}
-
-	private function addFloor(CutListAccumulator $list, Floor $floor): void
-	{
-		$scene = $this->sceneProvider->getScene($floor);
 		$hidden = array_flip($scene->hiddenItemIds());
 		$definitions = self::definitions($scene);
 		$materials = [];

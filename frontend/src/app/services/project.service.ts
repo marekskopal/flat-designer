@@ -3,6 +3,7 @@ import {inject, Injectable} from '@angular/core';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {CutList} from '@app/models/cut-list';
 import {FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
+import {MaterialPrices, Quantities} from '@app/models/quantities';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {Floor, Scene} from '@app/models/scene';
 import {environment} from '@environments/environment';
@@ -30,6 +31,21 @@ export class ProjectService {
         const path =
             floorId === undefined ? `${projectsUrl}/${projectId}/room-schedule` : `${projectsUrl}/${projectId}/floors/${floorId}/room-schedule`;
         return firstValueFrom(this.http.get<RoomSchedule>(path));
+    }
+
+    /** Quantities and cost estimate of the project's rooms and furniture (or one floor's). */
+    public async quantities(projectId: number, floorId?: number): Promise<Quantities> {
+        const path = floorId === undefined ? `${projectsUrl}/${projectId}/quantities` : `${projectsUrl}/${projectId}/floors/${floorId}/quantities`;
+        return firstValueFrom(this.http.get<Quantities>(path));
+    }
+
+    public async materialPrices(projectId: number): Promise<MaterialPrices> {
+        return firstValueFrom(this.http.get<MaterialPrices>(`${projectsUrl}/${projectId}/material-prices`));
+    }
+
+    /** Replaces the project's price list. */
+    public async saveMaterialPrices(projectId: number, prices: MaterialPrices): Promise<MaterialPrices> {
+        return firstValueFrom(this.http.put<MaterialPrices>(`${projectsUrl}/${projectId}/material-prices`, prices));
     }
 
     public async get(projectId: number): Promise<Project> {

@@ -24,7 +24,8 @@ use const JSON_THROW_ON_ERROR;
  * drawn from it: their look changes although no project revision does. A changed material (`markMaterialChanged()`) sends
  * `materialChanged` to every project: the catalogue is global and used from too many places to look them up.
  * Changed project details (`markDetailsChanged()`: name, address, description) send `detailsChanged`; they are not
- * floor content, so they bump no revision either.
+ * floor content, so they bump no revision either. A saved price list (`markPricesChanged()`) sends `pricesChanged`
+ * for the same reason.
  *
  * Topics are private: only subscribers whose cookie grants the topic (`MercureCookieIssuer`) get them.
  */
@@ -43,6 +44,9 @@ final class ProjectUpdatePublisher
 
 	/** @var array<int, true> projects whose details changed in the current request */
 	private array $changedDetails = [];
+
+	/** @var array<int, true> projects whose price list was saved in the current request */
+	private array $changedPrices = [];
 
 	public function __construct(
 		private readonly HubInterface $hub,
@@ -80,6 +84,11 @@ final class ProjectUpdatePublisher
 		$this->changedDetails[$projectId] = true;
 	}
 
+	public function markPricesChanged(int $projectId): void
+	{
+		$this->changedPrices[$projectId] = true;
+	}
+
 	/** Forgets marks of a request that is not going to be flushed (the worker resets before each request). */
 	public function reset(): void
 	{
@@ -87,6 +96,7 @@ final class ProjectUpdatePublisher
 		$this->changedDefinitions = [];
 		$this->changedMaterials = [];
 		$this->changedDetails = [];
+		$this->changedPrices = [];
 	}
 
 	public function flush(): void
@@ -95,10 +105,12 @@ final class ProjectUpdatePublisher
 		$definitions = array_keys($this->changedDefinitions);
 		$materials = array_keys($this->changedMaterials);
 		$details = array_keys($this->changedDetails);
+		$prices = array_keys($this->changedPrices);
 		$this->changed = [];
 		$this->changedDefinitions = [];
 		$this->changedMaterials = [];
 		$this->changedDetails = [];
+		$this->changedPrices = [];
 
 		foreach ($definitions as $definitionId) {
 			try {
@@ -118,7 +130,15 @@ final class ProjectUpdatePublisher
 
 		foreach ($details as $projectId) {
 			try {
-				$this->publishDetails($projectId);
+				$this->publishSimple('detailsChanged', $projectId);
+			} catch (Throwable $e) {
+				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
+			}
+		}
+
+		foreach ($prices as $projectId) {
+			try {
+				$this->publishSimple('pricesChanged', $projectId);
 			} catch (Throwable $e) {
 				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
 			}
@@ -186,10 +206,11 @@ final class ProjectUpdatePublisher
 		}
 	}
 
-	private function publishDetails(int $projectId): void
+	/** An update that carries only its type: the project's details or prices changed. */
+	private function publishSimple(string $type, int $projectId): void
 	{
 		$this->hub->publish(new Update(self::topic($projectId), json_encode([
-			'type' => 'detailsChanged',
+			'type' => $type,
 			'projectId' => $projectId,
 			'originClientId' => $this->originContext->get(),
 		], JSON_THROW_ON_ERROR), private: true));

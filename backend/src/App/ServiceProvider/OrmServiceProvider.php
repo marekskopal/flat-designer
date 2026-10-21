@@ -17,6 +17,7 @@ use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectChange;
 use FlatDesigner\Model\Entity\ProjectFile;
+use FlatDesigner\Model\Entity\ProjectMaterialPrice;
 use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\SavedView;
@@ -36,6 +37,7 @@ use FlatDesigner\Model\Repository\OAuthClientRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\ProjectChangeRepository;
 use FlatDesigner\Model\Repository\ProjectFileRepository;
+use FlatDesigner\Model\Repository\ProjectMaterialPriceRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
@@ -66,6 +68,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ProjectVersionRepository::class,
 			ProjectFileRepository::class,
 			ProjectChangeRepository::class,
+			ProjectMaterialPriceRepository::class,
 			ShareLinkRepository::class,
 			SavedViewRepository::class,
 			OAuthClientRepository::class,
@@ -99,6 +102,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ProjectVersionRepository::class, ProjectVersion::class);
 		$this->addRepository($container, $orm, ProjectFileRepository::class, ProjectFile::class);
 		$this->addRepository($container, $orm, ProjectChangeRepository::class, ProjectChange::class);
+		$this->addRepository($container, $orm, ProjectMaterialPriceRepository::class, ProjectMaterialPrice::class);
 		$this->addRepository($container, $orm, ShareLinkRepository::class, ShareLink::class);
 		$this->addRepository($container, $orm, SavedViewRepository::class, SavedView::class);
 		$this->addRepository($container, $orm, OAuthClientRepository::class, OAuthClient::class);

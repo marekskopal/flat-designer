@@ -1,5 +1,6 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, effect, inject, input, signal} from '@angular/core';
+import {RouterLink} from '@angular/router';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {ProjectService} from '@app/services/project.service';
 
@@ -9,7 +10,7 @@ import {ProjectService} from '@app/services/project.service';
  */
 @Component({
     selector: 'fd-room-schedule',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, RouterLink],
     templateUrl: './room-schedule.component.html',
     styleUrl: './room-schedule.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

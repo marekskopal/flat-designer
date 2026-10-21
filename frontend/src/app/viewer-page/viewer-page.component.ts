@@ -339,8 +339,8 @@ export class ViewerPageComponent {
     }
 
     private onProjectUpdate(update: ProjectUpdate): void {
-        // Own edits are applied already.
-        if (update.originClientId === originClientId) {
+        // Own edits are applied already; prices do not show in the viewer.
+        if (update.originClientId === originClientId || update.type === 'pricesChanged') {
             return;
         }
         if (update.type === 'detailsChanged') {

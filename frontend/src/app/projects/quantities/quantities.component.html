@@ -1,0 +1,172 @@
+<div class="page page--wide">
+    <div class="page__header">
+        <h1 class="page__title">Quantities &amp; cost{{ project() ? ': ' + project()?.name : '' }}</h1>
+        <div class="actions no-print">
+            <a class="btn btn--ghost" [routerLink]="['/projects', projectId()]">Back to the project</a>
+            <button type="button" class="btn btn--primary" (click)="print()">Print</button>
+        </div>
+    </div>
+
+    <div class="filters no-print">
+        <label class="field">
+            <span class="field__label">Floor</span>
+            <select class="input" (change)="setFloor($event)">
+                <option value="" [selected]="floorId() === null">All floors</option>
+                @for (floor of project()?.floors ?? []; track floor.id) {
+                    <option [value]="floor.id" [selected]="floor.id === floorId()">{{ floor.name }}</option>
+                }
+            </select>
+        </label>
+        <label class="field field--narrow">
+            <span class="field__label">Currency</span>
+            <input class="input" type="text" maxlength="3" [value]="currency()" [class.input--invalid]="!currencyValid()" (input)="setCurrency($event)" />
+        </label>
+        <label class="field field--narrow">
+            <span class="field__label">Waste %</span>
+            <input class="input" type="number" min="0" max="100" step="1" [value]="wastePercent()" [class.input--invalid]="!wasteValid()" (input)="setWaste($event)" />
+        </label>
+        <div class="save">
+            @if (dirty()) {
+                <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="discard()">Discard</button>
+            }
+            <button type="button" class="btn btn--primary" [disabled]="!dirty() || saving() || !valid()" (click)="save()">
+                Save prices
+            </button>
+        </div>
+    </div>
+    <p class="hint no-print">
+        Surfaces of the working copy as drawn: floors, wall finish bands, the paint around and above them up to the ceiling (openings left
+        out, façades not counted), ceilings and skirting; furniture boards from the cut list. Tiles and planks are whole pieces with the waste
+        allowance. Prices are per m², skirting and edge banding per running metre.
+        @if (dirty()) {
+            <strong>Save the prices to update the costs.</strong>
+        }
+    </p>
+
+    @if (quantities(); as q) {
+        <section class="card summary">
+            <span class="summary__label">Estimated total</span>
+            <span class="summary__total">{{ q.total | number: '1.2-2' }} {{ q.currency }}</span>
+            @if (!q.complete) {
+                <span class="summary__note">Some materials have no price yet; they are left out.</span>
+            }
+        </section>
+
+        @for (table of tables(); track table.title) {
+            <section class="card card--table">
+                <h2 class="section">
+                    {{ table.title }}
+                    <span class="section__totals">{{ table.note }}</span>
+                </h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Used on</th>
+                            <th class="num">m²</th>
+                            <th class="num">m</th>
+                            <th class="num">Pcs</th>
+                            <th class="num">{{ q.currency }} / m²</th>
+                            <th class="num">{{ q.currency }} / m</th>
+                            <th class="num">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (row of table.rows; track row.materialId + ':' + row.surface) {
+                            <tr>
+                                <td [class.muted]="row.materialId === null">{{ row.material }}</td>
+                                <td class="muted">{{ surfaces(row) }}</td>
+                                <td class="num">
+                                    {{ row.area === null ? '' : (row.area | number: '1.2-2') }}
+                                    @if (row.orderedArea !== null) {
+                                        <span class="muted">({{ row.orderedArea | number: '1.2-2' }})</span>
+                                    }
+                                </td>
+                                <td class="num">{{ row.length === null ? '' : (row.length | number: '1.2-2') }}</td>
+                                <td class="num">{{ row.pieces ?? '' }}</td>
+                                <td class="num">
+                                    @if (row.area !== null) {
+                                        <input
+                                            class="input input--price"
+                                            type="text"
+                                            inputmode="decimal"
+                                            [attr.aria-label]="'Price per m² of ' + row.material"
+                                            [class.input--invalid]="priceInvalid(row, 'pricePerArea')"
+                                            [value]="price(row, 'pricePerArea') ?? ''"
+                                            (input)="setPrice(row, 'pricePerArea', $event)"
+                                        />
+                                    }
+                                </td>
+                                <td class="num">
+                                    @if (row.length !== null) {
+                                        <input
+                                            class="input input--price"
+                                            type="text"
+                                            inputmode="decimal"
+                                            [attr.aria-label]="'Price per metre of ' + row.material"
+                                            [class.input--invalid]="priceInvalid(row, 'pricePerLength')"
+                                            [value]="price(row, 'pricePerLength') ?? ''"
+                                            (input)="setPrice(row, 'pricePerLength', $event)"
+                                        />
+                                    }
+                                </td>
+                                <td class="num strong">{{ row.cost === null ? '—' : (row.cost | number: '1.2-2') }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @for (room of q.rooms; track room.id) {
+            <section class="card card--table">
+                <h2 class="section">
+                    <span>
+                        {{ room.code }} {{ room.name }}
+                        @if (floorId() === null && (project()?.floors?.length ?? 0) > 1) {
+                            <span class="muted">· {{ room.floorName }}</span>
+                        }
+                    </span>
+                    <span class="section__totals">
+                        {{ room.cost | number: '1.2-2' }} {{ q.currency }}
+                        @if (!room.complete) {
+                            (not all priced)
+                        }
+                    </span>
+                </h2>
+                @if (room.lines.length === 0) {
+                    <p class="hint empty">Nothing to count: no floor material and no walls along the outline.</p>
+                } @else {
+                    <table class="table table--lines">
+                        <thead>
+                            <tr>
+                                <th>Surface</th>
+                                <th>Material</th>
+                                <th class="num">Quantity</th>
+                                <th class="num">Pcs</th>
+                                <th class="num">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (line of room.lines; track line.surface + ':' + line.materialId) {
+                                <tr>
+                                    <td>{{ labels[line.surface] }}</td>
+                                    <td [class.muted]="line.materialId === null">{{ line.material }}</td>
+                                    <td class="num">{{ lineQuantity(line) }}</td>
+                                    <td class="num">{{ line.pieces ?? '' }}</td>
+                                    <td class="num">{{ line.cost === null ? '—' : (line.cost | number: '1.2-2') }}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </section>
+        }
+
+        @if (q.rooms.length === 0 && q.furniture.length === 0 && !loading()) {
+            <p class="hint">No rooms or custom furniture here yet. Add rooms in a floor's editor (Room from walls).</p>
+        }
+    } @else if (loading()) {
+        <p class="hint">Loading…</p>
+    }
+</div>

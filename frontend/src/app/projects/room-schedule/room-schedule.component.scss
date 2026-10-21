@@ -19,6 +19,12 @@
     border-bottom: 1px solid $color-border;
 }
 
+.header-end {
+    display: flex;
+    align-items: baseline;
+    gap: $space-12;
+}
+
 .totals {
     font-size: $font-size-13;
     color: $color-text-muted;
