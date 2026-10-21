@@ -1,4 +1,4 @@
-FROM nginx:1.31.6-alpine
+FROM nginx:1.31.7-alpine
 
 COPY ./conf/upstreams.conf /etc/nginx/conf.d/upstreams.conf
 COPY ./conf/locations.conf /etc/nginx/snippets/locations.conf
