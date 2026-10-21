@@ -1,7 +1,8 @@
 import {Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
-import {PaperLong, PaperShort, planLayout, planSheet, roomScheduleSheets, SheetInfo} from './plan-drawing';
+import {planLayout, planSheet, roomScheduleSheets} from './plan-drawing';
+import {PaperLong, PaperShort, SheetInfo} from './sheet-svg';
 
 const wall = (id: number, start: PlanPoint, end: PlanPoint, openings: Opening[] = []): Wall => ({
     id,

@@ -355,9 +355,25 @@ format is the text in `FurnitureTools::Format`.
   columns filled. Dimensions are `roomDimensions()` at paper offsets, `walledOnly` (no lines where open-plan rooms
   meet). Text widths are estimated (`CharWidth`): room names wrap to the room, and dimensions and item names that
   would overlap text placed before them are left out.
+- Wall elevations (`viewer/engine/elevations.ts`, framework-free): `elevationSheets()` gives an A4 page (or more) per
+  room with walls. `roomFaces()` letters the room's outline edges that have a wall along them (A, B, … counter-clockwise),
+  each seen from inside, so its x runs from the edge's end to its start; the top follows a vaulted ceiling
+  (`ceilingHeightAt()`). A face draws the finish bands of `finishSegments()` round the openings (`clipGap()`, as
+  `buildWallFinishes()` does) with their joints as the viewer lays them: Tiles and Terrazzo as a grid on the room's
+  tile grid (u as `tileUv()`, the phase is −(b − origin)·dir; v from the floor), Brick in stretcher bond from the
+  edge's start (`worldUvBox()`; even courses from the floor shifted half a brick), Herringbone reflected (the canvas
+  is sampled with `flipY`), turned 45° and clipped; joints closer than `MinJointPitch` on paper are left out. Then
+  the skirting, the openings (doors with dashed lines to the hinge, a double door's leaf on `hinge` `leafWidth` wide,
+  windows with panes, transoms and panel), the items standing against the face (`itemsAgainst()`, by
+  `itemFootprint()`), all clipped to the outline (a vault), the width chain below and the band levels at the right up
+  to the crown. `ElevationFace` carries the edge's spans, gaps, openings and finish segments, computed once.
+  `layoutFaces()` flows the faces in rows at the largest of `ElevationScales` that fits one page with every face
+  within the paper (a wider one halves the scale); rows beside the key plan and legend start right of them, and a
+  face too wide for that starts below. Open stretches of an edge are hatched.
+- The sheets share `sheet-svg.ts` (paper size, frame, title block, SVG writing).
 - `app/export/`: `sheetsPdf()` turns the sheets into PDF pages with `jspdf` and `svg2pdf.js` (loaded lazily) and
   embeds Inter from `assets/fonts/` (SIL OFL; jsPDF's own fonts lack Czech letters). `ExportComponent` (Plan PDF,
-  Plan SVG, 3D glTF) exports the scene as shown on the viewer page and the shared viewer page;
+  Plan SVG, Elevations PDF, 3D glTF) exports the scene as shown on the viewer page and the shared viewer page;
   `ShareSettingsDto.exports` (missing in older links: allowed) lets a share link forbid it.
 - glTF: `ViewerEngine.exportGlb()` writes the built floor through `GLTFExporter` (loaded lazily). `exportTree()`
   (`viewer/engine/gltf-export.ts`) copies the content with the ceilings shown and leaves out the room labels, the

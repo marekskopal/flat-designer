@@ -150,6 +150,28 @@ export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tole
 }
 
 /** Signed area by the shoelace formula, mm²; positive for counter-clockwise polygons. */
+/**
+ * The corners of an item's footprint in plan mm, counter-clockwise from its front left (as seen from the front); a
+ * round column's is an ellipse of 32 points.
+ */
+export function itemFootprint(item: Pick<Item, 'kind' | 'x' | 'y' | 'width' | 'depth' | 'rotation' | 'params'>): Vec2[] {
+    const r = (item.rotation * Math.PI) / 180;
+    const cos = Math.cos(r);
+    const sin = Math.sin(r);
+    const w = item.width / 2;
+    const d = item.depth / 2;
+    const local: [number, number][] =
+        item.kind === 'Column' && item.params['shape'] === 'round'
+            ? Array.from({length: 32}, (_, i) => [w * Math.cos((i / 16) * Math.PI), d * Math.sin((i / 16) * Math.PI)])
+            : [
+                [-w, -d],
+                [w, -d],
+                [w, d],
+                [-w, d],
+            ];
+    return local.map(([x, y]) => ({x: item.x + x * cos - y * sin, y: item.y + x * sin + y * cos}));
+}
+
 /** Plan point (mm) where a room's tile joints cross; the plan origin when the room sets none. */
 export function tileOrigin(room: Pick<Room, 'tileOriginX' | 'tileOriginY'> | undefined): Vec2 {
     return {x: room?.tileOriginX ?? 0, y: room?.tileOriginY ?? 0};

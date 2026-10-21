@@ -1,4 +1,4 @@
-import {Sheet} from '@app/viewer/engine/plan-drawing';
+import {Sheet} from '@app/viewer/engine/sheet-svg';
 
 /** Inter (SIL OFL, in assets/fonts) for the PDF's text: jsPDF's own fonts lack most accented letters. */
 const Fonts = [

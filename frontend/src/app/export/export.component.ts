@@ -1,14 +1,17 @@
 import {ChangeDetectionStrategy, Component, inject, input, signal} from '@angular/core';
 import {Scene} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
-import {planSheet, roomScheduleSheets, SheetInfo} from '@app/viewer/engine/plan-drawing';
+import {elevationSheets} from '@app/viewer/engine/elevations';
+import {planSheet, roomScheduleSheets} from '@app/viewer/engine/plan-drawing';
+import {SheetInfo} from '@app/viewer/engine/sheet-svg';
 
 import {downloadBlob, safeFilename} from './download';
 import {sheetsPdf} from './sheets-pdf';
 
 /**
  * The viewer panel's exports of the floor as shown (its variants): the plan on A4 as a PDF, with the room schedule on
- * the following page, or the plan page alone as an SVG, and the 3D model as glTF (`glb`, made by the viewer).
+ * the following page, or the plan page alone as an SVG; the rooms' wall elevations as a PDF; and the 3D model as glTF
+ * (`glb`, made by the viewer).
  */
 @Component({
     selector: 'fd-export',
@@ -19,6 +22,15 @@ import {sheetsPdf} from './sheets-pdf';
             </button>
             <button type="button" class="btn btn--ghost" [disabled]="busy()" title="The plan page as a vector drawing" (click)="exportSvg()">
                 Plan SVG
+            </button>
+            <button
+                type="button"
+                class="btn btn--ghost"
+                [disabled]="busy()"
+                title="Every room's walls seen from inside, with tiling, openings and dimensions, a page per room"
+                (click)="exportElevations()"
+            >
+                Elevations PDF
             </button>
             <button
                 type="button"
@@ -35,12 +47,12 @@ import {sheetsPdf} from './sheets-pdf';
         @use 'variables' as *;
 
         .exports {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: $space-8;
         }
 
         .btn {
-            flex: 1;
             padding-inline: $space-4;
         }
     `,
@@ -61,6 +73,16 @@ export class ExportComponent {
         await this.export(async () => {
             const blob = await sheetsPdf([planSheet(this.scene(), info), ...roomScheduleSheets(this.scene(), info)]);
             downloadBlob(blob, this.filename('plan.pdf'));
+        });
+    }
+
+    protected async exportElevations(): Promise<void> {
+        await this.export(async () => {
+            const sheets = elevationSheets(this.scene(), this.info());
+            if (sheets.length === 0) {
+                throw new Error('No room on this floor has walls to draw.');
+            }
+            downloadBlob(await sheetsPdf(sheets), this.filename('elevations.pdf'));
         });
     }
 

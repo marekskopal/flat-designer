@@ -5,6 +5,7 @@ import {roomDimensions} from './dimensions';
 import {
     Bounds,
     cornerWindows,
+    itemFootprint,
     Leaf,
     NoCorners,
     openingLeaves,
@@ -19,6 +20,29 @@ import {
     wallJoints,
     wallPieces,
 } from './plan-geometry';
+import {
+    frameSvg,
+    Ink,
+    line,
+    Margin,
+    Muted,
+    n,
+    Padding,
+    PaperLong,
+    PaperShort,
+    path,
+    rect,
+    RuleColor,
+    Sheet,
+    SheetInfo,
+    sheetSvg,
+    Style,
+    text,
+    textWidth,
+    TitleBand,
+    titleBlockSvg,
+    truncate,
+} from './sheet-svg';
 import {hiddenItemIds} from './variants';
 
 // The floor plan as a drawing on paper (A4, in paper mm): walls cut at `PlanCutHeight`, doors with their swings,
@@ -29,15 +53,6 @@ import {hiddenItemIds} from './variants';
 export const PlanCutHeight = 1300;
 /** Scales tried for the plan, the largest drawing first (1:n). */
 export const PlanScales = [50, 100, 200, 250, 500, 1000];
-/** A4 in mm. */
-export const PaperLong = 297;
-export const PaperShort = 210;
-/** From the paper's edge to the frame, and from the frame to the drawing, mm. */
-const Margin = 10;
-const Padding = 6;
-/** Height of the band under the plan with the title block, scale bar and north arrow, mm. */
-const TitleBand = 24;
-
 /** Dimension lines and the chains of piers and openings, paper mm from the wall face into the room. */
 const DimensionPaperOffset = 5.5;
 const ChainPaperOffset = 2.5;
@@ -45,41 +60,10 @@ const ChainPaperOffset = 2.5;
 const TickPaper = 1.2;
 /** Gap between a glazing line and the window's centre line, mm. */
 const GlassGap = 20;
-/** Text widths are estimated (no font metrics): one character is this many times the font size on average. */
-const CharWidth = 0.56;
-
-const Font = 'Inter, Helvetica, Arial, sans-serif';
-const Ink = '#2f2c28';
-const Muted = '#6b665e';
 const WallFill = '#2f2c28';
 const ItemFill = '#f3f0ea';
 const IndoorFill = '#ffffff';
 const OutdoorFill = '#edf2e6';
-const RuleColor = '#d8d3ca';
-
-/** A page: its SVG and size in mm. */
-export interface Sheet {
-    width: number;
-    height: number;
-    svg: string;
-}
-
-/** What the title block says. */
-export interface SheetInfo {
-    projectName: string;
-    floorName: string;
-    address: string | null;
-    date: Date;
-}
-
-interface Style {
-    fill?: string;
-    stroke?: string;
-    /** Stroke width, paper mm. */
-    width?: number;
-    /** Dash pattern, paper mm. */
-    dash?: string;
-}
 
 /** A polygon or polyline in plan mm. */
 interface Shape {
@@ -179,7 +163,7 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
         ...[...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
-        titleBlockSvg(layout, info),
+        planBandSvg(layout, info),
     ];
     return {width: layout.width, height: layout.height, scale: s, svg: sheetSvg(layout.width, layout.height, body)};
 }
@@ -433,25 +417,6 @@ function slideShapes(frame: WallFrame, leaf: Leaf, opening: Opening): Shape[] {
         : [leafRect(leaf.travel, HiddenStyle), leafRect(0, OutlineStyle)];
 }
 
-/** The corners of an item's footprint, counter-clockwise from its front left (as seen from the front); a round column's is an ellipse. */
-function footprint(item: Item): Vec2[] {
-    const r = (item.rotation * Math.PI) / 180;
-    const cos = Math.cos(r);
-    const sin = Math.sin(r);
-    const w = item.width / 2;
-    const d = item.depth / 2;
-    const local: [number, number][] =
-        item.kind === 'Column' && item.params['shape'] === 'round'
-            ? Array.from({length: 32}, (_, i) => [w * Math.cos((i / 16) * Math.PI), d * Math.sin((i / 16) * Math.PI)])
-            : [
-                [-w, -d],
-                [w, -d],
-                [w, d],
-                [-w, d],
-            ];
-    return local.map(([x, y]) => ({x: item.x + x * cos - y * sin, y: item.y + x * sin + y * cos}));
-}
-
 /** An item's footprint: a column filled like the walls, an item above the cut (a wall cabinet, a beam, a lamp) dashed. */
 function itemShape(item: Item): Shape {
     const style: Style =
@@ -460,7 +425,7 @@ function itemShape(item: Item): Shape {
             : item.z >= PlanCutHeight
               ? {stroke: Muted, width: 0.15, dash: '1 0.7'}
               : {fill: ItemFill, stroke: Muted, width: 0.18};
-    return {points: footprint(item), closed: true, style};
+    return {points: itemFootprint(item), closed: true, style};
 }
 
 /** The item's name in its footprint, along its width or else its depth, if it fits; none for columns and items above the cut. */
@@ -622,17 +587,11 @@ function perimeter(room: Pick<Room, 'polygon'>): number {
 
 // --- Page furniture (paper mm) ---
 
-function frameSvg(width: number, height: number): string {
-    return rect({x: Margin, y: Margin}, width - 2 * Margin, height - 2 * Margin, {stroke: Ink, width: 0.35});
-}
-
 /** The band under the plan: a scale bar and a north arrow at the left, the title block at the right. */
-function titleBlockSvg(layout: PlanLayout, info: SheetInfo): string {
+function planBandSvg(layout: PlanLayout, info: SheetInfo): string {
     const top = layout.height - Margin - TitleBand;
-    const bottom = layout.height - Margin;
     const left = Margin + Padding;
-    const right = layout.width - Margin;
-    const parts: string[] = [line({x: Margin, y: top}, {x: right, y: top}, {stroke: Ink, width: 0.25})];
+    const parts: string[] = [];
 
     // Scale bar: the longest round length up to 50 mm on paper, in five parts.
     const metres = [100, 50, 20, 10, 5, 2, 1].find((m) => (m * 1000) / layout.scale <= 50) ?? 1;
@@ -654,51 +613,14 @@ function titleBlockSvg(layout: PlanLayout, info: SheetInfo): string {
     );
     parts.push(text({x: ax, y: ay - 7.5}, 'N', 2.6, {bold: true, anchor: 'middle'}));
 
-    // Title block.
-    const blockLeft = right - 110;
-    parts.push(line({x: blockLeft, y: top}, {x: blockLeft, y: bottom}, {stroke: Ink, width: 0.25}));
-    const x = blockLeft + 4;
-    parts.push(text({x, y: top + 7}, truncate(info.projectName, 102, 4), 4, {bold: true}));
-    const floor = info.address === null || info.address === '' ? info.floorName : `${info.floorName} · ${info.address}`;
-    parts.push(text({x, y: top + 13}, truncate(floor, 102, 2.8), 2.8));
-    parts.push(text({x, y: top + 19}, `Floor plan · 1:${layout.scale} (A4) · ${localDate(info.date)} · Flat Designer`, 2.2, {color: Muted}));
+    parts.push(titleBlockSvg(layout.width, layout.height, info, `Floor plan · 1:${layout.scale} (A4)`));
     return parts.join('');
 }
 
 // --- SVG writing ---
 
-function sheetSvg(width: number, height: number, body: readonly string[]): string {
-    return (
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}" ` +
-        `font-family="${Font}"><rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff"/>${body.join('')}</svg>`
-    );
-}
-
 function shapeSvg(shape: Shape, toPaper: (p: Vec2) => Vec2): string {
-    const d = shape.points
-        .map(toPaper)
-        .map((p, i) => `${i === 0 ? 'M' : 'L'} ${n(p.x)} ${n(p.y)}`)
-        .join(' ');
-    return `<path d="${d}${shape.closed ? ' Z' : ''}"${styleAttributes(shape.style, shape.closed)}/>`;
-}
-
-function line(a: Vec2, b: Vec2, style: Style): string {
-    return `<path d="M ${n(a.x)} ${n(a.y)} L ${n(b.x)} ${n(b.y)}"${styleAttributes(style, false)}/>`;
-}
-
-function rect(at: Vec2, width: number, height: number, style: Style): string {
-    return `<rect x="${n(at.x)}" y="${n(at.y)}" width="${n(width)}" height="${n(height)}"${styleAttributes(style, true)}/>`;
-}
-
-function styleAttributes(style: Style, closed: boolean): string {
-    let attributes = ` fill="${closed ? (style.fill ?? 'none') : 'none'}"`;
-    if (style.stroke !== undefined) {
-        attributes += ` stroke="${style.stroke}" stroke-width="${style.width ?? 0.2}" stroke-linejoin="round"`;
-        if (style.dash !== undefined) {
-            attributes += ` stroke-dasharray="${style.dash}"`;
-        }
-    }
-    return attributes;
+    return path(shape.points.map(toPaper), shape.closed, shape.style);
 }
 
 /** A label's lines stacked around its point, turned along its angle (as the paper shows it: y down) and never upside down. */
@@ -726,29 +648,4 @@ function paperDegrees(label: Label): number {
         degrees += 180;
     }
     return degrees;
-}
-
-function text(at: Vec2, value: string, size: number, options: {bold?: boolean; color?: string; anchor?: 'start' | 'middle' | 'end'} = {}): string {
-    const anchor = options.anchor === undefined || options.anchor === 'start' ? '' : ` text-anchor="${options.anchor}"`;
-    const weight = options.bold === true ? ' font-weight="bold"' : '';
-    return `<text x="${n(at.x)}" y="${n(at.y)}" font-size="${n(size)}" fill="${options.color ?? Ink}"${anchor}${weight}>${escapeXml(value)}</text>`;
-}
-
-/** Estimated width of a text in mm. */
-function textWidth(value: string, size: number): number {
-    return value.length * size * CharWidth;
-}
-
-/** The text, shortened with an ellipsis to fit `width` mm. */
-function truncate(value: string, width: number, size: number): string {
-    const max = Math.floor(width / (size * CharWidth));
-    return value.length <= max ? value : `${value.slice(0, Math.max(max - 1, 1)).trimEnd()}…`;
-}
-
-function escapeXml(value: string): string {
-    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function n(value: number): string {
-    return String(Math.round(value * 100) / 100);
 }

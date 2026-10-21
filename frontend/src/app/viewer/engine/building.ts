@@ -427,14 +427,14 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
 }
 
 /** A stretch of a room edge (mm from its start) and the finish bands lining it. */
-interface FinishSegment {
+export interface FinishSegment {
     from: number;
     to: number;
     bands: readonly WallFinish[];
 }
 
 /** The edge a → b in stretches: the wall faces with bands of their own, and the room's bands elsewhere. */
-function finishSegments(room: Room, a: Vec2, b: Vec2, length: number, walls: readonly Wall[]): FinishSegment[] {
+export function finishSegments(room: Room, a: Vec2, b: Vec2, length: number, walls: readonly Wall[]): FinishSegment[] {
     const own = wallFacesAlongEdge(a, b, walls).flatMap((face): FinishSegment[] => {
         const bands = face.side === 'Left' ? face.wall.leftFinishes : face.wall.rightFinishes;
         return bands == null ? [] : [{from: face.from, to: face.to, bands}];
@@ -449,7 +449,7 @@ export function hasFaceFinishes(wall: Wall): boolean {
 }
 
 /** Opening relative to a finish band on a segment, as `wallPieces` expects; nothing when the gap misses them. */
-function clipGap(gap: WallGap, bandBottom: number, bandTop: number, segment: FinishSegment): Opening[] {
+export function clipGap(gap: WallGap, bandBottom: number, bandTop: number, segment: FinishSegment): Opening[] {
     const from = Math.max(gap.from, segment.from);
     const to = Math.min(gap.to, segment.to);
     if (gap.top <= bandBottom || gap.bottom >= bandTop || to <= from) {

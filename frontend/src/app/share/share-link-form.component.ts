@@ -73,7 +73,7 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
             <div class="field">
                 <label class="check">
                     <input type="checkbox" formControlName="exports" />
-                    Guests can download the plan (PDF, SVG) and 3D model
+                    Guests can download the plan, elevations and 3D model
                 </label>
             </div>
 
