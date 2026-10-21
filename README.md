@@ -53,7 +53,8 @@ Switching variants is one click, and saved views and share links remember the on
 ![Living room with brick vaults, oak floor and furniture](docs/screenshots/view-tour-05-living-room.webp)
 
 A shared material catalogue with procedural and photo textures: planks, tiles, terrazzo, brick and herringbone on
-one tile grid per room. Ceilings can be vaulted between beams, with skirting, French windows, shutters and railings.
+one tile grid per room. Ceilings can be vaulted between beams, with skirting, French windows, shutters and railings. Columns and
+downstand beams are cut by the section like walls, and walls can have niches.
 
 ### Furniture, textiles and product models
 
@@ -259,7 +260,8 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
   floor, x points east and y points north.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south.
 - Walls are centre lines with a thickness. Openings are positioned by their offset along the wall from its start.
-- Openings are doors (single, double, sliding, pocket), passages without a door, and windows. Doors have a frame style
+- Openings are doors (single, double, sliding, pocket), passages without a door, windows and niches (recesses into one
+  face of the wall). Doors have a frame style
   (lining, architrave, flush, none), a handle (lever, knob, pull, none) and a flush, panelled or glazed leaf. Windows
   are divided by mullions and transoms, can have sill boards, a solid lower panel and louvred or solid exterior
   shutters, and two windows meeting at a wall corner form a corner window.
