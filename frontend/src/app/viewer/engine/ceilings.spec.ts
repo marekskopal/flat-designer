@@ -14,6 +14,7 @@ import {
     vaultBreaks,
     vaultFrame,
     vaultHeight,
+    wallFacesAlongEdge,
     wallSpansAlongEdge,
 } from './ceilings';
 import {wallGapsAlongEdge} from './plan-geometry';
@@ -44,6 +45,8 @@ const wall = (id: number, start: [number, number], end: [number, number], openin
     thickness: 100,
     height: 2600,
     materialId: null,
+    leftFinishes: null,
+    rightFinishes: null,
     openings,
 });
 
@@ -148,6 +151,7 @@ interface WallSpansCase {
     spans: [number, number][];
     gaps: {from: number; to: number; bottom: number; top: number; niche?: boolean}[];
     skirting: [number, number][];
+    faces: {wall: number; side: 'Left' | 'Right'; from: number; to: number}[];
 }
 
 /** Shared with the backend twin (`WallFaceSpansTest`), which the quantities use. */
@@ -172,6 +176,12 @@ describe('wall faces along an edge (shared fixture)', () => {
 
         near(wallSpansAlongEdge(a, b, walls), testCase.spans);
         near(skirtingPieces(a, b, walls), testCase.skirting);
+        const faces = wallFacesAlongEdge(a, b, walls);
+        expect(faces.map((face) => [face.wall.id, face.side])).toEqual(testCase.faces.map((face) => [walls[face.wall].id, face.side]));
+        near(
+            faces.map((face) => [face.from, face.to]),
+            testCase.faces.map((face) => [face.from, face.to]),
+        );
         near(
             wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche ? 1 : 0]),
             testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche === true ? 1 : 0]),

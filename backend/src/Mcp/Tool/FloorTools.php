@@ -28,7 +28,7 @@ final readonly class FloorTools
 	#[McpTool(
 		name: 'get_floor',
 		description: 'Everything on one floor: rooms (polygon outline, area m², ceiling height, floor material, wall finishes), '
-			. 'walls (centre line, thickness, height, type) with their openings (doors/windows: offset from wall start, width, '
+			. 'walls (centre line, thickness, height, type; leftFinishes / rightFinishes are a face\'s own finish bands in place of the room\'s) with their openings (doors/windows: offset from wall start, width, '
 			. 'height, sill), items (kind, footprint centre x/y, elevation z, size, rotation, room, group, material, params), '
 			. 'groups (items forming one piece of furniture, see create_group; a group with variantSetId is a variant) and '
 			. 'variantSets (alternatives of which activeGroupId is shown; hiddenItemIds lists the items of the other variants) and '

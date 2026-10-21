@@ -1,8 +1,8 @@
-import {Opening, Wall} from '@app/models/scene';
+import {Material, Opening, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildWall} from './building';
+import {buildWall, buildWallFinishes} from './building';
 import {MaterialLibrary} from './materials';
 import {WallEnds} from './plan-geometry';
 
@@ -32,6 +32,8 @@ const wall: Wall = {
     thickness: 300,
     height: 2600,
     materialId: null,
+    leftFinishes: null,
+    rightFinishes: null,
     openings: [niche],
 };
 
@@ -58,5 +60,70 @@ describe('buildWall', () => {
         const back = group.children.find((o) => o.userData['openingId'] === 7) as THREE.Mesh;
         const box = new THREE.Box3().setFromObject(back);
         expect([mm(box.min.x), mm(box.max.x), mm(box.min.z), mm(box.max.z)]).toEqual([0, 800, -50, 150]);
+    });
+});
+
+describe('buildWallFinishes', () => {
+    const material = (id: number, code: string): Material => ({
+        id,
+        code,
+        name: code,
+        pattern: 'Plain',
+        color: '#808080',
+        roughness: 0.5,
+        metalness: 0,
+        texture: null,
+        tileWidth: null,
+        tileHeight: null,
+    });
+    const materials = new MaterialLibrary([material(1, 'herringbone'), material(2, 'terrazzo')], 1);
+    const room: Room = {
+        id: 1,
+        code: 'B',
+        name: 'Bathroom',
+        type: 'Bathroom',
+        polygon: [[0, 0], [2000, 0], [2000, 2000], [0, 2000]],
+        area: 4,
+        ceilingHeight: 2600,
+        floorMaterialId: null,
+        wallFinishes: [{materialId: 1, bottom: 0, top: 1200}],
+        tileOriginX: null,
+        tileOriginY: null,
+    };
+    // The south wall; its left face (start → end runs east) faces the room.
+    const south = (leftFinishes: Wall['leftFinishes']): Wall => ({
+        ...wall,
+        id: 2,
+        startX: -50,
+        startY: -50,
+        endX: 2050,
+        endY: -50,
+        thickness: 100,
+        leftFinishes,
+        openings: [],
+    });
+    const pieces = (group: THREE.Group, code: string): THREE.Mesh[] => {
+        const meshes: THREE.Mesh[] = [];
+        group.traverse((o) => {
+            if (o instanceof THREE.Mesh && o.material === materials.byCode(code)) {
+                meshes.push(o);
+            }
+        });
+        return meshes;
+    };
+
+    it('lines a wall face with its own bands instead of the room\'s', () => {
+        const group = buildWallFinishes(room, [south([{materialId: 2, bottom: 0, top: 2100}])], materials);
+        const terrazzo = pieces(group, 'terrazzo');
+        expect(terrazzo).toHaveLength(1);
+        const box = new THREE.Box3().setFromObject(terrazzo[0]);
+        expect([Math.round(box.min.x * 1000), Math.round(box.max.x * 1000), Math.round(box.max.y * 1000)]).toEqual([0, 2000, 2100]);
+        // The other three edges keep the room's band.
+        expect(pieces(group, 'herringbone')).toHaveLength(3);
+    });
+
+    it('leaves a face with an empty list bare, and gives the room\'s bands to a face without its own', () => {
+        expect(pieces(buildWallFinishes(room, [south([])], materials), 'herringbone')).toHaveLength(3);
+        expect(pieces(buildWallFinishes(room, [south(null)], materials), 'herringbone')).toHaveLength(4);
     });
 });

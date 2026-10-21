@@ -6,7 +6,18 @@ import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.j
 import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
-import {addRoom, buildBuilding, buildCeilingSteps, buildFloor, BuildingParts, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
+import {
+    addRoom,
+    buildBuilding,
+    buildCeilingSteps,
+    buildFloor,
+    BuildingParts,
+    buildRoom,
+    buildRoomFinishes,
+    buildSlab,
+    buildWall,
+    hasFaceFinishes,
+} from './building';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
@@ -534,15 +545,26 @@ export class ViewerEngine {
             parts.ceilings.add(parts.ceilingSteps);
         }
         if (wallsChanged) {
-            // Wall finishes and skirting leave the doors free, so they follow the walls of unchanged rooms too.
+            // Wall finishes and skirting leave the doors free and take a wall face's own bands, so they follow the
+            // walls of unchanged rooms too. A room drawing none is left alone unless such bands came or went.
+            const previousWalls = new Map(previous.walls.map((wall) => [wall.id, wall]));
+            const facesChanged = [
+                ...walls.changed,
+                ...walls.changed.map((wall) => previousWalls.get(wall.id)),
+                ...walls.removed.map((id) => previousWalls.get(id)),
+            ].some((wall) => wall !== undefined && hasFaceFinishes(wall));
             for (const room of scene.rooms) {
                 const roomParts = parts.rooms.get(room.id);
-                if (roomParts === undefined || changedRooms.has(room.id) || roomParts.finishes === null) {
+                if (roomParts === undefined || changedRooms.has(room.id) || (roomParts.finishes === null && !facesChanged)) {
                     continue;
                 }
-                this.disposeObject(roomParts.finishes);
-                roomParts.finishes = buildWallFinishes(room, scene.walls, materials);
-                parts.root.add(roomParts.finishes);
+                if (roomParts.finishes !== null) {
+                    this.disposeObject(roomParts.finishes);
+                }
+                roomParts.finishes = buildRoomFinishes(room, scene.walls, materials);
+                if (roomParts.finishes !== null) {
+                    parts.root.add(roomParts.finishes);
+                }
             }
         }
     }
@@ -2069,6 +2091,8 @@ export class ViewerEngine {
             thickness: this.wallDraft.thickness,
             height: this.wallDraft.height,
             materialId: null,
+            leftFinishes: null,
+            rightFinishes: null,
             openings: [],
         }));
         const joints = wallJoints([...(this.sceneData?.walls ?? []), ...drawn]);

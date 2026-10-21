@@ -7,14 +7,24 @@ namespace FlatDesigner\Mcp\Tool;
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Service\Editor\Drawing\WallDrawer;
+use FlatDesigner\Service\Editor\Element\WallFinishBands;
 use FlatDesigner\Service\Editor\SceneEditor;
 use FlatDesigner\Service\Request\BodyReader;
 use Mcp\Capability\Attribute\McpTool;
+use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
 
 /** Walls, given by their centre line. */
 final readonly class WallTools
 {
+	private const array FaceFinishesSchema = [
+		'type' => ['array', 'null'],
+		'description' => 'wall finish bands on this face, mm above the floor, replacing the bands of the room the face borders; '
+			. '[] leaves the face bare (paint only)',
+		'items' => WallFinishBands::BandSchema,
+		'default' => null,
+	];
+
 	public function __construct(private ToolContext $context, private SceneEditor $editor, private WallDrawer $wallDrawer)
 	{
 	}
@@ -28,6 +38,8 @@ final readonly class WallTools
 	 * @param int|null $height mm (default 2600)
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft" (default Interior)
 	 * @param int|null $materialId surface material from list_materials
+	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands (e.g. tiling 0–2100) on the face left of start → end, instead of the room's wallFinishes
+	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
 	 */
 	#[McpTool(name: 'add_wall', description: 'Add a straight wall. Openings are placed along it from the start point.')]
 	public function addWall(
@@ -42,6 +54,10 @@ final readonly class WallTools
 		?string $type = null,
 		?string $name = null,
 		?int $materialId = null,
+		#[Schema(definition: self::FaceFinishesSchema)]
+		?array $leftFinishes = null,
+		#[Schema(definition: self::FaceFinishesSchema)]
+		?array $rightFinishes = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -57,6 +73,8 @@ final readonly class WallTools
 				'type' => $type,
 				'name' => $name,
 				'materialId' => $materialId,
+				'leftFinishes' => $leftFinishes,
+				'rightFinishes' => $rightFinishes,
 			]),
 		);
 	}
@@ -102,7 +120,9 @@ final readonly class WallTools
 
 	/**
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft"
-	 * @param list<string>|null $clear fields to set to none: "materialId"
+	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands on the face left of start → end, instead of the room's wallFinishes; [] = none
+	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
+	 * @param list<string>|null $clear fields to set to none: "materialId"; "leftFinishes", "rightFinishes" (the face takes the room's bands again)
 	 */
 	#[McpTool(
 		name: 'update_wall',
@@ -122,6 +142,10 @@ final readonly class WallTools
 		?string $type = null,
 		?string $name = null,
 		?int $materialId = null,
+		#[Schema(definition: self::FaceFinishesSchema)]
+		?array $leftFinishes = null,
+		#[Schema(definition: self::FaceFinishesSchema)]
+		?array $rightFinishes = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -139,7 +163,9 @@ final readonly class WallTools
 				'type' => $type,
 				'name' => $name,
 				'materialId' => $materialId,
-			], $clear, ['materialId']),
+				'leftFinishes' => $leftFinishes,
+				'rightFinishes' => $rightFinishes,
+			], $clear, ['materialId', 'leftFinishes', 'rightFinishes']),
 		);
 	}
 

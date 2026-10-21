@@ -170,6 +170,10 @@ export interface Wall {
     thickness: number;
     height: number;
     materialId: number | null;
+    /** Finish bands on the face left of start → end, instead of the room's `wallFinishes`; null: the room's, []: none. */
+    leftFinishes: WallFinish[] | null;
+    /** The same on the face right of start → end. */
+    rightFinishes: WallFinish[] | null;
     openings: Opening[];
 }
 

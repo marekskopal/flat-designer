@@ -17,10 +17,10 @@ use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 
 /**
- * Walls. The state leaves out the openings (they are elements of their own) but keeps their offsets as
- * `openingOffsets` ([{id, offset}] by id): moving the start point shifts the offsets so the openings stay
- * where they are on the plan, and undo restores them exactly. A deleted wall hides its openings until undo
- * brings it back.
+ * Walls, with optional wall finish bands per face (`leftFinishes` / `rightFinishes`, `WallFinishBands`). The state
+ * leaves out the openings (they are elements of their own) but keeps their offsets as `openingOffsets` ([{id, offset}]
+ * by id): moving the start point shifts the offsets so the openings stay where they are on the plan, and undo restores
+ * them exactly. A deleted wall hides its openings until undo brings it back.
  */
 final readonly class WallHandler implements ElementHandler
 {
@@ -30,6 +30,7 @@ final readonly class WallHandler implements ElementHandler
 		private WallRepository $wallRepository,
 		private OpeningRepository $openingRepository,
 		private MaterialResolver $materialResolver,
+		private WallFinishBands $wallFinishBands,
 	) {
 	}
 
@@ -41,7 +42,7 @@ final readonly class WallHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'thickness', 'height', 'materialId'];
+		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'thickness', 'height', 'materialId', 'leftFinishes', 'rightFinishes'];
 	}
 
 	/** @return list<string> */
@@ -63,6 +64,8 @@ final readonly class WallHandler implements ElementHandler
 			'thickness' => 100,
 			'height' => 2600,
 			'materialId' => null,
+			'leftFinishes' => null,
+			'rightFinishes' => null,
 		];
 	}
 
@@ -110,11 +113,18 @@ final readonly class WallHandler implements ElementHandler
 			'thickness' => $fields->int('thickness', 10, 2000),
 			'height' => $fields->int('height', 100, State::MaxSize),
 			'materialId' => $materialId,
+			'leftFinishes' => $this->faceFinishes($fields->raw('leftFinishes'), 'leftFinishes'),
+			'rightFinishes' => $this->faceFinishes($fields->raw('rightFinishes'), 'rightFinishes'),
 		];
 
 		$length = self::length($normalized['startX'], $normalized['startY'], $normalized['endX'], $normalized['endY']);
 		if ($length < self::MinLength) {
 			throw EditException::invalid(sprintf('A wall must be at least %d mm long.', self::MinLength));
+		}
+		// Turning the wall round turns its faces round: unless the request sets the bands (undo, redo), they stay
+		// on the same side of the plan, as the openings do.
+		if ($currentWall !== null && self::reverses($currentWall, $normalized) && self::keepsFaces($currentWall, $normalized)) {
+			[$normalized['leftFinishes'], $normalized['rightFinishes']] = [$normalized['rightFinishes'], $normalized['leftFinishes']];
 		}
 
 		$normalized['openingOffsets'] = $currentWall === null ? [] : self::offsetList(
@@ -214,6 +224,32 @@ final readonly class WallHandler implements ElementHandler
 	}
 
 	/**
+	 * A face's own bands; null leaves the face to its room's, [] keeps it bare.
+	 *
+	 * @return list<array{materialId: int, bottom: int, top: int}>|null
+	 */
+	private function faceFinishes(mixed $bands, string $field): ?array
+	{
+		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field);
+	}
+
+	/** @param array{startX: int, startY: int, endX: int, endY: int, ...} $next */
+	private static function reverses(Wall $wall, array $next): bool
+	{
+		$dx = $wall->endX - $wall->startX;
+		$dy = $wall->endY - $wall->startY;
+
+		return $dx * ($next['endX'] - $next['startX']) + $dy * ($next['endY'] - $next['startY']) < 0;
+	}
+
+	/** @param array{leftFinishes: mixed, rightFinishes: mixed, ...} $next */
+	private static function keepsFaces(Wall $wall, array $next): bool
+	{
+		return WallFinishBands::encodeFace($next['leftFinishes']) === $wall->leftFinishes
+			&& WallFinishBands::encodeFace($next['rightFinishes']) === $wall->rightFinishes;
+	}
+
+	/**
 	 * Requested offsets when they name exactly the wall's openings, otherwise null (ignored).
 	 *
 	 * @param array<int, int> $current
@@ -263,6 +299,8 @@ final readonly class WallHandler implements ElementHandler
 		$wall->thickness = $fields->int('thickness', 10, 2000);
 		$wall->height = $fields->int('height', 100, State::MaxSize);
 		$wall->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
+		$wall->leftFinishes = WallFinishBands::encodeFace($fields->raw('leftFinishes'));
+		$wall->rightFinishes = WallFinishBands::encodeFace($fields->raw('rightFinishes'));
 		$this->wallRepository->persist($wall);
 
 		$offsets = $fields->raw('openingOffsets');

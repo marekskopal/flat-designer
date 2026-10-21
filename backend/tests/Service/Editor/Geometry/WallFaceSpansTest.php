@@ -27,11 +27,11 @@ final class WallFaceSpansTest extends TestCase
 
 	private const float Delta = 0.01;
 
-	/** @return iterable<string, array{array{float, float}, array{float, float}, list<WallDto>, list<array{float, float}>, list<array{from: float, to: float, bottom: int, top: int, niche: bool}>, list<array{float, float}>}> */
+	/** @return iterable<string, array{array{float, float}, array{float, float}, list<WallDto>, list<array{float, float}>, list<array{from: float, to: float, bottom: int, top: int, niche: bool}>, list<array{float, float}>, list<array{wall: int, side: string, from: float, to: float}>}> */
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int, niche?: bool}>, skirting: list<array{int|float, int|float}>}> $cases */
+		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int, niche?: bool}>, skirting: list<array{int|float, int|float}>, faces: list<array{wall: int, side: string, from: int|float, to: int|float}>}> $cases */
 		$cases = $fixture['cases'];
 		foreach ($cases as $case) {
 			$walls = [];
@@ -56,6 +56,10 @@ final class WallFaceSpansTest extends TestCase
 					$case['gaps'],
 				),
 				array_map($pair, $case['skirting']),
+				array_map(
+					static fn (array $f): array => ['wall' => $f['wall'], 'side' => $f['side'], 'from' => (float) $f['from'], 'to' => (float) $f['to']],
+					$case['faces'],
+				),
 			];
 		}
 	}
@@ -67,9 +71,10 @@ final class WallFaceSpansTest extends TestCase
 	 * @param list<array{float, float}> $spans
 	 * @param list<array{from: float, to: float, bottom: int, top: int, niche: bool}> $gaps
 	 * @param list<array{float, float}> $skirting
+	 * @param list<array{wall: int, side: string, from: float, to: float}> $faces
 	 */
 	#[DataProvider('cases')]
-	public function testWallFaces(array $a, array $b, array $walls, array $spans, array $gaps, array $skirting): void
+	public function testWallFaces(array $a, array $b, array $walls, array $spans, array $gaps, array $skirting, array $faces): void
 	{
 		self::assertPairs($spans, WallFaceSpans::spans($a, $b, $walls));
 		self::assertPairs($skirting, WallFaceSpans::skirting($a, $b, $walls));
@@ -85,10 +90,13 @@ final class WallFaceSpansTest extends TestCase
 			);
 		}
 
-		// The faces one by one cover the merged spans exactly once.
-		$faces = WallFaceSpans::faces($a, $b, $walls);
-		$covered = array_sum(array_map(static fn (array $face): float => $face['to'] - $face['from'], $faces));
-		self::assertEqualsWithDelta(array_sum(array_map(static fn (array $s): float => $s[1] - $s[0], $spans)), $covered, self::Delta);
+		$actualFaces = WallFaceSpans::faces($a, $b, $walls);
+		self::assertCount(count($faces), $actualFaces);
+		foreach ($faces as $i => $face) {
+			self::assertSame([$walls[$face['wall']]->id, $face['side']], [$actualFaces[$i]['wall']->id, $actualFaces[$i]['side']->value]);
+			self::assertEqualsWithDelta($face['from'], $actualFaces[$i]['from'], self::Delta);
+			self::assertEqualsWithDelta($face['to'], $actualFaces[$i]['to'], self::Delta);
+		}
 	}
 
 	public function testFacesKeepTheirWallAndOpenings(): void
@@ -173,6 +181,8 @@ final class WallFaceSpansTest extends TestCase
 			thickness: $wall['thickness'],
 			height: 2700,
 			materialId: null,
+			leftFinishes: null,
+			rightFinishes: null,
 			openings: $openings,
 		);
 	}

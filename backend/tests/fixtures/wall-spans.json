@@ -1,5 +1,5 @@
 {
- "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting (PHP) and wallSpansAlongEdge, wallGapsAlongEdge and skirtingPieces (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. Expected lengths are mm along the edge from a, compared within 0.01.",
+ "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting/faces (PHP) and wallSpansAlongEdge, wallGapsAlongEdge, skirtingPieces and wallFacesAlongEdge (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. `faces` are the wall faces one by one ({wall: index into walls, side: the wall's side facing the edge, from, to}; where walls overlap, the first keeps the stretch). Expected lengths are mm along the edge from a, compared within 0.01.",
  "cases": [
   {
    "name": "a wall along the edge with a door and a window",
@@ -12,7 +12,8 @@
    ],
    "spans": [[0, 4000]],
    "gaps": [{"from": 400, "to": 1300, "bottom": 0, "top": 2000}, {"from": 2400, "to": 3600, "bottom": 900, "top": 2100}],
-   "skirting": [[0, 400], [1300, 4000]]
+   "skirting": [[0, 400], [1300, 4000]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 4000}]
   },
   {
    "name": "a wall drawn against the edge's direction; walls across or too far away do not count",
@@ -26,7 +27,8 @@
    ],
    "spans": [[0, 3000]],
    "gaps": [{"from": 1300, "to": 2100, "bottom": 0, "top": 2000}],
-   "skirting": [[0, 1300], [2100, 3000]]
+   "skirting": [[0, 1300], [2100, 3000]],
+   "faces": [{"wall": 0, "side": "Right", "from": 0, "to": 3000}]
   },
   {
    "name": "walls along parts of an open edge, two of them end to end",
@@ -38,7 +40,8 @@
    ],
    "spans": [[0, 3050], [3950, 6000]],
    "gaps": [],
-   "skirting": [[0, 3050], [3950, 6000]]
+   "skirting": [[0, 3050], [3950, 6000]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 2050}, {"wall": 1, "side": "Left", "from": 3950, "to": 6000}, {"wall": 2, "side": "Right", "from": 2050, "to": 3050}]
   },
   {
    "name": "a door reaching past the end of the edge is clipped",
@@ -50,7 +53,8 @@
    ],
    "spans": [[0, 1000]],
    "gaps": [{"from": 700, "to": 1000, "bottom": 0, "top": 2000}],
-   "skirting": [[0, 700]]
+   "skirting": [[0, 700]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 1000}]
   },
   {
    "name": "a diagonal wall",
@@ -62,7 +66,8 @@
    ],
    "spans": [[0, 4242.64]],
    "gaps": [{"from": 1000, "to": 2000, "bottom": 0, "top": 2000}],
-   "skirting": [[0, 1000], [2000, 4242.64]]
+   "skirting": [[0, 1000], [2000, 4242.64]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 4242.64}]
   },
   {
    "name": "niches are openings of the face they are cut into only",
@@ -75,7 +80,8 @@
    ],
    "spans": [[0, 4000]],
    "gaps": [{"from": 500, "to": 1300, "bottom": 0, "top": 2400, "niche": true}],
-   "skirting": [[0, 500], [1300, 4000]]
+   "skirting": [[0, 500], [1300, 4000]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 4000}]
   },
   {
    "name": "a niche on the right of a wall drawn against the edge's direction",
@@ -88,7 +94,20 @@
    ],
    "spans": [[0, 4000]],
    "gaps": [{"from": 2700, "to": 3500, "bottom": 900, "top": 1500, "niche": true}],
-   "skirting": [[0, 4000]]
+   "skirting": [[0, 4000]],
+   "faces": [{"wall": 0, "side": "Right", "from": 0, "to": 4000}]
+  },
+  {
+   "name": "a wall listed later is cut in two around the face of an earlier wall",
+   "edge": [[0, 0], [3000, 0]],
+   "walls": [
+    {"startX": 1000, "startY": -50, "endX": 2000, "endY": -50, "thickness": 100, "openings": []},
+    {"startX": 0, "startY": -50, "endX": 3000, "endY": -50, "thickness": 100, "openings": []}
+   ],
+   "spans": [[0, 3000]],
+   "gaps": [],
+   "skirting": [[0, 3000]],
+   "faces": [{"wall": 0, "side": "Left", "from": 950, "to": 2050}, {"wall": 1, "side": "Left", "from": 0, "to": 950}, {"wall": 1, "side": "Left", "from": 2050, "to": 3000}]
   }
  ]
 }

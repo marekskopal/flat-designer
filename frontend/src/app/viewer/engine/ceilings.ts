@@ -157,29 +157,58 @@ export function roomBeams(room: Room, profile: VaultProfile): {start: Vec2; end:
  * half a thickness (± tolerance) away, projected onto it and merged.
  */
 export function wallSpansAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance = 30): [number, number][] {
+    return mergeSpans(edgeWallSpans(a, b, walls, tolerance).map((face): [number, number] => [face.from, face.to]));
+}
+
+/** A wall face along a room edge: the wall, its side facing the edge and the stretch it covers (mm from the edge's start). */
+export interface EdgeFace {
+    wall: Wall;
+    side: 'Left' | 'Right';
+    from: number;
+    to: number;
+}
+
+/**
+ * The wall faces on the edge a → b one by one, without overlaps: where two walls' ends overlap, the first wall keeps
+ * the stretch. Twin of `WallFaceSpans::faces()`.
+ */
+export function wallFacesAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance = 30): EdgeFace[] {
+    const faces: EdgeFace[] = [];
+    let covered: [number, number][] = [];
+    for (const face of edgeWallSpans(a, b, walls, tolerance)) {
+        for (const [from, to] of subtractSpans([[face.from, face.to]], covered)) {
+            faces.push({...face, from, to});
+        }
+        covered = mergeSpans([...covered, [face.from, face.to]]);
+    }
+    return faces;
+}
+
+/** Each wall whose face lies on the edge, with the stretch it covers; a wall's ends reach half a thickness on (its mitre at corners). */
+function edgeWallSpans(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance: number): EdgeFace[] {
     const length = Math.hypot(b.x - a.x, b.y - a.y);
     if (length === 0) {
         return [];
     }
     const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
-    const spans: [number, number][] = [];
+    const faces: EdgeFace[] = [];
     for (const wall of walls) {
         const frame = wallFrame(wall);
         const parallel = Math.abs(dir.x * frame.dir.y - dir.y * frame.dir.x) < 1e-3;
-        const distance = Math.abs((a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y);
-        if (!parallel || Math.abs(distance - wall.thickness / 2) > tolerance) {
+        // Distance of a from the centre line, positive on its left.
+        const normal = (a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y;
+        if (!parallel || Math.abs(Math.abs(normal) - wall.thickness / 2) > tolerance) {
             continue;
         }
-        // The wall's ends reach half a thickness on at corners (its mitre).
         const t0 = dot({x: wall.startX - a.x, y: wall.startY - a.y}, dir);
         const t1 = dot({x: wall.endX - a.x, y: wall.endY - a.y}, dir);
         const from = Math.max(Math.min(t0, t1) - wall.thickness / 2, 0);
         const to = Math.min(Math.max(t0, t1) + wall.thickness / 2, length);
         if (to > from) {
-            spans.push([from, to]);
+            faces.push({wall, side: normal > 0 ? 'Left' : 'Right', from, to});
         }
     }
-    return mergeSpans(spans);
+    return faces;
 }
 
 function mergeSpans(spans: [number, number][]): [number, number][] {
@@ -196,7 +225,7 @@ function mergeSpans(spans: [number, number][]): [number, number][] {
 }
 
 /** Stretches of `spans` with the `holes` taken out. */
-function subtractSpans(spans: readonly [number, number][], holes: readonly [number, number][]): [number, number][] {
+export function subtractSpans(spans: readonly [number, number][], holes: readonly [number, number][]): [number, number][] {
     let pieces = spans.map(([from, to]): [number, number] => [from, to]);
     for (const [holeFrom, holeTo] of holes) {
         pieces = pieces.flatMap(([from, to]): [number, number][] => {

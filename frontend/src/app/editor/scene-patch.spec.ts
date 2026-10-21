@@ -31,6 +31,8 @@ const wall: Wall = {
     thickness: 100,
     height: 2600,
     materialId: null,
+    leftFinishes: null,
+    rightFinishes: null,
     openings: [door(1, 1000)],
 };
 const item = {id: 9, roomId: 2, name: 'Box', x: 0, y: 0} as Item;

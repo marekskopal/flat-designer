@@ -48,7 +48,11 @@ export class InspectorComponent {
     /** The image picker of a Custom item was opened: the host may refresh `images`. */
     public readonly imagesRefresh = output<void>();
 
-    protected readonly fields = computed(() => ElementFields[this.kind()].filter((def) => def.when?.(this.element()) ?? true));
+    protected readonly fields = computed(() =>
+        ElementFields[this.kind()]
+            .filter((def) => def.when?.(this.element()) ?? true)
+            .map((def) => (def.labelOf === undefined ? def : {...def, label: def.labelOf(this.element())})),
+    );
     protected readonly errors = signal<Record<string, string>>({});
     /**
      * The definitions to pick from, with the item's own first when it is not among them (deleted, another library), or a

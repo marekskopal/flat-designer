@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Project;
 
+use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
+use RuntimeException;
+use Throwable;
+use const JSON_THROW_ON_ERROR;
 
 /** Typed access to one JSON object of a decoded snapshot; any mismatch throws `InvalidSnapshotException`. */
 final readonly class SnapshotReader
@@ -52,6 +56,24 @@ final readonly class SnapshotReader
 		return $this->data[$key] ?? null;
 	}
 
+	/** Wall finish bands (`WallFinishBands`) as stored, JSON text; null when the snapshot has none. */
+	public function nullableFinishes(string $key): ?string
+	{
+		$value = $this->data[$key] ?? null;
+		if ($value === null) {
+			return null;
+		}
+		$json = json_encode($value, JSON_THROW_ON_ERROR);
+
+		try {
+			JsonDecoder::decodeWallFinishes($json);
+		} catch (RuntimeException $e) {
+			throw $this->invalid($key, 'a list of wall finish bands', $e);
+		}
+
+		return $json;
+	}
+
 	public function object(string $key): self
 	{
 		$value = $this->data[$key] ?? null;
@@ -78,8 +100,8 @@ final readonly class SnapshotReader
 		return $objects;
 	}
 
-	private function invalid(string $key, string $expected): InvalidSnapshotException
+	private function invalid(string $key, string $expected, ?Throwable $previous = null): InvalidSnapshotException
 	{
-		return new InvalidSnapshotException(sprintf('Snapshot field "%s.%s" must be %s.', $this->path, $key, $expected));
+		return new InvalidSnapshotException(sprintf('Snapshot field "%s.%s" must be %s.', $this->path, $key, $expected), 0, $previous);
 	}
 }

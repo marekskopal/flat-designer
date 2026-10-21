@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Dto;
 
+use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Wall;
+use FlatDesigner\Service\Json\JsonDecoder;
 
 final readonly class WallDto
 {
-	/** @param list<OpeningDto> $openings */
+	/**
+	 * @param list<WallFinishDto>|null $leftFinishes bands on the face left of start → end, overriding the room's (null: the room's)
+	 * @param list<WallFinishDto>|null $rightFinishes the same on the right face
+	 * @param list<OpeningDto> $openings
+	 */
 	public function __construct(
 		public int $id,
 		public string $name,
@@ -21,6 +27,8 @@ final readonly class WallDto
 		public int $thickness,
 		public int $height,
 		public ?int $materialId,
+		public ?array $leftFinishes,
+		public ?array $rightFinishes,
 		public array $openings,
 	) {
 	}
@@ -39,7 +47,28 @@ final readonly class WallDto
 			thickness: $wall->thickness,
 			height: $wall->height,
 			materialId: $wall->material?->id,
+			leftFinishes: self::finishes($wall->leftFinishes),
+			rightFinishes: self::finishes($wall->rightFinishes),
 			openings: $openings,
+		);
+	}
+
+	/**
+	 * The bands on one face when they override the room's, otherwise null.
+	 *
+	 * @return list<WallFinishDto>|null
+	 */
+	public function finishesOn(OpeningSideEnum $side): ?array
+	{
+		return $side === OpeningSideEnum::Left ? $this->leftFinishes : $this->rightFinishes;
+	}
+
+	/** @return list<WallFinishDto>|null */
+	private static function finishes(?string $json): ?array
+	{
+		return $json === null ? null : array_map(
+			fn (array $band): WallFinishDto => new WallFinishDto($band['materialId'], $band['bottom'], $band['top']),
+			JsonDecoder::decodeWallFinishes($json),
 		);
 	}
 }

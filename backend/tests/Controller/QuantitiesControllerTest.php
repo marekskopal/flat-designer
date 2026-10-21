@@ -150,6 +150,33 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(12 * 0.14, $lines['Beams']['area'], 0.01);
 	}
 
+	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+	public function testAWallFaceTakesItsOwnFinish(): void
+	{
+		$terrazzo = self::material('terrazzo-white');
+		$wallTiles = self::material('tile-wall-beige');
+		$paint = self::material('wall-paint-white');
+		$this->buildRoom($paint, [], ['leftFinishes' => [['materialId' => $terrazzo->id, 'bottom' => 0, 'top' => 2100]]]);
+
+		$lines = $this->lines();
+		// 4 m × 2.1 m without the door (0.9 × 2.0).
+		self::assertEqualsWithDelta(8.4 - 1.8, $lines['WallFinish:' . $terrazzo->id]['area'], 0.001);
+		// The other 10 m up to 1.2 m, without the window's bottom 0.3 m.
+		self::assertEqualsWithDelta(12 - 0.3, $lines['WallFinish:' . $wallTiles->id]['area'], 0.001);
+		// Paint above the terrazzo, which covers the door's head.
+		self::assertEqualsWithDelta(4 * 0.4, $lines['Wall:' . $paint->id]['area'], 0.001);
+	}
+
+	public function testAWallFaceWithAnEmptyFinishIsPainted(): void
+	{
+		$paint = self::material('wall-paint-white');
+		$this->buildRoom($paint, [], ['leftFinishes' => []]);
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(12 - 0.3, $lines['WallFinish:' . self::material('tile-wall-beige')->id]['area'], 0.001);
+		self::assertEqualsWithDelta(4 * 2.5 - 0.9 * 2.0, $lines['Wall:' . $paint->id]['area'], 0.001);
+	}
+
 	public function testRejectsAWrongPriceList(): void
 	{
 		$paint = self::material('wall-paint-white');
@@ -179,10 +206,13 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertSame(['currency' => 'EUR', 'wastePercent' => 10, 'prices' => []], $prices);
 	}
 
-	/** @param array<string, mixed> $room extra room fields */
-	private function buildRoom(?Material $southPaint, array $room = []): void
+	/**
+	 * @param array<string, mixed> $room extra room fields
+	 * @param array<string, mixed> $south extra fields of the south wall (its left face is the room's)
+	 */
+	private function buildRoom(?Material $southPaint, array $room = [], array $south = []): void
 	{
-		$south = $this->create('walls', [
+		$south = $this->create('walls', $south + [
 			'startX' => -100,
 			'startY' => -100,
 			'endX' => 4100,
@@ -218,6 +248,18 @@ final class QuantitiesControllerTest extends EditorTestCase
 	private static function material(string $code): Material
 	{
 		return Fixture::service(MaterialRepository::class)->findByCode($code) ?? self::fail('No material ' . $code);
+	}
+
+	/** @return array<string, array<string, mixed>> the first room's lines by surface and material id */
+	private function lines(): array
+	{
+		$lines = [];
+		foreach (self::rows(self::rows($this->quantities()['rooms'])[0]['lines']) as $line) {
+			$materialId = $line['materialId'];
+			$lines[self::stringField($line['surface']) . ':' . (is_int($materialId) ? $materialId : '-')] = $line;
+		}
+
+		return $lines;
 	}
 
 	/** @return array<string, mixed> */

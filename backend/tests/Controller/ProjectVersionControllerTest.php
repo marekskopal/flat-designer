@@ -131,6 +131,54 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertSame(['Lining', null, 1, 0], [$door['frameStyle'], $door['handle'], $door['mullions'], $door['transoms']]);
 	}
 
+	public function testRestoreKeepsWallFaceFinishesAndOlderSnapshotsHaveNone(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$wall = $this->jsonBody(
+			$this->request('GET', self::path(Routes::ProjectFloorScene, $project->id, null, $floor->id), authenticatedAs: $user),
+		)['walls'];
+		self::assertIsList($wall);
+		self::assertIsArray($wall[0]);
+		$finishes = [$wall[0]['leftFinishes'], $wall[0]['rightFinishes']];
+		self::assertIsList($finishes[0]);
+		self::assertSame([], $finishes[1]);
+		$versionId = $this->saveVersion($user, $project->id);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame($finishes, $this->restoredWallFinishes($user, $project->id));
+
+		// Snapshots saved before walls had face finishes.
+		Fixture::service(DatabaseInterface::class)->getPdo()->exec(sprintf(
+			'UPDATE project_versions SET snapshot = REGEXP_REPLACE(snapshot, \',"(left|right)Finishes":\\\\[[^]]*\\\\]\', \'\') WHERE id = %d',
+			$versionId,
+		));
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame([null, null], $this->restoredWallFinishes($user, $project->id));
+	}
+
+	/** @return array{mixed, mixed} the left and right finishes of the first wall of the project's first floor */
+	private function restoredWallFinishes(User $user, int $projectId): array
+	{
+		$projectBody = $this->jsonBody($this->request('GET', self::path(Routes::Project, $projectId), authenticatedAs: $user));
+		self::assertIsList($projectBody['floors']);
+		self::assertIsArray($projectBody['floors'][0]);
+		self::assertIsInt($projectBody['floors'][0]['id']);
+		$walls = $this->jsonBody(
+			$this->request(
+				'GET',
+				self::path(Routes::ProjectFloorScene, $projectId, null, $projectBody['floors'][0]['id']),
+				authenticatedAs: $user,
+			),
+		)['walls'];
+		self::assertIsList($walls);
+		self::assertIsArray($walls[0]);
+
+		return [$walls[0]['leftFinishes'], $walls[0]['rightFinishes']];
+	}
+
 	public function testVersionsOfOtherProjectsAreNotFound(): void
 	{
 		$owner = Fixture::createUser();

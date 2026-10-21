@@ -209,7 +209,7 @@ final readonly class ProjectSnapshotService
 	{
 		$restored = [];
 		foreach ($rooms as $data) {
-			$wallFinishes = $data->raw('wallFinishes');
+			$wallFinishes = $data->nullableFinishes('wallFinishes');
 			$room = $this->stamp(new Room(
 				floor: $floor,
 				code: $data->string('code'),
@@ -218,7 +218,7 @@ final readonly class ProjectSnapshotService
 				polygon: json_encode($data->raw('polygon'), JSON_THROW_ON_ERROR),
 				ceilingHeight: $data->nullableInt('ceilingHeight'),
 				floorMaterial: $materials[$data->nullableInt('floorMaterialId') ?? 0] ?? null,
-				wallFinishes: $wallFinishes === null || $wallFinishes === [] ? null : json_encode($wallFinishes, JSON_THROW_ON_ERROR),
+				wallFinishes: $wallFinishes === '[]' ? null : $wallFinishes,
 			));
 			// Snapshots taken before the tile origin existed have none.
 			$room->tileOriginX = $data->nullableInt('tileOriginX');
@@ -259,6 +259,9 @@ final readonly class ProjectSnapshotService
 				height: $data->int('height'),
 				material: $materials[$data->nullableInt('materialId') ?? 0] ?? null,
 			));
+			// Snapshots taken before face finishes have none (the rooms' bands); [] is kept, a bare face.
+			$wall->leftFinishes = $data->nullableFinishes('leftFinishes');
+			$wall->rightFinishes = $data->nullableFinishes('rightFinishes');
 			$this->wallRepository->persist($wall);
 
 			foreach ($data->objects('openings') as $opening) {

@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Quantities;
 
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\WallDto;
+use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
 use FlatDesigner\Service\Editor\Geometry\PlanMath;
 use FlatDesigner\Service\Editor\Geometry\Spans;
@@ -16,7 +17,8 @@ use const M_PI;
  * The surfaces of one room as the viewer draws them, in mm² (or mm for skirting), per surface and material:
  *
  * - the floor in the floor material;
- * - wall finish bands along the wall faces on the room's edges (`WallFaceSpans`), up to the wall's top, without openings;
+ * - wall finish bands along the wall faces on the room's edges (`WallFaceSpans`), up to the wall's top, without openings:
+ *   the face's own bands (`WallDto::finishesOn()`) or else the room's;
  * - the rest of those wall faces up to the ceiling in the wall's material (paint), without bands and openings; open-air
  *   rooms have no ceiling and paint none (their walls are façades);
  * - the ceiling, on a vault its arched surface, and the beams' underside and sides;
@@ -109,7 +111,7 @@ final class RoomSurfaces
 	/**
 	 * Skirting along the faces, except their doorways: the same as `WallFaceSpans::skirting()`, from the faces at hand.
 	 *
-	 * @param list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}> $faces
+	 * @param list<array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}> $faces
 	 */
 	private function addSkirting(RoomDto $room, array $faces): void
 	{
@@ -128,12 +130,12 @@ final class RoomSurfaces
 		}
 	}
 
-	/** @param array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face */
+	/** @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face */
 	private function addWallFace(RoomDto $room, array $face, ?float $wallTop): void
 	{
 		$top = $wallTop === null ? (float) $face['wall']->height : min((float) $face['wall']->height, $wallTop);
 		$bands = [];
-		foreach ($room->wallFinishes as $band) {
+		foreach ($face['wall']->finishesOn($face['side']) ?? $room->wallFinishes as $band) {
 			$bottom = max((float) $band->bottom, 0.0);
 			$bandTop = min((float) $band->top, $top);
 			if ($bandTop <= $bottom) {
@@ -155,7 +157,7 @@ final class RoomSurfaces
 	/**
 	 * Area of the face between two heights, without its openings.
 	 *
-	 * @param array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face
+	 * @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face
 	 */
 	private static function faceArea(array $face, float $bottom, float $top): float
 	{

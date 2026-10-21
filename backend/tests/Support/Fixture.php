@@ -93,7 +93,7 @@ final class Fixture
 		return self::service(FloorRepository::class)->findByProject($project->id)[0];
 	}
 
-	/** One room with tiling, a wall with a door and two items (one with empty params) on the floor. */
+	/** One room with tiling, a wall with a door and finishes of its own and two items (one with empty params) on the floor. */
 	public static function furnishFloor(Floor $floor): void
 	{
 		$material = self::service(MaterialRepository::class)->findAllOrdered()[0] ?? null;
@@ -122,6 +122,8 @@ final class Fixture
 			height: 2600,
 			material: $material,
 		));
+		$wall->leftFinishes = $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":2100}]';
+		$wall->rightFinishes = '[]';
 		self::service(WallRepository::class)->persist($wall);
 		$door = self::stamp(new Opening(
 			wall: $wall,

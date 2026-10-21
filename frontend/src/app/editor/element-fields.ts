@@ -55,6 +55,8 @@ export interface FieldDef {
     half?: boolean;
     /** Shown only for elements it applies to (e.g. by item kind). */
     when?: (element: Record<string, unknown>) => boolean;
+    /** The label for the element at hand, in place of `label` (e.g. the compass side of a wall face). */
+    labelOf?: (element: Record<string, unknown>) => string;
 }
 
 const ItemKinds = [
@@ -64,6 +66,23 @@ const ItemKinds = [
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
+
+/** A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east. */
+export function wallFaceName(wall: Record<string, unknown>, side: 'Left' | 'Right'): string {
+    const coordinate = (key: string): number => (typeof wall[key] === 'number' ? wall[key] : 0);
+    const dx = coordinate('endX') - coordinate('startX');
+    const dy = coordinate('endY') - coordinate('startY');
+    // The left normal of start → end is (−dy, dx); the right one points the other way.
+    const [nx, ny] = side === 'Left' ? [-dy, dx] : [dy, -dx];
+    if (nx === 0 && ny === 0) {
+        return `${side} face`;
+    }
+    const eastWest = nx > 0 ? 'East' : 'West';
+    const northSouth = ny > 0 ? 'North' : 'South';
+    const direction =
+        Math.abs(nx) > Math.abs(ny) ? eastWest : Math.abs(ny) > Math.abs(nx) ? northSouth : `${northSouth}-${eastWest.toLowerCase()}`;
+    return `${direction} face`;
+}
 
 /** The editable fields per element kind; keys are those of the scene JSON and the edit API. */
 export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
@@ -97,6 +116,20 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'thickness', label: 'Thickness', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
+        {
+            key: 'leftFinishes',
+            label: 'Left face finishes',
+            labelOf: (wall) => `${wallFaceName(wall, 'Left')} finishes [{materialId, bottom, top}] (JSON, empty: the room's)`,
+            type: 'json',
+            nullable: true,
+        },
+        {
+            key: 'rightFinishes',
+            label: 'Right face finishes',
+            labelOf: (wall) => `${wallFaceName(wall, 'Right')} finishes [{materialId, bottom, top}] (JSON, empty: the room's)`,
+            type: 'json',
+            nullable: true,
+        },
     ],
     opening: [
         {key: 'name', label: 'Name', type: 'text'},

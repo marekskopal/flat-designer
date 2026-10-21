@@ -22,6 +22,7 @@ use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(ElementController::class)]
 #[CoversClass(SceneEditor::class)]
@@ -580,6 +581,51 @@ final class ElementControllerTest extends EditorTestCase
 
 		self::assertSame([], $this->sceneList('walls'));
 		self::assertSame(422, $this->edit('POST', 'openings', body: ['wallId' => self::id($wall)])->getStatusCode());
+	}
+
+	public function testWallFacesHaveFinishesOfTheirOwn(): void
+	{
+		$tiles = Fixture::service(MaterialRepository::class)->findByCode('tile-wall-beige');
+		self::assertNotNull($tiles);
+		$band = ['materialId' => $tiles->id, 'bottom' => 0, 'top' => 2100];
+
+		$wall = $this->create('walls', []);
+		self::assertSame([null, null], [$wall['leftFinishes'], $wall['rightFinishes']]);
+
+		$changed = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['leftFinishes' => [$band], 'rightFinishes' => []]));
+		self::assertIsArray($changed['element']);
+		self::assertSame([[$band], []], [$changed['element']['leftFinishes'], $changed['element']['rightFinishes']]);
+		self::assertSame([$band], $this->sceneList('walls')[0]['leftFinishes']);
+
+		foreach ([
+			['leftFinishes' => [['materialId' => $tiles->id, 'bottom' => 500, 'top' => 100]]],
+			['leftFinishes' => [['materialId' => 999999, 'bottom' => 0, 'top' => 100]]],
+			['rightFinishes' => 'tiles'],
+		] as $body) {
+			self::assertSame(
+				422,
+				$this->edit('PATCH', 'walls', self::id($wall), $body)->getStatusCode(),
+				json_encode($body, JSON_THROW_ON_ERROR),
+			);
+		}
+
+		// Turning the wall round keeps the bands on the same side of the plan; undo turns it back.
+		$turned = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), [
+			'startX' => $wall['endX'],
+			'startY' => $wall['endY'],
+			'endX' => $wall['startX'],
+			'endY' => $wall['startY'],
+		]));
+		self::assertIsArray($turned['element']);
+		self::assertSame([[], [$band]], [$turned['element']['leftFinishes'], $turned['element']['rightFinishes']]);
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([[$band], []], [$this->sceneList('walls')[0]['leftFinishes'], $this->sceneList('walls')[0]['rightFinishes']]);
+
+		// Null gives the face back to its room; undo brings the bands back.
+		$this->edit('PATCH', 'walls', self::id($wall), ['leftFinishes' => null]);
+		self::assertNull($this->sceneList('walls')[0]['leftFinishes']);
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([[$band], []], [$this->sceneList('walls')[0]['leftFinishes'], $this->sceneList('walls')[0]['rightFinishes']]);
 	}
 
 	public function testRoomCeilingsVaultsAndSkirting(): void

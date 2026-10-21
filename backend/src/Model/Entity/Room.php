@@ -17,8 +17,8 @@ use MarekSkopal\ORM\Enum\Type;
  * Floor area of one room. `polygon` is a JSON list of [x, y] points in millimetres (plan coordinates,
  * origin at the inner south-west corner of the floor, y pointing north). `ceilingHeight` is null for
  * open-air areas (terrace). `wallFinishes` is an optional JSON list of horizontal bands
- * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left
- * free. Above the bands the walls keep their own material. `tileOriginX/Y` is a plan point where tile joints
+ * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left free. A wall
+ * face may have bands of its own instead (`Wall::$leftFinishes`). Above the bands the walls keep their own material. `tileOriginX/Y` is a plan point where tile joints
  * cross: the floor tiles, the wall bands and tiled items of the room share that grid (null: the plan origin).
  *
  * The ceiling is in `ceilingMaterial` (null: white plaster). With `vaultSpacing` it is vaulted: shallow vaults

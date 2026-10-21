@@ -307,6 +307,35 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertCount(1, $scene['rooms']);
 	}
 
+	public function testWallFacesTakeFinishesOfTheirOwn(): void
+	{
+		$floor = Fixture::firstFloor($this->project);
+		$band = ['materialId' => 1, 'bottom' => 0, 'top' => 2100];
+		$added = $this->client->call('add_wall', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'startX' => 0,
+			'startY' => 0,
+			'endX' => 3000,
+			'endY' => 0,
+			'rightFinishes' => [$band],
+		]);
+		self::assertIsArray($added);
+		self::assertIsArray($added['element']);
+		self::assertSame([null, [$band]], [$added['element']['leftFinishes'], $added['element']['rightFinishes']]);
+
+		$cleared = $this->client->call('update_wall', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'wallId' => $added['element']['id'],
+			'leftFinishes' => [],
+			'clear' => ['rightFinishes'],
+		]);
+		self::assertIsArray($cleared);
+		self::assertIsArray($cleared['element']);
+		self::assertSame([[], null], [$cleared['element']['leftFinishes'], $cleared['element']['rightFinishes']]);
+	}
+
 	public function testGroupsMoveTheirItemsAsOneUndoStep(): void
 	{
 		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];

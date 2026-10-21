@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
+import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue, wallFaceName} from './element-fields';
 
 const field = (key: string, kind: keyof typeof ElementFields = 'item'): FieldDef => {
     const def = ElementFields[kind].find((f) => f.key === key);
@@ -41,5 +41,15 @@ describe('element fields', () => {
         expect(isChanged({plinth: 100}, {plinth: 100})).toBe(false);
         expect(isChanged(null, undefined)).toBe(false);
         expect(isChanged(600, 610)).toBe(true);
+    });
+
+    it('names a wall face by the direction it faces', () => {
+        const east = {startX: 0, startY: 0, endX: 3000, endY: 0};
+        expect(wallFaceName(east, 'Left')).toBe('North face');
+        expect(wallFaceName(east, 'Right')).toBe('South face');
+        expect(wallFaceName({startX: 0, startY: 3000, endX: 0, endY: 0}, 'Left')).toBe('East face');
+        expect(wallFaceName({startX: 0, startY: 0, endX: 3000, endY: 3000}, 'Left')).toBe('North-west face');
+        expect(parseFieldValue(field('leftFinishes', 'wall'), '')).toEqual({ok: true, value: null});
+        expect(parseFieldValue(field('leftFinishes', 'wall'), '[]')).toEqual({ok: true, value: []});
     });
 });

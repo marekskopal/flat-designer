@@ -12,7 +12,6 @@ use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use const JSON_THROW_ON_ERROR;
@@ -23,12 +22,11 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class RoomHandler implements ElementHandler
 {
-	private const int MaxWallFinishes = 10;
-
 	public function __construct(
 		private RoomRepository $roomRepository,
 		private MaterialResolver $materialResolver,
 		private RoomCeiling $ceiling,
+		private WallFinishBands $wallFinishBands,
 	) {
 	}
 
@@ -109,7 +107,7 @@ final readonly class RoomHandler implements ElementHandler
 			'polygon' => PolygonValidator::validate($fields->raw('polygon'), State::CoordinateLimit),
 			'ceilingHeight' => $ceilingHeight,
 			'floorMaterialId' => $floorMaterialId,
-			'wallFinishes' => $this->wallFinishes($fields->raw('wallFinishes')),
+			'wallFinishes' => $this->wallFinishBands->parse($fields->raw('wallFinishes') ?? [], 'wallFinishes'),
 			'tileOriginX' => $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit),
 			'tileOriginY' => $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit),
 		] + $this->ceiling->fields($ceilingHeight, $fields);
@@ -168,46 +166,6 @@ final readonly class RoomHandler implements ElementHandler
 		$room->tileOriginY = $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit);
 		$this->ceiling->apply($room, $fields);
 		$this->roomRepository->persist($room);
-	}
-
-	/** @return list<array{materialId: int, bottom: int, top: int}> */
-	private function wallFinishes(mixed $bands): array
-	{
-		if ($bands === null) {
-			return [];
-		}
-		if (!is_array($bands) || !array_is_list($bands) || count($bands) > self::MaxWallFinishes) {
-			throw EditException::invalid(sprintf('Field "wallFinishes" must be a list of at most %d bands.', self::MaxWallFinishes));
-		}
-
-		$normalized = [];
-		foreach ($bands as $band) {
-			$fields = new FieldReader(is_array($band) ? self::object($band) : []);
-			$materialId = $fields->nullableId('materialId') ?? throw EditException::invalid('Every wall finish needs a materialId.');
-			$this->materialResolver->resolve($materialId);
-			$bottom = $fields->int('bottom', 0, State::MaxSize);
-			$top = $fields->int('top', 1, State::MaxSize);
-			if ($top <= $bottom) {
-				throw EditException::invalid('A wall finish must end above where it starts (top > bottom).');
-			}
-			$normalized[] = ['materialId' => $materialId, 'bottom' => $bottom, 'top' => $top];
-		}
-
-		return $normalized;
-	}
-
-	/**
-	 * @param array<mixed> $value
-	 * @return array<string, mixed>
-	 */
-	private static function object(array $value): array
-	{
-		$object = [];
-		foreach ($value as $key => $item) {
-			$object[(string) $key] = $item;
-		}
-
-		return $object;
 	}
 
 	private static function cast(AEntity $element): Room

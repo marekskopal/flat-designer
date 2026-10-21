@@ -360,6 +360,8 @@ function straightWall(id: number, start: [number, number], end: [number, number]
         thickness,
         height: 2600,
         materialId: null,
+        leftFinishes: null,
+        rightFinishes: null,
         openings,
     };
 }

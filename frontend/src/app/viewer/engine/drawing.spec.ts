@@ -14,6 +14,8 @@ const wall: Wall = {
     thickness: 300,
     height: 2600,
     materialId: null,
+    leftFinishes: null,
+    rightFinishes: null,
     openings: [],
 };
 

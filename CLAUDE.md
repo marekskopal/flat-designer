@@ -220,6 +220,11 @@ format is the text in `FurnitureTools::Format`.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
   grid.
+- Wall finishes: a room's `wallFinishes` are bands `{materialId, bottom, top}` lining all its walls. A wall face may have
+  its own instead, the wall fields `leftFinishes` / `rightFinishes` (left / right of start → end; null takes the
+  room's, `[]` leaves the face bare; validated by `WallFinishBands`; turning a wall round swaps them, so the bands stay
+  on the same side of the plan). `faces()` / `wallFacesAlongEdge()` say which wall
+  and side covers which stretch of a room edge; `buildWallFinishes()` and `RoomSurfaces` use them.
 - Ceilings and skirting are room fields (rules in `RoomCeiling`). A room has a `ceilingMaterialId`. With
   `vaultSpacing`, its ceiling is vaulted: sine arches `vaultRise` high spring between beams spaced at whole
   multiples of `vaultSpacing` from the plan origin, so neighbouring rooms line up. The beams run at `vaultAngle`,
@@ -326,8 +331,8 @@ format is the text in `FurnitureTools::Format`.
   without a material prices a surface's default look (`QuantitySurfaceEnum::defaultMaterialName()`, e.g. a ceiling
   without a material is white plaster). They are not floor content: no revision, no undo, not in snapshots; saving
   sends `pricesChanged`.
-- The wall faces along a room edge exist twice: `WallFaceSpans` (PHP; `faces()` also says which wall) and
-  `wallSpansAlongEdge()` / `wallGapsAlongEdge()` / `skirtingPieces()` (TS), kept identical by
+- The wall faces along a room edge exist twice: `WallFaceSpans` (PHP) and `wallSpansAlongEdge()` /
+  `wallFacesAlongEdge()` / `wallGapsAlongEdge()` / `skirtingPieces()` (TS), kept identical by
   `backend/tests/fixtures/wall-spans.json`. **Always change both twins and add a fixture case in the same change.**
 - Dimension lines (`viewer/engine/dimensions.ts`, the Display toggle and `ShareSettings.dimensions`): every room edge
   gets a line offset into the room. Where `wallGapsAlongEdge()` finds openings, the edge also gets a chain of piers and

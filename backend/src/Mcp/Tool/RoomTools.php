@@ -7,6 +7,7 @@ namespace FlatDesigner\Mcp\Tool;
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Service\Editor\Drawing\RoomOutliner;
+use FlatDesigner\Service\Editor\Element\WallFinishBands;
 use FlatDesigner\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
@@ -30,11 +31,7 @@ final readonly class RoomTools
 	private const array WallFinishesSchema = [
 		'type' => ['array', 'null'],
 		'description' => 'horizontal bands around the room\'s walls, mm above the floor (e.g. tiling from 0 to 1200); [] removes them',
-		'items' => [
-			'type' => 'object',
-			'properties' => ['materialId' => ['type' => 'integer'], 'bottom' => ['type' => 'integer'], 'top' => ['type' => 'integer']],
-			'required' => ['materialId', 'bottom', 'top'],
-		],
+		'items' => WallFinishBands::BandSchema,
 		'default' => null,
 	];
 
@@ -100,7 +97,7 @@ final readonly class RoomTools
 	 * @param string|null $type "Living" | "Bedroom" | "Bathroom" | "Toilet" | "Hallway" | "Terrace" | "Garden"
 	 * @param int|null $ceilingHeight mm (default 2600)
 	 * @param int|null $floorMaterialId floor surface from list_materials
-	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes horizontal bands around the room's walls, mm above the floor (e.g. tiling 0–1200)
+	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes horizontal bands around the room's walls, mm above the floor (e.g. tiling 0–1200); a wall face may override them (update_wall leftFinishes / rightFinishes)
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross; floor tiles, wall bands and tiled items share the grid
 	 * @param int|null $tileOriginY plan y (mm) of that point
 	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)

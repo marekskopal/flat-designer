@@ -9,8 +9,8 @@ use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 
 /**
- * Where a room edge runs along wall faces, and the openings on it. Twin of `wallSpansAlongEdge()`, `wallGapsAlongEdge()`
- * and `skirtingPieces()` in the viewer (`ceilings.ts`, `plan-geometry.ts`), kept identical by
+ * Where a room edge runs along wall faces, and the openings on it. Twin of `wallSpansAlongEdge()`, `wallFacesAlongEdge()`,
+ * `wallGapsAlongEdge()` and `skirtingPieces()` in the viewer (`ceilings.ts`, `plan-geometry.ts`), kept identical by
  * `tests/fixtures/wall-spans.json`. A wall lies on the edge a → b when it runs parallel to it and its centre line is half
  * a thickness (± tolerance) away. Lengths are mm along the edge from a. A niche is an opening of the face it is cut
  * into only, flagged `niche` (it stays in the plan).
@@ -70,12 +70,13 @@ final class WallFaceSpans
 
 	/**
 	 * The wall faces on the edge one by one, without overlaps (where two walls' ends overlap, the first wall keeps the
-	 * stretch), each with its own openings clipped to it. Not twinned: only the quantities need to know which wall.
+	 * stretch), each with the wall's side facing the edge (the face's own finish, `WallDto::finishesOn()`) and its own
+	 * openings clipped to it.
 	 *
 	 * @param array{float, float} $a
 	 * @param array{float, float} $b
 	 * @param list<WallDto> $walls
-	 * @return list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}>
+	 * @return list<array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}>
 	 */
 	public static function faces(array $a, array $b, array $walls): array
 	{
@@ -94,7 +95,7 @@ final class WallFaceSpans
 						$gaps[] = ['from' => $gapFrom, 'to' => $gapTo, 'bottom' => $gap['bottom'], 'top' => $gap['top'], 'niche' => $gap['niche']];
 					}
 				}
-				$faces[] = ['wall' => $face['wall'], 'from' => $from, 'to' => $to, 'gaps' => $gaps];
+				$faces[] = ['wall' => $face['wall'], 'side' => $face['side'], 'from' => $from, 'to' => $to, 'gaps' => $gaps];
 			}
 			$covered = Spans::merge([...$covered, [$face['from'], $face['to']]]);
 		}
@@ -106,7 +107,7 @@ final class WallFaceSpans
 	 * @param array{float, float} $a
 	 * @param array{float, float} $b
 	 * @param list<WallDto> $walls
-	 * @return list<array{wall: WallDto, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}>
+	 * @return list<array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}>
 	 */
 	private static function wallSpans(array $a, array $b, array $walls): array
 	{
@@ -140,7 +141,7 @@ final class WallFaceSpans
 			$gaps = self::openingGaps($wall, $face, $wallDir, $along, $length);
 
 			// A wall whose face misses the edge's extent still brings its openings, as in the viewer.
-			$spans[] = ['wall' => $wall, 'from' => $from, 'to' => $to, 'gaps' => $gaps];
+			$spans[] = ['wall' => $wall, 'side' => $face, 'from' => $from, 'to' => $to, 'gaps' => $gaps];
 		}
 
 		return $spans;

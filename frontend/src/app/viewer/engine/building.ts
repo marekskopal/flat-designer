@@ -1,4 +1,4 @@
-import {Opening, Room, Scene, Wall} from '@app/models/scene';
+import {Opening, Room, Scene, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {
@@ -6,11 +6,13 @@ import {
     clipToBand,
     roomBeams,
     skirtingPieces,
+    subtractSpans,
     vaultBreaks,
     vaultFrame,
     vaultHeight,
     VaultProfile,
     vaultProfile,
+    wallFacesAlongEdge,
 } from './ceilings';
 import {MaterialLibrary} from './materials';
 import {boxAt, prismAt, worldUvBox} from './meshes';
@@ -29,6 +31,7 @@ import {
     SlidingDoorOverlap,
     SquareEnds,
     tileOrigin,
+    Vec2,
     WallCorners,
     WallEnds,
     wallFrame,
@@ -110,8 +113,14 @@ export function buildRoom(room: Room, walls: readonly Wall[], materials: Materia
     return {
         floor: buildFloor(room, materials),
         ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials),
-        finishes: room.wallFinishes.length > 0 || room.skirtingHeight != null ? buildWallFinishes(room, walls, materials) : null,
+        finishes: buildRoomFinishes(room, walls, materials),
     };
+}
+
+/** A room's wall finishes and skirting; null when it has neither and no wall face has bands of its own. */
+export function buildRoomFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group | null {
+    const needed = room.wallFinishes.length > 0 || room.skirtingHeight != null || walls.some(hasFaceFinishes);
+    return needed ? buildWallFinishes(room, walls, materials) : null;
 }
 
 /** Puts a room's parts into the building (ceilings into their own group). */
@@ -354,9 +363,10 @@ const SkirtingThickness = 15;
 
 /**
  * Tiling (or another finish) as thin boxes along the inside of every room edge, band by band, and skirting
- * boards along the walls (`skirtingPieces`: not across open edges or doorways). Door
- * openings on the edge stay free; UVs continue across pieces from the room corner and the floor, and tiles
- * are then put on the room's tile grid (`alignTiles`), the one its floor uses.
+ * boards along the walls (`skirtingPieces`: not across open edges or doorways). A wall face with bands of its own
+ * (`leftFinishes` / `rightFinishes`) gets those instead of the room's. Door openings on the edge stay free; UVs
+ * continue across pieces from the room corner and the floor, and tiles are then put on the room's tile grid
+ * (`alignTiles`), the one its floor uses.
  */
 export function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
@@ -369,8 +379,11 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
 
     polygon.forEach(([ax, ay], i) => {
         const [bx, by] = polygon[(i + 1) % polygon.length];
+        const a = {x: ax, y: ay};
+        const b = {x: bx, y: by};
         const length = Math.hypot(bx - ax, by - ay);
-        const gaps = wallGapsAlongEdge({x: ax, y: ay}, {x: bx, y: by}, walls);
+        const gaps = wallGapsAlongEdge(a, b, walls);
+        const segments = finishSegments(room, a, b, length, walls);
 
         const edge = new THREE.Group();
         edge.position.set(ax * MM, 0, -ay * MM);
@@ -379,26 +392,31 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         edge.scale.z = -1;
 
         const skirting = room.skirtingHeight ?? null;
-        for (const [from, to] of skirting === null ? [] : skirtingPieces({x: ax, y: ay}, {x: bx, y: by}, walls)) {
+        const skirtingRuns = skirting === null ? [] : skirtingPieces(a, b, walls);
+        for (const segment of segments) {
             // In front of a finish band reaching the floor (tiling), otherwise on the wall face.
-            const inset = room.wallFinishes.some((band) => band.bottom <= 0) ? LiningThickness * MM : 0;
-            const width = (to - from) * MM;
-            const height = (skirting ?? 0) * MM;
-            const mesh = boxAt(skirtingMaterial, from * MM, 0, inset, width, height, SkirtingThickness * MM);
-            edge.add(mesh);
-        }
-        for (const band of room.wallFinishes) {
-            const bandGaps = gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top));
-            const material = materials.get(band.materialId);
-            for (const piece of wallPieces(length, band.top - band.bottom, bandGaps)) {
-                const bottom = band.bottom + piece.bottom;
-                const width = (piece.to - piece.from) * MM;
-                const height = (piece.top - piece.bottom) * MM;
-                const geometry = worldUvBox(width, height, LiningThickness * MM, {u: piece.from * MM, v: bottom * MM});
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(piece.from * MM + width / 2, bottom * MM + height / 2, (LiningThickness * MM) / 2);
-                mesh.receiveShadow = true;
-                edge.add(mesh);
+            const inset = segment.bands.some((band) => band.bottom <= 0) ? LiningThickness * MM : 0;
+            for (const [runFrom, runTo] of skirtingRuns) {
+                const from = Math.max(runFrom, segment.from);
+                const to = Math.min(runTo, segment.to);
+                if (to > from) {
+                    edge.add(boxAt(skirtingMaterial, from * MM, 0, inset, (to - from) * MM, (skirting ?? 0) * MM, SkirtingThickness * MM));
+                }
+            }
+            for (const band of segment.bands) {
+                const bandGaps = gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top, segment));
+                const material = materials.get(band.materialId);
+                for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
+                    const from = segment.from + piece.from;
+                    const bottom = band.bottom + piece.bottom;
+                    const width = (piece.to - piece.from) * MM;
+                    const height = (piece.top - piece.bottom) * MM;
+                    const geometry = worldUvBox(width, height, LiningThickness * MM, {u: from * MM, v: bottom * MM});
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(from * MM + width / 2, bottom * MM + height / 2, (LiningThickness * MM) / 2);
+                    mesh.receiveShadow = true;
+                    edge.add(mesh);
+                }
             }
         }
         group.add(edge);
@@ -408,9 +426,33 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     return group;
 }
 
-/** Opening relative to a finish band, as `wallPieces` expects; nothing when the gap misses the band. */
-function clipGap(gap: WallGap, bandBottom: number, bandTop: number): Opening[] {
-    if (gap.top <= bandBottom || gap.bottom >= bandTop) {
+/** A stretch of a room edge (mm from its start) and the finish bands lining it. */
+interface FinishSegment {
+    from: number;
+    to: number;
+    bands: readonly WallFinish[];
+}
+
+/** The edge a → b in stretches: the wall faces with bands of their own, and the room's bands elsewhere. */
+function finishSegments(room: Room, a: Vec2, b: Vec2, length: number, walls: readonly Wall[]): FinishSegment[] {
+    const own = wallFacesAlongEdge(a, b, walls).flatMap((face): FinishSegment[] => {
+        const bands = face.side === 'Left' ? face.wall.leftFinishes : face.wall.rightFinishes;
+        return bands == null ? [] : [{from: face.from, to: face.to, bands}];
+    });
+    const rest = subtractSpans([[0, length]], own.map((segment): [number, number] => [segment.from, segment.to]));
+    return [...own, ...rest.map(([from, to]): FinishSegment => ({from, to, bands: room.wallFinishes}))].sort((x, y) => x.from - y.from);
+}
+
+/** Whether a wall face has finish bands of its own, so the rooms along it draw their finishes. */
+export function hasFaceFinishes(wall: Wall): boolean {
+    return wall.leftFinishes != null || wall.rightFinishes != null;
+}
+
+/** Opening relative to a finish band on a segment, as `wallPieces` expects; nothing when the gap misses them. */
+function clipGap(gap: WallGap, bandBottom: number, bandTop: number, segment: FinishSegment): Opening[] {
+    const from = Math.max(gap.from, segment.from);
+    const to = Math.min(gap.to, segment.to);
+    if (gap.top <= bandBottom || gap.bottom >= bandTop || to <= from) {
         return [];
     }
     const sill = Math.max(gap.bottom - bandBottom, 0);
@@ -419,8 +461,8 @@ function clipGap(gap: WallGap, bandBottom: number, bandTop: number): Opening[] {
         id: 0,
         name: '',
         type: 'Door',
-        offset: gap.from,
-        width: gap.to - gap.from,
+        offset: from - segment.from,
+        width: to - from,
         height: head - sill,
         sillHeight: sill,
         leafWidth: null,
