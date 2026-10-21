@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Mcp\Tool;
 
 use FlatDesigner\Mcp\McpUserContext;
+use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
@@ -26,6 +27,21 @@ final readonly class ToolContext
 	public function user(): User
 	{
 		return $this->userContext->getUser();
+	}
+
+	/** The app's base URL the request came through, for links the tools hand out (share links, upload URLs). */
+	public function baseUrl(): string
+	{
+		$baseUrl = $this->userContext->getBaseUrl();
+
+		return $baseUrl !== '' ? $baseUrl : throw new RuntimeException('The app\'s base URL is not known to the MCP server.');
+	}
+
+	/** The scope argument of the furniture definition and model tools. */
+	public static function scope(string $scope): FurnitureScopeEnum
+	{
+		return FurnitureScopeEnum::tryFrom($scope)
+			?? throw new RuntimeException('Scope must be "user", "project" or "global".');
 	}
 
 	public function project(int $projectId): Project

@@ -7,7 +7,6 @@ namespace FlatDesigner\Mcp\Tool;
 use FlatDesigner\Dto\ShareLinkDto;
 use FlatDesigner\Dto\ShareLinkInputDto;
 use FlatDesigner\Dto\ShareSettingsDto;
-use FlatDesigner\Mcp\McpUserContext;
 use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Service\Project\ShareLinkProvider;
 use Mcp\Capability\Attribute\McpTool;
@@ -47,11 +46,7 @@ final readonly class ShareLinkTools
 		'default' => null,
 	];
 
-	public function __construct(
-		private ToolContext $context,
-		private ShareLinkProvider $shareLinkProvider,
-		private McpUserContext $userContext,
-	)
+	public function __construct(private ToolContext $context, private ShareLinkProvider $shareLinkProvider,)
 	{
 	}
 
@@ -246,6 +241,6 @@ final readonly class ShareLinkTools
 
 	private function toDto(ShareLink $link): ShareLinkDto
 	{
-		return $this->shareLinkProvider->toDto($link, $this->userContext->getBaseUrl());
+		return $this->shareLinkProvider->toDto($link, $this->context->baseUrl());
 	}
 }

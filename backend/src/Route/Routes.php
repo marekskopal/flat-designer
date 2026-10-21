@@ -84,5 +84,6 @@ enum Routes: string
 	case Models = '/api/models';
 	case Model = '/api/models/{modelId:number}';
 	case ModelContent = '/api/models/{modelId:number}/content';
+	case Upload = '/api/uploads/{token:[a-f0-9]+}';
 	case ProjectVersionRestore = '/api/projects/{projectId:number}/versions/{versionId:number}/restore';
 }

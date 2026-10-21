@@ -16,8 +16,8 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Requires a valid access token (`Authorization: Bearer …`) on every route except `OpenRoutes` and the guest read of
- * a share link, and puts the signed-in user on the request (`RequestService::getUser()`).
+ * Requires a valid access token (`Authorization: Bearer …`) on every route except `OpenRoutes`, the guest read of
+ * a share link and the one-time upload URLs, and puts the signed-in user on the request (`RequestService::getUser()`).
  */
 final readonly class AuthorizationMiddleware implements MiddlewareInterface
 {
@@ -45,6 +45,9 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 	/** `Routes::Share` as a pattern: share links are read by guests, the token in the path is the credential. */
 	/** The guest read of a share link, and the models its scene draws. */
 	private const string ShareRoutePattern = '#^/api/shares/[a-f0-9]+(/(models|pictures)/\d+/content)?$#';
+
+	/** One-time upload URLs handed to MCP agents; the token in the path authorizes the upload (`UploadTicketService`). */
+	private const string UploadRoutePattern = '#^/api/uploads/[a-f0-9]+$#';
 
 	public function __construct(
 		private TokenService $tokenService,
@@ -84,6 +87,8 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 
 	private function isOpenRoute(string $method, string $path): bool
 	{
-		return in_array($path, self::OpenRoutes, true) || $method === 'GET' && preg_match(self::ShareRoutePattern, $path) === 1;
+		return in_array($path, self::OpenRoutes, true)
+			|| $method === 'GET' && preg_match(self::ShareRoutePattern, $path) === 1
+			|| $method === 'PUT' && preg_match(self::UploadRoutePattern, $path) === 1;
 	}
 }

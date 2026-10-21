@@ -39,8 +39,8 @@ final readonly class FlatDesignerServer
 		Editing a definition changes every item drawn from it, in all projects. Kitchen cabinets, worktops,
 		wardrobes, chairs and tables are such definitions; the built-in kinds of the same furniture (marked
 		replacedBy in list_item_kinds) are kept only for older items, so add new furniture from the definitions.
-		Bought products (design chairs, lamps, taps, a WC, plants) are 3D models the user uploaded: list_models,
-		then add_item(kind: "Model", modelId) at the model's proportions.
+		Bought products (design chairs, lamps, taps, a WC, plants) are 3D models (.glb): list_models, then
+		add_item(kind: "Model", modelId) at the model's proportions. request_model_upload adds a new one.
 		get_cut_list lists the boards of a project's custom-made furniture; get_room_schedule lists the rooms'
 		areas, perimeters and clear heights with the indoor and outdoor totals. get_quantities lists what to buy
 		(flooring, tiles, paint, ceilings, skirting, furniture boards) per room and material with a cost estimate
@@ -49,6 +49,10 @@ final readonly class FlatDesignerServer
 		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
 		outer walls, open runs for partitions ending on other walls), then add each room with
 		detect_room(x, y) at a point inside it: its outline follows the inner wall faces.
+
+		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
+		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);
+		upload_project_file / upload_model take small files as base64.
 
 		To work from a plan or photos the user uploaded, list them with list_project_files and look at them
 		with get_project_file (crop into a region and add a pixel grid to read positions exactly). Lay the plan

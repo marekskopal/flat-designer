@@ -10,6 +10,7 @@ use Laminas\Diactoros\StreamFactory;
 use Laminas\Diactoros\UploadedFile;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 use const JSON_THROW_ON_ERROR;
 use const PHP_URL_QUERY;
 use const UPLOAD_ERR_OK;
@@ -39,6 +40,14 @@ abstract class IntegrationTestCase extends TestCase
 			->withHeader('Authorization', 'Bearer ' . Fixture::accessTokenFor($authenticatedAs));
 
 		return AppHarness::handle($request);
+	}
+
+	/** PUT with the raw content as the body and no access token, like `curl -T` to an upload URL. */
+	protected function putRaw(string $path, string|StreamInterface $content): ResponseInterface
+	{
+		$body = is_string($content) ? (new StreamFactory())->createStream($content) : $content;
+
+		return AppHarness::handle((new ServerRequest([], [], $path, 'PUT'))->withBody($body));
 	}
 
 	/**

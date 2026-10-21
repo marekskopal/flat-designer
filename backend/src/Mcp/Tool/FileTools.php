@@ -8,20 +8,74 @@ use FlatDesigner\Dto\ProjectFileDto;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Service\Project\ImagePreviewService;
 use FlatDesigner\Service\Project\ProjectFileProvider;
+use FlatDesigner\Service\Upload\UploadTicketService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\ImageContent;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\ToolAnnotations;
 use RuntimeException;
 
-/** Files uploaded to a project (plans, photos, renders), so an agent can work from them. */
+/** Files uploaded to a project (plans, photos, renders), so an agent can work from them, and their upload. */
 final readonly class FileTools
 {
 	public function __construct(
 		private ToolContext $context,
 		private ProjectFileProvider $projectFileProvider,
 		private ImagePreviewService $imagePreview,
+		private UploadTicketService $uploadTicketService,
 	) {
+	}
+
+	/** @param string $content the file's bytes, base64 encoded */
+	#[McpTool(
+		name: 'upload_project_file',
+		description: 'Upload a small file (a plan, photo, poster, JSON note) to a project, with its content as base64. '
+			. 'Only for files up to a few hundred kB: the whole content has to be written into the call. For a larger file you '
+			. 'can read from a shell, use request_file_upload. The type is read from the content; the size limit is the '
+			. 'app\'s upload limit. Returns the file (id for get_project_file, set_floor_underlay or a picture parameter).',
+	)]
+	public function uploadProjectFile(int $projectId, string $filename, string $content): ProjectFileDto
+	{
+		return ProjectFileDto::fromEntity($this->projectFileProvider->upload(
+			$this->context->user(),
+			$this->context->project($projectId),
+			$filename,
+			UploadContent::decodeBase64($content),
+		));
+	}
+
+	/** @return array{uploadUrl: string, expiresAt: string, curl: string} */
+	#[McpTool(
+		name: 'request_file_upload',
+		description: 'A one-time URL to upload a file of any size up to the app\'s upload limit to a project, for a file on '
+			. 'a disk you can reach from a shell. Send the file as the raw body of a PUT, e.g. with the returned curl '
+			. 'command; the answer is the stored file as JSON (id, filename, mimeType, size), or an error saying what was '
+			. 'rejected. The URL works once, for 15 minutes; a rejected file may be sent again to the same URL.',
+	)]
+	public function requestFileUpload(int $projectId, string $filename): array
+	{
+		[$ticket, $token] = $this->uploadTicketService->createForFile(
+			$this->context->user(),
+			$this->context->project($projectId),
+			$filename,
+		);
+
+		return UploadContent::uploadUrl($this->context->baseUrl(), $token, $ticket->expiresAt);
+	}
+
+	/** @return ProjectFileDto the deleted file */
+	#[McpTool(
+		name: 'delete_project_file',
+		description: 'Delete a file of a project. A floor underlay laid from it goes too, and items showing it as a picture '
+			. 'draw a plain one.',
+		annotations: new ToolAnnotations(destructiveHint: true),
+	)]
+	public function deleteProjectFile(int $projectId, int $fileId): ProjectFileDto
+	{
+		$file = $this->findFile($projectId, $fileId);
+		$this->projectFileProvider->delete($file);
+
+		return ProjectFileDto::fromEntity($file);
 	}
 
 	/** @return list<ProjectFileDto> */
@@ -67,8 +121,7 @@ final readonly class FileTools
 		int $maxSize = ImagePreviewService::DefaultMaxSize,
 		?int $grid = null,
 	): array {
-		$file = $this->projectFileProvider->find($this->context->project($projectId), $fileId)
-			?? throw new RuntimeException(sprintf('File %d is not a file of project %d. Use list_project_files.', $fileId, $projectId));
+		$file = $this->findFile($projectId, $fileId);
 
 		if ($this->projectFileProvider->isText($file)) {
 			return [new TextContent($this->projectFileProvider->readText($file))];
@@ -102,5 +155,11 @@ final readonly class FileTools
 			]),
 			new ImageContent(base64_encode($preview['data']), $preview['mimeType']),
 		];
+	}
+
+	private function findFile(int $projectId, int $fileId): ProjectFile
+	{
+		return $this->projectFileProvider->find($this->context->project($projectId), $fileId)
+			?? throw new RuntimeException(sprintf('File %d is not a file of project %d. Use list_project_files.', $fileId, $projectId));
 	}
 }

@@ -344,7 +344,8 @@ format is the text in `FurnitureTools::Format`.
   `UnderlayPanelComponent` (edit mode) picks the image and sets its placement. Calibrate… uses the measure tool without
   snapping (`EditorStore.calibration`, `ViewerEngine.setCalibrating()`), then `calibrateUnderlay()` applies the real
   distance and an optional axis. Images only; PDF pages have to be uploaded as images.
-- MCP `list_project_files` / `get_project_file` let an agent read uploaded plans and photos. Images come back as image
+- MCP `list_project_files` / `get_project_file` let an agent read uploaded plans and photos (and the upload tools,
+  see MCP server, add them). Images come back as image
   content, optionally cropped, scaled to `maxSize` and overlaid with a labelled pixel `grid` (`ImagePreviewService`,
   which needs PHP gd).
 
@@ -381,6 +382,11 @@ format is the text in `FurnitureTools::Format`.
   and JSON objects need `#[Schema(definition: …)]`.
 - Domain `RuntimeException`s reach the agent as tool errors (`ToolErrorTranslatingReferenceHandler`).
 - `FurnitureTools::Format` is the format text agents get; a test checks that it names every `PartTypeEnum` case.
+- Uploads: `upload_project_file` / `upload_model` take small files as base64. An LLM cannot write megabytes into a
+  call, so `request_file_upload` / `request_model_upload` return a one-time URL (`UploadTicket`, `UploadTicketService`)
+  that the agent PUTs the file to with curl. `PUT /api/uploads/{token}` is open in `AuthorizationMiddleware` (the
+  token authorizes it), stores the file through `ProjectFileProvider` / `ModelAssetProvider` as the ticket's user and
+  works once for 15 minutes; a rejected file releases the ticket. `delete_project_file` / `delete_model` remove them.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
 ## Seed data and files
