@@ -74,6 +74,24 @@ final readonly class ModelAssetProvider
 		return ScopePolicy::isUsableIn($model, $project);
 	}
 
+	/**
+	 * Checks the describing fields and the scope of a model about to be uploaded, before its file arrives (an upload URL
+	 * handed to an agent); `upload()` checks them again.
+	 *
+	 * @return array{User|null, Project|null} the owners of the model, as `upload()` would set them
+	 */
+	public function assertUploadable(User $author, ModelAssetInputDto $input): array
+	{
+		$target = $this->target($author, $input->scope ?? FurnitureScopeEnum::User, $input->projectId);
+		self::text($input->name, self::MaxNameLength, 'Name', true);
+		self::text($input->description, self::MaxDescriptionLength, 'Description');
+		self::text($input->license, self::MaxCreditLength, 'License');
+		self::text($input->author, self::MaxCreditLength, 'Author');
+		self::sourceUrl($input->sourceUrl);
+
+		return $target;
+	}
+
 	/** Stores a new model from the bytes of a `.glb` file; its size is read from the file. */
 	public function upload(?User $author, ModelAssetInputDto $input, string $filename, string $bytes): ModelAsset
 	{
@@ -205,7 +223,8 @@ final readonly class ModelAssetProvider
 		return $url;
 	}
 
-	private static function filename(string $filename): string
+	/** The stored file name: the cleaned one, or "model.glb" when none was given. */
+	public static function filename(string $filename): string
 	{
 		return trim($filename) === '' ? 'model.glb' : ProjectFileProvider::cleanFilename($filename);
 	}

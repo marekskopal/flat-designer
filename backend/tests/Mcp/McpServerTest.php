@@ -21,6 +21,7 @@ use FlatDesigner\Mcp\Tool\ProjectTools;
 use FlatDesigner\Mcp\Tool\RoomTools;
 use FlatDesigner\Mcp\Tool\ShareLinkTools;
 use FlatDesigner\Mcp\Tool\UnderlayTools;
+use FlatDesigner\Mcp\Tool\UploadContent;
 use FlatDesigner\Mcp\Tool\VariantTools;
 use FlatDesigner\Mcp\Tool\WallTools;
 use FlatDesigner\Model\Entity\Project;
@@ -30,6 +31,7 @@ use FlatDesigner\Service\Material\MaterialService;
 use FlatDesigner\Service\Project\ImagePreviewService;
 use FlatDesigner\Tests\Support\AppHarness;
 use FlatDesigner\Tests\Support\Fixture;
+use FlatDesigner\Tests\Support\Glb;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
 use FlatDesigner\Tests\Support\McpClient;
 use FlatDesigner\Tests\Support\OAuthFlow;
@@ -37,6 +39,7 @@ use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 use stdClass;
 use const JSON_THROW_ON_ERROR;
+use const PHP_URL_PATH;
 
 /** Drives the MCP server end to end over JSON-RPC, as Claude Code or claude.ai would. */
 #[CoversClass(McpController::class)]
@@ -56,6 +59,7 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(OpeningTools::class)]
 #[CoversClass(MaterialTools::class)]
 #[CoversClass(ModelTools::class)]
+#[CoversClass(UploadContent::class)]
 #[CoversClass(MaterialService::class)]
 #[CoversClass(FileTools::class)]
 #[CoversClass(UnderlayTools::class)]
@@ -103,8 +107,10 @@ final class McpServerTest extends IntegrationTestCase
 			'delete_furniture_definition',
 			'delete_group',
 			'delete_item',
+			'delete_model',
 			'delete_opening',
 			'delete_project',
+			'delete_project_file',
 			'delete_room',
 			'delete_share_link',
 			'delete_variant_set',
@@ -137,6 +143,8 @@ final class McpServerTest extends IntegrationTestCase
 			'remove_floor_underlay',
 			'rename_group',
 			'rename_variant_set',
+			'request_file_upload',
+			'request_model_upload',
 			'save_version',
 			'save_view',
 			'set_floor_underlay',
@@ -152,6 +160,8 @@ final class McpServerTest extends IntegrationTestCase
 			'update_room',
 			'update_share_link',
 			'update_wall',
+			'upload_model',
+			'upload_project_file',
 			'validate_furniture_definition',
 		], $names);
 	}
@@ -930,6 +940,106 @@ final class McpServerTest extends IntegrationTestCase
 			['removed' => false],
 			$this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]),
 		);
+	}
+
+	public function testUploadsAndDeletesProjectFiles(): void
+	{
+		$file = $this->client->call('upload_project_file', [
+			'projectId' => $this->project->id,
+			'filename' => 'notes.txt',
+			'content' => 'data:text/plain;base64,' . base64_encode("Kitchen 3.2 m\n"),
+		]);
+		self::assertIsArray($file);
+		self::assertSame(['notes.txt', 'text/plain', 14], [$file['filename'], $file['mimeType'], $file['size']]);
+		$read = $this->client->request('tools/call', [
+			'name' => 'get_project_file',
+			'arguments' => ['projectId' => $this->project->id, 'fileId' => $file['id']],
+		]);
+		self::assertSame([['type' => 'text', 'text' => "Kitchen 3.2 m\n"]], $read['content']);
+
+		$isError = false;
+		$message = $this->client->call(
+			'upload_project_file',
+			['projectId' => $this->project->id, 'filename' => 'x.txt', 'content' => 'not base64!'],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertSame('"content" is not valid base64.', $message);
+
+		// A larger file goes to a one-time URL, which acts as this user without an access token.
+		$upload = $this->client->call('request_file_upload', ['projectId' => $this->project->id, 'filename' => 'poster.txt']);
+		self::assertIsArray($upload);
+		self::assertIsString($upload['uploadUrl']);
+		self::assertIsString($upload['curl']);
+		self::assertStringContainsString($upload['uploadUrl'], $upload['curl']);
+		$path = (string) parse_url($upload['uploadUrl'], PHP_URL_PATH);
+		self::assertSame(201, $this->putRaw($path, 'A poster')->getStatusCode());
+		$files = $this->client->call('list_project_files', ['projectId' => $this->project->id]);
+		self::assertIsList($files);
+		self::assertSame(
+			['notes.txt', 'poster.txt'],
+			array_map(static fn (mixed $f): mixed => is_array($f) ? $f['filename'] : null, $files),
+		);
+
+		$deleted = $this->client->call('delete_project_file', ['projectId' => $this->project->id, 'fileId' => $file['id']]);
+		self::assertIsArray($deleted);
+		self::assertSame('notes.txt', $deleted['filename']);
+		$files = $this->client->call('list_project_files', ['projectId' => $this->project->id]);
+		self::assertIsList($files);
+		self::assertCount(1, $files);
+
+		$foreign = Fixture::createProject(Fixture::createUser(), 'Not yours');
+		$this->client->call('request_file_upload', ['projectId' => $foreign->id, 'filename' => 'x.txt'], $isError);
+		self::assertTrue($isError);
+	}
+
+	public function testUploadsAndDeletesModels(): void
+	{
+		$model = $this->client->call('upload_model', [
+			'name' => 'Lounge chair',
+			'content' => base64_encode(Glb::box([-0.38, 0.0, -0.4], [0.38, 0.86, 0.4])),
+			'license' => 'CC0',
+			'scope' => 'project',
+			'projectId' => $this->project->id,
+		]);
+		self::assertIsArray($model);
+		self::assertSame(['Lounge chair', 'project', $this->project->id, 760, 800, 860], [
+			$model['name'],
+			$model['scope'],
+			$model['projectId'],
+			$model['width'],
+			$model['depth'],
+			$model['height'],
+		]);
+
+		$isError = false;
+		$message = $this->client->call('upload_model', [
+			'name' => 'Squashed',
+			'content' => base64_encode(
+				Glb::box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [], ['extensionsRequired' => ['KHR_draco_mesh_compression']]),
+			),
+		], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('KHR_draco_mesh_compression', $message);
+
+		$message = $this->client->call('request_model_upload', ['name' => 'Chair', 'scope' => 'global'], $isError);
+		self::assertTrue($isError);
+		self::assertSame('Only admins manage global models.', $message);
+		$upload = $this->client->call('request_model_upload', ['name' => 'Plant', 'filename' => 'plant.glb']);
+		self::assertIsArray($upload);
+		self::assertIsString($upload['uploadUrl']);
+		$stored = $this->putRaw((string) parse_url($upload['uploadUrl'], PHP_URL_PATH), Glb::box([-0.2, 0.0, -0.2], [0.2, 1.2, 0.2]));
+		self::assertSame(201, $stored->getStatusCode());
+		self::assertSame(
+			['Plant', 'user', 1200],
+			[$this->jsonBody($stored)['name'], $this->jsonBody($stored)['scope'], $this->jsonBody($stored)['height']],
+		);
+
+		$this->client->call('delete_model', ['modelId' => $model['id']]);
+		$models = $this->client->call('list_models', ['projectId' => $this->project->id]);
+		self::assertIsList($models);
+		self::assertSame(['Plant'], array_map(static fn (mixed $m): mixed => is_array($m) ? $m['name'] : null, $models));
 	}
 
 	public function testRequestsWithoutAValidTokenAreRejected(): void

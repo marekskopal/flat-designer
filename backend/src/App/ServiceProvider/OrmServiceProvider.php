@@ -22,6 +22,7 @@ use FlatDesigner\Model\Entity\ProjectVersion;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\SavedView;
 use FlatDesigner\Model\Entity\ShareLink;
+use FlatDesigner\Model\Entity\UploadTicket;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
@@ -43,6 +44,7 @@ use FlatDesigner\Model\Repository\ProjectVersionRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\SavedViewRepository;
 use FlatDesigner\Model\Repository\ShareLinkRepository;
+use FlatDesigner\Model\Repository\UploadTicketRepository;
 use FlatDesigner\Model\Repository\UserRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -71,6 +73,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ProjectMaterialPriceRepository::class,
 			ShareLinkRepository::class,
 			SavedViewRepository::class,
+			UploadTicketRepository::class,
 			OAuthClientRepository::class,
 			OAuthAuthorizationRepository::class,
 			FloorRepository::class,
@@ -105,6 +108,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ProjectMaterialPriceRepository::class, ProjectMaterialPrice::class);
 		$this->addRepository($container, $orm, ShareLinkRepository::class, ShareLink::class);
 		$this->addRepository($container, $orm, SavedViewRepository::class, SavedView::class);
+		$this->addRepository($container, $orm, UploadTicketRepository::class, UploadTicket::class);
 		$this->addRepository($container, $orm, OAuthClientRepository::class, OAuthClient::class);
 		$this->addRepository($container, $orm, OAuthAuthorizationRepository::class, OAuthAuthorization::class);
 		$this->addRepository($container, $orm, FloorRepository::class, Floor::class);

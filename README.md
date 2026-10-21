@@ -270,7 +270,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 
 The backend is an MCP server at `/mcp` (Streamable HTTP, OAuth 2.1 with dynamic client registration and PKCE).
 Agents can create, rename and delete projects, read projects and floors, add floors, add, change and delete rooms, walls, openings and items, manage groups,
-variants, share links, versions and furniture definitions, list product models, get cut lists, room schedules and quantities, set prices, and undo or redo their own changes.
+variants, share links, versions and furniture definitions, upload project files and product models, get cut lists, room schedules and quantities, set prices, and undo or redo their own changes.
 Agent changes are logged under the client's name and appear live in open viewers.
 
 Connect Claude Code:
@@ -285,7 +285,8 @@ you can also revoke them.
 
 ## API overview
 
-Every endpoint except health, authentication, OAuth and public share links requires a Bearer access token.
+Every endpoint except health, authentication, OAuth, public share links and one-time upload URLs requires a Bearer
+access token.
 
 | Endpoint | Description |
 | --- | --- |
@@ -298,6 +299,7 @@ Every endpoint except health, authentication, OAuth and public share links requi
 | `/api/projects/{id}/{changes,undo,redo}` | Activity log and undo/redo |
 | `/api/projects/{id}/versions` | Saved versions and restore |
 | `/api/projects/{id}/share-links`, `/api/shares/{token}` | Share links and the public guest view |
+| `/api/uploads/{token}` | One-time upload URL an MCP agent got (PUT the raw file; the token authorizes it) |
 | `/api/projects/{id}/views` | Saved views (camera, display, variants of a floor) |
 | `/api/projects/{id}/files` | Project files |
 | `/api/projects/{id}/cut-list` | Cut list of the project's custom furniture |

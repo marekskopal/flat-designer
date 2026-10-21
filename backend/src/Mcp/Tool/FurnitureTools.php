@@ -170,7 +170,7 @@ final readonly class FurnitureTools
 		$created = $this->definitionProvider->create($user, new FurnitureDefinitionInputDto(
 			name: $name,
 			description: $description ?? '',
-			scope: self::scope($scope ?? FurnitureScopeEnum::User->value),
+			scope: ToolContext::scope($scope ?? FurnitureScopeEnum::User->value),
 			projectId: $projectId,
 			definition: $definition,
 		));
@@ -234,7 +234,7 @@ final readonly class FurnitureTools
 	public function copyFurnitureDefinition(int $definitionId, string $scope, ?int $projectId = null): FurnitureDefinitionDto
 	{
 		$user = $this->context->user();
-		$copy = $this->definitionProvider->copy($user, $this->find($definitionId), self::scope($scope), $projectId);
+		$copy = $this->definitionProvider->copy($user, $this->find($definitionId), ToolContext::scope($scope), $projectId);
 
 		return $this->definitionProvider->toDto($user, $copy);
 	}
@@ -302,12 +302,6 @@ final readonly class FurnitureTools
 			?? throw new RuntimeException(
 				sprintf('Furniture definition %d not found. Use list_furniture_definitions to see the available ones.', $definitionId),
 			);
-	}
-
-	private static function scope(string $scope): FurnitureScopeEnum
-	{
-		return FurnitureScopeEnum::tryFrom($scope)
-			?? throw new RuntimeException('Scope must be "user", "project" or "global".');
 	}
 
 	/** @param array<mixed> $size validated: whole mm */
