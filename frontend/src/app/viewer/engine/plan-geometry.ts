@@ -103,6 +103,8 @@ export interface WallGap {
     to: number;
     bottom: number;
     top: number;
+    /** A niche: a recess into this face that stays in the plan (no pier, no dimension chain). */
+    niche: boolean;
 }
 
 /**
@@ -139,7 +141,7 @@ export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tole
             const from = Math.max(Math.min(t0, t1), 0);
             const to = Math.min(Math.max(t0, t1), length);
             if (to > from) {
-                gaps.push({from, to, bottom: opening.sillHeight, top: opening.sillHeight + opening.height});
+                gaps.push({from, to, bottom: opening.sillHeight, top: opening.sillHeight + opening.height, niche: opening.type === 'Niche'});
             }
         }
     }

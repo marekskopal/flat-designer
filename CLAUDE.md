@@ -51,7 +51,8 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   behind it (`OpeningPlacement::nicheDepth()`, also checked when the wall changes). It is neither a door nor a gap
   for the walkthrough. `wallPieces()` gives the piece behind it a `recess`; `buildWall()` draws it thinner and tags it
   with the niche's `openingId`. The wall face twins (`WallFaceSpans` / `wallGapsAlongEdge()`) count a niche as an
-  opening of its own face only. A wall offset is a full-height niche, a `Column` against the face, or collinear walls
+  opening of its own face only, flagged `niche` (dimension chains skip it). Niches from both faces may share a
+  stretch of wall while 30 mm stays between them (`OpeningPlacement::nichesFit()`, also checked by `WallHandler`). A wall offset is a full-height niche, a `Column` against the face, or collinear walls
   of different thickness (room detection steps the outline; fixture cases `stepped` / `flushOuterFace`).
 - Windows have `mullions` (vertical bars; 1, two panes, is the default) and `transoms`, plus an optional `sillBoard`
   (the inner board's reach past the wall face on `side`, the interior; exterior walls also get an outer sill). A
@@ -172,9 +173,10 @@ format is the text in `FurnitureTools::Format`.
 
 - `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts`, `furniture.ts` and `structure.ts`.
   Each one builds the item body in its local frame.
-- Structural items (`ItemKindEnum::isStructural()`): a `Column` (`params.shape` rect or round) and a `Beam` along its
-  width, z being its soffit. They are listed under Building in the Add menu. `StructureSize` makes a new one in a
-  room reach its ceiling or hang from it (a vault counts at its springing). Like wall pieces, their meshes have an
+- Structural items (`ItemKindEnum::isStructural()`, `structural` in `list_item_kinds`): a `Column` (`params.shape`
+  rect or round) and a `Beam` along its width, z being its soffit. They are listed under Building in the Add menu.
+  `StructureSize` makes a new one in a room reach its ceiling or hang from it (a vault counts at its springing)
+  unless the client gives the height or z. `ElementHandler::defaults()` gets the floor for such lookups. Like wall pieces, their meshes have an
   inside-out twin in `MaterialLibrary.sectionFill()`, so the section plane shows a solid cut. Columns block the
   walkthrough (`columnColliders()`); a beam's body is tagged `ceilingPart` and hides with the ceilings. Quantities
   do not count them yet.

@@ -146,7 +146,7 @@ interface WallSpansCase {
         openings: (Pick<Opening, 'offset' | 'width' | 'sillHeight' | 'height'> & Partial<Pick<Opening, 'type' | 'side'>>)[];
     })[];
     spans: [number, number][];
-    gaps: {from: number; to: number; bottom: number; top: number}[];
+    gaps: {from: number; to: number; bottom: number; top: number; niche?: boolean}[];
     skirting: [number, number][];
 }
 
@@ -173,8 +173,8 @@ describe('wall faces along an edge (shared fixture)', () => {
         near(wallSpansAlongEdge(a, b, walls), testCase.spans);
         near(skirtingPieces(a, b, walls), testCase.skirting);
         near(
-            wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top]),
-            testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top]),
+            wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche ? 1 : 0]),
+            testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche === true ? 1 : 0]),
         );
     });
 });

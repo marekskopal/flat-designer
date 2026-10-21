@@ -60,9 +60,9 @@ final readonly class ItemKindCatalog
 
 	/**
 	 * Every kind; `replacedBy` names the global furniture definition to use for new items instead of a built-in kind
-	 * (kept for older items and saved versions), null for the others.
+	 * (kept for older items and saved versions), null for the others; `structural` marks the building elements.
 	 *
-	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null}>
+	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null, structural: bool}>
 	 */
 	public function all(): array
 	{
@@ -70,7 +70,7 @@ final readonly class ItemKindCatalog
 		foreach (ItemKindEnum::cases() as $case) {
 			$kinds[] = ['kind' => $case->value] + $this->get(
 				$case,
-			) + ['replacedBy' => BuiltInFurnitureConverter::Replaced[$case->value] ?? null];
+			) + ['replacedBy' => BuiltInFurnitureConverter::Replaced[$case->value] ?? null, 'structural' => $case->isStructural()];
 		}
 
 		return $kinds;

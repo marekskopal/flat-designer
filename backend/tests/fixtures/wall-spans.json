@@ -1,5 +1,5 @@
 {
- "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting (PHP) and wallSpansAlongEdge, wallGapsAlongEdge and skirtingPieces (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). Expected lengths are mm along the edge from a, compared within 0.01.",
+ "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting (PHP) and wallSpansAlongEdge, wallGapsAlongEdge and skirtingPieces (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. Expected lengths are mm along the edge from a, compared within 0.01.",
  "cases": [
   {
    "name": "a wall along the edge with a door and a window",
@@ -74,7 +74,7 @@
     ]}
    ],
    "spans": [[0, 4000]],
-   "gaps": [{"from": 500, "to": 1300, "bottom": 0, "top": 2400}],
+   "gaps": [{"from": 500, "to": 1300, "bottom": 0, "top": 2400, "niche": true}],
    "skirting": [[0, 500], [1300, 4000]]
   },
   {
@@ -87,7 +87,7 @@
     ]}
    ],
    "spans": [[0, 4000]],
-   "gaps": [{"from": 2700, "to": 3500, "bottom": 900, "top": 1500}],
+   "gaps": [{"from": 2700, "to": 3500, "bottom": 900, "top": 1500, "niche": true}],
    "skirting": [[0, 4000]]
   }
  ]

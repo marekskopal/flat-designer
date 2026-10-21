@@ -51,7 +51,7 @@ final readonly class WallHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(array $fields): array
+	public function defaults(Floor $floor, array $fields): array
 	{
 		return [
 			'name' => 'Wall',
@@ -205,6 +205,9 @@ final readonly class WallHandler implements ElementHandler
 			if (!OpeningPlacement::fits($opening, $offsets[$opening->id], $length, $next['thickness'], $next['height'])) {
 				throw EditException::invalid(sprintf('Opening "%s" would no longer fit the wall.', $opening->name));
 			}
+		}
+		if (!OpeningPlacement::nichesFit($openings, $next['thickness'])) {
+			throw EditException::invalid('Niches from both faces would meet inside the wall.');
 		}
 
 		return $offsets;

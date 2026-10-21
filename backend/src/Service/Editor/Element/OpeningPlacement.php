@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Editor\Element;
 
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
+use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Service\Editor\Exception\EditException;
@@ -70,7 +71,8 @@ final class OpeningPlacement
 	}
 
 	/**
-	 * Checks an opening (already within the wall) against the wall's length and thickness and its other openings.
+	 * Checks an opening (already within the wall) against the wall's length and thickness and its other openings. Two
+	 * niches may share a stretch of wall from opposite faces (`side`, `depth`) as long as the wall between them stays.
 	 *
 	 * @param iterable<Opening> $others the wall's other openings
 	 */
@@ -82,6 +84,8 @@ final class OpeningPlacement
 		int $wallLength,
 		int $wallThickness,
 		iterable $others,
+		?OpeningSideEnum $side = null,
+		?int $depth = null,
 	): void {
 		if ($type === OpeningTypeEnum::PocketDoor && $wallThickness < self::MinPocketWallThickness) {
 			throw EditException::invalid(sprintf('A pocket door needs a wall at least %d mm thick.', self::MinPocketWallThickness));
@@ -97,14 +101,57 @@ final class OpeningPlacement
 		}
 
 		foreach ($others as $other) {
-			if ($offset < $other->offset + $other->width && $other->offset < $offset + $width) {
-				throw EditException::invalid(sprintf('The opening overlaps "%s" on this wall.', $other->name));
+			if ($type === OpeningTypeEnum::Niche && self::backToBack($side, $depth, $other, $wallThickness)) {
+				continue;
 			}
-			[$otherFrom, $otherTo] = self::occupied($other->type, $other->hinge, $other->offset, $other->width);
-			if ($from < $otherTo && $otherFrom < $to) {
-				throw EditException::invalid(sprintf('The opening or "%s" needs that part of the wall for its open leaf.', $other->name));
+			self::checkApart($offset, $width, $from, $to, $other);
+		}
+	}
+
+	/** The opening (`offset`, `width`; occupying `from`..`to`) must not overlap `other` or the wall its open leaf needs. */
+	private static function checkApart(int $offset, int $width, int $from, int $to, Opening $other): void
+	{
+		if ($offset < $other->offset + $other->width && $other->offset < $offset + $width) {
+			throw EditException::invalid(sprintf('The opening overlaps "%s" on this wall.', $other->name));
+		}
+		[$otherFrom, $otherTo] = self::occupied($other->type, $other->hinge, $other->offset, $other->width);
+		if ($from < $otherTo && $otherFrom < $to) {
+			throw EditException::invalid(sprintf('The opening or "%s" needs that part of the wall for its open leaf.', $other->name));
+		}
+	}
+
+	/** Whether `other` is a niche in the opposite face that a niche `depth` deep in `side` leaves `MinNicheBack` of wall to. */
+	private static function backToBack(?OpeningSideEnum $side, ?int $depth, Opening $other, int $wallThickness): bool
+	{
+		return $other->type === OpeningTypeEnum::Niche
+			&& $other->side !== null
+			&& $other->side !== $side
+			&& ($depth ?? 0) + ($other->depth ?? 0) <= $wallThickness - self::MinNicheBack;
+	}
+
+	/**
+	 * Whether the niches of a wall `wallThickness` thick leave `MinNicheBack` of wall where two of them meet from
+	 * opposite faces.
+	 *
+	 * @param list<Opening> $openings
+	 */
+	public static function nichesFit(array $openings, int $wallThickness): bool
+	{
+		$niches = array_values(array_filter($openings, static fn (Opening $o): bool => $o->type === OpeningTypeEnum::Niche));
+		foreach ($niches as $i => $niche) {
+			foreach (array_slice($niches, $i + 1) as $other) {
+				$overlap = $niche->offset < $other->offset + $other->width && $other->offset < $niche->offset + $niche->width;
+				if (
+					$overlap
+					&& $niche->side !== $other->side
+					&& ($niche->depth ?? 0) + ($other->depth ?? 0) > $wallThickness - self::MinNicheBack
+				) {
+					return false;
+				}
 			}
 		}
+
+		return true;
 	}
 
 	/** Whether an existing opening, at `offset`, still fits a changed wall. */

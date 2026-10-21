@@ -88,7 +88,6 @@ export class MaterialLibrary {
         return this.tiles.has(material);
     }
 
-    /** Whether the material is one of the library's (shared, disposed with the library rather than with a mesh). */
     /**
      * Flat dark fill of solid cores cut by the section plane: drawn on the back faces of a wall piece's (or column's)
      * box, it is hidden until the plane slices the box open.
@@ -102,6 +101,7 @@ export class MaterialLibrary {
         return material;
     }
 
+    /** Whether the material is one of the library's (shared, disposed with the library rather than with a mesh). */
     public owns(material: THREE.Material): boolean {
         for (const cached of this.cache.values()) {
             if (cached === material) {

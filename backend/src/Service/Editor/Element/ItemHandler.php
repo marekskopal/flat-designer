@@ -68,7 +68,7 @@ final readonly class ItemHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(array $fields): array
+	public function defaults(Floor $floor, array $fields): array
 	{
 		$kind = is_string($fields['kind'] ?? null) ? ItemKindEnum::tryFrom($fields['kind']) : null;
 		$size = $this->catalog->get($kind ?? ItemKindEnum::Box);
@@ -88,7 +88,7 @@ final readonly class ItemHandler implements ElementHandler
 			$size = ['width' => $model->width, 'depth' => $model->depth, 'height' => $model->height] + $size;
 		}
 		if ($kind !== null) {
-			$size = $this->structureSize->fit($kind, $fields['roomId'] ?? null, $size['height']) + $size;
+			$size = $this->structureSize->fit($floor, $kind, $fields, $size['height']) + $size;
 		}
 
 		return [

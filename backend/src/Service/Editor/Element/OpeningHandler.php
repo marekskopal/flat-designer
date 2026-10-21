@@ -64,7 +64,7 @@ final readonly class OpeningHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(array $fields): array
+	public function defaults(Floor $floor, array $fields): array
 	{
 		return OpeningDefaults::of(OpeningTypeEnum::tryFrom(is_string($fields['type'] ?? null) ? $fields['type'] : ''));
 	}
@@ -117,6 +117,7 @@ final readonly class OpeningHandler implements ElementHandler
 
 		$type = $fields->enum('type', OpeningTypeEnum::class);
 		$hinge = $fields->nullableEnum('hinge', OpeningHingeEnum::class) ?? ($type->isSliding() ? OpeningHingeEnum::Start : null);
+		$depth = OpeningPlacement::nicheDepth($type, $fields->nullableInt('depth', 1, State::MaxSize), $wall->thickness);
 		OpeningPlacement::check(
 			$type,
 			$hinge,
@@ -125,9 +126,10 @@ final readonly class OpeningHandler implements ElementHandler
 			$length,
 			$wall->thickness,
 			array_filter($this->openingRepository->findByWalls([$wall->id]), fn (Opening $o): bool => $o->id !== $currentOpening?->id),
+			$fields->nullableEnum('side', OpeningSideEnum::class) ?? OpeningSideEnum::Left,
+			$depth,
 		);
 
-		$depth = OpeningPlacement::nicheDepth($type, $fields->nullableInt('depth', 1, State::MaxSize), $wall->thickness);
 		$entrance = $fields->bool('entrance');
 		if ($entrance && $type === OpeningTypeEnum::Niche) {
 			throw EditException::invalid('A niche cannot be the entrance.');

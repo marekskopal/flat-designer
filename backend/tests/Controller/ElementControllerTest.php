@@ -203,6 +203,10 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame([2920 - 130 - 130, 3000, 100, 130], [$beam['z'], $beam['width'], $beam['depth'], $beam['height']]);
 		$given = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($flat), 'height' => 200, 'z' => 2000]);
 		self::assertSame([2000, 200], [$given['z'], $given['height']]);
+		$tall = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($flat), 'height' => 300]);
+		self::assertSame([2300, 300], [$tall['z'], $tall['height']]);
+		$plinth = $this->create('items', ['kind' => 'Column', 'roomId' => self::id($flat), 'z' => 300]);
+		self::assertSame([300, 2600], [$plinth['z'], $plinth['height']]);
 		$outside = $this->create('items', ['kind' => 'Column']);
 		self::assertSame(2600, $outside['height']);
 
@@ -470,6 +474,24 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame([170, 'Right'], [$deep['element']['depth'], $deep['element']['side']]);
 		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 190])->getStatusCode());
 		self::assertSame(200, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 250])->getStatusCode());
+
+		// Niches from both faces may share a stretch of wall while 30 mm stays between them.
+		$this->create(
+			'openings',
+			['wallId' => $wallId, 'type' => 'Niche', 'offset' => 2000, 'width' => 600, 'depth' => 100, 'side' => 'Left'],
+		);
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'openings',
+				body: ['wallId' => $wallId, 'type' => 'Niche', 'offset' => 2300, 'depth' => 130, 'side' => 'Right'],
+			)->getStatusCode(),
+		);
+		$back = $this->create('openings', ['wallId' => $wallId, 'type' => 'Niche', 'offset' => 2300, 'depth' => 120, 'side' => 'Right']);
+		self::assertSame(120, $back['depth']);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 240])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 260])->getStatusCode());
 
 		// Another type has no depth.
 		$window = $this->jsonBody($this->edit('PATCH', 'openings', self::id($niche), ['type' => 'Window']));

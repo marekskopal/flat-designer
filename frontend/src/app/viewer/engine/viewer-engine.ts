@@ -2388,13 +2388,13 @@ export class ViewerEngine {
     }
 }
 
-/** Scales an outline box to the joint bounds of the objects, a few mm larger so it does not z-fight with their faces. */
 /** What the walker collides with: the walls and the shown columns (door leaves come on top, as they move). */
 function sceneColliders(scene: Scene): WallCollider[] {
     const hidden = hiddenItemIds(scene);
     return [...wallColliders(scene.walls), ...columnColliders(scene.items.filter((item) => !hidden.has(item.id)))];
 }
 
+/** Scales an outline box to the joint bounds of the objects, a few mm larger so it does not z-fight with their faces. */
 function fitOutline(outline: THREE.Mesh, objects: THREE.Object3D[]): void {
     const bounds = new THREE.Box3();
     objects.forEach((object) => bounds.expandByObject(object));

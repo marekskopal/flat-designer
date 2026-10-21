@@ -131,7 +131,7 @@ describe('wallGapsAlongEdge', () => {
 
     it('finds the door on the bathroom edge that runs along the wall face', () => {
         // Bathroom west edge, walked north → south as in a counter-clockwise polygon.
-        expect(wallGapsAlongEdge({x: 3871, y: 9906}, {x: 3871, y: 8045}, [wall])).toEqual([{from: 151, to: 951, bottom: 0, top: 2020}]);
+        expect(wallGapsAlongEdge({x: 3871, y: 9906}, {x: 3871, y: 8045}, [wall])).toEqual([{from: 151, to: 951, bottom: 0, top: 2020, niche: false}]);
     });
 
     it('ignores walls that are not on the edge', () => {

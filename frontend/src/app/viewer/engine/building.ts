@@ -45,8 +45,6 @@ const SlabThickness = 300;
 /** Bars of a French window sash, mm. */
 const SashBar = 55;
 
-/** Colour of wall cores revealed by the section plane (classic poché). */
-
 export interface BuildingParts {
     root: THREE.Group;
     /** Ceilings, toggled separately so the dollhouse view can look in from above. */
@@ -292,9 +290,7 @@ export function buildWall(
     const material = materials.get(wall.materialId);
 
     for (const piece of wallPieces(frame.length, wall.height, wall.openings)) {
-        const mesh = piece.recess === undefined
-            ? wallPieceMesh(material, piece, frame.length, wall.thickness, ends)
-            : nicheBack(material, piece, wall.thickness);
+        const mesh = wallPieceMesh(material, piece, frame.length, wall.thickness, ends);
         group.add(mesh);
 
         // Same box drawn inside-out in a flat dark colour: invisible normally, it fills the cut once the
@@ -312,40 +308,44 @@ export function buildWall(
 }
 
 /**
- * The wall left behind a niche: the piece without the niche's depth on the face it is cut into (the left face is −z).
- * Tagged with the niche, so clicking into it selects the niche.
+ * A box, or for a piece at a mitred wall end a prism whose faces run on to the corner. The piece behind a niche is
+ * thinner by the niche's depth on the face it is cut into (the left face is −z); its mitre follows the corner's at
+ * that depth. It is tagged with the niche, so clicking into it selects the niche.
  */
-function nicheBack(material: THREE.Material, piece: WallPiece, thickness: number): THREE.Mesh {
-    const {openingId, side, depth} = piece.recess!;
-    const back = thickness - depth;
-    const z = side === 'Left' ? -thickness / 2 + depth : -thickness / 2;
-    const length = (piece.to - piece.from) * MM;
-    const mesh = boxAt(material, piece.from * MM, piece.bottom * MM, z * MM, length, (piece.top - piece.bottom) * MM, back * MM);
-    mesh.userData = {openingId};
-    return mesh;
-}
-
-/** A box, or for a piece at a mitred wall end a prism whose faces run on to the corner. */
 function wallPieceMesh(material: THREE.Material, piece: WallPiece, length: number, thickness: number, ends: WallEnds): THREE.Mesh {
     const t = thickness * MM;
+    const recess = piece.recess;
+    // Faces of the piece across the wall, as fractions of the thickness from the left face.
+    const left = recess?.side === 'Left' ? recess.depth / thickness : 0;
+    const right = recess?.side === 'Right' ? 1 - recess.depth / thickness : 1;
+    const mitre = (atLeft: number, atRight: number, f: number): number => atLeft + (atRight - atLeft) * f;
     const atStart = piece.from <= 0;
     const atEnd = piece.to >= length;
-    const leftFrom = atStart ? -ends.startLeft : piece.from;
-    const rightFrom = atStart ? -ends.startRight : piece.from;
-    const leftTo = atEnd ? length + ends.endLeft : piece.to;
-    const rightTo = atEnd ? length + ends.endRight : piece.to;
+    const leftFrom = atStart ? -mitre(ends.startLeft, ends.startRight, left) : piece.from;
+    const rightFrom = atStart ? -mitre(ends.startLeft, ends.startRight, right) : piece.from;
+    const leftTo = atEnd ? length + mitre(ends.endLeft, ends.endRight, left) : piece.to;
+    const rightTo = atEnd ? length + mitre(ends.endLeft, ends.endRight, right) : piece.to;
     const square = leftFrom === piece.from && rightFrom === piece.from && leftTo === piece.to && rightTo === piece.to;
 
-    if (square || leftTo <= leftFrom || rightTo <= rightFrom) {
-        return boxAt(material, piece.from * MM, piece.bottom * MM, -t / 2, (piece.to - piece.from) * MM, (piece.top - piece.bottom) * MM, t);
+    const zLeft = -t / 2 + t * left;
+    const zRight = -t / 2 + t * right;
+    const mesh = square || leftTo <= leftFrom || rightTo <= rightFrom
+        ? boxAt(material, piece.from * MM, piece.bottom * MM, zLeft, (piece.to - piece.from) * MM, (piece.top - piece.bottom) * MM, zRight - zLeft)
+        : prismAt(
+            material,
+            [
+                {x: leftFrom * MM, z: zLeft},
+                {x: leftTo * MM, z: zLeft},
+                {x: rightTo * MM, z: zRight},
+                {x: rightFrom * MM, z: zRight},
+            ],
+            piece.bottom * MM,
+            piece.top * MM,
+        );
+    if (recess !== undefined) {
+        mesh.userData = {openingId: recess.openingId};
     }
-    const footprint = [
-        {x: leftFrom * MM, z: -t / 2},
-        {x: leftTo * MM, z: -t / 2},
-        {x: rightTo * MM, z: t / 2},
-        {x: rightFrom * MM, z: t / 2},
-    ];
-    return prismAt(material, footprint, piece.bottom * MM, piece.top * MM);
+    return mesh;
 }
 
 const LiningThickness = 8;

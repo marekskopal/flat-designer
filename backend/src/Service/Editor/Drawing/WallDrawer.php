@@ -71,7 +71,7 @@ final readonly class WallDrawer
 				[[$startX, $startY], [$endX, $endY]] = $segment;
 				$wall = ['startX' => $startX, 'startY' => $startY, 'endX' => $endX, 'endY' => $endY] + $fields;
 
-				return $this->walls->normalize($floor, $wall + $this->walls->defaults($wall), null);
+				return $this->walls->normalize($floor, $wall + $this->walls->defaults($floor, $wall), null);
 			}, $segments);
 
 			$batch = $this->writer->start($floor, $baseRevision, sprintf('Drew %d wall(s)', count($states)));

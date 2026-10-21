@@ -43,7 +43,7 @@ final readonly class VariantSetHandler implements ElementHandler
 	}
 
 	/** @return array<string, mixed> */
-	public function defaults(array $fields): array
+	public function defaults(Floor $floor, array $fields): array
 	{
 		return ['name' => 'Variants', 'activeGroupId' => null];
 	}

@@ -48,7 +48,7 @@ export function roomDimensions(rooms: readonly Pick<Room, 'polygon'>[], walls: r
             });
             lines.push({a: at(0, DimensionOffset), b: at(length, DimensionOffset), length: Math.round(length), normal});
 
-            const gaps = wallGapsAlongEdge(a, b, walls);
+            const gaps = wallGapsAlongEdge(a, b, walls).filter((gap) => !gap.niche);
             if (gaps.length === 0) {
                 return;
             }
