@@ -7,6 +7,7 @@ import {
     edgeMidpoints,
     entranceWalkStart,
     insertVertex,
+    isDoor,
     isSimplePolygon,
     leafCollider,
     leafColliders,
@@ -44,6 +45,25 @@ describe('wallPieces', () => {
             {from: 2755, to: 3655, bottom: 2020, top: 2600},
             {from: 3655, to: 3871, bottom: 0, top: 2600},
         ]);
+    });
+
+    it('keeps the wall behind a niche, less its depth on the face it is cut into', () => {
+        const niche: Opening = {...opening(1000, 600, 600, 900), id: 7, type: 'Niche', side: 'Right', depth: 120};
+        expect(wallPieces(3000, 2600, [niche])).toEqual([
+            {from: 0, to: 1000, bottom: 0, top: 2600},
+            {from: 1000, to: 1600, bottom: 0, top: 900},
+            {from: 1000, to: 1600, bottom: 900, top: 1500, recess: {openingId: 7, side: 'Right', depth: 120}},
+            {from: 1000, to: 1600, bottom: 1500, top: 2600},
+            {from: 1600, to: 3000, bottom: 0, top: 2600},
+        ]);
+    });
+
+    it('treats a niche as neither a door nor a gap to walk through', () => {
+        const niche: Opening = {...opening(1000, 900, 2000), type: 'Niche', side: 'Left', depth: 100};
+        const wall = {startX: 0, startY: 0, endX: 3000, endY: 0, thickness: 200, height: 2600, openings: [niche]} as Wall;
+        expect(isDoor(niche)).toBe(false);
+        expect(openingLeaves(niche, 200)).toEqual([]);
+        expect(wallColliders([wall]).map((c) => [c.from, c.to])).toEqual([[0, 3000]]);
     });
 
     it('adds a parapet under a window and sorts openings', () => {

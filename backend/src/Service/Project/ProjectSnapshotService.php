@@ -295,6 +295,8 @@ final readonly class ProjectSnapshotService
 				$restored->shutters = ShutterStyleEnum::tryFrom($opening->nullableString('shutters') ?? '');
 				$restored->shutterMaterial = $materials[$opening->nullableInt('shutterMaterialId') ?? 0] ?? null;
 				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
+				// And before niches.
+				$restored->depth = $opening->nullableInt('depth');
 				$this->openingRepository->persist($restored);
 			}
 		}

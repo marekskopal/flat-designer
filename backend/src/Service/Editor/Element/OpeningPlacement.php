@@ -12,7 +12,7 @@ use FlatDesigner\Service\Editor\Exception\EditException;
 /**
  * Where an opening may sit along its wall. Besides the opening itself, a sliding or pocket door takes the
  * stretch of wall its leaf slides into when open (towards `hinge`); a pocket door also needs a wall thick
- * enough for the pocket.
+ * enough for the pocket. A niche keeps a back of the wall behind it.
  */
 final class OpeningPlacement
 {
@@ -20,6 +20,38 @@ final class OpeningPlacement
 	public const int SlidingDoorOverlap = 50;
 
 	public const int MinPocketWallThickness = 100;
+
+	/** Wall a niche leaves behind it, mm. */
+	public const int MinNicheBack = 30;
+
+	public const int MinNicheDepth = 10;
+
+	/**
+	 * A niche's depth in a wall `wallThickness` thick: as given (none: half the wall), leaving `MinNicheBack` behind
+	 * it. Null for other types.
+	 */
+	public static function nicheDepth(OpeningTypeEnum $type, ?int $depth, int $wallThickness): ?int
+	{
+		if ($type !== OpeningTypeEnum::Niche) {
+			return null;
+		}
+		$max = $wallThickness - self::MinNicheBack;
+		if ($max < self::MinNicheDepth) {
+			throw EditException::invalid(sprintf('A niche needs a wall at least %d mm thick.', self::MinNicheBack + self::MinNicheDepth));
+		}
+		$depth ??= intdiv($wallThickness, 2);
+		if ($depth < self::MinNicheDepth || $depth > $max) {
+			throw EditException::invalid(sprintf(
+				'A niche in this wall (%d mm thick) is %d to %d mm deep, leaving %d mm of wall behind it.',
+				$wallThickness,
+				self::MinNicheDepth,
+				$max,
+				self::MinNicheBack,
+			));
+		}
+
+		return $depth;
+	}
 
 	/**
 	 * The part of the wall (mm along it) an opening takes.
@@ -83,6 +115,7 @@ final class OpeningPlacement
 		return $from >= 0
 			&& $to <= $wallLength
 			&& $opening->sillHeight + $opening->height <= $wallHeight
-			&& ($opening->type !== OpeningTypeEnum::PocketDoor || $wallThickness >= self::MinPocketWallThickness);
+			&& ($opening->type !== OpeningTypeEnum::PocketDoor || $wallThickness >= self::MinPocketWallThickness)
+			&& ($opening->type !== OpeningTypeEnum::Niche || ($opening->depth ?? 0) <= $wallThickness - self::MinNicheBack);
 	}
 }

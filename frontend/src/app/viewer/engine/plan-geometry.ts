@@ -8,12 +8,16 @@ export interface Vec2 {
     y: number;
 }
 
-/** Axis-aligned piece of a wall in wall-local coordinates: `from`/`to` along the centre line, `bottom`/`top` heights (mm). */
+/**
+ * Axis-aligned piece of a wall in wall-local coordinates: `from`/`to` along the centre line, `bottom`/`top` heights (mm).
+ * Behind a niche (`openingId`), `recess` takes its depth off the face it is cut into.
+ */
 export interface WallPiece {
     from: number;
     to: number;
     bottom: number;
     top: number;
+    recess?: {openingId: number; side: 'Left' | 'Right'; depth: number};
 }
 
 export interface WallFrame {
@@ -76,6 +80,10 @@ export function wallPieces(length: number, height: number, openings: readonly Op
             pieces.push({from, to, bottom: 0, top: Math.min(opening.sillHeight, height)});
         }
         const head = opening.sillHeight + opening.height;
+        if (opening.type === 'Niche' && opening.depth != null) {
+            const recess = {openingId: opening.id, side: opening.side ?? 'Left', depth: opening.depth};
+            pieces.push({from, to, bottom: opening.sillHeight, top: Math.min(head, height), recess});
+        }
         if (head < height) {
             pieces.push({from, to, bottom: head, top: height});
         }
@@ -99,7 +107,8 @@ export interface WallGap {
 
 /**
  * Openings of walls whose face lies on the edge a → b: the wall runs parallel to the edge and its
- * centre line is half a thickness (± tolerance) away. Returns their extents projected onto the edge.
+ * centre line is half a thickness (± tolerance) away. Returns their extents projected onto the edge; a niche
+ * counts on the face it is cut into only.
  */
 export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance = 30): WallGap[] {
     const length = Math.hypot(b.x - a.x, b.y - a.y);
@@ -112,12 +121,17 @@ export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tole
     for (const wall of walls) {
         const frame = wallFrame(wall);
         const parallel = Math.abs(dir.x * frame.dir.y - dir.y * frame.dir.x) < 1e-3;
-        const distance = Math.abs((a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y);
-        if (!parallel || Math.abs(distance - wall.thickness / 2) > tolerance) {
+        // Distance of a from the centre line, positive on its left.
+        const normal = (a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y;
+        if (!parallel || Math.abs(Math.abs(normal) - wall.thickness / 2) > tolerance) {
             continue;
         }
+        const face = normal > 0 ? 'Left' : 'Right';
 
         for (const opening of wall.openings) {
+            if (opening.type === 'Niche' && (opening.side ?? 'Left') !== face) {
+                continue;
+            }
             const p0 = pointOnWall(frame, opening.offset);
             const p1 = pointOnWall(frame, opening.offset + opening.width);
             const t0 = (p0.x - a.x) * dir.x + (p0.y - a.y) * dir.y;
@@ -342,7 +356,7 @@ export interface Leaf {
 
 /** Doorways of every kind, passages included. */
 export function isDoor(opening: Pick<Opening, 'type'>): boolean {
-    return opening.type !== 'Window';
+    return opening.type !== 'Window' && opening.type !== 'Niche';
 }
 
 /** Doorways and walkable French windows: openings a walker can pass through. */
@@ -414,6 +428,7 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
                 thickness: DoorLeafThickness,
             }];
         case 'Passage':
+        case 'Niche':
             return [];
         case 'Window': {
             if (opening.walkable !== true) {

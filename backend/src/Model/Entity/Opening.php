@@ -37,7 +37,8 @@ use MarekSkopal\ORM\Enum\Type;
  * floor (where a walkthrough starts); `walkable` a window down to the floor (French window) whose two sashes
  * open in the walkthrough (into `side`), so it can be walked through like a door. A window's `panelHeight` is a
  * solid lower part of its glazing (mm from the sill), and `shutters` are two leaves on the exterior face (opposite
- * `side`), folded back against the wall or `shuttersClosed`, in `shutterMaterial` (none: painted timber).
+ * `side`), folded back against the wall or `shuttersClosed`, in `shutterMaterial` (none: painted timber). A `Niche` is a
+ * recess `depth` mm deep into the `side` face; the rest of the wall stays behind it.
  */
 #[Entity(repositoryClass: OpeningRepository::class)]
 class Opening extends AEntity
@@ -84,6 +85,9 @@ class Opening extends AEntity
 
 	#[Column(type: Type::Boolean)]
 	public bool $shuttersClosed = false;
+
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $depth = null;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]

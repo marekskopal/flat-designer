@@ -1,5 +1,5 @@
 {
- "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting (PHP) and wallSpansAlongEdge, wallGapsAlongEdge and skirtingPieces (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height}. Expected lengths are mm along the edge from a, compared within 0.01.",
+ "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting (PHP) and wallSpansAlongEdge, wallGapsAlongEdge and skirtingPieces (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). Expected lengths are mm along the edge from a, compared within 0.01.",
  "cases": [
   {
    "name": "a wall along the edge with a door and a window",
@@ -63,6 +63,32 @@
    "spans": [[0, 4242.64]],
    "gaps": [{"from": 1000, "to": 2000, "bottom": 0, "top": 2000}],
    "skirting": [[0, 1000], [2000, 4242.64]]
+  },
+  {
+   "name": "niches are openings of the face they are cut into only",
+   "edge": [[0, 0], [4000, 0]],
+   "walls": [
+    {"startX": -100, "startY": -100, "endX": 4100, "endY": -100, "thickness": 200, "openings": [
+     {"type": "Niche", "side": "Left", "offset": 600, "width": 800, "sillHeight": 0, "height": 2400},
+     {"type": "Niche", "side": "Right", "offset": 2600, "width": 600, "sillHeight": 900, "height": 600}
+    ]}
+   ],
+   "spans": [[0, 4000]],
+   "gaps": [{"from": 500, "to": 1300, "bottom": 0, "top": 2400}],
+   "skirting": [[0, 500], [1300, 4000]]
+  },
+  {
+   "name": "a niche on the right of a wall drawn against the edge's direction",
+   "edge": [[0, 0], [4000, 0]],
+   "walls": [
+    {"startX": 4100, "startY": -100, "endX": -100, "endY": -100, "thickness": 200, "openings": [
+     {"type": "Niche", "side": "Right", "offset": 600, "width": 800, "sillHeight": 900, "height": 600},
+     {"type": "Niche", "side": "Left", "offset": 2600, "width": 600, "sillHeight": 900, "height": 600}
+    ]}
+   ],
+   "spans": [[0, 4000]],
+   "gaps": [{"from": 2700, "to": 3500, "bottom": 900, "top": 1500}],
+   "skirting": [[0, 4000]]
   }
  ]
 }

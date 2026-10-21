@@ -6,7 +6,7 @@ import {FurnitureDefinitionBody} from './furniture';
 export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
-export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window';
+export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
 export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
@@ -155,6 +155,8 @@ export interface Opening {
     shutters?: ShutterStyle | null;
     shutterMaterialId?: number | null;
     shuttersClosed?: boolean;
+    /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
+    depth?: number | null;
 }
 
 export interface Wall {

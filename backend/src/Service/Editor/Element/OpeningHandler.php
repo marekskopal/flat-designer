@@ -27,7 +27,7 @@ use FlatDesigner\Service\Editor\FieldReader;
  * Doors, passages and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must
  * fit within the wall's length and height and must not overlap another opening of that wall. A sliding or
  * pocket door also needs the wall beside it, towards `hinge`, free for its open leaf (a pocket door a wall
- * thick enough for the pocket). Only a window down to the floor can be `walkable`, with one or two sashes. Leaf
+ * thick enough for the pocket, a niche one thicker than its `depth`). Only a window down to the floor can be `walkable`, with one or two sashes. Leaf
  * styles are for doors with a leaf; a solid lower panel and shutters for windows.
  */
 final readonly class OpeningHandler implements ElementHandler
@@ -37,16 +37,6 @@ final readonly class OpeningHandler implements ElementHandler
 	public const int MaxTransoms = 4;
 
 	public const int MaxSillBoard = 300;
-
-	/** The look of a plain opening: flush leaves, glass down to the bottom rail, no shutters. */
-	private const array DefaultStyle = [
-		'leafStyle' => 'Flush',
-		'leafPanels' => 2,
-		'panelHeight' => null,
-		'shutters' => null,
-		'shutterMaterialId' => null,
-		'shuttersClosed' => false,
-	];
 
 	public function __construct(
 		private OpeningRepository $openingRepository,
@@ -64,7 +54,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard', 'leafStyle', 'leafPanels', 'panelHeight', 'shutters', 'shutterMaterialId', 'shuttersClosed'];
+		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard', 'leafStyle', 'leafPanels', 'panelHeight', 'shutters', 'shutterMaterialId', 'shuttersClosed', 'depth'];
 	}
 
 	/** @return list<string> */
@@ -76,49 +66,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return array<string, mixed> */
 	public function defaults(array $fields): array
 	{
-		if (($fields['type'] ?? null) === OpeningTypeEnum::Window->value) {
-			return [
-				'wallId' => null,
-				'name' => 'Window',
-				'type' => OpeningTypeEnum::Window->value,
-				'offset' => 100,
-				'width' => 1200,
-				'height' => 1200,
-				'sillHeight' => 900,
-				'leafWidth' => null,
-				'hinge' => null,
-				'side' => null,
-				'entrance' => false,
-				'walkable' => false,
-				'frameStyle' => DoorFrameStyleEnum::Lining->value,
-				'handle' => null,
-				'mullions' => 1,
-				'transoms' => 0,
-				'sillBoard' => null,
-			] + self::DefaultStyle;
-		}
-
-		$type = OpeningTypeEnum::tryFrom(is_string($fields['type'] ?? null) ? $fields['type'] : '') ?? OpeningTypeEnum::Door;
-
-		return [
-			'wallId' => null,
-			'name' => ucfirst($type->label()),
-			'type' => $type->value,
-			'offset' => 100,
-			'width' => $type === OpeningTypeEnum::DoubleDoor ? 1400 : 900,
-			'height' => $type === OpeningTypeEnum::Passage ? 2100 : 1970,
-			'sillHeight' => 0,
-			'leafWidth' => $type === OpeningTypeEnum::Door ? 800 : null,
-			'hinge' => $type->hasLeaves() ? OpeningHingeEnum::Start->value : null,
-			'side' => $type->hasLeaves() ? OpeningSideEnum::Left->value : null,
-			'entrance' => false,
-			'walkable' => false,
-			'frameStyle' => $type === OpeningTypeEnum::Passage ? DoorFrameStyleEnum::None->value : DoorFrameStyleEnum::Lining->value,
-			'handle' => null,
-			'mullions' => 1,
-			'transoms' => 0,
-			'sillBoard' => null,
-		] + self::DefaultStyle;
+		return OpeningDefaults::of(OpeningTypeEnum::tryFrom(is_string($fields['type'] ?? null) ? $fields['type'] : ''));
 	}
 
 	public function find(Floor $floor, int $id): ?Opening
@@ -179,6 +127,11 @@ final readonly class OpeningHandler implements ElementHandler
 			array_filter($this->openingRepository->findByWalls([$wall->id]), fn (Opening $o): bool => $o->id !== $currentOpening?->id),
 		);
 
+		$depth = OpeningPlacement::nicheDepth($type, $fields->nullableInt('depth', 1, State::MaxSize), $wall->thickness);
+		$entrance = $fields->bool('entrance');
+		if ($entrance && $type === OpeningTypeEnum::Niche) {
+			throw EditException::invalid('A niche cannot be the entrance.');
+		}
 		$walkable = $fields->bool('walkable');
 		if ($walkable && ($type !== OpeningTypeEnum::Window || $sillHeight !== 0)) {
 			throw EditException::invalid('Only a window down to the floor (sill height 0) can be walkable.');
@@ -196,9 +149,12 @@ final readonly class OpeningHandler implements ElementHandler
 			'width' => $width,
 			'height' => $height,
 			'sillHeight' => $sillHeight,
-			'entrance' => $fields->bool('entrance'),
+			'entrance' => $entrance,
 			'walkable' => $walkable,
-			'frameStyle' => ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
+			'frameStyle' => $type === OpeningTypeEnum::Niche
+				? DoorFrameStyleEnum::None->value
+				: ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
+			'depth' => $depth,
 		] + self::leafFields($type, $hinge, $width, $fields) + $window + $this->look->fields($type, $height, $fields);
 	}
 
@@ -224,7 +180,7 @@ final readonly class OpeningHandler implements ElementHandler
 
 	/**
 	 * The fields of the leaves: a passage has none, a sliding leaf is as wide as its opening, and only doors
-	 * with a leaf have a handle.
+	 * with a leaf have a handle. A niche has no leaf either, only the `side` face it is cut into (default Left).
 	 *
 	 * @return array{leafWidth: int|null, hinge: string|null, side: string|null, handle: string|null}
 	 */
@@ -232,11 +188,15 @@ final readonly class OpeningHandler implements ElementHandler
 	{
 		$leaves = $type->hasLeaves();
 		$passage = $type->isDoor() && !$leaves;
+		$niche = $type === OpeningTypeEnum::Niche;
 
 		return [
 			'leafWidth' => $leaves && !$type->isSliding() ? $fields->nullableInt('leafWidth', 100, $width) : null,
-			'hinge' => $passage ? null : $hinge?->value,
-			'side' => $passage ? null : $fields->nullableEnum('side', OpeningSideEnum::class)?->value,
+			'hinge' => $passage || $niche ? null : $hinge?->value,
+			'side' => $passage ? null : ($fields->nullableEnum(
+				'side',
+				OpeningSideEnum::class,
+			) ?? ($niche ? OpeningSideEnum::Left : null))?->value,
 			'handle' => $leaves ? $fields->nullableEnum('handle', DoorHandleEnum::class)?->value : null,
 		];
 	}
@@ -309,6 +269,7 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->shutters = $fields->nullableEnum('shutters', ShutterStyleEnum::class);
 		$opening->shutterMaterial = $this->materialResolver->resolve($fields->nullableId('shutterMaterialId'));
 		$opening->shuttersClosed = $fields->bool('shuttersClosed');
+		$opening->depth = $fields->nullableInt('depth', 1, State::MaxSize);
 		$this->openingRepository->persist($opening);
 	}
 

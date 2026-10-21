@@ -8,6 +8,7 @@ use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Service\Editor\Geometry\Spans;
@@ -30,7 +31,7 @@ final class WallFaceSpansTest extends TestCase
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int}>, skirting: list<array{int|float, int|float}>}> $cases */
+		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int}>, skirting: list<array{int|float, int|float}>}> $cases */
 		$cases = $fixture['cases'];
 		foreach ($cases as $case) {
 			$walls = [];
@@ -117,7 +118,7 @@ final class WallFaceSpansTest extends TestCase
 		}
 	}
 
-	/** @param array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int}>} $wall */
+	/** @param array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>} $wall */
 	private static function wall(int $id, array $wall): WallDto
 	{
 		$openings = [];
@@ -125,14 +126,16 @@ final class WallFaceSpansTest extends TestCase
 			$openings[] = new OpeningDto(
 				id: $id * 100 + $j,
 				name: 'Opening',
-				type: $o['sillHeight'] > 0 ? OpeningTypeEnum::Window : OpeningTypeEnum::Door,
+				type: isset($o['type'])
+					? OpeningTypeEnum::from($o['type'])
+					: ($o['sillHeight'] > 0 ? OpeningTypeEnum::Window : OpeningTypeEnum::Door),
 				offset: $o['offset'],
 				width: $o['width'],
 				height: $o['height'],
 				sillHeight: $o['sillHeight'],
 				leafWidth: null,
 				hinge: null,
-				side: null,
+				side: isset($o['side']) ? OpeningSideEnum::from($o['side']) : null,
 				entrance: false,
 				walkable: false,
 				frameStyle: DoorFrameStyleEnum::Lining,
@@ -146,6 +149,7 @@ final class WallFaceSpansTest extends TestCase
 				shutters: null,
 				shutterMaterialId: null,
 				shuttersClosed: false,
+				depth: isset($o['type']) && $o['type'] === 'Niche' ? 100 : null,
 			);
 		}
 

@@ -444,6 +444,45 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 90])->getStatusCode());
 	}
 
+	public function testNichesAreRecessesIntoOneFace(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0, 'thickness' => 200]);
+		$wallId = self::id($wall);
+
+		$niche = $this->create('openings', ['wallId' => $wallId, 'type' => 'Niche', 'offset' => 500, 'hinge' => 'End', 'handle' => 'Knob']);
+		self::assertSame(['Niche', 600, 600, 900, 100, 'Left', null, null, 'None'], [
+			$niche['name'],
+			$niche['width'],
+			$niche['height'],
+			$niche['sillHeight'],
+			$niche['depth'],
+			$niche['side'],
+			$niche['hinge'],
+			$niche['handle'],
+			$niche['frameStyle'],
+		]);
+
+		// At most the wall less 30 mm deep, never the entrance; the wall cannot get thinner than the niche needs.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($niche), ['depth' => 171])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($niche), ['entrance' => true])->getStatusCode());
+		$deep = $this->jsonBody($this->edit('PATCH', 'openings', self::id($niche), ['depth' => 170, 'side' => 'Right']));
+		self::assertIsArray($deep['element']);
+		self::assertSame([170, 'Right'], [$deep['element']['depth'], $deep['element']['side']]);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 190])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 250])->getStatusCode());
+
+		// Another type has no depth.
+		$window = $this->jsonBody($this->edit('PATCH', 'openings', self::id($niche), ['type' => 'Window']));
+		self::assertIsArray($window['element']);
+		self::assertNull($window['element']['depth']);
+
+		$thin = $this->create('walls', ['startX' => 0, 'startY' => 1000, 'endX' => 3000, 'endY' => 1000, 'thickness' => 30]);
+		self::assertSame(
+			422,
+			$this->edit('POST', 'openings', body: ['wallId' => self::id($thin), 'type' => 'Niche', 'offset' => 100])->getStatusCode(),
+		);
+	}
+
 	public function testMovingWallStartKeepsOpeningsInPlace(): void
 	{
 		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0]);

@@ -292,7 +292,9 @@ export function buildWall(
     const material = materials.get(wall.materialId);
 
     for (const piece of wallPieces(frame.length, wall.height, wall.openings)) {
-        const mesh = wallPieceMesh(material, piece, frame.length, wall.thickness, ends);
+        const mesh = piece.recess === undefined
+            ? wallPieceMesh(material, piece, frame.length, wall.thickness, ends)
+            : nicheBack(material, piece, wall.thickness);
         group.add(mesh);
 
         // Same box drawn inside-out in a flat dark colour: invisible normally, it fills the cut once the
@@ -302,11 +304,25 @@ export function buildWall(
         group.add(cap);
     }
 
-    for (const opening of wall.openings) {
+    for (const opening of wall.openings.filter((o) => o.type !== 'Niche')) {
         group.add(isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners));
     }
 
     return group;
+}
+
+/**
+ * The wall left behind a niche: the piece without the niche's depth on the face it is cut into (the left face is −z).
+ * Tagged with the niche, so clicking into it selects the niche.
+ */
+function nicheBack(material: THREE.Material, piece: WallPiece, thickness: number): THREE.Mesh {
+    const {openingId, side, depth} = piece.recess!;
+    const back = thickness - depth;
+    const z = side === 'Left' ? -thickness / 2 + depth : -thickness / 2;
+    const length = (piece.to - piece.from) * MM;
+    const mesh = boxAt(material, piece.from * MM, piece.bottom * MM, z * MM, length, (piece.top - piece.bottom) * MM, back * MM);
+    mesh.userData = {openingId};
+    return mesh;
 }
 
 /** A box, or for a piece at a mitred wall end a prism whose faces run on to the corner. */

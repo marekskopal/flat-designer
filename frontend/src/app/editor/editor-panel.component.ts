@@ -40,6 +40,7 @@ const NewOpeningWidths: Record<OpeningType, number> = {
     PocketDoor: 900,
     Passage: 900,
     Window: 1200,
+    Niche: 600,
 };
 
 /** Item kinds that are part of the building. */
