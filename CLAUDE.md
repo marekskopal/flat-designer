@@ -342,6 +342,24 @@ format is the text in `FurnitureTools::Format`.
   when an edit tool is picked. It snaps to wall ends and to face corners and faces (`wallFaces()` with the
   `wallJoints()` mitres). Esc first clears the measurement, then ends the tool.
 
+## Plan export
+
+- `viewer/engine/plan-drawing.ts` (framework-free; the geometry helpers, not a three.js scene) draws the floor as SVG text in paper mm: `planSheet()`
+  is the plan on A4 at the largest of `PlanScales` that fits (`planLayout()` turns the paper for a tall plan), with a
+  title block, scale bar and north arrow; `roomScheduleSheets()` are the room schedule pages, built from the scene's
+  rooms (no endpoint, so share guests have it too).
+- The walls are cut at `PlanCutHeight` (1300 mm, as the plan view): the `wallPieces()` reaching it, with the
+  `wallJoints()` mitres. An opening the cut passes through is a gap with its symbol (`openingLeaves()` opened square,
+  windows with glazing lines and sill board), one above or below it is dashed in the solid wall. Items are footprint
+  rectangles with names (`hiddenItemIds()` hides other variants); items from the cut up are dashed and unnamed,
+  columns filled. Dimensions are `roomDimensions()` at paper offsets, `walledOnly` (no lines where open-plan rooms
+  meet). Text widths are estimated (`CharWidth`): room names wrap to the room, and dimensions and item names that
+  would overlap text placed before them are left out.
+- `app/export/`: `sheetsPdf()` turns the sheets into PDF pages with `jspdf` and `svg2pdf.js` (loaded lazily) and
+  embeds Inter from `assets/fonts/` (SIL OFL; jsPDF's own fonts lack Czech letters). `PlanExportComponent` (Plan
+  PDF / Plan SVG) exports the scene as shown on the viewer page and the shared viewer page; `ShareSettingsDto.exports`
+  (missing in older links: allowed) lets a share link forbid it.
+
 ## Plan underlays
 
 - A floor may have one `FloorUnderlay` (`floor_underlays`): an image project file laid under the top view for tracing.

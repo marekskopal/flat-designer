@@ -33,6 +33,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		'dimensions' => true,
 		'night' => true,
 		'presentation' => true,
+		'exports' => false,
 	];
 
 	public function testCreatingALinkSavesAVersionAndGuestsSeeIt(): void
@@ -154,8 +155,11 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertSame(200, $updated->getStatusCode());
 		$body = $this->jsonBody($updated);
 		self::assertSame('Renamed', $body['name']);
-		// Without the flags (a link from before dimension lines, the night view and the quality), they are off.
-		self::assertSame([...$settings, 'dimensions' => false, 'night' => false, 'presentation' => false], $body['settings']);
+		// Without the flags (a link from before dimension lines, the night view and the quality), they are off; exports are allowed.
+		self::assertSame(
+			[...$settings, 'dimensions' => false, 'night' => false, 'presentation' => false, 'exports' => true],
+			$body['settings'],
+		);
 		self::assertSame($expiresAt, $body['expiresAt']);
 		self::assertSame($first['versionId'], $body['versionId']);
 

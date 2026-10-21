@@ -22,6 +22,8 @@ import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
 import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
+import {downloadBlob, safeFilename} from '@app/export/download';
+import {PlanExportComponent} from '@app/export/plan-export.component';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
 import {PlanPoint, Room, RoomType} from '@app/models/scene';
@@ -35,6 +37,7 @@ import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.co
 import {ToolStatus} from '@app/viewer/engine/drawing';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
+import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {Selection} from '@app/viewer/engine/selection';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
@@ -48,8 +51,6 @@ import {CaptureTarget, SavedViewsComponent} from './saved-views.component';
 /** Section heights offered by the slider (mm); the top value means "no cut". */
 const SectionMin = 900;
 const SectionMax = 2700;
-/** Plan view cuts walls at this height, like an architectural floor plan. */
-const PlanSectionHeight = 1300;
 
 /** Camera presets plus the first-person walkthrough. */
 type ViewMode = ViewPreset | 'walkthrough';
@@ -81,6 +82,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         MeasureHudComponent,
         UnderlayPanelComponent,
         SavedViewsComponent,
+        PlanExportComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -384,7 +386,7 @@ export class ViewerPageComponent {
         this.activeView.set(mode);
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
-        this.sectionSlider.set(mode === 'top' ? PlanSectionHeight : SectionMax);
+        this.sectionSlider.set(mode === 'top' ? PlanCutHeight : SectionMax);
         this.viewer().setView(mode, animate);
     }
 
@@ -534,17 +536,12 @@ export class ViewerPageComponent {
         this.viewBusy.set(true);
         try {
             const blob = await this.viewer().capture(1600, 1000, 2);
-            const name = `${scene.floor.name} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}.png`.replace(/[\\/:]/g, '-');
+            const name = safeFilename(`${scene.floor.name} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}.png`);
             if (target === 'file') {
                 await this.projects.uploadFile(this.projectId(), new File([blob], name, {type: 'image/png'}));
                 this.alerts.success(`Saved "${name}" among the project's files.`);
             } else {
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = name;
-                link.click();
-                URL.revokeObjectURL(url);
+                downloadBlob(blob, name);
             }
         } catch (e) {
             this.alerts.error(e instanceof Error ? e.message : 'The view could not be captured.');

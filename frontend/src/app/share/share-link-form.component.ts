@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
+import {localDate} from '@app/core/local-date';
 import {CameraPose, ShareLink, ShareLinkInput, ShareSettings, ShareView, ShareViewLabels} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
 
@@ -21,13 +22,9 @@ export interface ShareSource {
 
 const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
 
-/** `YYYY-MM-DD` of a date in local time, for the date input. */
-const localDate = (date: Date): string =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
 /**
  * Creates a share link from the viewer (`source`: the shown floor, view, camera and display) or edits an existing
- * `link` (name, views, start view, expiry; its floor, version and display stay).
+ * `link` (name, views, start view, exports, expiry; its floor, version and display stay).
  */
 @Component({
     selector: 'fd-share-link-form',
@@ -71,6 +68,13 @@ const localDate = (date: Date): string =>
                 @if (cameraHint(); as hint) {
                     <span class="field__hint">{{ hint }}</span>
                 }
+            </div>
+
+            <div class="field">
+                <label class="check">
+                    <input type="checkbox" formControlName="exports" />
+                    Guests can download the plan (PDF, SVG)
+                </label>
             </div>
 
             <label class="field">
@@ -154,6 +158,7 @@ export class ShareLinkFormComponent {
         walkthrough: [false],
         initialView: ['overview' as ShareView],
         camera: [false],
+        exports: [true],
         expires: [''],
     });
 
@@ -236,6 +241,7 @@ export class ShareLinkFormComponent {
             walkthrough: settings === undefined ? false : settings.views.includes('walkthrough'),
             initialView: settings?.initialView ?? (source?.view === 'top' ? 'top' : 'overview'),
             camera: settings === undefined ? source?.view === 'overview' : settings.camera !== null,
+            exports: settings?.exports ?? true,
             expires: link === null || link.expiresAt === null ? '' : localDate(new Date(link.expiresAt)),
         });
     }
@@ -270,6 +276,7 @@ export class ShareLinkFormComponent {
             dimensions: display.dimensions,
             night: display.night ?? false,
             presentation: display.presentation ?? false,
+            exports: value.exports,
         };
         const body: ShareLinkInput = {
             name: value.name.trim(),

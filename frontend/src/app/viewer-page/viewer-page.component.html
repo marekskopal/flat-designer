@@ -187,6 +187,13 @@
         />
     </section>
 
+    @if (viewedScene(); as s) {
+        <section class="panel__section" [hidden]="editor.enabled() || walking()">
+            <h2 class="section-title">Export</h2>
+            <fd-plan-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" />
+        </section>
+    }
+
     @if (hasVariants() && scene(); as s) {
         <section class="panel__section">
             <h2 class="section-title">Variants</h2>

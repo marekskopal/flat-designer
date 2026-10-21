@@ -2,6 +2,7 @@ import {Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {CSS2DObject} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
+import {wallSpansAlongEdge} from './ceilings';
 import {counterClockwise, MM, Vec2, wallGapsAlongEdge} from './plan-geometry';
 
 /** Distance of a room edge's overall dimension from the wall face, mm (inside the room). */
@@ -25,9 +26,14 @@ export interface DimensionLine {
 /**
  * Inner dimensions of the rooms: for every edge of a room outline (on the inner wall faces), its length
  * offset into the room and, where doors or windows break the wall, the chain of piers and openings closer
- * to the wall.
+ * to the wall. A drawing at a scale passes its own offsets (mm into the room); `walledOnly` leaves out the edges
+ * without a wall along them (where open-plan rooms meet).
  */
-export function roomDimensions(rooms: readonly Pick<Room, 'polygon'>[], walls: readonly Wall[]): DimensionLine[] {
+export function roomDimensions(
+    rooms: readonly Pick<Room, 'polygon'>[],
+    walls: readonly Wall[],
+    {overall = DimensionOffset, chain = ChainOffset, walledOnly = false}: {overall?: number; chain?: number; walledOnly?: boolean} = {},
+): DimensionLine[] {
     const lines: DimensionLine[] = [];
     for (const room of rooms) {
         const ccw = counterClockwise(room.polygon);
@@ -36,7 +42,7 @@ export function roomDimensions(rooms: readonly Pick<Room, 'polygon'>[], walls: r
             const a = {x, y};
             const b = {x: nx, y: ny};
             const length = Math.hypot(b.x - a.x, b.y - a.y);
-            if (length < MinEdge) {
+            if (length < MinEdge || (walledOnly && wallSpansAlongEdge(a, b, walls).length === 0)) {
                 return;
             }
             const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
@@ -46,7 +52,7 @@ export function roomDimensions(rooms: readonly Pick<Room, 'polygon'>[], walls: r
                 x: a.x + dir.x * along + normal.x * offset,
                 y: a.y + dir.y * along + normal.y * offset,
             });
-            lines.push({a: at(0, DimensionOffset), b: at(length, DimensionOffset), length: Math.round(length), normal});
+            lines.push({a: at(0, overall), b: at(length, overall), length: Math.round(length), normal});
 
             const gaps = wallGapsAlongEdge(a, b, walls).filter((gap) => !gap.niche);
             if (gaps.length === 0) {
@@ -56,7 +62,7 @@ export function roomDimensions(rooms: readonly Pick<Room, 'polygon'>[], walls: r
             stops.slice(1).forEach((to, j) => {
                 const from = stops[j];
                 if (to - from >= 1) {
-                    lines.push({a: at(from, ChainOffset), b: at(to, ChainOffset), length: to - from, normal});
+                    lines.push({a: at(from, chain), b: at(to, chain), length: to - from, normal});
                 }
             });
         });

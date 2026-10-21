@@ -33,6 +33,8 @@ export interface ShareSettings {
     night?: boolean;
     /** Opens in the presentation quality; missing in older links. */
     presentation?: boolean;
+    /** The guest may download the plan (PDF, SVG); missing in links saved before the exports, which allow them. */
+    exports?: boolean;
 }
 
 export interface ShareLink {

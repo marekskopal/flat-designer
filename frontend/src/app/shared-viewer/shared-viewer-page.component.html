@@ -158,6 +158,13 @@
             </label>
         </section>
 
+        @if (settings.exports !== false && scene(); as s) {
+            <section class="panel__section">
+                <h2 class="section-title">Export</h2>
+                <fd-plan-export [scene]="s" [projectName]="shared()?.projectName ?? ''" />
+            </section>
+        }
+
         <section class="panel__section">
             <button type="button" class="reset" (click)="resetToShared()">Reset to the shared view</button>
         </section>

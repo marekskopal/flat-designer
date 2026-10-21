@@ -3,11 +3,13 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, resource, signal, viewChild} from '@angular/core';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
+import {PlanExportComponent} from '@app/export/plan-export.component';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {MeasureStatus} from '@app/viewer/engine/measure';
+import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {DoorAim} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
@@ -17,7 +19,6 @@ import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 /** Section heights offered by the slider (mm); the top value means "no cut" (as on the viewer page). */
 const SectionMin = 900;
 const SectionMax = 2700;
-const PlanSectionHeight = 1300;
 
 /**
  * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
@@ -26,7 +27,7 @@ const PlanSectionHeight = 1300;
  */
 @Component({
     selector: 'fd-shared-viewer-page',
-    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent],
+    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent, PlanExportComponent],
     templateUrl: './shared-viewer-page.component.html',
     styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,7 +143,7 @@ export class SharedViewerPageComponent {
         this.activeView.set(view);
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
-        this.sectionSlider.set(view === 'top' ? PlanSectionHeight : SectionMax);
+        this.sectionSlider.set(view === 'top' ? PlanCutHeight : SectionMax);
         this.showView(view, true);
     }
 
@@ -184,7 +185,7 @@ export class SharedViewerPageComponent {
         this.activeView.set(view);
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
-        this.sectionSlider.set(view === 'top' ? PlanSectionHeight : SectionMax);
+        this.sectionSlider.set(view === 'top' ? PlanCutHeight : SectionMax);
         this.showView(view, true);
     }
 

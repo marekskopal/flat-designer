@@ -22,6 +22,15 @@
                         "index": "src/index.html",
                         "browser": "src/main.ts",
                         "tsConfig": "tsconfig.app.json",
+                        "allowedCommonJsDependencies": [
+                            "core-js",
+                            "cssesc",
+                            "font-family-papandreou",
+                            "html2canvas",
+                            "raf",
+                            "rgbcolor",
+                            "svgpath"
+                        ],
                         "assets": [
                             {
                                 "glob": "**/*",

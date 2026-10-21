@@ -76,6 +76,7 @@ final readonly class ShareLinkTools
 	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
 	 * @param bool $night start at night: no daylight, the flat lit by its lights
 	 * @param bool $presentation render in the presentation quality (ambient occlusion, antialiasing; slower)
+	 * @param bool $exports let the guest download the plan (PDF, SVG)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working; null = never
 	 */
 	#[McpTool(
@@ -98,6 +99,7 @@ final readonly class ShareLinkTools
 		bool $dimensions = false,
 		bool $night = false,
 		bool $presentation = false,
+		bool $exports = true,
 		?string $expiresAt = null,
 	): ShareLinkDto {
 		$views ??= ['overview', 'top'];
@@ -111,6 +113,7 @@ final readonly class ShareLinkTools
 			'dimensions' => $dimensions,
 			'night' => $night,
 			'presentation' => $presentation,
+			'exports' => $exports,
 		]);
 		$link = $this->shareLinkProvider->create(
 			$this->context->user(),
@@ -131,6 +134,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $dimensions show the dimension lines in the top view at the start
 	 * @param bool|null $night start at night (lit by the flat's lights)
 	 * @param bool|null $presentation render in the presentation quality
+	 * @param bool|null $exports let the guest download the plan (PDF, SVG)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
 	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "expiresAt" (never)
 	 */
@@ -154,6 +158,7 @@ final readonly class ShareLinkTools
 		?bool $dimensions = null,
 		?bool $night = null,
 		?bool $presentation = null,
+		?bool $exports = null,
 		?string $expiresAt = null,
 		?array $clear = null,
 	): ShareLinkDto {
@@ -171,6 +176,7 @@ final readonly class ShareLinkTools
 				'dimensions' => $dimensions,
 				'night' => $night,
 				'presentation' => $presentation,
+				'exports' => $exports,
 				'expiresAt' => $expiresAt,
 			],
 			$clear,
