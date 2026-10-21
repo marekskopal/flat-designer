@@ -8,11 +8,13 @@ use FlatDesigner\Controller\ElementController;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\ChairParamsValidator;
+use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\OpeningLook;
 use FlatDesigner\Service\Editor\Element\RoomCeiling;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
+use FlatDesigner\Service\Editor\Element\StructureSize;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
@@ -29,10 +31,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(OpeningLook::class)]
 #[CoversClass(RoomHandler::class)]
 #[CoversClass(RoomCeiling::class)]
+#[CoversClass(StructureSize::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(CabinetParamsValidator::class)]
 #[CoversClass(WardrobeParamsValidator::class)]
 #[CoversClass(ChairParamsValidator::class)]
+#[CoversClass(ColumnParamsValidator::class)]
 final class ElementControllerTest extends EditorTestCase
 {
 	public function testCreateItemFillsDefaultsLogsAndBumpsRevision(): void
@@ -180,6 +184,33 @@ final class ElementControllerTest extends EditorTestCase
 
 		foreach ([['seatHeight' => 885], ['seatHeight' => '460'], ['backWidth' => 401], ['backWidth' => 0]] as $invalid) {
 			$response = $this->edit('PATCH', 'items', self::id($chair), ['params' => $invalid]);
+			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
+		}
+	}
+
+	public function testColumnsAndBeamsFitTheCeilingOfTheirRoom(): void
+	{
+		$polygon = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+		$flat = $this->create('rooms', ['name' => 'Hall', 'polygon' => $polygon, 'ceilingHeight' => 2600]);
+		$vaulted = $this->create('rooms', ['name' => 'Living', 'polygon' => $polygon, 'ceilingHeight' => 2920, 'vaultSpacing' => 550]);
+
+		$column = $this->create('items', ['kind' => 'Column', 'roomId' => self::id($flat)]);
+		self::assertSame(
+			['Column', 0, 300, 300, 2600],
+			[$column['name'], $column['z'], $column['width'], $column['depth'], $column['height']],
+		);
+		$beam = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($vaulted)]);
+		self::assertSame([2920 - 130 - 130, 3000, 100, 130], [$beam['z'], $beam['width'], $beam['depth'], $beam['height']]);
+		$given = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($flat), 'height' => 200, 'z' => 2000]);
+		self::assertSame([2000, 200], [$given['z'], $given['height']]);
+		$outside = $this->create('items', ['kind' => 'Column']);
+		self::assertSame(2600, $outside['height']);
+
+		$round = $this->jsonBody($this->edit('PATCH', 'items', self::id($column), ['params' => ['shape' => 'round']]));
+		self::assertIsArray($round['element']);
+		self::assertSame(['shape' => 'round'], $round['element']['params']);
+		foreach ([['shape' => 'oval'], ['shape' => 1]] as $invalid) {
+			$response = $this->edit('PATCH', 'items', self::id($column), ['params' => $invalid]);
 			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
 		}
 	}

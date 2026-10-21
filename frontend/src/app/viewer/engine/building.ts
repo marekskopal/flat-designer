@@ -46,7 +46,6 @@ const SlabThickness = 300;
 const SashBar = 55;
 
 /** Colour of wall cores revealed by the section plane (classic poché). */
-const SectionColor = '#3d3a36';
 
 export interface BuildingParts {
     root: THREE.Group;
@@ -87,7 +86,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         slab: buildSlab(scene.walls, materials),
         rooms: new Map(),
         walls: new Map(),
-        sectionMaterial: new THREE.MeshBasicMaterial({color: SectionColor, side: THREE.BackSide}),
+        sectionMaterial: materials.sectionFill(),
     };
     root.add(parts.slab);
 

@@ -20,6 +20,7 @@ import {PictureFetcher, PictureLibrary} from './pictures';
 import {
     alongWall,
     Bounds,
+    columnColliders,
     cornerWindows,
     edgeMidpoints,
     entranceWalkStart,
@@ -39,6 +40,7 @@ import {
     snapToGrid,
     Vec2,
     WalkStart,
+    WallCollider,
     wallColliders,
     WallCorners,
     WallEnds,
@@ -373,7 +375,7 @@ export class ViewerEngine {
             this.leafStates.sync(scene.walls);
         }
         this.leafStates.apply(this.leaves);
-        this.walkthrough?.setColliders(wallColliders(scene.walls));
+        this.walkthrough?.setColliders(sceneColliders(scene));
         this.updateLeafColliders();
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
@@ -429,6 +431,7 @@ export class ViewerEngine {
         const assets = this.itemAssets(scene);
         for (const item of scene.items) {
             const object = buildItem(item, this.materials, rooms.get(item.roomId ?? 0), definitions, assets);
+            this.showCeilingParts(object);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -636,6 +639,7 @@ export class ViewerEngine {
             }
             const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, assets);
             object.visible = !hidden.has(item.id);
+            this.showCeilingParts(object);
             this.items.set(item.id, object);
             content.add(object);
         }
@@ -770,6 +774,16 @@ export class ViewerEngine {
         if (this.parts !== null) {
             this.parts.ceilings.visible = visible;
         }
+        this.items.forEach((object) => this.showCeilingParts(object));
+    }
+
+    /** Shows or hides the parts of an item that belong to the ceiling (a beam) with the ceilings. */
+    private showCeilingParts(object: THREE.Object3D): void {
+        object.traverse((o) => {
+            if (o.userData['ceilingPart'] === true) {
+                o.visible = this.ceilingsVisible;
+            }
+        });
     }
 
     public setLabelsVisible(visible: boolean): void {
@@ -1032,7 +1046,7 @@ export class ViewerEngine {
         const start = this.walkStart(this.sceneData);
         // The view looks along plan (−sin yaw, cos yaw).
         const yaw = Math.atan2(-start.direction.x, start.direction.y);
-        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, wallColliders(this.sceneData.walls), start.position, yaw);
+        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, sceneColliders(this.sceneData), start.position, yaw);
         walkthrough.onExit = (): void => {
             this.stopWalkthrough();
             this.onWalkthroughEnd();
@@ -2375,6 +2389,12 @@ export class ViewerEngine {
 }
 
 /** Scales an outline box to the joint bounds of the objects, a few mm larger so it does not z-fight with their faces. */
+/** What the walker collides with: the walls and the shown columns (door leaves come on top, as they move). */
+function sceneColliders(scene: Scene): WallCollider[] {
+    const hidden = hiddenItemIds(scene);
+    return [...wallColliders(scene.walls), ...columnColliders(scene.items.filter((item) => !hidden.has(item.id)))];
+}
+
 function fitOutline(outline: THREE.Mesh, objects: THREE.Object3D[]): void {
     const bounds = new THREE.Box3();
     objects.forEach((object) => bounds.expandByObject(object));

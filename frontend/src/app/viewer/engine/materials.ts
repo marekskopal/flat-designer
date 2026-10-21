@@ -10,6 +10,9 @@ const PatternTileSize: Record<string, number> = {
     Gravel: 1.0,
 };
 
+/** Fill of solid cores revealed by the section plane. */
+const SectionColor = '#3d3a36';
+
 export type GrainDirection = 'vertical' | 'horizontal';
 
 /**
@@ -86,6 +89,19 @@ export class MaterialLibrary {
     }
 
     /** Whether the material is one of the library's (shared, disposed with the library rather than with a mesh). */
+    /**
+     * Flat dark fill of solid cores cut by the section plane: drawn on the back faces of a wall piece's (or column's)
+     * box, it is hidden until the plane slices the box open.
+     */
+    public sectionFill(): THREE.Material {
+        let material = this.cache.get('section');
+        if (material === undefined) {
+            material = new THREE.MeshBasicMaterial({color: SectionColor, side: THREE.BackSide});
+            this.cache.set('section', material);
+        }
+        return material;
+    }
+
     public owns(material: THREE.Material): boolean {
         for (const cached of this.cache.values()) {
             if (cached === material) {

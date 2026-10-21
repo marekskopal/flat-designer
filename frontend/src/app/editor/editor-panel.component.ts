@@ -42,6 +42,9 @@ const NewOpeningWidths: Record<OpeningType, number> = {
     Window: 1200,
 };
 
+/** Item kinds that are part of the building. */
+const StructureKinds: readonly string[] = ['Column', 'Beam'];
+
 /** Nudge steps for arrow keys, mm (Shift: coarse). */
 const NudgeStep = 10;
 const NudgeStepCoarse = 100;
@@ -96,8 +99,14 @@ export class EditorPanelComponent {
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
     });
 
-    /** Item kinds of the Add menu; the built-in furniture kinds a definition replaces go last, as "old". */
-    protected readonly currentKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy === null));
+    /**
+     * Item kinds of the Add menu; the built-in furniture kinds a definition replaces go last, as "old", and columns and
+     * beams under Building.
+     */
+    protected readonly currentKinds = computed(() =>
+        this.editor.itemKinds().filter((k) => k.replacedBy === null && !StructureKinds.includes(k.kind)),
+    );
+    protected readonly structureKinds = computed(() => this.editor.itemKinds().filter((k) => StructureKinds.includes(k.kind)));
     protected readonly oldKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy !== null));
 
     /** The furniture of the Add menu by where it comes from. */

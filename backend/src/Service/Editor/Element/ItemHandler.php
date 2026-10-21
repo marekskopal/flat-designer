@@ -21,6 +21,7 @@ use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Editor\ChairParamsValidator;
+use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\CustomItemValidator;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
@@ -45,6 +46,7 @@ final readonly class ItemHandler implements ElementHandler
 		private FurnitureDefinitionRepository $definitionRepository,
 		private CustomItemValidator $customValidator,
 		private ItemModelLink $modelLink,
+		private StructureSize $structureSize,
 	) {
 	}
 
@@ -84,6 +86,9 @@ final readonly class ItemHandler implements ElementHandler
 		if ($model !== null) {
 			$name = $model->name;
 			$size = ['width' => $model->width, 'depth' => $model->depth, 'height' => $model->height] + $size;
+		}
+		if ($kind !== null) {
+			$size = $this->structureSize->fit($kind, $fields['roomId'] ?? null, $size['height']) + $size;
 		}
 
 		return [
@@ -150,6 +155,7 @@ final readonly class ItemHandler implements ElementHandler
 		CabinetParamsValidator::validate($kind, $params, $width, $height);
 		WardrobeParamsValidator::validate($kind, $params, $height);
 		ChairParamsValidator::validate($kind, $params, $width, $height);
+		ColumnParamsValidator::validate($kind, $params);
 		if ($kind === ItemKindEnum::Wardrobe && is_int($params['profileMaterialId'] ?? null)) {
 			$this->materialResolver->resolve($params['profileMaterialId']);
 		}

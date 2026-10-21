@@ -1,4 +1,4 @@
-import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
+import {Item, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 /** Plan millimetres → scene metres. Plan y (north) maps to scene −z, so a plan seen from above is not mirrored. */
 export const MM = 0.001;
@@ -281,6 +281,27 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
         }
     }
     return colliders;
+}
+
+/**
+ * Floor-level footprints of the columns among `items`, as wall pieces along their width (a round column by its
+ * bounding box). Other items do not block walking; beams are above head height.
+ */
+export function columnColliders(items: readonly Item[]): WallCollider[] {
+    return items
+        .filter((item) => item.kind === 'Column' && item.z < WalkableStep)
+        .map((item) => {
+            const angle = (item.rotation * Math.PI) / 180;
+            const dir = {x: Math.cos(angle), y: Math.sin(angle)};
+            const frame: WallFrame = {
+                start: {x: item.x - (dir.x * item.width) / 2, y: item.y - (dir.y * item.width) / 2},
+                dir,
+                normal: {x: -dir.y, y: dir.x},
+                length: item.width,
+                angle,
+            };
+            return {frame, from: 0, to: item.width, halfThickness: item.depth / 2};
+        });
 }
 
 /** Door frame on each side of a door leaf, mm; the leaf fills the rest of the opening unless `leafWidth` says otherwise. */

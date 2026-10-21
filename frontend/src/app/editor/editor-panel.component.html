@@ -34,6 +34,9 @@
             }
             <optgroup label="Building">
                 <option value="wall">Wall</option>
+                @for (kind of structureKinds(); track kind.kind) {
+                    <option [value]="'item:' + kind.kind" [title]="kind.description">{{ kindLabel(kind.kind) }}</option>
+                }
                 @for (type of openingTypes; track type[0]) {
                     <option [value]="'opening:' + type[0]" [disabled]="selectedWall() === null">{{ type[1] }} in selected wall</option>
                 }

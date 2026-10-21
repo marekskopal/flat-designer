@@ -33,6 +33,10 @@ export type ItemKind =
     | 'Wardrobe'
     | 'Chair'
     | 'Table'
+    /** A structural pillar, square or round (`params.shape`). */
+    | 'Column'
+    /** A structural downstand beam along its width; z is its soffit. */
+    | 'Beam'
     /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
     | 'Custom'
     /** A bought product drawn from a 3D model (`modelId`, in the scene's `models`), scaled to fit the item's box. */

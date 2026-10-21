@@ -55,7 +55,7 @@ export interface FieldDef {
 const ItemKinds = [
     'BaseCabinet', 'WallCabinet', 'TallCabinet', 'Worktop', 'Backsplash', 'Sink', 'Hob', 'LedStrip', 'Box',
     'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence', 'Wardrobe',
-    'Chair', 'Table', 'Custom', 'Model',
+    'Chair', 'Table', 'Column', 'Beam', 'Custom', 'Model',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;

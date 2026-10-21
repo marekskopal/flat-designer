@@ -10,6 +10,7 @@ import {buildOutdoorItemBody} from './outdoor';
 import {PictureLibrary} from './pictures';
 import {MM, tileOrigin} from './plan-geometry';
 import {buildSanitaryItemBody} from './sanitary';
+import {buildStructureItemBody} from './structure';
 import {alignTiles} from './tiling';
 
 /**
@@ -45,6 +46,7 @@ export function buildItem(
         buildSanitaryItemBody(item, materials) ??
         buildOutdoorItemBody(item, materials) ??
         buildFurnitureItemBody(item, materials) ??
+        buildStructureItemBody(item, materials) ??
         new THREE.Group();
     object.name = `item:${item.name}`;
     object.position.set(item.x * MM, item.z * MM, -item.y * MM);

@@ -1,7 +1,8 @@
-import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
+import {Item, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 import {
     collideCircle,
+    columnColliders,
     cornerWindows,
     edgeMidpoints,
     entranceWalkStart,
@@ -135,6 +136,23 @@ describe('pointInPolygon', () => {
         expect(pointInPolygon({x: 1000, y: 3500}, lShape)).toBe(true);
         expect(pointInPolygon({x: 3000, y: 3000}, lShape)).toBe(false);
         expect(pointInPolygon({x: -10, y: 1000}, lShape)).toBe(false);
+    });
+});
+
+describe('column collisions', () => {
+    const column = (fields: Partial<Item>): Item =>
+        ({kind: 'Column', x: 1000, y: 1000, z: 0, width: 400, depth: 200, height: 2600, rotation: 0, ...fields}) as Item;
+
+    it('blocks columns standing on the floor only', () => {
+        const items = [column({}), column({kind: 'Box'}), column({kind: 'Beam'}), column({z: 1200})];
+        expect(columnColliders(items)).toHaveLength(1);
+    });
+
+    it('keeps a walker off a turned column', () => {
+        // Turned 90°: 400 along y, 200 along x.
+        const colliders = columnColliders([column({rotation: 90})]);
+        expect(collideCircle({x: 1150, y: 1000}, 250, colliders).x).toBeCloseTo(1350);
+        expect(collideCircle({x: 1000, y: 1300}, 250, colliders).y).toBeCloseTo(1450);
     });
 });
 
