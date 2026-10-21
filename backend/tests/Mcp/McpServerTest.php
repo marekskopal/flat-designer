@@ -121,6 +121,7 @@ final class McpServerTest extends IntegrationTestCase
 			'duplicate_item',
 			'find_room_outline',
 			'get_cut_list',
+			'get_electrical_schedule',
 			'get_floor',
 			'get_furniture_definition',
 			'get_project',
@@ -368,6 +369,12 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($schedule);
 		self::assertEquals(['rooms' => 1, 'area' => 12.0, 'perimeter' => 14.0], $schedule['indoor']);
 		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $schedule['outdoor']);
+		$electrical = $this->client->call('get_electrical_schedule', ['projectId' => $this->project->id]);
+		self::assertIsArray($electrical);
+		self::assertEquals(
+			['lights' => 0, 'sockets' => 0, 'outlets' => 0, 'switches' => 0, 'dataSockets' => 0, 'plumbingPoints' => 0],
+			$electrical['totals'],
+		);
 
 		// Walls without a material are the default paint: 14 m around, 2.6 m high; the ceiling white plaster.
 		$prices = $this->client->call('set_material_prices', [

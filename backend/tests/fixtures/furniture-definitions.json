@@ -1357,6 +1357,45 @@
    ]
   },
   {
+   "name": "the schedule's category is not read by the evaluator",
+   "size": {
+    "width": 80,
+    "depth": 10,
+    "height": 80
+   },
+   "definition": {
+    "format": 1,
+    "category": "socket",
+    "parameters": [],
+    "parts": [
+     {
+      "type": "board",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": "D"
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "board",
+     "type": "board",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 0,
+     "w": 80,
+     "h": 80,
+     "d": 10,
+     "material": null,
+     "props": {}
+    }
+   ]
+  },
+  {
    "name": "negative positions are fine",
    "size": {
     "width": 800,

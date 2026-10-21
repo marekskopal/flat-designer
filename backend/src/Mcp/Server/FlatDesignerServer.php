@@ -44,7 +44,8 @@ final readonly class FlatDesignerServer
 		get_cut_list lists the boards of a project's custom-made furniture; get_room_schedule lists the rooms'
 		areas, perimeters and clear heights with the indoor and outdoor totals. get_quantities lists what to buy
 		(flooring, tiles, paint, ceilings, skirting, furniture boards) per room and material with a cost estimate
-		from the project's prices, which set_material_prices sets.
+		from the project's prices, which set_material_prices sets. get_electrical_schedule lists the lights,
+		sockets, switches, data sockets and plumbing points per room with their elevations.
 
 		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
 		outer walls, open runs for partitions ending on other walls), then add each room with

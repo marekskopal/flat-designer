@@ -59,6 +59,8 @@ enum Routes: string
 	case ProjectFloorCutList = '/api/projects/{projectId:number}/floors/{floorId:number}/cut-list';
 	case ProjectRoomSchedule = '/api/projects/{projectId:number}/room-schedule';
 	case ProjectFloorRoomSchedule = '/api/projects/{projectId:number}/floors/{floorId:number}/room-schedule';
+	case ProjectElectricalSchedule = '/api/projects/{projectId:number}/electrical-schedule';
+	case ProjectFloorElectricalSchedule = '/api/projects/{projectId:number}/floors/{floorId:number}/electrical-schedule';
 	case ProjectQuantities = '/api/projects/{projectId:number}/quantities';
 	case ProjectFloorQuantities = '/api/projects/{projectId:number}/floors/{floorId:number}/quantities';
 	case ProjectMaterialPrices = '/api/projects/{projectId:number}/material-prices';

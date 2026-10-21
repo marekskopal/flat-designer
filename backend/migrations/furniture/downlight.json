@@ -3,6 +3,7 @@
  "description": "A round downlight recessed in a (dropped) ceiling: a thin trim ring with a glowing lens, shining down. Give it the elevation of the ceiling minus its height.",
  "definition": {
   "format": 1,
+  "category": "light",
   "size": {
    "width": 90,
    "depth": 90,

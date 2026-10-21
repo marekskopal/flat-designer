@@ -3,6 +3,7 @@
  "description": "A flush wall switch with one rocker, or two side by side. Elevation: its bottom edge, usually 1050 mm.",
  "definition": {
   "format": 1,
+  "category": "switch",
   "size": {
    "width": 80,
    "depth": 10,

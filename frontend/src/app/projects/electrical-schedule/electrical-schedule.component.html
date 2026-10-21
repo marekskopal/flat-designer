@@ -1,0 +1,58 @@
+<section class="card card--table">
+    <div class="card__header">
+        <h2 class="card__title">Electrics &amp; plumbing</h2>
+        @if (schedule(); as s) {
+            <span class="totals">{{ totalsSummary(s.totals) }}</span>
+        }
+    </div>
+
+    @if (schedule(); as s) {
+        @if (floors().length === 0) {
+            <p class="empty">No lights, sockets, switches or plumbing points yet. Add them in a floor's editor (Add → Furniture).</p>
+        } @else {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Room / point</th>
+                        <th>Type</th>
+                        <th class="num">Elevation mm</th>
+                        <th class="num">Count</th>
+                    </tr>
+                </thead>
+                @for (floor of floors(); track floor.id) {
+                    <tbody>
+                        @if (s.floors.length > 1) {
+                            <tr class="floor">
+                                <th colspan="4" scope="rowgroup">{{ floor.name }}</th>
+                            </tr>
+                        }
+                        @for (room of floor.rooms; track room.id) {
+                            <tr class="room">
+                                <th colspan="4" scope="rowgroup">
+                                    @if (room.code !== null) {
+                                        <span class="code">{{ room.code.replace('H1/', '') }}</span>
+                                    }
+                                    {{ room.name }}
+                                    <span class="room-totals">{{ totalsSummary(room.totals) }}</span>
+                                </th>
+                            </tr>
+                            @for (row of room.rows; track $index) {
+                                <tr>
+                                    <td class="point">
+                                        {{ row.name }}
+                                        @if (rowValues(row); as values) {
+                                            <span class="values">{{ values }}</span>
+                                        }
+                                    </td>
+                                    <td>{{ categoryLabels[row.category] }}</td>
+                                    <td class="num">{{ row.z | number }}</td>
+                                    <td class="num">{{ row.count }}</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                }
+            </table>
+        }
+    }
+</section>

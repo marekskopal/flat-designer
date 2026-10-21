@@ -3,6 +3,7 @@
  "description": "A bare bulb on a fabric cable. The cable rises from the bulb to a ceiling hook above it and runs along path (points {x, z} from the item's left-back corner, mm) to the ceiling rose, sagging between them; it follows the room's real ceiling, also a vaulted one, so set the item's room. The item's elevation is the bulb's bottom.",
  "definition": {
   "format": 1,
+  "category": "light",
   "size": {
    "width": 140,
    "depth": 140,

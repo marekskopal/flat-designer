@@ -247,7 +247,9 @@ format is the text in `FurnitureTools::Format`.
   `ShareSettingsDto.night` starts a share link at night.
 - Seeded definitions (`SeedLightingCatalogueMigration`): a bare-bulb pendant with a cable path, a recessed downlight,
   a light source to group with the lamps of the model library, a Schuko socket, a rocker switch, a data socket and a
-  plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge.
+  plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge. Their definitions
+  carry a `category` (`DefinitionCategoryEnum`: light, socket, switch, data, plumbing; checked by `DefinitionValidator`,
+  not read by the evaluators) for the electrical schedule. Lights count only by this tag, not by their `light` parts.
 
 ## Render quality
 
@@ -308,6 +310,11 @@ format is the text in `FurnitureTools::Format`.
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Terraces and gardens
   (`RoomTypeEnum::isOutdoor()`) are totalled separately. Only PHP computes it, so there is no TS twin.
+- Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
+  `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
+  definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside
+  every room go under a room with `id` null). Rows group one definition with the same int/bool/select values at the
+  same `z`; a socket's `gangs` parameter counts its outlets. PHP only.
 - Quantities and cost: `Service/Quantities/QuantitiesService` (REST `…/quantities`, MCP `get_quantities`, page
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without

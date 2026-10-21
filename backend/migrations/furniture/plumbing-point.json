@@ -3,6 +3,7 @@
  "description": "A water or waste connection coming out of the wall: a cold and/or hot supply stub with a coloured cap, or a waste pipe. Elevation: the pipe's bottom.",
  "definition": {
   "format": 1,
+  "category": "plumbing",
   "size": {
    "width": 160,
    "depth": 60,

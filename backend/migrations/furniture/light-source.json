@@ -3,6 +3,7 @@
  "description": "The light of a lamp from the model library: put it inside the shade (group it with the lamp). A point light, or a spot shining down; it can glow as a small bulb.",
  "definition": {
   "format": 1,
+  "category": "light",
   "size": {
    "width": 60,
    "depth": 60,

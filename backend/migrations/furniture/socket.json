@@ -3,6 +3,7 @@
  "description": "A flush wall socket, one to four gangs side by side in one frame (make it 71 mm wide per gang plus 9). Elevation: its bottom edge, usually 300 mm (above a worktop 1100).",
  "definition": {
   "format": 1,
+  "category": "socket",
   "size": {
    "width": 80,
    "depth": 10,

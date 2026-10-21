@@ -11,14 +11,14 @@ use FlatDesigner\Service\Editor\Element\State;
 /**
  * Checks a furniture definition before it is saved: what `DefinitionEvaluator` reads (by evaluating it at its default
  * `size` with the parameter defaults), plus what only matters for storing and drawing it — no unknown keys, a `size`,
- * known part types with valid options, existing material codes as slot defaults and the size limit.
+ * known part types with valid options, existing material codes as slot defaults, a known `category` and the size limit.
  */
 final readonly class DefinitionValidator
 {
 	/** What the `definition` TEXT column holds. */
 	public const int MaxBytes = 65535;
 
-	private const array Keys = ['format', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
+	private const array Keys = ['format', 'category', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
 
 	private const array ParameterKeys = ['key', 'label', 'type', 'default'];
 
@@ -50,6 +50,7 @@ final readonly class DefinitionValidator
 			throw new DefinitionException(DefinitionErrorEnum::Limit, 'definition', sprintf('At most %d bytes of JSON.', self::MaxBytes));
 		}
 		self::checkKeys($definition, self::Keys, '');
+		self::checkCategory($definition['category'] ?? null);
 		[$width, $depth, $height] = self::size($definition['size'] ?? null);
 
 		$parts = $this->evaluator->evaluate($definition, $width, $depth, $height);
@@ -100,6 +101,13 @@ final readonly class DefinitionValidator
 		}
 
 		return [$mm[0], $mm[1], $mm[2]];
+	}
+
+	private static function checkCategory(mixed $category): void
+	{
+		if ($category !== null && (!is_string($category) || DefinitionCategoryEnum::tryFrom($category) === null)) {
+			throw DefinitionException::invalid('category', sprintf('Must be one of %s.', implode(', ', DefinitionCategoryEnum::values())));
+		}
 	}
 
 	/** @param array<mixed> $parameter a parameter, or with `$field` a field of a list parameter */

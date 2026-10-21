@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Mcp\Tool;
 
+use FlatDesigner\Dto\ElectricalScheduleDto;
 use FlatDesigner\Dto\RoomScheduleDto;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
 use FlatDesigner\Service\Provider\SceneProvider;
+use FlatDesigner\Service\Schedule\ElectricalScheduleService;
 use FlatDesigner\Service\Schedule\RoomScheduleService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
@@ -18,6 +20,7 @@ final readonly class FloorTools
 		private SceneProvider $sceneProvider,
 		private ItemKindCatalog $catalog,
 		private RoomScheduleService $roomScheduleService,
+		private ElectricalScheduleService $electricalScheduleService,
 	) {
 	}
 
@@ -65,6 +68,23 @@ final readonly class FloorTools
 		return $floorId === null
 			? $this->roomScheduleService->forProject($this->context->project($projectId))
 			: $this->roomScheduleService->forFloor($this->context->floor($projectId, $floorId));
+	}
+
+	#[McpTool(
+		name: 'get_electrical_schedule',
+		description: 'Electrical schedule of a project, or of one floor with floorId, for the electrician: per room the lights, '
+			. 'sockets, switches, data sockets and plumbing points (Custom items whose furniture definition has a category; '
+			. 'shown variants only), each row the points of one definition with the same parameter values (e.g. gangs) at the '
+			. 'same elevation z (mm, bottom edge), with the counts per category and the sockets\' outlets per room, floor and '
+			. 'project. An item belongs to its roomId, otherwise to the room holding its footprint centre; points outside every '
+			. 'room are listed under a room with id null.',
+		annotations: new ToolAnnotations(readOnlyHint: true),
+	)]
+	public function getElectricalSchedule(int $projectId, ?int $floorId = null): ElectricalScheduleDto
+	{
+		return $floorId === null
+			? $this->electricalScheduleService->forProject($this->context->project($projectId))
+			: $this->electricalScheduleService->forFloor($this->context->floor($projectId, $floorId));
 	}
 
 	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null, structural: bool}> */

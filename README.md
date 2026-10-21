@@ -25,7 +25,9 @@ windows. A measure tool snaps to wall ends, corners and faces, and a calibrated 
 ![Project page with the room schedule](docs/screenshots/project.webp)
 
 The project page lists each room's net area, perimeter, clear height and volume, with indoor and outdoor totals.
-Floors, versions, share links and project files are managed here too.
+Below it, the electrical schedule lists for the electrician each room's lights, sockets (with their gangs), switches,
+data sockets and plumbing points with their elevations. Floors, versions, share links and project files are managed
+here too.
 
 ### Eye-level views and the walkthrough
 
@@ -270,7 +272,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 
 The backend is an MCP server at `/mcp` (Streamable HTTP, OAuth 2.1 with dynamic client registration and PKCE).
 Agents can create, rename and delete projects, read projects and floors, add floors, add, change and delete rooms, walls, openings and items, manage groups,
-variants, share links, versions and furniture definitions, upload project files and product models, get cut lists, room schedules and quantities, set prices, and undo or redo their own changes.
+variants, share links, versions and furniture definitions, upload project files and product models, get cut lists, room and electrical schedules and quantities, set prices, and undo or redo their own changes.
 Agent changes are logged under the client's name and appear live in open viewers.
 
 Connect Claude Code:
@@ -304,6 +306,7 @@ access token.
 | `/api/projects/{id}/files` | Project files |
 | `/api/projects/{id}/cut-list` | Cut list of the project's custom furniture |
 | `/api/projects/{id}/room-schedule` | Room areas, perimeters and clear heights with indoor and outdoor totals (also per floor) |
+| `/api/projects/{id}/electrical-schedule` | Lights, sockets, switches, data sockets and plumbing points per room (also per floor) |
 | `/api/projects/{id}/quantities`, `…/material-prices` | Quantities and cost estimate (also per floor); the project's price list |
 | `/api/furniture-definitions` | Furniture definitions (CRUD, copy, validate) |
 | `/api/models`, `/api/models/{id}/content` | Product models (upload, list, rename, delete, the `.glb` file) |

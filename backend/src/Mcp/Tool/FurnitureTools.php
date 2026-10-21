@@ -31,7 +31,9 @@ final readonly class FurnitureTools
 	/** The format of a definition (format 1), for agents writing one; FurnitureToolsTest checks it names every part type. */
 	public const string Format = 'A furniture definition, JSON format 1. Lengths are mm; the parts\' frame has its origin at the item\'s '
 		. 'left-bottom-back corner: x along the width (0..W), y up (0..H), z towards the front (0..D). '
-		. 'Keys: "format": 1; "size": {width, depth, height} of a new item; "parameters": list of {key, label?, type: "int" '
+		. 'Keys: "format": 1; "category"?: "light" | "socket" | "switch" | "data" | "plumbing" (what get_electrical_schedule '
+		. 'counts its items as; a socket\'s int parameter "gangs" counts its outlets); "size": {width, depth, height} of a new '
+		. 'item; "parameters": list of {key, label?, type: "int" '
 		. '(default, min?, max?, unit?) | "bool" (default) | "select" (default, options: [strings]) | "list" (fields: list of '
 		. 'int/bool/select fields like parameters, each with default or optional: true, default: [items], minItems?, maxItems?; '
 		. 'the value is a list of records, e.g. fronts [{type, height}]) | "image" (no default; the item\'s value is the id of an '

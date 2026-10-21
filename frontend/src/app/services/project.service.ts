@@ -2,6 +2,7 @@ import {HttpClient, HttpContext} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {CutList} from '@app/models/cut-list';
+import {ElectricalSchedule} from '@app/models/electrical-schedule';
 import {FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
 import {MaterialPrices, Quantities} from '@app/models/quantities';
 import {RoomSchedule} from '@app/models/room-schedule';
@@ -31,6 +32,15 @@ export class ProjectService {
         const path =
             floorId === undefined ? `${projectsUrl}/${projectId}/room-schedule` : `${projectsUrl}/${projectId}/floors/${floorId}/room-schedule`;
         return firstValueFrom(this.http.get<RoomSchedule>(path));
+    }
+
+    /** Lights, sockets, switches, data sockets and plumbing points per room of the project (or one floor), with their elevations. */
+    public async electricalSchedule(projectId: number, floorId?: number): Promise<ElectricalSchedule> {
+        const path =
+            floorId === undefined
+                ? `${projectsUrl}/${projectId}/electrical-schedule`
+                : `${projectsUrl}/${projectId}/floors/${floorId}/electrical-schedule`;
+        return firstValueFrom(this.http.get<ElectricalSchedule>(path));
     }
 
     /** Quantities and cost estimate of the project's rooms and furniture (or one floor's). */

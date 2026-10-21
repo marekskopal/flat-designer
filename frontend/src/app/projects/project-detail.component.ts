@@ -7,6 +7,7 @@ import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
+import {ElectricalScheduleComponent} from '@app/projects/electrical-schedule/electrical-schedule.component';
 import {ProjectFilesComponent} from '@app/projects/files/project-files.component';
 import {RoomScheduleComponent} from '@app/projects/room-schedule/room-schedule.component';
 import {AlertService} from '@app/services/alert.service';
@@ -16,10 +17,19 @@ import {ShareService} from '@app/services/share.service';
 import {ShareLinkFormComponent} from '@app/share/share-link-form.component';
 import {filter, switchMap} from 'rxjs';
 
-/** One project: its details, floors (the working copy), room schedule, saved versions, share links and files. */
+/** One project: its details, floors (the working copy), room and electrical schedules, saved versions, share links and files. */
 @Component({
     selector: 'fd-project-detail',
-    imports: [DatePipe, NgTemplateOutlet, ProjectFilesComponent, ReactiveFormsModule, RoomScheduleComponent, RouterLink, ShareLinkFormComponent],
+    imports: [
+        DatePipe,
+        ElectricalScheduleComponent,
+        NgTemplateOutlet,
+        ProjectFilesComponent,
+        ReactiveFormsModule,
+        RoomScheduleComponent,
+        RouterLink,
+        ShareLinkFormComponent,
+    ],
     templateUrl: './project-detail.component.html',
     styleUrl: './project-detail.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

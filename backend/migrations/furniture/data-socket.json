@@ -3,6 +3,7 @@
  "description": "A flush wall socket for network or TV cables, one or two ports. Elevation: its bottom edge.",
  "definition": {
   "format": 1,
+  "category": "data",
   "size": {
    "width": 80,
    "depth": 10,
