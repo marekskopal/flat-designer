@@ -15,6 +15,7 @@ import {
 } from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {Router, RouterLink} from '@angular/router';
+import {CommentAction, CommentsComponent} from '@app/comments/comments.component';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
@@ -24,16 +25,19 @@ import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {downloadBlob, safeFilename} from '@app/export/download';
 import {ExportComponent} from '@app/export/export.component';
+import {Comment, commentPinsOf} from '@app/models/comment';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
 import {PlanPoint, Room, RoomType} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
+import {CommentService} from '@app/services/comment.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {SavedViewService} from '@app/services/saved-view.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
+import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {ToolStatus} from '@app/viewer/engine/drawing';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
@@ -83,6 +87,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         UnderlayPanelComponent,
         SavedViewsComponent,
         ExportComponent,
+        CommentsComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -255,6 +260,23 @@ export class ViewerPageComponent {
     /** For the editor panel: where new elements are placed. */
     protected readonly viewCenter = (): {x: number; y: number} => this.viewer().viewCenter();
 
+    private readonly commentService = inject(CommentService);
+    /** The review comments of the floor. They belong to the working copy: a saved version (its own floor ids) shows none. */
+    private readonly commentList = resource({
+        params: () => (this.version() === null ? {projectId: this.projectId(), floorId: this.floorId()} : undefined),
+        loader: async ({params}) => this.commentService.list(params.projectId, params.floorId),
+    });
+    protected readonly comments = computed(() => (this.commentList.hasValue() ? this.commentList.value() : []));
+    protected readonly commentsVisible = signal(true);
+    /** The thread open in the panel. */
+    protected readonly activeCommentId = signal<number | null>(null);
+    /** The comment tool: the next click in the view picks the point of a new thread. */
+    protected readonly commenting = signal(false);
+    /** The point picked for a new thread, while its text is written. */
+    protected readonly commentPoint = signal<CommentPoint | null>(null);
+    protected readonly commentBusy = signal(false);
+    protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
+
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
     protected readonly rooms = computed(() => this.scene()?.rooms ?? []);
     protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
@@ -295,6 +317,7 @@ export class ViewerPageComponent {
             if (this.editor.tool() !== 'select') {
                 untracked(() => {
                     this.measuring.set(false);
+                    this.commenting.set(false);
                     if (this.activeView() !== 'top') {
                         this.setView('top');
                     }
@@ -339,12 +362,19 @@ export class ViewerPageComponent {
             this.floorId();
             this.editor.select(null);
             this.sharing.set(null);
+            this.activeCommentId.set(null);
+            this.commenting.set(false);
+            this.commentPoint.set(null);
         });
     }
 
     private onProjectUpdate(update: ProjectUpdate): void {
         // Own edits are applied already; prices do not show in the viewer.
         if (update.originClientId === originClientId || update.type === 'pricesChanged') {
+            return;
+        }
+        if (update.type === 'commentsChanged') {
+            this.commentList.reload();
             return;
         }
         if (update.type === 'detailsChanged') {
@@ -423,6 +453,7 @@ export class ViewerPageComponent {
             return;
         }
         this.editor.setTool('select');
+        this.commenting.set(false);
         if (this.activeView() !== 'top') {
             this.setView('top');
         }
@@ -438,6 +469,11 @@ export class ViewerPageComponent {
         if ((event.key === 'd' || event.key === 'D') && this.editor.calibration() === null) {
             event.preventDefault();
             this.toggleMeasuring();
+        } else if ((event.key === 'c' || event.key === 'C') && this.version() === null && this.editor.calibration() === null) {
+            event.preventDefault();
+            this.pickCommentPoint(!this.commenting());
+        } else if (event.key === 'Escape' && (this.commenting() || this.commentPoint() !== null)) {
+            this.pickCommentPoint(false);
         } else if (event.key === 'Escape' && this.editor.calibration() !== null) {
             this.editor.calibration.set(null);
         } else if (event.key === 'Escape' && this.measuring()) {
@@ -478,6 +514,62 @@ export class ViewerPageComponent {
     /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
     protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>
         selection.kind === 'group' ? this.editor.moveGroup(selection.id, fields) : this.editor.update(selection.kind, selection.id, fields);
+
+    /** Turns the comment tool on (instead of the measure and edit tools, or the calibration) or off, dropping a point picked before. */
+    protected pickCommentPoint(on: boolean): void {
+        this.commentPoint.set(null);
+        this.commenting.set(on);
+        if (on) {
+            this.editor.calibration.set(null);
+            this.measuring.set(false);
+            this.editor.setTool('select');
+            this.activeCommentId.set(null);
+        }
+    }
+
+    /** The point of a new thread was clicked: the panel asks for its text. */
+    protected placeComment(point: CommentPoint): void {
+        this.commenting.set(false);
+        this.commentPoint.set(point);
+    }
+
+    /** A thread picked in the panel (the camera turns to its pin) or on its pin. */
+    protected selectComment(id: number | null, focus: boolean): void {
+        this.activeCommentId.set(id);
+        const comment = this.comments().find((c) => c.id === id);
+        if (focus && comment !== undefined) {
+            this.viewer().focusPoint(comment);
+        }
+    }
+
+    protected async onCommentAction(action: CommentAction): Promise<void> {
+        const projectId = this.projectId();
+        this.commentBusy.set(true);
+        try {
+            if (action.kind === 'add') {
+                const point = this.commentPoint();
+                if (point === null) {
+                    return;
+                }
+                const created: Comment = await this.commentService.create(projectId, {floorId: this.floorId(), ...point, body: action.body});
+                this.commentPoint.set(null);
+                this.activeCommentId.set(created.id);
+            } else if (action.kind === 'reply') {
+                await this.commentService.create(projectId, {floorId: this.floorId(), parentId: action.parentId, body: action.body});
+            } else if (action.kind === 'edit') {
+                await this.commentService.update(projectId, action.comment.id, {body: action.body});
+            } else if (action.kind === 'resolve') {
+                await this.commentService.update(projectId, action.comment.id, {resolved: action.resolved});
+            } else {
+                await this.commentService.delete(projectId, action.comment.id);
+            }
+            this.commentList.reload();
+        } catch {
+            // The error interceptor shows the toast.
+        } finally {
+            this.commentBusy.set(false);
+        }
+    }
 
     protected selectRoom(room: Room): void {
         this.editor.select({kind: 'room', id: room.id});

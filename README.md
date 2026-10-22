@@ -113,7 +113,14 @@ the page totals the cost per room and for the whole project, furniture boards fr
 
 A read-only guest view of a floor, without an account, with the allowed views, a start camera and display options.
 Guests can orbit, read the plan, walk through and switch variants, and download the plan, elevations and 3D
-model unless the link forbids it.
+model unless the link forbids it. A link can also show the floor's open review comments, and let guests add some.
+
+### Review comments
+
+Comments are pinned to a point in the scene: press <kbd>C</kbd>, click a wall, a worktop or the floor, and write.
+Each thread has a numbered pin in the viewer, replies and a Resolve button. The project's owner, share link guests and
+connected agents all write comments, so an agent can read what people want changed, reply and resolve the thread once
+it has made the change.
 
 ### And also
 
@@ -277,7 +284,7 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 
 The backend is an MCP server at `/mcp` (Streamable HTTP, OAuth 2.1 with dynamic client registration and PKCE).
 Agents can create, rename and delete projects, read projects and floors, add floors, add, change and delete rooms, walls, openings and items, manage groups,
-variants, share links, versions and furniture definitions, upload project files and product models, get cut lists, room and electrical schedules and quantities, set prices, and undo or redo their own changes.
+variants, share links, versions and furniture definitions, upload project files and product models, get cut lists, room and electrical schedules and quantities, set prices, read, write and resolve review comments, and undo or redo their own changes.
 Agent changes are logged under the client's name and appear live in open viewers.
 
 Connect Claude Code:
@@ -306,6 +313,7 @@ access token.
 | `/api/projects/{id}/{changes,undo,redo}` | Activity log and undo/redo |
 | `/api/projects/{id}/versions` | Saved versions and restore |
 | `/api/projects/{id}/share-links`, `/api/shares/{token}` | Share links and the public guest view |
+| `/api/projects/{id}/comments`, `/api/shares/{token}/comments` | Review comments, and those a share link's guests read and write |
 | `/api/uploads/{token}` | One-time upload URL an MCP agent got (PUT the raw file; the token authorizes it) |
 | `/api/projects/{id}/views` | Saved views (camera, display, variants of a floor) |
 | `/api/projects/{id}/files` | Project files |

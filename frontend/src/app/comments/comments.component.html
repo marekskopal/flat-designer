@@ -1,0 +1,142 @@
+@if (canWrite()) {
+    @if (placing()) {
+        <form class="draft" (submit)="submitDraft($event)">
+            <textarea
+                class="input"
+                rows="3"
+                maxlength="2000"
+                placeholder="What should change here?"
+                aria-label="New comment"
+                [value]="draft()"
+                (input)="draft.set(value($event))"
+                (keydown.control.enter)="submitDraft($event)"
+                (keydown.meta.enter)="submitDraft($event)"
+            ></textarea>
+            <div class="row">
+                <button type="button" class="btn btn--ghost" (click)="pick.emit(false)">Cancel</button>
+                <button type="submit" class="btn btn--primary" [disabled]="busy() || draft().trim() === ''">Comment</button>
+            </div>
+        </form>
+    } @else {
+        <button
+            type="button"
+            class="add"
+            [class.add--on]="picking()"
+            [attr.aria-pressed]="picking()"
+            title="Click a point in the view to pin a comment to it (C)"
+            (click)="pick.emit(!picking())"
+        >
+            {{ picking() ? 'Click a point in the view…' : 'Add comment' }} <kbd>C</kbd>
+        </button>
+    }
+}
+
+@if (shown().length > 0) {
+    <ol class="threads">
+        @for (thread of shown(); track thread.comment.id) {
+            @let open = activeId() === thread.comment.id;
+            <li class="thread" [class.thread--open]="open" [class.thread--resolved]="thread.comment.resolved">
+                <button type="button" class="thread__head" [attr.aria-expanded]="open" (click)="toggle(thread)">
+                    <span class="badge">{{ thread.number }}</span>
+                    <span class="thread__summary">
+                        @if (!open) {
+                            <span class="thread__body">{{ thread.comment.body }}</span>
+                        }
+                        <span class="meta">
+                            {{ thread.comment.authorName }}
+                            @if (thread.replies.length > 0) {
+                                · {{ thread.replies.length }} {{ thread.replies.length === 1 ? 'reply' : 'replies' }}
+                            }
+                            @if (thread.comment.resolved) {
+                                · resolved
+                            }
+                        </span>
+                    </span>
+                </button>
+
+                @if (open) {
+                    <ul class="messages">
+                        @for (comment of [thread.comment].concat(thread.replies); track comment.id) {
+                            <li class="message">
+                                <div class="meta">
+                                    <strong>{{ comment.authorName }}</strong>
+                                    @if (comment.authorType !== 'User') {
+                                        <span class="tag">{{ comment.authorType === 'Agent' ? 'agent' : 'guest' }}</span>
+                                    }
+                                    · {{ comment.createdAt | date: 'd MMM, HH:mm' }}
+                                </div>
+                                @if (editing()?.id === comment.id) {
+                                    <form (submit)="submitEdit($event, comment)">
+                                        <textarea
+                                            class="input"
+                                            rows="3"
+                                            maxlength="2000"
+                                            aria-label="Comment"
+                                            [value]="editing()?.body ?? ''"
+                                            (input)="editing.set({id: comment.id, body: value($event)})"
+                                        ></textarea>
+                                        <div class="row">
+                                            <button type="button" class="btn btn--ghost" (click)="editing.set(null)">Cancel</button>
+                                            <button type="submit" class="btn btn--primary" [disabled]="busy()">Save</button>
+                                        </div>
+                                    </form>
+                                } @else {
+                                    <p class="message__body">{{ comment.body }}</p>
+                                    @if (comment.canEdit || comment.canDelete) {
+                                        <div class="message__actions">
+                                            @if (comment.canEdit) {
+                                                <button type="button" class="link" [disabled]="busy()" (click)="editing.set({id: comment.id, body: comment.body})">
+                                                    Edit
+                                                </button>
+                                            }
+                                            @if (comment.canDelete) {
+                                                <button type="button" class="link link--danger" [disabled]="busy()" (click)="remove(comment)">Delete</button>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </li>
+                        }
+                    </ul>
+                    @if (canWrite() && !thread.comment.resolved) {
+                        <form class="reply" (submit)="submitReply($event, thread)">
+                            <textarea
+                                class="input"
+                                rows="2"
+                                maxlength="2000"
+                                placeholder="Reply"
+                                aria-label="Reply"
+                                [value]="reply()"
+                                (input)="reply.set(value($event))"
+                                (keydown.control.enter)="submitReply($event, thread)"
+                                (keydown.meta.enter)="submitReply($event, thread)"
+                            ></textarea>
+                            <div class="row">
+                                <button type="submit" class="btn btn--ghost" [disabled]="busy() || reply().trim() === ''">Reply</button>
+                            </div>
+                        </form>
+                    }
+                    @if (canResolve()) {
+                        <button
+                            type="button"
+                            class="btn btn--ghost resolve"
+                            [disabled]="busy()"
+                            (click)="action.emit({kind: 'resolve', comment: thread.comment, resolved: !thread.comment.resolved})"
+                        >
+                            {{ thread.comment.resolved ? 'Reopen' : 'Resolve' }}
+                        </button>
+                    }
+                }
+            </li>
+        }
+    </ol>
+} @else if (!placing()) {
+    <p class="empty">{{ threads().length > 0 ? 'All comments are resolved.' : 'No comments on this floor.' }}</p>
+}
+
+@if (canResolve() && resolvedCount() > 0) {
+    <label class="toggle">
+        <input type="checkbox" [checked]="showResolved()" (change)="showResolved.set(!showResolved())" />
+        <span>Show resolved ({{ resolvedCount() }})</span>
+    </label>
+}

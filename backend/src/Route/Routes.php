@@ -75,6 +75,8 @@ enum Routes: string
 	case ProjectFileContent = '/api/projects/{projectId:number}/files/{fileId:number}/content';
 	case ProjectViews = '/api/projects/{projectId:number}/views';
 	case ProjectView = '/api/projects/{projectId:number}/views/{viewId:number}';
+	case ProjectComments = '/api/projects/{projectId:number}/comments';
+	case ProjectComment = '/api/projects/{projectId:number}/comments/{commentId:number}';
 	case ProjectShareLinks = '/api/projects/{projectId:number}/share-links';
 	case ProjectShareLink = '/api/projects/{projectId:number}/share-links/{shareLinkId:number}';
 	case ProjectShareLinkRefresh = '/api/projects/{projectId:number}/share-links/{shareLinkId:number}/refresh';
@@ -83,6 +85,7 @@ enum Routes: string
 	case Share = '/api/shares/{token:[a-f0-9]+}';
 	case ShareModelContent = '/api/shares/{token:[a-f0-9]+}/models/{modelId:number}/content';
 	case SharePictureContent = '/api/shares/{token:[a-f0-9]+}/pictures/{fileId:number}/content';
+	case ShareComments = '/api/shares/{token:[a-f0-9]+}/comments';
 	case Models = '/api/models';
 	case Model = '/api/models/{modelId:number}';
 	case ModelContent = '/api/models/{modelId:number}/content';

@@ -77,6 +77,7 @@ final readonly class ShareLinkTools
 	 * @param bool $night start at night: no daylight, the flat lit by its lights
 	 * @param bool $presentation render in the presentation quality (ambient occlusion, antialiasing; slower)
 	 * @param bool $exports let the guest download the plan (PDF, SVG), the wall elevations (PDF) and the 3D model (glTF)
+	 * @param string $comments the floor's review comments: "hidden", "read" (the open threads) or "write" (guests may add some too)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working; null = never
 	 */
 	#[McpTool(
@@ -100,6 +101,7 @@ final readonly class ShareLinkTools
 		bool $night = false,
 		bool $presentation = false,
 		bool $exports = true,
+		string $comments = 'hidden',
 		?string $expiresAt = null,
 	): ShareLinkDto {
 		$views ??= ['overview', 'top'];
@@ -114,6 +116,7 @@ final readonly class ShareLinkTools
 			'night' => $night,
 			'presentation' => $presentation,
 			'exports' => $exports,
+			'comments' => $comments,
 		]);
 		$link = $this->shareLinkProvider->create(
 			$this->context->user(),
@@ -135,6 +138,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $night start at night (lit by the flat's lights)
 	 * @param bool|null $presentation render in the presentation quality
 	 * @param bool|null $exports let the guest download the plan (PDF, SVG), the wall elevations (PDF) and the 3D model (glTF)
+	 * @param string|null $comments the floor's review comments: "hidden", "read" or "write"
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
 	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "expiresAt" (never)
 	 */
@@ -159,6 +163,7 @@ final readonly class ShareLinkTools
 		?bool $night = null,
 		?bool $presentation = null,
 		?bool $exports = null,
+		?string $comments = null,
 		?string $expiresAt = null,
 		?array $clear = null,
 	): ShareLinkDto {
@@ -177,6 +182,7 @@ final readonly class ShareLinkTools
 				'night' => $night,
 				'presentation' => $presentation,
 				'exports' => $exports,
+				'comments' => $comments,
 				'expiresAt' => $expiresAt,
 			],
 			$clear,

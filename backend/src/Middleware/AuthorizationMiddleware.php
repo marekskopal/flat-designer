@@ -46,6 +46,9 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 	/** The guest read of a share link, and the models its scene draws. */
 	private const string ShareRoutePattern = '#^/api/shares/[a-f0-9]+(/(models|pictures)/\d+/content)?$#';
 
+	/** A share link's review comments: guests read them and, when the link allows it, post (`SharedCommentController`). */
+	private const string ShareCommentsRoutePattern = '#^/api/shares/[a-f0-9]+/comments$#';
+
 	/** One-time upload URLs handed to MCP agents; the token in the path authorizes the upload (`UploadTicketService`). */
 	private const string UploadRoutePattern = '#^/api/uploads/[a-f0-9]+$#';
 
@@ -89,6 +92,7 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 	{
 		return in_array($path, self::OpenRoutes, true)
 			|| $method === 'GET' && preg_match(self::ShareRoutePattern, $path) === 1
+			|| in_array($method, ['GET', 'POST'], true) && preg_match(self::ShareCommentsRoutePattern, $path) === 1
 			|| $method === 'PUT' && preg_match(self::UploadRoutePattern, $path) === 1;
 	}
 }

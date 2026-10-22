@@ -1,13 +1,18 @@
 import {DecimalPipe} from '@angular/common';
 import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, linkedSignal, resource, signal, viewChild} from '@angular/core';
+import {CommentAction, CommentsComponent} from '@app/comments/comments.component';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ExportComponent} from '@app/export/export.component';
+import {commentPinsOf} from '@app/models/comment';
 import {Scene} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
+import {CommentService} from '@app/services/comment.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
+import {StorageService} from '@app/services/storage.service';
+import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {DoorAim} from '@app/viewer/engine/viewer-engine';
@@ -19,15 +24,18 @@ import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 /** Section heights offered by the slider (mm); the top value means "no cut" (as on the viewer page). */
 const SectionMin = 900;
 const SectionMax = 2700;
+/** Where the guest's name for comments is kept (localStorage). */
+const GuestNameKey = 'fd.guestName';
 
 /**
  * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
  * decides which views are offered, the one it opens in, the 3D camera and the starting display; variants can be
- * switched for a look, nothing is saved.
+ * switched for a look, nothing is saved. When the link allows it, the guest sees the floor's open review comments and may
+ * add some, signed with a name kept in the browser.
  */
 @Component({
     selector: 'fd-shared-viewer-page',
-    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent, ExportComponent],
+    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent, ExportComponent, CommentsComponent],
     templateUrl: './shared-viewer-page.component.html',
     styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -91,6 +99,26 @@ export class SharedViewerPageComponent {
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
     protected readonly sectionSlider = signal(SectionMax);
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
+
+    private readonly commentService = inject(CommentService);
+    private readonly storage = inject(StorageService);
+    /** What the link lets the guest do with the comments. */
+    protected readonly commentAccess = computed(() => this.settings()?.comments ?? 'hidden');
+    private readonly commentList = resource({
+        params: () => (this.commentAccess() === 'hidden' ? undefined : {token: this.token()}),
+        loader: async ({params}) => this.commentService.listShared(params.token),
+    });
+    protected readonly comments = computed(() => (this.commentList.hasValue() ? this.commentList.value() : []));
+    protected readonly commentsVisible = signal(true);
+    protected readonly activeCommentId = signal<number | null>(null);
+    protected readonly commenting = signal(false);
+    protected readonly commentPoint = signal<CommentPoint | null>(null);
+    protected readonly commentBusy = signal(false);
+    /** The name a guest signs comments with, remembered in this browser. */
+    protected readonly guestName = signal(this.storage.get<string>(GuestNameKey) ?? '');
+    protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
+    /** The guest may write once the link allows it and they have given a name. */
+    protected readonly canComment = computed(() => this.commentAccess() === 'write' && this.guestName().trim() !== '');
 
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */
@@ -197,6 +225,7 @@ export class SharedViewerPageComponent {
             this.measuring.set(false);
             return;
         }
+        this.commenting.set(false);
         if (!this.views().includes('top')) {
             return;
         }
@@ -215,8 +244,68 @@ export class SharedViewerPageComponent {
         if (event.key === 'd' || event.key === 'D') {
             event.preventDefault();
             this.toggleMeasuring();
+        } else if ((event.key === 'c' || event.key === 'C') && this.canComment()) {
+            event.preventDefault();
+            this.pickCommentPoint(!this.commenting());
+        } else if (event.key === 'Escape' && (this.commenting() || this.commentPoint() !== null)) {
+            this.pickCommentPoint(false);
         } else if (event.key === 'Escape' && this.measuring()) {
             this.measuring.set(false);
+        }
+    }
+
+    protected pickCommentPoint(on: boolean): void {
+        this.commentPoint.set(null);
+        this.commenting.set(on && this.canComment());
+        if (this.commenting()) {
+            this.measuring.set(false);
+            this.activeCommentId.set(null);
+        }
+    }
+
+    protected placeComment(point: CommentPoint): void {
+        this.commenting.set(false);
+        this.commentPoint.set(point);
+    }
+
+    protected selectComment(id: number | null, focus: boolean): void {
+        this.activeCommentId.set(id);
+        const comment = this.comments().find((c) => c.id === id);
+        if (focus && comment !== undefined) {
+            this.viewer().focusPoint(comment);
+        }
+    }
+
+    protected setGuestName(event: Event): void {
+        const name = (event.target as HTMLInputElement).value;
+        this.guestName.set(name);
+        try {
+            this.storage.set(GuestNameKey, name.trim());
+        } catch {
+            // Storage blocked (a private window): the name lasts for the page.
+        }
+    }
+
+    /** Guests add threads and replies only. */
+    protected async onCommentAction(action: CommentAction): Promise<void> {
+        const guestName = this.guestName().trim();
+        const point = this.commentPoint();
+        if (guestName === '' || (action.kind !== 'add' && action.kind !== 'reply') || (action.kind === 'add' && point === null)) {
+            return;
+        }
+        this.commentBusy.set(true);
+        try {
+            const body = action.kind === 'add' ? {...point, body: action.body, guestName} : {parentId: action.parentId, body: action.body, guestName};
+            const created = await this.commentService.createShared(this.token(), body);
+            if (action.kind === 'add') {
+                this.commentPoint.set(null);
+                this.activeCommentId.set(created.id);
+            }
+            this.commentList.reload();
+        } catch {
+            // The error interceptor shows the toast.
+        } finally {
+            this.commentBusy.set(false);
         }
     }
 

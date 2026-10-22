@@ -25,7 +25,7 @@ use const JSON_THROW_ON_ERROR;
  * `materialChanged` to every project: the catalogue is global and used from too many places to look them up.
  * Changed project details (`markDetailsChanged()`: name, address, description) send `detailsChanged`; they are not
  * floor content, so they bump no revision either. A saved price list (`markPricesChanged()`) sends `pricesChanged`
- * for the same reason.
+ * for the same reason, and so do the review comments (`markCommentsChanged()`: `commentsChanged`).
  *
  * Topics are private: only subscribers whose cookie grants the topic (`MercureCookieIssuer`) get them.
  */
@@ -47,6 +47,9 @@ final class ProjectUpdatePublisher
 
 	/** @var array<int, true> projects whose price list was saved in the current request */
 	private array $changedPrices = [];
+
+	/** @var array<int, true> projects whose comments changed in the current request */
+	private array $changedComments = [];
 
 	public function __construct(
 		private readonly HubInterface $hub,
@@ -89,6 +92,11 @@ final class ProjectUpdatePublisher
 		$this->changedPrices[$projectId] = true;
 	}
 
+	public function markCommentsChanged(int $projectId): void
+	{
+		$this->changedComments[$projectId] = true;
+	}
+
 	/** Forgets marks of a request that is not going to be flushed (the worker resets before each request). */
 	public function reset(): void
 	{
@@ -97,6 +105,7 @@ final class ProjectUpdatePublisher
 		$this->changedMaterials = [];
 		$this->changedDetails = [];
 		$this->changedPrices = [];
+		$this->changedComments = [];
 	}
 
 	public function flush(): void
@@ -106,51 +115,36 @@ final class ProjectUpdatePublisher
 		$materials = array_keys($this->changedMaterials);
 		$details = array_keys($this->changedDetails);
 		$prices = array_keys($this->changedPrices);
-		$this->changed = [];
-		$this->changedDefinitions = [];
-		$this->changedMaterials = [];
-		$this->changedDetails = [];
-		$this->changedPrices = [];
+		$comments = array_keys($this->changedComments);
+		$this->reset();
 
 		foreach ($definitions as $definitionId) {
-			try {
-				$this->publishDefinition($definitionId);
-			} catch (Throwable $e) {
-				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
-			}
+			$this->attempt(fn () => $this->publishDefinition($definitionId));
 		}
-
 		foreach ($materials as $materialId) {
-			try {
-				$this->publishMaterial($materialId);
-			} catch (Throwable $e) {
-				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
+			$this->attempt(fn () => $this->publishMaterial($materialId));
+		}
+		foreach (['detailsChanged' => $details, 'pricesChanged' => $prices, 'commentsChanged' => $comments] as $type => $projectIds) {
+			foreach ($projectIds as $projectId) {
+				$this->attempt(fn () => $this->publishSimple($type, $projectId));
 			}
 		}
-
-		foreach ($details as $projectId) {
-			try {
-				$this->publishSimple('detailsChanged', $projectId);
-			} catch (Throwable $e) {
-				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
-			}
-		}
-
-		foreach ($prices as $projectId) {
-			try {
-				$this->publishSimple('pricesChanged', $projectId);
-			} catch (Throwable $e) {
-				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
-			}
-		}
-
 		foreach ($changed as $projectId => $revision) {
-			try {
-				$this->publish($projectId, $revision);
-			} catch (Throwable $e) {
-				// Live sync is best effort: a hub outage must never break the change that triggered it.
-				$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
-			}
+			$this->attempt(fn () => $this->publish($projectId, $revision));
+		}
+	}
+
+	/**
+	 * Live sync is best effort: a hub outage must never break the change that triggered it.
+	 *
+	 * @param callable(): void $publish
+	 */
+	private function attempt(callable $publish): void
+	{
+		try {
+			$publish();
+		} catch (Throwable $e) {
+			$this->logger->warning('Mercure publish failed: ' . $e->getMessage(), ['exception' => $e]);
 		}
 	}
 

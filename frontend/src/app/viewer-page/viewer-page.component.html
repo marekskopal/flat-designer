@@ -32,6 +32,12 @@
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
+    [comments]="commentPins()"
+    [activeCommentId]="activeCommentId()"
+    [commentsVisible]="commentsVisible()"
+    [commenting]="commenting()"
+    (commentPicked)="selectComment($event, false)"
+    (commentPlaced)="placeComment($event)"
 />
 
 @if (measureStatus(); as status) {
@@ -172,6 +178,24 @@
         }
     </section>
 
+    @if (scene() && version() === null) {
+        <section class="panel__section" [hidden]="walking()">
+            <h2 class="section-title">Comments</h2>
+            <fd-comments
+                [comments]="comments()"
+                [activeId]="activeCommentId()"
+                [canWrite]="true"
+                [canResolve]="true"
+                [picking]="commenting()"
+                [placing]="commentPoint() !== null"
+                [busy]="commentBusy()"
+                (opened)="selectComment($event, true)"
+                (pick)="pickCommentPoint($event)"
+                (action)="onCommentAction($event)"
+            />
+        </section>
+    }
+
     <section class="panel__section" [hidden]="editor.enabled() || walking()">
         <h2 class="section-title">Saved views</h2>
         <fd-saved-views
@@ -214,6 +238,10 @@
         <label class="toggle">
             <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
             <span>Dimensions (Plan)</span>
+        </label>
+        <label class="toggle">
+            <input type="checkbox" [checked]="commentsVisible()" (change)="commentsVisible.set(!commentsVisible())" />
+            <span>Comment pins</span>
         </label>
         <label class="toggle">
             <input type="checkbox" [checked]="night()" (change)="toggleNight()" />

@@ -1,0 +1,208 @@
+@use 'variables' as *;
+
+.add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-8;
+    width: 100%;
+    margin-bottom: $space-8;
+    padding: 6px 0;
+    border: 1px solid $color-border;
+    border-radius: $radius-10;
+    background: transparent;
+    font-size: $font-size-13;
+    font-weight: 500;
+    color: $color-text-muted;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        color: $color-text;
+    }
+
+    kbd {
+        padding: 0 4px;
+        border: 1px solid $color-border;
+        border-radius: 4px;
+        font: inherit;
+        font-size: 11px;
+    }
+
+    &--on {
+        border-color: $color-accent;
+        background: $color-surface-solid;
+        color: $color-text;
+    }
+}
+
+.draft,
+.reply,
+.message form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    margin-bottom: $space-8;
+
+    textarea {
+        width: 100%;
+        resize: vertical;
+    }
+}
+
+.row {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-8;
+}
+
+.threads,
+.messages {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.threads {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: $space-8;
+}
+
+.thread {
+    border-radius: $radius-6;
+
+    &--open {
+        padding-bottom: $space-8;
+        background: $color-surface-muted;
+    }
+
+    &--resolved .badge {
+        background: #8a857c;
+    }
+}
+
+.thread__head {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-8;
+    width: 100%;
+    padding: 6px $space-8;
+    border: 0;
+    border-radius: $radius-6;
+    background: none;
+    text-align: left;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+}
+
+.badge {
+    flex-shrink: 0;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px 10px 10px 3px;
+    background: $color-accent;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+    color: #fff;
+
+    .thread--open & {
+        background: $color-highlight;
+    }
+}
+
+.thread__summary {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.thread__body {
+    overflow: hidden;
+    font-size: $font-size-13;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta {
+    font-size: 11px;
+    color: $color-text-muted;
+}
+
+.tag {
+    padding: 0 4px;
+    border-radius: 3px;
+    background: $color-accent-soft;
+}
+
+.messages {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    padding: $space-4 $space-8 $space-8 36px;
+}
+
+.message__body {
+    margin: 2px 0 0;
+    font-size: $font-size-13;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.message__actions {
+    display: flex;
+    gap: $space-8;
+}
+
+.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 11px;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        color: $color-text;
+        text-decoration: underline;
+    }
+
+    &--danger:hover:not(:disabled) {
+        color: $color-danger;
+    }
+}
+
+.reply {
+    padding: 0 $space-8 0 36px;
+}
+
+.resolve {
+    margin-left: 36px;
+}
+
+.empty {
+    margin: 0 0 $space-8;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    padding: 3px 0;
+    font-size: $font-size-13;
+    cursor: pointer;
+
+    input {
+        accent-color: $color-accent;
+    }
+}

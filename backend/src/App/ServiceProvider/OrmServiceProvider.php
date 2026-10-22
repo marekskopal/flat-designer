@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\App\ServiceProvider;
 
+use FlatDesigner\Model\Entity\Comment;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\FloorUnderlay;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
@@ -26,6 +27,7 @@ use FlatDesigner\Model\Entity\UploadTicket;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
+use FlatDesigner\Model\Repository\CommentRepository;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
@@ -73,6 +75,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ProjectMaterialPriceRepository::class,
 			ShareLinkRepository::class,
 			SavedViewRepository::class,
+			CommentRepository::class,
 			UploadTicketRepository::class,
 			OAuthClientRepository::class,
 			OAuthAuthorizationRepository::class,
@@ -108,6 +111,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ProjectMaterialPriceRepository::class, ProjectMaterialPrice::class);
 		$this->addRepository($container, $orm, ShareLinkRepository::class, ShareLink::class);
 		$this->addRepository($container, $orm, SavedViewRepository::class, SavedView::class);
+		$this->addRepository($container, $orm, CommentRepository::class, Comment::class);
 		$this->addRepository($container, $orm, UploadTicketRepository::class, UploadTicket::class);
 		$this->addRepository($container, $orm, OAuthClientRepository::class, OAuthClient::class);
 		$this->addRepository($container, $orm, OAuthAuthorizationRepository::class, OAuthAuthorization::class);

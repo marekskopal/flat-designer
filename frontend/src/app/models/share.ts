@@ -18,6 +18,9 @@ export interface CameraPose {
     target: CameraPoint;
 }
 
+/** What a share link's guests may do with the floor's review comments. */
+export type ShareComments = 'hidden' | 'read' | 'write';
+
 export interface ShareSettings {
     views: ShareView[];
     initialView: ShareView;
@@ -38,6 +41,8 @@ export interface ShareSettings {
      * before the exports, which allow them.
      */
     exports?: boolean;
+    /** The floor's open review comments: hidden, shown, or guests may add some; missing in older links (hidden). */
+    comments?: ShareComments;
 }
 
 export interface ShareLink {

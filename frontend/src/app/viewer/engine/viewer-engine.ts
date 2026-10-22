@@ -18,6 +18,7 @@ import {
     buildWall,
     hasFaceFinishes,
 } from './building';
+import {CommentPin, CommentPins, CommentPoint, commentPointOf} from './comments';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
@@ -197,6 +198,10 @@ export class ViewerEngine {
     public onMeasureStatus: (status: MeasureStatus | null) => void = () => undefined;
     /** Both calibration points were clicked (plan mm, where they lie on the underlay as placed now). */
     public onCalibrate: (a: Vec2, b: Vec2) => void = () => undefined;
+    /** A comment pin was clicked: its thread. */
+    public onCommentPick: (id: number) => void = () => undefined;
+    /** With the comment tool on, a click on the view: the point of the surface under the pointer. */
+    public onCommentPlace: (point: CommentPoint) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -226,6 +231,10 @@ export class ViewerEngine {
     /** The measure tool's line and points, drawn above the cut like the handles. */
     private readonly measureLayer = new THREE.Group();
     private readonly measureLabel = new CSS2DObject(document.createElement('div'));
+    /** The pins of the review comments, kept over loads of the floor. */
+    private readonly commentPins = new CommentPins();
+    /** The comment tool: a click pins a new comment to the surface under the pointer (before the measure and edit tools). */
+    private commenting = false;
 
     private content: THREE.Group | null = null;
     private materials: MaterialLibrary | null = null;
@@ -332,6 +341,8 @@ export class ViewerEngine {
         this.measureLabel.element.className = 'measure-label';
         this.measureLabel.visible = false;
         this.scene.add(this.measureLabel);
+        this.scene.add(this.commentPins.group);
+        this.commentPins.onPick = (id): void => this.onCommentPick(id);
 
         this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.addEventListener('pointermove', this.handlePointerMove);
@@ -748,7 +759,7 @@ export class ViewerEngine {
         // A run still on its way is left to the server; its answer no longer concerns the view.
         this.pendingRun = null;
         this.detection = null;
-        this.renderer.domElement.style.cursor = tool === 'select' && !this.measuring ? '' : 'crosshair';
+        this.updateToolCursor();
         this.updateDrawing();
     }
 
@@ -897,9 +908,37 @@ export class ViewerEngine {
         if (on) {
             this.cancelDrag();
         }
-        this.renderer.domElement.style.cursor = on || this.tool !== 'select' ? 'crosshair' : '';
+        this.updateToolCursor();
         this.updateHandles();
         this.updateMeasure();
+    }
+
+    /** The pins of the review comments; `activeId` is the thread shown in the panel. */
+    public setComments(pins: readonly CommentPin[], activeId: number | null): void {
+        this.commentPins.set(pins, activeId);
+    }
+
+    public setCommentsVisible(visible: boolean): void {
+        this.commentPins.setVisible(visible);
+    }
+
+    /** The comment tool: in any view, a click reports the point under the pointer (`onCommentPlace`). */
+    public setCommenting(on: boolean): void {
+        this.commenting = on;
+        if (on) {
+            this.cancelDrag();
+        }
+        this.updateToolCursor();
+    }
+
+    /** Turns the camera to a commented point: centred from above in the top view, closer in 3D. */
+    public focusPoint(point: CommentPoint): void {
+        const target = new THREE.Vector3(point.x * MM, point.z * MM, -point.y * MM);
+        const offset = this.camera.position.clone().sub(this.controls.target);
+        if (!this.isTopDown()) {
+            offset.setLength(Math.min(offset.length(), 6));
+        }
+        this.moveCamera(target.clone().add(offset), target, true);
     }
 
     /** Clears the measurement; false when there was none. */
@@ -968,6 +1007,7 @@ export class ViewerEngine {
     public setSectionHeight(height: number | null): void {
         this.sectionHeight = height;
         this.updateHandles();
+        this.commentPins.setSectionHeight(height);
         if (height === null) {
             this.renderer.clippingPlanes = [];
             return;
@@ -1198,6 +1238,7 @@ export class ViewerEngine {
         this.pictureLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
         this.measureLabel.element.remove();
+        this.commentPins.clear();
         this.handles.clear();
         this.handleGeometry.dispose();
         this.handleCoreGeometry.dispose();
@@ -1351,6 +1392,7 @@ export class ViewerEngine {
         this.labelRenderer.render(this.scene, this.camera);
         // The renderer stacks labels by distance; the measured distance stays above the room labels.
         this.measureLabel.element.style.zIndex = String(this.labels.size + (this.dimensions?.children.length ?? 0) + 1);
+        this.commentPins.raise(this.labels.size + (this.dimensions?.children.length ?? 0) + 1);
     }
 
     /** Handles on top of everything, at a constant size on screen and only where they can be dragged. */
@@ -1381,6 +1423,10 @@ export class ViewerEngine {
         const distance = this.camera.position.distanceTo(this.controls.target);
         const height = Math.max(this.container.clientHeight, 1);
         return (2 * distance * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))) / height;
+    }
+
+    private updateToolCursor(): void {
+        this.renderer.domElement.style.cursor = this.tool === 'select' && !this.measuring && !this.commenting ? '' : 'crosshair';
     }
 
     private isTopDown(): boolean {
@@ -1417,7 +1463,15 @@ export class ViewerEngine {
             }
             return;
         }
-        if (this.measuring || !this.editMode || event.button !== 0 || !this.isTopDown() || this.preview !== null || this.tool !== 'select') {
+        if (
+            this.commenting
+            || this.measuring
+            || !this.editMode
+            || event.button !== 0
+            || !this.isTopDown()
+            || this.preview !== null
+            || this.tool !== 'select'
+        ) {
             return;
         }
 
@@ -1522,6 +1576,9 @@ export class ViewerEngine {
 
     private readonly handlePointerMove = (event: PointerEvent): void => {
         const drag = this.drag;
+        if (drag === null && this.commenting) {
+            return;
+        }
         if (drag === null && this.measuring) {
             this.trackMeasure(event);
             return;
@@ -1661,6 +1718,17 @@ export class ViewerEngine {
             // Touch walk: tapping a door within reach opens or closes it (the mouse uses the view centre instead).
             if (event.pointerType !== 'mouse') {
                 this.toggleDoor(this.doorAt(this.toNdc(event)));
+            }
+            return;
+        }
+        if (this.commenting) {
+            if (event.button === 0) {
+                const hit = this.pick(event);
+                const floor = hit === undefined ? this.planPointOn(event, FloorPlane) : null;
+                const point = hit !== undefined ? commentPointOf(hit.point) : floor === null ? null : {...floor, z: 0};
+                if (point !== null) {
+                    this.onCommentPlace(point);
+                }
             }
             return;
         }

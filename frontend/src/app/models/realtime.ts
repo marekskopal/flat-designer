@@ -1,5 +1,5 @@
 /** Live update of a project, pushed by the server after a committed change (see ProjectUpdatePublisher). */
-export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange | DetailsChange | PricesChange;
+export type ProjectUpdate = ProjectChange | DefinitionChange | MaterialChange | DetailsChange | PricesChange | CommentsChange;
 
 /** A committed change of the project (an edit, undo, restore, a new floor…). */
 export interface ProjectChange {
@@ -48,5 +48,13 @@ export interface PricesChange {
     type: 'pricesChanged';
     projectId: number;
     /** Browser tab that saved it (null for agents). */
+    originClientId: string | null;
+}
+
+/** A review comment was added, changed or deleted: not floor content, so the revision is the same. */
+export interface CommentsChange {
+    type: 'commentsChanged';
+    projectId: number;
+    /** Browser tab that changed it (null for agents and guests). */
     originClientId: string | null;
 }

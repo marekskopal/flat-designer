@@ -9,6 +9,7 @@ use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Mcp\Server\EmptyObjectSchemaValidator;
 use FlatDesigner\Mcp\Server\ToolErrorTranslatingReferenceHandler;
 use FlatDesigner\Mcp\Session\DatabaseSessionStore;
+use FlatDesigner\Mcp\Tool\CommentTools;
 use FlatDesigner\Mcp\Tool\FileTools;
 use FlatDesigner\Mcp\Tool\FloorTools;
 use FlatDesigner\Mcp\Tool\FurnitureTools;
@@ -49,6 +50,7 @@ use const PHP_URL_PATH;
 #[CoversClass(EmptyObjectSchemaValidator::class)]
 #[CoversClass(ProjectTools::class)]
 #[CoversClass(ShareLinkTools::class)]
+#[CoversClass(CommentTools::class)]
 #[CoversClass(ItemTools::class)]
 #[CoversClass(GroupTools::class)]
 #[CoversClass(FurnitureTools::class)]
@@ -90,6 +92,7 @@ final class McpServerTest extends IntegrationTestCase
 		$names = array_column($tools, 'name');
 		sort($names);
 		self::assertSame([
+			'add_comment',
 			'add_floor',
 			'add_item',
 			'add_material',
@@ -104,6 +107,7 @@ final class McpServerTest extends IntegrationTestCase
 			'create_project',
 			'create_share_link',
 			'create_variant_set',
+			'delete_comment',
 			'delete_furniture_definition',
 			'delete_group',
 			'delete_item',
@@ -129,6 +133,7 @@ final class McpServerTest extends IntegrationTestCase
 			'get_quantities',
 			'get_room_schedule',
 			'list_changes',
+			'list_comments',
 			'list_furniture_definitions',
 			'list_item_kinds',
 			'list_materials',
@@ -146,6 +151,7 @@ final class McpServerTest extends IntegrationTestCase
 			'rename_variant_set',
 			'request_file_upload',
 			'request_model_upload',
+			'resolve_comment',
 			'save_version',
 			'save_view',
 			'set_floor_underlay',
@@ -512,6 +518,59 @@ final class McpServerTest extends IntegrationTestCase
 
 		$this->client->call('delete_share_link', ['projectId' => $projectId, 'shareLinkId' => $link['id']]);
 		self::assertSame([], $this->client->call('list_share_links', ['projectId' => $projectId]));
+	}
+
+	public function testReadsAndAnswersReviewComments(): void
+	{
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$path = sprintf('/api/projects/%d/comments', $this->project->id);
+		$created = $this->request(
+			'POST',
+			$path,
+			['floorId' => $floorId, 'x' => 1200, 'y' => 900, 'z' => 0, 'body' => 'Wider door?'],
+			$this->user,
+		);
+		$threadId = $this->jsonBody($created)['id'];
+		self::assertIsInt($threadId);
+
+		$open = $this->client->call('list_comments', ['projectId' => $this->project->id, 'floorId' => $floorId]);
+		self::assertIsList($open);
+		self::assertSame(['Wider door?'], array_column($open, 'body'));
+		self::assertSame(['Jane'], array_column($open, 'authorName'));
+
+		$reply = $this->client->call(
+			'add_comment',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'parentId' => $threadId, 'body' => 'Made it 900 mm.'],
+		);
+		self::assertIsArray($reply);
+		self::assertSame(
+			['Agent', 'Claude Code', 1200, true],
+			[$reply['authorType'], $reply['authorName'], $reply['x'], $reply['canDelete']],
+		);
+		$pinned = $this->client->call(
+			'add_comment',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'point' => ['x' => 10, 'y' => 20, 'z' => 900], 'body' => 'Socket here.'],
+		);
+		self::assertIsArray($pinned);
+		self::assertSame([10, 20, 900, 2], [$pinned['x'], $pinned['y'], $pinned['z'], $pinned['number']]);
+
+		$resolved = $this->client->call('resolve_comment', ['projectId' => $this->project->id, 'commentId' => $threadId]);
+		self::assertIsArray($resolved);
+		self::assertTrue($resolved['resolved']);
+		$open = $this->client->call('list_comments', ['projectId' => $this->project->id]);
+		self::assertIsList($open);
+		self::assertSame(['Socket here.'], array_column($open, 'body'));
+
+		// The agent deletes only its own comments.
+		$isError = false;
+		$this->client->call('delete_comment', ['projectId' => $this->project->id, 'commentId' => $threadId], $isError);
+		self::assertTrue($isError);
+		$deleted = $this->client->call('delete_comment', ['projectId' => $this->project->id, 'commentId' => $pinned['id']]);
+		self::assertIsArray($deleted);
+		$all = $this->jsonList($this->request('GET', $path, authenticatedAs: $this->user));
+		self::assertSame(['Wider door?', 'Made it 900 mm.'], array_column($all, 'body'));
+		// The person may delete the agent's reply, not edit it.
+		self::assertSame([false, true], [$all[1]['canEdit'], $all[1]['canDelete']]);
 	}
 
 	public function testCreatesUpdatesAndDeletesProjects(): void

@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, effect, inject, input, out
 import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {localDate} from '@app/core/local-date';
-import {CameraPose, ShareLink, ShareLinkInput, ShareSettings, ShareView, ShareViewLabels} from '@app/models/share';
+import {CameraPose, ShareComments, ShareLink, ShareLinkInput, ShareSettings, ShareView, ShareViewLabels} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
 
 /** What the viewer shows right now: a new link starts from it. */
@@ -24,7 +24,7 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
 
 /**
  * Creates a share link from the viewer (`source`: the shown floor, view, camera and display) or edits an existing
- * `link` (name, views, start view, exports, expiry; its floor, version and display stay).
+ * `link` (name, views, start view, exports, comments, expiry; its floor, version and display stay).
  */
 @Component({
     selector: 'fd-share-link-form',
@@ -76,6 +76,15 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
                     Guests can download the plan, elevations and 3D model
                 </label>
             </div>
+
+            <label class="field">
+                <span class="field__label">Comments</span>
+                <select class="input" formControlName="comments">
+                    <option value="hidden">Hidden</option>
+                    <option value="read">Guests see the open comments</option>
+                    <option value="write">Guests see and add comments</option>
+                </select>
+            </label>
 
             <label class="field">
                 <span class="field__label">Expires</span>
@@ -159,6 +168,7 @@ export class ShareLinkFormComponent {
         initialView: ['overview' as ShareView],
         camera: [false],
         exports: [true],
+        comments: ['hidden' as ShareComments],
         expires: [''],
     });
 
@@ -242,6 +252,7 @@ export class ShareLinkFormComponent {
             initialView: settings?.initialView ?? (source?.view === 'top' ? 'top' : 'overview'),
             camera: settings === undefined ? source?.view === 'overview' : settings.camera !== null,
             exports: settings?.exports ?? true,
+            comments: settings?.comments ?? 'hidden',
             expires: link === null || link.expiresAt === null ? '' : localDate(new Date(link.expiresAt)),
         });
     }
@@ -277,6 +288,7 @@ export class ShareLinkFormComponent {
             night: display.night ?? false,
             presentation: display.presentation ?? false,
             exports: value.exports,
+            comments: value.comments,
         };
         const body: ShareLinkInput = {
             name: value.name.trim(),

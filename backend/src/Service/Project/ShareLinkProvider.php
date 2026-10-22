@@ -166,7 +166,7 @@ final readonly class ShareLinkProvider
 	}
 
 	/** The link of a token while it works (known, not expired); null otherwise. */
-	private function activeLink(string $token): ?ShareLink
+	public function activeLink(string $token): ?ShareLink
 	{
 		$link = $this->shareLinkRepository->findOneByToken($token);
 

@@ -18,6 +18,12 @@
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
     (measureStatus)="measureStatus.set($event)"
+    [comments]="commentAccess() === 'hidden' ? [] : commentPins()"
+    [activeCommentId]="activeCommentId()"
+    [commentsVisible]="commentsVisible()"
+    [commenting]="commenting()"
+    (commentPicked)="selectComment($event, false)"
+    (commentPlaced)="placeComment($event)"
 />
 
 @if (measureStatus(); as status) {
@@ -102,6 +108,40 @@
             </section>
         }
 
+        @if (commentAccess() !== 'hidden') {
+            <section class="panel__section">
+                <h2 class="section-title">Comments</h2>
+                @if (commentAccess() === 'write') {
+                    <label class="field guest-name">
+                        <span class="field__label">Your name</span>
+                        <input
+                            class="input"
+                            type="text"
+                            maxlength="100"
+                            placeholder="Shown with your comments"
+                            [value]="guestName()"
+                            (input)="setGuestName($event)"
+                        />
+                    </label>
+                    @if (guestName().trim() === '') {
+                        <p class="field__hint guest-name">Enter your name to add comments.</p>
+                    }
+                }
+                <fd-comments
+                    [comments]="comments()"
+                    [activeId]="activeCommentId()"
+                    [canWrite]="canComment()"
+                    [canResolve]="false"
+                    [picking]="commenting()"
+                    [placing]="commentPoint() !== null"
+                    [busy]="commentBusy()"
+                    (opened)="selectComment($event, true)"
+                    (pick)="pickCommentPoint($event)"
+                    (action)="onCommentAction($event)"
+                />
+            </section>
+        }
+
         @if (hasVariants() && scene(); as s) {
             <section class="panel__section">
                 <h2 class="section-title">Variants</h2>
@@ -123,6 +163,12 @@
                 <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
                 <span>Dimensions (Plan)</span>
             </label>
+            @if (commentAccess() !== 'hidden') {
+                <label class="toggle">
+                    <input type="checkbox" [checked]="commentsVisible()" (change)="commentsVisible.set(!commentsVisible())" />
+                    <span>Comment pins</span>
+                </label>
+            }
             <label class="toggle">
                 <input type="checkbox" [checked]="night()" (change)="toggleNight()" />
                 <span>Night</span>

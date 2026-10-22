@@ -18,7 +18,7 @@ use const JSON_THROW_ON_ERROR;
 /**
  * The saved views in a snapshot: written as `views: [{floorId, name, settings}]` (the working copy's ids), and recreated
  * on restore on the restored floors with their variant sets and groups remapped. A snapshot from before saved views
- * has none; then the views of the working copy are kept on the restored floor of the same level and name.
+ * has none; then the views of the working copy are kept on the restored floor `FloorMatcher` finds.
  */
 final readonly class SnapshotViewRestorer
 {
@@ -65,7 +65,7 @@ final readonly class SnapshotViewRestorer
 	{
 		if ($snapshot->raw('views') === null) {
 			foreach ($current as $view) {
-				$floor = self::floorLike(array_values($floors), $view['level'], $view['floorName']);
+				$floor = FloorMatcher::like(array_values($floors), $view['level'], $view['floorName']);
 				if ($floor === null) {
 					continue;
 				}
@@ -108,17 +108,5 @@ final readonly class SnapshotViewRestorer
 		$view->createdAt = new DateTimeImmutable();
 		$view->updatedAt = $view->createdAt;
 		$this->viewRepository->persist($view);
-	}
-
-	/** @param list<Floor> $floors */
-	private static function floorLike(array $floors, int $level, string $name): ?Floor
-	{
-		foreach ($floors as $floor) {
-			if ($floor->level === $level && $floor->name === $name) {
-				return $floor;
-			}
-		}
-
-		return null;
 	}
 }

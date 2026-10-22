@@ -289,6 +289,27 @@ format is the text in `FurnitureTools::Format`.
   UI and the plan underlay hidden. With `cwebp` on the PATH it saves WebP 1600 px wide. The README tour uses the demo
   flat's "Tour · …" views; keep the unlicensed poster and plan out of them.
 
+## Review comments
+
+- `Comment` (`comments`, `Service/Comment`): a thread pinned to a point of a floor (x, y plan mm, z above the floor),
+  with one level of replies (`parent`; a reply takes the thread's point). Only a thread is resolved (`resolvedAt`) and
+  numbered (`number`, counted up per floor, never reused: the pin's label, the same for owner, guests and agents). The
+  author is a user, an agent (`createdBy` plus the MCP client, `CommentActor::of()` from `ActorContext`) or a share link
+  guest (`guestName`, `shareLink`). Only the author edits the text; a person deletes any comment, an agent only its own.
+- They are not floor content: no revision, no undo, not in snapshots. A change sends `commentsChanged`. A version
+  restore carries them over to the restored floors (`CommentKeeper`, with `FloorMatcher`: the same level and name, else
+  the same level; `SnapshotViewRestorer` uses it too). The viewer shows them on the working copy only.
+- REST `…/comments` (`?floorId=`, `?resolved=0`), MCP `list_comments` / `add_comment` / `resolve_comment` /
+  `delete_comment`.
+- Share links: `ShareSettingsDto.comments` is `hidden` (also older links), `read` or `write`. `GET|POST
+  /api/shares/{token}/comments` (`SharedCommentController`, open in `AuthorizationMiddleware`) reads the open threads
+  of the link's floor in the working copy and takes a guest's comment, at most `SharedComments::GuestCommentsPerHour`
+  per link. After a restore the floor is found by the link's `floorName`.
+- Viewer: `viewer/engine/comments.ts` draws the pins (CSS2D badges, dimmed above the wall cut). The comment tool
+  (`setCommenting()`, key C) reports the surface point under a click and takes clicks before the measure and edit
+  tools. `app/comments/CommentsComponent` is the panel of both viewer pages. Agents are told that guest comments are
+  unauthenticated input.
+
 ## Walkthrough
 
 - View → Walk is implemented in `viewer/engine/walkthrough.ts`: first person at an eye height of 1630 mm with pointer

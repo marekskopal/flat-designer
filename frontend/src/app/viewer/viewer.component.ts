@@ -17,6 +17,7 @@ import {PlanPoint, Room, Scene} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
 
+import {CommentPin, CommentPoint} from './engine/comments';
 import {EditorTool, ToolStatus} from './engine/drawing';
 import {MeasureStatus} from './engine/measure';
 import {ModelFetcher} from './engine/models';
@@ -94,6 +95,13 @@ export class ViewerComponent {
     public readonly wallDraft = input<WallDraftShape>({thickness: 100, height: 2600});
     /** Adds a drawn run of walls; resolves true when it was added (the scene input then changes). */
     public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean) => Promise<boolean>>(() => Promise.resolve(false));
+    /** Pins of the review comments, numbered. */
+    public readonly comments = input<CommentPin[]>([]);
+    /** The thread open in the panel, its pin highlighted. */
+    public readonly activeCommentId = input<number | null>(null);
+    public readonly commentsVisible = input(true);
+    /** The comment tool: a click reports the point under the pointer (`commentPlaced`), before the measure and edit tools. */
+    public readonly commenting = input(false);
 
     public readonly selected = output<SelectEvent>();
     /** The walkthrough ended (Esc); the camera returns to the overview. */
@@ -112,6 +120,10 @@ export class ViewerComponent {
     public readonly measureStatus = output<MeasureStatus | null>();
     /** Both calibration points were clicked: where they lie on the underlay as placed now (plan mm). */
     public readonly calibrated = output<{a: Vec2; b: Vec2}>();
+    /** A comment pin was clicked: its thread's id. */
+    public readonly commentPicked = output<number>();
+    /** A click with the comment tool: the point to pin a new comment to. */
+    public readonly commentPlaced = output<CommentPoint>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Rebuilt only when the underlay itself changes, not with every edit of the floor. */
@@ -132,6 +144,8 @@ export class ViewerComponent {
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
             engine.onMeasureStatus = (status): void => this.measureStatus.emit(status);
             engine.onCalibrate = (a, b): void => this.calibrated.emit({a, b});
+            engine.onCommentPick = (id): void => this.commentPicked.emit(id);
+            engine.onCommentPlace = (point): void => this.commentPlaced.emit(point);
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -180,6 +194,9 @@ export class ViewerComponent {
         effect(() => this.engine()?.setInsetLeft(this.insetLeft()));
         effect(() => this.engine()?.setTool(this.tool()));
         effect(() => this.engine()?.setWallDraft(this.wallDraft()));
+        effect(() => this.engine()?.setComments(this.comments(), this.activeCommentId()));
+        effect(() => this.engine()?.setCommentsVisible(this.commentsVisible()));
+        effect(() => this.engine()?.setCommenting(this.commenting()));
 
         inject(DestroyRef).onDestroy(() => this.engine()?.dispose());
     }
@@ -256,5 +273,10 @@ export class ViewerComponent {
 
     public focusRoom(room: Room): void {
         this.engine()?.focusRoom(room);
+    }
+
+    /** Turns the camera to a commented point. */
+    public focusPoint(point: CommentPoint): void {
+        this.engine()?.focusPoint(point);
     }
 }

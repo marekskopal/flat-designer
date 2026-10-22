@@ -92,6 +92,9 @@ export class QuantitiesComponent {
                 takeUntilDestroyed(),
             )
             .subscribe((update) => {
+                if (update.type === 'commentsChanged') {
+                    return;
+                }
                 if (update.type === 'detailsChanged') {
                     void this.loadProject(update.projectId);
                     return;

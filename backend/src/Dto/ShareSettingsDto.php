@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Dto;
 
+use FlatDesigner\Model\Entity\Enum\ShareCommentsEnum;
 use FlatDesigner\Model\Entity\Enum\ShareViewEnum;
 use FlatDesigner\Service\Request\BodyReader;
 use FlatDesigner\Service\Request\Exception\InvalidRequestException;
@@ -13,7 +14,8 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * (only with the overview allowed; null = the default framing) and the display settings it starts with
  * (`sectionHeight` in mm, null = no wall cut; `dimensions` draws the plan's dimension lines; `night` shows the flat after
  * dark, lit by its lights; `presentation` renders in the presentation quality) and whether the guest may download the
- * exports (`exports`: the plan as PDF or SVG, the wall elevations, the 3D model as glTF). Stored as JSON in `ShareLink::$settings`.
+ * exports (`exports`: the plan as PDF or SVG, the wall elevations, the 3D model as glTF), and whether the guest sees the
+ * floor's open review comments or may also write them (`comments`). Stored as JSON in `ShareLink::$settings`.
  */
 final readonly class ShareSettingsDto implements ArrayFactoryInterface
 {
@@ -29,6 +31,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 		public bool $night = false,
 		public bool $presentation = false,
 		public bool $exports = true,
+		public ShareCommentsEnum $comments = ShareCommentsEnum::Hidden,
 	) {
 	}
 
@@ -50,7 +53,17 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 			presentation: array_key_exists('presentation', $data) && BodyReader::bool($data, 'presentation'),
 			// Links saved before the exports allow them.
 			exports: !array_key_exists('exports', $data) || BodyReader::bool($data, 'exports'),
+			// Links saved before the comments do not show them.
+			comments: array_key_exists('comments', $data) ? self::comments(
+				BodyReader::string($data, 'comments'),
+			) : ShareCommentsEnum::Hidden,
 		);
+	}
+
+	private static function comments(string $comments): ShareCommentsEnum
+	{
+		return ShareCommentsEnum::tryFrom($comments)
+			?? throw new InvalidRequestException(sprintf('Comments must be "hidden", "read" or "write", not "%s".', $comments), 422);
 	}
 
 	private static function view(string $view): ShareViewEnum

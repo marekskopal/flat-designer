@@ -35,6 +35,7 @@ use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
+use FlatDesigner\Service\Comment\CommentKeeper;
 use FlatDesigner\Service\Editor\Element\ItemModelLink;
 use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
 use FlatDesigner\Service\Provider\SceneProvider;
@@ -75,6 +76,7 @@ final readonly class ProjectSnapshotService
 		private SnapshotDefinitionRestorer $definitionRestorer,
 		private SnapshotUnderlayRestorer $underlayRestorer,
 		private SnapshotViewRestorer $viewRestorer,
+		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
 	) {
 	}
@@ -155,6 +157,8 @@ final readonly class ProjectSnapshotService
 		$data = $this->read($snapshot);
 		// The views go with the floors; a snapshot from before saved views keeps the current ones.
 		$currentViews = $this->viewRestorer->keep($project, $data);
+		// The review comments are not in snapshots: they are carried over to the restored floors.
+		$comments = $this->commentKeeper->keep($project);
 
 		foreach ($this->floorRepository->findByProject($project->id) as $floor) {
 			// Rooms, walls, openings, items, groups and variant sets go with it (ON DELETE CASCADE).
@@ -198,6 +202,7 @@ final readonly class ProjectSnapshotService
 		}
 
 		$this->viewRestorer->restore($project, $data, $currentViews, $floorIds, $allSetIds, $allGroupIds);
+		$this->commentKeeper->restore($comments, array_values($floorIds));
 	}
 
 	/**
