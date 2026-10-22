@@ -100,6 +100,7 @@ final readonly class RoomTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes horizontal bands around the room's walls, mm above the floor (e.g. tiling 0–1200); a wall face may override them (update_wall leftFinishes / rightFinishes)
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross; floor tiles, wall bands and tiled items share the grid
 	 * @param int|null $tileOriginY plan y (mm) of that point
+	 * @param int|null $floorAngle floor pattern turned about the tile origin, degrees counter-clockwise (0–179; 0 = planks running along plan y, 90 = along plan x); wall bands keep their joints
 	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)
 	 * @param int|null $vaultSpacing vaulted ceiling: mm between the beams (300–3000); the vaults' crowns are at ceilingHeight. Default none: a flat ceiling
 	 * @param int|null $vaultAngle vaulted ceiling: direction the beams run, degrees counter-clockwise from plan x (0 = beams running east–west)
@@ -124,6 +125,7 @@ final readonly class RoomTools
 		?array $wallFinishes = null,
 		?int $tileOriginX = null,
 		?int $tileOriginY = null,
+		?int $floorAngle = null,
 		?int $ceilingMaterialId = null,
 		?int $vaultSpacing = null,
 		?int $vaultAngle = null,
@@ -148,6 +150,7 @@ final readonly class RoomTools
 				'wallFinishes' => $wallFinishes,
 				'tileOriginX' => $tileOriginX,
 				'tileOriginY' => $tileOriginY,
+				'floorAngle' => $floorAngle,
 				'ceilingMaterialId' => $ceilingMaterialId,
 				'vaultSpacing' => $vaultSpacing,
 				'vaultAngle' => $vaultAngle,
@@ -167,6 +170,7 @@ final readonly class RoomTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $wallFinishes replaces all bands; [] removes them
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross (floor, wall bands and tiled items share the grid)
 	 * @param int|null $tileOriginY plan y (mm) of that point
+	 * @param int|null $floorAngle floor pattern turned about the tile origin, degrees counter-clockwise (0–179; 0 = planks running along plan y, 90 = along plan x); wall bands keep their joints
 	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)
 	 * @param int|null $vaultSpacing vaulted ceiling: mm between the beams (300–3000); the vaults' crowns are at ceilingHeight. Default none: a flat ceiling
 	 * @param int|null $vaultAngle vaulted ceiling: direction the beams run, degrees counter-clockwise from plan x (0 = beams running east–west)
@@ -193,6 +197,7 @@ final readonly class RoomTools
 		?array $wallFinishes = null,
 		?int $tileOriginX = null,
 		?int $tileOriginY = null,
+		?int $floorAngle = null,
 		?int $ceilingMaterialId = null,
 		?int $vaultSpacing = null,
 		?int $vaultAngle = null,
@@ -219,6 +224,7 @@ final readonly class RoomTools
 				'wallFinishes' => $wallFinishes,
 				'tileOriginX' => $tileOriginX,
 				'tileOriginY' => $tileOriginY,
+				'floorAngle' => $floorAngle,
 				'ceilingMaterialId' => $ceilingMaterialId,
 				'vaultSpacing' => $vaultSpacing,
 				'vaultAngle' => $vaultAngle,

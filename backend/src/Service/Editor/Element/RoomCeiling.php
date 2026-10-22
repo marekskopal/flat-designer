@@ -90,7 +90,7 @@ final readonly class RoomCeiling
 	{
 		$room->ceilingMaterial = $this->materialResolver->resolve($fields->nullableId('ceilingMaterialId'));
 		$room->vaultSpacing = $fields->nullableInt('vaultSpacing', self::MinVaultSpacing, self::MaxVaultSpacing);
-		$room->vaultAngle = $fields->int('vaultAngle', 0, 179);
+		$room->vaultAngle = $fields->int('vaultAngle', 0, 179, 'degrees');
 		$room->vaultRise = $fields->int('vaultRise', 0, self::MaxVaultRise);
 		$room->beamWidth = $fields->int('beamWidth', 0, self::MaxBeamWidth);
 		$room->beamDrop = $fields->int('beamDrop', 0, self::MaxBeamDrop);
@@ -113,6 +113,6 @@ final readonly class RoomCeiling
 		$default = self::VaultDefaults[$key];
 		assert(is_int($default));
 
-		return $fields->raw($key) === null ? $default : $fields->int($key, $min, $max);
+		return $fields->raw($key) === null ? $default : $fields->int($key, $min, $max, $key === 'vaultAngle' ? 'degrees' : 'mm');
 	}
 }

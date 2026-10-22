@@ -7,7 +7,7 @@ import {MaterialLibrary} from './materials';
 import {buildModelItemBody, ModelLibrary} from './models';
 import {buildOutdoorItemBody} from './outdoor';
 import {PictureLibrary} from './pictures';
-import {MM, tileOrigin} from './plan-geometry';
+import {MM, tileGrid} from './plan-geometry';
 import {buildSanitaryItemBody} from './sanitary';
 import {buildStructureItemBody} from './structure';
 import {alignTiles} from './tiling';
@@ -50,7 +50,7 @@ export function buildItem(
     object.position.set(item.x * MM, item.z * MM, -item.y * MM);
     object.rotation.y = THREE.MathUtils.degToRad(item.rotation);
     object.userData = {...object.userData, itemId: item.id};
-    alignTiles(object, tileOrigin(room), materials);
+    alignTiles(object, tileGrid(room), materials);
     object.traverse((o) => {
         if (o instanceof THREE.Mesh) {
             // A glowing bulb would block its own light.

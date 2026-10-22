@@ -633,6 +633,22 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['tileOriginX' => 1.5])->getStatusCode());
 	}
 
+	public function testRoomFloorAngleIsFoldedIntoHalfATurn(): void
+	{
+		$room = $this->create('rooms', ['name' => 'Living']);
+		self::assertSame(0, $room['floorAngle']);
+
+		foreach ([[105, 105], [195, 15], [-75, 105], [180, 0]] as [$given, $stored]) {
+			$changed = $this->jsonBody($this->edit('PATCH', 'rooms', self::id($room), ['floorAngle' => $given]));
+			self::assertIsArray($changed['element']);
+			self::assertSame($stored, $changed['element']['floorAngle']);
+		}
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['floorAngle' => 400])->getStatusCode());
+
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([105], array_column($this->sceneList('rooms'), 'floorAngle'));
+	}
+
 	public function testDeletingRoomUnlinksItsItemsInTheScene(): void
 	{
 		$room = $this->create('rooms', ['name' => 'Kitchen']);

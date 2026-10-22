@@ -30,7 +30,7 @@ import {
     polygonBounds,
     SlidingDoorOverlap,
     SquareEnds,
-    tileOrigin,
+    tileGrid,
     Vec2,
     WallCorners,
     WallEnds,
@@ -42,7 +42,7 @@ import {
     wallPieces,
     WindowFrameBar,
 } from './plan-geometry';
-import {alignTiles} from './tiling';
+import {alignTiles, turnLevelUvs} from './tiling';
 
 const SlabThickness = 300;
 /** Bars of a French window sash, mm. */
@@ -169,12 +169,18 @@ export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
     // Shape in plan (x, y); rotating −90° about x lays it flat with plan y → scene −z. UVs stay in metres.
     const geometry = new THREE.ShapeGeometry(roomShape(room));
     geometry.rotateX(-Math.PI / 2);
-    const floor = new THREE.Mesh(geometry, materials.get(room.floorMaterialId));
+    const grid = tileGrid(room);
+    const material = materials.get(room.floorMaterialId);
+    // Laid tiles get their UVs from `alignTiles` below; the other patterns (planks, wood) are turned here.
+    if (!materials.isTile(material)) {
+        turnLevelUvs(geometry, grid);
+    }
+    const floor = new THREE.Mesh(geometry, material);
     floor.position.y = 0.002;
     floor.receiveShadow = true;
     floor.name = `floor:${room.code}`;
     floor.userData = {roomId: room.id};
-    alignTiles(floor, tileOrigin(room), materials);
+    alignTiles(floor, grid, materials);
     return floor;
 }
 
@@ -422,7 +428,7 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         group.add(edge);
     });
 
-    alignTiles(group, tileOrigin(room), materials);
+    alignTiles(group, tileGrid(room), materials);
     return group;
 }
 

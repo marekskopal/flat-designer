@@ -6,6 +6,7 @@ namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ProjectVersionController;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Project\ProjectSnapshotService;
@@ -157,6 +158,50 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		));
 		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
 		self::assertSame([null, null], $this->restoredWallFinishes($user, $project->id));
+	}
+
+	public function testRestoreKeepsFloorAngleAndOlderSnapshotsLayAlongTheAxes(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$rooms = Fixture::service(RoomRepository::class);
+		$room = $rooms->findByFloor($floor->id)[0];
+		$room->floorAngle = 105;
+		$rooms->persist($room);
+		$versionId = $this->saveVersion($user, $project->id);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame(105, $this->restoredRoom($user, $project->id)['floorAngle']);
+
+		// Snapshots saved before rooms had a floor angle.
+		Fixture::service(DatabaseInterface::class)->getPdo()->exec(sprintf(
+			'UPDATE project_versions SET snapshot = REPLACE(snapshot, \',"floorAngle":105\', \'\') WHERE id = %d',
+			$versionId,
+		));
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame(0, $this->restoredRoom($user, $project->id)['floorAngle']);
+	}
+
+	/** @return array<mixed> the first room of the project's first floor */
+	private function restoredRoom(User $user, int $projectId): array
+	{
+		$projectBody = $this->jsonBody($this->request('GET', self::path(Routes::Project, $projectId), authenticatedAs: $user));
+		self::assertIsList($projectBody['floors']);
+		self::assertIsArray($projectBody['floors'][0]);
+		self::assertIsInt($projectBody['floors'][0]['id']);
+		$rooms = $this->jsonBody(
+			$this->request(
+				'GET',
+				self::path(Routes::ProjectFloorScene, $projectId, null, $projectBody['floors'][0]['id']),
+				authenticatedAs: $user,
+			),
+		)['rooms'];
+		self::assertIsList($rooms);
+		self::assertIsArray($rooms[0]);
+
+		return $rooms[0];
 	}
 
 	/** @return array{mixed, mixed} the left and right finishes of the first wall of the project's first floor */

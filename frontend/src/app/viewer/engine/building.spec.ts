@@ -2,7 +2,7 @@ import {Material, Opening, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildWall, buildWallFinishes} from './building';
+import {buildFloor, buildWall, buildWallFinishes} from './building';
 import {MaterialLibrary} from './materials';
 import {WallEnds} from './plan-geometry';
 
@@ -125,5 +125,63 @@ describe('buildWallFinishes', () => {
     it('leaves a face with an empty list bare, and gives the room\'s bands to a face without its own', () => {
         expect(pieces(buildWallFinishes(room, [south([])], materials), 'herringbone')).toHaveLength(3);
         expect(pieces(buildWallFinishes(room, [south(null)], materials), 'herringbone')).toHaveLength(4);
+    });
+});
+
+describe('buildFloor', () => {
+    const materials = new MaterialLibrary(
+        [
+            {
+                id: 1,
+                code: 'oak',
+                name: 'Oak',
+                pattern: 'Plain',
+                color: '#a07850',
+                roughness: 0.5,
+                metalness: 0,
+                texture: null,
+                tileWidth: null,
+                tileHeight: null,
+            },
+        ],
+        1,
+    );
+    const room = (floorAngle?: number): Room => ({
+        id: 1,
+        code: 'L',
+        name: 'Living',
+        type: 'Living',
+        polygon: [[0, 0], [2000, 0], [2000, 1000], [0, 1000]],
+        area: 2,
+        ceilingHeight: 2600,
+        floorMaterialId: 1,
+        wallFinishes: [],
+        tileOriginX: 1000,
+        tileOriginY: 0,
+        floorAngle,
+    });
+    // UV (mm) at the floor vertex over plan (x, y).
+    const uvAt = (floor: THREE.Mesh, x: number, y: number): number[] => {
+        const geometry = floor.geometry as THREE.BufferGeometry;
+        const position = geometry.getAttribute('position');
+        const uv = geometry.getAttribute('uv');
+        for (let i = 0; i < position.count; i++) {
+            if (Math.round(position.getX(i) * 1000) === x && Math.round(-position.getZ(i) * 1000) === y) {
+                return [Math.round(uv.getX(i) * 1000) + 0, Math.round(uv.getY(i) * 1000) + 0];
+            }
+        }
+        throw new Error(`No vertex at ${x}, ${y}`);
+    };
+
+    it('lays the pattern along the plan axes by default', () => {
+        expect(uvAt(buildFloor(room(), materials), 2000, 1000)).toEqual([2000, 1000]);
+    });
+
+    it('turns the pattern about the tile origin by the floor angle', () => {
+        const floor = buildFloor(room(90), materials);
+        // Turned a quarter counter-clockwise about (1000, 0): plan +x runs along −v, plan +y along +u.
+        expect(uvAt(floor, 0, 0)).toEqual([1000, 1000]);
+        expect(uvAt(floor, 2000, 0)).toEqual([1000, -1000]);
+        expect(uvAt(floor, 2000, 1000)).toEqual([2000, -1000]);
     });
 });

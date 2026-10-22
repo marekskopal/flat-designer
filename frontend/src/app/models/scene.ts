@@ -81,6 +81,11 @@ export interface Room {
     /** Plan point (mm) where tile joints cross; floor tiles, wall bands and tiled items share the grid. Null: plan origin. */
     tileOriginX: number | null;
     tileOriginY: number | null;
+    /**
+     * The floor's pattern turned about the tile origin, degrees counter-clockwise (0–179); 0 lays planks along plan y.
+     * Only level faces turn, the wall bands keep their joints. Missing in versions saved before it existed.
+     */
+    floorAngle?: number;
     /** Ceiling surface; null: white plaster (also when missing, in older versions). */
     ceilingMaterialId?: number | null;
     /**

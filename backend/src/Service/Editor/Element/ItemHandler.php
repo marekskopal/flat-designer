@@ -169,7 +169,7 @@ final readonly class ItemHandler implements ElementHandler
 			'width' => $width,
 			'depth' => $depth,
 			'height' => $height,
-			'rotation' => (($fields->int('rotation', -3600, 3600) % 360) + 360) % 360,
+			'rotation' => (($fields->int('rotation', -3600, 3600, 'degrees') % 360) + 360) % 360,
 			'materialId' => $materialId,
 			'params' => $params,
 		];
@@ -250,7 +250,7 @@ final readonly class ItemHandler implements ElementHandler
 		$item->width = $fields->int('width', 1, State::MaxSize);
 		$item->depth = $fields->int('depth', 1, State::MaxSize);
 		$item->height = $fields->int('height', 1, State::MaxSize);
-		$item->rotation = $fields->int('rotation', 0, 359);
+		$item->rotation = $fields->int('rotation', 0, 359, 'degrees');
 		$item->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$params = $fields->raw('params');
 		$item->params = $params === [] || $params === null ? null : json_encode($params, JSON_THROW_ON_ERROR);

@@ -48,6 +48,7 @@ final readonly class RoomHandler implements ElementHandler
 			'wallFinishes',
 			'tileOriginX',
 			'tileOriginY',
+			'floorAngle',
 			...array_keys(RoomCeiling::Defaults),
 		];
 	}
@@ -71,6 +72,7 @@ final readonly class RoomHandler implements ElementHandler
 			'wallFinishes' => [],
 			'tileOriginX' => null,
 			'tileOriginY' => null,
+			'floorAngle' => 0,
 		] + RoomCeiling::Defaults;
 	}
 
@@ -110,6 +112,8 @@ final readonly class RoomHandler implements ElementHandler
 			'wallFinishes' => $this->wallFinishBands->parse($fields->raw('wallFinishes') ?? [], 'wallFinishes'),
 			'tileOriginX' => $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit),
 			'tileOriginY' => $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit),
+			// Planks and tiles look the same turned half round, so 0 ≤ angle < 180 (missing in older change states).
+			'floorAngle' => ((self::floorAngle($fields) % 180) + 180) % 180,
 		] + $this->ceiling->fields($ceilingHeight, $fields);
 	}
 
@@ -164,8 +168,14 @@ final readonly class RoomHandler implements ElementHandler
 		$room->wallFinishes = $wallFinishes === [] || $wallFinishes === null ? null : json_encode($wallFinishes, JSON_THROW_ON_ERROR);
 		$room->tileOriginX = $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit);
 		$room->tileOriginY = $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit);
+		$room->floorAngle = $fields->int('floorAngle', 0, 179, 'degrees');
 		$this->ceiling->apply($room, $fields);
 		$this->roomRepository->persist($room);
+	}
+
+	private static function floorAngle(FieldReader $fields): int
+	{
+		return $fields->raw('floorAngle') === null ? 0 : $fields->int('floorAngle', -360, 360, 'degrees');
 	}
 
 	private static function cast(AEntity $element): Room

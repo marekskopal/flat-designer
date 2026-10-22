@@ -177,26 +177,47 @@ export function tileOrigin(room: Pick<Room, 'tileOriginX' | 'tileOriginY'> | und
     return {x: room?.tileOriginX ?? 0, y: room?.tileOriginY ?? 0};
 }
 
+/** A room's tile grid: where its joints cross (plan mm) and how far its floor pattern is turned (degrees counter-clockwise). */
+export interface TileGrid {
+    origin: Vec2;
+    angle: number;
+}
+
+export function tileGrid(room: Pick<Room, 'tileOriginX' | 'tileOriginY' | 'floorAngle'> | undefined): TileGrid {
+    return {origin: tileOrigin(room), angle: room?.floorAngle ?? 0};
+}
+
 /** A polygon counter-clockwise, so its interior is on the left of every edge. */
 export function counterClockwise(polygon: readonly PlanPoint[]): PlanPoint[] {
     return polygonSignedArea(polygon) >= 0 ? [...polygon] : [...polygon].reverse();
 }
 
 /**
- * Texture coordinates (metres) of a point on a tiled surface, on the grid whose joints cross at `origin`.
+ * Texture coordinates (metres) of a point on a tiled surface, on the grid whose joints cross at `grid.origin`.
  * Point and origin are plan mm, `height` mm above the floor; the normal is in plan axes plus `up`. Floors
- * and other level faces take u, v from plan x, y. Upright faces take u along the face (to the right as seen
- * from the front) measured from the origin's projection, so joints continue the floor's around every
- * corner, and v from the floor, so rows start with a whole tile at the floor.
+ * and other level faces take u, v from plan x, y, turned by `grid.angle`. Upright faces take u along the face
+ * (to the right as seen from the front) measured from the origin's projection, so joints continue those of an
+ * unturned floor around every corner, and v from the floor, so rows start with a whole tile at the floor.
  */
-export function tileUv(point: Vec2, height: number, normal: {x: number; y: number; up: number}, origin: Vec2): [number, number] {
-    const dx = point.x - origin.x;
-    const dy = point.y - origin.y;
+export function tileUv(point: Vec2, height: number, normal: {x: number; y: number; up: number}, grid: TileGrid): [number, number] {
+    const dx = point.x - grid.origin.x;
+    const dy = point.y - grid.origin.y;
     if (Math.abs(normal.up) > 0.5) {
-        return [dx * MM, dy * MM];
+        return turnedUv(dx, dy, grid.angle);
     }
     const length = Math.hypot(normal.x, normal.y);
     return [((dx * -normal.y + dy * normal.x) / length) * MM, height * MM];
+}
+
+/** Plan offsets (mm) as texture coordinates (metres) of a pattern turned `angle` degrees counter-clockwise. */
+export function turnedUv(dx: number, dy: number, angle: number): [number, number] {
+    if (angle === 0) {
+        return [dx * MM, dy * MM];
+    }
+    const a = (angle * Math.PI) / 180;
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    return [(dx * cos + dy * sin) * MM, (dy * cos - dx * sin) * MM];
 }
 
 export function polygonSignedArea(polygon: readonly PlanPoint[]): number {

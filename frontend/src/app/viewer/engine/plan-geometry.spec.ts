@@ -20,6 +20,7 @@ import {
     slideOpening,
     snapPoint,
     snapToGrid,
+    tileGrid,
     tileOrigin,
     tileUv,
     wallColliders,
@@ -513,22 +514,35 @@ describe('window sashes', () => {
 
 describe('tile grid', () => {
     const origin = {x: 4010, y: 9655};
+    const grid = {origin, angle: 0};
 
     it('defaults to the plan origin', () => {
         expect(tileOrigin({tileOriginX: null, tileOriginY: null})).toEqual({x: 0, y: 0});
         expect(tileOrigin({tileOriginX: 4010, tileOriginY: 9655})).toEqual(origin);
+        expect(tileGrid({tileOriginX: 4010, tileOriginY: 9655})).toEqual(grid);
+        expect(tileGrid({tileOriginX: 4010, tileOriginY: 9655, floorAngle: 105}).angle).toBe(105);
     });
 
     it('lays floors on plan x, y from the origin', () => {
-        expect(tileUv({x: 4610, y: 9055}, 0, {x: 0, y: 0, up: 1}, origin)).toEqual([0.6, -0.6]);
+        expect(tileUv({x: 4610, y: 9055}, 0, {x: 0, y: 0, up: 1}, grid)).toEqual([0.6, -0.6]);
     });
 
     it('continues the floor joints up the walls and starts rows at the floor', () => {
         // Facing south (wall along x): u follows plan x, joints at the floor's x joints.
-        const [u, v] = tileUv({x: 4610, y: 8045}, 300, {x: 0, y: -1, up: 0}, origin);
+        const [u, v] = tileUv({x: 4610, y: 8045}, 300, {x: 0, y: -1, up: 0}, grid);
         expect(u).toBeCloseTo(0.6);
         expect(v).toBeCloseTo(0.3);
         // Facing east (wall along y): u runs with −y, a joint where the floor has one.
-        expect(tileUv({x: 3871, y: 9055}, 0, {x: 1, y: 0, up: 0}, origin)[0]).toBeCloseTo(-0.6);
+        expect(tileUv({x: 3871, y: 9055}, 0, {x: 1, y: 0, up: 0}, grid)[0]).toBeCloseTo(-0.6);
+    });
+
+    it('turns the floor by the grid angle but not the walls', () => {
+        const turned = {origin, angle: 90};
+        const [u, v] = tileUv({x: 4610, y: 9055}, 0, {x: 0, y: 0, up: 1}, turned);
+        expect(u).toBeCloseTo(-0.6);
+        expect(v).toBeCloseTo(-0.6);
+        const [wu, wv] = tileUv({x: 4610, y: 8045}, 300, {x: 0, y: -1, up: 0}, turned);
+        expect(wu).toBeCloseTo(0.6);
+        expect(wv).toBeCloseTo(0.3);
     });
 });

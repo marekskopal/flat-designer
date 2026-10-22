@@ -221,7 +221,10 @@ format is the text in `FurnitureTools::Format`.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
-  grid.
+  grid. A room's `floorAngle` (0–179° counter-clockwise, 0 lays planks along plan y) turns the pattern of its level
+  faces (the floor, the tops of its tiled items) about the tile origin: `tileGrid()` carries it to `tileUv()`, and
+  `buildFloor()` turns the UVs of the patterns `alignTiles()` does not lay (planks, wood) with `turnLevelUvs()`.
+  Upright faces, the wall bands included, keep their own joints.
 - Wall finishes: a room's `wallFinishes` are bands `{materialId, bottom, top}` lining all its walls. A wall face may have
   its own instead, the wall fields `leftFinishes` / `rightFinishes` (left / right of start → end; null takes the
   room's, `[]` leaves the face bare; validated by `WallFinishBands`; turning a wall round swaps them, so the bands stay

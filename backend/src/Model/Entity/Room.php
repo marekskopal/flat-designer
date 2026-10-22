@@ -20,6 +20,8 @@ use MarekSkopal\ORM\Enum\Type;
  * `{materialId, bottom, top}` (mm above the floor) lining the room's walls, e.g. tiling; doors are left free. A wall
  * face may have bands of its own instead (`Wall::$leftFinishes`). Above the bands the walls keep their own material. `tileOriginX/Y` is a plan point where tile joints
  * cross: the floor tiles, the wall bands and tiled items of the room share that grid (null: the plan origin).
+ * `floorAngle` turns the floor's pattern (planks, tiles) about that point, degrees counter-clockwise; 0 lays planks
+ * along plan y. It turns only the level faces, so the wall bands keep their own joints.
  *
  * The ceiling is in `ceilingMaterial` (null: white plaster). With `vaultSpacing` it is vaulted: shallow vaults
  * `vaultRise` high spring between parallel beams `vaultSpacing` apart, running at `vaultAngle` degrees
@@ -39,6 +41,9 @@ class Room extends AEntity
 
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $tileOriginY = null;
+
+	#[Column(type: Type::Int)]
+	public int $floorAngle = 0;
 
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $ceilingMaterial = null;

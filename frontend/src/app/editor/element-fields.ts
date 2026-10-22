@@ -267,6 +267,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'wallFinishes', label: 'Wall finishes [{materialId, bottom, top}] (JSON)', type: 'json'},
         {key: 'tileOriginX', label: 'Tile joints cross at x', type: 'int', unit: 'mm', nullable: true, half: true},
         {key: 'tileOriginY', label: 'Tile joints cross at y', type: 'int', unit: 'mm', nullable: true, half: true},
+        {key: 'floorAngle', label: 'Floor laid at', type: 'int', unit: '°', half: true},
     ],
     group: [{key: 'name', label: 'Name', type: 'text'}],
     variantSet: [{key: 'name', label: 'Name', type: 'text'}],

@@ -15,11 +15,12 @@ final readonly class FieldReader
 	{
 	}
 
-	public function int(string $key, int $min, int $max): int
+	/** @param string $unit named in the error, e.g. "degrees" for an angle */
+	public function int(string $key, int $min, int $max, string $unit = 'mm'): int
 	{
 		$value = $this->data[$key] ?? null;
 		if (!is_int($value) || $value < $min || $value > $max) {
-			throw EditException::invalid(sprintf('Field "%s" must be a whole number of mm between %d and %d.', $key, $min, $max));
+			throw EditException::invalid(sprintf('Field "%s" must be a whole number of %s between %d and %d.', $key, $unit, $min, $max));
 		}
 
 		return $value;
