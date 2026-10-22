@@ -1,0 +1,339 @@
+[
+  {
+    "name": "base cabinet",
+    "file": "kitchen-base-cabinet.json",
+    "size": {"width": 500, "depth": 580, "height": 860},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "door"}
+      ],
+      "plinth": 100,
+      "handle": "horizontal",
+      "handleSide": "right",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-250, 0, -290, 250, 860, 315],
+      "tracked": [
+        [
+          [-112, 807, 303, 112, 820, 315]
+        ],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "corner base with a blind left",
+    "file": "kitchen-base-cabinet.json",
+    "size": {"width": 1200, "depth": 580, "height": 860},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "door"}
+      ],
+      "plinth": 100,
+      "handle": "horizontal",
+      "handleSide": "right",
+      "blindLeft": 580,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-600, 0, -290, 600, 860, 315],
+      "tracked": [
+        [
+          [151, 807, 303, 429, 820, 315]
+        ],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "hob drawers",
+    "file": "kitchen-base-cabinet.json",
+    "size": {"width": 800, "depth": 580, "height": 860},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "drawer", "height": 180},
+        {"type": "drawer", "height": 290},
+        {"type": "drawer", "height": 290}
+      ],
+      "plinth": 100,
+      "handle": "horizontal",
+      "handleSide": "right",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-400, 0, -290, 400, 860, 315],
+      "tracked": [
+        [
+          [-179, 227, 303, 179, 240, 315],
+          [-179, 517, 303, 179, 530, 315],
+          [-179, 807, 303, 179, 820, 315]
+        ],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "hall stand bench with a pair of doors",
+    "file": "kitchen-base-cabinet.json",
+    "size": {"width": 1200, "depth": 400, "height": 450},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "door", "count": 2}
+      ],
+      "plinth": 60,
+      "handle": "none",
+      "handleSide": "right",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-600, 0, -200, 600, 450, 200],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "pair of doors with handles at the meeting edges",
+    "file": "kitchen-base-cabinet.json",
+    "size": {"width": 900, "depth": 580, "height": 860},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "drawer", "height": 180},
+        {"type": "door", "count": 2}
+      ],
+      "plinth": 100,
+      "handle": "vertical",
+      "handleSide": "right",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-450, 0, -290, 450, 860, 315],
+      "tracked": [
+        [
+          [397, 181, 303, 410, 332, 315],
+          [-53, 577, 303, -40, 778, 315],
+          [40, 577, 303, 53, 778, 315]
+        ],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "wall cabinet",
+    "file": "kitchen-wall-cabinet.json",
+    "size": {"width": 480, "depth": 350, "height": 700},
+    "z": 1450,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "door"}
+      ],
+      "handle": "none",
+      "handleSide": "right",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-240, 1450, -175, 240, 2150, 175],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "tall fridge with a vertical handle on the left",
+    "file": "kitchen-tall-cabinet.json",
+    "size": {"width": 600, "depth": 600, "height": 2600},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "door", "height": 700},
+        {"type": "door", "height": 1350},
+        {"type": "door", "height": 450, "handle": "none"}
+      ],
+      "plinth": 100,
+      "handle": "vertical",
+      "handleSide": "left",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-300, 0, -300, 300, 2600, 325],
+      "tracked": [
+        [
+          [-260, 475, 313, -247, 718, 325],
+          [-260, 881, 313, -247, 1353, 325]
+        ],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "tall oven and microwave column",
+    "file": "kitchen-tall-cabinet.json",
+    "size": {"width": 600, "depth": 600, "height": 2600},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "fronts": [
+        {"type": "drawer", "height": 300},
+        {"type": "drawer", "height": 150},
+        {"type": "oven", "height": 600},
+        {"type": "microwave", "height": 400},
+        {"type": "door", "height": 600},
+        {"type": "door", "height": 450, "handle": "none"}
+      ],
+      "plinth": 100,
+      "handle": "horizontal",
+      "handleSide": "right",
+      "blindLeft": 0,
+      "blindRight": 0
+    },
+    "reference": {
+      "box": [-300, 0, -300, 300, 2600, 334],
+      "tracked": [
+        [
+          [-134, 347, 313, 134, 360, 325],
+          [-134, 497, 313, 134, 510, 325],
+          [-134, 1590, 313, 134, 1603, 325]
+        ],
+        [
+          [-299, 551, 281, 299, 1149, 300],
+          [-299, 1151, 281, 299, 1549, 300]
+        ],
+        []
+      ]
+    }
+  },
+  {
+    "name": "worktop",
+    "file": "worktop.json",
+    "size": {"width": 1200, "depth": 600, "height": 38},
+    "z": 860,
+    "materialId": 1,
+    "values": {},
+    "reference": {
+      "box": [-600, 860, -300, 600, 898, 300],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "backsplash",
+    "file": "backsplash.json",
+    "size": {"width": 1200, "depth": 16, "height": 550},
+    "z": 900,
+    "materialId": 1,
+    "values": {},
+    "reference": {
+      "box": [-600, 900, -8, 600, 1450, 8],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "sliding wardrobe with a mirror door",
+    "file": "sliding-wardrobe.json",
+    "size": {"width": 2468, "depth": 600, "height": 2400},
+    "z": 0,
+    "materialId": 1,
+    "values": {
+      "doors": [
+        {},
+        {},
+        {"mirror": true},
+        {}
+      ],
+      "plinth": 60
+    },
+    "reference": {
+      "box": [-1234, 0, -300, 1234, 2400, 300],
+      "tracked": [
+        [],
+        [],
+        [
+          [10, 97, 286, 592, 2319, 294]
+        ]
+      ]
+    }
+  },
+  {
+    "name": "dining chair",
+    "file": "dining-chair.json",
+    "size": {"width": 400, "depth": 395, "height": 885},
+    "z": 0,
+    "materialId": 5,
+    "values": {"seatHeight": 460, "backWidth": 375},
+    "reference": {
+      "box": [-200, 0, -197, 200, 885, 198],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "dining table",
+    "file": "dining-table.json",
+    "size": {"width": 1320, "depth": 700, "height": 780},
+    "z": 0,
+    "materialId": 5,
+    "values": {},
+    "reference": {
+      "box": [-660, 0, -350, 660, 780, 350],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  },
+  {
+    "name": "hall stand back panel",
+    "file": "panel.json",
+    "size": {"width": 1200, "depth": 18, "height": 1400},
+    "z": 0,
+    "materialId": 1,
+    "values": {},
+    "reference": {
+      "box": [-600, 0, -9, 600, 1400, 9],
+      "tracked": [
+        [],
+        [],
+        []
+      ]
+    }
+  }
+]

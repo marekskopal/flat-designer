@@ -97,13 +97,9 @@ export class EditorPanelComponent {
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
     });
 
-    /**
-     * Item kinds of the Add menu; the built-in furniture kinds a definition replaces go last, as "old", and columns and
-     * beams under Building.
-     */
-    protected readonly currentKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy === null && !k.structural));
+    /** Item kinds of the Add menu; columns and beams go under Building. */
+    protected readonly currentKinds = computed(() => this.editor.itemKinds().filter((k) => !k.structural));
     protected readonly structureKinds = computed(() => this.editor.itemKinds().filter((k) => k.structural));
-    protected readonly oldKinds = computed(() => this.editor.itemKinds().filter((k) => k.replacedBy !== null));
 
     /** The furniture of the Add menu by where it comes from. */
     protected readonly furnitureSections = computed(() => {

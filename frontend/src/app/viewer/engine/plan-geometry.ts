@@ -246,31 +246,6 @@ export function polygonBounds(points: readonly PlanPoint[]): Bounds {
     );
 }
 
-export interface FrontSlot {
-    type: string;
-    bottom: number;
-    height: number;
-}
-
-/**
- * Stacks fronts from the bottom up within `available` mm. Fronts with a fixed height keep it; the
- * remainder is shared evenly by the others. When the fixed heights do not fit they are scaled down.
- */
-export function stackFronts(fronts: readonly {type: string; height?: number}[], available: number): FrontSlot[] {
-    const fixed = fronts.reduce((sum, f) => sum + (f.height ?? 0), 0);
-    const flexible = fronts.filter((f) => f.height === undefined).length;
-    const scale = fixed > available ? available / fixed : 1;
-    const flexHeight = flexible > 0 ? Math.max(available - fixed * scale, 0) / flexible : 0;
-
-    let bottom = 0;
-    return fronts.map((front) => {
-        const height = front.height === undefined ? flexHeight : front.height * scale;
-        const slot = {type: front.type, bottom, height};
-        bottom += height;
-        return slot;
-    });
-}
-
 /** Rounds a length in mm to the nearest multiple of `step` (the editor's snap grid). */
 export function snapToGrid(value: number, step: number): number {
     return step <= 1 ? Math.round(value) : Math.round(value / step) * step;

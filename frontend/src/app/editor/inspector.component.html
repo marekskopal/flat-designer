@@ -66,18 +66,6 @@
                         (change)="commit(def, $event)"
                     />
                 }
-                @case ('cabinet') {
-                    <fd-cabinet-params [params]="params(def)" [disabled]="disabled()" (paramsChange)="commitValue(def, $event)" />
-                }
-                @case ('wardrobe') {
-                    <fd-wardrobe-params
-                        [params]="params(def)"
-                        [width]="size('width')"
-                        [materials]="materials()"
-                        [disabled]="disabled()"
-                        (paramsChange)="commitValue(def, $event)"
-                    />
-                }
                 @case ('custom') {
                     <fd-custom-params
                         [definition]="definitionBody()"

@@ -3,13 +3,13 @@ import {DefinitionField, DefinitionParameter, FurnitureDefinitionBody} from '@ap
 import {ProjectFile} from '@app/models/project';
 import {Material} from '@app/models/scene';
 
-import {Params} from './cabinet-params';
 import {
     customParamsOf,
     definitionError,
     ListItem,
     listItems,
     ownListItems,
+    Params,
     parseWholeNumber,
     withItemAdded,
     withItemField,

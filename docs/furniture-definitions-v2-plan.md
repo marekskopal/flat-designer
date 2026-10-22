@@ -7,7 +7,7 @@ washbasin, toilet, bathtub, mirror, towel radiator, flush plate, fixtures, washi
 
 Builds on `docs/furniture-definitions-plan.md` (v1, phases 1–7).
 
-Status: done (phases 1–7, ukolio FD-16…FD-22). Removing the built-in furniture kinds is a follow-up task (see the
+Status: done (phases 1–7, ukolio FD-16…FD-22). The built-in furniture kinds were removed afterwards (FD-23, see the
 decisions at the end).
 
 ## What flat 50 needs that format 1 cannot express
@@ -145,3 +145,8 @@ Each phase is its own commit and leaves the app working.
 - Removing them is a **separate follow-up**: it needs saved versions and change-log JSON converted too (or the snapshot
   restore and undo mapping built-in items through `BuiltInFurnitureConverter`), then drops the builders
   (`kitchen.ts` / `furniture.ts` parts), the inspector forms, `parity.spec.ts`' built-in side and the enum values.
+- **Done (FD-23):** `ConvertBuiltInFurnitureMigration` converted the remaining items of every project (deleted ones
+  too), the saved versions (adding the definitions to each floor's `definitions`) and the change-log states, so undo
+  matches the converted items; an item its definition refuses becomes a plain box. `RemoveBuiltInFurnitureKindsMigration`
+  dropped the kinds from `items.kind`. The builders, the cabinet and wardrobe forms and `replacedBy` are gone;
+  `parity.spec.ts` now compares against `parity-reference.json`, what the built-in kinds drew.

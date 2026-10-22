@@ -1,14 +1,12 @@
-import {CabinetParams, FrontSpec, Item} from '@app/models/scene';
+import {Item} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {markFixtureLight} from './lights';
 import {GrainDirection, MaterialLibrary} from './materials';
 import {boxAt} from './meshes';
-import {MM, stackFronts} from './plan-geometry';
+import {MM} from './plan-geometry';
 
 const FrontThickness = 19;
-const FrontGap = 3;
-const PlinthRecess = 50;
 const HandleSection = 12;
 const HandleStandoff = 25;
 
@@ -21,13 +19,6 @@ const HandleReachHeight = 1100;
  */
 export function buildKitchenItemBody(item: Item, materials: MaterialLibrary): THREE.Group | null {
     switch (item.kind) {
-        case 'BaseCabinet':
-        case 'WallCabinet':
-        case 'TallCabinet':
-            return buildCabinet(item, materials);
-        case 'Worktop':
-        case 'Backsplash':
-            return buildSlab(item, materials, 'horizontal');
         case 'Sink':
             return buildSink(item, materials);
         case 'Hob':
@@ -45,84 +36,6 @@ export function buildSlab(item: Item, materials: MaterialLibrary, grain: GrainDi
     const d = item.depth * MM;
     group.add(boxAt(materials.get(item.materialId, grain), -w / 2, 0, -d / 2, w, item.height * MM, d));
     return group;
-}
-
-function cabinetParams(item: Item): Required<CabinetParams> {
-    const p = item.params as CabinetParams;
-    const fronts = Array.isArray(p.fronts) && p.fronts.length > 0 ? p.fronts : [{type: 'door'} satisfies FrontSpec];
-    return {
-        plinth: typeof p.plinth === 'number' ? p.plinth : 0,
-        handle: p.handle ?? 'none',
-        handleSide: p.handleSide === 'left' ? 'left' : 'right',
-        fronts,
-        blindRight: typeof p.blindRight === 'number' ? p.blindRight : 0,
-        blindLeft: typeof p.blindLeft === 'number' ? p.blindLeft : 0,
-    };
-}
-
-function buildCabinet(item: Item, materials: MaterialLibrary): THREE.Group {
-    const params = cabinetParams(item);
-    const group = new THREE.Group();
-    const body = materials.get(item.materialId);
-    const mm = (v: number): number => v * MM;
-
-    const halfW = item.width / 2;
-    const backZ = -item.depth / 2;
-    const frontZ = item.depth / 2;
-
-    // Carcass behind the fronts, plinth recessed under them.
-    const carcassHeight = item.height - params.plinth;
-    group.add(boxAt(body, mm(-halfW), mm(params.plinth), mm(backZ), mm(item.width), mm(carcassHeight), mm(item.depth - FrontThickness)));
-    if (params.plinth > 0) {
-        const plinth = boxAt(
-            plinthMaterial(body, materials),
-            mm(-halfW + 2),
-            0,
-            mm(backZ),
-            mm(item.width - 4),
-            mm(params.plinth),
-            mm(item.depth - FrontThickness - PlinthRecess),
-        );
-        group.add(plinth);
-    }
-
-    const frontLeft = -halfW + params.blindLeft;
-    const frontRight = halfW - params.blindRight;
-    const slots = stackFronts(params.fronts, item.height - params.plinth);
-
-    slots.forEach((slot, index) => {
-        const spec = params.fronts[index];
-        const bottom = params.plinth + slot.bottom;
-        const leaves = spec.type === 'door' ? Math.max(1, spec.count ?? 1) : 1;
-        const leafWidth = (frontRight - frontLeft) / leaves;
-
-        for (let leaf = 0; leaf < leaves; leaf++) {
-            const left = frontLeft + leaf * leafWidth + FrontGap / 2;
-            const width = leafWidth - FrontGap;
-            const front = {left, width, bottom: bottom + FrontGap / 2, height: slot.height - FrontGap, z: frontZ - FrontThickness};
-
-            if (spec.type === 'oven' || spec.type === 'microwave') {
-                group.add(buildAppliance(spec.type, front, materials));
-                continue;
-            }
-
-            group.add(boxAt(body, mm(front.left), mm(front.bottom), mm(front.z), mm(front.width), mm(front.height), mm(FrontThickness)));
-
-            const handle = spec.handle ?? params.handle;
-            if (handle !== 'none') {
-                // Double doors get their handles at the meeting edges.
-                const edge = leaves === 2 ? (leaf === 0 ? 'right' : 'left') : params.handleSide;
-                group.add(buildHandle(handle, front, front.z + FrontThickness, item.z, edge, materials));
-            }
-        }
-    });
-
-    return group;
-}
-
-/** Plinth in a darker shade of the carcass, as it sits in the shadow under the fronts. */
-function plinthMaterial(body: THREE.Material, materials: MaterialLibrary): THREE.Material {
-    return materials.darkened(body, 0.7);
 }
 
 export interface FrontBox {

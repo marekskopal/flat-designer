@@ -2,7 +2,6 @@ import {Item, Room, SceneModel} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {buildCustomItemBody, DefinitionLibrary} from './custom/custom';
-import {buildFurnitureItemBody} from './furniture';
 import {buildKitchenItemBody} from './kitchen';
 import {MaterialLibrary} from './materials';
 import {buildModelItemBody, ModelLibrary} from './models';
@@ -45,7 +44,6 @@ export function buildItem(
         buildKitchenItemBody(item, materials) ??
         buildSanitaryItemBody(item, materials) ??
         buildOutdoorItemBody(item, materials) ??
-        buildFurnitureItemBody(item, materials) ??
         buildStructureItemBody(item, materials) ??
         new THREE.Group();
     object.name = `item:${item.name}`;

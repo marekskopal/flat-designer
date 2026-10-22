@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 import {ceilingHeightAt} from '../ceilings';
-import {taperedLeg} from '../furniture';
 import {buildAppliance, buildHandle} from '../kitchen';
 import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
@@ -12,6 +11,7 @@ import {boxAt, prismAt} from '../meshes';
 import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {evaluateDefinition, ResolvedPart} from './definition';
+import {taperedLeg} from './legs';
 
 /** The scene's furniture definitions by id. */
 export type DefinitionLibrary = ReadonlyMap<number, SceneDefinition>;

@@ -1,7 +1,7 @@
 import {FurnitureDefinitionBody} from '@app/models/furniture';
 import {evaluateDefinition, ItemSize} from '@app/viewer/engine/custom/definition';
 
-import {Params, swapped, withParam} from './cabinet-params';
+export type Params = Record<string, unknown>;
 
 /** The params of a Custom item: parameter values over the definition's defaults, and materials of its slots. */
 export interface CustomParams {
@@ -87,4 +87,21 @@ export function withItemRemoved(items: readonly ListItem[], index: number): List
 /** The list with an item swapped with the one before (−1) or after (+1) it. */
 export function withItemMoved(items: readonly ListItem[], index: number, direction: -1 | 1): ListItem[] {
     return swapped(items, index, direction);
+}
+
+/** Params with `key` set, or removed for undefined (the default applies); other keys are kept. */
+export function withParam(params: Params, key: string, value: unknown): Params {
+    const {[key]: _old, ...rest} = params;
+    return value === undefined ? rest : {...rest, [key]: value};
+}
+
+/** The list with an item swapped with the one before (−1) or after (+1) it; unchanged (a copy) at either end. */
+export function swapped<T>(items: readonly T[], index: number, direction: -1 | 1): T[] {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) {
+        return [...items];
+    }
+    const moved = [...items];
+    [moved[index], moved[target]] = [moved[target], moved[index]];
+    return moved;
 }

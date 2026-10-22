@@ -12,11 +12,6 @@ export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
 export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
 export type ShutterStyle = 'Louvred' | 'Solid';
 export type ItemKind =
-    | 'BaseCabinet'
-    | 'WallCabinet'
-    | 'TallCabinet'
-    | 'Worktop'
-    | 'Backsplash'
     | 'Sink'
     | 'Hob'
     | 'LedStrip'
@@ -30,9 +25,6 @@ export type ItemKind =
     | 'FlushPlate'
     | 'Fixture'
     | 'Fence'
-    | 'Wardrobe'
-    | 'Chair'
-    | 'Table'
     /** A structural pillar, square or round (`params.shape`). */
     | 'Column'
     /** A structural downstand beam along its width; z is its soffit. */
@@ -175,50 +167,6 @@ export interface Wall {
     /** The same on the face right of start → end. */
     rightFinishes: WallFinish[] | null;
     openings: Opening[];
-}
-
-export type FrontType = 'door' | 'drawer' | 'oven' | 'microwave';
-
-export interface FrontSpec {
-    type: FrontType;
-    /** Front height in mm; fronts without a height share the space left over. */
-    height?: number;
-    /** Side-by-side leaves (double door). */
-    count?: number;
-    /** Overrides the cabinet's handle for this front (e.g. 'none' for the top door of a tall column). */
-    handle?: CabinetHandle;
-}
-
-export type CabinetHandle = 'horizontal' | 'vertical' | 'none';
-
-export interface CabinetParams {
-    plinth?: number;
-    handle?: CabinetHandle;
-    /** Edge of a single door that carries a vertical handle, as seen from the front; 'right' by default. */
-    handleSide?: 'left' | 'right';
-    /** Fronts from the bottom up. */
-    fronts?: FrontSpec[];
-    /** Width (mm) of the front hidden behind the adjoining run in a corner, at the right or left end as seen from the front. */
-    blindRight?: number;
-    blindLeft?: number;
-}
-
-export interface WardrobeParams {
-    /** Sliding leaves, 2–6; by default one per ~900 mm of width. */
-    doors?: number;
-    /** Doors faced with mirror, numbered from 1 at the left as seen from the front. */
-    mirrorDoors?: number[];
-    /** Material of the door frames and tracks; aluminium by default. */
-    profileMaterialId?: number;
-    /** Height (mm) under the doors; 60 by default. */
-    plinth?: number;
-}
-
-export interface ChairParams {
-    /** Top of the seat (mm above the floor); 460 by default. */
-    seatHeight?: number;
-    /** Width (mm) of the seat at the back; the item width is the front. As wide as the front by default. */
-    backWidth?: number;
 }
 
 export interface Item {

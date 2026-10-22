@@ -100,7 +100,7 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     reload.
   - `EditorPanelComponent` has the toolbar, the Add menu and the shortcuts.
   - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. `when` limits a field
-    to certain elements, e.g. the `cabinet` / `wardrobe` forms.
+    to certain elements, e.g. the `custom` form of Custom items.
 - Engine picking: builders tag objects with `itemId` / `openingId` / `wallId` / `roomId` in `userData`
   (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
   selected wall's ends or room's corners get handles (in an overlay scene drawn above the section cut). One drag
@@ -141,7 +141,8 @@ format is the text in `FurnitureTools::Format`.
   `updatedAt` changes. A material slot without a default takes the item material, as the first slot does.
 - Seeding: global definitions come from `backend/migrations/furniture/*.json`. The seed migrations list their files,
   and `FurnitureSeeds` reads them. Both test suites build them, and `custom/parity.spec.ts` checks the sample project's
-  definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against the built-in kinds.
+  definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against what the removed built-in
+  kinds drew (`custom/parity-reference.json`, recorded before they went).
 - Per-copy variety: `hash(n, seed?)` gives a fixed pseudo-random 0 ≤ x < 1 (32-bit integer mixing, identical in both
   twins), and a part's `material` may be `{"expr": …}` choosing a slot per copy, e.g. book spines.
 - Pictures: a parameter of type `image` (no default) holds the id of an image file of the item's project, and a
@@ -155,10 +156,11 @@ format is the text in `FurnitureTools::Format`.
   cushion. Curtains and blinds are furniture placed at a window, not fields of the opening. Upholstery uses the `cushion` part, a
   box with rounded edges (`radius`), which the cut list counts among the other parts. Round tops and mirrors are
   `cylinder` parts.
-- Built-in furniture kinds: a conversion migration turned the sample project's built-in furniture into Custom items
-  in place, keeping the same ids (`BuiltInFurnitureConverter` maps params to values; `down()` maps them back). The
-  built-in kinds stay for saved versions and old changes. `ItemKindCatalog` marks them `replacedBy`, and the Add menu
-  lists them as "Built-in (old)".
+- Removed built-in furniture kinds (`BaseCabinet`, `WallCabinet`, `TallCabinet`, `Worktop`, `Backsplash`, `Wardrobe`,
+  `Chair`, `Table`): `ConvertFlat50FurnitureToDefinitions` turned the sample project's into Custom items in place
+  (same ids), then `ConvertBuiltInFurniture` the rest in every project, the saved versions and the change log, and
+  `RemoveBuiltInFurnitureKinds` dropped them from `items.kind`. `BuiltInFurnitureConverter` (params to values) and
+  `BuiltInItemConverter` (scene JSON) are kept only for these migrations.
 - UI: the Add menu's "Furniture —" groups; the inspector's `definition` / `custom` fields (`CustomParamsComponent`
   generates a form from the definition's parameters and slots; `EditorStore.definitions`); `/furniture` (the library,
   `?projectId=`); and `/furniture/:id` (a JSON editor with `FurniturePreview`, a framework-free one-item scene in
@@ -171,8 +173,8 @@ format is the text in `FurnitureTools::Format`.
 
 ## Item builders
 
-- `viewer/engine/items.ts` dispatches to `kitchen.ts`, `sanitary.ts`, `outdoor.ts`, `furniture.ts` and `structure.ts`.
-  Each one builds the item body in its local frame.
+- `viewer/engine/items.ts` dispatches to `custom/custom.ts`, `models.ts`, `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and
+  `structure.ts`. Each one builds the item body in its local frame.
 - Structural items (`ItemKindEnum::isStructural()`, `structural` in `list_item_kinds`): a `Column` (`params.shape`
   rect or round) and a `Beam` along its width, z being its soffit. They are listed under Building in the Add menu.
   `StructureSize` makes a new one in a room reach its ceiling or hang from it (a vault counts at its springing)

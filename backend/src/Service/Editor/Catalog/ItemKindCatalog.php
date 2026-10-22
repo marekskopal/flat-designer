@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Editor\Catalog;
 
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Service\Furniture\BuiltInFurnitureConverter;
 
 /**
  * What every item kind is, the size and elevation a new one starts with, and the `params` the viewer
@@ -13,29 +12,11 @@ use FlatDesigner\Service\Furniture\BuiltInFurnitureConverter;
  */
 final readonly class ItemKindCatalog
 {
-	private const string CabinetParams = 'plinth: mm of recessed plinth under the fronts (base/tall, e.g. 100); handle: "horizontal" | '
-		. '"vertical" | "none"; handleSide: "left" | "right" (default) edge of a single door with a vertical handle, as seen from the '
-		. 'front; fronts: list from the bottom up of {type: "door" | "drawer" | "oven" | "microwave", height?: mm, count?: leaves '
-		. 'side by side, handle?: overrides the cabinet\'s} — fronts without height share the rest; blindLeft / blindRight: mm of '
-		. 'the front hidden behind the adjoining run in a corner, at the left / right end as seen from the front.';
-
-	private const string WardrobeParams = 'doors: sliding leaves, 2 to 6 (default: one per ~900 mm of width); mirrorDoors: list of door numbers '
-		. 'counted from the left as seen from the front, e.g. [3], faced with mirror; profileMaterialId: material of the frames and '
-		. 'tracks (default aluminium); plinth: mm under the doors (default 60).';
-
-	private const string ChairParams = 'seatHeight: mm from the floor to the top of the seat (default 460); backWidth: mm of the seat at the '
-		. 'back, the width being its front (default: as wide as the front).';
-
 	private const string CustomParams = 'values: {parameter key: value} overriding the definition\'s parameter defaults; materials: {material slot '
 		. 'key: material id} (a slot without one takes the slot\'s default material; the first slot, and a slot without a default, '
 		. 'take the item material).';
 
 	private const array Kinds = [
-		'BaseCabinet' => ['description' => 'Kitchen base cabinet standing on the floor, front facing the rotation direction.', 'width' => 600, 'depth' => 580, 'height' => 860, 'z' => 0, 'params' => self::CabinetParams],
-		'WallCabinet' => ['description' => 'Kitchen wall cabinet hung on the wall; z is its bottom edge.', 'width' => 600, 'depth' => 350, 'height' => 720, 'z' => 1450, 'params' => self::CabinetParams],
-		'TallCabinet' => ['description' => 'Tall kitchen cabinet / appliance column (oven, microwave fronts).', 'width' => 600, 'depth' => 600, 'height' => 2200, 'z' => 0, 'params' => self::CabinetParams],
-		'Worktop' => ['description' => 'Worktop slab on top of base cabinets (z = cabinet height).', 'width' => 1200, 'depth' => 600, 'height' => 38, 'z' => 860, 'params' => 'none'],
-		'Backsplash' => ['description' => 'Wall panel between worktop and wall cabinets.', 'width' => 1200, 'depth' => 16, 'height' => 550, 'z' => 900, 'params' => 'none'],
 		'Sink' => ['description' => 'Inset sink with tap; place it on the worktop (z = worktop top).', 'width' => 780, 'depth' => 480, 'height' => 320, 'z' => 898, 'params' => 'bowls: 1 or 2 (1.5-bowl).'],
 		'Hob' => ['description' => 'Induction hob set into the worktop.', 'width' => 590, 'depth' => 520, 'height' => 6, 'z' => 898, 'params' => 'none'],
 		'LedStrip' => ['description' => 'LED strip, e.g. under wall cabinets.', 'width' => 1000, 'depth' => 20, 'height' => 8, 'z' => 1440, 'params' => 'color: "#rrggbb" light colour; intensity: number (default 5).'],
@@ -49,28 +30,22 @@ final readonly class ItemKindCatalog
 		'FlushPlate' => ['description' => 'Toilet flush plate on the pre-wall.', 'width' => 250, 'depth' => 10, 'height' => 165, 'z' => 1000, 'params' => 'none'],
 		'Fixture' => ['description' => 'Chrome bathroom fixture on a wall.', 'width' => 60, 'depth' => 70, 'height' => 60, 'z' => 600, 'params' => 'type: "bathMixer" | "showerHead" | "bidetSpray".'],
 		'Fence' => ['description' => 'Garden panel fence along x with posts.', 'width' => 2500, 'depth' => 60, 'height' => 1530, 'z' => 0, 'params' => 'panelLength: mm between posts (default 2500); baseBoard: mm of concrete base board.'],
-		'Wardrobe' => ['description' => 'Built-in wardrobe with sliding doors on two tracks in aluminium frames; the item material is the carcass and door panels.', 'width' => 2400, 'depth' => 600, 'height' => 2400, 'z' => 0, 'params' => self::WardrobeParams],
-		'Chair' => ['description' => 'Solid wood chair with tapered legs and a two-rail back; front facing the rotation direction, the item material is the wood.', 'width' => 400, 'depth' => 395, 'height' => 885, 'z' => 0, 'params' => self::ChairParams],
 		'Custom' => ['description' => 'Custom piece of furniture drawn from a furniture definition (definitionId, see list_furniture_definitions; create one with create_furniture_definition); the size defaults to the definition\'s.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => self::CustomParams],
 		'Model' => ['description' => 'A bought product (a chair, a lamp, a tap, a plant) drawn from a 3D model (modelId, see list_models), scaled evenly to fit the item\'s box, standing on its bottom and facing its front (rotation as for any item); the size defaults to the model\'s own.', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => 'none'],
 		'Column' => ['description' => 'Structural column (pillar) standing on the floor, cut by the section plane like walls; with a roomId it reaches that room\'s ceiling (the springing of a vault); the item material is its finish (default white paint). A pilaster is a column against a wall face.', 'width' => 300, 'depth' => 300, 'height' => 2600, 'z' => 0, 'params' => 'shape: "rect" (default) | "round" (an upright cylinder filling width × depth; equal for a circle).'],
 		'Beam' => ['description' => 'Structural downstand beam along its width, cut by the section plane like walls; z is its soffit, so it hangs from a ceiling at z = ceiling height - height (with a roomId, a new beam starts there). It may cross room boundaries. The item material is its finish (default white paint).', 'width' => 3000, 'depth' => 100, 'height' => 130, 'z' => 2470, 'params' => 'none'],
-		'Table' => ['description' => 'Solid wood table: a top of boards along the width, tapered legs and an apron; the item material is the wood.', 'width' => 1320, 'depth' => 700, 'height' => 780, 'z' => 0, 'params' => 'none'],
 	];
 
 	/**
-	 * Every kind; `replacedBy` names the global furniture definition to use for new items instead of a built-in kind
-	 * (kept for older items and saved versions), null for the others; `structural` marks the building elements.
+	 * Every kind; `structural` marks the building elements.
 	 *
-	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null, structural: bool}>
+	 * @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, structural: bool}>
 	 */
 	public function all(): array
 	{
 		$kinds = [];
 		foreach (ItemKindEnum::cases() as $case) {
-			$kinds[] = ['kind' => $case->value] + $this->get(
-				$case,
-			) + ['replacedBy' => BuiltInFurnitureConverter::Replaced[$case->value] ?? null, 'structural' => $case->isStructural()];
+			$kinds[] = ['kind' => $case->value] + $this->get($case) + ['structural' => $case->isStructural()];
 		}
 
 		return $kinds;

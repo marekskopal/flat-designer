@@ -6,8 +6,6 @@ namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
 use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\CabinetParamsValidator;
-use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
@@ -18,7 +16,6 @@ use FlatDesigner\Service\Editor\Element\StructureSize;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -34,9 +31,6 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(RoomCeiling::class)]
 #[CoversClass(StructureSize::class)]
 #[CoversClass(PolygonValidator::class)]
-#[CoversClass(CabinetParamsValidator::class)]
-#[CoversClass(WardrobeParamsValidator::class)]
-#[CoversClass(ChairParamsValidator::class)]
 #[CoversClass(ColumnParamsValidator::class)]
 final class ElementControllerTest extends EditorTestCase
 {
@@ -44,19 +38,19 @@ final class ElementControllerTest extends EditorTestCase
 	{
 		$revision = $this->revision();
 
-		$response = $this->edit('POST', 'items', body: ['kind' => 'BaseCabinet', 'name' => 'Base 60', 'x' => 300, 'rotation' => -90]);
+		$response = $this->edit('POST', 'items', body: ['kind' => 'Sink', 'name' => 'Sink', 'x' => 300, 'rotation' => -90]);
 
 		self::assertSame(201, $response->getStatusCode());
 		$result = $this->jsonBody($response);
 		self::assertSame($revision + 1, $result['revision']);
 		self::assertIsArray($result['element']);
-		self::assertSame('BaseCabinet', $result['element']['kind']);
+		self::assertSame('Sink', $result['element']['kind']);
 		self::assertSame(270, $result['element']['rotation']);
-		self::assertSame(600, $result['element']['width']);
+		self::assertSame(780, $result['element']['width']);
 		self::assertIsArray($result['change']);
-		self::assertSame('Added item "Base 60"', $result['change']['summary']);
+		self::assertSame('Added item "Sink"', $result['change']['summary']);
 		self::assertSame('Jane', $result['change']['actorName']);
-		self::assertSame(['Base 60'], array_column($this->sceneList('items'), 'name'));
+		self::assertSame(['Sink'], array_column($this->sceneList('items'), 'name'));
 	}
 
 	public function testUpdateChangesOnlyGivenFieldsAndSkipsNoOps(): void
@@ -112,81 +106,10 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertStringContainsString('Unknown field(s): colour', (string) $unknown->getBody());
 	}
 
-	public function testCabinetParamsAreValidated(): void
+	public function testParamsOfPlainKindsAreFreeForm(): void
 	{
-		$params = [
-			'plinth' => 100,
-			'handle' => 'vertical',
-			'handleSide' => 'left',
-			'blindLeft' => 300,
-			'fronts' => [['type' => 'drawer', 'height' => 180], ['type' => 'door', 'count' => 2, 'handle' => 'none']],
-		];
-		$cabinet = $this->create('items', ['kind' => 'BaseCabinet', 'params' => $params + ['custom' => 'kept']]);
-		self::assertSame($params + ['custom' => 'kept'], $cabinet['params']);
-
-		foreach ([
-			['plinth' => -1],
-			['plinth' => 860],
-			['handle' => 'knob'],
-			['fronts' => ['type' => 'door']],
-			['fronts' => [['type' => 'shelf']]],
-			['fronts' => [['type' => 'door', 'height' => 0]]],
-			['fronts' => [['type' => 'door', 'count' => 5]]],
-			['blindRight' => 600],
-			['blindLeft' => 300, 'blindRight' => 300],
-			['handleSide' => 'top'],
-			['fronts' => [['type' => 'door', 'handle' => 'knob']]],
-		] as $invalid) {
-			$response = $this->edit('PATCH', 'items', self::id($cabinet), ['params' => $invalid]);
-			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
-		}
-
-		// Other kinds keep free-form params.
 		$box = $this->create('items', ['kind' => 'Box', 'params' => ['handle' => 'knob']]);
 		self::assertSame(['handle' => 'knob'], $box['params']);
-	}
-
-	public function testWardrobeParamsAreValidated(): void
-	{
-		$wardrobe = $this->create('items', ['kind' => 'Wardrobe', 'name' => 'Wardrobe']);
-		self::assertSame([2400, 600, 2400], [$wardrobe['width'], $wardrobe['depth'], $wardrobe['height']]);
-
-		$params = ['doors' => 4, 'mirrorDoors' => [3], 'plinth' => 60, 'custom' => 'kept'];
-		$changed = $this->jsonBody($this->edit('PATCH', 'items', self::id($wardrobe), ['params' => $params]));
-		self::assertIsArray($changed['element']);
-		self::assertSame($params, $changed['element']['params']);
-
-		foreach ([
-			['doors' => 1],
-			['doors' => 7],
-			['doors' => '4'],
-			['plinth' => 2400],
-			['mirrorDoors' => 3],
-			['mirrorDoors' => [0]],
-			['doors' => 3, 'mirrorDoors' => [4]],
-			['mirrorDoors' => [2, 2]],
-			['profileMaterialId' => 'aluminium'],
-			['profileMaterialId' => 999999],
-		] as $invalid) {
-			$response = $this->edit('PATCH', 'items', self::id($wardrobe), ['params' => $invalid]);
-			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
-		}
-	}
-
-	public function testChairParamsAreValidated(): void
-	{
-		$chair = $this->create('items', ['kind' => 'Chair', 'name' => 'Chair']);
-		self::assertSame([400, 395, 885], [$chair['width'], $chair['depth'], $chair['height']]);
-
-		$params = ['seatHeight' => 460, 'backWidth' => 375];
-		$changed = $this->jsonBody($this->edit('PATCH', 'items', self::id($chair), ['params' => $params]));
-		self::assertIsArray($changed['element']);
-		self::assertSame($params, $changed['element']['params']);
-
-		foreach ([['seatHeight' => 885], ['seatHeight' => '460'], ['backWidth' => 401], ['backWidth' => 0]] as $invalid) {
-			$response = $this->edit('PATCH', 'items', self::id($chair), ['params' => $invalid]);
-			self::assertSame(422, $response->getStatusCode(), (string) json_encode($invalid));
-		}
 	}
 
 	public function testColumnsAndBeamsFitTheCeilingOfTheirRoom(): void

@@ -7,15 +7,16 @@ namespace FlatDesigner\Service\Furniture;
 use stdClass;
 
 /**
- * Maps built-in furniture items to the global furniture definitions seeded for them (`SeedFlat50FurnitureDefinitions`)
- * and back: the definition's name, the parameter values and the slot materials for the item's kind and params. The
- * values say what the built-in kind did by default (no plinth, no handle, the right-hand handle side, the built-in
- * clamps of a chair, …), so the item looks the same; `parity.spec.ts` in the viewer checks that with the same mapping.
- * Mapping back gives params that draw the same, keys written out where the built-in kind would have defaulted.
+ * Maps items of the removed built-in furniture kinds to the global furniture definitions seeded for them
+ * (`SeedFlat50FurnitureDefinitions`) and back: the definition's name, the parameter values and the slot materials for
+ * the item's kind and params. The values say what the built-in kind did by default (no plinth, no handle, the
+ * right-hand handle side, the built-in clamps of a chair, …), so the item looks the same; `parity-reference.json` in
+ * the viewer holds the values and what the built-in kinds drew. Mapping back gives params that draw the same, keys
+ * written out where the built-in kind would have defaulted. Kept for the conversion migrations only.
  */
 final readonly class BuiltInFurnitureConverter
 {
-	/** The built-in furniture kinds a definition replaces for new items (kept for older items and saved versions). */
+	/** The removed built-in furniture kinds and the definitions that replaced them. */
 	public const array Replaced = [
 		'BaseCabinet' => 'Kitchen base cabinet',
 		'WallCabinet' => 'Kitchen wall cabinet',

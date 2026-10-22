@@ -18,14 +18,11 @@ use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
-use FlatDesigner\Service\Editor\ChairParamsValidator;
 use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\CustomItemValidator;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
 use FlatDesigner\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
@@ -152,13 +149,7 @@ final readonly class ItemHandler implements ElementHandler
 			$definition = null;
 			$params = [];
 		}
-		CabinetParamsValidator::validate($kind, $params, $width, $height);
-		WardrobeParamsValidator::validate($kind, $params, $height);
-		ChairParamsValidator::validate($kind, $params, $width, $height);
 		ColumnParamsValidator::validate($kind, $params);
-		if ($kind === ItemKindEnum::Wardrobe && is_int($params['profileMaterialId'] ?? null)) {
-			$this->materialResolver->resolve($params['profileMaterialId']);
-		}
 
 		$state = [
 			'roomId' => $roomId,

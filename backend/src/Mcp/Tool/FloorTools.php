@@ -87,12 +87,12 @@ final readonly class FloorTools
 			: $this->electricalScheduleService->forFloor($this->context->floor($projectId, $floorId));
 	}
 
-	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, replacedBy: string|null, structural: bool}> */
+	/** @return list<array{kind: string, description: string, width: int, depth: int, height: int, z: int, params: string, structural: bool}> */
 	#[McpTool(
 		name: 'list_item_kinds',
 		description: 'Item kinds you can add, each with a description, the default size (width × depth × height) and elevation z '
-			. 'a new item gets, and the params it understands. A kind with replacedBy is built-in furniture kept for older items: '
-			. 'add the furniture definition of that name instead (kind "Custom", see list_furniture_definitions).',
+			. 'a new item gets, and the params it understands. Custom-made furniture (cabinets, worktops, wardrobes, chairs, '
+			. 'tables) is not a kind: add a furniture definition (kind "Custom", see list_furniture_definitions).',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function listItemKinds(): array

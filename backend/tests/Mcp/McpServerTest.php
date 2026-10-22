@@ -200,13 +200,13 @@ final class McpServerTest extends IntegrationTestCase
 
 		$cabinet = $this->client->call(
 			'add_item',
-			['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'BaseCabinet', 'x' => 300, 'y' => 2610, 'rotation' => 180, 'params' => ['plinth' => 100, 'handle' => 'horizontal']],
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'kind' => 'Sink', 'x' => 300, 'y' => 2610, 'rotation' => 180, 'params' => ['bowls' => 2]],
 		);
 		self::assertIsArray($cabinet);
 		self::assertIsArray($cabinet['element']);
-		self::assertSame(860, $cabinet['element']['height']);
+		self::assertSame(320, $cabinet['element']['height']);
 		self::assertIsArray($cabinet['change']);
-		self::assertSame('Added item "BaseCabinet"', $cabinet['change']['summary']);
+		self::assertSame('Added item "Sink"', $cabinet['change']['summary']);
 
 		$floor = $this->client->call('get_floor', ['projectId' => $this->project->id, 'floorId' => $floorId]);
 		self::assertIsArray($floor);
@@ -429,7 +429,7 @@ final class McpServerTest extends IntegrationTestCase
 	public function testVariantsHideTheItemsOfTheOtherVariants(): void
 	{
 		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
-		$island = $this->client->call('add_item', $ids + ['kind' => 'BaseCabinet', 'name' => 'Island', 'x' => 2000, 'y' => 2000]);
+		$island = $this->client->call('add_item', $ids + ['kind' => 'Box', 'name' => 'Island', 'x' => 2000, 'y' => 2000]);
 		self::assertIsArray($island);
 		self::assertIsArray($island['element']);
 		$group = $this->client->call('create_group', $ids + ['name' => 'Island', 'itemIds' => [$island['element']['id']]]);
@@ -829,38 +829,6 @@ final class McpServerTest extends IntegrationTestCase
 			$isError,
 		);
 		self::assertFalse($isError, is_string($updated) ? $updated : '');
-	}
-
-	public function testAddsAWardrobe(): void
-	{
-		$floorId = Fixture::firstFloor($this->project)->id;
-		$isError = false;
-		$wardrobe = $this->client->call('add_item', [
-			'projectId' => $this->project->id,
-			'floorId' => $floorId,
-			'kind' => 'Wardrobe',
-			'x' => 1200,
-			'y' => 300,
-			'width' => 2468,
-			'params' => ['doors' => 4, 'mirrorDoors' => [3]],
-		], $isError);
-		self::assertFalse($isError);
-		self::assertIsArray($wardrobe);
-		self::assertIsArray($wardrobe['element']);
-		self::assertSame('Wardrobe', $wardrobe['element']['kind']);
-		self::assertSame(['doors' => 4, 'mirrorDoors' => [3]], $wardrobe['element']['params']);
-
-		$message = $this->client->call('add_item', [
-			'projectId' => $this->project->id,
-			'floorId' => $floorId,
-			'kind' => 'Wardrobe',
-			'x' => 0,
-			'y' => 0,
-			'params' => ['doors' => 3, 'mirrorDoors' => [4]],
-		], $isError);
-		self::assertTrue($isError);
-		self::assertIsString($message);
-		self::assertStringContainsString('mirrorDoors', $message);
 	}
 
 	public function testReadsAPlanAndCalibratesTheUnderlay(): void

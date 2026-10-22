@@ -5,10 +5,8 @@ import {ProjectFile} from '@app/models/project';
 import {Group, Material, Room, SceneDefinition, SceneModel} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
-import {CabinetParamsComponent} from './cabinet-params.component';
 import {CustomParamsComponent} from './custom-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
-import {WardrobeParamsComponent} from './wardrobe-params.component';
 
 export interface FieldChange {
     key: string;
@@ -21,7 +19,7 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
-    imports: [CabinetParamsComponent, CustomParamsComponent, WardrobeParamsComponent],
+    imports: [CustomParamsComponent],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -87,13 +85,13 @@ export class InspectorComponent {
         return formatFieldValue(def, this.element()[def.key]);
     }
 
-    /** The element's size (mm); the width sets the wardrobe's default door count. */
+    /** The element's size (mm), which the definition's form evaluates at. */
     protected size(key: 'width' | 'depth' | 'height'): number {
         const value = this.element()[key];
         return typeof value === 'number' ? value : 0;
     }
 
-    /** Current params of the element for the cabinet and wardrobe forms. */
+    /** Current params of the element for the definition's form. */
     protected params(def: FieldDef): Record<string, unknown> {
         const value = this.element()[def.key];
         return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};

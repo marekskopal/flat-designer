@@ -6,9 +6,7 @@ namespace FlatDesigner\Mcp\Tool;
 
 use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Service\Editor\CabinetParamsValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Editor\WardrobeParamsValidator;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
@@ -22,7 +20,7 @@ final readonly class ItemTools
 	private const array ParamsSchema = [
 		'type' => ['object', 'null'],
 		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params); '
-			. 'the listed properties are those of cabinets (BaseCabinet, WallCabinet, TallCabinet), Wardrobe, Chair and Custom',
+			. 'the listed properties are those of Custom',
 		'properties' => [
 			'values' => [
 				'type' => 'object',
@@ -34,43 +32,6 @@ final readonly class ItemTools
 				'additionalProperties' => ['type' => 'integer'],
 				'description' => 'Custom: material id (list_materials) per material slot key of the definition',
 			],
-			'plinth' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of recessed plinth under the fronts / doors'],
-			'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles],
-			'handleSide' => [
-				'type' => 'string',
-				'enum' => CabinetParamsValidator::HandleSides,
-				'description' => 'edge of a single door with a vertical handle, as seen from the front (default right)',
-			],
-			'fronts' => [
-				'type' => 'array',
-				'description' => 'fronts from the bottom up; fronts without height share the rest',
-				'items' => [
-					'type' => 'object',
-					'properties' => [
-						'type' => ['type' => 'string', 'enum' => CabinetParamsValidator::FrontTypes],
-						'height' => ['type' => 'integer', 'minimum' => 1, 'description' => 'mm'],
-						'count' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 4, 'description' => 'leaves side by side'],
-						'handle' => ['type' => 'string', 'enum' => CabinetParamsValidator::Handles, 'description' => "overrides the cabinet's handle"],
-					],
-					'required' => ['type'],
-				],
-			],
-			'blindRight' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run (right end)'],
-			'blindLeft' => ['type' => 'integer', 'minimum' => 0, 'description' => 'mm of the front hidden behind the adjoining run (left end)'],
-			'doors' => [
-				'type' => 'integer',
-				'minimum' => WardrobeParamsValidator::MinDoors,
-				'maximum' => WardrobeParamsValidator::MaxDoors,
-				'description' => 'Wardrobe: sliding leaves (default: one per ~900 mm of width)',
-			],
-			'mirrorDoors' => [
-				'type' => 'array',
-				'items' => ['type' => 'integer', 'minimum' => 1, 'maximum' => WardrobeParamsValidator::MaxDoors],
-				'description' => 'Wardrobe: door numbers faced with mirror, counted from the left as seen from the front',
-			],
-			'profileMaterialId' => ['type' => 'integer', 'description' => 'Wardrobe: material of the door frames and tracks (default aluminium)'],
-			'seatHeight' => ['type' => 'integer', 'minimum' => 1, 'description' => 'Chair: mm from the floor to the top of the seat (default 460)'],
-			'backWidth' => ['type' => 'integer', 'minimum' => 1, 'description' => 'Chair: mm of the seat at the back (default: the width)'],
 		],
 		'additionalProperties' => true,
 		'default' => null,
@@ -81,7 +42,7 @@ final readonly class ItemTools
 	}
 
 	/**
-	 * @param string $kind item kind from list_item_kinds, e.g. "BaseCabinet"
+	 * @param string $kind item kind from list_item_kinds, e.g. "Custom"
 	 * @param int $x footprint centre, mm east of the floor origin
 	 * @param int $y footprint centre, mm north of the floor origin
 	 * @param string|null $name label shown to the user (defaults to the kind)

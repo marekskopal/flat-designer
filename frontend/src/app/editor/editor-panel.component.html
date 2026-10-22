@@ -23,15 +23,6 @@
                     }
                 </optgroup>
             }
-            @if (oldKinds().length > 0) {
-                <optgroup label="Built-in (old)">
-                    @for (kind of oldKinds(); track kind.kind) {
-                        <option [value]="'item:' + kind.kind" [title]="'Kept for older items; prefer the furniture “' + kind.replacedBy + '”.'">
-                            {{ kindLabel(kind.kind) }}
-                        </option>
-                    }
-                </optgroup>
-            }
             <optgroup label="Building">
                 <option value="wall">Wall</option>
                 @for (kind of structureKinds(); track kind.kind) {

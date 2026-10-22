@@ -1,14 +1,11 @@
 import {OpeningType} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
-import {isCabinet} from './cabinet-params';
 import {isCustom} from './custom-params';
-import {isWardrobe} from './wardrobe-params';
 
 /**
- * `cabinet`: the structured form for a cabinet's params (plinth, handle, fronts, blindRight); `wardrobe`: the same for
- * a sliding-door wardrobe (doors, plinth, profile material, mirror doors); `definition`: the furniture definition of a
- * Custom item; `custom`: the form generated from that definition (parameter values, slot materials).
+ * `definition`: the furniture definition of a Custom item; `custom`: the form generated from that definition (parameter
+ * values, slot materials).
  */
 export type FieldType =
     | 'int'
@@ -19,8 +16,6 @@ export type FieldType =
     | 'group'
     | 'json'
     | 'bool'
-    | 'cabinet'
-    | 'wardrobe'
     | 'definition'
     | 'model'
     | 'custom';
@@ -60,9 +55,8 @@ export interface FieldDef {
 }
 
 const ItemKinds = [
-    'BaseCabinet', 'WallCabinet', 'TallCabinet', 'Worktop', 'Backsplash', 'Sink', 'Hob', 'LedStrip', 'Box',
-    'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate', 'Fixture', 'Fence', 'Wardrobe',
-    'Chair', 'Table', 'Column', 'Beam', 'Custom', 'Model',
+    'Sink', 'Hob', 'LedStrip', 'Box', 'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate',
+    'Fixture', 'Fence', 'Column', 'Beam', 'Custom', 'Model',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
@@ -101,10 +95,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
         {key: 'groupId', label: 'Group', type: 'group', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
-        {key: 'params', label: 'Cabinet', type: 'cabinet', when: isCabinet},
-        {key: 'params', label: 'Wardrobe', type: 'wardrobe', when: isWardrobe},
         {key: 'params', label: 'Options', type: 'custom', when: isCustom},
-        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCabinet(element) && !isWardrobe(element) && !isCustom(element)},
+        {key: 'params', label: 'Params (JSON)', type: 'json', when: (element) => !isCustom(element)},
     ],
     wall: [
         {key: 'name', label: 'Name', type: 'text'},

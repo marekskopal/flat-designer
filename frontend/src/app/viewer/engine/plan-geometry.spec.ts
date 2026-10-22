@@ -20,7 +20,6 @@ import {
     slideOpening,
     snapPoint,
     snapToGrid,
-    stackFronts,
     tileOrigin,
     tileUv,
     wallColliders,
@@ -104,21 +103,6 @@ describe('polygon helpers', () => {
         const c = polygonCentroid([[0, 0], [2000, 0], [2000, 1000], [0, 1000]]);
         expect(c.x).toBeCloseTo(1000);
         expect(c.y).toBeCloseTo(500);
-    });
-});
-
-describe('stackFronts', () => {
-    it('shares the remainder among fronts without height', () => {
-        expect(stackFronts([{type: 'drawer', height: 200}, {type: 'door'}, {type: 'door'}], 800)).toEqual([
-            {type: 'drawer', bottom: 0, height: 200},
-            {type: 'door', bottom: 200, height: 300},
-            {type: 'door', bottom: 500, height: 300},
-        ]);
-    });
-
-    it('scales fixed fronts that do not fit', () => {
-        const slots = stackFronts([{type: 'door', height: 600}, {type: 'door', height: 600}], 600);
-        expect(slots.map((s) => s.height)).toEqual([300, 300]);
     });
 });
 

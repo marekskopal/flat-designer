@@ -160,7 +160,7 @@ final class Fixture
 		$items->persist(self::stamp(new Item(
 			floor: $floor,
 			room: $room,
-			kind: ItemKindEnum::BaseCabinet,
+			kind: ItemKindEnum::Box,
 			name: 'Base 60',
 			x: 300,
 			y: 2700,
@@ -170,12 +170,12 @@ final class Fixture
 			height: 870,
 			rotation: 180,
 			material: $material,
-			params: '{"fronts":["drawer","drawer"]}',
+			params: null,
 		)));
 		$items->persist(self::stamp(new Item(
 			floor: $floor,
 			room: null,
-			kind: ItemKindEnum::Worktop,
+			kind: ItemKindEnum::Box,
 			name: 'Worktop',
 			x: 300,
 			y: 2700,
