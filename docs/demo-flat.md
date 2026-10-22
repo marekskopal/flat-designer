@@ -207,7 +207,8 @@ read with `get_project_file` and small local measuring scripts.
 
 1. Underlay calibrated from the scale bar, then the walls (`add_walls`) and the rooms (`detect_room`). Version 1.
 2. Doors, French windows with panels, transoms and shutters, light-well windows, balconies and railings. Version 2.
-3. Finishes: oak planks, terrazzo, herringbone band, black kitchen ceiling, brick vaults with beams, skirting.
+3. Finishes: oak planks, terrazzo, herringbone band, black kitchen ceiling, brick vaults with beams, skirting. The
+   living room, dining and master bedroom planks run along the diagonal partition (`floorAngle` 75, FD-51).
 4. The kitchen (6 base modules, 4 wall cabinets, worktop, backsplashes, hob, sink, oak end panels) as one group, and
    **Oak sliding panels**, a project definition of six `slidingDoor` leaves on a ceiling track with an `open`
    parameter. The two states are the variants of "Kitchen open / closed".
@@ -224,7 +225,6 @@ The shell, heights, vaults, service box, kitchen, sliding panels and bathroom wa
 (photos 02 and 12 side by side with their saved views). Placing the poster outside the dining room was caught
 in the comparison and fixed. These mismatches remain, each logged as a task:
 
-- **FD-51** The planks run along the plan axes, not along the diagonal.
 - **FD-52** Wall finishes are per room, so the shower walls are herringbone instead of terrazzo.
 - **FD-53** Missing product models: vessel basin, black taps, close-coupled WC, rain shower, extractor, Cesca and
   butterfly chairs, TMM lamp. Stand-ins are named "… stand-in".
