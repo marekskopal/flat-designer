@@ -315,6 +315,8 @@ export class ViewerEngine {
     private sceneData: Scene | null = null;
     private walkthrough: Walkthrough | null = null;
     private lastFrame = performance.now();
+    /** Something was dragged, previewed or drawn in the last frame: its shadow follows it, and is redrawn once it ends. */
+    private moving = false;
     /** CPU time of the last frames, for the `?stats` readout. */
     private readonly frameStats = new FrameStats();
     /** What the last frame drew, all its passes together. */
@@ -332,6 +334,9 @@ export class ViewerEngine {
         this.renderer.toneMappingExposure = 1.0;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFShadowMap;
+        // The shadow passes draw the scene again for the sun and six times per shadow-casting fixture: they run only when
+        // something casting a shadow has changed (`refreshShadows()`), or every frame while something is being moved.
+        this.renderer.shadowMap.autoUpdate = false;
         // Counters per frame rather than per render call: `tick()` resets them, so the shadow and post-processing passes add up.
         this.renderer.info.autoReset = false;
         container.appendChild(this.renderer.domElement);
@@ -420,6 +425,7 @@ export class ViewerEngine {
             this.leafStates.sync(scene.walls);
         }
         this.leafStates.apply(this.leaves);
+        this.refreshShadows();
         this.walkthrough?.setColliders(sceneColliders(scene));
         this.updateLeafColliders();
         this.loadedFloorId = scene.floor.id;
@@ -698,6 +704,7 @@ export class ViewerEngine {
             this.showCeilingParts(object);
             this.items.set(item.id, object);
             content.add(object);
+            this.refreshShadows();
         }
         this.applyLights();
         if (this.selection?.kind === 'item' || this.selection?.kind === 'group') {
@@ -831,6 +838,7 @@ export class ViewerEngine {
             this.parts.ceilings.visible = visible;
         }
         this.items.forEach((object) => this.showCeilingParts(object));
+        this.refreshShadows();
     }
 
     /** Shows or hides the parts of an item that belong to the ceiling (a beam) with the ceilings. */
@@ -876,6 +884,7 @@ export class ViewerEngine {
         // A new size needs a new map.
         this.sun.shadow.map?.dispose();
         this.sun.shadow.map = null;
+        this.refreshShadows();
         this.resize();
     }
 
@@ -904,6 +913,7 @@ export class ViewerEngine {
         this.scene.environmentIntensity = daylight.environment;
         this.scene.background = new THREE.Color(night ? NightBackgroundColor : BackgroundColor);
         this.applyLights();
+        this.refreshShadows();
     }
 
     private applyLights(): void {
@@ -1030,6 +1040,7 @@ export class ViewerEngine {
         this.sectionHeight = height;
         this.updateHandles();
         this.commentPins.setSectionHeight(height);
+        this.refreshShadows();
         if (height === null) {
             this.renderer.clippingPlanes = [];
             return;
@@ -1238,6 +1249,7 @@ export class ViewerEngine {
         }
         this.leafStates.apply(this.leaves);
         this.updateLeafColliders();
+        this.refreshShadows();
         walkthrough.lock();
     }
 
@@ -1440,6 +1452,11 @@ export class ViewerEngine {
         };
     }
 
+    /** The shadow maps are redrawn with the next frame. */
+    private refreshShadows(): void {
+        this.renderer.shadowMap.needsUpdate = true;
+    }
+
     /** One frame of the animation loop, timed and counted for `stats()`. */
     private tick(): void {
         const started = performance.now();
@@ -1456,7 +1473,13 @@ export class ViewerEngine {
         if (this.leafStates.update(dt)) {
             this.leafStates.apply(this.leaves);
             this.updateLeafColliders();
+            this.refreshShadows();
         }
+        const moving = this.drag !== null || this.preview !== null || this.drawLayer.children.length > 0;
+        if (moving || this.moving) {
+            this.refreshShadows();
+        }
+        this.moving = moving;
         if (this.walkthrough !== null) {
             this.walkthrough.update(dt);
             this.updateAim();

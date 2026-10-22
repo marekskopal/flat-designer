@@ -270,6 +270,10 @@ format is the text in `FurnitureTools::Format`.
   The handle and measure overlay still draws after it, on the canvas.
 - The pages' Display has "Presentation quality"; `ShareSettingsDto.presentation` opens a share link with it. The
   screenshot capture (FD-44) is meant to use it.
+- Shadow maps are static (`shadowMap.autoUpdate` off): the sun's and the fixtures' shadow passes run only after
+  `refreshShadows()`. `load()`, item rebuilds, ceilings, the section cut, lighting, quality and moving door leaves
+  call it, and the maps update every frame while a drag, preview or drawing is under way. **Engine code that moves,
+  shows or hides anything casting a shadow outside these paths must call `refreshShadows()`.**
 - Measuring it (FD-58): `?stats` in a viewer URL shows `StatsHudComponent` (frame CPU time, draw calls, triangles,
   programs, meshes, lights, build time; `viewer/engine/frame-stats.ts`) and exposes `window.fdBench`. The renderer's
   `info.autoReset` is off, and `tick()` resets it once a frame, so the counts cover the shadow, post-processing and
