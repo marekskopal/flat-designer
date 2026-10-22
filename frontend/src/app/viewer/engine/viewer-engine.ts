@@ -116,6 +116,8 @@ const DoorReach = 2.2;
 
 /** Shortest wall the backend accepts, mm. */
 const MinWallLength = 100;
+/** Input on the canvas that may change the view; pointer moves invalidate only where they draw something. */
+const InputEvents = ['pointerdown', 'pointerup', 'pointerleave', 'dblclick', 'wheel'] as const;
 /** The floor level, where the drawing tools place points. */
 const FloorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 /** Snap grid for dragged elements, mm (Shift: whole mm, no snapping). */
@@ -331,6 +333,13 @@ export class ViewerEngine {
     private lastFrame = performance.now();
     /** Something was dragged, previewed or drawn in the last frame: its shadow follows it, and is redrawn once it ends. */
     private moving = false;
+    /**
+     * The view has to be drawn again (`invalidate()`). Frames are rendered on demand: when something has changed, while
+     * the camera, a door or a walk moves, and until the presentation quality's still frame follows the moving ones.
+     */
+    private needsRender = true;
+    /** The last frame was a presentation's moving frame: the still one is still to come. */
+    private renderedMoving = false;
     /** CPU time of the last frames, for the `?stats` readout. */
     private readonly frameStats = new FrameStats();
     /** What the last frame drew, all its passes together. */
@@ -383,6 +392,12 @@ export class ViewerEngine {
         this.scene.add(this.commentPins.group);
         this.commentPins.onPick = (id): void => this.onCommentPick(id);
 
+        // The controls report every change of the camera, damping included, as they update it.
+        this.controls.addEventListener('change', this.invalidate);
+        for (const type of InputEvents) {
+            this.renderer.domElement.addEventListener(type, this.invalidate);
+        }
+        document.addEventListener('visibilitychange', this.invalidate);
         this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.addEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.addEventListener('pointerup', this.handlePointerUp);
@@ -403,6 +418,7 @@ export class ViewerEngine {
      * elements that changed; a different floor, or changed materials, builds everything anew.
      */
     public load(scene: Scene): void {
+        this.invalidate();
         this.cancelDrag();
         this.clearPreview();
         this.loads++;
@@ -481,6 +497,7 @@ export class ViewerEngine {
 
         const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
         this.materials = new MaterialLibrary(scene.materials, anisotropy);
+        this.materials.onTextureLoaded = this.invalidate;
 
         const content = new THREE.Group();
         content.name = `floor:${scene.floor.name}`;
@@ -746,6 +763,7 @@ export class ViewerEngine {
 
     /** Highlights the selected element: a room's floor is tinted, other elements get an outline box. */
     public setSelection(selection: Selection | null): void {
+        this.invalidate();
         this.selection = selection;
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
 
@@ -762,6 +780,7 @@ export class ViewerEngine {
 
     /** Outlines the items picked with Shift+click. */
     public setPicked(itemIds: number[]): void {
+        this.invalidate();
         this.picked = itemIds;
         this.removePickedOutlines();
         for (const id of itemIds) {
@@ -780,6 +799,7 @@ export class ViewerEngine {
      * wall's ends and the selected room's corners get handles.
      */
     public setEditMode(enabled: boolean): void {
+        this.invalidate();
         this.editMode = enabled;
         if (!enabled) {
             this.cancelDrag();
@@ -794,6 +814,7 @@ export class ViewerEngine {
      * open), or add the room around the pointer (`detectRoom`).
      */
     public setTool(tool: EditorTool): void {
+        this.invalidate();
         if (tool === this.tool) {
             return;
         }
@@ -808,6 +829,7 @@ export class ViewerEngine {
 
     /** Thickness and height of the walls drawn next. */
     public setWallDraft(draft: WallDraftShape): void {
+        this.invalidate();
         this.wallDraft = draft;
         this.updateDrawing();
     }
@@ -817,6 +839,7 @@ export class ViewerEngine {
      * counter-clockwise from east), or towards the pointer when null. Typed lengths come in this way.
      */
     public placeRunPoint(length: number, angle: number | null): void {
+        this.invalidate();
         const run = this.run;
         const previous = run?.points.at(-1);
         if (run === null || previous === undefined) {
@@ -828,11 +851,13 @@ export class ViewerEngine {
 
     /** Ends the run being drawn as it is (open); a run of one point is dropped. */
     public finishRun(): void {
+        this.invalidate();
         this.commitRun(false);
     }
 
     /** Drops the run being drawn; false when there was none. */
     public cancelRun(): boolean {
+        this.invalidate();
         if (this.run === null) {
             return false;
         }
@@ -865,6 +890,7 @@ export class ViewerEngine {
     }
 
     public setLabelsVisible(visible: boolean): void {
+        this.invalidate();
         this.labelsVisible = visible;
         this.labels.forEach((label) => (label.visible = visible));
     }
@@ -916,12 +942,14 @@ export class ViewerEngine {
             this.renderedProjection.copy(this.camera.projectionMatrix);
             this.cameraMovedAt = now;
         }
+        this.renderedMoving = false;
         if (this.presentation === null) {
             this.renderer.render(this.scene, this.camera);
         } else if (this.stillFrames || now - this.cameraMovedAt >= PresentationSettleMs) {
             this.presentation.render();
         } else {
             this.presentation.renderMoving();
+            this.renderedMoving = true;
         }
     }
 
@@ -947,6 +975,7 @@ export class ViewerEngine {
     }
 
     public setDimensionsVisible(visible: boolean): void {
+        this.invalidate();
         this.dimensionsVisible = visible;
     }
 
@@ -956,6 +985,7 @@ export class ViewerEngine {
      * tools, and takes the clicks before them.
      */
     public setMeasuring(on: boolean): void {
+        this.invalidate();
         if (on === this.measuring) {
             return;
         }
@@ -971,15 +1001,18 @@ export class ViewerEngine {
 
     /** The pins of the review comments; `activeId` is the thread shown in the panel. */
     public setComments(pins: readonly CommentPin[], activeId: number | null): void {
+        this.invalidate();
         this.commentPins.set(pins, activeId);
     }
 
     public setCommentsVisible(visible: boolean): void {
+        this.invalidate();
         this.commentPins.setVisible(visible);
     }
 
     /** The comment tool: in any view, a click reports the point under the pointer (`onCommentPlace`). */
     public setCommenting(on: boolean): void {
+        this.invalidate();
         this.commenting = on;
         if (on) {
             this.cancelDrag();
@@ -989,6 +1022,7 @@ export class ViewerEngine {
 
     /** Turns the camera to a commented point: centred from above in the top view, closer in 3D. */
     public focusPoint(point: CommentPoint): void {
+        this.invalidate();
         const target = new THREE.Vector3(point.x * MM, point.z * MM, -point.y * MM);
         const offset = this.camera.position.clone().sub(this.controls.target);
         if (!this.isTopDown()) {
@@ -999,6 +1033,7 @@ export class ViewerEngine {
 
     /** Clears the measurement; false when there was none. */
     public clearMeasurement(): boolean {
+        this.invalidate();
         if (this.measurement.a === null) {
             return false;
         }
@@ -1031,6 +1066,7 @@ export class ViewerEngine {
      * The image is the decoded file of `underlay.fileId`.
      */
     public setUnderlay(underlay: Underlay | null, image: TexImageSource | null): void {
+        this.invalidate();
         if (this.underlay !== null && underlay !== null && image === this.underlayImage) {
             // The same image moved or faded: no new texture upload.
             updateUnderlay(this.underlay, underlay);
@@ -1049,11 +1085,13 @@ export class ViewerEngine {
     }
 
     public setUnderlayVisible(visible: boolean): void {
+        this.invalidate();
         this.underlayVisible = visible;
     }
 
     /** With the measure tool on: the two points clicked next calibrate the underlay (`onCalibrate`), without snapping. */
     public setCalibrating(on: boolean): void {
+        this.invalidate();
         this.calibrating = on;
         this.measurement = NoMeasurement;
         this.updateMeasure();
@@ -1075,11 +1113,13 @@ export class ViewerEngine {
 
     /** Width (px) covered by UI on the left; the projection centre shifts right so the model is framed in the free area. */
     public setInsetLeft(pixels: number): void {
+        this.invalidate();
         this.insetLeft = pixels;
         this.resize();
     }
 
     public setView(preset: ViewPreset, animate = true): void {
+        this.invalidate();
         const center = this.planCenter();
         const width = (this.bounds.maxX - this.bounds.minX) * MM;
         const depth = (this.bounds.maxY - this.bounds.minY) * MM;
@@ -1139,6 +1179,7 @@ export class ViewerEngine {
     public stats(): ViewerStats {
         return {
             frame: this.frameStats.summary(),
+            rendersPerSecond: this.frameStats.rendersPerSecond(performance.now()),
             render: this.lastCounters ?? renderCounters(this.renderer),
             scene: sceneCounters(this.scene),
             buildMs: this.buildMs,
@@ -1243,6 +1284,7 @@ export class ViewerEngine {
     }
 
     public setCameraPose(pose: CameraPose, animate = true): void {
+        this.invalidate();
         const toScene = (p: CameraPoint): THREE.Vector3 => new THREE.Vector3(p.x * MM, p.z * MM, -p.y * MM);
         this.moveCamera(toScene(pose.position), toScene(pose.target), animate);
     }
@@ -1252,6 +1294,7 @@ export class ViewerEngine {
      * indoor room, facing the way the camera does). Call it from a click: it captures the mouse.
      */
     public startWalkthrough(): void {
+        this.invalidate();
         if (this.walkthrough !== null || this.sceneData === null) {
             return;
         }
@@ -1290,11 +1333,13 @@ export class ViewerEngine {
 
     /** Ends the walk as Esc does: `onWalkthroughEnd` follows. */
     public endWalkthrough(): void {
+        this.invalidate();
         this.walkthrough?.end();
     }
 
     /** Back to the orbit controls; with `animate` the camera flies from the walker's eye to the overview. */
     public stopWalkthrough(animate = true): void {
+        this.invalidate();
         if (this.walkthrough === null) {
             return;
         }
@@ -1329,6 +1374,7 @@ export class ViewerEngine {
     }
 
     public focusRoom(room: Room): void {
+        this.invalidate();
         const c = polygonCentroid(room.polygon);
         const b = polygonBounds(room.polygon);
         const size = Math.max(b.maxX - b.minX, b.maxY - b.minY) * MM;
@@ -1363,6 +1409,11 @@ export class ViewerEngine {
         this.renderer.setAnimationLoop(null);
         this.presentation?.dispose();
         this.resizeObserver.disconnect();
+        this.controls.removeEventListener('change', this.invalidate);
+        for (const type of InputEvents) {
+            this.renderer.domElement.removeEventListener(type, this.invalidate);
+        }
+        document.removeEventListener('visibilitychange', this.invalidate);
         this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
         this.renderer.domElement.removeEventListener('pointermove', this.handlePointerMove);
         this.renderer.domElement.removeEventListener('pointerup', this.handlePointerUp);
@@ -1485,14 +1536,27 @@ export class ViewerEngine {
     /** The shadow maps are redrawn with the next frame. */
     private refreshShadows(): void {
         this.renderer.shadowMap.needsUpdate = true;
+        this.invalidate();
     }
+
+    /** The view is drawn again with the next frame. */
+    public readonly invalidate = (): void => {
+        this.needsRender = true;
+    };
 
     /** One frame of the animation loop, timed and counted for `stats()`. */
     private tick(): void {
+        const active = this.walkthrough !== null || this.tween !== null || this.drag !== null || this.preview !== null || this.moving;
+        if (!this.needsRender && !active && !this.renderedMoving) {
+            // Nothing to draw; the time without frames does not count as one long frame for the animations.
+            this.lastFrame = performance.now();
+            return;
+        }
+        this.needsRender = false;
         const started = performance.now();
         this.renderer.info.reset();
         this.frame();
-        this.frameStats.record(performance.now() - started);
+        this.frameStats.record(performance.now() - started, started);
         this.lastCounters = renderCounters(this.renderer);
     }
 
@@ -1607,6 +1671,8 @@ export class ViewerEngine {
         this.renderer.setSize(width, height);
         this.presentation?.setSize(width, height, this.renderer.getPixelRatio());
         this.labelRenderer.setSize(width, height);
+        // A resized canvas is cleared.
+        this.invalidate();
     }
 
     private readonly handlePointerDown = (event: PointerEvent): void => {
@@ -1736,6 +1802,10 @@ export class ViewerEngine {
 
     private readonly handlePointerMove = (event: PointerEvent): void => {
         const drag = this.drag;
+        // Hovering changes only the cursor, except for the measure and drawing tools' previews and drags.
+        if (drag !== null || this.measuring || (this.editMode && this.tool !== 'select')) {
+            this.invalidate();
+        }
         if (drag === null && this.commenting) {
             return;
         }
@@ -2042,6 +2112,7 @@ export class ViewerEngine {
     };
 
     private readonly handleKeyDown = (event: KeyboardEvent): void => {
+        this.invalidate();
         if (event.key === 'Escape' && this.drag !== null) {
             event.stopPropagation();
             this.cancelDrag();

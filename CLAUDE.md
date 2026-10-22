@@ -277,6 +277,11 @@ format is the text in `FurnitureTools::Format`.
   `refreshShadows()`. `load()`, item rebuilds, ceilings, the section cut, lighting, quality and moving door leaves
   call it, and the maps update every frame while a drag, preview or drawing is under way. **Engine code that moves,
   shows or hides anything casting a shadow outside these paths must call `refreshShadows()`.**
+- Frames are rendered on demand: `tick()` draws only after `invalidate()` and while something moves (a walk, a camera
+  tween, a drag or preview, a presentation's moving frames until its still one). The controls' `change` event (damping
+  included), canvas input, resizes, texture, model and picture loads, `refreshShadows()` and every public setter of
+  `ViewerEngine` invalidate. **Engine code that changes what is drawn outside these paths must call `invalidate()`.**
+  The furniture preview (`custom/preview.ts`) still renders every frame.
 - Measuring it (FD-58): `?stats` in a viewer URL shows `StatsHudComponent` (frame CPU time, draw calls, triangles,
   programs, meshes, lights, build time; `viewer/engine/frame-stats.ts`) and exposes `window.fdBench`. The renderer's
   `info.autoReset` is off, and `tick()` resets it once a frame, so the counts cover the shadow, post-processing and

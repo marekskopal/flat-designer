@@ -94,6 +94,10 @@ for (const view of views) {
     await page.goto(`${base}/projects/${projectId}/floors/${view.floorId}?view=${view.id}&stats`);
     await page.waitForSelector('fd-viewer-page[data-view-ready]', {timeout: 120000});
     result.gpu ||= await page.evaluate(() => window.fdBench.gpu());
+    // Frames rendered on demand: once the view has settled, an idle viewer renders none.
+    await page.waitForTimeout(2000);
+    const idleRenders = await page.evaluate(() => window.fdBench.stats().rendersPerSecond);
+    console.log(`  idle                 ${idleRenders} renders/s`);
     for (const scenario of scenarios) {
         const measured = [];
         for (let run = 0; run < runs; run++) {
@@ -116,6 +120,7 @@ for (const view of views) {
             meshes: kept.scene.meshes,
             lights: kept.scene.lights,
             buildMs: kept.buildMs,
+            idleRenders,
             size: `${kept.width}×${kept.height}`,
         };
         result.rows.push(row);
@@ -144,7 +149,7 @@ const cell = (now, before, digits, flag) => {
     return `${before.toFixed(digits)} → ${now.toFixed(digits)} (${change >= 0 ? '+' : ''}${(change * 100).toFixed(1)}%)${mark}`;
 };
 
-const columns = ['view', 'scenario', 'median ms', 'p95 ms', 'calls', 'triangles k', 'programs', 'build ms'];
+const columns = ['view', 'scenario', 'median ms', 'p95 ms', 'calls', 'triangles k', 'programs', 'build ms', 'idle /s'];
 const table = result.rows.map((row) => {
     const old = baseline?.rows.find((r) => r.view === row.view && r.scenario === row.scenario);
     return [
@@ -156,6 +161,7 @@ const table = result.rows.map((row) => {
         cell(row.triangles / 1000, old === undefined ? undefined : old.triangles / 1000, 0, false),
         cell(row.programs, old?.programs, 0, false),
         cell(row.buildMs, old?.buildMs, 0, false),
+        cell(row.idleRenders, old?.idleRenders, 0, false),
     ];
 });
 const widths = columns.map((c, i) => Math.max(c.length, ...table.map((r) => r[i].length)));

@@ -19,9 +19,16 @@ describe('percentile', () => {
 describe('FrameStats', () => {
     it('keeps the last frames only', () => {
         const stats = new FrameStats(3);
-        [100, 100, 1, 2, 3].forEach((ms) => stats.record(ms));
+        [100, 100, 1, 2, 3].forEach((ms, i) => stats.record(ms, i));
         expect(stats.summary()).toEqual(summarize([1, 2, 3]));
         expect(stats.summary().count).toBe(3);
+    });
+
+    it('counts the frames of the last second', () => {
+        const stats = new FrameStats();
+        [0, 500, 1200, 1900].forEach((at) => stats.record(5, at));
+        expect(stats.rendersPerSecond(2000)).toBe(2);
+        expect(stats.rendersPerSecond(5000)).toBe(0);
     });
 });
 

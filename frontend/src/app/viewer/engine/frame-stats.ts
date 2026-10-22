@@ -34,6 +34,8 @@ export interface SceneCounters {
 
 export interface ViewerStats {
     frame: FrameSummary;
+    /** Frames rendered in the last second: 0 while nothing changes, as frames are rendered on demand. */
+    rendersPerSecond: number;
     render: RenderCounters;
     scene: SceneCounters;
     /** Time the last full build of the floor took, ms. */
@@ -90,24 +92,33 @@ export function summarize(values: readonly number[]): FrameSummary {
     return {median: median(values), p95: percentile(values, 95), mean, count: values.length};
 }
 
-/** The last frame times, in a ring. */
+/** The last frame times, in a ring, with when the frames were rendered. */
 export class FrameStats {
     private readonly times: number[] = [];
+    private readonly renderedAt: number[] = [];
     private next = 0;
 
     public constructor(private readonly size = StatsFrames) {}
 
-    public record(ms: number): void {
+    /** A frame that took `ms`, rendered at `at` (`performance.now()`). */
+    public record(ms: number, at: number): void {
         if (this.times.length < this.size) {
             this.times.push(ms);
+            this.renderedAt.push(at);
         } else {
             this.times[this.next] = ms;
+            this.renderedAt[this.next] = at;
         }
         this.next = (this.next + 1) % this.size;
     }
 
     public summary(): FrameSummary {
         return summarize(this.times);
+    }
+
+    /** Frames rendered in the second before `now`. */
+    public rendersPerSecond(now: number): number {
+        return this.renderedAt.filter((at) => at > now - 1000).length;
     }
 }
 

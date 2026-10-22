@@ -29,6 +29,9 @@ export class MaterialLibrary {
     /** Materials of laid tiles, whose UVs `alignTiles` puts on the room's tile grid. */
     private readonly tiles = new WeakSet<THREE.Material>();
 
+    /** A texture image has arrived: a viewer rendering on demand draws again. */
+    public onTextureLoaded: () => void = () => undefined;
+
     public constructor(materials: readonly MaterialDto[], private readonly maxAnisotropy: number) {
         for (const material of materials) {
             this.byId.set(material.id, material);
@@ -222,6 +225,7 @@ export class MaterialLibrary {
             if (ctx !== null) {
                 layout.draw(ctx, image, seededRandom(dto.id * 7919));
                 texture.needsUpdate = true;
+                this.onTextureLoaded();
             }
         };
         image.src = new URL(`assets/${dto.texture}`, document.baseURI).href;
@@ -233,7 +237,7 @@ export class MaterialLibrary {
      * mm across × along the grain. Horizontal grain turns the image a quarter (the repeat applies after the turn).
      */
     private woodTexture(dto: MaterialDto, grain: GrainDirection): THREE.Texture {
-        const texture = new THREE.TextureLoader().load(new URL(`assets/${dto.texture}`, document.baseURI).href);
+        const texture = new THREE.TextureLoader().load(new URL(`assets/${dto.texture}`, document.baseURI).href, () => this.onTextureLoaded());
         texture.repeat.set(1000 / (dto.tileWidth ?? 1000), 1000 / (dto.tileHeight ?? 1000));
         if (grain === 'horizontal') {
             texture.rotation = Math.PI / 2;

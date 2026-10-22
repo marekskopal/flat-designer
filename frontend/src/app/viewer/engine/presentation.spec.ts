@@ -20,8 +20,8 @@ describe('presentation quality', () => {
 describe('viewChanged', () => {
     it('ignores what damping leaves behind and notices a move', () => {
         const a = new THREE.Matrix4().makeTranslation(1, 2, 3);
-        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeTranslation(1e-7, 0, 0)))).toBe(false);
-        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeTranslation(0.001, 0, 0)))).toBe(true);
-        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeRotationY(0.001)))).toBe(true);
+        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeTranslation(0.0002, 0, 0)))).toBe(false);
+        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeTranslation(0.005, 0, 0)))).toBe(true);
+        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeRotationY(0.005)))).toBe(true);
     });
 });

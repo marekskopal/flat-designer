@@ -19,6 +19,8 @@ const RefreshInterval = 500;
             <dl class="stats" aria-label="Rendering statistics">
                 <dt>Frame</dt>
                 <dd>{{ s.frame.median | number: '1.1-1' }} ms · p95 {{ s.frame.p95 | number: '1.1-1' }}</dd>
+                <dt>Renders</dt>
+                <dd>{{ s.rendersPerSecond }} /s</dd>
                 <dt>Calls</dt>
                 <dd>{{ s.render.calls | number }}</dd>
                 <dt>Triangles</dt>

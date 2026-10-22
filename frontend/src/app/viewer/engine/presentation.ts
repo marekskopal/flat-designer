@@ -35,8 +35,11 @@ const AoBlend = 1;
  */
 export const PresentationSettleMs = 150;
 
-/** How far two camera matrices may differ and still count as the same view: damping keeps nudging a resting camera. */
-const ViewTolerance = 1e-5;
+/**
+ * How far two camera matrices may differ and still count as the same view (1 mm, 0.06°), as the controls' own threshold:
+ * damping keeps nudging the camera by less for a second or more.
+ */
+const ViewTolerance = 1e-3;
 
 /**
  * GTAO at half the canvas resolution: the normal pass, the occlusion and its denoising get a quarter of the pixels. The
