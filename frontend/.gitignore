@@ -3,3 +3,4 @@
 /.angular/
 /out-tsc/
 /coverage/
+/benchmarks/

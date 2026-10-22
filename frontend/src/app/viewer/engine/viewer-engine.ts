@@ -23,6 +23,18 @@ import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
+import {
+    BenchmarkOptions,
+    BenchmarkResult,
+    FrameStats,
+    gpuName,
+    median,
+    percentile,
+    RenderCounters,
+    renderCounters,
+    sceneCounters,
+    ViewerStats,
+} from './frame-stats';
 import {exportTree, toGlb} from './gltf-export';
 import {buildItem, ItemAssets} from './items';
 import {applyFixtureLights} from './lights';
@@ -303,6 +315,12 @@ export class ViewerEngine {
     private sceneData: Scene | null = null;
     private walkthrough: Walkthrough | null = null;
     private lastFrame = performance.now();
+    /** CPU time of the last frames, for the `?stats` readout. */
+    private readonly frameStats = new FrameStats();
+    /** What the last frame drew, all its passes together. */
+    private lastCounters: RenderCounters | null = null;
+    /** Time the last full build took, ms. */
+    private buildMs = 0;
 
     public constructor(private readonly container: HTMLElement) {
         RectAreaLightUniformsLib.init();
@@ -314,6 +332,8 @@ export class ViewerEngine {
         this.renderer.toneMappingExposure = 1.0;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFShadowMap;
+        // Counters per frame rather than per render call: `tick()` resets them, so the shadow and post-processing passes add up.
+        this.renderer.info.autoReset = false;
         container.appendChild(this.renderer.domElement);
 
         this.labelRenderer = new CSS2DRenderer();
@@ -356,7 +376,7 @@ export class ViewerEngine {
         this.resizeObserver.observe(container);
         this.resize();
 
-        this.renderer.setAnimationLoop(() => this.frame());
+        this.renderer.setAnimationLoop(() => this.tick());
     }
 
     /**
@@ -375,7 +395,9 @@ export class ViewerEngine {
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
             this.applyChanges(previous, scene, changedPictures, changedModels);
         } else {
+            const started = performance.now();
             this.build(scene);
+            this.buildMs = performance.now() - started;
         }
         this.sceneData = scene;
         this.showVariants(scene);
@@ -1078,6 +1100,82 @@ export class ViewerEngine {
         return (this.modelLibrary?.pending() ?? 0) + (this.pictureLibrary?.pending() ?? 0);
     }
 
+    /** Frame times and what the frames draw, for the `?stats` readout. */
+    public stats(): ViewerStats {
+        return {
+            frame: this.frameStats.summary(),
+            render: this.lastCounters ?? renderCounters(this.renderer),
+            scene: sceneCounters(this.scene),
+            buildMs: this.buildMs,
+        };
+    }
+
+    public gpu(): string {
+        return gpuName(this.renderer);
+    }
+
+    /**
+     * Renders frames back to back in a scenario (quality, night, lights) and times each one with the GPU waited for (a
+     * pixel read), so the time is what the frame costs rather than the display's refresh interval. With `orbit`, the
+     * camera turns a full circle about its target. The scenario and the camera are restored afterwards.
+     */
+    public async benchmark(options: BenchmarkOptions = {}): Promise<BenchmarkResult> {
+        if (this.walkthrough !== null) {
+            throw new Error('End the walk before a benchmark.');
+        }
+        const frames = Math.max(1, options.frames ?? 120);
+        const warmup = Math.max(0, options.warmup ?? 20);
+        const previous = {quality: this.quality, night: this.night, lightsOn: this.lightsOn};
+        const position = this.camera.position.clone();
+        this.renderer.setAnimationLoop(null);
+        this.tween = null;
+        try {
+            this.setQuality(options.quality ?? previous.quality);
+            this.setLighting(options.night ?? previous.night, options.lightsOn ?? previous.lightsOn);
+            const target = this.controls.target;
+            const offset = position.clone().sub(target);
+            const step = options.orbit === true ? (2 * Math.PI) / frames : 0;
+            const gl = this.renderer.getContext();
+            const pixel = new Uint8Array(4);
+            const times: number[] = [];
+            let counters: RenderCounters | null = null;
+            for (let i = 0; i < warmup + frames; i++) {
+                const measured = i - warmup;
+                this.camera.position.copy(offset).applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.max(measured, 0) * step).add(target);
+                const started = performance.now();
+                this.renderer.info.reset();
+                this.frame();
+                this.renderer.setRenderTarget(null);
+                gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+                if (measured >= 0) {
+                    times.push(performance.now() - started);
+                    counters ??= renderCounters(this.renderer);
+                }
+                if (i % 10 === 9) {
+                    await new Promise((resolve) => setTimeout(resolve, 0));
+                }
+            }
+            const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+            return {
+                median: median(times),
+                p95: percentile(times, 95),
+                min: Math.min(...times),
+                frames,
+                render: counters ?? renderCounters(this.renderer),
+                scene: sceneCounters(this.scene),
+                buildMs: this.buildMs,
+                width: size.x,
+                height: size.y,
+            };
+        } finally {
+            this.camera.position.copy(position);
+            this.setQuality(previous.quality);
+            this.setLighting(previous.night, previous.lightsOn);
+            this.lastFrame = performance.now();
+            this.renderer.setAnimationLoop(() => this.tick());
+        }
+    }
+
     /**
      * The view as a PNG of `width` × `height` CSS pixels at `pixelRatio`, rendered off the visible size (the panel inset is
      * left out, so the floor is framed in the whole image). The room labels are HTML over the canvas and not in it.
@@ -1340,6 +1438,15 @@ export class ViewerEngine {
             start: performance.now(),
             duration: TweenDuration,
         };
+    }
+
+    /** One frame of the animation loop, timed and counted for `stats()`. */
+    private tick(): void {
+        const started = performance.now();
+        this.renderer.info.reset();
+        this.frame();
+        this.frameStats.record(performance.now() - started);
+        this.lastCounters = renderCounters(this.renderer);
     }
 
     private frame(): void {

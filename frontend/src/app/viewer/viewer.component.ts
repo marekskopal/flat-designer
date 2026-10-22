@@ -19,12 +19,14 @@ import {environment} from '@environments/environment';
 
 import {CommentPin, CommentPoint} from './engine/comments';
 import {EditorTool, ToolStatus} from './engine/drawing';
+import {BenchmarkOptions, BenchmarkResult, ViewerStats} from './engine/frame-stats';
 import {MeasureStatus} from './engine/measure';
 import {ModelFetcher} from './engine/models';
 import {PictureFetcher} from './engine/pictures';
 import {Vec2} from './engine/plan-geometry';
 import {Selection} from './engine/selection';
 import {DoorAim, EditHandler, ViewerEngine, ViewPreset, WallDraftShape} from './engine/viewer-engine';
+import {StatsHudComponent} from './stats-hud.component';
 
 /** A click on the view: the element (or group) under the pointer, `additive` for Shift+click. */
 export interface SelectEvent {
@@ -35,7 +37,15 @@ export interface SelectEvent {
 /** Hosts the three.js canvas. Persistent display options are inputs; one-off camera moves are methods. */
 @Component({
     selector: 'fd-viewer',
-    template: '<div #host class="host"></div>',
+    imports: [StatsHudComponent],
+    template: `
+        <div #host class="host"></div>
+        @if (showStats) {
+            @if (engine(); as e) {
+                <fd-stats-hud [engine]="e" />
+            }
+        }
+    `,
     styles: `
         :host, .host {
             position: relative;
@@ -129,7 +139,9 @@ export class ViewerComponent {
     /** Rebuilt only when the underlay itself changes, not with every edit of the floor. */
     private readonly underlay = computed(() => this.scene()?.underlay ?? null, {equal: (a, b) => JSON.stringify(a) === JSON.stringify(b)});
     /** Created after the first render, once the host element has its size. */
-    private readonly engine = signal<ViewerEngine | null>(null);
+    protected readonly engine = signal<ViewerEngine | null>(null);
+    /** `?stats` in the URL: the rendering readout over the view and the `fdBench` handle for `make benchmark`. */
+    protected readonly showStats = new URLSearchParams(window.location.search).has('stats');
 
     public constructor() {
         afterNextRender(() => {
@@ -150,6 +162,14 @@ export class ViewerComponent {
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
                 (window as unknown as Record<string, unknown>)['fdViewer'] = engine;
+            }
+            if (this.showStats) {
+                // For `make benchmark`, which runs against the production build.
+                (window as unknown as Record<string, unknown>)['fdBench'] = {
+                    stats: (): ViewerStats => engine.stats(),
+                    benchmark: (options?: BenchmarkOptions): Promise<BenchmarkResult> => engine.benchmark(options),
+                    gpu: (): string => engine.gpu(),
+                };
             }
         });
 

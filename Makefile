@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db env ssl-cert admin import-files import-models screenshots install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db env ssl-cert admin import-files import-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -71,6 +71,15 @@ screenshots:
 	cd frontend && pnpm exec playwright install chromium >/dev/null && \
 		FD_PROJECT=$(PROJECT) FD_EMAIL=$(EMAIL) FD_PASSWORD=$(PASSWORD) FD_VIEWS="$(VIEWS)" FD_ROOM="$(ROOM)" \
 		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) node scripts/screenshots.mjs
+
+## Measure the rendering cost of a project's saved views into frontend/benchmarks (needs the running stack, FD-58):
+## make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… [VIEWS="Tour ·"] [SCENARIOS=fast-day,…] [FRAMES=120] [RUNS=3]
+## [BASELINE=frontend/benchmarks/….json] (compare results from the same machine only)
+benchmark:
+	cd frontend && pnpm exec playwright install chromium >/dev/null && \
+		FD_PROJECT=$(PROJECT) FD_EMAIL=$(EMAIL) FD_PASSWORD=$(PASSWORD) FD_VIEWS="$(VIEWS)" FD_SCENARIOS="$(SCENARIOS)" \
+		FD_FRAMES=$(FRAMES) FD_RUNS=$(RUNS) FD_BASELINE=$(if $(BASELINE),$(abspath $(BASELINE))) \
+		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) node scripts/benchmark.mjs
 
 ## Install backend + frontend dependencies on the host (for linting, tests, ng serve)
 install:

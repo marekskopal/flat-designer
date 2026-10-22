@@ -270,6 +270,14 @@ format is the text in `FurnitureTools::Format`.
   The handle and measure overlay still draws after it, on the canvas.
 - The pages' Display has "Presentation quality"; `ShareSettingsDto.presentation` opens a share link with it. The
   screenshot capture (FD-44) is meant to use it.
+- Measuring it (FD-58): `?stats` in a viewer URL shows `StatsHudComponent` (frame CPU time, draw calls, triangles,
+  programs, meshes, lights, build time; `viewer/engine/frame-stats.ts`) and exposes `window.fdBench`. The renderer's
+  `info.autoReset` is off, and `tick()` resets it once a frame, so the counts cover the shadow, post-processing and
+  overlay passes together. `ViewerEngine.benchmark()` pauses the loop and renders frames back to back in a scenario
+  (quality, night, lights), orbiting the camera. It reads a pixel after each frame, so the GPU is waited for and vsync
+  does not cap the time. `make benchmark PROJECT=5 … [VIEWS=… BASELINE=…]` (`frontend/scripts/benchmark.mjs`) runs
+  it over the saved views and writes `frontend/benchmarks/<date>-<commit>.json` (gitignored). A baseline makes it print
+  `old → new` per metric. Compare results from the same machine only (the file names the GPU).
 
 ## Saved views and screenshots
 
@@ -493,4 +501,5 @@ format is the text in `FurnitureTools::Format`.
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |
 | `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `flat_designer_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
+| `make benchmark PROJECT=… EMAIL=… PASSWORD=… [BASELINE=…]` | Time the rendering of a project's saved views (FD-58) |
 | `make reset-db` | Drop the database and file volumes and re-seed |

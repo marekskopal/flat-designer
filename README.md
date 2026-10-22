@@ -224,6 +224,14 @@ make screenshots PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·" RO
 `VIEWS` keeps only the saved views whose name starts with it, and `ROOM` is the room selected for the editor shot.
 The plan underlay is hidden in the screenshots.
 
+To measure the rendering cost of the saved views, run the benchmark before and after a change. Add `?stats` to a
+viewer URL for a live readout.
+
+```sh
+make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·"
+make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·" BASELINE=frontend/benchmarks/<earlier>.json
+```
+
 ### Configuration
 
 All settings are in `.env`. `.env.example` documents each variable. The most important ones:
