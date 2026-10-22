@@ -73,7 +73,15 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
-import {PresentationPipeline, PresentationPixelRatio, RenderQuality, sunShadowMapSize, SunShadowRadius} from './presentation';
+import {
+    PresentationPipeline,
+    PresentationPixelRatio,
+    PresentationSettleMs,
+    RenderQuality,
+    sunShadowMapSize,
+    SunShadowRadius,
+    viewChanged,
+} from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
@@ -229,6 +237,12 @@ export class ViewerEngine {
     private quality: RenderQuality = 'fast';
     /** The post-processing of the presentation quality; null in the fast one. */
     private presentation: PresentationPipeline | null = null;
+    /** The camera as last rendered, and when it last moved: the presentation pipeline waits for it to stand still. */
+    private readonly renderedView = new THREE.Matrix4();
+    private readonly renderedProjection = new THREE.Matrix4();
+    private cameraMovedAt = 0;
+    /** Every frame through the presentation pipeline, moving or not: a capture, a benchmark. */
+    private stillFrames = false;
     private readonly sectionPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 10);
     private readonly resizeObserver: ResizeObserver;
     private readonly raycaster = new THREE.Raycaster();
@@ -873,10 +887,11 @@ export class ViewerEngine {
         this.presentation?.dispose();
         this.presentation = null;
         const device = window.devicePixelRatio;
-        const pixelRatio = quality === 'presentation' ? Math.max(device, PresentationPixelRatio) : Math.min(device, 2);
+        const fastRatio = Math.min(device, 2);
+        const pixelRatio = quality === 'presentation' ? Math.max(device, PresentationPixelRatio) : fastRatio;
         this.renderer.setPixelRatio(pixelRatio);
         if (quality === 'presentation') {
-            this.presentation = new PresentationPipeline(this.renderer, this.scene, this.camera);
+            this.presentation = new PresentationPipeline(this.renderer, this.scene, this.camera, fastRatio);
         }
         const size = sunShadowMapSize(quality, this.renderer.capabilities.maxTextureSize);
         this.sun.shadow.mapSize.set(size, size);
@@ -892,12 +907,21 @@ export class ViewerEngine {
         return this.quality;
     }
 
-    /** The scene into the canvas: directly, or through the presentation pipeline. */
+    /** The scene into the canvas: directly, or through the presentation pipeline (its plain frames while the camera moves). */
     private renderMain(): void {
-        if (this.presentation !== null) {
+        const now = performance.now();
+        this.camera.updateMatrixWorld();
+        if (viewChanged(this.renderedView, this.camera.matrixWorld) || viewChanged(this.renderedProjection, this.camera.projectionMatrix)) {
+            this.renderedView.copy(this.camera.matrixWorld);
+            this.renderedProjection.copy(this.camera.projectionMatrix);
+            this.cameraMovedAt = now;
+        }
+        if (this.presentation === null) {
+            this.renderer.render(this.scene, this.camera);
+        } else if (this.stillFrames || now - this.cameraMovedAt >= PresentationSettleMs) {
             this.presentation.render();
         } else {
-            this.renderer.render(this.scene, this.camera);
+            this.presentation.renderMoving();
         }
     }
 
@@ -1140,6 +1164,9 @@ export class ViewerEngine {
         const position = this.camera.position.clone();
         this.renderer.setAnimationLoop(null);
         this.tween = null;
+        // The presentation scenarios measure the frame the pipeline renders once the camera stops, orbit or not, unless
+        // asked for the frames rendered while it moves.
+        this.stillFrames = options.moving !== true;
         try {
             this.setQuality(options.quality ?? previous.quality);
             this.setLighting(options.night ?? previous.night, options.lightsOn ?? previous.lightsOn);
@@ -1160,7 +1187,7 @@ export class ViewerEngine {
                 gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
                 if (measured >= 0) {
                     times.push(performance.now() - started);
-                    counters ??= renderCounters(this.renderer);
+                    counters = renderCounters(this.renderer);
                 }
                 if (i % 10 === 9) {
                     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1179,6 +1206,7 @@ export class ViewerEngine {
                 height: size.y,
             };
         } finally {
+            this.stillFrames = false;
             this.camera.position.copy(position);
             this.setQuality(previous.quality);
             this.setLighting(previous.night, previous.lightsOn);
@@ -1201,7 +1229,9 @@ export class ViewerEngine {
         this.camera.clearViewOffset();
         this.camera.updateProjectionMatrix();
         this.presentation?.setSize(width, height, pixelRatio);
+        this.stillFrames = true;
         this.renderMain();
+        this.stillFrames = false;
         // The drawing buffer is read now, before the browser composites (and clears) it.
         const blob = new Promise<Blob>((resolve, reject) =>
             this.renderer.domElement.toBlob((b) => (b === null ? reject(new Error('The view could not be captured.')) : resolve(b)), 'image/png'),

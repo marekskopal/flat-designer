@@ -1,6 +1,7 @@
 // Measures the rendering cost of a project's saved views (FD-58): each view is opened with `?view=…&stats`, and the
-// engine renders frames back to back in each scenario (fast / presentation quality, day / night with the lights on),
-// waiting for the GPU after every frame, so the times are what a frame costs rather than the display's refresh rate.
+// engine renders frames back to back in each scenario (fast / presentation quality, day / night with the lights on, and
+// presentation-moving: the plain frames rendered while the camera moves), waiting for the GPU after every frame, so
+// the times are what a frame costs rather than the display's refresh rate.
 // Run it with `make benchmark`. The results go to benchmarks/<date>-<commit>.json; compare them on the same machine only.
 //
 // Environment: FD_EMAIL, FD_PASSWORD (or FD_AUTHENTICATION) and FD_PROJECT as for scripts/screenshots.mjs, FD_VIEWS
@@ -36,6 +37,8 @@ const allScenarios = [
     {name: 'fast-night', quality: 'fast', night: true, lightsOn: true},
     {name: 'presentation-day', quality: 'presentation', night: false, lightsOn: false},
     {name: 'presentation-night', quality: 'presentation', night: true, lightsOn: true},
+    // What orbiting costs in the presentation quality: the plain frames rendered until the camera stops.
+    {name: 'presentation-moving', quality: 'presentation', night: false, lightsOn: false, moving: true},
 ];
 const wanted = (process.env.FD_SCENARIOS ?? '').split(',').map((s) => s.trim()).filter((s) => s !== '');
 const scenarios = wanted.length === 0 ? allScenarios : allScenarios.filter((s) => wanted.includes(s.name));
@@ -94,7 +97,7 @@ for (const view of views) {
     for (const scenario of scenarios) {
         const measured = [];
         for (let run = 0; run < runs; run++) {
-            const options = {frames, warmup: 20, orbit: true, quality: scenario.quality, night: scenario.night, lightsOn: scenario.lightsOn};
+            const options = {frames, warmup: 20, orbit: true, quality: scenario.quality, night: scenario.night, lightsOn: scenario.lightsOn, moving: scenario.moving};
             measured.push(await page.evaluate((o) => window.fdBench.benchmark(o), options));
         }
         const kept = measured.toSorted((a, b) => a.median - b.median)[Math.floor(measured.length / 2)];

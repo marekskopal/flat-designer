@@ -51,6 +51,8 @@ export interface BenchmarkOptions {
     quality?: RenderQuality;
     night?: boolean;
     lightsOn?: boolean;
+    /** Renders as while the camera moves (the presentation quality's plain frames) rather than the still frame. */
+    moving?: boolean;
 }
 
 export interface BenchmarkResult {

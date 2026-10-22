@@ -267,7 +267,10 @@ format is the text in `FurnitureTools::Format`.
   (`viewer/engine/presentation.ts`, `PresentationPipeline`) renders through an `EffectComposer`: the scene, GTAO
   ambient occlusion, the output pass (tone mapping and colour space, so the renderer's are not applied twice) and SMAA.
   It renders at a pixel ratio of at least 2 and gives the sun a larger, softer shadow map (8192, capped by the GPU).
-  The handle and measure overlay still draws after it, on the canvas.
+  The handle and measure overlay still draws after it, on the canvas. GTAO runs at half the canvas resolution
+  (`HalfResolutionGtaoPass`). While the camera moves (`viewChanged()`, until it has stood still for
+  `PresentationSettleMs`), `renderMoving()` renders the plain scene at the fast quality's pixel ratio into a
+  multisampled buffer stretched over the canvas. `capture()` and the benchmark always render the full pipeline.
 - The pages' Display has "Presentation quality"; `ShareSettingsDto.presentation` opens a share link with it. The
   screenshot capture (FD-44) is meant to use it.
 - Shadow maps are static (`shadowMap.autoUpdate` off): the sun's and the fixtures' shadow passes run only after
@@ -278,8 +281,8 @@ format is the text in `FurnitureTools::Format`.
   programs, meshes, lights, build time; `viewer/engine/frame-stats.ts`) and exposes `window.fdBench`. The renderer's
   `info.autoReset` is off, and `tick()` resets it once a frame, so the counts cover the shadow, post-processing and
   overlay passes together. `ViewerEngine.benchmark()` pauses the loop and renders frames back to back in a scenario
-  (quality, night, lights), orbiting the camera. It reads a pixel after each frame, so the GPU is waited for and vsync
-  does not cap the time. `make benchmark PROJECT=5 … [VIEWS=… BASELINE=…]` (`frontend/scripts/benchmark.mjs`) runs
+  (quality, night, lights, or the presentation's moving frames), orbiting the camera. It reads a pixel after each
+  frame, so the GPU is waited for and vsync does not cap the time. `make benchmark PROJECT=5 … [VIEWS=… BASELINE=…]` (`frontend/scripts/benchmark.mjs`) runs
   it over the saved views and writes `frontend/benchmarks/<date>-<commit>.json` (gitignored). A baseline makes it print
   `old → new` per metric. Compare results from the same machine only (the file names the GPU).
 

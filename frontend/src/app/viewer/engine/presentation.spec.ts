@@ -1,6 +1,7 @@
+import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {SunShadowMapSize, sunShadowMapSize, SunShadowRadius} from './presentation';
+import {SunShadowMapSize, sunShadowMapSize, SunShadowRadius, viewChanged} from './presentation';
 
 describe('presentation quality', () => {
     it('gives the sun a larger shadow map on a large GPU only', () => {
@@ -13,5 +14,14 @@ describe('presentation quality', () => {
 
     it('softens the sun shadow without blurring it away', () => {
         expect(SunShadowRadius.presentation).toBeGreaterThan(SunShadowRadius.fast);
+    });
+});
+
+describe('viewChanged', () => {
+    it('ignores what damping leaves behind and notices a move', () => {
+        const a = new THREE.Matrix4().makeTranslation(1, 2, 3);
+        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeTranslation(1e-7, 0, 0)))).toBe(false);
+        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeTranslation(0.001, 0, 0)))).toBe(true);
+        expect(viewChanged(a, a.clone().multiply(new THREE.Matrix4().makeRotationY(0.001)))).toBe(true);
     });
 });
