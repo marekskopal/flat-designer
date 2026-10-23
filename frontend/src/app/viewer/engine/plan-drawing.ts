@@ -1,5 +1,5 @@
 import {localDate} from '@app/core/local-date';
-import {Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
 
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
 import {
@@ -262,7 +262,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
 // --- Plan shapes (plan mm) ---
 
 function isOutdoor(room: Pick<Room, 'type'>): boolean {
-    return room.type === 'Terrace' || room.type === 'Garden';
+    return isOutdoorRoom(room);
 }
 
 /** A plot's boundary: the dash-dot line of a property line. */

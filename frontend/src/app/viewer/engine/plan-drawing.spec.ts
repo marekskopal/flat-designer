@@ -126,6 +126,14 @@ describe('planSheet', () => {
         expect(labels).toEqual(expect.arrayContaining(['1000', '900', '2100']));
     });
 
+    it('fills paths and driveways as open-air rooms', () => {
+        const fill = (type: Room['type']): string | undefined =>
+            planSheet(scene({rooms: [room({type})]}), info).svg.match(/<path d="[^"]*" fill="(#[0-9a-f]+)"/)?.[1];
+        expect(fill('Path')).toBe(fill('Garden'));
+        expect(fill('Driveway')).toBe(fill('Terrace'));
+        expect(fill('Path')).not.toBe(fill('Living'));
+    });
+
     it('writes the floor level of a raised or sunken room under its area', () => {
         expect(texts(planSheet(scene({rooms: [room({floorElevation: -150})]}), info).svg)).toContain('12.00 m² · −0.150');
         expect(texts(planSheet(scene({rooms: [room({floorElevation: 450})]}), info).svg)).toContain('12.00 m² · +0.450');

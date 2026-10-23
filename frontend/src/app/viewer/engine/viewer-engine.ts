@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Plot, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, PlanPoint, Plot, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -1454,7 +1454,7 @@ export class ViewerEngine {
         }
         const view = this.camera.getWorldDirection(new THREE.Vector3());
         const direction = Math.hypot(view.x, view.z) > 1e-3 ? {x: view.x, y: -view.z} : {x: 0, y: 1};
-        const indoor = scene.rooms.filter((r) => r.type !== 'Terrace' && r.type !== 'Garden');
+        const indoor = scene.rooms.filter((r) => !isOutdoorRoom(r));
         if (indoor.length === 0) {
             return {position: this.viewCenter(), direction};
         }

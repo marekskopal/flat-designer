@@ -19,6 +19,26 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(ScheduleTotalDto::class)]
 final class RoomScheduleControllerTest extends EditorTestCase
 {
+	public function testCountsPathsAndDrivewaysOutdoors(): void
+	{
+		$this->create(
+			'rooms',
+			['code' => 'P1', 'name' => 'Path', 'type' => 'Path', 'polygon' => [[0, 0], [1000, 0], [1000, 4000], [0, 4000]]],
+		);
+		$this->create('rooms', [
+			'code' => 'D1',
+			'name' => 'Driveway',
+			'type' => 'Driveway',
+			'polygon' => [[2000, 0], [5000, 0], [5000, 6000], [2000, 6000]],
+		]);
+
+		$floor = $this->schedule(false)['floors'];
+		self::assertIsList($floor);
+		self::assertIsArray($floor[0]);
+		self::assertEquals(['rooms' => 2, 'area' => 22.0, 'perimeter' => 28.0], $floor[0]['outdoor']);
+		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $floor[0]['indoor']);
+	}
+
 	public function testListsTheRoomsWithIndoorAndOutdoorTotals(): void
 	{
 		$this->create('rooms', [

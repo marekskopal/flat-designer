@@ -87,6 +87,17 @@ final class PlotTest extends EditorTestCase
 		self::assertSame(2950, $beam['z']);
 	}
 
+	public function testPavingAndAsphaltAreSeeded(): void
+	{
+		$materials = Fixture::service(MaterialRepository::class);
+		$paving = $materials->findByCode('paving-concrete-grey');
+		$asphalt = $materials->findByCode('asphalt');
+
+		self::assertNotNull($paving);
+		self::assertNotNull($asphalt);
+		self::assertSame([200, 100], [$paving->tileWidth, $paving->tileHeight]);
+	}
+
 	public function testRefusesABadBoundaryOrMaterial(): void
 	{
 		self::assertSame(422, $this->edit('POST', 'plots', body: ['polygon' => [[0, 0], [1000, 0]]])->getStatusCode());

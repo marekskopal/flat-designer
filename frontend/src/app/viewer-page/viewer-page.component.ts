@@ -28,7 +28,7 @@ import {ExportComponent} from '@app/export/export.component';
 import {Comment, commentPinsOf} from '@app/models/comment';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
-import {hasSiteLocation, PlanPoint, Room, RoomType, SunTime} from '@app/models/scene';
+import {hasSiteLocation, isOutdoorRoom, PlanPoint, Room, RoomType, SunTime} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {CommentService} from '@app/services/comment.service';
@@ -290,9 +290,10 @@ export class ViewerPageComponent {
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
     protected readonly rooms = computed(() => this.scene()?.rooms ?? []);
     protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
-    protected readonly indoorArea = computed(() => this.areaOf((type) => type !== 'Terrace' && type !== 'Garden'));
+    protected readonly indoorArea = computed(() => this.areaOf((type) => !isOutdoorRoom({type})));
     protected readonly terraceArea = computed(() => this.areaOf((type) => type === 'Terrace'));
     protected readonly gardenArea = computed(() => this.areaOf((type) => type === 'Garden'));
+    protected readonly pavedArea = computed(() => this.areaOf((type) => type === 'Path' || type === 'Driveway'));
 
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */

@@ -314,6 +314,10 @@
                 <dd>{{ terraceArea() | number: '1.1-1' }} m²</dd>
                 <dt>Garden</dt>
                 <dd>{{ gardenArea() | number: '1.1-1' }} m²</dd>
+                @if (pavedArea() > 0) {
+                    <dt>Paths & driveway</dt>
+                    <dd>{{ pavedArea() | number: '1.1-1' }} m²</dd>
+                }
             </dl>
         </section>
     }

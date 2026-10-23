@@ -59,7 +59,7 @@ const ItemKinds = [
     'Fixture', 'Fence', 'Column', 'Beam', 'Custom', 'Model',
 ] as const;
 
-const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
+const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway'] as const;
 
 /**
  * A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east (at its
