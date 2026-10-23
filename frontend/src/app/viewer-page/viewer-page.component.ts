@@ -39,6 +39,7 @@ import {SavedViewService} from '@app/services/saved-view.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {ToolStatus} from '@app/viewer/engine/drawing';
+import {GhostFloor} from '@app/viewer/engine/ghost';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
@@ -182,6 +183,34 @@ export class ViewerPageComponent {
     protected readonly underlayImage = computed(() =>
         this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,
     );
+    /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
+    protected readonly floorBelow = computed(() => {
+        const floors = this.floors();
+        const level = floors.find((f) => f.id === this.floorId())?.level;
+        const below = floors.filter((f) => level !== undefined && f.level < level);
+        return below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a));
+    });
+    /** Shows the floor below by hand; null follows edit mode. */
+    private readonly floorBelowChoice = signal<boolean | null>(null);
+    protected readonly floorBelowShown = computed(() => this.floorBelow() !== null && (this.floorBelowChoice() ?? this.editor.enabled()));
+    /** The floor below's scene, loaded only while it is shown (from the same version as this floor). */
+    private readonly floorBelowScene = resource({
+        params: () => {
+            const below = this.floorBelow();
+            return below === null || !this.floorBelowShown()
+                ? undefined
+                : {projectId: this.projectId(), floorId: below.id, versionId: this.version()};
+        },
+        // Quietly: without it the plan just shows no trace of the floor below.
+        loader: async ({params}) => this.projects.getScene(params.projectId, params.floorId, params.versionId, {quiet: true}),
+    });
+    protected readonly ghost = computed<GhostFloor | null>(() => {
+        if (!this.floorBelowShown() || !this.floorBelowScene.hasValue()) {
+            return null;
+        }
+        const {walls, rooms} = this.floorBelowScene.value();
+        return {walls, rooms};
+    });
     /** The measure tool is on, for measuring or to pick the underlay's calibration points. */
     protected readonly measureActive = computed(() => this.measuring() || this.editor.calibration() !== null);
     protected readonly project = computed(() => (this.data.hasValue() ? this.data.value().project : null));
@@ -411,6 +440,8 @@ export class ViewerPageComponent {
         }
         if (update.revision > (this.scene()?.revision ?? -1)) {
             this.data.reload();
+            // The change may have been on the floor below.
+            this.floorBelowScene.reload();
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
                 const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
@@ -594,6 +625,10 @@ export class ViewerPageComponent {
 
     private areaOf(matches: (type: RoomType) => boolean): number {
         return this.rooms().filter((r) => matches(r.type)).reduce((sum, r) => sum + r.area, 0);
+    }
+
+    protected toggleFloorBelow(): void {
+        this.floorBelowChoice.set(!this.floorBelowShown());
     }
 
     protected onSectionInput(event: Event): void {

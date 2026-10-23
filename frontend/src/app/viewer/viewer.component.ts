@@ -20,6 +20,7 @@ import {environment} from '@environments/environment';
 import {CommentPin, CommentPoint} from './engine/comments';
 import {EditorTool, ToolStatus} from './engine/drawing';
 import {BenchmarkOptions, BenchmarkResult, ViewerStats} from './engine/frame-stats';
+import {GhostFloor} from './engine/ghost';
 import {MeasureStatus} from './engine/measure';
 import {ModelFetcher} from './engine/models';
 import {PictureFetcher} from './engine/pictures';
@@ -88,6 +89,8 @@ export class ViewerComponent {
     public readonly underlayImage = input<TexImageSource | null>(null);
     /** The underlay in the top view. */
     public readonly underlayVisible = input(true);
+    /** The floor below, traced in the top view; null shows none. */
+    public readonly ghost = input<GhostFloor | null>(null);
     /** With `measuring`: the two points clicked next calibrate the underlay (`calibrated`). */
     public readonly calibrating = input(false);
     /** Section plane height in mm; null shows everything. */
@@ -212,6 +215,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setCalibrating(this.calibrating()));
         effect(() => this.engine()?.setUnderlay(this.underlay(), this.underlayImage()));
         effect(() => this.engine()?.setUnderlayVisible(this.underlayVisible()));
+        effect(() => this.engine()?.setGhost(this.ghost()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));

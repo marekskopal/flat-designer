@@ -15,6 +15,7 @@
     [modelFetcher]="modelFetcher"
     [pictureFetcher]="pictureFetcher"
     [underlayVisible]="editor.underlayVisible()"
+    [ghost]="ghost()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
@@ -268,6 +269,12 @@
             <label class="toggle">
                 <input type="checkbox" [checked]="editor.underlayVisible()" (change)="editor.underlayVisible.set(!editor.underlayVisible())" />
                 <span>Plan underlay</span>
+            </label>
+        }
+        @if (floorBelow(); as below) {
+            <label class="toggle" title="Trace the walls and rooms of the floor below in the plan">
+                <input type="checkbox" [checked]="floorBelowShown()" (change)="toggleFloorBelow()" />
+                <span>Floor below ({{ below.name }})</span>
             </label>
         }
         <label class="slider">

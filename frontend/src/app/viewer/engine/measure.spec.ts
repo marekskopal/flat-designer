@@ -25,6 +25,12 @@ const walls = [wall(1, -150, -150, 4150, -150), wall(2, -150, 3150, -150, -150)]
 const options = {radius: 100, walls, joints: wallJoints(walls), from: null};
 
 describe('snapMeasurePoint', () => {
+    it("snaps onto the ends and centre lines of the floor below's walls", () => {
+        const ghostWalls = [wall(9, 1000, 6000, 5000, 6000)];
+        expect(snapMeasurePoint({x: 4970, y: 6040}, {...options, ghostWalls})).toEqual({point: {x: 5000, y: 6000}, kind: 'point'});
+        expect(snapMeasurePoint({x: 2500, y: 5950}, {...options, ghostWalls})).toEqual({point: {x: 2500, y: 6000}, kind: 'line'});
+    });
+
     it('snaps onto wall ends and the corners where the faces meet', () => {
         expect(snapMeasurePoint({x: 4120, y: -130}, options)).toEqual({point: {x: 4150, y: -150}, kind: 'point'});
         // Inner corner of the mitred joint.

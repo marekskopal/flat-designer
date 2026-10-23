@@ -87,9 +87,11 @@ export class ProjectService {
     }
 
     /** Scene of a floor of the working copy, or of a saved version when `versionId` is given. */
-    public async getScene(projectId: number, floorId: number, versionId: number | null = null): Promise<Scene> {
+    public async getScene(projectId: number, floorId: number, versionId: number | null = null, options: {quiet?: boolean} = {}): Promise<Scene> {
         const base = versionId === null ? `${projectsUrl}/${projectId}` : `${projectsUrl}/${projectId}/versions/${versionId}`;
-        return firstValueFrom(this.http.get<Scene>(`${base}/floors/${floorId}/scene`));
+        return firstValueFrom(
+            this.http.get<Scene>(`${base}/floors/${floorId}/scene`, {context: new HttpContext().set(SkipErrorToast, options.quiet === true)}),
+        );
     }
 
     public async listVersions(projectId: number): Promise<ProjectVersion[]> {

@@ -42,6 +42,11 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (`FloorStack`; 300 mm slabs at level 0 and below, 250 above); snapshots from before them are stacked the same way. The
   sheets, the schedules and the project page write the level as `levelText()` (`+3.000`). REST `…/floors`, MCP
   `add_floor` / `update_floor` / `delete_floor`.
+- Ghost of the floor below (FD-71): the viewer page loads the scene of the floor with the highest level under the shown
+  one (from the same version) while its Display toggle "Floor below" is on (by default in edit mode), and reloads it
+  with live updates. `ViewerEngine.setGhost()` draws its wall outlines and dashed room outlines over the plan without a
+  depth test, only while `isTopDown()` (`viewer/engine/ghost.ts`, not pickable). Draw walls and the measure tool snap
+  to its wall ends and centre lines (`ghostWalls` of `snapDrawPoint()` / `snapMeasurePoint()`).
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is

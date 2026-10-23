@@ -39,15 +39,18 @@ export interface DrawSnapOptions {
     walls: readonly Wall[];
     /** Points of the run placed so far. */
     points: readonly Vec2[];
+    /** Walls of the floor below while it is traced (`ghost.ts`): their ends and centre lines are snapped to as well. */
+    ghostWalls?: readonly Wall[];
 }
 
 /**
  * Where the next point of a run goes: onto a wall end or a point of the run, onto a wall's centre line
  * (a T-joint), in line with another point, at a multiple of 15° from the previous point (with the length
- * on the grid), else onto the grid.
+ * on the grid), else onto the grid. The walls of the floor below count as walls of this one.
  */
 export function snapDrawPoint(cursor: Vec2, options: DrawSnapOptions): SnapResult {
-    const {grid, radius, walls, points} = options;
+    const {grid, radius, points} = options;
+    const walls = [...options.walls, ...(options.ghostWalls ?? [])];
     const ends = walls.flatMap((w) => [
         {x: w.startX, y: w.startY},
         {x: w.endX, y: w.endY},

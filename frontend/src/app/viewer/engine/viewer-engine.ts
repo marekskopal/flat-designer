@@ -35,6 +35,7 @@ import {
     sceneCounters,
     ViewerStats,
 } from './frame-stats';
+import {buildGhost, disposeGhost, GhostFloor} from './ghost';
 import {exportTree, toGlb} from './gltf-export';
 import {buildItem, ItemAssets} from './items';
 import {applyFixtureLights} from './lights';
@@ -318,6 +319,9 @@ export class ViewerEngine {
     private pictureLibrary: PictureLibrary | null = null;
     private underlayImage: TexImageSource | null = null;
     private underlayVisible = true;
+    /** The floor below, traced in the top view (`setGhost()`), and its walls for the snapping. */
+    private ghost: THREE.Group | null = null;
+    private ghostWalls: readonly Wall[] = [];
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -1208,6 +1212,24 @@ export class ViewerEngine {
         }
     }
 
+    /**
+     * Traces the floor below in the top view (null hides it): its walls and rooms as faint lines over the plan. Drawing
+     * walls and measuring snap to its wall ends and centre lines too.
+     */
+    public setGhost(floor: GhostFloor | null): void {
+        this.invalidate();
+        if (this.ghost !== null) {
+            disposeGhost(this.ghost);
+            this.ghost = null;
+        }
+        this.ghostWalls = floor?.walls ?? [];
+        if (floor !== null) {
+            this.ghost = buildGhost(floor);
+            this.ghost.visible = false;
+            this.scene.add(this.ghost);
+        }
+    }
+
     public setUnderlayVisible(visible: boolean): void {
         this.invalidate();
         this.underlayVisible = visible;
@@ -1574,6 +1596,7 @@ export class ViewerEngine {
         this.clearContent();
         this.removeDimensions();
         this.setUnderlay(null, null);
+        this.setGhost(null);
         this.modelLibrary?.dispose();
         this.pictureLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
@@ -1767,6 +1790,9 @@ export class ViewerEngine {
         }
         if (this.underlay !== null) {
             this.underlay.visible = this.underlayVisible && topDown;
+        }
+        if (this.ghost !== null) {
+            this.ghost.visible = topDown;
         }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
         this.renderMain();
@@ -2390,7 +2416,7 @@ export class ViewerEngine {
         const from = this.measurement.b === null ? this.measurement.a : null;
         // Calibration points are features of the image, which the drawn walls would only pull them away from.
         const radius = free || this.calibrating ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
-        return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from});
+        return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from, ghostWalls: this.ghostWalls});
     }
 
     /** Redraws the measurement (line, points, distance label) and reports the readout. */
@@ -2509,7 +2535,13 @@ export class ViewerEngine {
 
     private snapRunPoint(point: Vec2, free: boolean): SnapResult {
         const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
-        return snapDrawPoint(point, {grid: free ? 1 : DragSnap, radius, walls: this.sceneData?.walls ?? [], points: this.run?.points ?? []});
+        return snapDrawPoint(point, {
+            grid: free ? 1 : DragSnap,
+            radius,
+            walls: this.sceneData?.walls ?? [],
+            points: this.run?.points ?? [],
+            ghostWalls: this.ghostWalls,
+        });
     }
 
     /** The segment of the run waiting for its curve: the last one, or the one closing the run. */
