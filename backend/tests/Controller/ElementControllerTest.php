@@ -13,7 +13,9 @@ use FlatDesigner\Service\Editor\Element\OpeningLook;
 use FlatDesigner\Service\Editor\Element\RoomCeiling;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
 use FlatDesigner\Service\Editor\Element\StructureSize;
+use FlatDesigner\Service\Editor\Element\WallCurve;
 use FlatDesigner\Service\Editor\Element\WallHandler;
+use FlatDesigner\Service\Editor\Geometry\WallLine;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
 use FlatDesigner\Tests\Support\EditorTestCase;
@@ -32,6 +34,8 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(StructureSize::class)]
 #[CoversClass(PolygonValidator::class)]
 #[CoversClass(ColumnParamsValidator::class)]
+#[CoversClass(WallCurve::class)]
+#[CoversClass(WallLine::class)]
 final class ElementControllerTest extends EditorTestCase
 {
 	public function testCreateItemFillsDefaultsLogsAndBumpsRevision(): void
@@ -549,6 +553,62 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertNull($this->sceneList('walls')[0]['leftFinishes']);
 		self::assertSame(200, $this->undo()->getStatusCode());
 		self::assertSame([[$band], []], [$this->sceneList('walls')[0]['leftFinishes'], $this->sceneList('walls')[0]['rightFinishes']]);
+	}
+
+	public function testCurvedWalls(): void
+	{
+		// Chord 4000, sagitta 1000: a radius of 2500 and 4636 mm along the arc.
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0, 'sagitta' => 1000]);
+		self::assertSame(1000, $wall['sagitta']);
+		self::assertSame(1000, $this->sceneList('walls')[0]['sagitta']);
+
+		// Openings run along the arc, past the chord's length; built straight, they must stay shallow (707 mm at most here).
+		$window = $this->create('openings', ['wallId' => self::id($wall), 'type' => 'Window', 'offset' => 3800, 'width' => 700]);
+		$wide = $this->edit('POST', 'openings', body: ['wallId' => self::id($wall), 'type' => 'Window', 'offset' => 500, 'width' => 900]);
+		self::assertSame(422, $wide->getStatusCode());
+		self::assertStringContainsString('707 mm', (string) $wide->getBody());
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'openings',
+				body: ['wallId' => self::id($wall), 'type' => 'Window', 'offset' => 4000, 'width' => 700],
+			)->getStatusCode(),
+		);
+		// Niches follow the curve.
+		$this->create(
+			'openings',
+			['wallId' => self::id($wall), 'type' => 'Niche', 'offset' => 500, 'width' => 1500, 'sillHeight' => 500, 'height' => 1000],
+		);
+
+		foreach ([
+			['sagitta' => 2001],
+			['sagitta' => 'round'],
+			// A tighter curve would make the window too deep for it.
+			['sagitta' => 1900],
+			// Straight, the wall is too short for the window.
+			['sagitta' => 0],
+		] as $body) {
+			self::assertSame(
+				422,
+				$this->edit('PATCH', 'walls', self::id($wall), $body)->getStatusCode(),
+				json_encode($body, JSON_THROW_ON_ERROR),
+			);
+		}
+		$tight = $this->edit(
+			'POST',
+			'walls',
+			body: ['startX' => 0, 'startY' => 2000, 'endX' => 300, 'endY' => 2000, 'sagitta' => 150, 'thickness' => 200],
+		);
+		self::assertSame(422, $tight->getStatusCode());
+		self::assertStringContainsString('100 mm round', (string) $tight->getBody());
+
+		// Turned round, the wall keeps its curve on the same side of the plan; undo turns it back.
+		$turned = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => 4000, 'endX' => 0]));
+		self::assertIsArray($turned['element']);
+		self::assertSame(-1000, $turned['element']['sagitta']);
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([1000, 3800], [$this->sceneList('walls')[0]['sagitta'], $this->openingOffset(self::id($window))]);
 	}
 
 	public function testRoomCeilingsVaultsAndSkirting(): void

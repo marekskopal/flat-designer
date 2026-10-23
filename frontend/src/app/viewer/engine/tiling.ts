@@ -11,7 +11,8 @@ const normalMatrix = new THREE.Matrix3();
  * Puts every tiled mesh under `object` on one tile grid: UVs are recomputed from each vertex's plan position
  * (see `tileUv`), so the floor, the wall bands and tiled items (bath panel, pre-wall) of a room share their
  * joints. `object` must already be placed in the floor's frame (scene x, y up, −z = plan y), not yet added
- * to it. Meshes with other materials keep their UVs. Level faces are turned by the grid's angle.
+ * to it. Meshes with other materials keep their UVs, as do geometries flagged `ownUvs` (the lining of a curved wall,
+ * laid along its arc). Level faces are turned by the grid's angle.
  */
 export function alignTiles(object: THREE.Object3D, grid: TileGrid, materials: MaterialLibrary): void {
     object.updateWorldMatrix(true, true);
@@ -20,6 +21,9 @@ export function alignTiles(object: THREE.Object3D, grid: TileGrid, materials: Ma
             return;
         }
         const geometry = mesh.geometry as THREE.BufferGeometry;
+        if (geometry.userData['ownUvs'] === true) {
+            return;
+        }
         const positions = geometry.getAttribute('position');
         const normals = geometry.getAttribute('normal') as THREE.BufferAttribute | undefined;
         const uv = geometry.getAttribute('uv') as THREE.BufferAttribute | undefined;

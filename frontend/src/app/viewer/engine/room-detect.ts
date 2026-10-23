@@ -1,6 +1,6 @@
 import {PlanPoint} from '@app/models/scene';
 
-import {isSimplePolygon, pointInPolygon, pointOnWall, SquareEnds, Vec2, wallFrame, wallJoints, WallLine} from './plan-geometry';
+import {isSimplePolygon, pointInPolygon, SquareEnds, Vec2, wallFrame, wallJoints, WallLine, wallOutline} from './plan-geometry';
 
 /** `onWall`: the point is inside a wall; `open`: no walls close around it; `invalid`: the outline is not a usable room polygon. */
 export type RoomDetectError = 'onWall' | 'open' | 'invalid';
@@ -60,21 +60,14 @@ export function pickRoom(prepared: RoomFaces, point: Vec2): RoomDetection {
     return withinLimits && isSimplePolygon(polygon) ? {polygon} : {error: 'invalid'};
 }
 
-/** Footprint of every wall with a length: right face start → end, then left face end → start. */
+/** Footprint of every wall with a length (`wallOutline()`): right face start → end, then left face end → start. */
 function wallFootprints(walls: readonly WallLine[]): Vec2[][] {
     const joints = wallJoints(walls);
     return walls
         .filter((wall) => wall.startX !== wall.endX || wall.startY !== wall.endY)
         .map((wall) => {
             const frame = wallFrame(wall);
-            const half = wall.thickness / 2;
-            const ends = joints.get(wall.id) ?? SquareEnds;
-            return [
-                pointOnWall(frame, -ends.startRight, -half),
-                pointOnWall(frame, frame.length + ends.endRight, -half),
-                pointOnWall(frame, frame.length + ends.endLeft, half),
-                pointOnWall(frame, -ends.startLeft, half),
-            ];
+            return wallOutline(frame, wall.thickness, 0, frame.length, joints.get(wall.id) ?? SquareEnds);
         });
 }
 

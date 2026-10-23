@@ -2,6 +2,7 @@ import {Item, Material, Opening, PlanPoint, Room, Scene, Wall} from '@app/models
 import {describe, expect, it} from 'vitest';
 
 import {elevationSheets, faceLetter, gridLines, itemsAgainst, layoutFaces, roomElevationSheets, roomFaces} from './elevations';
+import {detectRoom} from './room-detect';
 import {SheetInfo} from './sheet-svg';
 
 const wall = (id: number, start: PlanPoint, end: PlanPoint, fields: Partial<Wall> = {}): Wall => ({
@@ -106,6 +107,51 @@ describe('roomFaces', () => {
         // The beams run north, so along the south face the ceiling rises and falls from bay to bay.
         expect(south.height).toBeCloseTo(2600, 0);
         expect(Math.min(...south.top.map((p) => p.y))).toBe(2600 - 200 - 30);
+    });
+});
+
+describe('roomFaces along a curved wall', () => {
+    // The south wall bows 400 mm out (south) between the corners of the 4000 × 3200 room; a door 1600 mm along it.
+    const bay = [
+        wall(1, [-100, -100], [4100, -100], {thickness: 200, sagitta: -400, openings: [{...door, offset: 1600}]}),
+        wall(2, [4100, -100], [4100, 3100], {thickness: 200}),
+        wall(3, [4100, 3100], [-100, 3100], {thickness: 200}),
+        wall(4, [-100, 3100], [-100, -100], {thickness: 200}),
+    ];
+    const detected = detectRoom(bay, {x: 2000, y: 1500});
+    const bayRoom: Room = {...room, polygon: 'polygon' in detected ? detected.polygon : []};
+
+    it('unrolls the pieces of the curved face into one face', () => {
+        const faces = roomFaces(bayRoom, bay);
+
+        expect(faces.map((f) => [f.letter, Math.round(f.length)])).toEqual([
+            ['A', 4089],
+            ['B', 3032],
+            ['C', 4000],
+            ['D', 3032],
+        ]);
+        const [curved] = faces;
+        expect(curved.spans.map(([from, to]) => [Math.round(from), Math.round(to)])).toEqual([[0, 4089]]);
+        expect(curved.openings.map((o) => [o.opening.id, Math.round(o.from), Math.round(o.to)])).toEqual([[9, 1504, 2388]]);
+        expect(curved.gaps.map((g) => [Math.round(g.from), Math.round(g.to)])).toEqual([[1504, 2388]]);
+    });
+
+    it('takes the items standing against the curved face', () => {
+        const [curved] = roomFaces(bayRoom, bay);
+        // A 600 mm deep cabinet with its back at the face's middle, 400 mm south of the corners.
+        const cabinet = {
+            id: 1, roomId: 1, groupId: null, kind: 'Custom', definitionId: null, name: 'Cabinet', x: 2000, y: -100, z: 0,
+            width: 600, depth: 600, height: 850, rotation: 0, materialId: null, params: {},
+        } as unknown as Item;
+        const [against] = itemsAgainst(curved, [cabinet]);
+        // Its true width, at the face's middle.
+        expect(against.to - against.from).toBeCloseTo(600, 6);
+        expect((against.from + against.to) / 2).toBeCloseTo(curved.length / 2, 0);
+    });
+
+    it('draws the unrolled face on its sheet', () => {
+        const sheets = roomElevationSheets(scene({rooms: [bayRoom], walls: bay}), bayRoom, info);
+        expect(sheets[0].svg).toContain('4089 mm');
     });
 });
 

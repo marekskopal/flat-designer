@@ -145,7 +145,7 @@ describe('skirting', () => {
 interface WallSpansCase {
     name: string;
     edge: [[number, number], [number, number]];
-    walls: (Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'thickness'> & {
+    walls: (Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'sagitta' | 'thickness'> & {
         openings: (Pick<Opening, 'offset' | 'width' | 'sillHeight' | 'height'> & Partial<Pick<Opening, 'type' | 'side'>>)[];
     })[];
     spans: [number, number][];
@@ -171,7 +171,7 @@ describe('wall faces along an edge (shared fixture)', () => {
             const openings = w.openings.map(
                 (o): Opening => ({...door(o.offset, o.width), ...o, depth: o.type === 'Niche' ? 100 : null}),
             );
-            return {...wall(i + 1, [w.startX, w.startY], [w.endX, w.endY], openings), thickness: w.thickness};
+            return {...wall(i + 1, [w.startX, w.startY], [w.endX, w.endY], openings), thickness: w.thickness, sagitta: w.sagitta ?? 0};
         });
 
         near(wallSpansAlongEdge(a, b, walls), testCase.spans);

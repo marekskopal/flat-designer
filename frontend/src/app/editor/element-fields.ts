@@ -61,7 +61,10 @@ const ItemKinds = [
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
 
-/** A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east. */
+/**
+ * A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east (at its
+ * middle for a curved wall, whose faces are also told apart as convex or concave).
+ */
 export function wallFaceName(wall: Record<string, unknown>, side: 'Left' | 'Right'): string {
     const coordinate = (key: string): number => (typeof wall[key] === 'number' ? wall[key] : 0);
     const dx = coordinate('endX') - coordinate('startX');
@@ -75,7 +78,9 @@ export function wallFaceName(wall: Record<string, unknown>, side: 'Left' | 'Righ
     const northSouth = ny > 0 ? 'North' : 'South';
     const direction =
         Math.abs(nx) > Math.abs(ny) ? eastWest : Math.abs(ny) > Math.abs(nx) ? northSouth : `${northSouth}-${eastWest.toLowerCase()}`;
-    return `${direction} face`;
+    const sagitta = coordinate('sagitta');
+    const curve = sagitta === 0 ? '' : (sagitta > 0) === (side === 'Left') ? ' (convex)' : ' (concave)';
+    return `${direction} face${curve}`;
 }
 
 /** The editable fields per element kind; keys are those of the scene JSON and the edit API. */
@@ -105,6 +110,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'startY', label: 'Start Y', type: 'int', unit: 'mm', half: true},
         {key: 'endX', label: 'End X', type: 'int', unit: 'mm', half: true},
         {key: 'endY', label: 'End Y', type: 'int', unit: 'mm', half: true},
+        {key: 'sagitta', label: 'Curve: middle off the straight line (+ left, 0 straight)', type: 'int', unit: 'mm'},
         {key: 'thickness', label: 'Thickness', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},

@@ -22,7 +22,7 @@ import {CommentPin, CommentPins, CommentPoint, commentPointOf} from './comments'
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
-import {closesRun, directionOf, EditorTool, pointAt, snapDrawPoint, ToolStatus} from './drawing';
+import {closesRun, directionOf, EditorTool, pointAt, sagittaToward, snapDrawPoint, ToolStatus} from './drawing';
 import {
     BenchmarkOptions,
     BenchmarkResult,
@@ -44,7 +44,9 @@ import {ModelFetcher, ModelLibrary} from './models';
 import {PictureFetcher, PictureLibrary} from './pictures';
 import {
     alongWall,
+    bendWall,
     Bounds,
+    clampSagitta,
     columnColliders,
     cornerWindows,
     edgeMidpoints,
@@ -55,6 +57,7 @@ import {
     MM,
     moveWallEnds,
     pointInPolygon,
+    pointOnWall,
     polygonBounds,
     polygonCentroid,
     polygonSignedArea,
@@ -144,7 +147,11 @@ type HandleState = keyof typeof HandleColors;
 export type EditHandler = (selection: Selection, fields: Record<string, unknown>) => Promise<boolean>;
 
 /** What a handle of the selected wall or room stands for; `draw` marks the points of a run of walls (not draggable). */
-type HandleRole = {role: 'wallStart' | 'wallEnd'} | {role: 'vertex'; index: number} | {role: 'midpoint'; index: number} | {role: 'draw'};
+type HandleRole =
+    | {role: 'wallStart' | 'wallEnd' | 'wallCurve'}
+    | {role: 'vertex'; index: number}
+    | {role: 'midpoint'; index: number}
+    | {role: 'draw'};
 
 /** Wall fields of a run being drawn, for its preview. */
 export interface WallDraftShape {
@@ -152,11 +159,16 @@ export interface WallDraftShape {
     height: number;
 }
 
-/** The run of walls being drawn: the points placed and where the pointer would put the next one. */
+/**
+ * The run of walls being drawn: the points placed, the curve of each segment between them, and where the pointer would
+ * put the next one. In arc mode a placed segment waits for its curve (`bend`: the last one, or the closing one).
+ */
 interface WallRun {
     points: Vec2[];
+    sagittas: number[];
     cursor: Vec2 | null;
     snap: SnapResult['kind'] | null;
+    bend: {closing: boolean; sagitta: number} | null;
 }
 
 interface DragBase {
@@ -171,7 +183,7 @@ type Drag = DragBase &
     (
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
         | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
-        | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
+        | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
         | {kind: 'vertex'; room: Room; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
     );
@@ -211,7 +223,7 @@ export class ViewerEngine {
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
     /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
-    public onDrawWalls: (points: PlanPoint[], closed: boolean) => Promise<boolean> = () => Promise.resolve(false);
+    public onDrawWalls: (points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean> = () => Promise.resolve(false);
     /** A click with the room tool inside walls that close around the point. */
     public onDetectRoom: (point: PlanPoint) => void = () => undefined;
     /** The readout of the drawing tool changed; null when no tool is active or the pointer left the view. */
@@ -307,7 +319,9 @@ export class ViewerEngine {
     private wallDraft: WallDraftShape = {thickness: 100, height: 2600};
     private run: WallRun | null = null;
     /** A drawn run sent off and not yet loaded back, still shown. */
-    private pendingRun: {points: Vec2[]; closed: boolean} | null = null;
+    private pendingRun: {points: Vec2[]; closed: boolean; sagittas: number[]} | null = null;
+    /** Arc mode of the draw tool: each segment is bent by one more click. */
+    private drawArc = false;
     /** The room the room tool would add at the pointer (kept while the pointer stays inside it). */
     private detection: RoomDetection | null = null;
     /** The faces between the loaded walls, for the room tool; computed when first needed after a load. */
@@ -838,15 +852,33 @@ export class ViewerEngine {
      * Places the next point of the run `length` mm from the last one, in the direction `angle` (degrees
      * counter-clockwise from east), or towards the pointer when null. Typed lengths come in this way.
      */
-    public placeRunPoint(length: number, angle: number | null): void {
+    public placeRunPoint(length: number, angle: number | null, sagitta: number | null = null): void {
         this.invalidate();
         const run = this.run;
         const previous = run?.points.at(-1);
-        if (run === null || previous === undefined) {
+        if (run === null || previous === undefined || run.bend !== null) {
             return;
         }
         const direction = angle ?? (run.cursor === null ? 0 : directionOf(previous, run.cursor));
-        this.addRunPoint(pointAt(previous, length, direction));
+        const point = pointAt(previous, length, direction);
+        this.addRunPoint(point, sagitta === null ? null : clampSagitta(previous, point, sagitta));
+    }
+
+    /** Arc mode of the draw tool: every segment drawn next waits for its curve. */
+    public setDrawArc(arc: boolean): void {
+        this.invalidate();
+        this.drawArc = arc;
+        this.updateDrawing();
+    }
+
+    /** Gives the segment waiting for its curve a typed sagitta (mm, + to the left). */
+    public bendRun(sagitta: number): void {
+        this.invalidate();
+        if (this.run?.bend != null) {
+            const [a, b] = this.bendingSegment(this.run);
+            this.run.bend.sagitta = clampSagitta(a, b, sagitta);
+            this.fixBend();
+        }
     }
 
     /** Ends the run being drawn as it is (open); a run of one point is dropped. */
@@ -1729,9 +1761,9 @@ export class ViewerEngine {
             return null;
         }
 
-        if (this.selection.kind === 'wall' && (role.role === 'wallStart' || role.role === 'wallEnd')) {
+        if (this.selection.kind === 'wall' && (role.role === 'wallStart' || role.role === 'wallEnd' || role.role === 'wallCurve')) {
             const wall = scene.walls.find((w) => w.id === this.selection?.id);
-            const mode = role.role === 'wallStart' ? 'start' : 'end';
+            const mode = role.role === 'wallStart' ? 'start' : role.role === 'wallEnd' ? 'end' : 'curve';
             return wall === undefined ? null : {kind: 'wall', plane, grab, moved: false, wall, mode, current: wall, fits: true, snap: null};
         }
         const room = this.selection.kind === 'room' ? scene.rooms.find((r) => r.id === this.selection?.id) : undefined;
@@ -1876,9 +1908,19 @@ export class ViewerEngine {
         }
     };
 
-    /** Moves a wall end (snapping onto other wall ends, or into line with them) or the whole wall. */
+    /**
+     * Moves a wall end (snapping onto other wall ends, or into line with them) or the whole wall, or bends it by its
+     * middle (snapping to straight, else to the grid).
+     */
     private dragWall(drag: Extract<Drag, {kind: 'wall'}>, delta: Vec2, free: boolean): void {
         const wall = drag.wall;
+        if (drag.mode === 'curve') {
+            const bent = bendWall(wall, this.dragSagitta(drag, delta, free));
+            drag.current = bent.wall;
+            drag.fits = bent.fits;
+            this.previewWall(bent.wall, bent.fits);
+            return;
+        }
         const others = (this.sceneData?.walls ?? [])
             .filter((w) => w.id !== wall.id)
             .flatMap((w) => [
@@ -1915,6 +1957,18 @@ export class ViewerEngine {
         drag.current = moved.wall;
         drag.fits = moved.fits;
         this.previewWall(moved.wall, moved.fits);
+    }
+
+    /** The sagitta a wall's middle dragged by `delta` gives (`sagittaToward()`). */
+    private dragSagitta(drag: Extract<Drag, {kind: 'wall'}>, delta: Vec2, free: boolean): number {
+        const wall = drag.wall;
+        const frame = wallFrame(wall);
+        const middle = pointOnWall(frame, frame.length / 2);
+        const point = {x: middle.x + delta.x, y: middle.y + delta.y};
+        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        const sagitta = sagittaToward({x: wall.startX, y: wall.startY}, {x: wall.endX, y: wall.endY}, point, free ? 1 : DragSnap, radius);
+        drag.snap = sagitta === 0 && !free ? 'point' : 'grid';
+        return sagitta;
     }
 
     /** A room corner snaps onto other rooms' corners and wall corners, or into line with its neighbours. */
@@ -2020,7 +2074,13 @@ export class ViewerEngine {
                 }
                 break;
             case 'wall': {
-                const {startX, startY, endX, endY} = drag.current;
+                const {startX, startY, endX, endY, sagitta} = drag.current;
+                if (drag.mode === 'curve') {
+                    if ((sagitta ?? 0) !== (drag.wall.sagitta ?? 0) && drag.fits) {
+                        edit = {selection: {kind: 'wall', id: drag.wall.id}, fields: {sagitta}};
+                    }
+                    break;
+                }
                 const changed = startX !== drag.wall.startX || startY !== drag.wall.startY || endX !== drag.wall.endX || endY !== drag.wall.endY;
                 if (changed && drag.fits) {
                     edit = {selection: {kind: 'wall', id: drag.wall.id}, fields: {startX, startY, endX, endY}};
@@ -2124,6 +2184,11 @@ export class ViewerEngine {
             event.stopPropagation();
             return;
         }
+        if (this.editMode && this.tool === 'drawWalls' && !typing && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'a') {
+            event.stopPropagation();
+            this.setDrawArc(!this.drawArc);
+            return;
+        }
         if (this.run === null || typing) {
             return;
         }
@@ -2134,14 +2199,26 @@ export class ViewerEngine {
         } else if (event.key === 'Backspace') {
             event.stopPropagation();
             event.preventDefault();
-            this.run.points.pop();
+            // Back before the last click: the curve waiting for its click, or the last point (and its segment's curve).
+            if (this.run.bend?.closing === true) {
+                this.run.bend = null;
+            } else {
+                this.run.bend = null;
+                this.run.points.pop();
+                this.run.sagittas.splice(Math.max(this.run.points.length - 1, 0));
+            }
             if (this.run.points.length === 0) {
                 this.run = null;
             }
             this.updateDrawing();
         } else if (event.key === 'Enter') {
             event.stopPropagation();
-            this.commitRun(false);
+            if (this.run.bend !== null) {
+                this.fixBend();
+            }
+            if (this.run !== null) {
+                this.commitRun(false);
+            }
         }
     };
 
@@ -2236,6 +2313,12 @@ export class ViewerEngine {
             this.onToolStatus(null);
             return;
         }
+        if (this.tool === 'drawWalls' && this.run?.bend != null) {
+            this.run.bend.sagitta = this.bendTowards(this.run, point, event.shiftKey);
+            this.run.cursor = null;
+            this.updateDrawing();
+            return;
+        }
         if (this.tool === 'drawWalls') {
             const snapped = this.snapRunPoint(point, event.shiftKey);
             if (this.run !== null) {
@@ -2273,6 +2356,11 @@ export class ViewerEngine {
         if (point === null || this.pendingRun !== null) {
             return;
         }
+        if (this.tool === 'drawWalls' && this.run?.bend != null) {
+            this.run.bend.sagitta = this.bendTowards(this.run, point, event.shiftKey);
+            this.fixBend();
+            return;
+        }
         if (this.tool === 'drawWalls') {
             this.addRunPoint(this.snapRunPoint(point, event.shiftKey).point);
             return;
@@ -2290,15 +2378,54 @@ export class ViewerEngine {
         return snapDrawPoint(point, {grid: free ? 1 : DragSnap, radius, walls: this.sceneData?.walls ?? [], points: this.run?.points ?? []});
     }
 
-    /** Adds a point to the run (starting one); back at the first point the run closes and is sent. */
-    private addRunPoint(point: Vec2): void {
+    /** The segment of the run waiting for its curve: the last one, or the one closing the run. */
+    private bendingSegment(run: WallRun): [Vec2, Vec2] {
+        const last = run.points[run.points.length - 1];
+        return run.bend?.closing === true ? [last, run.points[0]] : [run.points[run.points.length - 2], last];
+    }
+
+    /** The curve that puts the middle of the waiting segment at `point`'s distance off it. */
+    private bendTowards(run: WallRun, point: Vec2, free: boolean): number {
+        const [a, b] = this.bendingSegment(run);
+        const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
+        return sagittaToward(a, b, point, free ? 1 : DragSnap, radius);
+    }
+
+    /** Fixes the waiting segment's curve; a closing one sends the run. */
+    private fixBend(): void {
+        const run = this.run;
+        const bend = run?.bend;
+        if (run === null || bend == null) {
+            return;
+        }
+        run.bend = null;
+        if (bend.closing) {
+            run.sagittas[run.points.length - 1] = bend.sagitta;
+            this.commitRun(true);
+            return;
+        }
+        run.sagittas[run.points.length - 2] = bend.sagitta;
+        this.updateDrawing();
+    }
+
+    /**
+     * Adds a point to the run (starting one) with the curve of the segment to it; back at the first point the run
+     * closes and is sent. In arc mode, without a typed curve, the segment then waits for its curve.
+     */
+    private addRunPoint(point: Vec2, sagitta: number | null = null): void {
         const run = this.run;
         if (run === null) {
-            this.run = {points: [point], cursor: point, snap: null};
+            this.run = {points: [point], sagittas: [], cursor: point, snap: null, bend: null};
             this.updateDrawing();
             return;
         }
         if (closesRun(run.points, point)) {
+            if (sagitta === null && this.drawArc) {
+                run.bend = {closing: true, sagitta: 0};
+                this.updateDrawing();
+                return;
+            }
+            run.sagittas[run.points.length - 1] = sagitta ?? 0;
             this.commitRun(true);
             return;
         }
@@ -2312,6 +2439,10 @@ export class ViewerEngine {
             return;
         }
         run.points.push(point);
+        run.sagittas[run.points.length - 2] = sagitta ?? 0;
+        if (sagitta === null && this.drawArc) {
+            run.bend = {closing: false, sagitta: 0};
+        }
         this.updateDrawing();
     }
 
@@ -2326,12 +2457,15 @@ export class ViewerEngine {
             this.updateDrawing();
             return;
         }
-        const pending = {points: run.points, closed};
+        const segments = closed ? run.points.length : run.points.length - 1;
+        const sagittas = Array.from({length: segments}, (_, i) => run.sagittas[i] ?? 0);
+        const pending = {points: run.points, closed, sagittas};
         this.pendingRun = pending;
         this.updateDrawing();
         void this.onDrawWalls(
             run.points.map((p): PlanPoint => [p.x, p.y]),
             closed,
+            sagittas.some((s) => s !== 0) ? sagittas : null,
         ).then((added) => {
             if (this.pendingRun !== pending) {
                 return;
@@ -2369,14 +2503,20 @@ export class ViewerEngine {
         }
 
         const pending = this.pendingRun;
-        const points = pending?.points ?? this.run?.points ?? [];
+        const run = this.run;
+        const points = pending?.points ?? run?.points ?? [];
+        const sagittas = pending?.sagittas ?? run?.sagittas ?? [];
+        const bend = pending === null ? (run?.bend ?? null) : null;
         const last = points.at(-1);
-        const segments: [Vec2, Vec2][] = points.slice(1).map((p, i) => [points[i], p]);
-        if (pending?.closed === true && last !== undefined) {
-            segments.push([last, points[0]]);
+        const segments: [Vec2, Vec2, number][] = points.slice(1).map((p, i) => [points[i], p, sagittas[i] ?? 0]);
+        if (bend !== null && !bend.closing && segments.length > 0) {
+            segments[segments.length - 1][2] = bend.sagitta;
         }
-        if (pending === null && last !== undefined && cursor !== null && Math.hypot(cursor.x - last.x, cursor.y - last.y) >= 1) {
-            segments.push([last, cursor]);
+        if ((pending?.closed === true || bend?.closing === true) && last !== undefined) {
+            segments.push([last, points[0], bend?.closing === true ? bend.sagitta : (sagittas[points.length - 1] ?? 0)]);
+        }
+        if (pending === null && bend === null && last !== undefined && cursor !== null && Math.hypot(cursor.x - last.x, cursor.y - last.y) >= 1) {
+            segments.push([last, cursor, 0]);
         }
         this.addRunWalls(segments);
         this.markRun(points, pending === null ? cursor : null, snap);
@@ -2387,17 +2527,19 @@ export class ViewerEngine {
             length,
             angle: last !== undefined && cursor !== null && length !== 0 ? Math.round(directionOf(last, cursor) * 10) / 10 : null,
             snap: cursor === null ? null : snap,
+            arc: this.drawArc,
+            sagitta: bend?.sagitta ?? null,
         });
     }
 
-    /** Preview walls of a run, mitred with each other and with the walls of the floor. */
-    private addRunWalls(segments: readonly [Vec2, Vec2][]): void {
+    /** Preview walls of a run (start, end and curve each), mitred with each other and with the walls of the floor. */
+    private addRunWalls(segments: readonly [Vec2, Vec2, number][]): void {
         const parts = this.parts;
         const materials = this.materials;
         if (parts === null || materials === null || segments.length === 0) {
             return;
         }
-        const drawn: Wall[] = segments.map(([a, b], i) => ({
+        const drawn: Wall[] = segments.map(([a, b, sagitta], i) => ({
             id: -1 - i,
             name: 'New wall',
             type: 'Interior',
@@ -2405,6 +2547,7 @@ export class ViewerEngine {
             startY: a.y,
             endX: b.x,
             endY: b.y,
+            sagitta,
             thickness: this.wallDraft.thickness,
             height: this.wallDraft.height,
             materialId: null,
@@ -2523,6 +2666,9 @@ export class ViewerEngine {
             const active = drag?.kind === 'wall' ? drag.mode : null;
             this.addHandle({x: wall.startX, y: wall.startY}, y, {role: 'wallStart'}, active === 'start' ? state : 'normal');
             this.addHandle({x: wall.endX, y: wall.endY}, y, {role: 'wallEnd'}, active === 'end' ? state : 'normal');
+            // The middle of the centre line bends the wall.
+            const frame = wallFrame(wall);
+            this.addHandle(pointOnWall(frame, frame.length / 2), y, {role: 'wallCurve'}, active === 'curve' ? state : 'normal');
         } else if (this.selection.kind === 'room') {
             const id = this.selection.id;
             const room = scene.rooms.find((r) => r.id === id);
@@ -2838,5 +2984,5 @@ function sameJson(a: unknown, b: unknown): boolean {
 /** The four corners of a wall's footprint (mitred with `ends`), where room outlines usually meet it. */
 function wallCorners(wall: Wall, ends?: WallEnds): Vec2[] {
     const {left, right} = wallFaces(wall, ends);
-    return [...left, ...right].map((p) => ({x: Math.round(p.x), y: Math.round(p.y)}));
+    return [left[0], left[left.length - 1], right[0], right[right.length - 1]].map((p) => ({x: Math.round(p.x), y: Math.round(p.y)}));
 }

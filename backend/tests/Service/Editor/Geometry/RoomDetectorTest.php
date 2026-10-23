@@ -32,7 +32,7 @@ final class RoomDetectorTest extends TestCase
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var array<string, list<array{id: int, startX: int, startY: int, endX: int, endY: int, thickness: int}>> $layouts */
+		/** @var array<string, list<array{id: int, startX: int, startY: int, endX: int, endY: int, thickness: int, sagitta?: int}>> $layouts */
 		$layouts = $fixture['layouts'];
 		/** @var list<array{name: string, layout: string, point: array{int, int}, polygon?: list<array{int, int}>, error?: string}> $cases */
 		$cases = $fixture['cases'];
@@ -45,6 +45,7 @@ final class RoomDetectorTest extends TestCase
 					$wall['endX'],
 					$wall['endY'],
 					$wall['thickness'],
+					$wall['sagitta'] ?? 0,
 				),
 				$layouts[$case['layout']],
 			);

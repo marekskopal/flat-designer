@@ -34,6 +34,7 @@ final readonly class WallTools
 	 * @param int $startY centre line start, mm north
 	 * @param int $endX centre line end, mm east
 	 * @param int $endY centre line end, mm north
+	 * @param int|null $sagitta a curved wall: how far the middle of its centre line lies off the straight line start → end, mm, + to the left of start → end (at most half that distance: a semicircle); default 0, straight
 	 * @param int|null $thickness mm (default 100)
 	 * @param int|null $height mm (default 2600)
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft" (default Interior)
@@ -41,7 +42,10 @@ final readonly class WallTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands (e.g. tiling 0–2100) on the face left of start → end, instead of the room's wallFinishes
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
 	 */
-	#[McpTool(name: 'add_wall', description: 'Add a straight wall. Openings are placed along it from the start point.')]
+	#[McpTool(
+		name: 'add_wall',
+		description: 'Add a wall, straight or curved (an arc, `sagitta`). Openings are placed along its centre line from the start point.',
+	)]
 	public function addWall(
 		int $projectId,
 		int $floorId,
@@ -49,6 +53,7 @@ final readonly class WallTools
 		int $startY,
 		int $endX,
 		int $endY,
+		?int $sagitta = null,
 		?int $thickness = null,
 		?int $height = null,
 		?string $type = null,
@@ -68,6 +73,7 @@ final readonly class WallTools
 				'startY' => $startY,
 				'endX' => $endX,
 				'endY' => $endY,
+				'sagitta' => $sagitta,
 				'thickness' => $thickness,
 				'height' => $height,
 				'type' => $type,
@@ -82,6 +88,7 @@ final readonly class WallTools
 	/**
 	 * @param list<list<int>> $points centre-line points as [[x, y], …] in mm; each wall runs from one point to the next
 	 * @param bool|null $closed true adds a last wall from the last point back to the first (default false)
+	 * @param list<int>|null $sagittas curved walls: one sagitta per wall in the order drawn (the closing wall last), mm off the straight line between its points, + to the left of the drawing direction; 0 = straight (default: all straight)
 	 * @param int|null $thickness mm, for every wall (default 100)
 	 * @param int|null $height mm, for every wall (default 2600)
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft" (default Interior)
@@ -89,8 +96,8 @@ final readonly class WallTools
 	 */
 	#[McpTool(
 		name: 'add_walls',
-		description: 'Draw a run of straight walls through the given centre-line points, as one change (one undo step, listed in `batch`). '
-			. 'Walls sharing an end point join in a mitred corner. Put rooms inside with detect_room.',
+		description: 'Draw a run of walls through the given centre-line points, as one change (one undo step, listed in `batch`); '
+			. '`sagittas` curves some of them. Walls sharing an end point join in a mitred corner. Put rooms inside with detect_room.',
 	)]
 	public function addWalls(
 		int $projectId,
@@ -102,6 +109,7 @@ final readonly class WallTools
 		?string $type = null,
 		?string $name = null,
 		?int $materialId = null,
+		?array $sagittas = null,
 	): EditResultDto {
 		return $this->wallDrawer->drawWalls(
 			$this->context->user(),
@@ -115,10 +123,12 @@ final readonly class WallTools
 				'name' => $name,
 				'materialId' => $materialId,
 			]),
+			sagittas: $sagittas === null ? null : BodyReader::intList(['sagittas' => $sagittas], 'sagittas'),
 		);
 	}
 
 	/**
+	 * @param int|null $sagitta curve the wall: mm its centre line's middle lies off the straight line start → end, + to the left of start → end; 0 straightens it
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft"
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands on the face left of start → end, instead of the room's wallFinishes; [] = none
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
@@ -127,7 +137,7 @@ final readonly class WallTools
 	#[McpTool(
 		name: 'update_wall',
 		description: 'Change a wall. Only the given fields change. Moving the start point shifts the offsets of its doors and windows so they '
-			. 'stay in place on the plan; they must still fit the wall.',
+			. 'stay in place on the plan; they must still fit the wall. Swapping start and end keeps a curve on the same side of the plan.',
 	)]
 	public function updateWall(
 		int $projectId,
@@ -137,6 +147,7 @@ final readonly class WallTools
 		?int $startY = null,
 		?int $endX = null,
 		?int $endY = null,
+		?int $sagitta = null,
 		?int $thickness = null,
 		?int $height = null,
 		?string $type = null,
@@ -158,6 +169,7 @@ final readonly class WallTools
 				'startY' => $startY,
 				'endX' => $endX,
 				'endY' => $endY,
+				'sagitta' => $sagitta,
 				'thickness' => $thickness,
 				'height' => $height,
 				'type' => $type,

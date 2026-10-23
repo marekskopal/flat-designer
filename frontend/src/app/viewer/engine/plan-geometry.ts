@@ -20,41 +20,184 @@ export interface WallPiece {
     recess?: {openingId: number; side: 'Left' | 'Right'; depth: number};
 }
 
+/**
+ * The circle of a curved wall's centre line: it turns through `sweep` (radians, counter-clockwise positive) from
+ * `startAngle` (of the start point about `centre`). `segments` straight pieces stand in for it in footprints and meshes.
+ */
+export interface WallArc {
+    centre: Vec2;
+    radius: number;
+    startAngle: number;
+    sweep: number;
+    segments: number;
+}
+
 export interface WallFrame {
     start: Vec2;
-    /** Unit vector start → end. */
+    /** Unit vector start → end (of the chord, for a curved wall). */
     dir: Vec2;
     /** Unit normal to the left of `dir` (counter-clockwise). */
     normal: Vec2;
+    /** Length of the centre line, along the arc for a curved wall. */
     length: number;
     /** Angle of `dir` from the plan x axis, radians counter-clockwise; equals the scene rotation about +y. */
     angle: number;
+    /** Set for a curved wall: `pointOnWall()`, `tangentAt()` and `alongWall()` follow it. */
+    arc?: WallArc;
 }
+
+/** The fields of a wall that define its centre line; `sagitta` is missing in older snapshots (straight). */
+export type WallPath = Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY'> & {sagitta?: number};
 
 /** The fields of a wall that define its footprint. */
-export type WallLine = Pick<Wall, 'id' | 'startX' | 'startY' | 'endX' | 'endY' | 'thickness'>;
+export type WallLine = Pick<Wall, 'id' | 'startX' | 'startY' | 'endX' | 'endY' | 'thickness' | 'sagitta'>;
 
-export function wallFrame(wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY'>): WallFrame {
+/** How far (mm) a straight piece standing in for an arc may be off it, about (the PHP `WallLine::ArcSag`). */
+const ArcSag = 3;
+const MaxArcSegments = 64;
+
+/**
+ * How many straight pieces stand in for an arc of this sagitta: each is off the arc by about `ArcSag` at most, a
+ * curved wall has at least two. Twin of `WallLine::segments()`.
+ */
+export function arcSegments(sagitta: number): number {
+    return Math.min(MaxArcSegments, Math.max(2, Math.ceil(Math.sqrt(Math.abs(sagitta) / ArcSag))));
+}
+
+/**
+ * The centre line of a wall: straight, or for a `sagitta` (mm from the chord's midpoint to the arc, + to the left of
+ * start → end) an arc of at most a semicircle. Twin of `WallLine` in the backend.
+ */
+export function wallFrame(wall: WallPath): WallFrame {
     const dx = wall.endX - wall.startX;
     const dy = wall.endY - wall.startY;
-    const length = Math.hypot(dx, dy);
-    const dir = {x: dx / length, y: dy / length};
+    const chord = Math.hypot(dx, dy);
+    const dir = {x: dx / chord, y: dy / chord};
+    const normal = {x: -dir.y, y: dir.x};
+    const frame: WallFrame = {start: {x: wall.startX, y: wall.startY}, dir, normal, length: chord, angle: Math.atan2(dy, dx)};
+    const sagitta = wall.sagitta ?? 0;
+    if (sagitta === 0 || !(chord > 0)) {
+        return frame;
+    }
 
+    const radius = ((chord * chord) / 4 + sagitta * sagitta) / (2 * Math.abs(sagitta));
+    // The centre lies on the chord's bisector, on the side away from the bulge.
+    const offset = sagitta - Math.sign(sagitta) * radius;
+    const centre = {x: (wall.startX + wall.endX) / 2 + normal.x * offset, y: (wall.startY + wall.endY) / 2 + normal.y * offset};
+    const half = Math.asin(Math.min(chord / (2 * radius), 1));
     return {
-        start: {x: wall.startX, y: wall.startY},
-        dir,
-        normal: {x: -dir.y, y: dir.x},
-        length,
-        angle: Math.atan2(dy, dx),
+        ...frame,
+        length: 2 * half * radius,
+        arc: {
+            centre,
+            radius,
+            startAngle: Math.atan2(wall.startY - centre.y, wall.startX - centre.x),
+            // Bulging to the left, the wall turns clockwise.
+            sweep: -Math.sign(sagitta) * 2 * half,
+            segments: arcSegments(sagitta),
+        },
     };
 }
 
-/** Point at distance `along` the centre line and `across` to its left. */
+/**
+ * Point at distance `along` the centre line and `across` to its left. On a curved wall `across` is radial, and an
+ * `along` beyond the ends runs on along the circle.
+ */
 export function pointOnWall(frame: WallFrame, along: number, across = 0): Vec2 {
+    const arc = frame.arc;
+    if (arc === undefined) {
+        return {
+            x: frame.start.x + frame.dir.x * along + frame.normal.x * across,
+            y: frame.start.y + frame.dir.y * along + frame.normal.y * across,
+        };
+    }
+    const angle = arc.startAngle + (arc.sweep * along) / frame.length;
+    // The left of a clockwise arc is outwards.
+    const distance = arc.radius - Math.sign(arc.sweep) * across;
+    return {x: arc.centre.x + Math.cos(angle) * distance, y: arc.centre.y + Math.sin(angle) * distance};
+}
+
+/** Unit vector along the centre line (towards the end) at `along`. */
+export function tangentAt(frame: WallFrame, along: number): Vec2 {
+    const arc = frame.arc;
+    if (arc === undefined) {
+        return frame.dir;
+    }
+    const angle = arc.startAngle + (arc.sweep * along) / frame.length;
+    const sign = Math.sign(arc.sweep);
+    return {x: -Math.sin(angle) * sign, y: Math.cos(angle) * sign};
+}
+
+/**
+ * The straight frame touching the centre line at `along`: the same `along` / `across` coordinates near that point. A
+ * door or window of a curved wall is built straight on it, at its middle. A straight wall's own frame.
+ */
+export function tangentFrame(frame: WallFrame, along: number): WallFrame {
+    if (frame.arc === undefined) {
+        return frame;
+    }
+    const dir = tangentAt(frame, along);
+    const at = pointOnWall(frame, along);
     return {
-        x: frame.start.x + frame.dir.x * along + frame.normal.x * across,
-        y: frame.start.y + frame.dir.y * along + frame.normal.y * across,
+        start: {x: at.x - dir.x * along, y: at.y - dir.y * along},
+        dir,
+        normal: {x: -dir.y, y: dir.x},
+        length: frame.length,
+        angle: Math.atan2(dir.y, dir.x),
     };
+}
+
+/** The frame an opening is built on: its wall's, or on a curved wall the tangent at the opening's middle. */
+export function openingFrame(frame: WallFrame, opening: Pick<Opening, 'offset' | 'width'>): WallFrame {
+    return tangentFrame(frame, opening.offset + opening.width / 2);
+}
+
+/**
+ * Where along the centre line `along` the samples of a face or footprint lie between `from` and `to`: the ends and,
+ * on a curved wall, the joints of its `segments` pieces in between (the same for every face, so pieces line up).
+ */
+export function wallSamples(frame: WallFrame, from: number, to: number): number[] {
+    const samples = [from];
+    const segments = frame.arc?.segments ?? 1;
+    for (let i = 1; i < segments; i++) {
+        const along = (frame.length * i) / segments;
+        if (along > from && along < to) {
+            samples.push(along);
+        }
+    }
+    samples.push(to);
+    return samples;
+}
+
+/**
+ * Footprint of a stretch of wall `from`..`to` along the centre line: its right face start → end, then its left face
+ * back. `ends` mitres it where it reaches the wall's ends; a recess takes `depth` off one face (`WallPiece.recess`).
+ * Four corners for a straight wall.
+ */
+export function wallOutline(
+    frame: WallFrame,
+    thickness: number,
+    from: number,
+    to: number,
+    ends: WallEnds = SquareEnds,
+    recess?: WallPiece['recess'],
+): Vec2[] {
+    const h = thickness / 2;
+    const left = h - (recess?.side === 'Left' ? recess.depth : 0);
+    const right = -h + (recess?.side === 'Right' ? recess.depth : 0);
+    // A mitre's reach at the given distance across, between the two faces' (as a cut across the wall).
+    const mitre = (atLeft: number, atRight: number, across: number): number => atRight + ((atLeft - atRight) * (across + h)) / thickness;
+    const face = (across: number): Vec2[] => {
+        const samples = wallSamples(frame, from, to);
+        if (from <= 0) {
+            samples[0] = -mitre(ends.startLeft, ends.startRight, across);
+        }
+        if (to >= frame.length) {
+            samples[samples.length - 1] = frame.length + mitre(ends.endLeft, ends.endRight, across);
+        }
+        return samples.map((along) => pointOnWall(frame, along, across));
+    };
+    return [...face(right), ...face(left).reverse()];
 }
 
 /**
@@ -108,9 +251,67 @@ export interface WallGap {
 }
 
 /**
- * Openings of walls whose face lies on the edge a → b: the wall runs parallel to the edge and its
- * centre line is half a thickness (± tolerance) away. Returns their extents projected onto the edge; a niche
- * counts on the face it is cut into only.
+ * How a wall lies along the room edge a → b: the side of it whose face is on the edge and, for a curved wall, where the
+ * edge's ends lie along its centre line (mm, unsorted). Null when neither face is.
+ */
+export interface EdgeWall {
+    frame: WallFrame;
+    side: 'Left' | 'Right';
+    along?: [number, number];
+}
+
+/**
+ * The face of `wall` on the edge a → b, if any: a straight wall runs parallel to the edge with its centre line half a
+ * thickness (± tolerance) away; a curved one has the edge's ends and middle half a thickness (± tolerance) off its arc,
+ * on one side, beside it (the edge is a piece of the outline along its face, its ends reaching half a thickness on).
+ * Twin of `EdgeWall::of()`.
+ */
+export function edgeWall(a: Vec2, b: Vec2, wall: WallPath & Pick<Wall, 'thickness'>, tolerance: number): EdgeWall | null {
+    const frame = wallFrame(wall);
+    const half = wall.thickness / 2;
+    if (frame.arc === undefined) {
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        const parallel = Math.abs(((b.x - a.x) * frame.dir.y - (b.y - a.y) * frame.dir.x) / length) < 1e-3;
+        // Distance of a from the centre line, positive on its left.
+        const normal = acrossWall(frame, a);
+        if (!parallel || Math.abs(Math.abs(normal) - half) > tolerance) {
+            return null;
+        }
+        return {frame, side: normal > 0 ? 'Left' : 'Right'};
+    }
+
+    const across = [a, {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}, b].map((point) => acrossWall(frame, point));
+    if (across.some((d) => Math.abs(Math.abs(d) - half) > tolerance || d > 0 !== across[0] > 0)) {
+        return null;
+    }
+    const along: [number, number] = [alongWall(frame, a), alongWall(frame, b)];
+    if (Math.max(...along) <= -half || Math.min(...along) >= frame.length + half) {
+        return null;
+    }
+    return {frame, side: across[0] > 0 ? 'Left' : 'Right', along};
+}
+
+/**
+ * Where a stretch of a wall's centre line (mm along it) lies on the edge from `a` along `dir`, `length` long, mm from a
+ * (unsorted): projected, on a curved wall clipped to the edge and placed between its ends. Null when it misses the edge.
+ */
+export function edgeStretch(match: EdgeWall, a: Vec2, dir: Vec2, length: number, from: number, to: number): [number, number] | null {
+    if (match.along === undefined) {
+        const project = (point: Vec2): number => (point.x - a.x) * dir.x + (point.y - a.y) * dir.y;
+        return [project(pointOnWall(match.frame, from)), project(pointOnWall(match.frame, to))];
+    }
+    const [ta, tb] = match.along;
+    const lo = Math.max(from, Math.min(ta, tb));
+    const hi = Math.min(to, Math.max(ta, tb));
+    if (hi <= lo) {
+        return null;
+    }
+    return [((lo - ta) / (tb - ta)) * length, ((hi - ta) / (tb - ta)) * length];
+}
+
+/**
+ * Openings of walls whose face lies on the edge a → b (`edgeWall()`). Returns their extents projected onto the edge; a
+ * niche counts on the face it is cut into only.
  */
 export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance = 30): WallGap[] {
     const length = Math.hypot(b.x - a.x, b.y - a.y);
@@ -121,25 +322,20 @@ export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tole
     const gaps: WallGap[] = [];
 
     for (const wall of walls) {
-        const frame = wallFrame(wall);
-        const parallel = Math.abs(dir.x * frame.dir.y - dir.y * frame.dir.x) < 1e-3;
-        // Distance of a from the centre line, positive on its left.
-        const normal = (a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y;
-        if (!parallel || Math.abs(Math.abs(normal) - wall.thickness / 2) > tolerance) {
+        const match = edgeWall(a, b, wall, tolerance);
+        if (match === null) {
             continue;
         }
-        const face = normal > 0 ? 'Left' : 'Right';
-
         for (const opening of wall.openings) {
-            if (opening.type === 'Niche' && (opening.side ?? 'Left') !== face) {
+            if (opening.type === 'Niche' && (opening.side ?? 'Left') !== match.side) {
                 continue;
             }
-            const p0 = pointOnWall(frame, opening.offset);
-            const p1 = pointOnWall(frame, opening.offset + opening.width);
-            const t0 = (p0.x - a.x) * dir.x + (p0.y - a.y) * dir.y;
-            const t1 = (p1.x - a.x) * dir.x + (p1.y - a.y) * dir.y;
-            const from = Math.max(Math.min(t0, t1), 0);
-            const to = Math.min(Math.max(t0, t1), length);
+            const stretch = edgeStretch(match, a, dir, length, opening.offset, opening.offset + opening.width);
+            if (stretch === null) {
+                continue;
+            }
+            const from = Math.max(Math.min(...stretch), 0);
+            const to = Math.min(Math.max(...stretch), length);
             if (to > from) {
                 gaps.push({from, to, bottom: opening.sillHeight, top: opening.sillHeight + opening.height, niche: opening.type === 'Niche'});
             }
@@ -309,8 +505,20 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
         }
         const doors = wall.openings.filter(isPassable);
         for (const piece of wallPieces(frame.length, wall.height, doors)) {
-            if (piece.bottom < WalkableStep) {
+            if (piece.bottom >= WalkableStep) {
+                continue;
+            }
+            if (frame.arc === undefined) {
                 colliders.push({frame, from: piece.from, to: piece.to, halfThickness: wall.thickness / 2});
+                continue;
+            }
+            // A curved wall blocks as its straight pieces, each on the chord of its stretch.
+            const samples = wallSamples(frame, piece.from, piece.to);
+            for (let i = 1; i < samples.length; i++) {
+                const start = pointOnWall(frame, samples[i - 1]);
+                const end = pointOnWall(frame, samples[i]);
+                const chord = wallFrame({startX: start.x, startY: start.y, endX: end.x, endY: end.y});
+                colliders.push({frame: chord, from: 0, to: chord.length, halfThickness: wall.thickness / 2});
             }
         }
     }
@@ -503,7 +711,7 @@ export function leafColliders(walls: readonly Wall[], openness: (openingId: numb
             return [];
         }
         return wall.openings.flatMap((opening) =>
-            openingLeaves(opening, wall.thickness).map((leaf) => leafCollider(frame, leaf, openness(opening.id))),
+            openingLeaves(opening, wall.thickness).map((leaf) => leafCollider(openingFrame(frame, opening), leaf, openness(opening.id))),
         );
     });
 }
@@ -576,7 +784,7 @@ export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]
         return null;
     }
 
-    const frame = wallFrame(door.wall);
+    const frame = openingFrame(wallFrame(door.wall), door.opening);
     const along = door.opening.offset + door.opening.width / 2;
     const across = door.wall.thickness / 2 + EntranceStep;
     const indoor = rooms.filter((r) => r.type !== 'Terrace' && r.type !== 'Garden');
@@ -715,40 +923,122 @@ function alignOnLine(point: Vec2, [a, b]: readonly [Vec2, Vec2], anchors: readon
     return best;
 }
 
-/** Distance along the wall's centre line of the point's projection onto it, mm from the start. */
+/**
+ * Distance along the wall's centre line of the point's projection onto it, mm from the start; on a curved wall by its
+ * angle about the centre (within half a turn of the arc's middle).
+ */
 export function alongWall(frame: WallFrame, point: Vec2): number {
-    return (point.x - frame.start.x) * frame.dir.x + (point.y - frame.start.y) * frame.dir.y;
+    const arc = frame.arc;
+    if (arc === undefined) {
+        return (point.x - frame.start.x) * frame.dir.x + (point.y - frame.start.y) * frame.dir.y;
+    }
+    const middle = arc.startAngle + arc.sweep / 2;
+    let delta = Math.atan2(point.y - arc.centre.y, point.x - arc.centre.x) - middle;
+    delta -= 2 * Math.PI * Math.round(delta / (2 * Math.PI));
+    return frame.length / 2 + (delta / arc.sweep) * frame.length;
 }
 
-/** Centre-line length in whole mm, rounded down like the backend does (openings that fit it fit the wall). */
-export function wallLength(wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY'>): number {
-    return Math.floor(Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY));
+/** Distance of the point from the wall's centre line, mm, positive on its left (radial on a curved wall). */
+export function acrossWall(frame: WallFrame, point: Vec2): number {
+    const arc = frame.arc;
+    if (arc === undefined) {
+        return (point.x - frame.start.x) * frame.normal.x + (point.y - frame.start.y) * frame.normal.y;
+    }
+    return Math.sign(arc.sweep) * (arc.radius - Math.hypot(point.x - arc.centre.x, point.y - arc.centre.y));
+}
+
+/** Centre-line length in whole mm (along the arc), rounded down like the backend does (openings that fit it fit the wall). */
+export function wallLength(wall: WallPath): number {
+    return Math.floor(wallFrame(wall).length);
+}
+
+/** Smallest radius (mm) of a curved wall's inner face (the PHP `WallCurve::MinInnerRadius`). */
+export const MinInnerRadius = 100;
+
+/** Whether a wall's curve is one the backend accepts: at most a semicircle, its inner face at least `MinInnerRadius` round. */
+export function curveFits(wall: WallPath & Pick<Wall, 'thickness'>): boolean {
+    const sagitta = wall.sagitta ?? 0;
+    const frame = wallFrame(wall);
+    return sagitta === 0 || (2 * Math.abs(sagitta) <= Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY) &&
+        frame.arc !== undefined && frame.arc.radius - wall.thickness / 2 >= MinInnerRadius);
+}
+
+/**
+ * The stretch of wall (mm along it) an opening takes: a sliding or pocket door with the wall its open leaf slides into
+ * (towards `hinge`). Twin of `OpeningPlacement::occupied()`.
+ */
+export function occupiedSpan(opening: Pick<Opening, 'type' | 'hinge' | 'offset' | 'width'>): [number, number] {
+    const {offset, width} = opening;
+    if (opening.type !== 'SlidingDoor' && opening.type !== 'PocketDoor') {
+        return [offset, offset + width];
+    }
+    const travel = width + (opening.type === 'SlidingDoor' ? 2 * SlidingDoorOverlap : 0);
+    return opening.hinge === 'End' ? [offset, offset + width + travel] : [offset - travel, offset + width];
+}
+
+/**
+ * Whether an opening is shallow enough for its curved wall: built straight on the tangent (with the wall its open leaf
+ * takes, `occupiedSpan()`), it may stand off the arc by a quarter of the thickness at most. Niches follow the curve.
+ * Twin of `OpeningPlacement::fitsCurve()`.
+ */
+export function openingFitsCurve(frame: WallFrame, thickness: number, opening: Pick<Opening, 'type' | 'hinge' | 'offset' | 'width'>): boolean {
+    const arc = frame.arc;
+    if (arc === undefined || opening.type === 'Niche') {
+        return true;
+    }
+    const [from, to] = occupiedSpan(opening);
+    return arc.radius * (1 - Math.cos((to - from) / (2 * arc.radius))) <= thickness / 4;
+}
+
+/** The sagitta clamped to what the chord a → b allows: a semicircle at most. */
+export function clampSagitta(a: Vec2, b: Vec2, sagitta: number): number {
+    const limit = Math.floor(Math.hypot(b.x - a.x, b.y - a.y) / 2);
+    return Math.max(-limit, Math.min(limit, Math.round(sagitta)));
 }
 
 /**
  * The wall with new end points and its openings' offsets as the backend derives them: a moved start shifts
- * the offsets so the openings keep their place on the plan. `fits` tells whether they all still fit
- * (otherwise the edit would be refused).
+ * the offsets so the openings keep their place on the plan (projected onto the moved centre line). The curve's sagitta
+ * stays. `fits` tells whether the curve and the openings all still fit (otherwise the edit would be refused).
  */
 export function moveWallEnds(wall: Wall, start: Vec2, end: Vec2): {wall: Wall; fits: boolean} {
-    const moved = {...wall, startX: start.x, startY: start.y, endX: end.x, endY: end.y};
+    // Turned round (the backend's `reverses()`: the new chord runs against the old one), the curve stays on the same
+    // side of the plan.
+    const reversed = (wall.endX - wall.startX) * (end.x - start.x) + (wall.endY - wall.startY) * (end.y - start.y) < 0;
+    const sagitta = reversed ? -(wall.sagitta ?? 0) : (wall.sagitta ?? 0);
+    const moved = {...wall, startX: start.x, startY: start.y, endX: end.x, endY: end.y, sagitta};
     const length = wallLength(moved);
-    const oldLength = Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY);
-    const newLength = Math.hypot(end.x - start.x, end.y - start.y);
     const startMoved = start.x !== wall.startX || start.y !== wall.startY;
+    const oldFrame = wallFrame(wall);
+    const newFrame = wallFrame(moved);
 
     const openings = wall.openings.map((opening) => {
-        if (!startMoved || newLength === 0) {
+        if (!startMoved || !(newFrame.length > 0)) {
             return opening;
         }
-        const t = oldLength > 0 ? opening.offset / oldLength : 0;
-        const x = wall.startX + (wall.endX - wall.startX) * t - start.x;
-        const y = wall.startY + (wall.endY - wall.startY) * t - start.y;
-        return {...opening, offset: Math.round((x * (end.x - start.x) + y * (end.y - start.y)) / newLength)};
+        const at = oldFrame.length > 0 ? pointOnWall(oldFrame, opening.offset) : {x: wall.startX, y: wall.startY};
+        return {...opening, offset: Math.round(alongWall(newFrame, at))};
     });
-    const fits = length >= 100 && openings.every((o) => o.offset >= 0 && o.offset + o.width <= length);
+    const fits =
+        length >= 100 &&
+        curveFits(moved) &&
+        openings.every((o) => o.offset >= 0 && o.offset + o.width <= length && openingFitsCurve(newFrame, wall.thickness, o));
 
     return {wall: {...moved, openings}, fits};
+}
+
+/**
+ * The wall curved to a new sagitta (mm off its chord's midpoint, + to the left; 0 straight), its openings keeping their
+ * offsets. `fits` tells whether the curve and the openings still fit (otherwise the edit would be refused).
+ */
+export function bendWall(wall: Wall, sagitta: number): {wall: Wall; fits: boolean} {
+    const bent = {...wall, sagitta};
+    const frame = wallFrame(bent);
+    const length = wallLength(bent);
+    const fits =
+        curveFits(bent) &&
+        wall.openings.every((o) => o.offset + o.width <= length && openingFitsCurve(frame, wall.thickness, o));
+    return {wall: bent, fits};
 }
 
 /** Where a door or window dragged along its wall goes: `offset` kept on the wall, `fits` false when it overlaps another opening. */
@@ -845,21 +1135,37 @@ const JointTolerance = 1;
 
 /**
  * The two faces of a wall, each from end to end: `left` of the direction start → end and `right`, running on
- * to the mitred corners given by `ends` (from `wallJoints()`).
+ * to the mitred corners given by `ends` (from `wallJoints()`). Two points on a straight wall, the samples of its
+ * pieces (`wallSamples()`) on a curved one.
  */
-export function wallFaces(wall: WallLine, ends: WallEnds = SquareEnds): {left: [Vec2, Vec2]; right: [Vec2, Vec2]} {
+export function wallFaces(wall: WallLine, ends: WallEnds = SquareEnds): {left: Vec2[]; right: Vec2[]} {
     const frame = wallFrame(wall);
     const h = wall.thickness / 2;
-    return {
-        left: [pointOnWall(frame, -ends.startLeft, h), pointOnWall(frame, frame.length + ends.endLeft, h)],
-        right: [pointOnWall(frame, -ends.startRight, -h), pointOnWall(frame, frame.length + ends.endRight, -h)],
+    const face = (across: number, start: number, end: number): Vec2[] => {
+        const samples = wallSamples(frame, 0, frame.length);
+        samples[0] = -start;
+        samples[samples.length - 1] = frame.length + end;
+        return samples.map((along) => pointOnWall(frame, along, across));
     };
+    return {left: face(h, ends.startLeft, ends.endLeft), right: face(-h, ends.startRight, ends.endRight)};
+}
+
+/** The straight pieces of a polyline, as segments. */
+export function polylineSegments(points: readonly Vec2[]): [Vec2, Vec2][] {
+    return points.slice(1).map((point, i): [Vec2, Vec2] => [points[i], point]);
+}
+
+/** The wall's centre line as segments: one for a straight wall, the pieces standing in for an arc. */
+export function centreLineSegments(wall: WallPath): [Vec2, Vec2][] {
+    const frame = wallFrame(wall);
+    return polylineSegments(wallSamples(frame, 0, frame.length).map((along) => pointOnWall(frame, along)));
 }
 
 /**
  * Mitres for walls whose end points meet in pairs: at such a corner each face runs on until it meets the
- * corresponding face of the other wall. Ends shared by three or more walls, straight continuations and
- * very sharp angles stay square. Walls without a joint are left out of the map.
+ * corresponding face of the other wall (a curved wall's face along its circle). Ends shared by three or more walls,
+ * straight (tangent) continuations and very sharp angles stay square. Walls without a joint are left out of the map.
+ * Twin of `WallJoints` in the backend.
  */
 export function wallJoints(walls: readonly WallLine[]): Map<number, WallEnds> {
     const result = new Map<number, WallEnds>();
@@ -875,24 +1181,120 @@ export function wallJoints(walls: readonly WallLine[]): Map<number, WallEnds> {
         if (Math.abs(cross) < 1e-3) {
             continue;
         }
-        // Distance from the corner along `a` where the face on the left of `a` meets the other wall's face
-        // (the right face is its mirror image).
-        const k = (hb + ha * (a.x * b.x + a.y * b.y)) / cross;
-        if (Math.abs(k) > limit) {
+        // How far from the corner into the wall the face on the left of `a` meets the other wall's face, and the one
+        // on its right (for straight walls its mirror image).
+        const reach = faceReach(end, other, a, b, cross);
+        if (reach === null || Math.abs(reach.left) > limit || Math.abs(reach.right) > limit) {
             continue;
         }
         const faces = result.get(end.wall.id) ?? {...SquareEnds};
         if (end.atStart) {
-            faces.startLeft = -k;
-            faces.startRight = k;
+            faces.startLeft = -reach.left;
+            faces.startRight = -reach.right;
         } else {
             // Seen from the end, the left of `a` is the wall's right.
-            faces.endRight = -k;
-            faces.endLeft = k;
+            faces.endRight = -reach.left;
+            faces.endLeft = -reach.right;
         }
         result.set(end.wall.id, faces);
     }
     return result;
+}
+
+/** A wall face in the plan: a line through `point` along `dir`, or a curved wall's circle. */
+type FaceCurve = {point: Vec2; dir: Vec2} | {centre: Vec2; radius: number};
+
+/**
+ * Where the faces left and right of `a` meet the other wall's faces at a corner: mm from the corner into the wall,
+ * along its centre line. Null when a curved face misses the other.
+ */
+function faceReach(end: WallEnd<WallLine>, other: WallEnd<WallLine>, a: Vec2, b: Vec2, cross: number): {left: number; right: number} | null {
+    const ha = end.wall.thickness / 2;
+    const hb = other.wall.thickness / 2;
+    const frame = wallFrame(end.wall);
+    const otherFrame = wallFrame(other.wall);
+    if (frame.arc === undefined && otherFrame.arc === undefined) {
+        const k = (hb + ha * (a.x * b.x + a.y * b.y)) / cross;
+        return {left: k, right: -k};
+    }
+    // The left of `a` is the wall's left at its start, its right at its end; the face it meets is on the right of `b`.
+    const sign = end.atStart ? 1 : -1;
+    const otherSign = other.atStart ? 1 : -1;
+    const reach = (across: number, otherAcross: number): number | null => {
+        const meet = nearestIntersection(faceCurve(frame, across), faceCurve(otherFrame, otherAcross), end.point);
+        if (meet === null) {
+            return null;
+        }
+        const along = alongWall(frame, meet);
+        return end.atStart ? along : frame.length - along;
+    };
+    const left = reach(sign * ha, -otherSign * hb);
+    const right = reach(-sign * ha, otherSign * hb);
+    return left === null || right === null ? null : {left, right};
+}
+
+function faceCurve(frame: WallFrame, across: number): FaceCurve {
+    const arc = frame.arc;
+    return arc === undefined
+        ? {point: pointOnWall(frame, 0, across), dir: frame.dir}
+        : {centre: arc.centre, radius: arc.radius - Math.sign(arc.sweep) * across};
+}
+
+/** The intersection of two face curves nearest to `near`; null when they do not meet. */
+function nearestIntersection(p: FaceCurve, q: FaceCurve, near: Vec2): Vec2 | null {
+    let points: Vec2[];
+    if ('dir' in p && 'dir' in q) {
+        points = lineLine(p.point, p.dir, q.point, q.dir);
+    } else if ('dir' in p && 'centre' in q) {
+        points = lineCircle(p.point, p.dir, q.centre, q.radius);
+    } else if ('centre' in p && 'dir' in q) {
+        points = lineCircle(q.point, q.dir, p.centre, p.radius);
+    } else if ('centre' in p && 'centre' in q) {
+        points = circleCircle(p.centre, p.radius, q.centre, q.radius);
+    } else {
+        points = [];
+    }
+    let best: Vec2 | null = null;
+    for (const point of points) {
+        if (best === null || Math.hypot(point.x - near.x, point.y - near.y) < Math.hypot(best.x - near.x, best.y - near.y)) {
+            best = point;
+        }
+    }
+    return best;
+}
+
+function lineLine(p: Vec2, d: Vec2, q: Vec2, e: Vec2): Vec2[] {
+    const cross = d.x * e.y - d.y * e.x;
+    if (Math.abs(cross) < 1e-9) {
+        return [];
+    }
+    const t = ((q.x - p.x) * e.y - (q.y - p.y) * e.x) / cross;
+    return [{x: p.x + d.x * t, y: p.y + d.y * t}];
+}
+
+function lineCircle(p: Vec2, d: Vec2, centre: Vec2, radius: number): Vec2[] {
+    const fx = p.x - centre.x;
+    const fy = p.y - centre.y;
+    const b = fx * d.x + fy * d.y;
+    const discriminant = b * b - (fx * fx + fy * fy - radius * radius);
+    if (discriminant < 0) {
+        return [];
+    }
+    const root = Math.sqrt(discriminant);
+    return [-b - root, -b + root].map((t) => ({x: p.x + d.x * t, y: p.y + d.y * t}));
+}
+
+function circleCircle(c1: Vec2, r1: number, c2: Vec2, r2: number): Vec2[] {
+    const dx = c2.x - c1.x;
+    const dy = c2.y - c1.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance === 0 || distance > r1 + r2 || distance < Math.abs(r1 - r2)) {
+        return [];
+    }
+    const along = (r1 * r1 - r2 * r2 + distance * distance) / (2 * distance);
+    const height = Math.sqrt(Math.max(r1 * r1 - along * along, 0));
+    const base = {x: c1.x + (dx * along) / distance, y: c1.y + (dy * along) / distance};
+    return [1, -1].map((sign) => ({x: base.x - (sign * dy * height) / distance, y: base.y + (sign * dx * height) / distance}));
 }
 
 interface WallEnd<W extends WallLine> {
@@ -918,10 +1320,14 @@ function cornerEnds<W extends WallLine>(walls: readonly W[]): {end: WallEnd<W>; 
     });
 }
 
-/** Unit vector from a wall end into the wall. */
+/** Unit vector from a wall end into the wall (along the tangent of a curved wall). */
 function intoWall(end: WallEnd<WallLine>): Vec2 {
     const frame = wallFrame(end.wall);
-    return end.atStart ? frame.dir : {x: -frame.dir.x, y: -frame.dir.y};
+    if (end.atStart) {
+        return tangentAt(frame, 0);
+    }
+    const tangent = tangentAt(frame, frame.length);
+    return {x: -tangent.x, y: -tangent.y};
 }
 
 /** The corner windows at a wall's ends: the id of the window that turns the corner there, or null. */
@@ -952,6 +1358,10 @@ export function cornerWindows(walls: readonly Wall[]): Map<number, WallCorners> 
     };
 
     for (const {end, other} of cornerEnds(walls)) {
+        // Not on curved walls: their windows stand on the tangent, away from the corner.
+        if (wallFrame(end.wall).arc !== undefined || wallFrame(other.wall).arc !== undefined) {
+            continue;
+        }
         const a = intoWall(end);
         const b = intoWall(other);
         const mine = windowAt(end);

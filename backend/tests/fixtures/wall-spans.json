@@ -1,5 +1,5 @@
 {
- "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting/faces (PHP) and wallSpansAlongEdge, wallGapsAlongEdge, skirtingPieces and wallFacesAlongEdge (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. `faces` are the wall faces one by one ({wall: index into walls, side: the wall's side facing the edge, from, to}; where walls overlap, the first keeps the stretch). Expected lengths are mm along the edge from a, compared within 0.01.",
+ "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting/faces (PHP) and wallSpansAlongEdge, wallGapsAlongEdge, skirtingPieces and wallFacesAlongEdge (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines (curved by an optional `sagitta`, mm + to the left of start → end) with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. `faces` are the wall faces one by one ({wall: index into walls, side: the wall's side facing the edge, from, to}; where walls overlap, the first keeps the stretch). Expected lengths are mm along the edge from a, compared within 0.01.",
  "cases": [
   {
    "name": "a wall along the edge with a door and a window",
@@ -108,6 +108,50 @@
    "gaps": [],
    "skirting": [[0, 3000]],
    "faces": [{"wall": 0, "side": "Left", "from": 950, "to": 2050}, {"wall": 1, "side": "Left", "from": 0, "to": 950}, {"wall": 1, "side": "Left", "from": 2050, "to": 3000}]
+  },
+  {
+   "name": "a curved face with a doorway, one piece of the outline along it",
+   "edge": [[1298, -356], [1648, -389]],
+   "walls": [
+    {"startX": -100, "startY": -100, "endX": 4100, "endY": -100, "sagitta": -400, "thickness": 200, "openings": [{"offset": 1600, "width": 900, "sillHeight": 0, "height": 2000}]}
+   ],
+   "spans": [[0, 351.55]],
+   "gaps": [{"from": 163.01, "to": 351.55, "bottom": 0, "top": 2000}],
+   "skirting": [[0, 163.01]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 351.55}]
+  },
+  {
+   "name": "the last piece of a curved face meets the corner",
+   "edge": [[3732, -126], [4000, -32]],
+   "walls": [
+    {"startX": -100, "startY": -100, "endX": 4100, "endY": -100, "sagitta": -400, "thickness": 200, "openings": [{"offset": 1600, "width": 900, "sillHeight": 0, "height": 2000}]}
+   ],
+   "spans": [[0, 284.01]],
+   "gaps": [],
+   "skirting": [[0, 284.01]],
+   "faces": [{"wall": 0, "side": "Left", "from": 0, "to": 284.01}]
+  },
+  {
+   "name": "a chord across a curved wall is no face",
+   "edge": [[0, -32], [4000, -32]],
+   "walls": [
+    {"startX": -100, "startY": -100, "endX": 4100, "endY": -100, "sagitta": -400, "thickness": 200, "openings": [{"offset": 1600, "width": 900, "sillHeight": 0, "height": 2000}]}
+   ],
+   "spans": [],
+   "gaps": [],
+   "skirting": [],
+   "faces": []
+  },
+  {
+   "name": "a piece of the outer face of a curved wall",
+   "edge": [[2254, -594], [1745, -594]],
+   "walls": [
+    {"startX": -100, "startY": -100, "endX": 4100, "endY": -100, "sagitta": -400, "thickness": 200, "openings": [{"offset": 1600, "width": 900, "sillHeight": 0, "height": 2000}]}
+   ],
+   "spans": [[0, 509]],
+   "gaps": [{"from": 0, "to": 509, "bottom": 0, "top": 2000}],
+   "skirting": [],
+   "faces": [{"wall": 0, "side": "Right", "from": 0, "to": 509}]
   }
  ]
 }

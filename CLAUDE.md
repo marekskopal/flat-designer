@@ -39,6 +39,16 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
   Start or End of the opening; `side` is Left or Right of the wall direction.
+- Curved walls (FD-63): `walls.sagitta` (mm from the chord's midpoint to the arc, + to the left of start → end, 0
+  straight) makes the centre line an arc of at most a semicircle, its inner face at least 100 mm round (`WallCurve`).
+  The geometry twins are `WallLine` (PHP) and `wallFrame()` / `pointOnWall()` / `alongWall()` / `tangentAt()` (TS):
+  lengths and opening offsets run along the arc, `across` is radial. Footprints, meshes and room outlines stand in for
+  the arc by `arcSegments()` straight pieces (`wallSamples()` / `wallOutline()`, identical in both twins, as room
+  detection needs the same vertices). Mitres of a curved wall meet the other face along its circle (`Intersections`).
+  Doors and windows stand straight on the tangent at their middle (`openingFrame()`), so they may stand off the arc by
+  a quarter of the thickness at most (`OpeningPlacement::fitsCurve()` / `openingFitsCurve()`, sliding leaves'
+  travel included); niches follow the curve. Turning a wall round negates its sagitta (as the face finishes swap).
+  Corner windows need straight walls.
 - Opening types (`OpeningTypeEnum`): `Door`, `DoubleDoor`, `SlidingDoor`, `PocketDoor`, `Passage` (no leaf),
   `Window` and `Niche`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
   `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
@@ -103,12 +113,13 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     to certain elements, e.g. the `custom` form of Custom items.
 - Engine picking: builders tag objects with `itemId` / `openingId` / `wallId` / `roomId` in `userData`
   (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
-  selected wall's ends or room's corners get handles (in an overlay scene drawn above the section cut). One drag
-  results in one `onEdit` call and one change.
+  selected wall's ends and middle (which bends it, `bendWall()`) or room's corners get handles (in an overlay scene
+  drawn above the section cut). One drag results in one `onEdit` call and one change.
 - Drawing tools (`EditorStore.tool`, `viewer/engine/drawing.ts`, `DrawHudComponent`): in the top view, Draw walls
   clicks a run of centre-line points (snapping to wall ends, onto centre lines for T-joints, axes and 15° steps; a
-  typed `3200` or `3200<90` places an exact segment). `WallDrawer` (`POST …/walls/polyline`, MCP `add_walls`) adds
-  the run as one `ChangeBatch`. Room from walls (`RoomOutliner`, `POST …/rooms/detect`, MCP `detect_room` /
+  typed `3200` or `3200<90` places an exact segment, `~400` curves it). In arc mode (key A) each placed segment waits
+  for a click (or a typed value) setting its curve (`sagittaToward()`). `WallDrawer` (`POST …/walls/polyline` with
+  `sagittas`, one per wall; MCP `add_walls`) adds the run as one `ChangeBatch`. Room from walls (`RoomOutliner`, `POST …/rooms/detect`, MCP `detect_room` /
   `find_room_outline`) outlines the inner wall faces around a point. The detection exists twice, `RoomDetector`
   (`Service/Editor/Geometry`) and `room-detect.ts`, kept identical by `backend/tests/fixtures/room-detection.json`.
   **Always change both twins and add a fixture case in the same change.**
@@ -386,9 +397,13 @@ format is the text in `FurnitureTools::Format`.
   without a material prices a surface's default look (`QuantitySurfaceEnum::defaultMaterialName()`, e.g. a ceiling
   without a material is white plaster). They are not floor content: no revision, no undo, not in snapshots; saving
   sends `pricesChanged`.
-- The wall faces along a room edge exist twice: `WallFaceSpans` (PHP) and `wallSpansAlongEdge()` /
-  `wallFacesAlongEdge()` / `wallGapsAlongEdge()` / `skirtingPieces()` (TS), kept identical by
-  `backend/tests/fixtures/wall-spans.json`. **Always change both twins and add a fixture case in the same change.**
+- The wall faces along a room edge exist twice: `WallFaceSpans` with `EdgeWall` (PHP) and `wallSpansAlongEdge()` /
+  `wallFacesAlongEdge()` / `wallGapsAlongEdge()` / `skirtingPieces()` with `edgeWall()` (TS), kept identical by
+  `backend/tests/fixtures/wall-spans.json`. A curved wall's face matches each room edge of its outline pieces (the
+  edge's ends and middle on the face's circle). **Always change both twins and add a fixture case in the same change.**
+- `edgeRuns()` (`ceilings.ts`) joins the room edges along one curved wall face: the dimensions draw it as one line along
+  the arc (`DimensionLine.path`), the elevations as one face unrolled (`ElevationFace.curve`). Its wall finishes get
+  UVs along the arc (`arcFaceUvs()`, flagged `ownUvs` so `alignTiles()` leaves them).
 - Dimension lines (`viewer/engine/dimensions.ts`, the Display toggle and `ShareSettings.dimensions`): every room edge
   gets a line offset into the room. Where `wallGapsAlongEdge()` finds openings, the edge also gets a chain of piers and
   openings. They show only while `isTopDown()`, and labels that are longer than their line on screen are hidden.

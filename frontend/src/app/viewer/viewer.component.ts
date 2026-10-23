@@ -104,7 +104,9 @@ export class ViewerComponent {
     /** Thickness and height of the walls drawn next (for their preview). */
     public readonly wallDraft = input<WallDraftShape>({thickness: 100, height: 2600});
     /** Adds a drawn run of walls; resolves true when it was added (the scene input then changes). */
-    public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean) => Promise<boolean>>(() => Promise.resolve(false));
+    public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean>>(() =>
+        Promise.resolve(false),
+    );
     /** Pins of the review comments, numbered. */
     public readonly comments = input<CommentPin[]>([]);
     /** The thread open in the panel, its pin highlighted. */
@@ -151,7 +153,7 @@ export class ViewerComponent {
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
-            engine.onDrawWalls = (points, closed): Promise<boolean> => this.drawWallsHandler()(points, closed);
+            engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
             engine.onMeasureStatus = (status): void => this.measureStatus.emit(status);
@@ -225,9 +227,22 @@ export class ViewerComponent {
         this.engine()?.setView(preset, animate);
     }
 
-    /** Places the next point of the run being drawn, `length` mm on (towards the pointer, or at `angle` degrees). */
-    public placeRunPoint(length: number, angle: number | null): void {
-        this.engine()?.placeRunPoint(length, angle);
+    /**
+     * Places the next point of the run being drawn, `length` mm on (towards the pointer, or at `angle` degrees), the wall
+     * to it curved by `sagitta` (mm; null: as the arc mode has it).
+     */
+    public placeRunPoint(length: number, angle: number | null, sagitta: number | null = null): void {
+        this.engine()?.placeRunPoint(length, angle, sagitta);
+    }
+
+    /** Arc mode of the draw tool: each wall drawn next waits for its curve. */
+    public setDrawArc(arc: boolean): void {
+        this.engine()?.setDrawArc(arc);
+    }
+
+    /** Curves the wall of the run waiting for its curve by a typed sagitta (mm, + to the left). */
+    public bendRun(sagitta: number): void {
+        this.engine()?.bendRun(sagitta);
     }
 
     /** Ends the run being drawn, open. */

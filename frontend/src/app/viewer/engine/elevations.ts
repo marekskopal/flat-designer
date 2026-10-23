@@ -1,16 +1,29 @@
 import {Item, Material, Opening, Room, Scene, Wall} from '@app/models/scene';
 
 import {clipGap, FinishSegment, finishSegments} from './building';
-import {ceilingHeightAt, subtractSpans, vaultProfile, wallFacesAlongEdge, wallSpansAlongEdge} from './ceilings';
+import {
+    ceilingHeightAt,
+    EdgeRun,
+    edgeRuns,
+    joinedAlong,
+    RoomEdge,
+    subtractSpans,
+    vaultProfile,
+    wallFacesAlongEdge,
+    wallSpansAlongEdge,
+} from './ceilings';
 import {herringboneLength, herringboneTiles} from './materials';
 import {
-    counterClockwise,
+    acrossWall,
+    alongWall,
     DoorFrameWidth,
     itemFootprint,
     pointInPolygon,
     pointOnWall,
+    tangentAt,
     tileOrigin,
     Vec2,
+    WallFrame,
     wallFrame,
     WallGap,
     wallGapsAlongEdge,
@@ -97,6 +110,11 @@ export interface ElevationFace {
     gaps: WallGap[];
     openings: EdgeOpening[];
     segments: FinishSegment[];
+    /**
+     * A curved wall's face, unrolled: the room edges along it are one face, `length` the sum of theirs. `from` / `to`
+     * are where a and b lie along the wall's centre line, `across` the face's distance from it (+ on its left).
+     */
+    curve?: {frame: WallFrame; across: number; from: number; to: number};
 }
 
 /** A, B, … Z, AA, AB, … */
@@ -105,45 +123,118 @@ export function faceLetter(index: number): string {
     return index < 26 ? letter : `${faceLetter(Math.floor(index / 26) - 1)}${letter}`;
 }
 
-/** The faces of a room to draw: its outline's edges (counter-clockwise) with a wall along them, lettered A, B, … */
+/**
+ * The faces of a room to draw: its outline's edges (counter-clockwise) with a wall along them, lettered A, B, … The
+ * edges along one curved wall face are one face, unrolled.
+ */
 export function roomFaces(room: Room, walls: readonly Wall[]): ElevationFace[] {
-    const polygon = counterClockwise(room.polygon);
     const faces: ElevationFace[] = [];
-    polygon.forEach(([ax, ay], i) => {
-        const [bx, by] = polygon[(i + 1) % polygon.length];
-        const a = {x: ax, y: ay};
-        const b = {x: bx, y: by};
-        const length = Math.hypot(bx - ax, by - ay);
-        const spans = length < MinFace ? [] : wallSpansAlongEdge(a, b, walls);
-        if (spans.length === 0) {
-            return;
+    for (const run of edgeRuns(room.polygon, walls)) {
+        const face = run.curve !== null && run.edges.length > 1 ? curvedFace(room, walls, run, run.curve) : straightFace(room, walls, run.edges[0]);
+        if (face !== null) {
+            faces.push({...face, letter: faceLetter(faces.length)});
         }
-        const dir = {x: (bx - ax) / length, y: (by - ay) / length};
-        const edgeFaces = wallFacesAlongEdge(a, b, walls);
-        const top = faceTop(room, a, dir, length, edgeFaces.map((f) => f.wall));
-        faces.push({
-            letter: faceLetter(faces.length),
-            a,
-            b,
-            length,
-            dir,
-            normal: {x: -dir.y, y: dir.x},
-            top,
-            height: Math.max(...top.map((p) => p.y)),
-            spans,
-            gaps: wallGapsAlongEdge(a, b, walls),
-            openings: edgeOpenings(a, dir, length, edgeFaces),
-            segments: finishSegments(room, a, b, length, walls),
-        });
-    });
+    }
     return faces;
+}
+
+function straightFace(room: Room, walls: readonly Wall[], {a, b, length}: RoomEdge): ElevationFace | null {
+    const spans = length < MinFace ? [] : wallSpansAlongEdge(a, b, walls);
+    if (spans.length === 0) {
+        return null;
+    }
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const edgeFaces = wallFacesAlongEdge(a, b, walls);
+    const top = faceTop(room, (t) => ({x: a.x + dir.x * t, y: a.y + dir.y * t}), length, edgeFaces.map((f) => f.wall));
+    return {
+        letter: '',
+        a,
+        b,
+        length,
+        dir,
+        normal: {x: -dir.y, y: dir.x},
+        top,
+        height: Math.max(...top.map((p) => p.y)),
+        spans,
+        gaps: wallGapsAlongEdge(a, b, walls),
+        openings: edgeOpenings(a, dir, length, edgeFaces),
+        segments: finishSegments(room, a, b, length, walls),
+    };
+}
+
+/**
+ * The run of room edges along a curved wall face as one face, unrolled: what lies along each edge, one after the other,
+ * joined where it runs on; the openings placed by where they lie along the wall.
+ */
+function curvedFace(
+    room: Room,
+    walls: readonly Wall[],
+    {edges: run, offsets, length}: EdgeRun,
+    curve: NonNullable<EdgeRun['curve']>,
+): ElevationFace | null {
+    const frame = wallFrame(curve.wall);
+    const shifted = <T extends {from: number; to: number}>(lists: T[][]): T[] =>
+        lists.flatMap((list, i) => list.map((entry) => ({...entry, from: entry.from + offsets[i], to: entry.to + offsets[i]})));
+
+    const spans = joinedAlong(
+        shifted(run.map((edge) => wallSpansAlongEdge(edge.a, edge.b, walls).map(([from, to]) => ({from, to})))),
+        () => true,
+    ).map((span): [number, number] => [span.from, span.to]);
+    if (length < MinFace || spans.length === 0) {
+        return null;
+    }
+    const gaps = joinedAlong(
+        shifted(run.map((edge) => wallGapsAlongEdge(edge.a, edge.b, walls))),
+        (p, q) => p.bottom === q.bottom && p.top === q.top && p.niche === q.niche,
+    );
+    const segments = joinedAlong(
+        shifted(run.map((edge) => finishSegments(room, edge.a, edge.b, edge.length, walls))),
+        (p, q) => JSON.stringify(p.bands) === JSON.stringify(q.bands),
+    );
+
+    const a = run[0].a;
+    const b = run[run.length - 1].b;
+    const across = curve.side === 'Left' ? curve.wall.thickness / 2 : -curve.wall.thickness / 2;
+    const from = alongWall(frame, a);
+    const to = alongWall(frame, b);
+    const position = (along: number): number => ((along - from) / (to - from)) * length;
+    const openings = curve.wall.openings.flatMap((opening): EdgeOpening[] => {
+        if (opening.type === 'Niche' && (opening.side ?? 'Left') !== curve.side) {
+            return [];
+        }
+        const t0 = position(opening.offset);
+        const t1 = position(opening.offset + opening.width);
+        const start = Math.max(Math.min(t0, t1), 0);
+        const end = Math.min(Math.max(t0, t1), length);
+        const hinge = opening.hinge === null ? null : opening.hinge === 'End' ? t1 : t0;
+        return end > start ? [{opening, wall: curve.wall, from: start, to: end, hinge}] : [];
+    });
+
+    const chord = Math.hypot(b.x - a.x, b.y - a.y);
+    const dir = {x: (b.x - a.x) / chord, y: (b.y - a.y) / chord};
+    const top = faceTop(room, (t) => pointOnWall(frame, from + ((to - from) * t) / length, across), length, [curve.wall]);
+    return {
+        letter: '',
+        a,
+        b,
+        length,
+        dir,
+        normal: {x: -dir.y, y: dir.x},
+        top,
+        height: Math.max(...top.map((p) => p.y)),
+        spans,
+        gaps,
+        openings,
+        segments,
+        curve: {frame, across, from, to},
+    };
 }
 
 /**
  * The ceiling along a face: flat at the room's height, the vaults and beams sampled along it, or for an open-air room
  * the tallest of the walls on the edge.
  */
-function faceTop(room: Room, a: Vec2, dir: Vec2, length: number, along: readonly Wall[]): Vec2[] {
+function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along: readonly Wall[]): Vec2[] {
     if (room.ceilingHeight === null) {
         const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
         return [{x: 0, y: height}, {x: length, y: height}];
@@ -154,8 +245,8 @@ function faceTop(room: Room, a: Vec2, dir: Vec2, length: number, along: readonly
     const steps = Math.max(2, Math.ceil(length / 20));
     return Array.from({length: steps + 1}, (_, i) => {
         const x = (length * i) / steps;
-        const t = length - x;
-        return {x, y: ceilingHeightAt(room, a.x + dir.x * t, a.y + dir.y * t) ?? room.ceilingHeight ?? 0};
+        const point = pointAt(length - x);
+        return {x, y: ceilingHeightAt(room, point.x, point.y) ?? room.ceilingHeight ?? 0};
     });
 }
 
@@ -326,14 +417,14 @@ function faceSvg(face: ElevationFace, at: Vec2, context: FaceContext): string {
     // Finish bands, round the openings. Tiles go on the room's grid: u (mm, as `tileUv()`) at x = 0 is the origin's
     // projection, growing to the right as seen from the front; bricks keep their surface's UVs, u from the edge's start a.
     const origin = tileOrigin(room);
-    const gridPhase = -((face.b.x - origin.x) * face.dir.x + (face.b.y - origin.y) * face.dir.y);
+    const gridPhase = face.curve === undefined ? -((face.b.x - origin.x) * face.dir.x + (face.b.y - origin.y) * face.dir.y) : curvedPhase(face.curve);
     for (const segment of face.segments) {
         for (const band of segment.bands) {
             const material = context.materials.get(band.materialId);
             if (material === undefined) {
                 continue;
             }
-            const phase = material.pattern === 'Brick' ? -face.length : gridPhase;
+            const phase = material.pattern === 'Brick' && face.curve === undefined ? -face.length : gridPhase;
             const bandGaps = face.gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top, segment));
             for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
                 const x0 = xOf(segment.from + piece.to);
@@ -388,6 +479,17 @@ function faceSvg(face: ElevationFace, at: Vec2, context: FaceContext): string {
     parts.push(...widthDimensions(face, xOf, toPaper));
     parts.push(...heightDimensions(face, context, toPaper));
     return parts.join('');
+}
+
+/**
+ * The phase of a curved face's joints: the viewer lays its patterns along the arc from the wall's start (`arcFaceUvs()`),
+ * the distance along the face being u; seen from the room, x runs from b, one way or the other along the wall.
+ */
+function curvedPhase(curve: NonNullable<ElevationFace['curve']>): number {
+    const arc = curve.frame.arc!;
+    const scale = (arc.radius - Math.sign(arc.sweep) * curve.across) / arc.radius;
+    const atB = curve.to * scale;
+    return curve.from > curve.to ? atB : -atB;
 }
 
 /** A piece of a finish band: filled in the material's colour, with its joints (a herringbone clipped to the piece). */
@@ -660,14 +762,33 @@ export function itemsAgainst(face: ElevationFace, items: readonly Item[]): {item
     return items
         .flatMap((item) => {
             const corners = itemFootprint(item);
-            const along = corners.map((p) => (p.x - face.a.x) * face.dir.x + (p.y - face.a.y) * face.dir.y);
-            const away = corners.map((p) => (p.x - face.a.x) * face.normal.x + (p.y - face.a.y) * face.normal.y);
+            const curve = face.curve;
+            // Along an unrolled curved face: seen square on at the item's place along it, and how far from the face.
+            const along = curve === undefined
+                ? corners.map((p) => (p.x - face.a.x) * face.dir.x + (p.y - face.a.y) * face.dir.y)
+                : curvedExtent(face, curve, item, corners);
+            const away = curve === undefined
+                ? corners.map((p) => (p.x - face.a.x) * face.normal.x + (p.y - face.a.y) * face.normal.y)
+                : corners.map((p) => (acrossWall(curve.frame, p) - curve.across) * Math.sign(curve.across));
             const from = Math.max(0, Math.min(...along));
             const to = Math.min(face.length, Math.max(...along));
             const near = Math.min(...away);
             return near <= AgainstWall && Math.max(...away) > 0 && to - from >= 50 ? [{item, from, to}] : [];
         })
         .sort((p, q) => p.item.z - q.item.z);
+}
+
+/**
+ * Where an item's corners lie along an unrolled curved face: its place along the face, and its true width about it as
+ * seen along the face's normal there.
+ */
+function curvedExtent(face: ElevationFace, curve: NonNullable<ElevationFace['curve']>, item: Item, corners: readonly Vec2[]): number[] {
+    const centre = alongWall(curve.frame, item);
+    const at = ((centre - curve.from) / (curve.to - curve.from)) * face.length;
+    const tangent = tangentAt(curve.frame, centre);
+    // The face runs the wall's way or against it.
+    const sign = curve.to > curve.from ? 1 : -1;
+    return corners.map((p) => at + sign * ((p.x - item.x) * tangent.x + (p.y - item.y) * tangent.y));
 }
 
 /** Under the face: the chain of piers and openings, and the face's whole width. */
@@ -757,7 +878,12 @@ function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2): stri
     ];
     for (const face of faces) {
         const mid = {x: (face.a.x + face.b.x) / 2, y: (face.a.y + face.b.y) / 2};
-        const inside = toPaper({x: mid.x + face.normal.x * 3 * scale, y: mid.y + face.normal.y * 3 * scale});
+        const curve = face.curve;
+        const inside = toPaper(
+            curve === undefined
+                ? {x: mid.x + face.normal.x * 3 * scale, y: mid.y + face.normal.y * 3 * scale}
+                : pointOnWall(curve.frame, (curve.from + curve.to) / 2, curve.across + Math.sign(curve.across) * 3 * scale),
+        );
         parts.push(text({x: inside.x, y: inside.y + 1.1}, face.letter, 3, {bold: true, anchor: 'middle'}));
     }
     return parts.join('');

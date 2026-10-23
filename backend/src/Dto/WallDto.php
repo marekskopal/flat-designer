@@ -12,6 +12,7 @@ use FlatDesigner\Service\Json\JsonDecoder;
 final readonly class WallDto
 {
 	/**
+	 * @param int $sagitta a curved wall: mm from the chord's midpoint to the centre line's arc, + to the left of start → end (0: straight)
 	 * @param list<WallFinishDto>|null $leftFinishes bands on the face left of start → end, overriding the room's (null: the room's)
 	 * @param list<WallFinishDto>|null $rightFinishes the same on the right face
 	 * @param list<OpeningDto> $openings
@@ -24,6 +25,7 @@ final readonly class WallDto
 		public int $startY,
 		public int $endX,
 		public int $endY,
+		public int $sagitta,
 		public int $thickness,
 		public int $height,
 		public ?int $materialId,
@@ -44,6 +46,7 @@ final readonly class WallDto
 			startY: $wall->startY,
 			endX: $wall->endX,
 			endY: $wall->endY,
+			sagitta: $wall->sagitta,
 			thickness: $wall->thickness,
 			height: $wall->height,
 			materialId: $wall->material?->id,

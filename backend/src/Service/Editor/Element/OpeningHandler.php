@@ -22,6 +22,7 @@ use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
+use FlatDesigner\Service\Editor\Geometry\WallLine;
 
 /**
  * Doors, passages and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must
@@ -101,7 +102,7 @@ final readonly class OpeningHandler implements ElementHandler
 		}
 		$wall = $this->wall($floor, $wallId);
 
-		$length = WallHandler::length($wall->startX, $wall->startY, $wall->endX, $wall->endY);
+		$length = WallHandler::length($wall);
 		$offset = $fields->int('offset', 0, $length);
 		$width = $fields->int('width', 100, $length);
 		$height = $fields->int('height', 100, $wall->height);
@@ -129,6 +130,7 @@ final readonly class OpeningHandler implements ElementHandler
 			$fields->nullableEnum('side', OpeningSideEnum::class) ?? OpeningSideEnum::Left,
 			$depth,
 		);
+		self::checkCurve($wall, $type, $hinge, $width);
 
 		$entrance = $fields->bool('entrance');
 		if ($entrance && $type === OpeningTypeEnum::Niche) {
@@ -283,6 +285,19 @@ final readonly class OpeningHandler implements ElementHandler
 		}
 
 		return $wall;
+	}
+
+	/** On a curved wall a door or window is built straight, so it has to be shallow (`OpeningPlacement::fitsCurve()`). */
+	private static function checkCurve(Wall $wall, OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $width): void
+	{
+		$radius = WallLine::fromWall($wall)->arc()['radius'] ?? null;
+		if ($radius !== null && !OpeningPlacement::fitsCurve($type, $hinge, $width, $radius, $wall->thickness)) {
+			throw EditException::invalid(sprintf(
+				'On this curved wall a door or window is built straight, so it may take %d mm of the wall at most%s.',
+				OpeningPlacement::maxCurvedWidth($radius, $wall->thickness),
+				$type->isSliding() ? ' with the wall its open leaf slides along' : '',
+			));
+		}
 	}
 
 	private static function cast(AEntity $element): Opening

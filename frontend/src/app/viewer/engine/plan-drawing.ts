@@ -1,13 +1,14 @@
 import {localDate} from '@app/core/local-date';
 import {Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
 
-import {roomDimensions} from './dimensions';
+import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
 import {
     Bounds,
     cornerWindows,
     itemFootprint,
     Leaf,
     NoCorners,
+    openingFrame,
     openingLeaves,
     pointInPolygon,
     pointOnWall,
@@ -18,7 +19,9 @@ import {
     WallFrame,
     wallFrame,
     wallJoints,
+    wallOutline,
     wallPieces,
+    wallSamples,
 } from './plan-geometry';
 import {
     frameSvg,
@@ -304,23 +307,11 @@ function wallShapes(walls: readonly Wall[]): Shape[] {
             endLeft: corner.end === null ? joint.endLeft : 0,
             endRight: corner.end === null ? joint.endRight : 0,
         };
-        const h = wall.thickness / 2;
-        return merged.map((piece): Shape => {
-            const left = h - (piece.recess?.side === 'Left' ? piece.recess.depth : 0);
-            const right = -h + (piece.recess?.side === 'Right' ? piece.recess.depth : 0);
-            const atStart = piece.from <= 0.5;
-            const atEnd = piece.to >= frame.length - 0.5;
-            return {
-                points: [
-                    pointOnWall(frame, atStart ? -ends.startLeft : piece.from, left),
-                    pointOnWall(frame, atEnd ? frame.length + ends.endLeft : piece.to, left),
-                    pointOnWall(frame, atEnd ? frame.length + ends.endRight : piece.to, right),
-                    pointOnWall(frame, atStart ? -ends.startRight : piece.from, right),
-                ],
-                closed: true,
-                style: {fill: WallFill},
-            };
-        });
+        return merged.map((piece): Shape => ({
+            points: wallOutline(frame, wall.thickness, piece.from, piece.to, ends, piece.recess),
+            closed: true,
+            style: {fill: WallFill},
+        }));
     });
 }
 
@@ -348,8 +339,8 @@ const HiddenStyle: Style = {stroke: Muted, width: 0.15, dash: '1 0.7'};
  * high window, a hatch) is dashed in the solid wall.
  */
 function openingShapes(wall: Wall): Shape[] {
-    const frame = wallFrame(wall);
-    if (!(frame.length > 0)) {
+    const wallPath = wallFrame(wall);
+    if (!(wallPath.length > 0)) {
         return [];
     }
     const level = cutLevel(wall);
@@ -359,11 +350,16 @@ function openingShapes(wall: Wall): Shape[] {
         const to = opening.offset + opening.width;
         const sign = opening.side === 'Right' ? -1 : 1;
         if (opening.type === 'Niche') {
+            // A niche follows its wall's curve.
             const depth = opening.depth ?? h;
+            const face = wallSamples(wallPath, from, to).map((along) => pointOnWall(wallPath, along, sign * h));
+            const back = wallSamples(wallPath, from, to).map((along) => pointOnWall(wallPath, along, sign * (h - depth)));
             return cutsThrough(opening, level)
-                ? [wallLine(frame, from, to, sign * h, HiddenStyle)]
-                : [wallRect(frame, from, to, sign * h, sign * (h - depth), HiddenStyle)];
+                ? [{points: face, closed: false, style: HiddenStyle}]
+                : [{points: [...face, ...back.reverse()], closed: true, style: HiddenStyle}];
         }
+        // Doors and windows stand straight on a curved wall.
+        const frame = openingFrame(wallPath, opening);
         if (!cutsThrough(opening, level)) {
             return [wallRect(frame, from, to, h, -h, HiddenStyle)];
         }
@@ -526,25 +522,30 @@ function dimensionLabels(scene: Scene, scale: number): Label[] {
     });
     const style: Style = {stroke: '#4a4640', width: 0.13};
     const size = 1.6;
-    return lines.flatMap(({a, b, length, normal}): Label[] => {
-        const value = String(length);
-        if (textWidth(value, size) + 1 > length / scale) {
+    return lines.flatMap((dimension): Label[] => {
+        const value = String(dimension.length);
+        if (textWidth(value, size) + 1 > dimension.length / scale) {
             return [];
         }
-        const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+        const points = dimensionPath(dimension);
         const tick = ((TickPaper / 2) * scale) / Math.SQRT2;
-        const slash = {x: (dir.x + normal.x) * tick, y: (dir.y + normal.y) * tick};
+        // 45° ticks at the ends, across the line's direction there (towards the room's side).
+        const slashAt = (end: Vec2, next: Vec2, sign: 1 | -1): Shape => {
+            const step = Math.hypot(next.x - end.x, next.y - end.y) || 1;
+            const dir = {x: ((next.x - end.x) / step) * sign, y: ((next.y - end.y) / step) * sign};
+            const slash = {x: (dir.x - dir.y) * tick, y: (dir.y + dir.x) * tick};
+            return {points: [{x: end.x - slash.x, y: end.y - slash.y}, {x: end.x + slash.x, y: end.y + slash.y}], closed: false, style};
+        };
         const shapes: Shape[] = [
-            {points: [a, b], closed: false, style},
-            ...[a, b].map((end): Shape => ({
-                points: [{x: end.x - slash.x, y: end.y - slash.y}, {x: end.x + slash.x, y: end.y + slash.y}],
-                closed: false,
-                style,
-            })),
+            {points, closed: false, style},
+            slashAt(points[0], points[1], 1),
+            slashAt(points[points.length - 1], points[points.length - 2], -1),
         ];
         const lift = 1.1 * scale;
+        const {at, dir} = dimensionMiddle(dimension);
+        const normal = dimension.path === undefined ? dimension.normal : {x: -dir.y, y: dir.x};
         return [{
-            at: {x: (a.x + b.x) / 2 + normal.x * lift, y: (a.y + b.y) / 2 + normal.y * lift},
+            at: {x: at.x + normal.x * lift, y: at.y + normal.y * lift},
             lines: [{text: value, size, color: '#4a4640'}],
             angle: Math.atan2(dir.y, dir.x),
             shapes,

@@ -1,7 +1,7 @@
 import {Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
-import {closesRun, directionOf, parseDrawInput, pointAt, snapDrawPoint} from './drawing';
+import {closesRun, directionOf, parseDrawInput, pointAt, sagittaToward, snapDrawPoint} from './drawing';
 
 const wall: Wall = {
     id: 1,
@@ -48,10 +48,12 @@ describe('pointAt / directionOf', () => {
 });
 
 describe('parseDrawInput', () => {
-    it('reads a length, optionally with an angle', () => {
-        expect(parseDrawInput('3200')).toEqual({length: 3200, angle: null});
-        expect(parseDrawInput(' 3200 < 90 ')).toEqual({length: 3200, angle: 90});
-        expect(parseDrawInput('1200.4<-45')).toEqual({length: 1200, angle: -45});
+    it('reads a length, optionally with an angle and a curve', () => {
+        expect(parseDrawInput('3200')).toEqual({length: 3200, angle: null, sagitta: null});
+        expect(parseDrawInput(' 3200 < 90 ')).toEqual({length: 3200, angle: 90, sagitta: null});
+        expect(parseDrawInput('1200.4<-45')).toEqual({length: 1200, angle: -45, sagitta: null});
+        expect(parseDrawInput('3200<90~400')).toEqual({length: 3200, angle: 90, sagitta: 400});
+        expect(parseDrawInput('3200 ~ -250')).toEqual({length: 3200, angle: null, sagitta: -250});
     });
 
     it('rejects anything else', () => {
@@ -59,6 +61,8 @@ describe('parseDrawInput', () => {
         expect(parseDrawInput('0')).toBeNull();
         expect(parseDrawInput('3200<')).toBeNull();
         expect(parseDrawInput('abc')).toBeNull();
+        expect(parseDrawInput('3200~')).toBeNull();
+        expect(parseDrawInput('3200~1.5')).toBeNull();
     });
 });
 
@@ -70,5 +74,32 @@ describe('closesRun', () => {
         ];
         expect(closesRun(points, {x: 0, y: 0})).toBe(false);
         expect(closesRun([...points, {x: 4000, y: 3000}], {x: 0, y: 0})).toBe(true);
+    });
+});
+
+describe('sagittaToward', () => {
+    const a = {x: 0, y: 0};
+    const b = {x: 4000, y: 0};
+
+    it('puts the middle of the arc at the point\'s distance off the chord, + to the left', () => {
+        expect(sagittaToward(a, b, {x: 1500, y: 640}, 10, 0)).toBe(640);
+        expect(sagittaToward(a, b, {x: 2000, y: -333}, 10, 0)).toBe(-330);
+        expect(sagittaToward(b, a, {x: 2000, y: -333}, 1, 0)).toBe(333);
+    });
+
+    it('is straight near the chord and a semicircle at most', () => {
+        expect(sagittaToward(a, b, {x: 2000, y: 40}, 10, 50)).toBe(0);
+        expect(sagittaToward(a, b, {x: 2000, y: 5000}, 10, 50)).toBe(2000);
+        expect(sagittaToward(a, a, {x: 2000, y: 5000}, 10, 50)).toBe(0);
+    });
+});
+
+describe('snapDrawPoint onto a curved wall', () => {
+    it('snaps onto the arc of its centre line for a T-joint', () => {
+        const curved: Wall = {...wall, sagitta: 1000};
+        // The arc's middle is 1000 mm north of the chord's.
+        const snapped = snapDrawPoint({x: 2010, y: 990}, {grid: 100, radius: 50, walls: [curved], points: []});
+        expect(snapped.kind).toBe('line');
+        expect(Math.hypot(snapped.point.x - 2000, snapped.point.y - 1000)).toBeLessThan(15);
     });
 });

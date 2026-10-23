@@ -1,6 +1,6 @@
 import {Wall} from '@app/models/scene';
 
-import {snapPoint, SnapResult, Vec2, WallEnds, wallFaces} from './plan-geometry';
+import {centreLineSegments, polylineSegments, snapPoint, SnapResult, Vec2, WallEnds, wallFaces} from './plan-geometry';
 
 /** A measurement in the top view: the first point, the second (null while the pointer still moves it), and the pointer. */
 export interface Measurement {
@@ -45,8 +45,8 @@ export function snapMeasurePoint(cursor: Vec2, options: MeasureSnapOptions): Sna
         const start = {x: wall.startX, y: wall.startY};
         const end = {x: wall.endX, y: wall.endY};
         const {left, right} = wallFaces(wall, joints.get(wall.id));
-        points.push(start, end, ...left, ...right);
-        lines.push(left, right, [start, end]);
+        points.push(start, end, left[0], left[left.length - 1], right[0], right[right.length - 1]);
+        lines.push(...polylineSegments(left), ...polylineSegments(right), ...centreLineSegments(wall));
     }
     return snapPoint(cursor, {grid: 1, radius, points, lines, anchors: from === null ? [] : [from]});
 }

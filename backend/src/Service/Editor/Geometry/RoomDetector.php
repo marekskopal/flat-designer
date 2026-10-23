@@ -61,7 +61,7 @@ final readonly class RoomDetector
 	}
 
 	/**
-	 * Footprint of every wall with a length: right face start → end, then left face end → start.
+	 * Footprint of every wall with a length (`WallLine::outline()`): right face start → end, then left face end → start.
 	 *
 	 * @param list<WallLine> $walls
 	 * @return list<list<Point>>
@@ -74,15 +74,7 @@ final readonly class RoomDetector
 			if ($wall->startX === $wall->endX && $wall->startY === $wall->endY) {
 				continue;
 			}
-			$half = $wall->thickness / 2;
-			$length = $wall->length();
-			$ends = $joints[$wall->id] ?? WallJoints::Square;
-			$footprints[] = [
-				$wall->point(-$ends['startRight'], -$half),
-				$wall->point($length + $ends['endRight'], -$half),
-				$wall->point($length + $ends['endLeft'], $half),
-				$wall->point(-$ends['startLeft'], $half),
-			];
+			$footprints[] = $wall->outline($joints[$wall->id] ?? WallJoints::Square);
 		}
 
 		return $footprints;

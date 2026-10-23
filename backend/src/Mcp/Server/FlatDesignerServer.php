@@ -54,7 +54,10 @@ final readonly class FlatDesignerServer
 
 		To lay out a floor, draw the walls as runs of centre-line points with add_walls (a closed run for the
 		outer walls, open runs for partitions ending on other walls), then add each room with
-		detect_room(x, y) at a point inside it: its outline follows the inner wall faces.
+		detect_room(x, y) at a point inside it: its outline follows the inner wall faces. A wall may be curved:
+		its `sagitta` is how far (mm) the middle of its centre line lies off the straight line from start to end, + to
+		the left (an arc, a semicircle at most); offsets of openings run along the arc, and doors and windows on it
+		stand straight, so they have to be narrow enough for the curve.
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);

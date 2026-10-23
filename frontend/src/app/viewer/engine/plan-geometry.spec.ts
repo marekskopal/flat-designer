@@ -1,6 +1,8 @@
 import {Item, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 import {
+    alongWall,
+    bendWall,
     collideCircle,
     columnColliders,
     cornerWindows,
@@ -12,21 +14,26 @@ import {
     leafCollider,
     leafColliders,
     moveWallEnds,
+    openingFitsCurve,
     openingLeaves,
     pointInPolygon,
+    pointOnWall,
     polygonCentroid,
     polygonSignedArea,
     removeVertex,
     slideOpening,
     snapPoint,
     snapToGrid,
+    tangentAt,
     tileGrid,
     tileOrigin,
     tileUv,
     wallColliders,
+    wallFaces,
     wallFrame,
     wallGapsAlongEdge,
     wallJoints,
+    wallOutline,
     wallPieces,
 } from './plan-geometry';
 
@@ -89,6 +96,100 @@ describe('wallFrame', () => {
         expect(frame.normal.x).toBeCloseTo(-1);
         expect(frame.normal.y).toBeCloseTo(0);
         expect(frame.angle).toBeCloseTo(Math.PI / 2);
+    });
+});
+
+describe('curved walls', () => {
+    // Chord 4000 along x, the middle 1000 to the left (north): a radius of 2500 about (2000, −1500), 4636 mm of arc.
+    const curved = {startX: 0, startY: 0, endX: 4000, endY: 0, sagitta: 1000};
+    const close = (p: {x: number; y: number}, x: number, y: number): void => {
+        expect(p.x).toBeCloseTo(x, 6);
+        expect(p.y).toBeCloseTo(y, 6);
+    };
+
+    it('runs along an arc of the sagitta, at most a semicircle', () => {
+        const frame = wallFrame(curved);
+        expect(frame.arc?.radius).toBeCloseTo(2500);
+        close(frame.arc!.centre, 2000, -1500);
+        expect(frame.length).toBeCloseTo(2 * 2500 * Math.asin(0.8));
+        close(pointOnWall(frame, 0), 0, 0);
+        close(pointOnWall(frame, frame.length), 4000, 0);
+        close(pointOnWall(frame, frame.length / 2), 2000, 1000);
+        // Across is radial: the left of a wall bulging left is outwards.
+        close(pointOnWall(frame, frame.length / 2, 100), 2000, 1100);
+        close(tangentAt(frame, frame.length / 2), 1, 0);
+
+        const semicircle = wallFrame({...curved, sagitta: -2000});
+        expect(semicircle.length).toBeCloseTo(Math.PI * 2000);
+        close(pointOnWall(semicircle, semicircle.length / 2), 2000, -2000);
+    });
+
+    it('finds where a point lies along the arc', () => {
+        const frame = wallFrame(curved);
+        for (const along of [0, 700, 2318, 4600]) {
+            expect(alongWall(frame, pointOnWall(frame, along, 150))).toBeCloseTo(along, 6);
+        }
+    });
+
+    it('stands in for the arc by pieces in its footprint and colliders', () => {
+        const frame = wallFrame(curved);
+        const outline = wallOutline(frame, 200, 0, frame.length);
+        // ceil(√(1000 / 3)) = 19 pieces: 20 points a face.
+        expect(outline).toHaveLength(40);
+        // The right face starts 100 mm inwards of the start: towards the centre, along (0.8, −0.6).
+        close(outline[0], 80, -60);
+        const wall = {...straightWall(1, [0, 0], [4000, 0]), sagitta: 1000, thickness: 200};
+        expect(wallColliders([wall])).toHaveLength(19);
+        expect(wallFaces(wall).left).toHaveLength(20);
+    });
+
+    it('mitres a curved wall into a straight one where their faces meet', () => {
+        const arc = {...straightWall(1, [0, 0], [4000, 0]), sagitta: -400, thickness: 200};
+        const side = {...straightWall(2, [4000, 0], [4000, 3000]), thickness: 200};
+        const joints = wallJoints([arc, side]);
+        const arcFaces = wallFaces(arc, joints.get(1));
+        const sideFaces = wallFaces(side, joints.get(2));
+        // The inner faces (the arc's left, the straight wall's left) end at the same corner, as do the outer ones.
+        const arcInner = arcFaces.left[arcFaces.left.length - 1];
+        close(arcInner, sideFaces.left[0].x, sideFaces.left[0].y);
+        const arcOuter = arcFaces.right[arcFaces.right.length - 1];
+        close(arcOuter, sideFaces.right[0].x, sideFaces.right[0].y);
+        expect(arcInner.x).toBeCloseTo(3900, 6);
+    });
+
+    it('keeps the openings in place along the arc when the start moves, and checks the curve', () => {
+        const window = {...opening(3000, 600, 1200, 900), id: 3, type: 'Window' as const};
+        const wall = {...straightWall(1, [0, 0], [4000, 0], [window]), sagitta: 1000, thickness: 100};
+        const moved = moveWallEnds(wall, {x: -500, y: 0}, {x: 4000, y: 0});
+        expect(moved.fits).toBe(true);
+        // About 500 mm further from the new start (the arc flattens a little, too).
+        expect(moved.wall.openings[0].offset).toBeGreaterThan(3400);
+        expect(moved.wall.openings[0].offset).toBeLessThan(3600);
+        // Ends closer than twice the sagitta: more than a semicircle.
+        expect(moveWallEnds(wall, {x: 2500, y: 0}, {x: 4000, y: 0}).fits).toBe(false);
+    });
+
+    it('bends a wall while its openings stay shallow enough for the curve', () => {
+        const window = {...opening(1000, 700, 1200, 900), type: 'Window' as const};
+        const wall = {...straightWall(1, [0, 0], [4000, 0], [window]), thickness: 100};
+        expect(bendWall(wall, 1000).fits).toBe(true);
+        expect(bendWall(wall, 1000).wall.sagitta).toBe(1000);
+        // A tighter curve makes the straight window stand off it by more than a quarter of the wall.
+        expect(bendWall(wall, 1900).fits).toBe(false);
+        expect(bendWall(wall, 2001).fits).toBe(false);
+        const curvedFrame = wallFrame({...wall, sagitta: 1000});
+        expect(openingFitsCurve(curvedFrame, 100, {...window, width: 707})).toBe(true);
+        expect(openingFitsCurve(curvedFrame, 100, {...window, width: 708})).toBe(false);
+        // A sliding door takes the wall its open leaf slides along too; a niche follows the curve.
+        expect(openingFitsCurve(curvedFrame, 100, {...window, type: 'SlidingDoor', hinge: 'Start', width: 400})).toBe(false);
+        expect(openingFitsCurve(curvedFrame, 100, {...window, type: 'Niche', width: 2000})).toBe(true);
+    });
+
+    it('turns the curve round with the wall, as the backend does', () => {
+        const wall = {...straightWall(1, [0, 0], [4000, 0]), sagitta: 1000};
+        expect(moveWallEnds(wall, {x: 4000, y: 0}, {x: 0, y: 0}).wall.sagitta).toBe(-1000);
+        expect(moveWallEnds(wall, {x: 0, y: 0}, {x: -4000, y: 500}).wall.sagitta).toBe(-1000);
+        expect(moveWallEnds(wall, {x: 0, y: 0}, {x: 4000, y: 3000}).wall.sagitta).toBe(1000);
     });
 });
 

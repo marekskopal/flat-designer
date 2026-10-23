@@ -265,6 +265,8 @@ final readonly class ProjectSnapshotService
 				height: $data->int('height'),
 				material: $materials[$data->nullableInt('materialId') ?? 0] ?? null,
 			));
+			// Snapshots taken before walls could curve have straight ones.
+			$wall->sagitta = $data->nullableInt('sagitta') ?? 0;
 			// Snapshots taken before face finishes have none (the rooms' bands); [] is kept, a bare face.
 			$wall->leftFinishes = $data->nullableFinishes('leftFinishes');
 			$wall->rightFinishes = $data->nullableFinishes('rightFinishes');

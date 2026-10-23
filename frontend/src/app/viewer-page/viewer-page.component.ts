@@ -509,7 +509,8 @@ export class ViewerPageComponent {
     }
 
     /** A run of walls drawn in the viewer. */
-    protected readonly drawWalls = (points: PlanPoint[], closed: boolean): Promise<boolean> => this.editor.drawWalls(points, closed);
+    protected readonly drawWalls = (points: PlanPoint[], closed: boolean, sagittas: number[] | null): Promise<boolean> =>
+        this.editor.drawWalls(points, closed, sagittas);
 
     /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
     protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>

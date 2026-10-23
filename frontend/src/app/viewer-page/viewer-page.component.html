@@ -46,7 +46,12 @@
     }
 } @else if (toolStatus(); as status) {
     @if (editor.enabled() && !walking()) {
-        <fd-draw-hud [status]="status" (segment)="viewerRef.placeRunPoint($event.length, $event.angle)" />
+        <fd-draw-hud
+            [status]="status"
+            (segment)="viewerRef.placeRunPoint($event.length, $event.angle, $event.sagitta)"
+            (arc)="viewerRef.setDrawArc($event)"
+            (bend)="viewerRef.bendRun($event)"
+        />
     }
 }
 

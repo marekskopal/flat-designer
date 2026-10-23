@@ -1,5 +1,5 @@
 {
- "_comment": "Twin fixture of room detection: read by backend/tests/Service/Editor/Geometry/RoomDetectorTest.php and frontend/src/app/viewer/engine/room-detect.spec.ts. Walls are centre lines with a thickness (mm); every case detects the room around `point` in `layout` and expects its `polygon` or an `error` (onWall, open, invalid).",
+ "_comment": "Twin fixture of room detection: read by backend/tests/Service/Editor/Geometry/RoomDetectorTest.php and frontend/src/app/viewer/engine/room-detect.spec.ts. Walls are centre lines with a thickness (mm), curved by an optional `sagitta` (mm, + to the left of start → end); every case detects the room around `point` in `layout` and expects its `polygon` or an `error` (onWall, open, invalid).",
  "layouts": {
   "rectangle": [
    {
@@ -504,6 +504,119 @@
     "endY": -150,
     "thickness": 300
    }
+  ],
+  "apse": [
+   {
+    "id": 1,
+    "startX": -100,
+    "startY": -100,
+    "endX": 4100,
+    "endY": -100,
+    "thickness": 200
+   },
+   {
+    "id": 2,
+    "startX": 4100,
+    "startY": -100,
+    "endX": 4100,
+    "endY": 3000,
+    "thickness": 200
+   },
+   {
+    "id": 3,
+    "startX": 4100,
+    "startY": 3000,
+    "endX": -100,
+    "endY": 3000,
+    "thickness": 200,
+    "sagitta": -2100
+   },
+   {
+    "id": 4,
+    "startX": -100,
+    "startY": 3000,
+    "endX": -100,
+    "endY": -100,
+    "thickness": 200
+   }
+  ],
+  "bay": [
+   {
+    "id": 1,
+    "startX": -100,
+    "startY": -100,
+    "endX": 4100,
+    "endY": -100,
+    "thickness": 200,
+    "sagitta": -400
+   },
+   {
+    "id": 2,
+    "startX": 4100,
+    "startY": -100,
+    "endX": 4100,
+    "endY": 3100,
+    "thickness": 200
+   },
+   {
+    "id": 3,
+    "startX": 4100,
+    "startY": 3100,
+    "endX": -100,
+    "endY": 3100,
+    "thickness": 200
+   },
+   {
+    "id": 4,
+    "startX": -100,
+    "startY": 3100,
+    "endX": -100,
+    "endY": -100,
+    "thickness": 200
+   }
+  ],
+  "curvedPartition": [
+   {
+    "id": 1,
+    "startX": -100,
+    "startY": -100,
+    "endX": 6100,
+    "endY": -100,
+    "thickness": 200
+   },
+   {
+    "id": 2,
+    "startX": 6100,
+    "startY": -100,
+    "endX": 6100,
+    "endY": 3100,
+    "thickness": 200
+   },
+   {
+    "id": 3,
+    "startX": 6100,
+    "startY": 3100,
+    "endX": -100,
+    "endY": 3100,
+    "thickness": 200
+   },
+   {
+    "id": 4,
+    "startX": -100,
+    "startY": 3100,
+    "endX": -100,
+    "endY": -100,
+    "thickness": 200
+   },
+   {
+    "id": 5,
+    "startX": 3000,
+    "startY": -100,
+    "endX": 3000,
+    "endY": 3100,
+    "thickness": 100,
+    "sagitta": 600
+   }
   ]
  },
  "cases": [
@@ -896,6 +1009,388 @@
     [
      2000,
      0
+    ]
+   ]
+  },
+  {
+   "name": "a room with a semicircular apse",
+   "layout": "apse",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     4000,
+     0
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     3986,
+     3232
+    ],
+    [
+     3946,
+     3461
+    ],
+    [
+     3879,
+     3684
+    ],
+    [
+     3787,
+     3898
+    ],
+    [
+     3671,
+     4099
+    ],
+    [
+     3532,
+     4286
+    ],
+    [
+     3372,
+     4455
+    ],
+    [
+     3194,
+     4604
+    ],
+    [
+     3000,
+     4732
+    ],
+    [
+     2792,
+     4836
+    ],
+    [
+     2574,
+     4916
+    ],
+    [
+     2347,
+     4970
+    ],
+    [
+     2116,
+     4997
+    ],
+    [
+     1884,
+     4997
+    ],
+    [
+     1653,
+     4970
+    ],
+    [
+     1426,
+     4916
+    ],
+    [
+     1208,
+     4836
+    ],
+    [
+     1000,
+     4732
+    ],
+    [
+     806,
+     4604
+    ],
+    [
+     628,
+     4455
+    ],
+    [
+     468,
+     4286
+    ],
+    [
+     329,
+     4099
+    ],
+    [
+     213,
+     3898
+    ],
+    [
+     121,
+     3684
+    ],
+    [
+     54,
+     3461
+    ],
+    [
+     14,
+     3232
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "a point inside a semicircular wall",
+   "layout": "apse",
+   "point": [
+    2000,
+    5100
+   ],
+   "error": "onWall"
+  },
+  {
+   "name": "a shallow bay mitred into straight walls",
+   "layout": "bay",
+   "point": [
+    2000,
+    1500
+   ],
+   "polygon": [
+    [
+     2000,
+     -400
+    ],
+    [
+     2352,
+     -389
+    ],
+    [
+     2702,
+     -356
+    ],
+    [
+     3050,
+     -301
+    ],
+    [
+     3394,
+     -224
+    ],
+    [
+     3732,
+     -126
+    ],
+    [
+     4000,
+     -32
+    ],
+    [
+     4000,
+     3000
+    ],
+    [
+     0,
+     3000
+    ],
+    [
+     0,
+     -32
+    ],
+    [
+     268,
+     -126
+    ],
+    [
+     606,
+     -224
+    ],
+    [
+     950,
+     -301
+    ],
+    [
+     1298,
+     -356
+    ],
+    [
+     1648,
+     -389
+    ]
+   ]
+  },
+  {
+   "name": "a point inside a curved wall",
+   "layout": "bay",
+   "point": [
+    2000,
+    -500
+   ],
+   "error": "onWall"
+  },
+  {
+   "name": "the convex side of a curved partition",
+   "layout": "curvedPartition",
+   "point": [
+    1500,
+    1500
+   ],
+   "polygon": [
+    [
+     0,
+     0
+    ],
+    [
+     2857,
+     0
+    ],
+    [
+     2815,
+     53
+    ],
+    [
+     2686,
+     253
+    ],
+    [
+     2577,
+     464
+    ],
+    [
+     2488,
+     684
+    ],
+    [
+     2421,
+     912
+    ],
+    [
+     2376,
+     1145
+    ],
+    [
+     2353,
+     1381
+    ],
+    [
+     2353,
+     1619
+    ],
+    [
+     2376,
+     1855
+    ],
+    [
+     2421,
+     2088
+    ],
+    [
+     2488,
+     2316
+    ],
+    [
+     2577,
+     2536
+    ],
+    [
+     2686,
+     2747
+    ],
+    [
+     2815,
+     2947
+    ],
+    [
+     2857,
+     3000
+    ],
+    [
+     0,
+     3000
+    ]
+   ]
+  },
+  {
+   "name": "the concave side of a curved partition",
+   "layout": "curvedPartition",
+   "point": [
+    5000,
+    1500
+   ],
+   "polygon": [
+    [
+     2985,
+     0
+    ],
+    [
+     6000,
+     0
+    ],
+    [
+     6000,
+     3000
+    ],
+    [
+     2985,
+     3000
+    ],
+    [
+     2896,
+     2888
+    ],
+    [
+     2772,
+     2697
+    ],
+    [
+     2667,
+     2495
+    ],
+    [
+     2582,
+     2283
+    ],
+    [
+     2518,
+     2065
+    ],
+    [
+     2474,
+     1841
+    ],
+    [
+     2453,
+     1614
+    ],
+    [
+     2453,
+     1386
+    ],
+    [
+     2474,
+     1159
+    ],
+    [
+     2518,
+     935
+    ],
+    [
+     2582,
+     717
+    ],
+    [
+     2667,
+     505
+    ],
+    [
+     2772,
+     303
+    ],
+    [
+     2896,
+     112
     ]
    ]
   }

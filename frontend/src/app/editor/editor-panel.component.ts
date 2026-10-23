@@ -3,7 +3,7 @@ import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
 import {Group, Item, Opening, OpeningType, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
-import {polygonCentroid} from '@app/viewer/engine/plan-geometry';
+import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {ActivityComponent} from './activity.component';
@@ -211,7 +211,7 @@ export class EditorPanelComponent {
             const wall = this.selectedWall();
             if (wall !== null) {
                 const type = choice.slice(8) as OpeningType;
-                const length = Math.floor(Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY));
+                const length = wallLength(wall);
                 const width = NewOpeningWidths[type];
                 // Centred; a sliding or pocket door opens towards the wall start, so it sits past the middle.
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);

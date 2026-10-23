@@ -137,7 +137,10 @@ describe('EditorStore', () => {
 
         expect(await store.drawWalls(points, true)).toBe(true);
 
-        expect(api['drawWalls']).toHaveBeenCalledWith(1, 3, points, true, {type: 'Exterior', thickness: 300, height: 2700}, 7);
+        expect(api['drawWalls']).toHaveBeenCalledWith(1, 3, points, true, {type: 'Exterior', thickness: 300, height: 2700}, 7, null);
+
+        await store.drawWalls(points, false, [-500, 0]);
+        expect(api['drawWalls']).toHaveBeenLastCalledWith(1, 3, points, false, {type: 'Exterior', thickness: 300, height: 2700}, 7, [-500, 0]);
     });
 
     it('adds the room around a point as the next numbered room and selects it', async () => {

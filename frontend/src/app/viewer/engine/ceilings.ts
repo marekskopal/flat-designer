@@ -1,6 +1,6 @@
 import {PlanPoint, Room, Wall} from '@app/models/scene';
 
-import {counterClockwise, pointInPolygon, Vec2, wallFrame, wallGapsAlongEdge} from './plan-geometry';
+import {counterClockwise, edgeStretch, edgeWall, pointInPolygon, Vec2, wallGapsAlongEdge} from './plan-geometry';
 
 /** Directions of a vaulted ceiling in plan: `u` along the beams, `v` across them (u turned 90° counter-clockwise). */
 export interface VaultFrame {
@@ -184,7 +184,10 @@ export function wallFacesAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tol
     return faces;
 }
 
-/** Each wall whose face lies on the edge, with the stretch it covers; a wall's ends reach half a thickness on (its mitre at corners). */
+/**
+ * Each wall whose face lies on the edge (`edgeWall()`), with the stretch it covers; a wall's ends reach half a thickness
+ * on (its mitre at corners).
+ */
 function edgeWallSpans(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance: number): EdgeFace[] {
     const length = Math.hypot(b.x - a.x, b.y - a.y);
     if (length === 0) {
@@ -193,22 +196,92 @@ function edgeWallSpans(a: Vec2, b: Vec2, walls: readonly Wall[], tolerance: numb
     const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
     const faces: EdgeFace[] = [];
     for (const wall of walls) {
-        const frame = wallFrame(wall);
-        const parallel = Math.abs(dir.x * frame.dir.y - dir.y * frame.dir.x) < 1e-3;
-        // Distance of a from the centre line, positive on its left.
-        const normal = (a.x - frame.start.x) * frame.normal.x + (a.y - frame.start.y) * frame.normal.y;
-        if (!parallel || Math.abs(Math.abs(normal) - wall.thickness / 2) > tolerance) {
+        const match = edgeWall(a, b, wall, tolerance);
+        const stretch = match === null ? null : edgeStretch(match, a, dir, length, -wall.thickness / 2, match.frame.length + wall.thickness / 2);
+        if (match === null || stretch === null) {
             continue;
         }
-        const t0 = dot({x: wall.startX - a.x, y: wall.startY - a.y}, dir);
-        const t1 = dot({x: wall.endX - a.x, y: wall.endY - a.y}, dir);
-        const from = Math.max(Math.min(t0, t1) - wall.thickness / 2, 0);
-        const to = Math.min(Math.max(t0, t1) + wall.thickness / 2, length);
+        const from = Math.max(Math.min(...stretch), 0);
+        const to = Math.min(Math.max(...stretch), length);
         if (to > from) {
-            faces.push({wall, side: normal > 0 ? 'Left' : 'Right', from, to});
+            faces.push({wall, side: match.side, from, to});
         }
     }
     return faces;
+}
+
+/** A room edge a → b in plan mm. */
+export interface RoomEdge {
+    a: Vec2;
+    b: Vec2;
+    length: number;
+}
+
+/**
+ * Room edges one after the other, along one curved wall face (`curve`) or a single edge (`curve` null); `offsets` is
+ * where each edge starts along the run (mm), `length` the run's whole length.
+ */
+export interface EdgeRun {
+    edges: RoomEdge[];
+    offsets: number[];
+    length: number;
+    curve: {wall: Wall; side: 'Left' | 'Right'} | null;
+}
+
+/**
+ * A room outline's edges (taken counter-clockwise) in runs: the edges along one curved wall face, which stand in for
+ * its arc, together; every other edge on its own. Starts with the run holding the outline's first edge.
+ */
+export function edgeRuns(polygon: readonly PlanPoint[], walls: readonly Wall[]): EdgeRun[] {
+    const ccw = counterClockwise(polygon);
+    const edges = ccw.map(([ax, ay], i) => {
+        const [bx, by] = ccw[(i + 1) % ccw.length];
+        const edge = {a: {x: ax, y: ay}, b: {x: bx, y: by}, length: Math.hypot(bx - ax, by - ay)};
+        // A piece of the outline along a curved face (`edgeWall()` has its ends and middle on the face); the pieces
+        // at a mitred corner reach past the wall's own span, so the face need cover only most of the edge.
+        const face = wallFacesAlongEdge(edge.a, edge.b, walls).find((f) => (f.wall.sagitta ?? 0) !== 0 && f.to - f.from >= edge.length / 2);
+        return {edge, curve: face === undefined ? null : {wall: face.wall, side: face.side}};
+    });
+    const continues = (p: (typeof edges)[number], q: (typeof edges)[number]): boolean =>
+        p.curve !== null && q.curve !== null && p.curve.wall.id === q.curve.wall.id && p.curve.side === q.curve.side;
+    const first = Math.max(edges.findIndex((edge, i) => !continues(edges[(i + edges.length - 1) % edges.length], edge)), 0);
+    const runs: EdgeRun[] = [];
+    let previous: (typeof edges)[number] | null = null;
+    let withFirst = 0;
+    for (let k = 0; k < edges.length; k++) {
+        const index = (first + k) % edges.length;
+        const entry = edges[index];
+        const run = runs.at(-1);
+        if (run !== undefined && previous !== null && continues(previous, entry)) {
+            run.edges.push(entry.edge);
+            run.offsets.push(run.length);
+            run.length += entry.edge.length;
+        } else {
+            runs.push({edges: [entry.edge], offsets: [0], length: entry.edge.length, curve: entry.curve});
+        }
+        if (index === 0) {
+            withFirst = runs.length - 1;
+        }
+        previous = entry;
+    }
+    return [...runs.slice(withFirst), ...runs.slice(0, withFirst)];
+}
+
+/**
+ * Stretches along a run (`from`, `to`) sorted, those that touch (within 1 mm) and `match` joined into one: what the
+ * pieces of a curved face split (an opening's gap, a finish segment) made whole again.
+ */
+export function joinedAlong<T extends {from: number; to: number}>(entries: readonly T[], match: (p: T, q: T) => boolean): T[] {
+    const result: T[] = [];
+    for (const entry of [...entries].sort((p, q) => p.from - q.from)) {
+        const last = result.at(-1);
+        if (last !== undefined && entry.from <= last.to + 1 && match(last, entry)) {
+            last.to = Math.max(last.to, entry.to);
+        } else {
+            result.push({...entry});
+        }
+    }
+    return result;
 }
 
 function mergeSpans(spans: [number, number][]): [number, number][] {

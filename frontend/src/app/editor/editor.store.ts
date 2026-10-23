@@ -105,10 +105,10 @@ export class EditorStore {
         }
     }
 
-    /** Draws a run of walls with the `wallDraft` fields; resolves true when they were added. */
-    public async drawWalls(points: PlanPoint[], closed: boolean): Promise<boolean> {
+    /** Draws a run of walls with the `wallDraft` fields, curved by `sagittas` (one per wall); resolves true when they were added. */
+    public async drawWalls(points: PlanPoint[], closed: boolean, sagittas: number[] | null = null): Promise<boolean> {
         const draft = this.wallDraft();
-        const result = await this.run((c) => this.api.drawWalls(c.projectId(), c.floorId(), points, closed, draft, revisionOf(c)));
+        const result = await this.run((c) => this.api.drawWalls(c.projectId(), c.floorId(), points, closed, draft, revisionOf(c), sagittas));
         return result?.change != null;
     }
 

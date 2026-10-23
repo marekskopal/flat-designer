@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
     ceilingSteps,
     clipToBand,
+    EdgeFace,
     roomBeams,
     skirtingPieces,
     subtractSpans,
@@ -16,9 +17,10 @@ import {
 } from './ceilings';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
-import {boxAt, prismAt, worldUvBox} from './meshes';
+import {boxAt, curvedPrismAt, prismAt, worldUvBox} from './meshes';
 import {exteriorSign, freeBeside, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
 import {
+    alongWall,
     cornerWindows,
     counterClockwise,
     DoorFrameWidth,
@@ -27,7 +29,9 @@ import {
     LeafOpenAngle,
     MM,
     NoCorners,
+    openingFrame,
     openingLeaves,
+    pointOnWall,
     polygonBounds,
     SlidingDoorOverlap,
     SquareEnds,
@@ -35,12 +39,15 @@ import {
     Vec2,
     WallCorners,
     WallEnds,
+    WallFrame,
     wallFrame,
     WallGap,
     wallGapsAlongEdge,
     wallJoints,
+    wallOutline,
     WallPiece,
     wallPieces,
+    wallSamples,
     WindowFrameBar,
 } from './plan-geometry';
 import {alignTiles, turnLevelUvs} from './tiling';
@@ -137,10 +144,16 @@ export function addRoom(parts: BuildingParts, room: RoomParts, roomId: number): 
 }
 
 export function buildSlab(walls: readonly Wall[], materials: MaterialLibrary): THREE.Mesh {
-    const points = walls.flatMap((w) => [
-        [w.startX, w.startY] as [number, number],
-        [w.endX, w.endY] as [number, number],
-    ]);
+    // The ends of the centre lines, and the joints between the pieces of a curved one.
+    const points = walls.flatMap((w) => {
+        const frame = wallFrame(w);
+        return frame.length > 0
+            ? wallSamples(frame, 0, frame.length).map((along): [number, number] => {
+                const p = pointOnWall(frame, along);
+                return [p.x, p.y];
+            })
+            : [[w.startX, w.startY] as [number, number]];
+    });
     const maxThickness = Math.max(...walls.map((w) => w.thickness), 0) / 2;
     const b = polygonBounds(points);
     const minX = b.minX - maxThickness;
@@ -284,10 +297,11 @@ export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[]
 }
 
 /**
- * Wall group in wall-local coordinates: x along the centre line from the start, y up, z across with
- * −z on the left of the wall direction. Solid pieces leave the openings empty; doors and windows are
- * added into them. `ends` mitres the end pieces where the wall meets another one in a corner; `corners` names
- * the corner windows at its ends (`cornerWindows()`).
+ * Wall group in wall-local coordinates: x along the centre line from the start (along the chord of a curved wall),
+ * y up, z across with −z on the left of the wall direction. Solid pieces leave the openings empty; doors and windows
+ * are added into them, on a curved wall built straight on the tangent at their middle (`openingFrame()`). `ends`
+ * mitres the end pieces where the wall meets another one in a corner; `corners` names the corner windows at its ends
+ * (`cornerWindows()`).
  */
 export function buildWall(
     wall: Wall,
@@ -306,7 +320,9 @@ export function buildWall(
     const material = materials.get(wall.materialId);
 
     for (const piece of wallPieces(frame.length, wall.height, wall.openings)) {
-        const mesh = wallPieceMesh(material, piece, frame.length, wall.thickness, ends);
+        const mesh = frame.arc === undefined
+            ? wallPieceMesh(material, piece, frame.length, wall.thickness, ends)
+            : curvedWallPieceMesh(material, piece, frame, wall.thickness, ends);
         group.add(mesh);
 
         // Same box drawn inside-out in a flat dark colour: invisible normally, it fills the cut once the
@@ -317,11 +333,43 @@ export function buildWall(
     }
 
     for (const opening of wall.openings.filter((o) => o.type !== 'Niche')) {
-        group.add(isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners));
+        const part = isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners);
+        if (frame.arc !== undefined) {
+            placeOnFrame(part, frame, openingFrame(frame, opening));
+        }
+        group.add(part);
     }
 
     mergeStatic(group);
     return group;
+}
+
+/** Puts an object built in the coordinates of `target` into the group of a wall on `frame`. */
+function placeOnFrame(object: THREE.Object3D, frame: WallFrame, target: WallFrame): void {
+    const dx = target.start.x - frame.start.x;
+    const dy = target.start.y - frame.start.y;
+    object.position.set((dx * frame.dir.x + dy * frame.dir.y) * MM, 0, -(dx * frame.normal.x + dy * frame.normal.y) * MM);
+    object.rotation.y = target.angle - frame.angle;
+}
+
+/**
+ * A piece of a curved wall: its outline (`wallOutline()`, mitred at the wall's ends, thinner behind a niche) stood up
+ * with smooth faces. Tagged with the niche behind which it is, like `wallPieceMesh()`.
+ */
+function curvedWallPieceMesh(material: THREE.Material, piece: WallPiece, frame: WallFrame, thickness: number, ends: WallEnds): THREE.Mesh {
+    const outline = wallOutline(frame, thickness, piece.from, piece.to, ends, piece.recess);
+    // In the wall group: x along the chord, z across it with the left at −z.
+    const local = outline.map((p) => {
+        const dx = p.x - frame.start.x;
+        const dy = p.y - frame.start.y;
+        return {x: (dx * frame.dir.x + dy * frame.dir.y) * MM, z: -(dx * frame.normal.x + dy * frame.normal.y) * MM};
+    });
+    const half = local.length / 2;
+    const mesh = curvedPrismAt(material, local.slice(0, half), local.slice(half).reverse(), piece.bottom * MM, piece.top * MM);
+    if (piece.recess !== undefined) {
+        mesh.userData = {openingId: piece.recess.openingId};
+    }
+    return mesh;
 }
 
 /**
@@ -392,6 +440,8 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         const length = Math.hypot(bx - ax, by - ay);
         const gaps = wallGapsAlongEdge(a, b, walls);
         const segments = finishSegments(room, a, b, length, walls);
+        // Along a curved wall the edge is one of the pieces of its face: the bands' UVs run on along the arc.
+        const curved = wallFacesAlongEdge(a, b, walls).find((face) => (face.wall.sagitta ?? 0) !== 0);
 
         const edge = new THREE.Group();
         edge.position.set(ax * MM, 0, -ay * MM);
@@ -420,6 +470,9 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
                     const width = (piece.to - piece.from) * MM;
                     const height = (piece.top - piece.bottom) * MM;
                     const geometry = worldUvBox(width, height, LiningThickness * MM, {u: from * MM, v: bottom * MM});
+                    if (curved !== undefined) {
+                        arcFaceUvs(geometry, {x: from * MM + width / 2, y: bottom * MM + height / 2}, a, b, curved);
+                    }
                     const mesh = new THREE.Mesh(geometry, material);
                     mesh.position.set(from * MM + width / 2, bottom * MM + height / 2, (LiningThickness * MM) / 2);
                     mesh.receiveShadow = true;
@@ -433,6 +486,30 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     alignTiles(group, tileGrid(room), materials);
     mergeStatic(group);
     return group;
+}
+
+/**
+ * UVs of a lining box on the room edge a → b along a curved wall's face, for a box at `offset` (metres, along the edge
+ * and up): u the distance along the face's arc from the wall's start, v the height, so the pattern runs on across the
+ * pieces of the face. They stay as they are (`alignTiles()` skips them).
+ */
+function arcFaceUvs(geometry: THREE.BufferGeometry, offset: {x: number; y: number}, a: Vec2, b: Vec2, face: EdgeFace): void {
+    const frame = wallFrame(face.wall);
+    if (frame.arc === undefined) {
+        return;
+    }
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    const across = face.side === 'Left' ? face.wall.thickness / 2 : -face.wall.thickness / 2;
+    const scale = (frame.arc.radius - Math.sign(frame.arc.sweep) * across) / frame.arc.radius;
+    const positions = geometry.getAttribute('position');
+    const uv = geometry.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < positions.count; i++) {
+        const t = (positions.getX(i) + offset.x) / MM / length;
+        const point = {x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t};
+        uv.setXY(i, alongWall(frame, point) * scale * MM, positions.getY(i) + offset.y);
+    }
+    uv.needsUpdate = true;
+    geometry.userData['ownUvs'] = true;
 }
 
 /** A stretch of a room edge (mm from its start) and the finish bands lining it. */

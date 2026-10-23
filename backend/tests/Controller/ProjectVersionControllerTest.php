@@ -160,6 +160,30 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertSame([null, null], $this->restoredWallFinishes($user, $project->id));
 	}
 
+	public function testRestoreKeepsCurvedWallsAndOlderSnapshotsHaveStraightOnes(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$walls = Fixture::service(WallRepository::class);
+		$wall = $walls->findByFloor($floor->id)[0];
+		$wall->sagitta = 321;
+		$walls->persist($wall);
+		$versionId = $this->saveVersion($user, $project->id);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame(321, $this->restoredWall($user, $project->id)['sagitta']);
+
+		// Snapshots saved before walls could curve.
+		Fixture::service(DatabaseInterface::class)->getPdo()->exec(sprintf(
+			'UPDATE project_versions SET snapshot = REPLACE(snapshot, \',"sagitta":321\', \'\') WHERE id = %d',
+			$versionId,
+		));
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame(0, $this->restoredWall($user, $project->id)['sagitta']);
+	}
+
 	public function testRestoreKeepsFloorAngleAndOlderSnapshotsLayAlongTheAxes(): void
 	{
 		$user = Fixture::createUser();
@@ -207,6 +231,14 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 	/** @return array{mixed, mixed} the left and right finishes of the first wall of the project's first floor */
 	private function restoredWallFinishes(User $user, int $projectId): array
 	{
+		$wall = $this->restoredWall($user, $projectId);
+
+		return [$wall['leftFinishes'], $wall['rightFinishes']];
+	}
+
+	/** @return array<mixed> the first wall of the project's first floor */
+	private function restoredWall(User $user, int $projectId): array
+	{
 		$projectBody = $this->jsonBody($this->request('GET', self::path(Routes::Project, $projectId), authenticatedAs: $user));
 		self::assertIsList($projectBody['floors']);
 		self::assertIsArray($projectBody['floors'][0]);
@@ -221,7 +253,7 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertIsList($walls);
 		self::assertIsArray($walls[0]);
 
-		return [$walls[0]['leftFinishes'], $walls[0]['rightFinishes']];
+		return $walls[0];
 	}
 
 	public function testVersionsOfOtherProjectsAreNotFound(): void

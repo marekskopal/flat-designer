@@ -31,7 +31,7 @@ final class WallFaceSpansTest extends TestCase
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int, niche?: bool}>, skirting: list<array{int|float, int|float}>, faces: list<array{wall: int, side: string, from: int|float, to: int|float}>}> $cases */
+		/** @var list<array{name: string, edge: array{array{int|float, int|float}, array{int|float, int|float}}, walls: list<array{startX: int, startY: int, endX: int, endY: int, sagitta?: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, spans: list<array{int|float, int|float}>, gaps: list<array{from: int|float, to: int|float, bottom: int, top: int, niche?: bool}>, skirting: list<array{int|float, int|float}>, faces: list<array{wall: int, side: string, from: int|float, to: int|float}>}> $cases */
 		$cases = $fixture['cases'];
 		foreach ($cases as $case) {
 			$walls = [];
@@ -135,7 +135,7 @@ final class WallFaceSpansTest extends TestCase
 		}
 	}
 
-	/** @param array{startX: int, startY: int, endX: int, endY: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>} $wall */
+	/** @param array{startX: int, startY: int, endX: int, endY: int, sagitta?: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>} $wall */
 	private static function wall(int $id, array $wall): WallDto
 	{
 		$openings = [];
@@ -178,6 +178,7 @@ final class WallFaceSpansTest extends TestCase
 			startY: $wall['startY'],
 			endX: $wall['endX'],
 			endY: $wall['endY'],
+			sagitta: $wall['sagitta'] ?? 0,
 			thickness: $wall['thickness'],
 			height: 2700,
 			materialId: null,

@@ -164,6 +164,11 @@ export interface Wall {
     startY: number;
     endX: number;
     endY: number;
+    /**
+     * A curved wall: how far (mm) the middle of its centre line lies off the chord start → end, + to the left; an arc of at
+     * most a semicircle. 0: straight. Missing in snapshots saved before walls could curve.
+     */
+    sagitta?: number;
     thickness: number;
     height: number;
     materialId: number | null;

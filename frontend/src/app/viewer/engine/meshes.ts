@@ -96,3 +96,100 @@ export function prismAt(material: THREE.Material, footprint: readonly {x: number
     mesh.receiveShadow = true;
     return mesh;
 }
+
+/**
+ * Upright solid between two faces given as polylines of the same number of points (x, z in the parent's frame,
+ * metres), `right` and `left`, from their start to their end, from `bottom` to `top`: a piece of a curved wall. The
+ * faces are smooth (normals averaged at the joints), the ends and the top and bottom flat. UVs are in metres: along
+ * each face and up, top and bottom in x/z.
+ */
+export function curvedPrismAt(
+    material: THREE.Material,
+    right: readonly {x: number; z: number}[],
+    left: readonly {x: number; z: number}[],
+    bottom: number,
+    top: number,
+): THREE.Mesh {
+    const positions: number[] = [];
+    const normals: number[] = [];
+    const uvs: number[] = [];
+    type Vertex = {x: number; y: number; z: number; normal: THREE.Vector3; uv: [number, number]};
+    const triangle = (a: Vertex, b: Vertex, c: Vertex, facing: THREE.Vector3): void => {
+        // Wound counter-clockwise seen from the side the face looks to.
+        const normal = new THREE.Vector3(b.x - a.x, b.y - a.y, b.z - a.z).cross(new THREE.Vector3(c.x - a.x, c.y - a.y, c.z - a.z));
+        for (const v of normal.dot(facing) >= 0 ? [a, b, c] : [a, c, b]) {
+            positions.push(v.x, v.y, v.z);
+            normals.push(v.normal.x, v.normal.y, v.normal.z);
+            uvs.push(...v.uv);
+        }
+    };
+    const quad = (p: Vertex, q: Vertex, r: Vertex, s: Vertex, facing: THREE.Vector3): void => {
+        triangle(p, q, r, facing);
+        triangle(p, r, s, facing);
+    };
+
+    // A face's normals at its points, away from the other face.
+    const faceNormals = (face: readonly {x: number; z: number}[], other: readonly {x: number; z: number}[]): THREE.Vector3[] =>
+        face.map((p, i) => {
+            const before = face[Math.max(i - 1, 0)];
+            const after = face[Math.min(i + 1, face.length - 1)];
+            const normal = new THREE.Vector3(after.z - before.z, 0, -(after.x - before.x)).normalize();
+            return normal.dot(new THREE.Vector3(p.x - other[i].x, 0, p.z - other[i].z)) < 0 ? normal.negate() : normal;
+        });
+    for (const [face, other] of [
+        [right, left],
+        [left, right],
+    ] as const) {
+        const faceNormal = faceNormals(face, other);
+        let u = 0;
+        for (let i = 1; i < face.length; i++) {
+            const p = face[i - 1];
+            const q = face[i];
+            const step = Math.hypot(q.x - p.x, q.z - p.z);
+            const at = (point: {x: number; z: number}, y: number, normal: THREE.Vector3, along: number): Vertex => ({
+                ...point,
+                y,
+                normal,
+                uv: [along, y],
+            });
+            const [n0, n1] = [faceNormal[i - 1], faceNormal[i]];
+            quad(at(p, bottom, n0, u), at(q, bottom, n1, u + step), at(q, top, n1, u + step), at(p, top, n0, u), n0.clone().add(n1));
+            u += step;
+        }
+    }
+
+    const flat = (point: {x: number; z: number}, y: number, normal: THREE.Vector3): Vertex => ({...point, y, normal, uv: [point.x, point.z]});
+    const last = right.length - 1;
+    for (const [i, towards] of [
+        [0, 1],
+        [last, last - 1],
+    ] as const) {
+        // An end, facing away from the rest of the piece.
+        const r = right[i];
+        const l = left[i];
+        const normal = new THREE.Vector3(l.z - r.z, 0, -(l.x - r.x)).normalize();
+        const inside = {x: (right[towards].x + left[towards].x) / 2 - (r.x + l.x) / 2, z: (right[towards].z + left[towards].z) / 2 - (r.z + l.z) / 2};
+        if (normal.x * inside.x + normal.z * inside.z > 0) {
+            normal.negate();
+        }
+        const side = (point: {x: number; z: number}, y: number): Vertex => ({...point, y, normal, uv: [Math.hypot(point.x - r.x, point.z - r.z), y]});
+        quad(side(r, bottom), side(l, bottom), side(l, top), side(r, top), normal);
+    }
+    for (const [y, normal] of [
+        [top, new THREE.Vector3(0, 1, 0)],
+        [bottom, new THREE.Vector3(0, -1, 0)],
+    ] as const) {
+        for (let i = 1; i < right.length; i++) {
+            quad(flat(right[i - 1], y, normal), flat(right[i], y, normal), flat(left[i], y, normal), flat(left[i - 1], y, normal), normal);
+        }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}

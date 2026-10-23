@@ -79,6 +79,26 @@ final class DrawingControllerTest extends EditorTestCase
 		self::assertSame(400, $this->edit('POST', 'walls', body: ['points' => [[0, 0], [3000]]], suffix: '/polyline')->getStatusCode());
 	}
 
+	public function testARunCurvesTheWallsGivenASagitta(): void
+	{
+		$this->drawWalls(['points' => [[0, 0], [4000, 0], [4000, 3000]], 'sagittas' => [-500, 0]]);
+
+		self::assertSame([-500, 0], array_column($this->sceneList('walls'), 'sagitta'));
+		foreach ([[0], [0, 0, 0], ['a', 0]] as $sagittas) {
+			self::assertContains(
+				$this->edit(
+					'POST',
+					'walls',
+					body: ['points' => [[0, 5000], [4000, 5000], [4000, 8000]], 'sagittas' => $sagittas],
+					suffix: '/polyline',
+				)
+					->getStatusCode(),
+				[400, 422],
+			);
+		}
+		self::assertCount(2, $this->sceneList('walls'));
+	}
+
 	public function testAStaleRevisionIsRejected(): void
 	{
 		$revision = $this->revision();

@@ -1,6 +1,6 @@
 import {Wall} from '@app/models/scene';
 
-import {snapPoint, SnapResult, snapToGrid, Vec2} from './plan-geometry';
+import {centreLineSegments, snapPoint, SnapResult, snapToGrid, Vec2} from './plan-geometry';
 import {RoomDetectError} from './room-detect';
 
 /** What a click in the editor's top view does: select and drag, draw a run of walls, or outline a room. */
@@ -19,6 +19,10 @@ export type ToolStatus =
           length: number | null;
           angle: number | null;
           snap: SnapResult['kind'] | null;
+          /** Arc mode: every segment gets a curve, set by one more click (or typed) once its end is placed. */
+          arc: boolean;
+          /** The curve (sagitta, mm) of the segment waiting for it; null when none waits. */
+          sagitta: number | null;
       }
     | {
           tool: 'detectRoom';
@@ -53,7 +57,7 @@ export function snapDrawPoint(cursor: Vec2, options: DrawSnapOptions): SnapResul
         grid,
         radius,
         points: [...ends, ...points],
-        lines: walls.map((w) => [{x: w.startX, y: w.startY}, {x: w.endX, y: w.endY}] as const),
+        lines: walls.flatMap((w) => centreLineSegments(w)),
         anchors: [...points, ...ends],
     });
     if (snapped.kind !== 'grid' || previous === undefined || radius === 0) {
@@ -80,15 +84,35 @@ export function directionOf(from: Vec2, to: Vec2): number {
 
 /**
  * Typed segment input: `3200` (a length in mm along the current direction) or `3200<90` (length and
- * direction in degrees counter-clockwise from east). Null when it is not one of these.
+ * direction in degrees counter-clockwise from east), either followed by `~400` for a curved wall (its sagitta, mm, + to
+ * the left). Null when it is not one of these.
  */
-export function parseDrawInput(text: string): {length: number; angle: number | null} | null {
-    const match = /^\s*(\d+(?:\.\d+)?)\s*(?:<\s*(-?\d+(?:\.\d+)?)\s*)?$/.exec(text);
+export function parseDrawInput(text: string): {length: number; angle: number | null; sagitta: number | null} | null {
+    const match = /^\s*(\d+(?:\.\d+)?)\s*(?:<\s*(-?\d+(?:\.\d+)?)\s*)?(?:~\s*(-?\d+)\s*)?$/.exec(text);
     if (match === null) {
         return null;
     }
     const length = Math.round(Number(match[1]));
-    return length > 0 ? {length, angle: match[2] === undefined ? null : Number(match[2])} : null;
+    return length > 0
+        ? {length, angle: match[2] === undefined ? null : Number(match[2]), sagitta: match[3] === undefined ? null : Number(match[3])}
+        : null;
+}
+
+/**
+ * The sagitta (mm, + to the left of a → b) that puts the middle of the arc from a to b at `point`'s distance off the
+ * chord: at most a semicircle; straight within `radius`, else on the grid.
+ */
+export function sagittaToward(a: Vec2, b: Vec2, point: Vec2, grid: number, radius: number): number {
+    const chord = Math.hypot(b.x - a.x, b.y - a.y);
+    if (chord === 0) {
+        return 0;
+    }
+    const off = ((point.x - (a.x + b.x) / 2) * -(b.y - a.y) + (point.y - (a.y + b.y) / 2) * (b.x - a.x)) / chord;
+    const limit = Math.floor(chord / 2);
+    if (Math.abs(off) <= radius) {
+        return 0;
+    }
+    return Math.max(-limit, Math.min(limit, snapToGrid(off, grid)));
 }
 
 /** Whether placing `point` closes the run: it is back at the first point and at least three points are placed. */

@@ -2,6 +2,7 @@ import {Opening, PlanPoint, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {ChainOffset, DimensionOffset, roomDimensions} from './dimensions';
+import {detectRoom} from './room-detect';
 
 const wall = (id: number, start: PlanPoint, end: PlanPoint, openings: Opening[] = []): Wall => ({
     id,
@@ -80,5 +81,40 @@ describe('roomDimensions', () => {
         const notched = {polygon: [[0, 0], [4000, 0], [4000, 3000], [100, 3000], [100, 2900], [0, 2900]] as PlanPoint[]};
 
         expect(roomDimensions([notched], []).map((l) => l.length)).toEqual([4000, 3000, 3900, 2900]);
+    });
+});
+
+describe('roomDimensions along a curved wall', () => {
+    // The south wall bows 400 mm out (south) between the corners of the 4000 × 3200 room; a door 1600 mm along it.
+    const bay = [
+        {...wall(1, [-100, -100], [4100, -100], [{...door, offset: 1600}]), thickness: 200, sagitta: -400},
+        {...wall(2, [4100, -100], [4100, 3100]), thickness: 200},
+        {...wall(3, [4100, 3100], [-100, 3100]), thickness: 200},
+        {...wall(4, [-100, 3100], [-100, -100]), thickness: 200},
+    ];
+    const detected = detectRoom(bay, {x: 2000, y: 1500});
+    const polygon = 'polygon' in detected ? detected.polygon : [];
+
+    it('measures the curved face as one line along the arc, with the chain of its door', () => {
+        const lines = roomDimensions([{polygon}], bay);
+        const curved = lines.filter((l) => l.path !== undefined);
+
+        // The overall line, then pier, door, pier.
+        // The room side of the wall runs 5612 mm round (the centre line 5712): 4089 mm between the corners, the door 884.
+        expect(curved.map((l) => l.length)).toEqual([4089, 1504, 884, 1701]);
+        expect(curved[0].path!.length).toBeGreaterThan(10);
+        // 300 mm into the room from the face, which lies 400 mm south of the corners at its middle.
+        const middle = curved[0].path!.reduce((low, p) => (p.y < low.y ? p : low));
+        expect(Math.round(middle.y)).toBeGreaterThanOrEqual(-100 - 3);
+        expect(lines.filter((l) => l.path === undefined).map((l) => l.length)).toEqual([3032, 4000, 3032]);
+    });
+
+    it('keeps the corner pieces of a thin curved wall between thick walls in its line', () => {
+        // The mitres at the corners reach past the thin wall's own span: its end pieces are still part of its face.
+        const thin = [{...bay[0], thickness: 100, startY: -50, endY: -50, openings: []}, ...bay.slice(1)];
+        const outline = detectRoom(thin, {x: 2000, y: 1500});
+        const lines = roomDimensions([{polygon: 'polygon' in outline ? outline.polygon : []}], thin);
+        expect(lines.filter((l) => l.path !== undefined)).toHaveLength(1);
+        expect(lines.filter((l) => l.path === undefined).map((l) => l.length)).toEqual([3033, 4000, 3033]);
     });
 });

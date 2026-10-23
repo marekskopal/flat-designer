@@ -11,8 +11,8 @@ use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 /**
  * Where a room edge runs along wall faces, and the openings on it. Twin of `wallSpansAlongEdge()`, `wallFacesAlongEdge()`,
  * `wallGapsAlongEdge()` and `skirtingPieces()` in the viewer (`ceilings.ts`, `plan-geometry.ts`), kept identical by
- * `tests/fixtures/wall-spans.json`. A wall lies on the edge a → b when it runs parallel to it and its centre line is half
- * a thickness (± tolerance) away. Lengths are mm along the edge from a. A niche is an opening of the face it is cut
+ * `tests/fixtures/wall-spans.json`. A wall lies on the edge a → b when one of its faces does (`EdgeWall`: a straight
+ * wall parallel to it, a curved one with the edge a piece of the outline along its face). Lengths are mm along the edge from a. A niche is an opening of the face it is cut
  * into only, flagged `niche` (it stays in the plan).
  */
 final class WallFaceSpans
@@ -116,56 +116,51 @@ final class WallFaceSpans
 			return [];
 		}
 		$dir = [($b[0] - $a[0]) / $length, ($b[1] - $a[1]) / $length];
-		$along = static fn (float $x, float $y): float => ($x - $a[0]) * $dir[0] + ($y - $a[1]) * $dir[1];
 
 		$spans = [];
 		foreach ($walls as $wall) {
-			$wallLength = hypot($wall->endX - $wall->startX, $wall->endY - $wall->startY);
-			if ($wallLength <= 0.0) {
+			$line = WallLine::fromDto($wall);
+			if ($line->chord() <= 0.0) {
 				continue;
 			}
-			$wallDir = [($wall->endX - $wall->startX) / $wallLength, ($wall->endY - $wall->startY) / $wallLength];
-			$parallel = abs($dir[0] * $wallDir[1] - $dir[1] * $wallDir[0]) < 1e-3;
-			// Distance of a from the centre line, along the wall's normal (positive on its left).
-			$normal = ($a[0] - $wall->startX) * -$wallDir[1] + ($a[1] - $wall->startY) * $wallDir[0];
-			if (!$parallel || abs(abs($normal) - $wall->thickness / 2) > self::Tolerance) {
+			$match = EdgeWall::of($a, $b, $line, self::Tolerance);
+			$half = $wall->thickness / 2;
+			$stretch = $match?->stretch($a, $dir, $length, -$half, $line->length() + $half);
+			if ($match === null || $stretch === null) {
 				continue;
 			}
+			$from = max(min($stretch), 0.0);
+			$to = min(max($stretch), $length);
 
-			$t0 = $along($wall->startX, $wall->startY);
-			$t1 = $along($wall->endX, $wall->endY);
-			$from = max(min($t0, $t1) - $wall->thickness / 2, 0.0);
-			$to = min(max($t0, $t1) + $wall->thickness / 2, $length);
-
-			$face = $normal > 0 ? OpeningSideEnum::Left : OpeningSideEnum::Right;
-			$gaps = self::openingGaps($wall, $face, $wallDir, $along, $length);
+			$gaps = self::openingGaps($wall, $match, $a, $dir, $length);
 
 			// A wall whose face misses the edge's extent still brings its openings, as in the viewer.
-			$spans[] = ['wall' => $wall, 'side' => $face, 'from' => $from, 'to' => $to, 'gaps' => $gaps];
+			$spans[] = ['wall' => $wall, 'side' => $match->side, 'from' => $from, 'to' => $to, 'gaps' => $gaps];
 		}
 
 		return $spans;
 	}
 
 	/**
-	 * The wall's openings on its `face` projected onto the edge: all but the niches cut into the other face.
+	 * The wall's openings on its face on the edge projected onto it: all but the niches cut into the other face.
 	 *
-	 * @param array{float, float} $wallDir
-	 * @param callable(float, float): float $along position of a plan point along the edge
+	 * @param array{float, float} $a
+	 * @param array{float, float} $dir
 	 * @return list<array{from: float, to: float, bottom: int, top: int, niche: bool}>
 	 */
-	private static function openingGaps(WallDto $wall, OpeningSideEnum $face, array $wallDir, callable $along, float $length): array
+	private static function openingGaps(WallDto $wall, EdgeWall $match, array $a, array $dir, float $length): array
 	{
 		$gaps = [];
 		foreach ($wall->openings as $opening) {
-			if ($opening->type === OpeningTypeEnum::Niche && ($opening->side ?? OpeningSideEnum::Left) !== $face) {
+			if ($opening->type === OpeningTypeEnum::Niche && ($opening->side ?? OpeningSideEnum::Left) !== $match->side) {
 				continue;
 			}
-			$g0 = $along($wall->startX + $wallDir[0] * $opening->offset, $wall->startY + $wallDir[1] * $opening->offset);
-			$end = $opening->offset + $opening->width;
-			$g1 = $along($wall->startX + $wallDir[0] * $end, $wall->startY + $wallDir[1] * $end);
-			$gapFrom = max(min($g0, $g1), 0.0);
-			$gapTo = min(max($g0, $g1), $length);
+			$stretch = $match->stretch($a, $dir, $length, $opening->offset, $opening->offset + $opening->width);
+			if ($stretch === null) {
+				continue;
+			}
+			$gapFrom = max(min($stretch), 0.0);
+			$gapTo = min(max($stretch), $length);
 			if ($gapTo <= $gapFrom) {
 				continue;
 			}

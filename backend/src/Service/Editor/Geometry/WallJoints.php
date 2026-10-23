@@ -7,9 +7,13 @@ namespace FlatDesigner\Service\Editor\Geometry;
 /**
  * Mitres of walls whose end points meet in pairs, as the viewer draws them (`wallJoints()` in
  * `viewer/engine/plan-geometry.ts`): how far each face reaches past the wall's end points (mm; negative
- * = cut short). Ends shared by three or more walls, straight continuations and very sharp angles stay square.
+ * = cut short), a curved wall's face along its circle. Ends shared by three or more walls, straight (tangent)
+ * continuations and very sharp angles stay square.
  *
+ * @phpstan-import-type Point from PlanMath
  * @phpstan-type Ends array{startLeft: float, startRight: float, endLeft: float, endRight: float}
+ * @phpstan-type End array{wall: WallLine, atStart: bool, x: int, y: int}
+ * @phpstan-type Curve array{kind: 'line', point: Point, dir: Point}|array{kind: 'circle', centre: Point, radius: float}
  */
 final readonly class WallJoints
 {
@@ -50,20 +54,21 @@ final readonly class WallJoints
 			if (abs($cross) < 1e-3) {
 				continue;
 			}
-			// Distance from the corner along `a` where the face on the left of `a` meets the other wall's face
-			// (the right face is its mirror image).
-			$k = ($hb + $ha * ($ax * $bx + $ay * $by)) / $cross;
-			if (abs($k) > 4 * max($ha, $hb)) {
+			// How far from the corner into the wall the face on the left of `a` meets the other wall's face, and the one
+			// on its right (for straight walls its mirror image).
+			$reach = self::reach($end, $other, [$ax, $ay], [$bx, $by], $cross);
+			$limit = 4 * max($ha, $hb);
+			if ($reach === null || abs($reach[0]) > $limit || abs($reach[1]) > $limit) {
 				continue;
 			}
 			$faces = $result[$end['wall']->id] ?? self::Square;
 			if ($end['atStart']) {
-				$faces['startLeft'] = -$k;
-				$faces['startRight'] = $k;
+				$faces['startLeft'] = -$reach[0];
+				$faces['startRight'] = -$reach[1];
 			} else {
 				// Seen from the end, the left of `a` is the wall's right.
-				$faces['endRight'] = -$k;
-				$faces['endLeft'] = $k;
+				$faces['endRight'] = -$reach[0];
+				$faces['endLeft'] = -$reach[1];
 			}
 			$result[$end['wall']->id] = $faces;
 		}
@@ -71,13 +76,98 @@ final readonly class WallJoints
 		return $result;
 	}
 
-	/** @return array{float, float} */
+	/**
+	 * Where the faces left and right of `a` meet the other wall's faces at a corner: mm from the corner into the wall,
+	 * along its centre line. Null when a curved face misses the other.
+	 *
+	 * @param End $end
+	 * @param End $other
+	 * @param Point $a
+	 * @param Point $b
+	 * @return array{float, float}|null
+	 */
+	private static function reach(array $end, array $other, array $a, array $b, float $cross): ?array
+	{
+		$wall = $end['wall'];
+		$otherWall = $other['wall'];
+		$ha = $wall->thickness / 2;
+		$hb = $otherWall->thickness / 2;
+		if ($wall->arc() === null && $otherWall->arc() === null) {
+			$k = ($hb + $ha * ($a[0] * $b[0] + $a[1] * $b[1])) / $cross;
+
+			return [$k, -$k];
+		}
+		// The left of `a` is the wall's left at its start, its right at its end; the face it meets is on the right of `b`.
+		$sign = $end['atStart'] ? 1 : -1;
+		$otherSign = $other['atStart'] ? 1 : -1;
+		$corner = [(float) $end['x'], (float) $end['y']];
+		$reach = static function (float $across, float $otherAcross) use ($wall, $otherWall, $end, $corner): ?float {
+			$meet = self::nearestIntersection(self::curve($wall, $across), self::curve($otherWall, $otherAcross), $corner);
+			if ($meet === null) {
+				return null;
+			}
+			$along = $wall->along($meet);
+
+			return $end['atStart'] ? $along : $wall->length() - $along;
+		};
+		$left = $reach($sign * $ha, -$otherSign * $hb);
+		$right = $reach(-$sign * $ha, $otherSign * $hb);
+
+		return $left === null || $right === null ? null : [$left, $right];
+	}
+
+	/** @return Curve */
+	private static function curve(WallLine $wall, float $across): array
+	{
+		$arc = $wall->arc();
+		if ($arc === null) {
+			return ['kind' => 'line', 'point' => $wall->point(0.0, $across), 'dir' => $wall->tangent(0.0)];
+		}
+
+		return ['kind' => 'circle', 'centre' => [$arc['cx'], $arc['cy']], 'radius' => $arc['radius'] - ($arc['sweep'] > 0 ? 1 : -1) * $across];
+	}
+
+	/**
+	 * The intersection of two face curves nearest to `near`; null when they do not meet.
+	 *
+	 * @param Curve $p
+	 * @param Curve $q
+	 * @param Point $near
+	 * @return Point|null
+	 */
+	private static function nearestIntersection(array $p, array $q, array $near): ?array
+	{
+		if ($p['kind'] === 'line') {
+			$points = $q['kind'] === 'line'
+				? Intersections::lineLine($p['point'], $p['dir'], $q['point'], $q['dir'])
+				: Intersections::lineCircle($p['point'], $p['dir'], $q['centre'], $q['radius']);
+		} else {
+			$points = $q['kind'] === 'line'
+				? Intersections::lineCircle($q['point'], $q['dir'], $p['centre'], $p['radius'])
+				: Intersections::circleCircle($p['centre'], $p['radius'], $q['centre'], $q['radius']);
+		}
+		$best = null;
+		foreach ($points as $point) {
+			if ($best === null || hypot($point[0] - $near[0], $point[1] - $near[1]) < hypot($best[0] - $near[0], $best[1] - $near[1])) {
+				$best = $point;
+			}
+		}
+
+		return $best;
+	}
+
+	/**
+	 * Unit vector from a wall end into the wall (along the tangent of a curved wall).
+	 *
+	 * @return Point
+	 */
 	private static function intoWall(WallLine $wall, bool $atStart): array
 	{
-		$length = $wall->length();
-		$dx = ($wall->endX - $wall->startX) / $length;
-		$dy = ($wall->endY - $wall->startY) / $length;
+		if ($atStart) {
+			return $wall->tangent(0.0);
+		}
+		[$dx, $dy] = $wall->tangent($wall->length());
 
-		return $atStart ? [$dx, $dy] : [-$dx, -$dy];
+		return [-$dx, -$dy];
 	}
 }

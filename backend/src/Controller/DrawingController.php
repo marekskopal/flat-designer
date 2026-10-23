@@ -34,7 +34,7 @@ final readonly class DrawingController
 	) {
 	}
 
-	/** Body `{points: [[x, y], …], closed?, name?, type?, thickness?, height?, materialId?}`. */
+	/** Body `{points: [[x, y], …], closed?, sagittas?: [mm per wall], name?, type?, thickness?, height?, materialId?}`. */
 	#[RoutePost(Routes::ProjectFloorWallPolyline->value)]
 	public function actionPostWallPolyline(ServerRequestInterface $request, int $projectId, int $floorId): ResponseInterface
 	{
@@ -52,6 +52,7 @@ final readonly class DrawingController
 			$input->closed,
 			$input->fields,
 			$this->requestService->getBaseRevision($request),
+			$input->sagittas,
 		), 201);
 	}
 

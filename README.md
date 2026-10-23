@@ -84,7 +84,7 @@ temperature. The night view switches off the sun and lights the flat with its ow
 ![Editor with the kitchen's inspector open](docs/screenshots/editor.webp)
 
 Select rooms, walls, openings and items and edit them in the inspector, drag them in the plan, draw runs of walls
-with snapping, and outline a room by clicking inside it. Every change is logged, and you can undo your own.
+with snapping (straight or curved), bend a wall by its middle, and outline a room by clicking inside it. Every change is logged, and you can undo your own.
 
 ### Furniture definitions
 
@@ -281,7 +281,8 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 - Lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the
   floor, x points east and y points north.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south.
-- Walls are centre lines with a thickness. Openings are positioned by their offset along the wall from its start.
+- Walls are centre lines with a thickness, straight or curved (an arc given by its sagitta). Openings are positioned by
+  their offset along the wall from its start.
 - Openings are doors (single, double, sliding, pocket), passages without a door, windows and niches (recesses into one
   face of the wall). Doors have a frame style
   (lining, architrave, flush, none), a handle (lever, knob, pull, none) and a flush, panelled or glazed leaf. Windows

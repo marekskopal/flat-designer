@@ -154,8 +154,36 @@ final class OpeningPlacement
 		return true;
 	}
 
-	/** Whether an existing opening, at `offset`, still fits a changed wall. */
-	public static function fits(Opening $opening, int $offset, int $wallLength, int $wallThickness, int $wallHeight): bool
+	/**
+	 * Whether an opening `width` wide (a sliding or pocket door with the wall its open leaf takes) is shallow enough for
+	 * a wall curved at `radius` (null: straight): built straight, it may stand off the arc by a quarter of the wall's
+	 * thickness at most. Niches follow the curve. Twin of `openingFitsCurve()` in `plan-geometry.ts`.
+	 */
+	public static function fitsCurve(OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $width, ?float $radius, int $wallThickness): bool
+	{
+		if ($radius === null || $type === OpeningTypeEnum::Niche) {
+			return true;
+		}
+		[$from, $to] = self::occupied($type, $hinge, 0, $width);
+
+		return $radius * (1 - cos(($to - $from) / (2 * $radius))) <= $wallThickness / 4;
+	}
+
+	/** The widest opening (mm) `fitsCurve()` allows on a wall curved at `radius`. */
+	public static function maxCurvedWidth(float $radius, int $wallThickness): int
+	{
+		return (int) floor(2 * $radius * acos(max(1 - $wallThickness / 4 / $radius, -1.0)));
+	}
+
+	/** Whether an existing opening, at `offset`, still fits a changed wall (curved at `wallRadius`; null: straight). */
+	public static function fits(
+		Opening $opening,
+		int $offset,
+		int $wallLength,
+		int $wallThickness,
+		int $wallHeight,
+		?float $wallRadius = null,
+	): bool
 	{
 		[$from, $to] = self::occupied($opening->type, $opening->hinge, $offset, $opening->width);
 
@@ -163,6 +191,7 @@ final class OpeningPlacement
 			&& $to <= $wallLength
 			&& $opening->sillHeight + $opening->height <= $wallHeight
 			&& ($opening->type !== OpeningTypeEnum::PocketDoor || $wallThickness >= self::MinPocketWallThickness)
-			&& ($opening->type !== OpeningTypeEnum::Niche || ($opening->depth ?? 0) <= $wallThickness - self::MinNicheBack);
+			&& ($opening->type !== OpeningTypeEnum::Niche || ($opening->depth ?? 0) <= $wallThickness - self::MinNicheBack)
+			&& self::fitsCurve($opening->type, $opening->hinge, $opening->width, $wallRadius, $wallThickness);
 	}
 }

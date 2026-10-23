@@ -117,7 +117,7 @@ export class EditorApiService {
         );
     }
 
-    /** A run of walls through centre-line points, as one change listing the batch. */
+    /** A run of walls through centre-line points, curved by `sagittas` (one per wall; null: straight), as one change listing the batch. */
     public async drawWalls(
         projectId: number,
         floorId: number,
@@ -125,9 +125,11 @@ export class EditorApiService {
         closed: boolean,
         fields: Partial<WallDraft>,
         baseRevision?: number,
+        sagittas: number[] | null = null,
     ): Promise<EditResult> {
         const url = `${this.url(projectId, floorId, 'wall')}/polyline`;
-        return firstValueFrom(this.http.post<EditResult>(url, {...fields, points, closed}, {headers: ifMatch(baseRevision)}));
+        const body = {...fields, points, closed, ...(sagittas === null ? {} : {sagittas})};
+        return firstValueFrom(this.http.post<EditResult>(url, body, {headers: ifMatch(baseRevision)}));
     }
 
     /** A room outlined by the walls around the point; the other fields as for any new room. */

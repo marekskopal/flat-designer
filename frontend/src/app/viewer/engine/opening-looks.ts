@@ -1,5 +1,7 @@
 import {Opening, Wall} from '@app/models/scene';
 
+import {wallFrame} from './plan-geometry';
+
 /** A rectangle in a leaf's or sash's own frame: x from its hinge edge, y up from its bottom, mm. */
 export interface PanelRect {
     x: number;
@@ -62,9 +64,9 @@ export function shutterLeaves(
 /** The wall free beside an opening, mm along the wall: up to its neighbouring openings, or the wall's ends. */
 export function freeBeside(
     opening: Pick<Opening, 'id' | 'offset' | 'width'>,
-    wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'openings'>,
+    wall: Pick<Wall, 'startX' | 'startY' | 'endX' | 'endY' | 'sagitta' | 'openings'>,
 ): [number, number] {
-    const length = Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY);
+    const length = wallFrame(wall).length;
     let from = 0;
     let to = length;
     for (const other of wall.openings) {
