@@ -2,7 +2,7 @@ import {Material, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildFloor, buildRoom, buildWall, buildWallFinishes} from './building';
+import {buildFloor, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {MaterialLibrary} from './materials';
 import {alongWall, MM, WallEnds, wallFrame} from './plan-geometry';
 import {detectRoom} from './room-detect';
@@ -317,5 +317,14 @@ describe('buildFloor', () => {
         expect(uvAt(floor, 0, 0)).toEqual([1000, 1000]);
         expect(uvAt(floor, 2000, 0)).toEqual([1000, -1000]);
         expect(uvAt(floor, 2000, 1000)).toEqual([2000, -1000]);
+    });
+});
+
+describe('buildSlab', () => {
+    it("hangs the floor's slab under its level, round the walls", () => {
+        const slab = buildSlab([wall], 250, new MaterialLibrary([], 1));
+        const box = new THREE.Box3().setFromObject(slab);
+        expect(box.max.y).toBeCloseTo(0);
+        expect(box.min.y).toBeCloseTo(-0.25);
     });
 });

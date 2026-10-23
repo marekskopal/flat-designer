@@ -638,7 +638,7 @@ export class ViewerEngine {
             this.joints = joints;
             this.corners = corners;
             this.disposeObject(parts.slab);
-            parts.slab = buildSlab(scene.walls, materials);
+            parts.slab = buildSlab(scene.walls, scene.floor.slabThickness, materials);
             parts.root.add(parts.slab);
             this.indexWalls();
         }

@@ -101,6 +101,7 @@ final readonly class ElectricalScheduleService
 			id: $floor->id,
 			name: $floor->name,
 			level: $floor->level,
+			elevation: $floor->elevation,
 			rooms: $schedule,
 			totals: ElectricalTotalsDto::sum(array_map(static fn (RoomElectricalDto $r): ElectricalTotalsDto => $r->totals, $schedule)),
 		);

@@ -110,7 +110,8 @@ export class ExportComponent {
     }
 
     private info(): SheetInfo {
-        return {projectName: this.projectName(), floorName: this.scene().floor.name, address: this.address(), date: new Date()};
+        const floor = this.scene().floor;
+        return {projectName: this.projectName(), floorName: floor.name, floorElevation: floor.elevation, address: this.address(), date: new Date()};
     }
 
     private filename(suffix: string): string {

@@ -3,6 +3,7 @@ import {ChangeDetectionStrategy, Component, effect, inject, input, signal} from 
 import {RouterLink} from '@angular/router';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {ProjectService} from '@app/services/project.service';
+import {levelText} from '@app/viewer/engine/sheet-svg';
 
 /**
  * The project's room schedule: per floor the rooms' net area, perimeter, clear height and volume, with the
@@ -20,6 +21,7 @@ export class RoomScheduleComponent {
     public readonly revision = input.required<number>();
 
     protected readonly schedule = signal<RoomSchedule | null>(null);
+    protected readonly levelText = levelText;
 
     private readonly projects = inject(ProjectService);
     /** Bumped by every load; an older request that comes back late is dropped. */

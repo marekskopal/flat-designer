@@ -53,6 +53,8 @@ use const JSON_THROW_ON_ERROR;
  * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
  * plots: [PlotDto]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
+ * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
+ * and walls by `FloorStack`)
  * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` missing in snapshots taken before they
  * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
@@ -121,13 +123,18 @@ final readonly class ProjectSnapshotService
 	/** @return list<FloorDto> */
 	public function getFloors(string $snapshot): array
 	{
+		$data = $this->read($snapshot);
+		$stack = FloorStack::ofSnapshot($data);
+
 		return array_map(
 			fn (SnapshotReader $entry): FloorDto => new FloorDto(
 				id: $entry->object('floor')->int('id'),
 				name: $entry->object('floor')->string('name'),
 				level: $entry->object('floor')->int('level'),
+				elevation: $stack[$entry->object('floor')->int('id')]['elevation'],
+				slabThickness: $stack[$entry->object('floor')->int('id')]['slabThickness'],
 			),
-			$this->read($snapshot)->objects('floors'),
+			$data->objects('floors'),
 		);
 	}
 
@@ -145,6 +152,10 @@ final readonly class ProjectSnapshotService
 		foreach ($data->floors as $entry) {
 			if ($entry instanceof stdClass && $entry->floor instanceof stdClass && $entry->floor->id === $floorId) {
 				$scene = clone $entry;
+				$scene->floor = clone $entry->floor;
+				$stacked = FloorStack::ofSnapshot($this->read($snapshot))[$floorId];
+				$scene->floor->elevation = $stacked['elevation'];
+				$scene->floor->slabThickness = $stacked['slabThickness'];
 				$scene->materials = $data->materials ?? [];
 				$scene->location = $data->location ?? null;
 
@@ -184,10 +195,17 @@ final readonly class ProjectSnapshotService
 		$allSetIds = [];
 		/** @var array<int, ItemGroup> $allGroupIds */
 		$allGroupIds = [];
+		$stack = FloorStack::ofSnapshot($data);
 
 		foreach ($data->objects('floors') as $entry) {
 			$floorData = $entry->object('floor');
-			$floor = $this->stamp(new Floor(project: $project, name: $floorData->string('name'), level: $floorData->int('level')));
+			$floor = $this->stamp(new Floor(
+				project: $project,
+				name: $floorData->string('name'),
+				level: $floorData->int('level'),
+				elevation: $stack[$floorData->int('id')]['elevation'],
+				slabThickness: $stack[$floorData->int('id')]['slabThickness'],
+			));
 			$this->floorRepository->persist($floor);
 			$floorIds[$floorData->int('id')] = $floor;
 

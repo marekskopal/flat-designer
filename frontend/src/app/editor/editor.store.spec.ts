@@ -40,7 +40,8 @@ describe('EditorStore', () => {
         };
         reload = vi.fn();
         setScene = vi.fn();
-        scene = {floor: {id: 3, name: 'Ground', level: 0}, revision: 7, materials: [], rooms: [], walls: [], items: []};
+        const floor = {id: 3, name: 'Ground', level: 0, elevation: 0, slabThickness: 300};
+        scene = {floor, revision: 7, materials: [], rooms: [], walls: [], items: []};
         TestBed.configureTestingModule({
             providers: [provideZonelessChangeDetection(), EditorStore, {provide: EditorApiService, useValue: api}],
         });

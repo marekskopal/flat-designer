@@ -12,6 +12,7 @@ final readonly class FloorScheduleDto
 		public int $id,
 		public string $name,
 		public int $level,
+		public int $elevation,
 		public array $rooms,
 		public ScheduleTotalDto $indoor,
 		public ScheduleTotalDto $outdoor,

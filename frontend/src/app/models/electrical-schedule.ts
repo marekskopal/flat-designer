@@ -38,6 +38,8 @@ export interface FloorElectrical {
     id: number;
     name: string;
     level: number;
+    /** mm above ±0.000. */
+    elevation: number;
     rooms: RoomElectrical[];
     totals: ElectricalTotals;
 }

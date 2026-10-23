@@ -46,6 +46,10 @@ export interface Floor {
     name: string;
     /** 0 = ground floor, negative below ground. */
     level: number;
+    /** mm, the finished floor level above the project datum ±0.000. All floors share the plan coordinates. */
+    elevation: number;
+    /** mm, the slab under the floor. */
+    slabThickness: number;
 }
 
 export interface Material {

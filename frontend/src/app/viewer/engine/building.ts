@@ -53,7 +53,6 @@ import {
 import {buildPlot, groundUnder} from './plots';
 import {alignTiles, turnLevelUvs} from './tiling';
 
-const SlabThickness = 300;
 /** Bars of a French window sash, mm. */
 const SashBar = 55;
 
@@ -95,7 +94,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root,
         ceilings,
         ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
-        slab: buildSlab(scene.walls, materials),
+        slab: buildSlab(scene.walls, scene.floor.slabThickness, materials),
         rooms: new Map(),
         plots: new Map(),
         walls: new Map(),
@@ -157,7 +156,8 @@ export function addRoom(parts: BuildingParts, room: RoomParts, roomId: number): 
     }
 }
 
-export function buildSlab(walls: readonly Wall[], materials: MaterialLibrary): THREE.Mesh {
+/** The slab under the floor, `thickness` mm deep, round the walls. */
+export function buildSlab(walls: readonly Wall[], thickness: number, materials: MaterialLibrary): THREE.Mesh {
     // The ends of the centre lines, and the joints between the pieces of a curved one.
     const points = walls.flatMap((w) => {
         const frame = wallFrame(w);
@@ -178,10 +178,10 @@ export function buildSlab(walls: readonly Wall[], materials: MaterialLibrary): T
     const slab = boxAt(
         materials.plain('#d6d1c8', 0.95),
         minX * MM,
-        -SlabThickness * MM,
+        -thickness * MM,
         -maxY * MM,
         (maxX - minX) * MM,
-        SlabThickness * MM,
+        thickness * MM,
         (maxY - minY) * MM,
     );
     slab.castShadow = false;

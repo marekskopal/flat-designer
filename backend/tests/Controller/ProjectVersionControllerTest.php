@@ -62,7 +62,10 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 			authenticatedAs: $user,
 		);
 
-		self::assertSame([['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0]], $detail['floors']);
+		self::assertSame(
+			[['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0, 'elevation' => 0, 'slabThickness' => 300]],
+			$detail['floors'],
+		);
 		self::assertSame(200, $stored->getStatusCode());
 		self::assertEquals($working, $this->jsonBody($stored));
 		// Empty item params stay a JSON object.
@@ -130,6 +133,30 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertIsArray($scene['walls'][0]['openings'][0]);
 		$door = $scene['walls'][0]['openings'][0];
 		self::assertSame(['Lining', null, 1, 0], [$door['frameStyle'], $door['handle'], $door['mullions'], $door['transoms']]);
+	}
+
+	public function testRestoreKeepsFloorElevationsAndStacksOlderSnapshots(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$this->request(
+			'POST',
+			self::path(Routes::ProjectFloors, $project->id),
+			['name' => 'Attic', 'level' => 1, 'elevation' => 3100],
+			$user,
+		);
+		$versionId = $this->saveVersion($user, $project->id);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame([[0, 300], [3100, 250]], $this->restoredFloorStack($user, $project->id));
+
+		// Snapshots saved before floors had an elevation are stacked on the default walls.
+		Fixture::service(DatabaseInterface::class)->getPdo()->exec(sprintf(
+			'UPDATE project_versions SET snapshot = REGEXP_REPLACE(snapshot, \',"elevation":-?[0-9]+,"slabThickness":[0-9]+\', \'\') WHERE id = %d',
+			$versionId,
+		));
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame([[0, 300], [2850, 250]], $this->restoredFloorStack($user, $project->id));
 	}
 
 	public function testRestoreKeepsWallFaceFinishesAndOlderSnapshotsHaveNone(): void
@@ -323,5 +350,14 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 			[(string) $projectId, (string) $versionId, (string) $floorId],
 			$route->value,
 		);
+	}
+
+	/** @return list<array{mixed, mixed}> elevation and slab of the working copy's floors, by level */
+	private function restoredFloorStack(User $user, int $projectId): array
+	{
+		$floors = $this->jsonBody($this->request('GET', self::path(Routes::Project, $projectId), authenticatedAs: $user))['floors'];
+		self::assertIsList($floors);
+
+		return array_map(static fn (mixed $f): array => is_array($f) ? [$f['elevation'], $f['slabThickness']] : [null, null], $floors);
 	}
 }

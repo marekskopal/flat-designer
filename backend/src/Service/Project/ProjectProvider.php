@@ -63,7 +63,11 @@ final readonly class ProjectProvider
 
 		return $this->orm->getTransactionProvider()->transaction(function () use ($project): Project {
 			$this->projectRepository->persist(self::stamp($project));
-			$this->floorRepository->persist(self::stamp(new Floor(project: $project, name: 'Ground floor', level: 0)));
+			$this->floorRepository->persist(
+				self::stamp(
+					new Floor(project: $project, name: 'Ground floor', level: 0, elevation: 0, slabThickness: FloorStack::GroundSlab),
+				),
+			);
 
 			return $project;
 		});

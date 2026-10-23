@@ -12,6 +12,7 @@ final readonly class FloorElectricalDto
 		public int $id,
 		public string $name,
 		public int $level,
+		public int $elevation,
 		public array $rooms,
 		public ElectricalTotalsDto $totals,
 	) {

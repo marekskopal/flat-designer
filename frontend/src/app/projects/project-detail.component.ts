@@ -15,6 +15,7 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareService} from '@app/services/share.service';
 import {ShareLinkFormComponent} from '@app/share/share-link-form.component';
+import {levelText} from '@app/viewer/engine/sheet-svg';
 import {filter, switchMap} from 'rxjs';
 
 /** One project: its details, floors (the working copy), room and electrical schedules, saved versions, share links and files. */
@@ -71,6 +72,9 @@ export class ProjectDetailComponent {
     protected readonly floorForm = this.fb.group({
         name: ['', Validators.required],
         level: [0, Validators.required],
+        /** Null stacks a new floor on the one below. */
+        elevation: [null as number | null],
+        slabThickness: [null as number | null, [Validators.min(0), Validators.max(1000)]],
     });
     protected readonly versionForm = this.fb.group({
         note: [''],
@@ -137,9 +141,15 @@ export class ProjectDetailComponent {
         });
     }
 
+    protected readonly levelText = levelText;
+
     protected startFloor(floor: Floor | null): void {
         const levels = this.project()?.floors.map((f) => f.level) ?? [0];
-        this.floorForm.setValue(floor === null ? {name: '', level: Math.max(...levels) + 1} : {name: floor.name, level: floor.level});
+        this.floorForm.setValue(
+            floor === null
+                ? {name: '', level: Math.max(...levels) + 1, elevation: null, slabThickness: null}
+                : {name: floor.name, level: floor.level, elevation: floor.elevation, slabThickness: floor.slabThickness},
+        );
         this.editingFloor.set(floor?.id ?? 'new');
     }
 

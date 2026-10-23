@@ -33,7 +33,10 @@ final class ProjectControllerTest extends IntegrationTestCase
 		self::assertNull($body['address']);
 		self::assertSame('Plan', $body['description']);
 		self::assertSame($user->id, $body['ownerId']);
-		self::assertSame([['id' => self::firstFloorId($body), 'name' => 'Ground floor', 'level' => 0]], $body['floors']);
+		self::assertSame(
+			[['id' => self::firstFloorId($body), 'name' => 'Ground floor', 'level' => 0, 'elevation' => 0, 'slabThickness' => 300]],
+			$body['floors'],
+		);
 		self::assertNull($body['latestVersion']);
 	}
 

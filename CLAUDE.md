@@ -34,7 +34,14 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
 ## Domain conventions
 
 - All stored lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the
-  floor, x points east and y points north. The viewer converts with `MM` (0.001) and maps plan y to scene −z.
+  ground floor, x points east and y points north; all floors of a project share it, so they stack. The viewer converts
+  with `MM` (0.001) and maps plan y to scene −z.
+- Stacked floors (FD-36, plan in `docs/stacked-floors-plan.md`): a floor's `level` orders it, `elevation` is its
+  finished floor level above the project datum ±0.000 and `slabThickness` the slab under it (the viewer's slab). A new
+  floor without them stands on the tallest wall of the floor below plus its slab, or hangs under the one above
+  (`FloorStack`; 300 mm slabs at level 0 and below, 250 above); snapshots from before them are stacked the same way. The
+  sheets, the schedules and the project page write the level as `levelText()` (`+3.000`). REST `…/floors`, MCP
+  `add_floor` / `update_floor` / `delete_floor`.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is

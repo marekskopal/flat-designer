@@ -109,6 +109,7 @@ final class McpServerTest extends IntegrationTestCase
 			'create_share_link',
 			'create_variant_set',
 			'delete_comment',
+			'delete_floor',
 			'delete_furniture_definition',
 			'delete_group',
 			'delete_item',
@@ -161,6 +162,7 @@ final class McpServerTest extends IntegrationTestCase
 			'switch_variant',
 			'undo',
 			'ungroup',
+			'update_floor',
 			'update_furniture_definition',
 			'update_item',
 			'update_material',
@@ -592,6 +594,28 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame(['Wider door?', 'Made it 900 mm.'], array_column($all, 'body'));
 		// The person may delete the agent's reply, not edit it.
 		self::assertSame([false, true], [$all[1]['canEdit'], $all[1]['canDelete']]);
+	}
+
+	public function testAddsUpdatesAndDeletesFloors(): void
+	{
+		$attic = $this->client->call('add_floor', ['projectId' => $this->project->id, 'name' => 'Attic', 'level' => 1]);
+		self::assertIsArray($attic);
+		self::assertIsInt($attic['id']);
+		self::assertSame([2850, 250], [$attic['elevation'], $attic['slabThickness']]);
+
+		// Only the given fields change.
+		$updated = $this->client->call('update_floor', ['projectId' => $this->project->id, 'floorId' => $attic['id'], 'elevation' => 3000]);
+		self::assertIsArray($updated);
+		self::assertSame(['Attic', 1, 3000, 250], [$updated['name'], $updated['level'], $updated['elevation'], $updated['slabThickness']]);
+
+		$deleted = $this->client->call('delete_floor', ['projectId' => $this->project->id, 'floorId' => $attic['id']]);
+		self::assertIsArray($deleted);
+		self::assertSame('Attic', $deleted['name']);
+		// The last floor stays.
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$isError = false;
+		$this->client->call('delete_floor', ['projectId' => $this->project->id, 'floorId' => $floorId], $isError);
+		self::assertTrue($isError);
 	}
 
 	public function testCreatesUpdatesAndDeletesProjects(): void

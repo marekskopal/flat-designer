@@ -38,7 +38,7 @@ const wall: Wall = {
 const item = {id: 9, roomId: 2, name: 'Box', x: 0, y: 0} as Item;
 
 const scene: Scene = {
-    floor: {id: 3, name: 'Ground', level: 0},
+    floor: {id: 3, name: 'Ground', level: 0, elevation: 0, slabThickness: 300},
     revision: 7,
     materials: [],
     rooms: [

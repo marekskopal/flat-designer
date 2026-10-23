@@ -94,10 +94,10 @@
                             } @else {
                                 <a class="list__main" [routerLink]="['/projects', project.id, 'floors', floor.id]">
                                     <span class="list__title">{{ floor.name }}</span>
-                                    <span class="list__meta">level {{ floor.level }}</span>
+                                    <span class="list__meta">level {{ floor.level }} · {{ levelText(floor.elevation) }} · slab {{ floor.slabThickness }} mm</span>
                                 </a>
                                 <span class="list__actions">
-                                    <button type="button" class="btn btn--ghost" (click)="startFloor(floor)">Rename</button>
+                                    <button type="button" class="btn btn--ghost" (click)="startFloor(floor)">Edit</button>
                                     <button
                                         type="button"
                                         class="btn btn--ghost btn--danger"
@@ -122,6 +122,22 @@
                     <form class="inline-form" [formGroup]="floorForm" (ngSubmit)="saveFloor(project)">
                         <input class="input" type="text" formControlName="name" placeholder="Floor name" aria-label="Floor name" />
                         <input class="input input--level" type="number" formControlName="level" aria-label="Level" title="Level (0 = ground floor)" />
+                        <input
+                            class="input input--mm"
+                            type="number"
+                            formControlName="elevation"
+                            placeholder="Elevation"
+                            aria-label="Elevation, mm"
+                            title="Finished floor level above ±0.000, mm (empty: on the floor below)"
+                        />
+                        <input
+                            class="input input--mm"
+                            type="number"
+                            formControlName="slabThickness"
+                            placeholder="Slab"
+                            aria-label="Slab thickness, mm"
+                            title="Slab under the floor, mm (empty: the default)"
+                        />
                         <button type="submit" class="btn btn--primary" [disabled]="floorForm.invalid || busy()">Save</button>
                         <button type="button" class="btn btn--ghost" (click)="editingFloor.set(null)">Cancel</button>
                     </form>

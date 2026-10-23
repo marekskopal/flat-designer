@@ -73,7 +73,10 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertSame('Test Project', $view['projectName']);
 		self::assertSame(self::Settings, $view['settings']);
 		self::assertIsArray($view['scene']);
-		self::assertSame(['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0], $view['scene']['floor']);
+		self::assertSame(
+			['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0, 'elevation' => 0, 'slabThickness' => 300],
+			$view['scene']['floor'],
+		);
 		self::assertIsList($view['scene']['walls']);
 		self::assertCount(1, $view['scene']['walls']);
 	}

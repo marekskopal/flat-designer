@@ -40,6 +40,10 @@ export interface ProjectInput {
 export interface FloorInput {
     name: string;
     level: number;
+    /** mm above ±0.000; null stacks a new floor on the one below (and keeps an edited floor's). */
+    elevation: number | null;
+    /** mm; null takes the default for a new floor (and keeps an edited floor's). */
+    slabThickness: number | null;
 }
 
 export interface ProjectVersion {

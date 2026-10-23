@@ -1,8 +1,8 @@
-import {Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {Floor, Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {planLayout, planSheet, roomScheduleSheets} from './plan-drawing';
-import {PaperLong, PaperShort, SheetInfo} from './sheet-svg';
+import {levelText, PaperLong, PaperShort, SheetInfo} from './sheet-svg';
 
 const wall = (id: number, start: PlanPoint, end: PlanPoint, openings: Opening[] = []): Wall => ({
     id,
@@ -78,14 +78,27 @@ const box = (south: Opening[] = [], north: Opening[] = []): Wall[] => [
     wall(4, [-150, 3150], [-150, -150]),
 ];
 
-const scene = (fields: Partial<Scene>): Scene =>
-    ({floor: {id: 1, name: 'Ground floor', level: 0}, materials: [], rooms: [room({})], walls: box(), items: [], ...fields}) as Scene;
+const ground: Floor = {id: 1, name: 'Ground floor', level: 0, elevation: 0, slabThickness: 300};
 
-const info: SheetInfo = {projectName: 'Flat & garden', floorName: 'Ground floor', address: 'Main Street 1', date: new Date(2026, 9, 21)};
+const scene = (fields: Partial<Scene>): Scene => ({floor: ground, materials: [], rooms: [room({})], walls: box(), items: [], ...fields}) as Scene;
+
+const info: SheetInfo = {
+    projectName: 'Flat & garden',
+    floorName: 'Ground floor',
+    floorElevation: 0,
+    address: 'Main Street 1',
+    date: new Date(2026, 9, 21),
+};
 
 /** The paths filled like the cut walls, in the plan (before the frame and the north arrow). */
 const wallPaths = (svg: string): string[] => svg.split('<rect x="10"')[0].match(/<path d="[^"]*" fill="#2f2c28"\/>/g) ?? [];
 const texts = (svg: string): string[] => [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+
+describe('levelText', () => {
+    it('writes levels in metres as plans do', () => {
+        expect([0, 3000, -150, 450].map(levelText)).toEqual(['±0.000', '+3.000', '−0.150', '+0.450']);
+    });
+});
 
 describe('planLayout', () => {
     it('takes the largest standard scale that fits A4, turning the paper for a tall plan', () => {
@@ -119,7 +132,9 @@ describe('planSheet', () => {
         expect(doc.documentElement.getAttribute('width')).toBe('297mm');
 
         const labels = texts(sheet.svg);
-        expect(labels).toEqual(expect.arrayContaining(['Living room', '12.00 m²', 'Flat &amp; garden', 'Ground floor · Main Street 1', '1:50']));
+        expect(labels).toEqual(
+            expect.arrayContaining(['Living room', '12.00 m²', 'Flat &amp; garden', 'Ground floor ±0.000 · Main Street 1', '1:50']),
+        );
         // The overall lengths and the chain of piers and the door along the south wall.
         expect(labels.filter((t) => t === '4000')).toHaveLength(2);
         expect(labels.filter((t) => t === '3000')).toHaveLength(2);
