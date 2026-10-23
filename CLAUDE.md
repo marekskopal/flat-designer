@@ -200,9 +200,11 @@ format is the text in `FurnitureTools::Format`.
   scene.
 - `make import-models DIR=… [PROJECT=…]` (`models:import`) uploads every `*.glb` with an optional `<name>.json`
   sidecar (`name`, `license`, `author`, `sourceUrl`). **Third-party models are never committed.** Keep them in the
-  gitignored `source_files/` (the demo's CC0 Poly Haven models are in `source_files/demo/models/`, optimised with
-  `npx @gltf-transform/cli optimize --compress meshopt --texture-compress webp --texture-size 1024`) and import
-  them.
+  gitignored `source_files/` (the demo's CC0 Poly Haven models are in `source_files/demo/models/`, optimised from
+  their originals in `src/` with `npx @gltf-transform/cli optimize --compress meshopt --texture-compress webp
+  --texture-size 1024 --simplify-error 0.003`, which keeps their look at about a quarter of the triangles; FD-58) and
+  import them. A model file never changes: to replace one, import the new file and point the items at it
+  (`update_item` `modelId`), then delete the old model.
 
 ## Materials and tiling
 
