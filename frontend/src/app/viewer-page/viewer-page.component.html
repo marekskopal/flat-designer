@@ -98,7 +98,7 @@
     </section>
 }
 
-<aside class="panel" [class.panel--editing]="editor.enabled()" [class.panel--hidden]="walking()">
+<aside class="panel" [class.panel--hidden]="walking()">
     <header class="panel__header">
         @if (project(); as p) {
             <a class="eyebrow eyebrow--link" [routerLink]="['/projects', p.id]">{{ p.name }}</a>
