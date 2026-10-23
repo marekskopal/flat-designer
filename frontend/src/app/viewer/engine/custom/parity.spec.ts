@@ -6,7 +6,7 @@ import {Item, Material} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildItem} from '../items';
+import {buildItemParts} from '../items';
 import {MaterialLibrary} from '../materials';
 import {definitionLibrary} from './custom';
 
@@ -114,7 +114,8 @@ describe('flat 50 definitions match the built-in kinds they replaced', () => {
         };
         const definitions = definitionLibrary([{id: 1, name: sample.file, definition: definition(sample.file), updatedAt: ''}]);
 
-        const drawn = buildItem(custom, library, undefined, definitions);
+        // Part by part, as the built-in kinds drew them (merged, a material's parts are one mesh).
+        const drawn = buildItemParts(custom, library, undefined, definitions);
         expect(drawn.userData['definitionError']).toBeUndefined();
         const result = shape(drawn);
 

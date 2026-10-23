@@ -15,6 +15,7 @@ import {
     wallFacesAlongEdge,
 } from './ceilings';
 import {MaterialLibrary} from './materials';
+import {mergeStatic} from './merge';
 import {boxAt, prismAt, worldUvBox} from './meshes';
 import {exteriorSign, freeBeside, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
 import {
@@ -319,6 +320,7 @@ export function buildWall(
         group.add(isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners));
     }
 
+    mergeStatic(group);
     return group;
 }
 
@@ -429,6 +431,7 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     });
 
     alignTiles(group, tileGrid(room), materials);
+    mergeStatic(group);
     return group;
 }
 

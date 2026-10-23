@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {buildCustomItemBody, DefinitionLibrary} from './custom/custom';
 import {buildKitchenItemBody} from './kitchen';
 import {MaterialLibrary} from './materials';
+import {mergeStatic} from './merge';
 import {buildModelItemBody, ModelLibrary} from './models';
 import {buildOutdoorItemBody} from './outdoor';
 import {PictureLibrary} from './pictures';
@@ -29,9 +30,22 @@ const NoAssets: ItemAssets = {models: new Map(), modelLibrary: null, pictures: n
  * (bottom centre origin, x along the width, +z out of the front), then moved to its plan position and
  * rotated counter-clockwise by `rotation` degrees. Tiled surfaces (a bath panel, a tiled box) follow the tile
  * grid of the item's `room`. `Custom` items are drawn from their entry in `definitions`, `Model` items and pictures
- * from the `assets` loaded on demand.
+ * from the `assets` loaded on demand. Its plain meshes are merged per material (`mergeStatic()`).
  */
 export function buildItem(
+    item: Item,
+    materials: MaterialLibrary,
+    room?: Room,
+    definitions: DefinitionLibrary = new Map(),
+    assets: ItemAssets = NoAssets,
+): THREE.Object3D {
+    const object = buildItemParts(item, materials, room, definitions, assets);
+    mergeStatic(object);
+    return object;
+}
+
+/** The item as `buildItem()` builds it, before merging: a mesh per part (`userData.partName` on a `Custom` item's). */
+export function buildItemParts(
     item: Item,
     materials: MaterialLibrary,
     room?: Room,

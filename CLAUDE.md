@@ -175,6 +175,12 @@ format is the text in `FurnitureTools::Format`.
 
 - `viewer/engine/items.ts` dispatches to `custom/custom.ts`, `models.ts`, `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and
   `structure.ts`. Each one builds the item body in its local frame.
+- Merged meshes (FD-58): `buildItem()`, `buildWall()` and `buildWallFinishes()` end with `mergeStatic()`
+  (`viewer/engine/merge.ts`), which merges an element's plain meshes per material and shadow settings, one draw call
+  each. An object with any `userData` key other than `partName` is left as it is (a tagged mesh) or merged on its own
+  (a tagged group: an opening, a door leaf), as are hidden, mirrored and multi-material meshes. **A mesh the engine
+  reads or toggles by itself must carry a `userData` tag, or it is merged away.** `buildItemParts()` is the unmerged
+  item (the parity test compares parts); the glTF export names a merged mesh after its parts.
 - Structural items (`ItemKindEnum::isStructural()`, `structural` in `list_item_kinds`): a `Column` (`params.shape`
   rect or round) and a `Beam` along its width, z being its soffit. They are listed under Building in the Add menu.
   `StructureSize` makes a new one in a room reach its ceiling or hang from it (a vault counts at its springing)
