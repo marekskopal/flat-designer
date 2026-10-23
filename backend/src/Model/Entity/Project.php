@@ -29,6 +29,22 @@ class Project extends AEntity
 	#[Column(type: Type::Int, default: 10)]
 	public int $wastePercent = 10;
 
+	/** Degrees clockwise from plan north (+y) to true north, 0–359: the viewer's sun and the drawings' north arrows. */
+	#[Column(type: Type::Int, default: 0)]
+	public int $northAngle = 0;
+
+	/** Where the building stands, degrees north; set together with `longitude`, for the sun. */
+	#[Column(type: Type::Double, nullable: true)]
+	public ?float $latitude = null;
+
+	/** Degrees east. */
+	#[Column(type: Type::Double, nullable: true)]
+	public ?float $longitude = null;
+
+	/** IANA name (e.g. Europe/Prague) the sun's clock time is read in; null: local solar time. */
+	#[Column(type: Type::String, size: 64, nullable: true)]
+	public ?string $timeZone = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: User::class, nullable: true)]
 		public ?User $owner,

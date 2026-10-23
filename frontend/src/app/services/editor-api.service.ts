@@ -11,6 +11,7 @@ const Segments: Record<ElementKind, string> = {
     wall: 'walls',
     opening: 'openings',
     room: 'rooms',
+    plot: 'plots',
     group: 'groups',
     variantSet: 'variant-sets',
 };

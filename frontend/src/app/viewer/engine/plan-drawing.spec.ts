@@ -126,6 +126,34 @@ describe('planSheet', () => {
         expect(labels).toEqual(expect.arrayContaining(['1000', '900', '2100']));
     });
 
+    it('fills paths and driveways as open-air rooms', () => {
+        const fill = (type: Room['type']): string | undefined =>
+            planSheet(scene({rooms: [room({type})]}), info).svg.match(/<path d="[^"]*" fill="(#[0-9a-f]+)"/)?.[1];
+        expect(fill('Path')).toBe(fill('Garden'));
+        expect(fill('Driveway')).toBe(fill('Terrace'));
+        expect(fill('Path')).not.toBe(fill('Living'));
+    });
+
+    it('writes the floor level of a raised or sunken room under its area', () => {
+        expect(texts(planSheet(scene({rooms: [room({floorElevation: -150})]}), info).svg)).toContain('12.00 m² · −0.150');
+        expect(texts(planSheet(scene({rooms: [room({floorElevation: 450})]}), info).svg)).toContain('12.00 m² · +0.450');
+        expect(texts(planSheet(scene({}), info).svg)).toContain('12.00 m²');
+        // A room too narrow for both keeps its area.
+        const narrow = room({polygon: [[0, 0], [700, 0], [700, 3000], [0, 3000]], area: 2.1, floorElevation: -20});
+        const labels = texts(planSheet(scene({rooms: [narrow]}), info).svg);
+        expect(labels).toContain('2.10 m²');
+        expect(labels.some((t) => t.includes('−0.020'))).toBe(false);
+    });
+
+    it('draws a plot boundary as a property line and fits the page to it', () => {
+        const polygon: PlanPoint[] = [[-3000, -3000], [12000, -3000], [12000, 9000], [-3000, 9000]];
+        const plot = {id: 7, name: 'Parcel', polygon, area: 180, groundMaterialId: null};
+        const sheet = planSheet(scene({plots: [plot]}), info);
+
+        expect(sheet.scale).toBe(100);
+        expect(sheet.svg).toContain('stroke-dasharray="6 1.2 0.6 1.2"');
+    });
+
     it('dimensions only the room edges along a wall, not where open-plan rooms meet', () => {
         const labels = texts(planSheet(scene({walls: box().filter((w) => w.id !== 2)}), info).svg);
 

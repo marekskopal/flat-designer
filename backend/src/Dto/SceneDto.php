@@ -10,6 +10,7 @@ final readonly class SceneDto
 	/**
 	 * @param list<MaterialDto> $materials
 	 * @param list<RoomDto> $rooms
+	 * @param list<PlotDto> $plots the land around the building
 	 * @param list<WallDto> $walls
 	 * @param list<ItemDto> $items
 	 * @param list<GroupDto> $groups
@@ -33,6 +34,9 @@ final readonly class SceneDto
 		public ?UnderlayDto $underlay = null,
 		public array $models = [],
 		public array $pictures = [],
+		/** Where the project's building stands, for the sun. */
+		public ?LocationDto $location = null,
+		public array $plots = [],
 	)
 	{
 	}

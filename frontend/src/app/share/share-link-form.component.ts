@@ -2,6 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, effect, inject, input, out
 import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {localDate} from '@app/core/local-date';
+import {SunTime} from '@app/models/scene';
 import {CameraPose, ShareComments, ShareLink, ShareLinkInput, ShareSettings, ShareView, ShareViewLabels} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
 
@@ -17,6 +18,7 @@ export interface ShareSource {
     sectionHeight: number | null;
     dimensions: boolean;
     night?: boolean;
+    sun?: SunTime | null;
     presentation?: boolean;
 }
 
@@ -95,7 +97,7 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
             @if (link() === null) {
                 <p class="field__hint">
                     Creating the link saves a version of the project: guests see this floor as it is now, later edits do not
-                    reach them. The display (ceilings, labels, wall cut, dimensions, night, quality) and the shown variants are kept too.
+                    reach them. The display (ceilings, labels, wall cut, dimensions, night, sun time, quality) and the shown variants are kept too.
                 </p>
             }
             <div class="form__actions">
@@ -286,6 +288,7 @@ export class ShareLinkFormComponent {
             sectionHeight: display.sectionHeight,
             dimensions: display.dimensions,
             night: display.night ?? false,
+            sun: display.sun ?? null,
             presentation: display.presentation ?? false,
             exports: value.exports,
             comments: value.comments,

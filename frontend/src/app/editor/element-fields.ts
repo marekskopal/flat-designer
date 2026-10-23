@@ -59,7 +59,7 @@ const ItemKinds = [
     'Fixture', 'Fence', 'Column', 'Beam', 'Custom', 'Model',
 ] as const;
 
-const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden'] as const;
+const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway'] as const;
 
 /**
  * A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east (at its
@@ -240,11 +240,18 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool', when: (element) => element['type'] !== 'Niche'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
     ],
+    plot: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
+        {key: 'groundLevel', label: 'Ground level (+ above, − below the floor)', type: 'int', unit: 'mm'},
+        {key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
+    ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'code', label: 'Code', type: 'text', half: true},
         {key: 'type', label: 'Type', type: 'select', options: RoomTypes, half: true},
-        {key: 'ceilingHeight', label: 'Ceiling height', type: 'int', unit: 'mm', nullable: true},
+        {key: 'floorElevation', label: 'Floor level (+ raised, − sunken)', type: 'int', unit: 'mm'},
+        {key: 'ceilingHeight', label: 'Ceiling height (from its floor)', type: 'int', unit: 'mm', nullable: true},
         {key: 'floorMaterialId', label: 'Floor material', type: 'material', nullable: true},
         {key: 'ceilingMaterialId', label: 'Ceiling material', type: 'material', nullable: true, when: (room) => room['ceilingHeight'] != null},
         {

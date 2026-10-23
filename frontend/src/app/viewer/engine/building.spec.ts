@@ -1,11 +1,12 @@
-import {Material, Opening, Room, Wall} from '@app/models/scene';
+import {Material, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildFloor, buildWall, buildWallFinishes} from './building';
+import {buildFloor, buildRoom, buildWall, buildWallFinishes} from './building';
 import {MaterialLibrary} from './materials';
 import {alongWall, MM, WallEnds, wallFrame} from './plan-geometry';
 import {detectRoom} from './room-detect';
+import {selectionOf} from './selection';
 
 const niche: Opening = {
     id: 7,
@@ -235,6 +236,76 @@ describe('buildFloor', () => {
         }
         throw new Error(`No vertex at ${x}, ${y}`);
     };
+
+    it('lifts a raised floor, its ceiling with it, and closes the step with an edge down to the floor level', () => {
+        const deck = {...room(), floorElevation: 450};
+        const parts = buildRoom(deck, [], materials);
+        const edge = parts.floor.getObjectByName('floor-edge') as THREE.Mesh;
+        const box = new THREE.Box3().setFromObject(edge);
+
+        expect(parts.floor.position.y).toBeCloseTo(0.452, 6);
+        expect(parts.ceiling?.position.y).toBeCloseTo(0.45, 6);
+        // From the floor mesh (2 mm over the deck's 450) down to the floor's level.
+        expect([box.min.y, box.max.y].map((y) => Math.round(y * 1000))).toEqual([0, 452]);
+        // The edge belongs to the room: a click on it picks the room.
+        expect(selectionOf(edge)).toEqual({kind: 'room', id: 1});
+        expect(buildFloor(room(), materials).getObjectByName('floor-edge')).toBeUndefined();
+    });
+
+    it('steps the floor edge to the ground of the plot the room lies on, inset from the outline', () => {
+        const boundary: PlanPoint[] = [[-5000, -5000], [9000, -5000], [9000, 9000], [-5000, 9000]];
+        const lawn = [{id: 1, name: 'Plot', polygon: boundary, area: 0, groundMaterialId: null, groundLevel: -300}];
+        const sunk = buildRoom({...room(), floorElevation: -150}, [], materials, lawn);
+        const edge = sunk.floor.getObjectByName('floor-edge') as THREE.Mesh;
+        const box = new THREE.Box3().setFromObject(edge);
+
+        // Down from the terrace's floor mesh at −148 to the lawn at −300.
+        expect([box.min.y, box.max.y].map((y) => Math.round(y * 1000))).toEqual([-300, -148]);
+        // The face along the south edge (plan y 0, the outline's first) stands 2 mm inside it, at scene z −0.002.
+        const southZ = Array.from(edge.geometry.getAttribute('position').array.slice(0, 12)).filter((_, i) => i % 3 === 2);
+        expect(southZ.map((z) => Math.round(z * 1000))).toEqual([-2, -2, -2, -2]);
+        // Level with the ground beside it: no edge.
+        const level = buildRoom({...room(), floorElevation: -300}, [], materials, lawn);
+        expect(level.floor.getObjectByName('floor-edge')).toBeUndefined();
+    });
+
+    it('lifts the wall finishes with the floor and keeps the door openings where they are', () => {
+        const door: Opening = {
+            id: 9,
+            name: 'D',
+            type: 'Door',
+            offset: 500,
+            width: 900,
+            height: 2000,
+            sillHeight: 0,
+            leafWidth: null,
+            hinge: null,
+            side: null,
+            entrance: false,
+        };
+        // The room's south edge lies on the wall's left face (y = 150).
+        const deck: Room = {
+            ...room(),
+            polygon: [[0, 150], [2000, 150], [2000, 1150], [0, 1150]],
+            floorElevation: 450,
+            wallFinishes: [{materialId: 1, bottom: 0, top: 2400}],
+        };
+        const finishes = buildWallFinishes(deck, [{...wall, openings: [door]}], materials);
+        finishes.updateMatrixWorld(true);
+        const overDoor: number[] = [];
+        finishes.traverse((o) => {
+            if (o instanceof THREE.Mesh) {
+                const box = new THREE.Box3().setFromObject(o);
+                if (box.min.x >= 0.5 - 1e-6 && box.max.x <= 1.4 + 1e-6 && box.max.z < 0.2) {
+                    overDoor.push(Math.round(box.min.y * 1000));
+                }
+            }
+        });
+
+        expect(finishes.position.y).toBeCloseTo(0.45, 6);
+        // The band's piece over the door starts at the door head (2000 above the floor's level), not 450 higher.
+        expect(Math.min(...overDoor)).toBe(2000);
+    });
 
     it('lays the pattern along the plan axes by default', () => {
         expect(uvAt(buildFloor(room(), materials), 2000, 1000)).toEqual([2000, 1000]);

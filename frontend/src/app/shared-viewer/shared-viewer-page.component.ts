@@ -6,7 +6,7 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ExportComponent} from '@app/export/export.component';
 import {commentPinsOf} from '@app/models/comment';
-import {Scene} from '@app/models/scene';
+import {hasSiteLocation, Scene, SunTime} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {CommentService} from '@app/services/comment.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
@@ -15,9 +15,11 @@ import {StorageService} from '@app/services/storage.service';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
+import {isSunDown} from '@app/viewer/engine/sun';
 import {DoorAim} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
+import {SunTimeComponent} from '@app/viewer/sun-time.component';
 import {ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 
@@ -35,7 +37,16 @@ const GuestNameKey = 'fd.guestName';
  */
 @Component({
     selector: 'fd-shared-viewer-page',
-    imports: [ViewerComponent, WalkPadComponent, DecimalPipe, VariantsComponent, MeasureHudComponent, ExportComponent, CommentsComponent],
+    imports: [
+        ViewerComponent,
+        WalkPadComponent,
+        DecimalPipe,
+        VariantsComponent,
+        MeasureHudComponent,
+        ExportComponent,
+        CommentsComponent,
+        SunTimeComponent,
+    ],
     templateUrl: './shared-viewer-page.component.html',
     styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,10 +99,16 @@ export class SharedViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
-    /** After dark; the lights follow it (on at night) until switched by hand. */
+    /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
     protected readonly night = signal(false);
     private readonly lightsChoice = signal<boolean | null>(null);
-    protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
+    protected readonly lightsOn = computed(() => this.lightsChoice() ?? (this.night() || this.sunDown()));
+    /** The chosen sun time has the sun below the horizon: the viewer draws it as night. */
+    private readonly sunDown = computed(() => isSunDown(this.scene()?.location, this.sunTime(), new Date().getFullYear()));
+    /** Where the sun stands (with the project's location); null: the default afternoon sun. */
+    protected readonly sunTime = signal<SunTime | null>(null);
+    /** The sun can be placed at a time: the scene knows where the building stands. */
+    protected readonly hasLocation = computed(() => hasSiteLocation(this.scene()));
     /** Presentation quality, for screenshots: slower, so off while working. */
     protected readonly presentation = signal(false);
     /** The measure tool, in the plan view (when the link offers it). */
@@ -153,6 +170,7 @@ export class SharedViewerPageComponent {
         this.dimensionsVisible.set(settings.dimensions);
         this.night.set(settings.night ?? false);
         this.presentation.set(settings.presentation ?? false);
+        this.sunTime.set(settings.sun ?? null);
         this.lightsChoice.set(null);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
         this.measuring.set(false);

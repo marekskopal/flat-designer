@@ -13,7 +13,8 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * What a share link shows: the view modes the guest may switch between, the one it opens in, the 3D camera
  * (only with the overview allowed; null = the default framing) and the display settings it starts with
  * (`sectionHeight` in mm, null = no wall cut; `dimensions` draws the plan's dimension lines; `night` shows the flat after
- * dark, lit by its lights; `presentation` renders in the presentation quality) and whether the guest may download the
+ * dark, lit by its lights; `sun` places the sun at a clock time on site, null = the default afternoon sun; `presentation`
+ * renders in the presentation quality) and whether the guest may download the
  * exports (`exports`: the plan as PDF or SVG, the wall elevations, the 3D model as glTF), and whether the guest sees the
  * floor's open review comments or may also write them (`comments`). Stored as JSON in `ShareLink::$settings`.
  */
@@ -29,6 +30,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 		public ?int $sectionHeight,
 		public bool $dimensions = false,
 		public bool $night = false,
+		public ?SunTimeDto $sun = null,
 		public bool $presentation = false,
 		public bool $exports = true,
 		public ShareCommentsEnum $comments = ShareCommentsEnum::Hidden,
@@ -50,6 +52,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 			dimensions: array_key_exists('dimensions', $data) && BodyReader::bool($data, 'dimensions'),
 			// Nor those saved before the night view.
 			night: array_key_exists('night', $data) && BodyReader::bool($data, 'night'),
+			sun: SunTimeDto::optional($data),
 			presentation: array_key_exists('presentation', $data) && BodyReader::bool($data, 'presentation'),
 			// Links saved before the exports allow them.
 			exports: !array_key_exists('exports', $data) || BodyReader::bool($data, 'exports'),

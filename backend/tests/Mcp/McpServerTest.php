@@ -97,6 +97,7 @@ final class McpServerTest extends IntegrationTestCase
 			'add_item',
 			'add_material',
 			'add_opening',
+			'add_plot',
 			'add_room',
 			'add_variant',
 			'add_wall',
@@ -113,6 +114,7 @@ final class McpServerTest extends IntegrationTestCase
 			'delete_item',
 			'delete_model',
 			'delete_opening',
+			'delete_plot',
 			'delete_project',
 			'delete_project_file',
 			'delete_room',
@@ -163,6 +165,7 @@ final class McpServerTest extends IntegrationTestCase
 			'update_item',
 			'update_material',
 			'update_opening',
+			'update_plot',
 			'update_project',
 			'update_room',
 			'update_share_link',
@@ -498,6 +501,24 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertNull($updated['settings']['camera']);
 		self::assertSame(1300, $updated['settings']['sectionHeight']);
 
+		// A sun time needs both halves at first; later one of them changes alone, and `clear` drops it.
+		$sunArguments = ['projectId' => $projectId, 'shareLinkId' => $link['id']];
+		$isError = false;
+		$this->client->call('update_share_link', [...$sunArguments, 'sunHour' => 10.0], $isError);
+		self::assertTrue($isError);
+		$updated = $this->client->call('update_share_link', [...$sunArguments, 'sunMonth' => 6, 'sunHour' => 15.0]);
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['settings']);
+		self::assertEquals(['month' => 6, 'hour' => 15.0], $updated['settings']['sun']);
+		$updated = $this->client->call('update_share_link', [...$sunArguments, 'sunHour' => 10.0]);
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['settings']);
+		self::assertEquals(['month' => 6, 'hour' => 10.0], $updated['settings']['sun']);
+		$updated = $this->client->call('update_share_link', [...$sunArguments, 'clear' => ['sun']]);
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['settings']);
+		self::assertNull($updated['settings']['sun']);
+
 		$isError = false;
 		$message = $this->client->call(
 			'update_share_link',
@@ -598,6 +619,19 @@ final class McpServerTest extends IntegrationTestCase
 		);
 		self::assertIsArray($updated);
 		self::assertSame(['Cottage by the lake', null, 'Summer house'], [$updated['name'], $updated['address'], $updated['description']]);
+
+		// The site: kept by updates of other fields, its location cleared as one.
+		$site = ['northAngle' => 20, 'latitude' => 49.2, 'longitude' => 16.6, 'timeZone' => 'Europe/Prague'];
+		$this->client->call('update_project', ['projectId' => $created['id'], ...$site]);
+		$updated = $this->client->call('update_project', ['projectId' => $created['id'], 'description' => 'By the lake']);
+		self::assertIsArray($updated);
+		self::assertEquals($site, array_intersect_key($updated, $site));
+		$updated = $this->client->call('update_project', ['projectId' => $created['id'], 'clear' => ['location']]);
+		self::assertIsArray($updated);
+		self::assertEquals(
+			[20, null, null, 'Europe/Prague'],
+			[$updated['northAngle'], $updated['latitude'], $updated['longitude'], $updated['timeZone']],
+		);
 
 		$isError = false;
 		self::assertSame(

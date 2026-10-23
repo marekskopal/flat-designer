@@ -1,4 +1,4 @@
-import {Item, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 
 /** Plan millimetres → scene metres. Plan y (north) maps to scene −z, so a plan seen from above is not mirrored. */
 export const MM = 0.001;
@@ -787,7 +787,7 @@ export function entranceWalkStart(walls: readonly Wall[], rooms: readonly Room[]
     const frame = openingFrame(wallFrame(door.wall), door.opening);
     const along = door.opening.offset + door.opening.width / 2;
     const across = door.wall.thickness / 2 + EntranceStep;
-    const indoor = rooms.filter((r) => r.type !== 'Terrace' && r.type !== 'Garden');
+    const indoor = rooms.filter((r) => !isOutdoorRoom(r));
     const sides = [1, -1].map((sign) => ({sign, position: pointOnWall(frame, along, sign * across)}));
     const inside =
         sides.find((s) => indoor.some((r) => pointInPolygon(s.position, r.polygon))) ??

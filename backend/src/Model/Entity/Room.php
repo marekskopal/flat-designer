@@ -45,6 +45,13 @@ class Room extends AEntity
 	#[Column(type: Type::Int)]
 	public int $floorAngle = 0;
 
+	/**
+	 * mm the room's floor lies above (+) or below (−) the floor's level: a raised deck, a terrace a step down. The
+	 * ceiling height counts from it; items keep their own elevation.
+	 */
+	#[Column(type: Type::Int)]
+	public int $floorElevation = 0;
+
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $ceilingMaterial = null;
 

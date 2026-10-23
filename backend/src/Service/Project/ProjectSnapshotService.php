@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Project;
 
 use DateTimeImmutable;
 use FlatDesigner\Dto\FloorDto;
+use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
@@ -47,12 +48,14 @@ use const JSON_THROW_ON_ERROR;
  * Serialises a project's working copy (all floors with their rooms, walls, openings and items) into the
  * JSON stored in `ProjectVersion::$snapshot`, serves floor scenes straight from it and restores it.
  *
- * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], floors: [{floor:
+ * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], location: LocationDto, floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
- * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int]}],
+ * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
+ * plots: [PlotDto]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
- * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` missing in snapshots taken before they
- * existed; `pictures` lists the files the items show, so that share guests may load them) — each floor entry plus the materials is
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` missing in snapshots taken before they
+ * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
+ * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
  * definitions as they were. Ids inside are those of the working copy at the time and only link entries together,
  * except definition ids: a restore links an item to the live definition of that id while the project may still use
@@ -75,6 +78,7 @@ final readonly class ProjectSnapshotService
 		private VariantSetRepository $variantSetRepository,
 		private SnapshotDefinitionRestorer $definitionRestorer,
 		private SnapshotUnderlayRestorer $underlayRestorer,
+		private SnapshotPlotRestorer $plotRestorer,
 		private SnapshotViewRestorer $viewRestorer,
 		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
@@ -97,6 +101,7 @@ final readonly class ProjectSnapshotService
 				'underlay' => $scene->underlay,
 				'models' => $scene->models,
 				'pictures' => $scene->pictures,
+				'plots' => $scene->plots,
 			];
 		}
 
@@ -105,6 +110,7 @@ final readonly class ProjectSnapshotService
 				'format' => self::Format,
 				'project' => ['name' => $project->name, 'address' => $project->address, 'description' => $project->description],
 				'materials' => $this->sceneProvider->getMaterials(),
+				'location' => LocationDto::fromEntity($project),
 				'floors' => $floors,
 				'views' => $this->viewRestorer->snapshot($project),
 			],
@@ -140,6 +146,7 @@ final readonly class ProjectSnapshotService
 			if ($entry instanceof stdClass && $entry->floor instanceof stdClass && $entry->floor->id === $floorId) {
 				$scene = clone $entry;
 				$scene->materials = $data->materials ?? [];
+				$scene->location = $data->location ?? null;
 
 				return $scene;
 			}
@@ -186,6 +193,7 @@ final readonly class ProjectSnapshotService
 
 			$this->underlayRestorer->restore($project, $floor, $entry);
 			$roomIds = $this->restoreRooms($floor, $entry->objects('rooms'), $materials);
+			$this->plotRestorer->restore($floor, $entry, $materials);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
 			$setIds = $this->restoreVariantSets($floor, $sets);
@@ -229,6 +237,7 @@ final readonly class ProjectSnapshotService
 			$room->tileOriginX = $data->nullableInt('tileOriginX');
 			$room->tileOriginY = $data->nullableInt('tileOriginY');
 			$room->floorAngle = $data->nullableInt('floorAngle') ?? 0;
+			$room->floorElevation = $data->nullableInt('floorElevation') ?? 0;
 			// Nor ceilings and skirting before they had their own fields.
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');

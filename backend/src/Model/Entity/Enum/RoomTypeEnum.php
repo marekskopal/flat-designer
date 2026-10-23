@@ -13,10 +13,12 @@ enum RoomTypeEnum: string
 	case Hallway = 'Hallway';
 	case Terrace = 'Terrace';
 	case Garden = 'Garden';
+	case Path = 'Path';
+	case Driveway = 'Driveway';
 
 	/** Open-air rooms, summed apart from the indoor floor area in the room schedule. */
 	public function isOutdoor(): bool
 	{
-		return $this === self::Terrace || $this === self::Garden;
+		return in_array($this, [self::Terrace, self::Garden, self::Path, self::Driveway], true);
 	}
 }

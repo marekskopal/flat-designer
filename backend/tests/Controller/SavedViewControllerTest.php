@@ -64,6 +64,22 @@ final class SavedViewControllerTest extends EditorTestCase
 		self::assertSame(422, $this->save(['settings' => ['view' => 'overview', 'sectionHeight' => 200]])->getStatusCode());
 		self::assertSame(422, $this->save(['settings' => ['view' => 'overview', 'variants' => ['999' => 5]]])->getStatusCode());
 		self::assertSame(422, $this->save(['name' => '  ', 'settings' => ['view' => 'overview']])->getStatusCode());
+		self::assertSame(422, $this->save(['settings' => ['view' => 'overview', 'sun' => ['month' => 13, 'hour' => 12]]])->getStatusCode());
+		self::assertSame(422, $this->save(['settings' => ['view' => 'overview', 'sun' => ['month' => 6, 'hour' => 25]]])->getStatusCode());
+	}
+
+	public function testKeepsTheSunTime(): void
+	{
+		$created = $this->save(['settings' => ['view' => 'overview', 'sun' => ['month' => 12, 'hour' => 15.5]]]);
+		self::assertSame(201, $created->getStatusCode(), (string) $created->getBody());
+		$settings = $this->jsonBody($created)['settings'];
+		self::assertIsArray($settings);
+		self::assertEquals(['month' => 12, 'hour' => 15.5], $settings['sun']);
+
+		// Views saved before it have none: the default afternoon sun.
+		$plain = $this->jsonBody($this->save(['name' => 'Plain', 'settings' => ['view' => 'overview']]))['settings'];
+		self::assertIsArray($plain);
+		self::assertNull($plain['sun']);
 	}
 
 	public function testAVersionRestoreBringsTheViewsBackOnTheNewFloor(): void

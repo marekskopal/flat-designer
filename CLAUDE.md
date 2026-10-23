@@ -259,6 +259,41 @@ format is the text in `FurnitureTools::Format`.
   upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
   beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
 
+## Site and sun (FD-39)
+
+- A project's site: `northAngle` (true north, degrees clockwise from plan +y), `latitude` / `longitude` (both or
+  neither, entered by hand; there is no geocoding) and `timeZone` (IANA). These are project details, edited with the
+  name (`ProjectProvider::applySite()`, MCP `update_project`; `detailsChanged`, no revision). The scene carries them as
+  `location` (`LocationDto`), and snapshots keep it at their top level for the version's scenes. A restore leaves the
+  project's own.
+- `viewer/engine/sun.ts` (framework-free): `sunPosition()` (NOAA), `sunInstant()` (clock time in the zone, else local
+  solar time), `sunDirection()` (turned by the north angle) and `daylightAt()` (the sun and sky fade around the
+  horizon). `ViewerEngine.setSunTime()` places the sun in `fitSunShadow()`. Without a location or a time, the default
+  sun (`DefaultSun`, afternoon from the south-west, turned by the north angle) stays.
+- A sun time (`SunTimeDto`, `{month, hour}`: the 21st of the month at that clock time) is a Display option
+  (`SunTimeComponent`, shown when the scene has a location), kept by saved views and share links (`sun`; null or
+  missing means the default sun). The north arrows of the plan PDF and the elevations' key plans follow `northAngle`.
+- Plots (`Plot`, `plots`, element type `Plot`): the land around the building on a floor, a boundary `polygon` and a
+  `groundMaterialId` (null means a lawn). A floor element like a room: `PlotHandler` through `SceneEditor` (undo, change
+  log; its default boundary is a rectangle 3 m clear of the floor's walls and rooms, and it may reach a kilometre from
+  the origin), REST `…/plots`, MCP `add_plot` / `update_plot` / `delete_plot`, the scene's `plots` and the snapshot restore
+  (`SnapshotPlotRestorer`). The viewer draws the ground just below the rooms' floors and the boundary as a dashed line
+  (`viewer/engine/plots.ts`, `parts.plots`, tagged `plotId`); a selected plot gets corner handles like a room (the
+  engine's `Outlined` vertex drag). The plan PDF draws the boundary as a dash-dot property line. Paths and lawns on it
+  are rooms (the types `Path` and `Driveway`, with the seeded `paving-concrete-grey` and `asphalt`); fences are
+  `Fence` items.
+- Levels: a room's `floorElevation` (mm, ±3000; a terrace a step down, a raised deck) lifts everything the room draws
+  (`buildRoom()`: floor, ceiling and finishes, whose opening gaps are brought down to the room's floor; `buildFloor()`
+  adds the upright `floor-edge`, 2 mm inside the outline, stepping to the ground beside the room: its plot's
+  `groundUnder()`, else the floor's level). Its `ceilingHeight` counts from it, so `ceilingSteps()`, pendant cables
+  (`custom.ts`) and `StructureSize` (a column stands on the room's floor) add it; items keep their own z, and the
+  elevations and quantities ignore it. The plan PDF writes it under the room's area (`+0.450`) where it fits. A plot's
+  `groundLevel` (mm, ±10000) moves its ground, which is cut out under the rooms lying lower than it (`groundHoles()`, so
+  the house's rooms show on a raised plot); the surroundings' disc goes under the lowest plot or room
+  (`lowestGround()`). Changed rooms rebuild the plots and changed plots the levelled rooms. The walkthrough's eye stays
+  at eye height over the floor underfoot (`floorLevels()`: the smallest room there, else the plot, else 0); steps do
+  not block it.
+
 ## Lighting
 
 - Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with
@@ -379,8 +414,9 @@ format is the text in `FurnitureTools::Format`.
 
 - Room schedule: `Service/Schedule/RoomScheduleService` (REST `…/room-schedule`, MCP `get_room_schedule`, the project
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
-  the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Terraces and gardens
-  (`RoomTypeEnum::isOutdoor()`) are totalled separately. Only PHP computes it, so there is no TS twin.
+  the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
+  gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) are totalled separately. Only
+  PHP computes it, so there is no TS twin.
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
   definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside

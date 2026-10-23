@@ -1,4 +1,4 @@
-import {Scene} from '@app/models/scene';
+import {Scene, SunTime} from '@app/models/scene';
 
 // Mirrors the backend DTOs (FlatDesigner\Dto\Share*).
 
@@ -34,6 +34,8 @@ export interface ShareSettings {
     dimensions: boolean;
     /** Opens after dark, lit by the flat's lights; missing in links saved before the night view. */
     night?: boolean;
+    /** The sun at a clock time on site; null or missing (older links): the default afternoon sun. */
+    sun?: SunTime | null;
     /** Opens in the presentation quality; missing in older links. */
     presentation?: boolean;
     /**

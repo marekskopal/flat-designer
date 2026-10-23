@@ -16,6 +16,7 @@ const KindLabels: Record<ElementKind, string> = {
     wall: 'Wall',
     opening: 'Door / window',
     room: 'Room',
+    plot: 'Plot',
     group: 'Group',
     variantSet: 'Variant set',
 };
@@ -217,6 +218,9 @@ export class EditorPanelComponent {
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
                 void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
+        } else if (choice === 'plot') {
+            // Its boundary comes from the backend: a rectangle round the floor's walls and rooms.
+            void this.editor.create('plot', {});
         } else if (choice === 'room') {
             const half = NewRoomSize / 2;
             void this.editor.create('room', {
@@ -345,6 +349,8 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             return find(scene.walls);
         case 'room':
             return find(scene.rooms);
+        case 'plot':
+            return find(scene.plots ?? []);
         case 'opening':
             return find(scene.walls.flatMap((w): Opening[] => w.openings));
         case 'group':

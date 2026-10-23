@@ -20,6 +20,20 @@
     }
 }
 
+.site {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: $space-8 $space-12;
+    margin: 0;
+    padding: 0;
+    border: 0;
+
+    legend {
+        grid-column: 1 / -1;
+        padding: 0;
+    }
+}
+
 .head__address,
 .head__description,
 .head__owner {

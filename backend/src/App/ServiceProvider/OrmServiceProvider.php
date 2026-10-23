@@ -15,6 +15,7 @@ use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\OAuthAuthorization;
 use FlatDesigner\Model\Entity\OAuthClient;
 use FlatDesigner\Model\Entity\Opening;
+use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\ProjectChange;
 use FlatDesigner\Model\Entity\ProjectFile;
@@ -38,6 +39,7 @@ use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\OAuthAuthorizationRepository;
 use FlatDesigner\Model\Repository\OAuthClientRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\PlotRepository;
 use FlatDesigner\Model\Repository\ProjectChangeRepository;
 use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Model\Repository\ProjectMaterialPriceRepository;
@@ -85,6 +87,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ModelAssetRepository::class,
 			FurnitureDefinitionRepository::class,
 			RoomRepository::class,
+			PlotRepository::class,
 			WallRepository::class,
 			OpeningRepository::class,
 			ItemRepository::class,
@@ -121,6 +124,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ModelAssetRepository::class, ModelAsset::class);
 		$this->addRepository($container, $orm, FurnitureDefinitionRepository::class, FurnitureDefinition::class);
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
+		$this->addRepository($container, $orm, PlotRepository::class, Plot::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);
 		$this->addRepository($container, $orm, OpeningRepository::class, Opening::class);
 		$this->addRepository($container, $orm, ItemRepository::class, Item::class);

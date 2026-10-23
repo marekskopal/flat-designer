@@ -1,4 +1,4 @@
-import {Opening, Room, Scene, Wall, WallFinish} from '@app/models/scene';
+import {Opening, PlanPoint, Plot, Room, Scene, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {
@@ -50,6 +50,7 @@ import {
     wallSamples,
     WindowFrameBar,
 } from './plan-geometry';
+import {buildPlot, groundUnder} from './plots';
 import {alignTiles, turnLevelUvs} from './tiling';
 
 const SlabThickness = 300;
@@ -65,6 +66,8 @@ export interface BuildingParts {
     slab: THREE.Mesh;
     /** Per room: its floor mesh (for picking and highlighting), ceiling and wall finishes, keyed by room id. */
     rooms: Map<number, RoomParts>;
+    /** Plots (their ground and boundary) keyed by plot id. */
+    plots: Map<number, THREE.Group>;
     /** Wall groups (with their doors and windows) keyed by wall id. */
     walls: Map<number, THREE.Group>;
     /** Fill of wall cores revealed by the section plane, shared by all walls. */
@@ -94,13 +97,19 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
         slab: buildSlab(scene.walls, materials),
         rooms: new Map(),
+        plots: new Map(),
         walls: new Map(),
         sectionMaterial: materials.sectionFill(),
     };
     root.add(parts.slab);
 
     for (const room of scene.rooms) {
-        addRoom(parts, buildRoom(room, scene.walls, materials), room.id);
+        addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? []), room.id);
+    }
+    for (const plot of scene.plots ?? []) {
+        const group = buildPlot(plot, materials, scene.rooms);
+        parts.plots.set(plot.id, group);
+        root.add(group);
     }
 
     const joints = wallJoints(scene.walls);
@@ -116,13 +125,18 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     return parts;
 }
 
-/** Floor, ceiling and wall finishes of one room (the finishes leave the walls' door openings free). */
-export function buildRoom(room: Room, walls: readonly Wall[], materials: MaterialLibrary): RoomParts {
-    return {
-        floor: buildFloor(room, materials),
+/**
+ * Floor, ceiling and wall finishes of one room (the finishes leave the walls' door openings free), all at the room's
+ * floor elevation; the floor's edge steps down (or up) to the ground of the plot the room lies on.
+ */
+export function buildRoom(room: Room, walls: readonly Wall[], materials: MaterialLibrary, plots: readonly Plot[] = []): RoomParts {
+    const parts: RoomParts = {
+        floor: buildFloor(room, materials, groundUnder(room, plots)),
         ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials),
         finishes: buildRoomFinishes(room, walls, materials),
     };
+    parts.ceiling?.position.setY(parts.ceiling.position.y + (room.floorElevation ?? 0) * MM);
+    return parts;
 }
 
 /** A room's wall finishes and skirting; null when it has neither and no wall face has bands of its own. */
@@ -179,7 +193,11 @@ function roomShape(room: Room): THREE.Shape {
     return new THREE.Shape(room.polygon.map(([x, y]) => new THREE.Vector2(x * MM, y * MM)));
 }
 
-export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
+/**
+ * The room's floor at its elevation; `ground` (mm) is the level beside it, the plot's ground or the floor's level,
+ * which the floor's edge steps down or up to when the two differ.
+ */
+export function buildFloor(room: Room, materials: MaterialLibrary, ground = 0): THREE.Mesh {
     // Shape in plan (x, y); rotating −90° about x lays it flat with plan y → scene −z. UVs stay in metres.
     const geometry = new THREE.ShapeGeometry(roomShape(room));
     geometry.rotateX(-Math.PI / 2);
@@ -190,12 +208,58 @@ export function buildFloor(room: Room, materials: MaterialLibrary): THREE.Mesh {
         turnLevelUvs(geometry, grid);
     }
     const floor = new THREE.Mesh(geometry, material);
-    floor.position.y = 0.002;
+    const elevation = room.floorElevation ?? 0;
+    floor.position.y = (FloorLift + elevation) * MM;
     floor.receiveShadow = true;
     floor.name = `floor:${room.code}`;
     floor.userData = {roomId: room.id};
     alignTiles(floor, grid, materials);
+    if (elevation !== ground) {
+        // From the floor mesh, which sits `FloorLift` over the floor's elevation, down to the ground beside it.
+        floor.add(buildFloorEdge(room.polygon, ground - elevation - FloorLift, materials));
+    }
     return floor;
+}
+
+/** The floor mesh's height over the room's floor elevation, mm, so it draws over the slab and the plots' ground. */
+const FloorLift = 2;
+
+/** The upright face at the step of a room whose floor is off the ground beside it. */
+const FloorEdgeColor = '#b9b2a6';
+/** How far the edge stands inside the room's outline, mm: off the wall faces along it, so the two do not z-fight. */
+const FloorEdgeInset = 2;
+
+/**
+ * The upright face round a room whose floor is off the ground beside it: from the room's floor (the parent's height,
+ * so y 0 here) down, or up, `drop` mm to that ground — a raised deck's side, a sunken terrace's step. Both sides show.
+ */
+function buildFloorEdge(polygon: readonly PlanPoint[], drop: number, materials: MaterialLibrary): THREE.Mesh {
+    const positions: number[] = [];
+    const indices: number[] = [];
+    const outline = counterClockwise(polygon);
+    outline.forEach(([ax, ay], i) => {
+        const [bx, by] = outline[(i + 1) % outline.length];
+        const length = Math.hypot(bx - ax, by - ay);
+        if (length < 1) {
+            return;
+        }
+        // Counter-clockwise: the room is on the left, so the left normal points inwards.
+        const nx = (-(by - ay) / length) * FloorEdgeInset;
+        const ny = ((bx - ax) / length) * FloorEdgeInset;
+        const [x0, y0, x1, y1] = [(ax + nx) * MM, -(ay + ny) * MM, (bx + nx) * MM, -(by + ny) * MM];
+        const base = positions.length / 3;
+        positions.push(x0, 0, y0, x1, 0, y1, x1, drop * MM, y1, x0, drop * MM, y0);
+        indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const edge = new THREE.Mesh(geometry, materials.plain(FloorEdgeColor, 0.9, 0, THREE.DoubleSide));
+    edge.name = 'floor-edge';
+    edge.castShadow = true;
+    edge.receiveShadow = true;
+    return edge;
 }
 
 /** Strips across each vault of a vaulted ceiling, enough for a smooth arch. */
@@ -429,6 +493,10 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     // Clicking a tiled wall selects the room the tiling belongs to.
     group.userData = {roomId: room.id};
     group.name = `finishes:${room.code}`;
+    // The bands count from the room's floor: the group stands at its elevation, and the openings' heights, given from
+    // the floor's level, come down to it.
+    const elevation = room.floorElevation ?? 0;
+    group.position.y = elevation * MM;
     // Counter-clockwise, so the room interior is on the left of every edge.
     const polygon = counterClockwise(room.polygon);
     const skirtingMaterial = room.skirtingMaterialId == null ? materials.plain('#f4f2ee', 0.6) : materials.get(room.skirtingMaterialId);
@@ -438,7 +506,7 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         const a = {x: ax, y: ay};
         const b = {x: bx, y: by};
         const length = Math.hypot(bx - ax, by - ay);
-        const gaps = wallGapsAlongEdge(a, b, walls);
+        const gaps = wallGapsAlongEdge(a, b, walls).map((gap) => ({...gap, bottom: gap.bottom - elevation, top: gap.top - elevation}));
         const segments = finishSegments(room, a, b, length, walls);
         // Along a curved wall the edge is one of the pieces of its face: the bands' UVs run on along the arc.
         const curved = wallFacesAlongEdge(a, b, walls).find((face) => (face.wall.sagitta ?? 0) !== 0);

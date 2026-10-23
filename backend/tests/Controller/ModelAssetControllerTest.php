@@ -83,11 +83,7 @@ final class ModelAssetControllerTest extends IntegrationTestCase
 		$project = Fixture::createProject($user);
 		$floor = Fixture::firstFloor($project);
 		$tap = $this->projectModel($user, $project, 'Black tap', Glb::box([-0.03, 0.0, -0.1], [0.03, 0.3, 0.1]));
-		$items = str_replace(
-			['{projectId:number}', '{floorId:number}', '{elementType:items|walls|openings|rooms}'],
-			[(string) $project->id, (string) $floor->id, 'items'],
-			Routes::ProjectFloorElements->value,
-		);
+		$items = Fixture::elementsPath($project, $floor->id);
 
 		$created = $this->request('POST', $items, ['kind' => 'Model', 'modelId' => $tap, 'x' => 1000, 'y' => 1000], $user);
 		self::assertSame(201, $created->getStatusCode());
@@ -148,11 +144,7 @@ final class ModelAssetControllerTest extends IntegrationTestCase
 		$project = Fixture::createProject($user);
 		$floor = Fixture::firstFloor($project);
 		$lamp = $this->projectModel($user, $project, 'Lamp', Glb::box([-0.2, 0.0, -0.2], [0.2, 1.6, 0.2]));
-		$items = str_replace(
-			['{projectId:number}', '{floorId:number}', '{elementType:items|walls|openings|rooms}'],
-			[(string) $project->id, (string) $floor->id, 'items'],
-			Routes::ProjectFloorElements->value,
-		);
+		$items = Fixture::elementsPath($project, $floor->id);
 		$created = $this->jsonBody($this->request('POST', $items, ['kind' => 'Model', 'modelId' => $lamp, 'x' => 500, 'y' => 500], $user));
 		self::assertIsArray($created['element']);
 		$itemId = $created['element']['id'];
@@ -186,11 +178,7 @@ final class ModelAssetControllerTest extends IntegrationTestCase
 		$floor = Fixture::firstFloor($project);
 		$plant = $this->projectModel($user, $project, 'Plant', Glb::box([-0.2, 0.0, -0.2], [0.2, 0.9, 0.2]));
 		$unused = $this->projectModel($user, $project, 'Lamp', Glb::box([-0.2, 0.0, -0.2], [0.2, 1.6, 0.2]));
-		$items = str_replace(
-			['{projectId:number}', '{floorId:number}', '{elementType:items|walls|openings|rooms}'],
-			[(string) $project->id, (string) $floor->id, 'items'],
-			Routes::ProjectFloorElements->value,
-		);
+		$items = Fixture::elementsPath($project, $floor->id);
 		$this->request('POST', $items, ['kind' => 'Model', 'modelId' => $plant, 'x' => 500, 'y' => 500], $user);
 
 		$link = $this->jsonBody($this->request(

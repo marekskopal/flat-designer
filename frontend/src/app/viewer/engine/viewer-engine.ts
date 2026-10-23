@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Room, Scene, Underlay, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, PlanPoint, Plot, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -76,6 +76,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
+import {buildPlot, groundUnder, highlightPlot, lowestGround} from './plots';
 import {
     PresentationPipeline,
     PresentationPixelRatio,
@@ -87,9 +88,10 @@ import {
 } from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
-import {Walkthrough, WalkthroughFov} from './walkthrough';
+import {floorLevels, Walkthrough, WalkthroughFov} from './walkthrough';
 
 export type ViewPreset = 'overview' | 'top';
 
@@ -105,9 +107,16 @@ interface CameraTween {
 const BackgroundColor = '#e8e4dd';
 /** The sky after dark. */
 const NightBackgroundColor = '#1b2029';
-/** Daylight (sun, sky, reflections) by day and by night: at night only a faint blue sky light is left. */
-const Daylight = {sun: 2.4, sky: 1.4, environment: 0.45};
-const Nightlight = {sun: 0, sky: 0.05, environment: 0.03};
+/**
+ * Daylight (sun, sky, reflections) by day and by night: at night only a faint blue sky light is left. The sun's height
+ * blends between them (`daylightAt()`).
+ */
+const Daylight = {sun: 2.4, sky: 1.4, skyColor: '#fbf8f2', environment: 0.45};
+const Nightlight = {sky: 0.05, skyColor: '#5a6f99', environment: 0.03};
+/** The surroundings' ground disc below the floor's level (or the lowest plot's ground), m. */
+const GroundDiscY = -0.02;
+/** The sun's distance from the plan centre beyond the radius its shadow covers, m. */
+const SunDistance = 20;
 const HighlightColor = '#d9822b';
 const TweenDuration = 900;
 /** Framing of a floor with nothing on it yet (plan mm). */
@@ -171,6 +180,9 @@ interface WallRun {
     bend: {closing: boolean; sagitta: number} | null;
 }
 
+/** An element whose outline gets corner handles: a room or a plot. */
+type Outlined = {kind: 'room'; element: Room} | {kind: 'plot'; element: Plot};
+
 interface DragBase {
     plane: THREE.Plane;
     /** Plan point (mm) under the pointer when the drag started. */
@@ -185,7 +197,7 @@ type Drag = DragBase &
         | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
-        | {kind: 'vertex'; room: Room; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
+        | {kind: 'vertex'; outline: Outlined; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
     );
 
 /** The door (or walkable French window) the walker looks at, and whether it is open or opening. */
@@ -244,8 +256,16 @@ export class ViewerEngine {
     private readonly controls: OrbitControls;
     private readonly sun = new THREE.DirectionalLight('#fff3e0', Daylight.sun);
     private readonly sky = new THREE.HemisphereLight('#fbf8f2', '#a9a196', Daylight.sky);
+    /** The ground round the floor, beyond its plots. */
+    private readonly surroundings = new THREE.Mesh(
+        new THREE.CircleGeometry(60, 64),
+        new THREE.MeshStandardMaterial({color: '#cfd2c4', roughness: 1}),
+    );
     /** After dark: no sun, the flat lit by its own lights. */
     private night = false;
+    /** The clock time on site the sun stands at; null: the default afternoon sun. */
+    private sunTime: SunTime | null = null;
+    private sunAngles: SunAngles = DefaultSun;
     /** The fixture lights (light parts, LED strips) are on. */
     private lightsOn = false;
     private quality: RenderQuality = 'fast';
@@ -456,6 +476,7 @@ export class ViewerEngine {
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
         this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
+        this.fitGround(scene);
         if (this.loadedFloorId !== scene.floor.id) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
@@ -471,6 +492,7 @@ export class ViewerEngine {
         this.leafStates.apply(this.leaves);
         this.refreshShadows();
         this.walkthrough?.setColliders(sceneColliders(scene));
+        this.walkthrough?.setFloorLevels(floorLevels(scene));
         this.updateLeafColliders();
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
@@ -614,11 +636,28 @@ export class ViewerEngine {
             this.indexWalls();
         }
 
-        for (const id of [...rooms.removed, ...rooms.changed.map((r) => r.id)]) {
+        // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground:
+        // changed rooms rebuild every plot, changed plots the rooms off the floor's level.
+        const plots = diffById(previous.plots ?? [], scene.plots ?? []);
+        const plotsChanged = plots.removed.length > 0 || plots.changed.length > 0;
+        const roomsChanged = rooms.removed.length > 0 || rooms.changed.length > 0;
+        if (plotsChanged || roomsChanged) {
+            parts.plots.forEach((group) => this.disposeObject(group));
+            parts.plots.clear();
+            for (const plot of scene.plots ?? []) {
+                const group = buildPlot(plot, materials, scene.rooms);
+                parts.plots.set(plot.id, group);
+                parts.root.add(group);
+            }
+            this.highlightPlots();
+        }
+        const rebuiltRooms = plotsChanged ? scene.rooms.filter((r) => changedRooms.has(r.id) || (r.floorElevation ?? 0) !== 0) : rooms.changed;
+
+        for (const id of [...rooms.removed, ...rebuiltRooms.map((r) => r.id)]) {
             this.removeRoom(id);
         }
-        for (const room of rooms.changed) {
-            addRoom(parts, buildRoom(room, scene.walls, materials), room.id);
+        for (const room of rebuiltRooms) {
+            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? []), room.id);
             const label = this.createLabel(room);
             this.labels.set(room.id, label);
             content.add(label);
@@ -760,8 +799,8 @@ export class ViewerEngine {
     private disposeObject(object: THREE.Object3D): void {
         object.removeFromParent();
         object.traverse((o) => {
-            // Model instances share their geometry and materials with the model library's template.
-            if (o instanceof THREE.Mesh && o.userData['shared'] !== true) {
+            // Model instances share their geometry and materials with the model library's template. Lines: a plot's boundary.
+            if ((o instanceof THREE.Mesh || o instanceof THREE.Line) && o.userData['shared'] !== true) {
                 (o.geometry as THREE.BufferGeometry).dispose();
                 for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
                     if (this.materials?.owns(material) !== true && material !== this.parts?.sectionMaterial) {
@@ -780,6 +819,7 @@ export class ViewerEngine {
         this.invalidate();
         this.selection = selection;
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
+        this.highlightPlots();
 
         this.removeOutline();
         const objects = this.objectsOf(selection);
@@ -988,16 +1028,32 @@ export class ViewerEngine {
     public setLighting(night: boolean, lightsOn: boolean): void {
         this.night = night;
         this.lightsOn = lightsOn;
-        const daylight = night ? Nightlight : Daylight;
-        this.sun.intensity = daylight.sun;
-        // No sun, no shadow pass for it.
-        this.sun.castShadow = !night;
-        this.sky.intensity = daylight.sky;
-        this.sky.color.set(night ? '#5a6f99' : '#fbf8f2');
-        this.scene.environmentIntensity = daylight.environment;
-        this.scene.background = new THREE.Color(night ? NightBackgroundColor : BackgroundColor);
+        this.applyDaylight();
         this.applyLights();
         this.refreshShadows();
+    }
+
+    /**
+     * The sun at a clock time on site (the 21st of the month), from the scene's location and north angle; null, or a
+     * scene without a location, keeps the default afternoon sun from the south-west. Below the horizon it is gone and
+     * the sky fades as at dusk.
+     */
+    public setSunTime(time: SunTime | null): void {
+        this.sunTime = time;
+        this.fitSunShadow();
+        this.refreshShadows();
+    }
+
+    /** The sun, sky and background for the night switch and the sun's height. */
+    private applyDaylight(): void {
+        const daylight = this.night ? {sun: 0, sky: 0} : daylightAt(this.sunAngles.elevation);
+        this.sun.intensity = Daylight.sun * daylight.sun;
+        // No sun, no shadow pass for it.
+        this.sun.castShadow = daylight.sun > 0;
+        this.sky.intensity = THREE.MathUtils.lerp(Nightlight.sky, Daylight.sky, daylight.sky);
+        this.sky.color.set(Nightlight.skyColor).lerp(new THREE.Color(Daylight.skyColor), daylight.sky);
+        this.scene.environmentIntensity = THREE.MathUtils.lerp(Nightlight.environment, Daylight.environment, daylight.sky);
+        this.scene.background = new THREE.Color(NightBackgroundColor).lerp(new THREE.Color(BackgroundColor), daylight.sky);
     }
 
     private applyLights(): void {
@@ -1339,7 +1395,8 @@ export class ViewerEngine {
         const start = this.walkStart(this.sceneData);
         // The view looks along plan (−sin yaw, cos yaw).
         const yaw = Math.atan2(-start.direction.x, start.direction.y);
-        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, sceneColliders(this.sceneData), start.position, yaw);
+        const colliders = sceneColliders(this.sceneData);
+        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, colliders, start.position, yaw, floorLevels(this.sceneData));
         walkthrough.onExit = (): void => {
             this.stopWalkthrough();
             this.onWalkthroughEnd();
@@ -1397,7 +1454,7 @@ export class ViewerEngine {
         }
         const view = this.camera.getWorldDirection(new THREE.Vector3());
         const direction = Math.hypot(view.x, view.z) > 1e-3 ? {x: view.x, y: -view.z} : {x: 0, y: 1};
-        const indoor = scene.rooms.filter((r) => r.type !== 'Terrace' && r.type !== 'Garden');
+        const indoor = scene.rooms.filter((r) => !isOutdoorRoom(r));
         if (indoor.length === 0) {
             return {position: this.viewCenter(), direction};
         }
@@ -1413,6 +1470,30 @@ export class ViewerEngine {
         const target = new THREE.Vector3(c.x * MM, 0.8, -c.y * MM);
         const offset = new THREE.Vector3(0.55, 1.1, 0.75).normalize().multiplyScalar(size * 1.4 + 3);
         this.moveCamera(target.clone().add(offset), target, true);
+    }
+
+    /** The selected room or plot, whose corners get handles. */
+    private selectedOutline(): Outlined | null {
+        const selection = this.selection;
+        const scene = this.sceneData;
+        if (selection === null || scene === null) {
+            return null;
+        }
+        if (selection.kind === 'room') {
+            const room = scene.rooms.find((r) => r.id === selection.id);
+            return room === undefined ? null : {kind: 'room', element: room};
+        }
+        if (selection.kind === 'plot') {
+            const plot = scene.plots?.find((p) => p.id === selection.id);
+            return plot === undefined ? null : {kind: 'plot', element: plot};
+        }
+        return null;
+    }
+
+    /** The selected plot's boundary in the highlight colour. */
+    private highlightPlots(): void {
+        const selection = this.selection;
+        this.parts?.plots.forEach((group, id) => highlightPlot(group, selection?.kind === 'plot' && selection.id === id));
     }
 
     /** Tints the room's floor; `floor` overrides the room's own mesh (the preview while a corner is dragged). */
@@ -1484,7 +1565,7 @@ export class ViewerEngine {
 
         this.scene.add(this.sky);
 
-        // Afternoon sun from the south-west, entering through the living-room windows.
+        // Placed by `fitSunShadow()`: by default an afternoon sun from the south-west.
         this.sun.castShadow = true;
         const shadowSize = sunShadowMapSize('fast', this.renderer.capabilities.maxTextureSize);
         this.sun.shadow.mapSize.set(shadowSize, shadowSize);
@@ -1493,22 +1574,28 @@ export class ViewerEngine {
         this.sun.shadow.radius = SunShadowRadius.fast;
         this.scene.add(this.sun, this.sun.target);
 
-        const ground = new THREE.Mesh(
-            new THREE.CircleGeometry(60, 64),
-            new THREE.MeshStandardMaterial({color: '#cfd2c4', roughness: 1}),
-        );
+        const ground = this.surroundings;
         ground.rotation.x = -Math.PI / 2;
-        // Just below the floor level: the gardens and the terrace lie on it, the slab is buried.
-        ground.position.y = -0.02;
+        // Just below the floor level (or the lowest plot, `fitGround()`): the gardens and the terrace lie on it, the slab is buried.
+        ground.position.y = GroundDiscY;
         ground.receiveShadow = true;
         ground.name = 'ground';
         this.scene.add(ground);
     }
 
+    /** The surroundings' ground under the lowest plot or room, so nothing below the floor's level is buried in it. */
+    private fitGround(scene: Scene): void {
+        this.surroundings.position.y = lowestGround(scene.plots ?? [], scene.rooms) * MM + GroundDiscY;
+    }
+
+    /** The sun towards its direction at the clock time, its shadow camera covering the plan. */
     private fitSunShadow(): void {
+        this.sunAngles = sunAt(this.sceneData?.location, this.sunTime, new Date().getFullYear());
+        const direction = sunDirection(this.sceneData?.location?.northAngle ?? 0, this.sunAngles);
         const center = this.planCenter();
         const radius = Math.hypot(this.bounds.maxX - this.bounds.minX, this.bounds.maxY - this.bounds.minY) * MM * 0.6 + 2;
-        this.sun.position.set(center.x - 9, 14, center.z + 12);
+        const distance = radius + SunDistance;
+        this.sun.position.set(center.x + direction.x * distance, center.y + direction.y * distance, center.z + direction.z * distance);
         this.sun.target.position.copy(center);
         const cam = this.sun.shadow.camera;
         cam.left = -radius;
@@ -1516,8 +1603,9 @@ export class ViewerEngine {
         cam.top = radius;
         cam.bottom = -radius;
         cam.near = 1;
-        cam.far = 60;
+        cam.far = distance + radius + 10;
         cam.updateProjectionMatrix();
+        this.applyDaylight();
     }
 
     private createLabel(room: Room): CSS2DObject {
@@ -1743,7 +1831,7 @@ export class ViewerEngine {
         if (drag.kind === 'vertex' && drag.inserted) {
             // A new corner pulled out of an edge shows up right away.
             drag.moved = true;
-            this.previewRoom(drag);
+            this.previewOutline(drag);
         }
     };
 
@@ -1766,20 +1854,21 @@ export class ViewerEngine {
             const mode = role.role === 'wallStart' ? 'start' : role.role === 'wallEnd' ? 'end' : 'curve';
             return wall === undefined ? null : {kind: 'wall', plane, grab, moved: false, wall, mode, current: wall, fits: true, snap: null};
         }
-        const room = this.selection.kind === 'room' ? scene.rooms.find((r) => r.id === this.selection?.id) : undefined;
-        if (room === undefined) {
+        const outline = this.selectedOutline();
+        if (outline === null) {
             return null;
         }
+        const original = outline.element.polygon;
         if (role.role === 'vertex') {
-            const polygon = room.polygon;
-            return {kind: 'vertex', plane, grab, moved: false, room, index: role.index, inserted: false, polygon, valid: true, snap: null};
+            const index = role.index;
+            return {kind: 'vertex', plane, grab, moved: false, outline, index, inserted: false, polygon: original, valid: true, snap: null};
         }
         if (role.role === 'midpoint') {
-            const midpoint = edgeMidpoints(room.polygon)[role.index];
-            const polygon = insertVertex(room.polygon, role.index, midpoint);
+            const midpoint = edgeMidpoints(original)[role.index];
+            const polygon = insertVertex(original, role.index, midpoint);
             const at = {x: polygon[role.index + 1][0], y: polygon[role.index + 1][1]};
             const valid = isSimplePolygon(polygon);
-            return {kind: 'vertex', plane, grab: at, moved: false, room, index: role.index + 1, inserted: true, polygon, valid, snap: null};
+            return {kind: 'vertex', plane, grab: at, moved: false, outline, index: role.index + 1, inserted: true, polygon, valid, snap: null};
         }
         return null;
     }
@@ -1793,7 +1882,7 @@ export class ViewerEngine {
         const hit = this.pick(event);
         const selection = this.groupOf(selectionOf(hit?.object ?? null), event);
         const scene = this.sceneData;
-        if (hit === undefined || selection === null || scene === null || selection.kind === 'room') {
+        if (hit === undefined || selection === null || scene === null || selection.kind === 'room' || selection.kind === 'plot') {
             return null;
         }
         // Drag in the horizontal plane through the grabbed point; the element keeps its elevation.
@@ -1897,12 +1986,12 @@ export class ViewerEngine {
                 break;
             }
             case 'vertex': {
-                const [x0, y0] = drag.inserted ? [drag.grab.x, drag.grab.y] : drag.room.polygon[drag.index];
+                const [x0, y0] = drag.inserted ? [drag.grab.x, drag.grab.y] : drag.outline.element.polygon[drag.index];
                 const snapped = this.snapVertex(drag, {x: x0 + delta.x, y: y0 + delta.y}, free);
                 drag.polygon = drag.polygon.map((p, i): PlanPoint => (i === drag.index ? [snapped.point.x, snapped.point.y] : p));
                 drag.valid = isSimplePolygon(drag.polygon);
                 drag.snap = snapped.kind;
-                this.previewRoom(drag);
+                this.previewOutline(drag);
                 break;
             }
         }
@@ -1971,7 +2060,7 @@ export class ViewerEngine {
         return sagitta;
     }
 
-    /** A room corner snaps onto other rooms' corners and wall corners, or into line with its neighbours. */
+    /** A room's or plot's corner snaps onto the other outlines' corners and wall corners, or into line with its neighbours. */
     private snapVertex(drag: Extract<Drag, {kind: 'vertex'}>, point: Vec2, free: boolean): SnapResult {
         const scene = this.sceneData;
         if (free || scene === null) {
@@ -1979,10 +2068,13 @@ export class ViewerEngine {
         }
         const n = drag.polygon.length;
         const neighbours = [drag.polygon[(drag.index + n - 1) % n], drag.polygon[(drag.index + 1) % n]].map(([x, y]) => ({x, y}));
-        const corners = [
-            ...scene.rooms.filter((r) => r.id !== drag.room.id).flatMap((r) => r.polygon.map(([x, y]) => ({x, y}))),
-            ...scene.walls.flatMap((w) => wallCorners(w, this.joints.get(w.id))),
-        ];
+        const own = (kind: Outlined['kind'], id: number): boolean => drag.outline.kind === kind && drag.outline.element.id === id;
+        // The other outlines' corners, not the dragged one's (by id: the scene may have been reloaded meanwhile).
+        const outlines = [
+            ...scene.rooms.filter((r) => !own('room', r.id)).flatMap((r) => r.polygon),
+            ...(scene.plots ?? []).filter((p) => !own('plot', p.id)).flatMap((p) => p.polygon),
+        ].map(([x, y]) => ({x, y}));
+        const corners = [...outlines, ...scene.walls.flatMap((w) => wallCorners(w, this.joints.get(w.id)))];
         return snapPoint(point, {grid: DragSnap, radius: (SnapPixels * this.metresPerPixel()) / MM, points: corners, anchors: neighbours});
     }
 
@@ -2041,7 +2133,11 @@ export class ViewerEngine {
         if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
             return;
         }
-        this.onSelect(this.groupOf(selectionOf(this.pick(event)?.object ?? null), event), event.shiftKey);
+        const picked = selectionOf(this.pick(event)?.object ?? null);
+        // A plot's ground surrounds the building: outside the plan view, where it has no handles, a click on it is a
+        // click on the background, which clears the selection as it did before the plot was there.
+        const selection = picked?.kind === 'plot' && !this.isTopDown() ? null : picked;
+        this.onSelect(this.groupOf(selection, event), event.shiftKey);
     };
 
     /**
@@ -2095,8 +2191,8 @@ export class ViewerEngine {
                 break;
             }
             case 'vertex':
-                if (drag.valid && (drag.inserted || !sameJson(drag.polygon, drag.room.polygon))) {
-                    edit = {selection: {kind: 'room', id: drag.room.id}, fields: {polygon: drag.polygon}};
+                if (drag.valid && (drag.inserted || !sameJson(drag.polygon, drag.outline.element.polygon))) {
+                    edit = {selection: {kind: drag.outline.kind, id: drag.outline.element.id}, fields: {polygon: drag.polygon}};
                 }
                 break;
         }
@@ -2157,17 +2253,17 @@ export class ViewerEngine {
             this.onSelect(clicked, false);
             return;
         }
-        if (!this.editMode || !this.isTopDown() || this.selection?.kind !== 'room') {
+        const outline = this.editMode && this.isTopDown() ? this.selectedOutline() : null;
+        if (outline === null) {
             return;
         }
         const role = (this.pickHandle(event)?.object.userData as {handle?: HandleRole} | undefined)?.handle;
-        const room = this.sceneData?.rooms.find((r) => r.id === this.selection?.id);
-        if (role?.role !== 'vertex' || room === undefined) {
+        if (role?.role !== 'vertex') {
             return;
         }
-        const polygon = removeVertex(room.polygon, role.index);
+        const polygon = removeVertex(outline.element.polygon, role.index);
         if (polygon !== null && isSimplePolygon(polygon)) {
-            void this.onEdit({kind: 'room', id: room.id}, {polygon});
+            void this.onEdit({kind: outline.kind, id: outline.element.id}, {polygon});
         }
     };
 
@@ -2600,15 +2696,23 @@ export class ViewerEngine {
         this.updateHandles();
     }
 
-    /** Shows the dragged outline of a room: its floor, highlight, label and handles. */
-    private previewRoom(drag: Extract<Drag, {kind: 'vertex'}>): void {
+    /** Shows the dragged outline of a room (its floor, highlight, label) or plot (its ground and boundary), and the handles. */
+    private previewOutline(drag: Extract<Drag, {kind: 'vertex'}>): void {
         const parts = this.parts;
         const materials = this.materials;
         if (parts === null || materials === null) {
             return;
         }
-        const room = {...drag.room, polygon: drag.polygon};
-        const floor = buildFloor(room, materials);
+        if (drag.outline.kind === 'plot') {
+            const plot = buildPlot({...drag.outline.element, polygon: drag.polygon}, materials);
+            highlightPlot(plot, true);
+            const original = parts.plots.get(drag.outline.element.id);
+            this.setPreview(original === undefined ? [] : [original], [plot]);
+            this.updateHandles();
+            return;
+        }
+        const room = {...drag.outline.element, polygon: drag.polygon};
+        const floor = buildFloor(room, materials, groundUnder(room, this.sceneData?.plots ?? []));
         const original = parts.rooms.get(room.id);
         this.setPreview(original === undefined ? [] : [original.floor], [floor]);
         this.setSelectedRoom(room.id, floor);
@@ -2647,7 +2751,7 @@ export class ViewerEngine {
         });
     }
 
-    /** Recreates the handles of the selected wall (its ends) or room (corners, plus edge midpoints to pull new corners out). */
+    /** Recreates the handles of the selected wall (its ends), room or plot (corners, plus edge midpoints to pull new corners out). */
     private updateHandles(): void {
         this.handles.clear();
         const scene = this.sceneData;
@@ -2669,14 +2773,14 @@ export class ViewerEngine {
             // The middle of the centre line bends the wall.
             const frame = wallFrame(wall);
             this.addHandle(pointOnWall(frame, frame.length / 2), y, {role: 'wallCurve'}, active === 'curve' ? state : 'normal');
-        } else if (this.selection.kind === 'room') {
-            const id = this.selection.id;
-            const room = scene.rooms.find((r) => r.id === id);
-            const vertexDrag = drag?.kind === 'vertex' && drag.room.id === id ? drag : null;
-            const polygon = vertexDrag?.polygon ?? room?.polygon;
-            if (polygon === undefined) {
+        } else {
+            const outline = this.selectedOutline();
+            if (outline === null) {
                 return;
             }
+            const dragged = drag?.kind === 'vertex' && drag.outline.kind === outline.kind && drag.outline.element.id === outline.element.id;
+            const vertexDrag = dragged ? drag : null;
+            const polygon = vertexDrag?.polygon ?? outline.element.polygon;
             polygon.forEach(([x, y], index) => {
                 let state: HandleState = 'normal';
                 if (vertexDrag?.index === index) {
@@ -2850,7 +2954,7 @@ export class ViewerEngine {
             const geometries = new Set<THREE.BufferGeometry>();
             const materials = new Set<THREE.Material>();
             this.content.traverse((object) => {
-                if (object instanceof THREE.Mesh) {
+                if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
                     geometries.add(object.geometry);
                     (Array.isArray(object.material) ? object.material : [object.material]).forEach((m) => materials.add(m));
                 }

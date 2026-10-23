@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Project;
 
 use DateTimeImmutable;
+use DateTimeZone;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Dto\ProjectDto;
 use FlatDesigner\Dto\ProjectInputDto;
@@ -71,10 +72,10 @@ final readonly class ProjectProvider
 	/** Unchanged details are not a change: nothing is saved or announced. */
 	public function update(Project $project, ProjectInputDto $input): Project
 	{
-		$before = [$project->name, $project->address, $project->description];
+		$before = self::details($project);
 		$project->name = self::name($input->name);
 		self::applyDetails($project, $input);
-		if ($before !== [$project->name, $project->address, $project->description]) {
+		if ($before !== self::details($project)) {
 			$this->touch($project);
 			$this->updatePublisher->markDetailsChanged($project->id);
 		}
@@ -107,6 +108,20 @@ final readonly class ProjectProvider
 		);
 	}
 
+	/** @return list<mixed> what an update may change */
+	private static function details(Project $project): array
+	{
+		return [
+			$project->name,
+			$project->address,
+			$project->description,
+			$project->northAngle,
+			$project->latitude,
+			$project->longitude,
+			$project->timeZone,
+		];
+	}
+
 	private static function name(string $name): string
 	{
 		$name = trim($name);
@@ -127,6 +142,33 @@ final readonly class ProjectProvider
 
 		$project->address = $address === '' ? null : $address;
 		$project->description = $description === '' ? null : $description;
+		self::applySite($project, $input);
+	}
+
+	private static function applySite(Project $project, ProjectInputDto $input): void
+	{
+		if ($input->northAngle < 0 || $input->northAngle > 359) {
+			throw new ProjectException('North angle must be 0–359 degrees.');
+		}
+		if (($input->latitude === null) !== ($input->longitude === null)) {
+			throw new ProjectException('Give the latitude and longitude together, or neither.');
+		}
+		if ($input->latitude !== null && ($input->latitude < -90 || $input->latitude > 90)) {
+			throw new ProjectException('Latitude must be −90 to 90 degrees.');
+		}
+		if ($input->longitude !== null && ($input->longitude < -180 || $input->longitude > 180)) {
+			throw new ProjectException('Longitude must be −180 to 180 degrees.');
+		}
+		$timeZone = trim($input->timeZone ?? '');
+		// With the aliases (Europe/Kiev, Asia/Calcutta): browsers list those, and the project form offers what they list.
+		if ($timeZone !== '' && !in_array($timeZone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true)) {
+			throw new ProjectException(sprintf('Unknown time zone "%s"; use an IANA name such as Europe/Prague.', $timeZone));
+		}
+
+		$project->northAngle = $input->northAngle;
+		$project->latitude = $input->latitude;
+		$project->longitude = $input->longitude;
+		$project->timeZone = $timeZone === '' ? null : $timeZone;
 	}
 
 	/**

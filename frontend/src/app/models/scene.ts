@@ -4,7 +4,12 @@ import {FurnitureDefinitionBody} from './furniture';
 // origin at the inner south-west corner of the floor, x east, y north.
 
 export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
-export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden';
+export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway';
+
+/** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
+export const OutdoorRoomTypes: readonly RoomType[] = ['Terrace', 'Garden', 'Path', 'Driveway'];
+
+export const isOutdoorRoom = (room: {type: RoomType}): boolean => OutdoorRoomTypes.includes(room.type);
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
 export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
@@ -65,6 +70,19 @@ export interface WallFinish {
     top: number;
 }
 
+/** The land the building stands on (`PlotDto`): its boundary in plan mm and the ground inside it. */
+export interface Plot {
+    id: number;
+    name: string;
+    polygon: PlanPoint[];
+    /** m². */
+    area: number;
+    /** Null: a lawn. */
+    groundMaterialId: number | null;
+    /** mm the ground lies above (+) or below (−) the floor's level; missing in older versions: 0. */
+    groundLevel?: number;
+}
+
 export interface Room {
     id: number;
     code: string;
@@ -86,6 +104,11 @@ export interface Room {
      * Only level faces turn, the wall bands keep their joints. Missing in versions saved before it existed.
      */
     floorAngle?: number;
+    /**
+     * mm the room's floor lies above (+) or below (−) the floor's level (a raised deck, a terrace a step down); its
+     * ceiling, finishes and skirting go with it, items keep their own z. Missing in older versions: 0.
+     */
+    floorElevation?: number;
     /** Ceiling surface; null: white plaster (also when missing, in older versions). */
     ceilingMaterialId?: number | null;
     /**
@@ -237,6 +260,32 @@ export interface Scene {
     models?: SceneModel[];
     /** The project files the `Custom` items show as pictures; absent in older versions. */
     pictures?: number[];
+    /** The land around the building; absent in older versions. */
+    plots?: Plot[];
+    /** Where the building stands, for the sun; absent in older versions. */
+    location?: SiteLocation | null;
+}
+
+/** The project's orientation and place on the earth (`LocationDto`). */
+export interface SiteLocation {
+    /** Degrees clockwise from plan north (+y) to true north, 0–359. */
+    northAngle: number;
+    /** Degrees, north positive; null with `longitude` when the place is not set. */
+    latitude: number | null;
+    /** Degrees, east positive. */
+    longitude: number | null;
+    /** IANA name (e.g. Europe/Prague) the sun's clock time is read in; null: local solar time. */
+    timeZone: string | null;
+}
+
+/** The scene says where its building stands (a latitude and longitude), so the sun can be placed at a time. */
+export const hasSiteLocation = (scene: Scene | null): boolean =>
+    scene?.location != null && scene.location.latitude !== null && scene.location.longitude !== null;
+
+/** A moment to place the sun at: the 21st of `month` (1–12) at `hour` (0–24, fractional) clock time on site. */
+export interface SunTime {
+    month: number;
+    hour: number;
 }
 
 /** A 3D model as the scene carries it: its native size (mm) to scale it by, and its credits. */

@@ -1,4 +1,4 @@
-import {DatePipe, NgTemplateOutlet} from '@angular/common';
+import {DatePipe, DecimalPipe, NgTemplateOutlet} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, numberAttribute, signal} from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
@@ -22,6 +22,7 @@ import {filter, switchMap} from 'rxjs';
     selector: 'fd-project-detail',
     imports: [
         DatePipe,
+        DecimalPipe,
         ElectricalScheduleComponent,
         NgTemplateOutlet,
         ProjectFilesComponent,
@@ -60,7 +61,13 @@ export class ProjectDetailComponent {
         name: ['', Validators.required],
         address: [''],
         description: [''],
+        northAngle: [0, [Validators.required, Validators.min(0), Validators.max(359)]],
+        latitude: [null as number | null, [Validators.min(-90), Validators.max(90)]],
+        longitude: [null as number | null, [Validators.min(-180), Validators.max(180)]],
+        timeZone: [''],
     });
+    /** The time zones the browser knows, offered for the site's time zone. */
+    protected readonly timeZones = Intl.supportedValuesOf('timeZone');
     protected readonly floorForm = this.fb.group({
         name: ['', Validators.required],
         level: [0, Validators.required],
@@ -89,14 +96,32 @@ export class ProjectDetailComponent {
     }
 
     protected editDetails(project: Project): void {
-        this.detailsForm.setValue({name: project.name, address: project.address ?? '', description: project.description ?? ''});
+        this.detailsForm.setValue({
+            name: project.name,
+            address: project.address ?? '',
+            description: project.description ?? '',
+            northAngle: project.northAngle,
+            latitude: project.latitude,
+            longitude: project.longitude,
+            timeZone: project.timeZone ?? '',
+        });
         this.editingDetails.set(true);
     }
 
     protected async saveDetails(project: Project): Promise<void> {
-        const {name, address, description} = this.detailsForm.getRawValue();
+        const {name, address, description, northAngle, latitude, longitude, timeZone} = this.detailsForm.getRawValue();
         await this.run(async () => {
-            this.project.set(await this.projectService.update(project.id, {name, address: address || null, description: description || null}));
+            this.project.set(
+                await this.projectService.update(project.id, {
+                    name,
+                    address: address || null,
+                    description: description || null,
+                    northAngle: northAngle ?? 0,
+                    latitude,
+                    longitude,
+                    timeZone: timeZone || null,
+                }),
+            );
             this.editingDetails.set(false);
         });
     }

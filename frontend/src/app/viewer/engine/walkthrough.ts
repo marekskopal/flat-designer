@@ -1,6 +1,7 @@
+import {Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
-import {collideCircle, MM, Vec2, WallCollider} from './plan-geometry';
+import {collideCircle, MM, pointInPolygon, polygonSignedArea, Vec2, WallCollider} from './plan-geometry';
 
 /** Eye level of a 180 cm tall person, mm above the floor. */
 const EyeHeight = 1630;
@@ -27,6 +28,22 @@ const MoveKeys = new Set([...ForwardKeys, ...BackwardKeys, ...LeftKeys, ...Right
 /** Opens or closes the door the walker looks at. */
 const UseKey = 'KeyE';
 
+/** Where the walker stands on the floor's level, mm: plan point → height of the floor under it. */
+export type FloorLevels = (point: Vec2) => number;
+
+/**
+ * The height of what is underfoot at a plan point, mm against the floor's level: the floor of the room there (the
+ * smallest one where rooms overlap: a terrace inside a garden), else the ground of the plot there, else the floor's
+ * level. Steps do not block the walk. Keeps only the outlines and levels, not the scene.
+ */
+export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>): FloorLevels {
+    const rooms = scene.rooms
+        .map((r) => ({polygon: r.polygon, level: r.floorElevation ?? 0, area: Math.abs(polygonSignedArea(r.polygon))}))
+        .sort((a, b) => a.area - b.area);
+    const plots = (scene.plots ?? []).map((p) => ({polygon: p.polygon, level: p.groundLevel ?? 0}));
+    return (point) => [...rooms, ...plots].find((o) => pointInPolygon(point, o.polygon))?.level ?? 0;
+}
+
 /**
  * Without a mouse (phones, tablets) there is no pointer lock: a finger drags the view around and on-screen arrows
  * stand in for the keys (`Walkthrough.setVirtualKeys()`).
@@ -37,7 +54,8 @@ export function walkthroughTouchMode(): boolean {
 
 /**
  * First-person walk through the floor: WASD / arrows move (Shift runs), the mouse looks around while the
- * pointer is locked to the canvas. Positions are plan millimetres; the walker collides with the walls and
+ * pointer is locked to the canvas. Positions are plan millimetres; the eye stays at eye height over the floor
+ * underfoot (`floorLevels()`: a room's floor elevation, a plot's ground level). The walker collides with the walls and
  * with door leaves and sashes, whose colliders change as they swing (`setLeafColliders()`). E asks to open or
  * close the door in view (`onUse`).
  * Esc ends it: the browser releases the pointer lock (the key itself never reaches the page while locked),
@@ -62,6 +80,8 @@ export class Walkthrough {
     private position: Vec2;
     private yaw: number;
     private leafColliders: readonly WallCollider[] = [];
+    /** The floor level under the walker, looked up again only once they move. */
+    private underfoot: {x: number; y: number; level: number} | null = null;
     private pitch = 0;
     private locked = false;
     private active = true;
@@ -72,6 +92,7 @@ export class Walkthrough {
         private wallColliders: readonly WallCollider[],
         start: Vec2,
         yaw: number,
+        private levels: FloorLevels = () => 0,
     ) {
         this.document = element.ownerDocument;
         this.position = collideCircle(start, BodyRadius, wallColliders);
@@ -107,6 +128,13 @@ export class Walkthrough {
     public setColliders(colliders: readonly WallCollider[]): void {
         this.wallColliders = colliders;
         this.collide();
+    }
+
+    /** Rooms or plots changed (a live update of the floor): the eye follows their levels. */
+    public setFloorLevels(levels: FloorLevels): void {
+        this.levels = levels;
+        this.underfoot = null;
+        this.applyCamera();
     }
 
     /** Door leaves and sashes moved; one swinging into the walker pushes them aside. */
@@ -186,7 +214,11 @@ export class Walkthrough {
     }
 
     private applyCamera(): void {
-        this.camera.position.set(this.position.x * MM, EyeHeight * MM, -this.position.y * MM);
+        const {x, y} = this.position;
+        if (this.underfoot === null || this.underfoot.x !== x || this.underfoot.y !== y) {
+            this.underfoot = {x, y, level: this.levels(this.position)};
+        }
+        this.camera.position.set(x * MM, (EyeHeight + this.underfoot.level) * MM, -y * MM);
         this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
     }
 

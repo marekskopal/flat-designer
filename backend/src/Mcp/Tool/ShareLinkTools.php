@@ -7,6 +7,7 @@ namespace FlatDesigner\Mcp\Tool;
 use FlatDesigner\Dto\ShareLinkDto;
 use FlatDesigner\Dto\ShareLinkInputDto;
 use FlatDesigner\Dto\ShareSettingsDto;
+use FlatDesigner\Dto\SunTimeDto;
 use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Service\Project\ShareLinkProvider;
 use Mcp\Capability\Attribute\McpTool;
@@ -21,7 +22,7 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class ShareLinkTools
 {
-	private const array Clearable = ['camera', 'sectionHeight', 'expiresAt'];
+	private const array Clearable = ['camera', 'sectionHeight', 'sun', 'expiresAt'];
 
 	private const array ViewsSchema = [
 		'type' => ['array', 'null'],
@@ -75,6 +76,9 @@ final readonly class ShareLinkTools
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700); null = no cut
 	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
 	 * @param bool $night start at night: no daylight, the flat lit by its lights
+	 * @param int|null $sunMonth with `sunHour`: the sun on the 21st of this month (1–12), from the project's location and north
+	 *   angle (update_project); null = the default afternoon sun
+	 * @param float|null $sunHour clock time on site of the sun, 0–24 (e.g. 15.5 = 15:30)
 	 * @param bool $presentation render in the presentation quality (ambient occlusion, antialiasing; slower)
 	 * @param bool $exports let the guest download the plan (PDF, SVG), the wall elevations (PDF) and the 3D model (glTF)
 	 * @param string $comments the floor's review comments: "hidden", "read" (the open threads) or "write" (guests may add some too)
@@ -99,6 +103,8 @@ final readonly class ShareLinkTools
 		?int $sectionHeight = null,
 		bool $dimensions = false,
 		bool $night = false,
+		?int $sunMonth = null,
+		?float $sunHour = null,
 		bool $presentation = false,
 		bool $exports = true,
 		string $comments = 'hidden',
@@ -114,6 +120,7 @@ final readonly class ShareLinkTools
 			'sectionHeight' => $sectionHeight,
 			'dimensions' => $dimensions,
 			'night' => $night,
+			'sun' => SunTimeDto::fields($sunMonth, $sunHour),
 			'presentation' => $presentation,
 			'exports' => $exports,
 			'comments' => $comments,
@@ -136,11 +143,14 @@ final readonly class ShareLinkTools
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700)
 	 * @param bool|null $dimensions show the dimension lines in the top view at the start
 	 * @param bool|null $night start at night (lit by the flat's lights)
+	 * @param int|null $sunMonth the sun on the 21st of this month (1–12); with `sunHour`, or alone to keep the link's hour
+	 * @param float|null $sunHour clock time on site of the sun, 0–24; alone, the link's month stays
 	 * @param bool|null $presentation render in the presentation quality
 	 * @param bool|null $exports let the guest download the plan (PDF, SVG), the wall elevations (PDF) and the 3D model (glTF)
 	 * @param string|null $comments the floor's review comments: "hidden", "read" or "write"
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
-	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "expiresAt" (never)
+	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "sun" (the default
+	 *   afternoon sun), "expiresAt" (never)
 	 */
 	#[McpTool(
 		name: 'update_share_link',
@@ -161,6 +171,8 @@ final readonly class ShareLinkTools
 		?int $sectionHeight = null,
 		?bool $dimensions = null,
 		?bool $night = null,
+		?int $sunMonth = null,
+		?float $sunHour = null,
 		?bool $presentation = null,
 		?bool $exports = null,
 		?string $comments = null,
@@ -180,6 +192,7 @@ final readonly class ShareLinkTools
 				'sectionHeight' => $sectionHeight,
 				'dimensions' => $dimensions,
 				'night' => $night,
+				'sun' => SunTimeDto::fields($sunMonth, $sunHour, is_array($current['sun'] ?? null) ? $current['sun'] : null),
 				'presentation' => $presentation,
 				'exports' => $exports,
 				'comments' => $comments,

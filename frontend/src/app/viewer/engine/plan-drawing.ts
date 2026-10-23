@@ -1,5 +1,5 @@
 import {localDate} from '@app/core/local-date';
-import {Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
 
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
 import {
@@ -30,6 +30,7 @@ import {
     Margin,
     Muted,
     n,
+    northArrowSvg,
     Padding,
     PaperLong,
     PaperShort,
@@ -66,6 +67,8 @@ const GlassGap = 20;
 const WallFill = '#2f2c28';
 const ItemFill = '#f3f0ea';
 const IndoorFill = '#ffffff';
+/** A property line: long dash, dot (paper mm). */
+const PlotDash = '6 1.2 0.6 1.2';
 const OutdoorFill = '#edf2e6';
 
 /** A polygon or polyline in plan mm. */
@@ -138,11 +141,12 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const hidden = hiddenItemIds(scene);
     const items = scene.items.filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
     const rooms = scene.rooms.map(roomShape);
+    const plots = (scene.plots ?? []).map(plotShape);
     const itemShapes = items.map(itemShape);
     const walls = wallShapes(scene.walls);
     const openings = scene.walls.flatMap(openingShapes);
 
-    const bounds = shapeBounds([...rooms, ...itemShapes, ...walls, ...openings]);
+    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings]);
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
@@ -163,10 +167,12 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const labels = [...itemLabels, ...roomLabels, ...dimensions];
 
     const body = [
-        ...[...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) => shapeSvg(shape, toPaper)),
+        ...[...plots, ...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) =>
+            shapeSvg(shape, toPaper),
+        ),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
-        planBandSvg(layout, info),
+        planBandSvg(layout, info, scene.location?.northAngle ?? 0),
     ];
     return {width: layout.width, height: layout.height, scale: s, svg: sheetSvg(layout.width, layout.height, body)};
 }
@@ -256,7 +262,12 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
 // --- Plan shapes (plan mm) ---
 
 function isOutdoor(room: Pick<Room, 'type'>): boolean {
-    return room.type === 'Terrace' || room.type === 'Garden';
+    return isOutdoorRoom(room);
+}
+
+/** A plot's boundary: the dash-dot line of a property line. */
+function plotShape(plot: Plot): Shape {
+    return {points: plot.polygon.map(([x, y]) => ({x, y})), closed: true, style: {stroke: Ink, width: 0.35, dash: PlotDash}};
 }
 
 function roomShape(room: Room): Shape {
@@ -490,6 +501,9 @@ function segmentDistance(p: Vec2, a: Vec2, b: Vec2): number {
 }
 
 /** The room's name, wrapped (and if need be made smaller) to the width free around its label point, over its area. */
+/** Paper size of the line under a room's name: its area and level. */
+const MetaSize = 2.1;
+
 function roomLabel(room: Room, scale: number): Label {
     const {at, clearance} = labelPoint(room.polygon);
     const width = ((2 * clearance) / scale) * 0.9;
@@ -504,9 +518,15 @@ function roomLabel(room: Room, scale: number): Label {
     }
     const widest = Math.max(0, ...names.map((name) => textWidth(name, RoomNameSize)));
     const size = widest > width ? Math.max(MinRoomNameSize, (RoomNameSize * width) / widest) : RoomNameSize;
+    const area = `${room.area.toFixed(2)} m²`;
+    const elevation = room.floorElevation ?? 0;
+    // The floor's height against the floor's level, in metres as levels are written on plans (+0.450, −0.150), when
+    // the room is wide enough for it beside the area.
+    const level = `${area} · ${elevation > 0 ? '+' : '−'}${(Math.abs(elevation) / 1000).toFixed(3)}`;
+    const meta = elevation !== 0 && textWidth(level, MetaSize) <= width ? level : area;
     return {
         at,
-        lines: [...names.map((name) => ({text: name, size, bold: true})), {text: `${room.area.toFixed(2)} m²`, size: 2.1, color: Muted}],
+        lines: [...names.map((name) => ({text: name, size, bold: true})), {text: meta, size: MetaSize, color: Muted}],
     };
 }
 
@@ -589,7 +609,7 @@ function perimeter(room: Pick<Room, 'polygon'>): number {
 // --- Page furniture (paper mm) ---
 
 /** The band under the plan: a scale bar and a north arrow at the left, the title block at the right. */
-function planBandSvg(layout: PlanLayout, info: SheetInfo): string {
+function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number): string {
     const top = layout.height - Margin - TitleBand;
     const left = Margin + Padding;
     const parts: string[] = [];
@@ -606,13 +626,8 @@ function planBandSvg(layout: PlanLayout, info: SheetInfo): string {
     parts.push(text({x: left + barLength, y: barY - 1.5}, `${metres} m`, 2.2, {anchor: 'middle'}));
     parts.push(text({x: left, y: barY + 6}, `1:${layout.scale}`, 2.4, {bold: true}));
 
-    // North arrow: the plan's y axis points north.
-    const ax = left + barLength + 16;
-    const ay = top + 14;
-    parts.push(
-        `<path d="M ${n(ax)} ${n(ay - 6)} L ${n(ax + 2.6)} ${n(ay + 3)} L ${n(ax)} ${n(ay + 1.2)} L ${n(ax - 2.6)} ${n(ay + 3)} Z" fill="${Ink}"/>`,
-    );
-    parts.push(text({x: ax, y: ay - 7.5}, 'N', 2.6, {bold: true, anchor: 'middle'}));
+    // North arrow: true north, turned from the plan's y axis by the site's north angle.
+    parts.push(northArrowSvg({x: left + barLength + 16, y: top + 14}, northAngle));
 
     parts.push(titleBlockSvg(layout.width, layout.height, info, `Floor plan · 1:${layout.scale} (A4)`));
     return parts.join('');

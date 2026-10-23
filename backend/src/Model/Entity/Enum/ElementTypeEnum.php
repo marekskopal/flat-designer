@@ -12,4 +12,5 @@ enum ElementTypeEnum: string
 	case Room = 'Room';
 	case Group = 'Group';
 	case VariantSet = 'VariantSet';
+	case Plot = 'Plot';
 }

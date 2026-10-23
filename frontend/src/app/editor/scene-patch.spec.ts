@@ -131,6 +131,14 @@ describe('patchScene', () => {
         expect(patched?.items[0].roomId).toBeNull();
     });
 
+    it('adds, changes and removes plots, also in scenes saved before them', () => {
+        const plot = {id: 4, name: 'Parcel', polygon: [[0, 0], [9000, 0], [9000, 9000]], area: 40.5, groundMaterialId: null};
+        const added = patchScene(scene, result('Plot', 4, plot));
+        expect(added?.plots).toEqual([plot]);
+        expect(patchScene({...added!, revision: 7}, result('Plot', 4, {...plot, name: 'Lot'}))?.plots?.[0].name).toBe('Lot');
+        expect(patchScene({...added!, revision: 7}, result('Plot', 4, null))?.plots).toEqual([]);
+    });
+
     it('applies every change of a batch', () => {
         const grouped = result('Group', 4, {id: 4, name: 'Pair', variantSetId: null});
         const member = result('Item', 9, {...item, groupId: 4});

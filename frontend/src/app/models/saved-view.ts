@@ -1,3 +1,4 @@
+import {SunTime} from './scene';
 import {CameraPose} from './share';
 
 /** How a saved view shows its floor (`SavedViewSettingsDto`). */
@@ -13,6 +14,8 @@ export interface SavedViewSettings {
     night: boolean;
     /** Null: the lights follow the night. */
     lightsOn: boolean | null;
+    /** The sun at a clock time on site; null: the default afternoon sun. Missing in views saved before it. */
+    sun?: SunTime | null;
     presentation: boolean;
     /** The variant shown per variant set: set id → group id. */
     variants: Record<string, number>;
