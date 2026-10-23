@@ -1,5 +1,5 @@
 import {localDate} from '@app/core/local-date';
-import {Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
 
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
 import {
@@ -67,6 +67,8 @@ const GlassGap = 20;
 const WallFill = '#2f2c28';
 const ItemFill = '#f3f0ea';
 const IndoorFill = '#ffffff';
+/** A property line: long dash, dot (paper mm). */
+const PlotDash = '6 1.2 0.6 1.2';
 const OutdoorFill = '#edf2e6';
 
 /** A polygon or polyline in plan mm. */
@@ -139,11 +141,12 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const hidden = hiddenItemIds(scene);
     const items = scene.items.filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
     const rooms = scene.rooms.map(roomShape);
+    const plots = (scene.plots ?? []).map(plotShape);
     const itemShapes = items.map(itemShape);
     const walls = wallShapes(scene.walls);
     const openings = scene.walls.flatMap(openingShapes);
 
-    const bounds = shapeBounds([...rooms, ...itemShapes, ...walls, ...openings]);
+    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings]);
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
@@ -164,7 +167,9 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const labels = [...itemLabels, ...roomLabels, ...dimensions];
 
     const body = [
-        ...[...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) => shapeSvg(shape, toPaper)),
+        ...[...plots, ...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) =>
+            shapeSvg(shape, toPaper),
+        ),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
         planBandSvg(layout, info, scene.location?.northAngle ?? 0),
@@ -258,6 +263,11 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
 
 function isOutdoor(room: Pick<Room, 'type'>): boolean {
     return room.type === 'Terrace' || room.type === 'Garden';
+}
+
+/** A plot's boundary: the dash-dot line of a property line. */
+function plotShape(plot: Plot): Shape {
+    return {points: plot.polygon.map(([x, y]) => ({x, y})), closed: true, style: {stroke: Ink, width: 0.35, dash: PlotDash}};
 }
 
 function roomShape(room: Room): Shape {

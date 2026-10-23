@@ -32,6 +32,7 @@
                     <option [value]="'opening:' + type[0]" [disabled]="selectedWall() === null">{{ type[1] }} in selected wall</option>
                 }
                 <option value="room">Room</option>
+                <option value="plot">Plot boundary</option>
             </optgroup>
         </select>
         <button
@@ -150,9 +151,9 @@
         }
     } @else {
         <p class="hint">
-            Click an item, wall, door, window or room to edit it; an item of a group selects the whole group (Alt+click or double-click
+            Click an item, wall, door, window, room or the plot's ground to edit it; an item of a group selects the whole group (Alt+click or double-click
             for just the item), Shift+click picks items to group them. In the Plan view drag items, groups, walls and doors / windows; a selected
-            wall's ends and a selected room's corners get handles (drag a midpoint for a new corner, double-click a corner to remove
+            wall's ends and a selected room's or plot's corners get handles (drag a midpoint for a new corner, double-click a corner to remove
             it). Drags snap to the grid and to nearby corners; Shift moves in 1 mm steps without snapping, Esc cancels.
         </p>
     }

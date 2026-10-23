@@ -10,6 +10,7 @@ use FlatDesigner\Dto\ItemDto;
 use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
+use FlatDesigner\Dto\PlotDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
@@ -23,6 +24,7 @@ use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\ModelAsset;
+use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
@@ -31,6 +33,7 @@ use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\PlotRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -48,6 +51,7 @@ final readonly class SceneProvider
 		private ItemGroupRepository $groupRepository,
 		private VariantSetRepository $variantSetRepository,
 		private FloorUnderlayRepository $underlayRepository,
+		private PlotRepository $plotRepository,
 		private ShownPictures $shownPictures,
 	) {
 	}
@@ -102,6 +106,7 @@ final readonly class SceneProvider
 			models: array_map(fn (ModelAsset $model): SceneModelDto => SceneModelDto::fromEntity($model), array_values($models)),
 			pictures: $this->shownPictures->byItems($floor->project, $items),
 			location: LocationDto::fromEntity($floor->project),
+			plots: array_map(fn (Plot $plot): PlotDto => PlotDto::fromEntity($plot), $this->plotRepository->findByFloor($floor->id)),
 		);
 	}
 

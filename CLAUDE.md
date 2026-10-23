@@ -273,6 +273,14 @@ format is the text in `FurnitureTools::Format`.
 - A sun time (`SunTimeDto`, `{month, hour}`: the 21st of the month at that clock time) is a Display option
   (`SunTimeComponent`, shown when the scene has a location), kept by saved views and share links (`sun`; null or
   missing means the default sun). The north arrows of the plan PDF and the elevations' key plans follow `northAngle`.
+- Plots (`Plot`, `plots`, element type `Plot`): the land around the building on a floor, a boundary `polygon` and a
+  `groundMaterialId` (null means a lawn). A floor element like a room: `PlotHandler` through `SceneEditor` (undo, change
+  log; its default boundary is a rectangle 3 m clear of the floor's walls and rooms, and it may reach a kilometre from
+  the origin), REST `…/plots`, MCP `add_plot` / `update_plot` / `delete_plot`, the scene's `plots` and the snapshot restore
+  (`SnapshotPlotRestorer`). The viewer draws the ground just below the rooms' floors and the boundary as a dashed line
+  (`viewer/engine/plots.ts`, `parts.plots`, tagged `plotId`); a selected plot gets corner handles like a room (the
+  engine's `Outlined` vertex drag). The plan PDF draws the boundary as a dash-dot property line. Paths and lawns on it
+  are rooms; fences are `Fence` items.
 
 ## Lighting
 

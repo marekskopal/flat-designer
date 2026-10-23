@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
+import {Item, PlanPoint, Plot, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -76,6 +76,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
+import {buildPlot, highlightPlot} from './plots';
 import {
     PresentationPipeline,
     PresentationPixelRatio,
@@ -177,6 +178,9 @@ interface WallRun {
     bend: {closing: boolean; sagitta: number} | null;
 }
 
+/** An element whose outline gets corner handles: a room or a plot. */
+type Outlined = {kind: 'room'; element: Room} | {kind: 'plot'; element: Plot};
+
 interface DragBase {
     plane: THREE.Plane;
     /** Plan point (mm) under the pointer when the drag started. */
@@ -191,7 +195,7 @@ type Drag = DragBase &
         | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
-        | {kind: 'vertex'; room: Room; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
+        | {kind: 'vertex'; outline: Outlined; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
     );
 
 /** The door (or walkable French window) the walker looks at, and whether it is open or opening. */
@@ -623,6 +627,21 @@ export class ViewerEngine {
             this.indexWalls();
         }
 
+        const plots = diffById(previous.plots ?? [], scene.plots ?? []);
+        for (const id of [...plots.removed, ...plots.changed.map((p) => p.id)]) {
+            const group = parts.plots.get(id);
+            if (group !== undefined) {
+                this.disposeObject(group);
+                parts.plots.delete(id);
+            }
+        }
+        for (const plot of plots.changed) {
+            const group = buildPlot(plot, materials);
+            parts.plots.set(plot.id, group);
+            parts.root.add(group);
+        }
+        this.highlightPlots();
+
         for (const id of [...rooms.removed, ...rooms.changed.map((r) => r.id)]) {
             this.removeRoom(id);
         }
@@ -769,8 +788,8 @@ export class ViewerEngine {
     private disposeObject(object: THREE.Object3D): void {
         object.removeFromParent();
         object.traverse((o) => {
-            // Model instances share their geometry and materials with the model library's template.
-            if (o instanceof THREE.Mesh && o.userData['shared'] !== true) {
+            // Model instances share their geometry and materials with the model library's template. Lines: a plot's boundary.
+            if ((o instanceof THREE.Mesh || o instanceof THREE.Line) && o.userData['shared'] !== true) {
                 (o.geometry as THREE.BufferGeometry).dispose();
                 for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
                     if (this.materials?.owns(material) !== true && material !== this.parts?.sectionMaterial) {
@@ -789,6 +808,7 @@ export class ViewerEngine {
         this.invalidate();
         this.selection = selection;
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
+        this.highlightPlots();
 
         this.removeOutline();
         const objects = this.objectsOf(selection);
@@ -1440,6 +1460,30 @@ export class ViewerEngine {
         this.moveCamera(target.clone().add(offset), target, true);
     }
 
+    /** The selected room or plot, whose corners get handles. */
+    private selectedOutline(): Outlined | null {
+        const selection = this.selection;
+        const scene = this.sceneData;
+        if (selection === null || scene === null) {
+            return null;
+        }
+        if (selection.kind === 'room') {
+            const room = scene.rooms.find((r) => r.id === selection.id);
+            return room === undefined ? null : {kind: 'room', element: room};
+        }
+        if (selection.kind === 'plot') {
+            const plot = scene.plots?.find((p) => p.id === selection.id);
+            return plot === undefined ? null : {kind: 'plot', element: plot};
+        }
+        return null;
+    }
+
+    /** The selected plot's boundary in the highlight colour. */
+    private highlightPlots(): void {
+        const selection = this.selection;
+        this.parts?.plots.forEach((group, id) => highlightPlot(group, selection?.kind === 'plot' && selection.id === id));
+    }
+
     /** Tints the room's floor; `floor` overrides the room's own mesh (the preview while a corner is dragged). */
     private setSelectedRoom(roomId: number | null, floor?: THREE.Mesh): void {
         this.labels.forEach((label, id) => label.element.classList.toggle('selected', id === roomId));
@@ -1773,7 +1817,7 @@ export class ViewerEngine {
         if (drag.kind === 'vertex' && drag.inserted) {
             // A new corner pulled out of an edge shows up right away.
             drag.moved = true;
-            this.previewRoom(drag);
+            this.previewOutline(drag);
         }
     };
 
@@ -1796,20 +1840,21 @@ export class ViewerEngine {
             const mode = role.role === 'wallStart' ? 'start' : role.role === 'wallEnd' ? 'end' : 'curve';
             return wall === undefined ? null : {kind: 'wall', plane, grab, moved: false, wall, mode, current: wall, fits: true, snap: null};
         }
-        const room = this.selection.kind === 'room' ? scene.rooms.find((r) => r.id === this.selection?.id) : undefined;
-        if (room === undefined) {
+        const outline = this.selectedOutline();
+        if (outline === null) {
             return null;
         }
+        const original = outline.element.polygon;
         if (role.role === 'vertex') {
-            const polygon = room.polygon;
-            return {kind: 'vertex', plane, grab, moved: false, room, index: role.index, inserted: false, polygon, valid: true, snap: null};
+            const index = role.index;
+            return {kind: 'vertex', plane, grab, moved: false, outline, index, inserted: false, polygon: original, valid: true, snap: null};
         }
         if (role.role === 'midpoint') {
-            const midpoint = edgeMidpoints(room.polygon)[role.index];
-            const polygon = insertVertex(room.polygon, role.index, midpoint);
+            const midpoint = edgeMidpoints(original)[role.index];
+            const polygon = insertVertex(original, role.index, midpoint);
             const at = {x: polygon[role.index + 1][0], y: polygon[role.index + 1][1]};
             const valid = isSimplePolygon(polygon);
-            return {kind: 'vertex', plane, grab: at, moved: false, room, index: role.index + 1, inserted: true, polygon, valid, snap: null};
+            return {kind: 'vertex', plane, grab: at, moved: false, outline, index: role.index + 1, inserted: true, polygon, valid, snap: null};
         }
         return null;
     }
@@ -1823,7 +1868,7 @@ export class ViewerEngine {
         const hit = this.pick(event);
         const selection = this.groupOf(selectionOf(hit?.object ?? null), event);
         const scene = this.sceneData;
-        if (hit === undefined || selection === null || scene === null || selection.kind === 'room') {
+        if (hit === undefined || selection === null || scene === null || selection.kind === 'room' || selection.kind === 'plot') {
             return null;
         }
         // Drag in the horizontal plane through the grabbed point; the element keeps its elevation.
@@ -1927,12 +1972,12 @@ export class ViewerEngine {
                 break;
             }
             case 'vertex': {
-                const [x0, y0] = drag.inserted ? [drag.grab.x, drag.grab.y] : drag.room.polygon[drag.index];
+                const [x0, y0] = drag.inserted ? [drag.grab.x, drag.grab.y] : drag.outline.element.polygon[drag.index];
                 const snapped = this.snapVertex(drag, {x: x0 + delta.x, y: y0 + delta.y}, free);
                 drag.polygon = drag.polygon.map((p, i): PlanPoint => (i === drag.index ? [snapped.point.x, snapped.point.y] : p));
                 drag.valid = isSimplePolygon(drag.polygon);
                 drag.snap = snapped.kind;
-                this.previewRoom(drag);
+                this.previewOutline(drag);
                 break;
             }
         }
@@ -2001,7 +2046,7 @@ export class ViewerEngine {
         return sagitta;
     }
 
-    /** A room corner snaps onto other rooms' corners and wall corners, or into line with its neighbours. */
+    /** A room's or plot's corner snaps onto the other outlines' corners and wall corners, or into line with its neighbours. */
     private snapVertex(drag: Extract<Drag, {kind: 'vertex'}>, point: Vec2, free: boolean): SnapResult {
         const scene = this.sceneData;
         if (free || scene === null) {
@@ -2009,10 +2054,13 @@ export class ViewerEngine {
         }
         const n = drag.polygon.length;
         const neighbours = [drag.polygon[(drag.index + n - 1) % n], drag.polygon[(drag.index + 1) % n]].map(([x, y]) => ({x, y}));
-        const corners = [
-            ...scene.rooms.filter((r) => r.id !== drag.room.id).flatMap((r) => r.polygon.map(([x, y]) => ({x, y}))),
-            ...scene.walls.flatMap((w) => wallCorners(w, this.joints.get(w.id))),
-        ];
+        const own = (kind: Outlined['kind'], id: number): boolean => drag.outline.kind === kind && drag.outline.element.id === id;
+        // The other outlines' corners, not the dragged one's (by id: the scene may have been reloaded meanwhile).
+        const outlines = [
+            ...scene.rooms.filter((r) => !own('room', r.id)).flatMap((r) => r.polygon),
+            ...(scene.plots ?? []).filter((p) => !own('plot', p.id)).flatMap((p) => p.polygon),
+        ].map(([x, y]) => ({x, y}));
+        const corners = [...outlines, ...scene.walls.flatMap((w) => wallCorners(w, this.joints.get(w.id)))];
         return snapPoint(point, {grid: DragSnap, radius: (SnapPixels * this.metresPerPixel()) / MM, points: corners, anchors: neighbours});
     }
 
@@ -2071,7 +2119,11 @@ export class ViewerEngine {
         if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
             return;
         }
-        this.onSelect(this.groupOf(selectionOf(this.pick(event)?.object ?? null), event), event.shiftKey);
+        const picked = selectionOf(this.pick(event)?.object ?? null);
+        // A plot's ground surrounds the building: outside the plan view, where it has no handles, a click on it is a
+        // click on the background, which clears the selection as it did before the plot was there.
+        const selection = picked?.kind === 'plot' && !this.isTopDown() ? null : picked;
+        this.onSelect(this.groupOf(selection, event), event.shiftKey);
     };
 
     /**
@@ -2125,8 +2177,8 @@ export class ViewerEngine {
                 break;
             }
             case 'vertex':
-                if (drag.valid && (drag.inserted || !sameJson(drag.polygon, drag.room.polygon))) {
-                    edit = {selection: {kind: 'room', id: drag.room.id}, fields: {polygon: drag.polygon}};
+                if (drag.valid && (drag.inserted || !sameJson(drag.polygon, drag.outline.element.polygon))) {
+                    edit = {selection: {kind: drag.outline.kind, id: drag.outline.element.id}, fields: {polygon: drag.polygon}};
                 }
                 break;
         }
@@ -2187,17 +2239,17 @@ export class ViewerEngine {
             this.onSelect(clicked, false);
             return;
         }
-        if (!this.editMode || !this.isTopDown() || this.selection?.kind !== 'room') {
+        const outline = this.editMode && this.isTopDown() ? this.selectedOutline() : null;
+        if (outline === null) {
             return;
         }
         const role = (this.pickHandle(event)?.object.userData as {handle?: HandleRole} | undefined)?.handle;
-        const room = this.sceneData?.rooms.find((r) => r.id === this.selection?.id);
-        if (role?.role !== 'vertex' || room === undefined) {
+        if (role?.role !== 'vertex') {
             return;
         }
-        const polygon = removeVertex(room.polygon, role.index);
+        const polygon = removeVertex(outline.element.polygon, role.index);
         if (polygon !== null && isSimplePolygon(polygon)) {
-            void this.onEdit({kind: 'room', id: room.id}, {polygon});
+            void this.onEdit({kind: outline.kind, id: outline.element.id}, {polygon});
         }
     };
 
@@ -2630,14 +2682,22 @@ export class ViewerEngine {
         this.updateHandles();
     }
 
-    /** Shows the dragged outline of a room: its floor, highlight, label and handles. */
-    private previewRoom(drag: Extract<Drag, {kind: 'vertex'}>): void {
+    /** Shows the dragged outline of a room (its floor, highlight, label) or plot (its ground and boundary), and the handles. */
+    private previewOutline(drag: Extract<Drag, {kind: 'vertex'}>): void {
         const parts = this.parts;
         const materials = this.materials;
         if (parts === null || materials === null) {
             return;
         }
-        const room = {...drag.room, polygon: drag.polygon};
+        if (drag.outline.kind === 'plot') {
+            const plot = buildPlot({...drag.outline.element, polygon: drag.polygon}, materials);
+            highlightPlot(plot, true);
+            const original = parts.plots.get(drag.outline.element.id);
+            this.setPreview(original === undefined ? [] : [original], [plot]);
+            this.updateHandles();
+            return;
+        }
+        const room = {...drag.outline.element, polygon: drag.polygon};
         const floor = buildFloor(room, materials);
         const original = parts.rooms.get(room.id);
         this.setPreview(original === undefined ? [] : [original.floor], [floor]);
@@ -2677,7 +2737,7 @@ export class ViewerEngine {
         });
     }
 
-    /** Recreates the handles of the selected wall (its ends) or room (corners, plus edge midpoints to pull new corners out). */
+    /** Recreates the handles of the selected wall (its ends), room or plot (corners, plus edge midpoints to pull new corners out). */
     private updateHandles(): void {
         this.handles.clear();
         const scene = this.sceneData;
@@ -2699,14 +2759,14 @@ export class ViewerEngine {
             // The middle of the centre line bends the wall.
             const frame = wallFrame(wall);
             this.addHandle(pointOnWall(frame, frame.length / 2), y, {role: 'wallCurve'}, active === 'curve' ? state : 'normal');
-        } else if (this.selection.kind === 'room') {
-            const id = this.selection.id;
-            const room = scene.rooms.find((r) => r.id === id);
-            const vertexDrag = drag?.kind === 'vertex' && drag.room.id === id ? drag : null;
-            const polygon = vertexDrag?.polygon ?? room?.polygon;
-            if (polygon === undefined) {
+        } else {
+            const outline = this.selectedOutline();
+            if (outline === null) {
                 return;
             }
+            const dragged = drag?.kind === 'vertex' && drag.outline.kind === outline.kind && drag.outline.element.id === outline.element.id;
+            const vertexDrag = dragged ? drag : null;
+            const polygon = vertexDrag?.polygon ?? outline.element.polygon;
             polygon.forEach(([x, y], index) => {
                 let state: HandleState = 'normal';
                 if (vertexDrag?.index === index) {
@@ -2880,7 +2940,7 @@ export class ViewerEngine {
             const geometries = new Set<THREE.BufferGeometry>();
             const materials = new Set<THREE.Material>();
             this.content.traverse((object) => {
-                if (object instanceof THREE.Mesh) {
+                if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
                     geometries.add(object.geometry);
                     (Array.isArray(object.material) ? object.material : [object.material]).forEach((m) => materials.add(m));
                 }

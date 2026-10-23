@@ -126,6 +126,15 @@ describe('planSheet', () => {
         expect(labels).toEqual(expect.arrayContaining(['1000', '900', '2100']));
     });
 
+    it('draws a plot boundary as a property line and fits the page to it', () => {
+        const polygon: PlanPoint[] = [[-3000, -3000], [12000, -3000], [12000, 9000], [-3000, 9000]];
+        const plot = {id: 7, name: 'Parcel', polygon, area: 180, groundMaterialId: null};
+        const sheet = planSheet(scene({plots: [plot]}), info);
+
+        expect(sheet.scale).toBe(100);
+        expect(sheet.svg).toContain('stroke-dasharray="6 1.2 0.6 1.2"');
+    });
+
     it('dimensions only the room edges along a wall, not where open-plan rooms meet', () => {
         const labels = texts(planSheet(scene({walls: box().filter((w) => w.id !== 2)}), info).svg);
 

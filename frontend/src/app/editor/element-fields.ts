@@ -240,6 +240,11 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool', when: (element) => element['type'] !== 'Niche'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
     ],
+    plot: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
+        {key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
+    ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'code', label: 'Code', type: 'text', half: true},

@@ -189,10 +189,6 @@ final class PictureTest extends IntegrationTestCase
 
 	private static function itemsPath(Project $project, int $floorId): string
 	{
-		return str_replace(
-			['{projectId:number}', '{floorId:number}', '{elementType:items|walls|openings|rooms}'],
-			[(string) $project->id, (string) $floorId, 'items'],
-			Routes::ProjectFloorElements->value,
-		);
+		return Fixture::elementsPath($project, $floorId);
 	}
 }

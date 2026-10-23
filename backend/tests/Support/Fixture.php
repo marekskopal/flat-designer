@@ -19,6 +19,7 @@ use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Opening;
+use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\User;
@@ -27,6 +28,7 @@ use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\PlotRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Authentication\TokenService;
@@ -88,6 +90,12 @@ final class Fixture
 		return self::service(ProjectProvider::class)->create($owner, new ProjectInputDto($name, 'Example City', null));
 	}
 
+	/** The elements path of one floor (`Routes::ProjectFloorElements` with the type filled in). */
+	public static function elementsPath(Project $project, int $floorId, string $type = 'items'): string
+	{
+		return sprintf('/api/projects/%d/floors/%d/%s', $project->id, $floorId, $type);
+	}
+
 	public static function firstFloor(Project $project): Floor
 	{
 		return self::service(FloorRepository::class)->findByProject($project->id)[0];
@@ -109,6 +117,12 @@ final class Fixture
 			wallFinishes: $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":1200}]',
 		));
 		self::service(RoomRepository::class)->persist($room);
+		self::service(PlotRepository::class)->persist(self::stamp(new Plot(
+			floor: $floor,
+			name: 'Parcel',
+			polygon: '[[-3000,-3000],[9000,-3000],[9000,8000],[-3000,8000]]',
+			groundMaterial: $material,
+		)));
 
 		$wall = self::stamp(new Wall(
 			floor: $floor,

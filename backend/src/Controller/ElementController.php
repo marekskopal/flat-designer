@@ -20,7 +20,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Editing floor elements (items, walls, openings, rooms; groups are created, moved and dissolved through
+ * Editing floor elements (items, walls, openings, rooms, plots; groups are created, moved and dissolved through
  * `GroupController`, renamed, copied and deleted — with their items — here; variant sets are made, extended
  * and switched through `VariantSetController`, renamed and decided — keeping the active variant — here). Bodies are JSON objects of the element's
  * fields as the scene serves them; PATCH changes only the given ones. Send the scene's `revision` as
@@ -36,6 +36,7 @@ final readonly class ElementController
 		'rooms' => ElementTypeEnum::Room,
 		'groups' => ElementTypeEnum::Group,
 		'variant-sets' => ElementTypeEnum::VariantSet,
+		'plots' => ElementTypeEnum::Plot,
 	];
 
 	public function __construct(

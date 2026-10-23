@@ -65,6 +65,17 @@ export interface WallFinish {
     top: number;
 }
 
+/** The land the building stands on (`PlotDto`): its boundary in plan mm and the ground inside it. */
+export interface Plot {
+    id: number;
+    name: string;
+    polygon: PlanPoint[];
+    /** m². */
+    area: number;
+    /** Null: a lawn. */
+    groundMaterialId: number | null;
+}
+
 export interface Room {
     id: number;
     code: string;
@@ -237,6 +248,8 @@ export interface Scene {
     models?: SceneModel[];
     /** The project files the `Custom` items show as pictures; absent in older versions. */
     pictures?: number[];
+    /** The land around the building; absent in older versions. */
+    plots?: Plot[];
     /** Where the building stands, for the sun; absent in older versions. */
     location?: SiteLocation | null;
 }

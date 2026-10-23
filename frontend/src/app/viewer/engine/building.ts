@@ -50,6 +50,7 @@ import {
     wallSamples,
     WindowFrameBar,
 } from './plan-geometry';
+import {buildPlot} from './plots';
 import {alignTiles, turnLevelUvs} from './tiling';
 
 const SlabThickness = 300;
@@ -65,6 +66,8 @@ export interface BuildingParts {
     slab: THREE.Mesh;
     /** Per room: its floor mesh (for picking and highlighting), ceiling and wall finishes, keyed by room id. */
     rooms: Map<number, RoomParts>;
+    /** Plots (their ground and boundary) keyed by plot id. */
+    plots: Map<number, THREE.Group>;
     /** Wall groups (with their doors and windows) keyed by wall id. */
     walls: Map<number, THREE.Group>;
     /** Fill of wall cores revealed by the section plane, shared by all walls. */
@@ -94,6 +97,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
         slab: buildSlab(scene.walls, materials),
         rooms: new Map(),
+        plots: new Map(),
         walls: new Map(),
         sectionMaterial: materials.sectionFill(),
     };
@@ -101,6 +105,11 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
 
     for (const room of scene.rooms) {
         addRoom(parts, buildRoom(room, scene.walls, materials), room.id);
+    }
+    for (const plot of scene.plots ?? []) {
+        const group = buildPlot(plot, materials);
+        parts.plots.set(plot.id, group);
+        root.add(group);
     }
 
     const joints = wallJoints(scene.walls);
