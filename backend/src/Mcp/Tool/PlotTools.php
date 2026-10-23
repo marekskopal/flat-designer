@@ -23,6 +23,7 @@ final readonly class PlotTools
 	 * @param list<list<int>> $polygon the plot's boundary as [[x, y], …] in mm (plan coordinates of the floor), at least 3 points, not crossing itself
 	 * @param string|null $name e.g. "Parcel 1234/5" (default "Plot")
 	 * @param int|null $groundMaterialId the ground inside the boundary, from list_materials (default a lawn)
+	 * @param int|null $groundLevel mm the ground lies above (+) or below (−) the floor's level, e.g. -300 when the ground floor stands on a plinth (default 0)
 	 */
 	#[McpTool(
 		name: 'add_plot',
@@ -35,19 +36,23 @@ final readonly class PlotTools
 		array $polygon,
 		?string $name = null,
 		?int $groundMaterialId = null,
+		?int $groundLevel = null,
 	): EditResultDto
 	{
 		return $this->editor->create(
 			$this->context->user(),
 			$this->context->floor($projectId, $floorId),
 			ElementTypeEnum::Plot,
-			ToolContext::fields(['polygon' => $polygon, 'name' => $name, 'groundMaterialId' => $groundMaterialId]),
+			ToolContext::fields(
+				['polygon' => $polygon, 'name' => $name, 'groundMaterialId' => $groundMaterialId, 'groundLevel' => $groundLevel],
+			),
 		);
 	}
 
 	/**
 	 * @param list<list<int>>|null $polygon new boundary as [[x, y], …] in mm
 	 * @param int|null $groundMaterialId the ground inside the boundary, from list_materials
+	 * @param int|null $groundLevel mm the ground lies above (+) or below (−) the floor's level
 	 * @param list<string>|null $clear fields to set to none: "groundMaterialId" (a lawn again)
 	 */
 	#[McpTool(name: 'update_plot', description: 'Change a plot. Only the given fields change.')]
@@ -58,6 +63,7 @@ final readonly class PlotTools
 		?string $name = null,
 		?array $polygon = null,
 		?int $groundMaterialId = null,
+		?int $groundLevel = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -65,7 +71,11 @@ final readonly class PlotTools
 			$this->context->floor($projectId, $floorId),
 			ElementTypeEnum::Plot,
 			$plotId,
-			ToolContext::fields(['name' => $name, 'polygon' => $polygon, 'groundMaterialId' => $groundMaterialId], $clear, self::Clearable),
+			ToolContext::fields(
+				['name' => $name, 'polygon' => $polygon, 'groundMaterialId' => $groundMaterialId, 'groundLevel' => $groundLevel],
+				$clear,
+				self::Clearable,
+			),
 		);
 	}
 

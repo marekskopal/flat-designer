@@ -22,6 +22,9 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class RoomHandler implements ElementHandler
 {
+	/** How far a room's floor may lie above or below the floor's level, mm. */
+	private const int MaxFloorElevation = 3000;
+
 	public function __construct(
 		private RoomRepository $roomRepository,
 		private MaterialResolver $materialResolver,
@@ -49,6 +52,7 @@ final readonly class RoomHandler implements ElementHandler
 			'tileOriginX',
 			'tileOriginY',
 			'floorAngle',
+			'floorElevation',
 			...array_keys(RoomCeiling::Defaults),
 		];
 	}
@@ -73,6 +77,7 @@ final readonly class RoomHandler implements ElementHandler
 			'tileOriginX' => null,
 			'tileOriginY' => null,
 			'floorAngle' => 0,
+			'floorElevation' => 0,
 		] + RoomCeiling::Defaults;
 	}
 
@@ -114,6 +119,8 @@ final readonly class RoomHandler implements ElementHandler
 			'tileOriginY' => $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit),
 			// Planks and tiles look the same turned half round, so 0 ≤ angle < 180 (missing in older change states).
 			'floorAngle' => ((self::floorAngle($fields) % 180) + 180) % 180,
+			// Missing in older change states: the floor's level.
+			'floorElevation' => $fields->raw('floorElevation') === null ? 0 : self::floorElevation($fields),
 		] + $this->ceiling->fields($ceilingHeight, $fields);
 	}
 
@@ -169,8 +176,14 @@ final readonly class RoomHandler implements ElementHandler
 		$room->tileOriginX = $fields->nullableInt('tileOriginX', -State::CoordinateLimit, State::CoordinateLimit);
 		$room->tileOriginY = $fields->nullableInt('tileOriginY', -State::CoordinateLimit, State::CoordinateLimit);
 		$room->floorAngle = $fields->int('floorAngle', 0, 179, 'degrees');
+		$room->floorElevation = self::floorElevation($fields);
 		$this->ceiling->apply($room, $fields);
 		$this->roomRepository->persist($room);
+	}
+
+	private static function floorElevation(FieldReader $fields): int
+	{
+		return $fields->int('floorElevation', -self::MaxFloorElevation, self::MaxFloorElevation);
 	}
 
 	private static function floorAngle(FieldReader $fields): int

@@ -74,6 +74,8 @@ export interface Plot {
     area: number;
     /** Null: a lawn. */
     groundMaterialId: number | null;
+    /** mm the ground lies above (+) or below (−) the floor's level; missing in older versions: 0. */
+    groundLevel?: number;
 }
 
 export interface Room {
@@ -97,6 +99,11 @@ export interface Room {
      * Only level faces turn, the wall bands keep their joints. Missing in versions saved before it existed.
      */
     floorAngle?: number;
+    /**
+     * mm the room's floor lies above (+) or below (−) the floor's level (a raised deck, a terrace a step down); its
+     * ceiling, finishes and skirting go with it, items keep their own z. Missing in older versions: 0.
+     */
+    floorElevation?: number;
     /** Ceiling surface; null: white plaster (also when missing, in older versions). */
     ceilingMaterialId?: number | null;
     /**

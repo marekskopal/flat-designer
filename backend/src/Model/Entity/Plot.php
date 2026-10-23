@@ -22,6 +22,10 @@ class Plot extends AEntity
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
 
+	/** mm the ground lies above (+) or below (−) the floor's level; the building's slab shows above a lower ground. */
+	#[Column(type: Type::Int)]
+	public int $groundLevel = 0;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

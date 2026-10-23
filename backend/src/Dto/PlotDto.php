@@ -8,7 +8,7 @@ use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Service\Editor\Geometry\PlanMath;
 use FlatDesigner\Service\Json\JsonDecoder;
 
-/** A plot as the scene serves it: its boundary (plan mm), area in m² and ground material (null: a lawn). */
+/** A plot as the scene serves it: its boundary (plan mm), area in m², ground material (null: a lawn) and level (mm). */
 final readonly class PlotDto
 {
 	/** @param list<array{int, int}> $polygon */
@@ -18,6 +18,7 @@ final readonly class PlotDto
 		public array $polygon,
 		public float $area,
 		public ?int $groundMaterialId,
+		public int $groundLevel,
 	)
 	{
 	}
@@ -33,6 +34,7 @@ final readonly class PlotDto
 			polygon: $polygon,
 			area: round(abs(PlanMath::signedArea($points)) / 1000000, 2),
 			groundMaterialId: $plot->groundMaterial?->id,
+			groundLevel: $plot->groundLevel,
 		);
 	}
 }

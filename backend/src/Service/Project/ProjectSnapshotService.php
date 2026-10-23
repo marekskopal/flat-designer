@@ -237,6 +237,7 @@ final readonly class ProjectSnapshotService
 			$room->tileOriginX = $data->nullableInt('tileOriginX');
 			$room->tileOriginY = $data->nullableInt('tileOriginY');
 			$room->floorAngle = $data->nullableInt('floorAngle') ?? 0;
+			$room->floorElevation = $data->nullableInt('floorElevation') ?? 0;
 			// Nor ceilings and skirting before they had their own fields.
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');

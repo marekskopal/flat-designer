@@ -76,7 +76,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
-import {buildPlot, highlightPlot} from './plots';
+import {buildPlot, groundUnder, highlightPlot, lowestGround} from './plots';
 import {
     PresentationPipeline,
     PresentationPixelRatio,
@@ -91,7 +91,7 @@ import {sameSelection, Selection, selectionOf} from './selection';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
-import {Walkthrough, WalkthroughFov} from './walkthrough';
+import {floorLevels, Walkthrough, WalkthroughFov} from './walkthrough';
 
 export type ViewPreset = 'overview' | 'top';
 
@@ -113,6 +113,8 @@ const NightBackgroundColor = '#1b2029';
  */
 const Daylight = {sun: 2.4, sky: 1.4, skyColor: '#fbf8f2', environment: 0.45};
 const Nightlight = {sky: 0.05, skyColor: '#5a6f99', environment: 0.03};
+/** The surroundings' ground disc below the floor's level (or the lowest plot's ground), m. */
+const GroundDiscY = -0.02;
 /** The sun's distance from the plan centre beyond the radius its shadow covers, m. */
 const SunDistance = 20;
 const HighlightColor = '#d9822b';
@@ -254,6 +256,11 @@ export class ViewerEngine {
     private readonly controls: OrbitControls;
     private readonly sun = new THREE.DirectionalLight('#fff3e0', Daylight.sun);
     private readonly sky = new THREE.HemisphereLight('#fbf8f2', '#a9a196', Daylight.sky);
+    /** The ground round the floor, beyond its plots. */
+    private readonly surroundings = new THREE.Mesh(
+        new THREE.CircleGeometry(60, 64),
+        new THREE.MeshStandardMaterial({color: '#cfd2c4', roughness: 1}),
+    );
     /** After dark: no sun, the flat lit by its own lights. */
     private night = false;
     /** The clock time on site the sun stands at; null: the default afternoon sun. */
@@ -469,6 +476,7 @@ export class ViewerEngine {
         const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
         this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
+        this.fitGround(scene);
         if (this.loadedFloorId !== scene.floor.id) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
@@ -484,6 +492,7 @@ export class ViewerEngine {
         this.leafStates.apply(this.leaves);
         this.refreshShadows();
         this.walkthrough?.setColliders(sceneColliders(scene));
+        this.walkthrough?.setFloorLevels(floorLevels(scene));
         this.updateLeafColliders();
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
@@ -627,26 +636,28 @@ export class ViewerEngine {
             this.indexWalls();
         }
 
+        // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground:
+        // changed rooms rebuild every plot, changed plots the rooms off the floor's level.
         const plots = diffById(previous.plots ?? [], scene.plots ?? []);
-        for (const id of [...plots.removed, ...plots.changed.map((p) => p.id)]) {
-            const group = parts.plots.get(id);
-            if (group !== undefined) {
-                this.disposeObject(group);
-                parts.plots.delete(id);
+        const plotsChanged = plots.removed.length > 0 || plots.changed.length > 0;
+        const roomsChanged = rooms.removed.length > 0 || rooms.changed.length > 0;
+        if (plotsChanged || roomsChanged) {
+            parts.plots.forEach((group) => this.disposeObject(group));
+            parts.plots.clear();
+            for (const plot of scene.plots ?? []) {
+                const group = buildPlot(plot, materials, scene.rooms);
+                parts.plots.set(plot.id, group);
+                parts.root.add(group);
             }
+            this.highlightPlots();
         }
-        for (const plot of plots.changed) {
-            const group = buildPlot(plot, materials);
-            parts.plots.set(plot.id, group);
-            parts.root.add(group);
-        }
-        this.highlightPlots();
+        const rebuiltRooms = plotsChanged ? scene.rooms.filter((r) => changedRooms.has(r.id) || (r.floorElevation ?? 0) !== 0) : rooms.changed;
 
-        for (const id of [...rooms.removed, ...rooms.changed.map((r) => r.id)]) {
+        for (const id of [...rooms.removed, ...rebuiltRooms.map((r) => r.id)]) {
             this.removeRoom(id);
         }
-        for (const room of rooms.changed) {
-            addRoom(parts, buildRoom(room, scene.walls, materials), room.id);
+        for (const room of rebuiltRooms) {
+            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? []), room.id);
             const label = this.createLabel(room);
             this.labels.set(room.id, label);
             content.add(label);
@@ -1384,7 +1395,8 @@ export class ViewerEngine {
         const start = this.walkStart(this.sceneData);
         // The view looks along plan (−sin yaw, cos yaw).
         const yaw = Math.atan2(-start.direction.x, start.direction.y);
-        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, sceneColliders(this.sceneData), start.position, yaw);
+        const colliders = sceneColliders(this.sceneData);
+        const walkthrough = new Walkthrough(this.camera, this.renderer.domElement, colliders, start.position, yaw, floorLevels(this.sceneData));
         walkthrough.onExit = (): void => {
             this.stopWalkthrough();
             this.onWalkthroughEnd();
@@ -1562,16 +1574,18 @@ export class ViewerEngine {
         this.sun.shadow.radius = SunShadowRadius.fast;
         this.scene.add(this.sun, this.sun.target);
 
-        const ground = new THREE.Mesh(
-            new THREE.CircleGeometry(60, 64),
-            new THREE.MeshStandardMaterial({color: '#cfd2c4', roughness: 1}),
-        );
+        const ground = this.surroundings;
         ground.rotation.x = -Math.PI / 2;
-        // Just below the floor level: the gardens and the terrace lie on it, the slab is buried.
-        ground.position.y = -0.02;
+        // Just below the floor level (or the lowest plot, `fitGround()`): the gardens and the terrace lie on it, the slab is buried.
+        ground.position.y = GroundDiscY;
         ground.receiveShadow = true;
         ground.name = 'ground';
         this.scene.add(ground);
+    }
+
+    /** The surroundings' ground under the lowest plot or room, so nothing below the floor's level is buried in it. */
+    private fitGround(scene: Scene): void {
+        this.surroundings.position.y = lowestGround(scene.plots ?? [], scene.rooms) * MM + GroundDiscY;
     }
 
     /** The sun towards its direction at the clock time, its shadow camera covering the plan. */
@@ -2698,7 +2712,7 @@ export class ViewerEngine {
             return;
         }
         const room = {...drag.outline.element, polygon: drag.polygon};
-        const floor = buildFloor(room, materials);
+        const floor = buildFloor(room, materials, groundUnder(room, this.sceneData?.plots ?? []));
         const original = parts.rooms.get(room.id);
         this.setPreview(original === undefined ? [] : [original.floor], [floor]);
         this.setSelectedRoom(room.id, floor);

@@ -281,6 +281,17 @@ format is the text in `FurnitureTools::Format`.
   (`viewer/engine/plots.ts`, `parts.plots`, tagged `plotId`); a selected plot gets corner handles like a room (the
   engine's `Outlined` vertex drag). The plan PDF draws the boundary as a dash-dot property line. Paths and lawns on it
   are rooms; fences are `Fence` items.
+- Levels: a room's `floorElevation` (mm, ±3000; a terrace a step down, a raised deck) lifts everything the room draws
+  (`buildRoom()`: floor, ceiling and finishes, whose opening gaps are brought down to the room's floor; `buildFloor()`
+  adds the upright `floor-edge`, 2 mm inside the outline, stepping to the ground beside the room: its plot's
+  `groundUnder()`, else the floor's level). Its `ceilingHeight` counts from it, so `ceilingSteps()`, pendant cables
+  (`custom.ts`) and `StructureSize` (a column stands on the room's floor) add it; items keep their own z, and the
+  elevations and quantities ignore it. The plan PDF writes it under the room's area (`+0.450`) where it fits. A plot's
+  `groundLevel` (mm, ±10000) moves its ground, which is cut out under the rooms lying lower than it (`groundHoles()`, so
+  the house's rooms show on a raised plot); the surroundings' disc goes under the lowest plot or room
+  (`lowestGround()`). Changed rooms rebuild the plots and changed plots the levelled rooms. The walkthrough's eye stays
+  at eye height over the floor underfoot (`floorLevels()`: the smallest room there, else the plot, else 0); steps do
+  not block it.
 
 ## Lighting
 

@@ -54,6 +54,39 @@ final class PlotTest extends EditorTestCase
 		self::assertSame([[-4500, -4000], [8500, -4000], [8500, 7000], [-4500, 7000]], $around['polygon']);
 	}
 
+	public function testTheGroundLevelIsKeptAndUndone(): void
+	{
+		$plot = $this->create('plots', ['polygon' => self::Boundary]);
+		self::assertSame(0, $plot['groundLevel']);
+
+		$this->edit('PATCH', 'plots', self::id($plot), ['groundLevel' => -450]);
+		self::assertSame([-450], array_column($this->sceneList('plots'), 'groundLevel'));
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([0], array_column($this->sceneList('plots'), 'groundLevel'));
+	}
+
+	public function testARoomFloorLiesAboveOrBelowTheFloorsLevel(): void
+	{
+		$polygon = [[0, 0], [3000, 0], [3000, 2000], [0, 2000]];
+		$terrace = $this->create('rooms', ['name' => 'Terrace', 'type' => 'Terrace', 'polygon' => $polygon, 'floorElevation' => -150]);
+		self::assertSame(-150, $terrace['floorElevation']);
+		self::assertSame(0, $this->create('rooms', ['name' => 'Hall', 'polygon' => $polygon])['floorElevation']);
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($terrace), ['floorElevation' => 3001])->getStatusCode());
+	}
+
+	public function testColumnsAndBeamsReachTheCeilingOfARaisedRoom(): void
+	{
+		$polygon = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+		$deck = $this->create('rooms', ['name' => 'Deck', 'polygon' => $polygon, 'ceilingHeight' => 2700, 'floorElevation' => 450]);
+
+		$column = $this->create('items', ['kind' => 'Column', 'roomId' => self::id($deck), 'x' => 500, 'y' => 500]);
+		$beam = $this->create('items', ['kind' => 'Beam', 'roomId' => self::id($deck), 'x' => 2000, 'y' => 1500, 'height' => 200]);
+
+		// From the deck's floor up to its ceiling, 450 + 2700 above the floor's level; the beam's soffit at the ceiling.
+		self::assertSame([450, 2700], [$column['z'], $column['height']]);
+		self::assertSame(2950, $beam['z']);
+	}
+
 	public function testRefusesABadBoundaryOrMaterial(): void
 	{
 		self::assertSame(422, $this->edit('POST', 'plots', body: ['polygon' => [[0, 0], [1000, 0]]])->getStatusCode());
@@ -66,6 +99,7 @@ final class PlotTest extends EditorTestCase
 			$this->edit('POST', 'plots', body: ['polygon' => self::Boundary, 'groundMaterialId' => 999999])->getStatusCode(),
 		);
 		self::assertSame(422, $this->edit('POST', 'plots', body: ['polygon' => self::Boundary, 'height' => 3])->getStatusCode());
+		self::assertSame(422, $this->edit('POST', 'plots', body: ['polygon' => self::Boundary, 'groundLevel' => 10001])->getStatusCode());
 		// Further than a room may reach, but a plot may: a kilometre out is fine, past it is not.
 		$far = static fn (int $reach): array => [[0, 0], [$reach, 0], [$reach, $reach]];
 		self::assertSame(201, $this->edit('POST', 'plots', body: ['polygon' => $far(900000)])->getStatusCode());

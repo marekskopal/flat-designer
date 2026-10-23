@@ -243,13 +243,15 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     plot: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
+        {key: 'groundLevel', label: 'Ground level (+ above, − below the floor)', type: 'int', unit: 'mm'},
         {key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
     ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'code', label: 'Code', type: 'text', half: true},
         {key: 'type', label: 'Type', type: 'select', options: RoomTypes, half: true},
-        {key: 'ceilingHeight', label: 'Ceiling height', type: 'int', unit: 'mm', nullable: true},
+        {key: 'floorElevation', label: 'Floor level (+ raised, − sunken)', type: 'int', unit: 'mm'},
+        {key: 'ceilingHeight', label: 'Ceiling height (from its floor)', type: 'int', unit: 'mm', nullable: true},
         {key: 'floorMaterialId', label: 'Floor material', type: 'material', nullable: true},
         {key: 'ceilingMaterialId', label: 'Ceiling material', type: 'material', nullable: true, when: (room) => room['ceilingHeight'] != null},
         {

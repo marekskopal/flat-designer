@@ -34,6 +34,8 @@ final readonly class SnapshotPlotRestorer
 				polygon: json_encode($data->raw('polygon'), JSON_THROW_ON_ERROR),
 				groundMaterial: $materials[$data->nullableInt('groundMaterialId') ?? 0] ?? null,
 			);
+			// Snapshots taken before plot levels have none.
+			$plot->groundLevel = $data->nullableInt('groundLevel') ?? 0;
 			$plot->createdAt = new DateTimeImmutable();
 			$plot->updatedAt = $plot->createdAt;
 			$this->plotRepository->persist($plot);

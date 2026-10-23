@@ -237,8 +237,9 @@ function buildCable(part: ResolvedPart, item: Item, material: THREE.Material, ro
             return top;
         }
         const plan = partsPointToPlan(item, p.x, p.z);
+        // The room's ceiling counts from its own floor; the item's z from the floor's level.
         const height = ceilingHeightAt(room, plan.x, plan.y);
-        return height === null ? top : height - item.z;
+        return height === null ? top : height + (room.floorElevation ?? 0) - item.z;
     };
 
     const vertices = [new THREE.Vector3(hook.x, part.y, hook.z), new THREE.Vector3(hook.x, ceiling(hook) - radius, hook.z)];

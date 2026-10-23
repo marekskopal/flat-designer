@@ -336,7 +336,7 @@ const NeighbourProbe = 60;
 /**
  * The faces closing the gap between ceilings of different heights where rooms meet without a wall (an open-plan
  * corridor with a lower ceiling beside the living room): from the lower ceiling up to the higher one, along the lower
- * room's open edges.
+ * room's open edges. Heights are above the floor's level: a room's ceiling height counts from its own floor elevation.
  */
 export function ceilingSteps(rooms: readonly Room[], walls: readonly Wall[]): CeilingStep[] {
     const steps: CeilingStep[] = [];
@@ -344,6 +344,7 @@ export function ceilingSteps(rooms: readonly Room[], walls: readonly Wall[]): Ce
         if (room.ceilingHeight === null) {
             continue;
         }
+        const bottom = room.ceilingHeight + (room.floorElevation ?? 0);
         const polygon = counterClockwise(room.polygon);
         polygon.forEach(([ax, ay], i) => {
             const [bx, by] = polygon[(i + 1) % polygon.length];
@@ -360,12 +361,12 @@ export function ceilingSteps(rooms: readonly Room[], walls: readonly Wall[]): Ce
                 const mid = (from + to) / 2;
                 const probe = {x: ax + dir.x * mid + outward.x * NeighbourProbe, y: ay + dir.y * mid + outward.y * NeighbourProbe};
                 const neighbour = rooms.find((r) => r.id !== room.id && r.ceilingHeight !== null && pointInPolygon(probe, r.polygon));
-                const top = neighbour?.ceilingHeight ?? null;
-                if (top !== null && top > room.ceilingHeight!) {
+                const top = neighbour?.ceilingHeight == null ? null : neighbour.ceilingHeight + (neighbour.floorElevation ?? 0);
+                if (top !== null && top > bottom) {
                     steps.push({
                         a: {x: ax + dir.x * from, y: ay + dir.y * from},
                         b: {x: ax + dir.x * to, y: ay + dir.y * to},
-                        bottom: room.ceilingHeight!,
+                        bottom,
                         top,
                     });
                 }

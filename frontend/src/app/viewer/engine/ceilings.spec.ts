@@ -198,6 +198,17 @@ describe('ceilingSteps', () => {
         expect(ceilingSteps([living, corridor], [])).toEqual([{a: {x: 3000, y: 3000}, b: {x: 3000, y: 0}, bottom: 2510, top: 2920}]);
     });
 
+    it('counts each ceiling from its own floor level', () => {
+        // The corridor two steps up: its ceiling at 2510 + 300 is still under the living room's 2920.
+        expect(ceilingSteps([living, {...corridor, floorElevation: 300}], [])).toEqual([
+            {a: {x: 3000, y: 3000}, b: {x: 3000, y: 0}, bottom: 2810, top: 2920},
+        ]);
+        // The living room sunk by 500: its 2920 ceiling is now the lower one, at 2420.
+        expect(ceilingSteps([{...living, floorElevation: -500}, corridor], [])).toEqual([
+            {a: {x: 3000, y: 0}, b: {x: 3000, y: 3000}, bottom: 2420, top: 2510},
+        ]);
+    });
+
     it('draws nothing where a wall stands between them or the ceilings are level', () => {
         expect(ceilingSteps([living, corridor], [wall(1, [3050, -100], [3050, 3100])])).toEqual([]);
         expect(ceilingSteps([living, {...corridor, ceilingHeight: 2920}], [])).toEqual([]);

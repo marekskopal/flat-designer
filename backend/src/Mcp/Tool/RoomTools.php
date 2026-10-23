@@ -101,6 +101,7 @@ final readonly class RoomTools
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross; floor tiles, wall bands and tiled items share the grid
 	 * @param int|null $tileOriginY plan y (mm) of that point
 	 * @param int|null $floorAngle floor pattern turned about the tile origin, degrees counter-clockwise (0–179; 0 = planks running along plan y, 90 = along plan x); wall bands keep their joints
+	 * @param int|null $floorElevation mm the room's floor lies above (+) or below (−) the floor's level, e.g. -150 for a terrace a step down, 450 for a raised deck (−3000…3000, default 0); its ceiling height counts from it, items keep their own z
 	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)
 	 * @param int|null $vaultSpacing vaulted ceiling: mm between the beams (300–3000); the vaults' crowns are at ceilingHeight. Default none: a flat ceiling
 	 * @param int|null $vaultAngle vaulted ceiling: direction the beams run, degrees counter-clockwise from plan x (0 = beams running east–west)
@@ -126,6 +127,7 @@ final readonly class RoomTools
 		?int $tileOriginX = null,
 		?int $tileOriginY = null,
 		?int $floorAngle = null,
+		?int $floorElevation = null,
 		?int $ceilingMaterialId = null,
 		?int $vaultSpacing = null,
 		?int $vaultAngle = null,
@@ -151,6 +153,7 @@ final readonly class RoomTools
 				'tileOriginX' => $tileOriginX,
 				'tileOriginY' => $tileOriginY,
 				'floorAngle' => $floorAngle,
+				'floorElevation' => $floorElevation,
 				'ceilingMaterialId' => $ceilingMaterialId,
 				'vaultSpacing' => $vaultSpacing,
 				'vaultAngle' => $vaultAngle,
@@ -171,6 +174,7 @@ final readonly class RoomTools
 	 * @param int|null $tileOriginX plan x (mm) of a point where tile joints cross (floor, wall bands and tiled items share the grid)
 	 * @param int|null $tileOriginY plan y (mm) of that point
 	 * @param int|null $floorAngle floor pattern turned about the tile origin, degrees counter-clockwise (0–179; 0 = planks running along plan y, 90 = along plan x); wall bands keep their joints
+	 * @param int|null $floorElevation mm the room's floor lies above (+) or below (−) the floor's level, e.g. -150 for a terrace a step down, 450 for a raised deck (−3000…3000, default 0); its ceiling height counts from it, items keep their own z
 	 * @param int|null $ceilingMaterialId ceiling surface from list_materials (default white plaster; the vaults' material when vaulted, e.g. exposed brick)
 	 * @param int|null $vaultSpacing vaulted ceiling: mm between the beams (300–3000); the vaults' crowns are at ceilingHeight. Default none: a flat ceiling
 	 * @param int|null $vaultAngle vaulted ceiling: direction the beams run, degrees counter-clockwise from plan x (0 = beams running east–west)
@@ -198,6 +202,7 @@ final readonly class RoomTools
 		?int $tileOriginX = null,
 		?int $tileOriginY = null,
 		?int $floorAngle = null,
+		?int $floorElevation = null,
 		?int $ceilingMaterialId = null,
 		?int $vaultSpacing = null,
 		?int $vaultAngle = null,
@@ -225,6 +230,7 @@ final readonly class RoomTools
 				'tileOriginX' => $tileOriginX,
 				'tileOriginY' => $tileOriginY,
 				'floorAngle' => $floorAngle,
+				'floorElevation' => $floorElevation,
 				'ceilingMaterialId' => $ceilingMaterialId,
 				'vaultSpacing' => $vaultSpacing,
 				'vaultAngle' => $vaultAngle,

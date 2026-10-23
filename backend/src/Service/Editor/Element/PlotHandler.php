@@ -24,6 +24,9 @@ final readonly class PlotHandler implements ElementHandler
 	/** A plot may reach further from the floor's origin than a room (`State::CoordinateLimit`): a kilometre, mm. */
 	private const int CoordinateLimit = 1000000;
 
+	/** How far the ground may lie above or below the floor's level, mm. */
+	private const int MaxGroundLevel = 10000;
+
 	/** How far a new plot's boundary stands off the floor's walls and rooms, mm. */
 	private const int DefaultMargin = 3000;
 
@@ -46,7 +49,7 @@ final readonly class PlotHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name', 'polygon', 'groundMaterialId'];
+		return ['name', 'polygon', 'groundMaterialId', 'groundLevel'];
 	}
 
 	/** @return list<string> */
@@ -63,7 +66,7 @@ final readonly class PlotHandler implements ElementHandler
 	 */
 	public function defaults(Floor $floor, array $fields): array
 	{
-		return ['name' => 'Plot', 'polygon' => $this->defaultBoundary($floor), 'groundMaterialId' => null];
+		return ['name' => 'Plot', 'polygon' => $this->defaultBoundary($floor), 'groundMaterialId' => null, 'groundLevel' => 0];
 	}
 
 	/** @return list<array{int, int}> */
@@ -122,6 +125,8 @@ final readonly class PlotHandler implements ElementHandler
 			'name' => $fields->string('name', 255),
 			'polygon' => PolygonValidator::validate($fields->raw('polygon'), self::CoordinateLimit),
 			'groundMaterialId' => $groundMaterialId,
+			// Missing in older change states: the floor's level.
+			'groundLevel' => $fields->raw('groundLevel') === null ? 0 : self::groundLevel($fields),
 		];
 	}
 
@@ -160,7 +165,13 @@ final readonly class PlotHandler implements ElementHandler
 		$plot->name = $fields->string('name', 255);
 		$plot->polygon = json_encode($fields->raw('polygon'), JSON_THROW_ON_ERROR);
 		$plot->groundMaterial = $this->materialResolver->resolve($fields->nullableId('groundMaterialId'));
+		$plot->groundLevel = self::groundLevel($fields);
 		$this->plotRepository->persist($plot);
+	}
+
+	private static function groundLevel(FieldReader $fields): int
+	{
+		return $fields->int('groundLevel', -self::MaxGroundLevel, self::MaxGroundLevel);
 	}
 
 	private static function cast(AEntity $element): Plot

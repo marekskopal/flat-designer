@@ -116,13 +116,16 @@ final class Fixture
 			floorMaterial: $material,
 			wallFinishes: $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":1200}]',
 		));
+		$room->floorElevation = 20;
 		self::service(RoomRepository::class)->persist($room);
-		self::service(PlotRepository::class)->persist(self::stamp(new Plot(
+		$plot = new Plot(
 			floor: $floor,
 			name: 'Parcel',
 			polygon: '[[-3000,-3000],[9000,-3000],[9000,8000],[-3000,8000]]',
 			groundMaterial: $material,
-		)));
+		);
+		$plot->groundLevel = -300;
+		self::service(PlotRepository::class)->persist(self::stamp($plot));
 
 		$wall = self::stamp(new Wall(
 			floor: $floor,

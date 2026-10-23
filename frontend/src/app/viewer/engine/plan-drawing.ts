@@ -501,6 +501,9 @@ function segmentDistance(p: Vec2, a: Vec2, b: Vec2): number {
 }
 
 /** The room's name, wrapped (and if need be made smaller) to the width free around its label point, over its area. */
+/** Paper size of the line under a room's name: its area and level. */
+const MetaSize = 2.1;
+
 function roomLabel(room: Room, scale: number): Label {
     const {at, clearance} = labelPoint(room.polygon);
     const width = ((2 * clearance) / scale) * 0.9;
@@ -515,9 +518,15 @@ function roomLabel(room: Room, scale: number): Label {
     }
     const widest = Math.max(0, ...names.map((name) => textWidth(name, RoomNameSize)));
     const size = widest > width ? Math.max(MinRoomNameSize, (RoomNameSize * width) / widest) : RoomNameSize;
+    const area = `${room.area.toFixed(2)} m²`;
+    const elevation = room.floorElevation ?? 0;
+    // The floor's height against the floor's level, in metres as levels are written on plans (+0.450, −0.150), when
+    // the room is wide enough for it beside the area.
+    const level = `${area} · ${elevation > 0 ? '+' : '−'}${(Math.abs(elevation) / 1000).toFixed(3)}`;
+    const meta = elevation !== 0 && textWidth(level, MetaSize) <= width ? level : area;
     return {
         at,
-        lines: [...names.map((name) => ({text: name, size, bold: true})), {text: `${room.area.toFixed(2)} m²`, size: 2.1, color: Muted}],
+        lines: [...names.map((name) => ({text: name, size, bold: true})), {text: meta, size: MetaSize, color: Muted}],
     };
 }
 
