@@ -1,24 +1,47 @@
 <header class="topbar">
-    <a routerLink="/" class="brand">
+    <a routerLink="/" class="brand" (click)="menuOpen.set(false)">
         <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 28V12L16 4l12 8v16H19v-9h-6v9z" /></svg>
         Flat Designer
     </a>
 
-    <nav class="nav">
-        <a routerLink="/projects" routerLinkActive="active">Projects</a>
-        <a routerLink="/furniture" routerLinkActive="active">Furniture</a>
-        @if (currentUser.isAdmin()) {
-            <a routerLink="/admin/users" routerLinkActive="active">Users</a>
-        }
-    </nav>
+    <button
+        type="button"
+        class="menu-toggle"
+        aria-controls="fd-menu"
+        [attr.aria-expanded]="menuOpen()"
+        [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'"
+        (click)="toggleMenu()"
+    >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            @if (menuOpen()) {
+                <path d="M6 6l12 12M18 6L6 18" />
+            } @else {
+                <path d="M4 7h16M4 12h16M4 17h16" />
+            }
+        </svg>
+    </button>
 
-    <div class="user">
-        @if (currentUser.currentUser(); as user) {
-            <a routerLink="/account" routerLinkActive="active" class="user__name" [title]="user.email">{{ user.name }}</a>
-        }
-        <button type="button" class="btn btn--ghost" (click)="logout()">Sign out</button>
+    <div id="fd-menu" class="menu" [class.menu--open]="menuOpen()">
+        <nav class="nav">
+            <a routerLink="/projects" routerLinkActive="active" (click)="menuOpen.set(false)">Projects</a>
+            <a routerLink="/furniture" routerLinkActive="active" (click)="menuOpen.set(false)">Furniture</a>
+            @if (currentUser.isAdmin()) {
+                <a routerLink="/admin/users" routerLinkActive="active" (click)="menuOpen.set(false)">Users</a>
+            }
+        </nav>
+
+        <div class="user">
+            @if (currentUser.currentUser(); as user) {
+                <a routerLink="/account" routerLinkActive="active" class="user__name" [title]="user.email" (click)="menuOpen.set(false)">{{ user.name }}</a>
+            }
+            <button type="button" class="btn btn--ghost" (click)="logout()">Sign out</button>
+        </div>
     </div>
 </header>
+
+@if (menuOpen()) {
+    <button type="button" class="menu-backdrop" tabindex="-1" aria-label="Close menu" (click)="menuOpen.set(false)"></button>
+}
 
 <main class="content">
     <router-outlet />

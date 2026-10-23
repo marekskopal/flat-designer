@@ -11,6 +11,8 @@
 }
 
 .topbar {
+    position: relative;
+    z-index: 60;
     display: flex;
     align-items: center;
     gap: $space-20;
@@ -36,6 +38,14 @@
     fill: $color-accent;
 }
 
+.menu {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: $space-20;
+    min-width: 0;
+}
+
 .nav,
 .user {
     display: flex;
@@ -44,7 +54,12 @@
 }
 
 .user {
+    min-width: 0;
     margin-left: auto;
+
+    .btn {
+        flex: none;
+    }
 }
 
 .nav a,
@@ -68,10 +83,45 @@
 }
 
 .user__name {
+    min-width: 0;
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.menu-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: auto;
+    margin-right: -$space-8;
+    padding: 0;
+    border: none;
+    border-radius: $radius-6;
+    background: transparent;
+    color: $color-text;
+    cursor: pointer;
+
+    &:hover,
+    &[aria-expanded='true'] {
+        background: $color-surface-muted;
+    }
+
+    svg {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+    }
+}
+
+.menu-backdrop {
+    display: none;
 }
 
 .content {
@@ -79,4 +129,65 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
+}
+
+@media (max-width: 640px) {
+    .menu-toggle {
+        display: inline-flex;
+    }
+
+    .menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: $space-8;
+        padding: $space-8 $space-12 $space-12;
+        background: $color-surface-solid;
+        border-bottom: 1px solid $color-border;
+        box-shadow: $shadow-panel;
+    }
+
+    .menu--open {
+        display: flex;
+    }
+
+    .nav,
+    .user {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .user {
+        margin-left: 0;
+        padding-top: $space-8;
+        border-top: 1px solid $color-border;
+
+        .btn {
+            justify-content: flex-start;
+            // 12px like the links, less the button's transparent border.
+            padding: 11px;
+            font-size: $font-size-14;
+        }
+    }
+
+    .nav a,
+    .user__name {
+        max-width: none;
+        padding: 12px;
+        font-size: $font-size-14;
+    }
+
+    .menu-backdrop {
+        display: block;
+        position: fixed;
+        inset: $topbar-height 0 0;
+        z-index: 55;
+        padding: 0;
+        border: none;
+        background: rgba(35, 33, 30, 0.24);
+    }
 }
