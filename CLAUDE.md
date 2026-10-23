@@ -256,10 +256,11 @@ format is the text in `FurnitureTools::Format`.
   the real ceiling of the item's room (`ceilingHeightAt()` in `ceilings.ts`, vaults and beams included) and hangs
   between the fixings, sagging by `sag`.
 - `viewer/engine/lights.ts` builds the three.js lights (`createFixtureLight()`) and switches them
-  (`applyFixtureLights()`). Lights that are off keep intensity 0, so toggling them does not recompile shaders. At most
-  `MaxFixtureShadows` lights cast shadows. `LumenScale` maps lumens to the scene's units, where the sun is 2.4, and
-  `WhiteBalance` pulls the kelvin colours towards white, as a camera would. LED strips and `led` parts are fixtures
-  too.
+  (`applyFixtureLights()`). Lights are created, and switched off, hidden: that leaves them out of the shaders (kept at
+  intensity 0, they cost about 70% of a frame; FD-58). The first switch recompiles the shaders, a one-off 0.1–0.3 s.
+  At most `MaxFixtureShadows` lights cast shadows. `LumenScale` maps lumens to the scene's units, where the sun is
+  2.4, and `WhiteBalance` pulls the kelvin colours towards white, as a camera would. LED strips and `led` parts are
+  fixtures too.
 - `ViewerEngine.setLighting(night, lightsOn)`: at night the sun is gone (along with its shadow pass), the sky is faint
   and the background dark. The pages' Display has Night and Lights on; lights follow Night until switched by hand.
   `ShareSettingsDto.night` starts a share link at night.

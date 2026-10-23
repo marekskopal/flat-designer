@@ -46,6 +46,10 @@ export function exportTree(content: THREE.Object3D, scene: Scene, sectionMateria
         const material = o instanceof THREE.Mesh ? (o.material as THREE.Material | THREE.Material[]) : null;
         const sectionFill = material === sectionMaterial || (Array.isArray(material) && material.includes(sectionMaterial));
         const fixture = o.userData['fixtureLight'] as FixtureLight | undefined;
+        if (fixture !== undefined) {
+            // Every fixture goes in on; switched off, the viewer hides it.
+            o.visible = true;
+        }
         const unlit = o instanceof THREE.Light && fixture === undefined && o.intensity === 0;
         if (
             o instanceof CSS2DObject ||

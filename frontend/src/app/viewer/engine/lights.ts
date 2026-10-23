@@ -2,8 +2,9 @@ import * as THREE from 'three';
 
 /**
  * The artificial lights of a scene (light parts of furniture definitions, LED strips): each three.js light is tagged
- * `userData.fixtureLight` with its intensity when on, and glowing bulbs are tagged `userData.bulb`. Switching them
- * off sets the intensity to 0 instead of removing them, so the shaders (compiled per number of lights) stay.
+ * `userData.fixtureLight` with its intensity when on, and glowing bulbs are tagged `userData.bulb`. Switching them off
+ * hides them, so the shaders (compiled per number of lights) leave them out: kept at intensity 0, every lit surface would
+ * still loop over them, which cost about 70% of a frame of the demo flat (FD-58). Switching recompiles the shaders.
  */
 export interface FixtureLight {
     /** Intensity while the lights are on. */
@@ -78,6 +79,7 @@ export function createFixtureLight(options: FixtureOptions): THREE.Group {
     light.shadow.bias = -0.002;
     light.shadow.camera.near = 0.05;
     light.userData['fixtureLight'] = {intensity: group.userData['fixtureIntensity'] as number, shadow: options.shadow} satisfies FixtureLight;
+    light.visible = false;
     group.add(light);
     return group;
 }
@@ -91,6 +93,7 @@ function balanced(kelvin: number): THREE.Color {
 export function markFixtureLight(light: THREE.Light, intensity: number): void {
     light.userData['fixtureLight'] = {intensity, shadow: false} satisfies FixtureLight;
     light.intensity = 0;
+    light.visible = false;
 }
 
 /** A glowing bulb's material in the light's colour; dark until the lights are switched on. */
@@ -114,6 +117,7 @@ export function applyFixtureLights(root: THREE.Object3D, on: boolean): number {
         const fixture = o.userData['fixtureLight'] as FixtureLight | undefined;
         if (o instanceof THREE.Light && fixture !== undefined) {
             o.intensity = on ? fixture.intensity : 0;
+            o.visible = on;
             const cast = on && fixture.shadow && shadows < MaxFixtureShadows;
             if (cast) {
                 shadows++;

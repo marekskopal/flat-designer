@@ -25,7 +25,7 @@ describe('createFixtureLight', () => {
 });
 
 describe('applyFixtureLights', () => {
-    it('switches lights by intensity and gives shadows to the first few that ask', () => {
+    it('switches lights on and off and gives shadows to the first few that ask', () => {
         const root = new THREE.Group();
         for (let i = 0; i < 4; i++) {
             root.add(createFixtureLight({kind: i % 2 === 0 ? 'point' : 'spot', lumens: 800, kelvin: 2700, angle: 60, shadow: true}));
@@ -39,6 +39,6 @@ describe('applyFixtureLights', () => {
         expect((lights[1] as THREE.SpotLight).power).toBeCloseTo(800 * LumenScale, 6);
 
         applyFixtureLights(root, false);
-        expect(lights.every((l) => l.intensity === 0 && !l.castShadow)).toBe(true);
+        expect(lights.every((l) => l.intensity === 0 && !l.castShadow && !l.visible)).toBe(true);
     });
 });
