@@ -58,15 +58,15 @@ export function frameSvg(width: number, height: number): string {
     return rect({x: Margin, y: Margin}, width - 2 * Margin, height - 2 * Margin, {stroke: Ink, width: 0.35});
 }
 
-/**
- * The band at the foot of the sheet with the title block at its right: the project, the floor (and address) and
- * `caption` (what the drawing is, its scale). The band's left part is the caller's.
- */
 /** A level in metres as plans write them: ±0.000, +3.000, −0.150. */
 export function levelText(mm: number): string {
     return `${mm === 0 ? '±' : mm > 0 ? '+' : '−'}${(Math.abs(mm) / 1000).toFixed(3)}`;
 }
 
+/**
+ * The band at the foot of the sheet with the title block at its right: the project, the floor (and address) and
+ * `caption` (what the drawing is, its scale). The band's left part is the caller's.
+ */
 export function titleBlockSvg(width: number, height: number, info: SheetInfo, caption: string): string {
     const top = height - Margin - TitleBand;
     const bottom = height - Margin;

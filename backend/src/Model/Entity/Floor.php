@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Model\Entity;
 
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Service\Project\FloorStack;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
@@ -27,7 +28,7 @@ class Floor extends AEntity
 		public int $level,
 		#[Column(type: Type::Int, default: 0)]
 		public int $elevation,
-		#[Column(type: Type::Int, default: 300)]
+		#[Column(type: Type::Int, default: FloorStack::GroundSlab)]
 		public int $slabThickness,
 	) {
 	}

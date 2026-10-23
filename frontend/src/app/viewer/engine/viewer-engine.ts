@@ -637,10 +637,12 @@ export class ViewerEngine {
             }
             this.joints = joints;
             this.corners = corners;
+            this.indexWalls();
+        }
+        if (wallsChanged || previous.floor.slabThickness !== scene.floor.slabThickness) {
             this.disposeObject(parts.slab);
             parts.slab = buildSlab(scene.walls, scene.floor.slabThickness, materials);
             parts.root.add(parts.slab);
-            this.indexWalls();
         }
 
         // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground:

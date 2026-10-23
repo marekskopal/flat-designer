@@ -128,7 +128,7 @@
                             formControlName="elevation"
                             placeholder="Elevation"
                             aria-label="Elevation, mm"
-                            title="Finished floor level above ±0.000, mm (empty: on the floor below)"
+                            title="Finished floor level above ±0.000, mm (empty: a new floor stands on the one below, an edited one keeps its level)"
                         />
                         <input
                             class="input input--mm"
@@ -136,7 +136,7 @@
                             formControlName="slabThickness"
                             placeholder="Slab"
                             aria-label="Slab thickness, mm"
-                            title="Slab under the floor, mm (empty: the default)"
+                            title="Slab under the floor, mm (empty: a new floor takes the default, an edited one keeps its slab)"
                         />
                         <button type="submit" class="btn btn--primary" [disabled]="floorForm.invalid || busy()">Save</button>
                         <button type="button" class="btn btn--ghost" (click)="editingFloor.set(null)">Cancel</button>

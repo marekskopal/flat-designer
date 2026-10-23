@@ -8,10 +8,9 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\FloorInputDto;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
+use MarekSkopal\ORM\Database\DatabaseInterface;
 
 /** Floors of a project; a project always keeps at least one. */
 final readonly class FloorProvider
@@ -24,7 +23,7 @@ final readonly class FloorProvider
 
 	public function __construct(
 		private FloorRepository $floorRepository,
-		private WallRepository $wallRepository,
+		private DatabaseInterface $database,
 		private ProjectRevisionService $revisionService,
 	) {
 	}
@@ -82,14 +81,26 @@ final readonly class FloorProvider
 	 */
 	private function stacked(Project $project): array
 	{
+		/** @var array<int, int> $tallest the tallest wall per floor id, of the floors with walls */
+		$tallest = [];
+		$rows = $this->database->execute(
+			'SELECT floor_id, MAX(height) AS tallest FROM walls WHERE deleted_at IS NULL AND floor_id IN '
+			. '(SELECT id FROM floors WHERE project_id = ?) GROUP BY floor_id',
+			[$project->id],
+			cached: false,
+		)->fetchAll();
+		foreach ($rows as $row) {
+			if (is_array($row) && is_numeric($row['floor_id'] ?? null) && is_numeric($row['tallest'] ?? null)) {
+				$tallest[(int) $row['floor_id']] = (int) $row['tallest'];
+			}
+		}
+
 		return array_map(
 			fn (Floor $floor): array => [
 				'level' => $floor->level,
 				'elevation' => $floor->elevation,
 				'slabThickness' => $floor->slabThickness,
-				'tallestWall' => FloorStack::tallestWall(
-					array_map(fn (Wall $wall): int => $wall->height, $this->wallRepository->findByFloor($floor->id)),
-				),
+				'tallestWall' => $tallest[$floor->id] ?? FloorStack::DefaultWallHeight,
 			],
 			$this->floorRepository->findByProject($project->id),
 		);

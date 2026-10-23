@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Project;
 
+use Closure;
+use FlatDesigner\Service\Editor\Element\WallHandler;
+use stdClass;
+
 /**
  * How the floors of a project stack: a floor's `elevation` is its finished floor level above the project datum (±0.000),
  * its `slabThickness` the slab under it. A floor stands on the walls of the floor below, so the default elevation of a
@@ -15,7 +19,7 @@ namespace FlatDesigner\Service\Project;
 final class FloorStack
 {
 	/** mm, the wall height of a floor without walls (the walls' default). */
-	public const int DefaultWallHeight = 2600;
+	public const int DefaultWallHeight = WallHandler::DefaultHeight;
 
 	/** mm, the slab on the ground under the ground floor and the basements. */
 	public const int GroundSlab = 300;
@@ -106,6 +110,24 @@ final class FloorStack
 		}
 
 		return $result;
+	}
+
+	/**
+	 * A snapshot's floor as the scene serves it: as stored, or, from a snapshot taken before stacked floors, a copy with
+	 * the elevation and slab `$stack` gives (called only then, as it decodes the snapshot again).
+	 *
+	 * @param Closure(): array{elevation: int, slabThickness: int} $stack
+	 */
+	public static function sceneFloor(stdClass $floor, Closure $stack): stdClass
+	{
+		if (is_int($floor->elevation ?? null) && is_int($floor->slabThickness ?? null)) {
+			return $floor;
+		}
+
+		$stacked = clone $floor;
+		['elevation' => $stacked->elevation, 'slabThickness' => $stacked->slabThickness] = $stack();
+
+		return $stacked;
 	}
 
 	/**

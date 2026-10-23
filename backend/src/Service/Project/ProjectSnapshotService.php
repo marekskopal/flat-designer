@@ -152,10 +152,10 @@ final readonly class ProjectSnapshotService
 		foreach ($data->floors as $entry) {
 			if ($entry instanceof stdClass && $entry->floor instanceof stdClass && $entry->floor->id === $floorId) {
 				$scene = clone $entry;
-				$scene->floor = clone $entry->floor;
-				$stacked = FloorStack::ofSnapshot($this->read($snapshot))[$floorId];
-				$scene->floor->elevation = $stacked['elevation'];
-				$scene->floor->slabThickness = $stacked['slabThickness'];
+				$scene->floor = FloorStack::sceneFloor(
+					$entry->floor,
+					fn (): array => FloorStack::ofSnapshot($this->read($snapshot))[$floorId],
+				);
 				$scene->materials = $data->materials ?? [];
 				$scene->location = $data->location ?? null;
 
