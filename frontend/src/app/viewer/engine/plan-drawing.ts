@@ -30,6 +30,7 @@ import {
     Margin,
     Muted,
     n,
+    northArrowSvg,
     Padding,
     PaperLong,
     PaperShort,
@@ -166,7 +167,7 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
         ...[...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
-        planBandSvg(layout, info),
+        planBandSvg(layout, info, scene.location?.northAngle ?? 0),
     ];
     return {width: layout.width, height: layout.height, scale: s, svg: sheetSvg(layout.width, layout.height, body)};
 }
@@ -589,7 +590,7 @@ function perimeter(room: Pick<Room, 'polygon'>): number {
 // --- Page furniture (paper mm) ---
 
 /** The band under the plan: a scale bar and a north arrow at the left, the title block at the right. */
-function planBandSvg(layout: PlanLayout, info: SheetInfo): string {
+function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number): string {
     const top = layout.height - Margin - TitleBand;
     const left = Margin + Padding;
     const parts: string[] = [];
@@ -606,13 +607,8 @@ function planBandSvg(layout: PlanLayout, info: SheetInfo): string {
     parts.push(text({x: left + barLength, y: barY - 1.5}, `${metres} m`, 2.2, {anchor: 'middle'}));
     parts.push(text({x: left, y: barY + 6}, `1:${layout.scale}`, 2.4, {bold: true}));
 
-    // North arrow: the plan's y axis points north.
-    const ax = left + barLength + 16;
-    const ay = top + 14;
-    parts.push(
-        `<path d="M ${n(ax)} ${n(ay - 6)} L ${n(ax + 2.6)} ${n(ay + 3)} L ${n(ax)} ${n(ay + 1.2)} L ${n(ax - 2.6)} ${n(ay + 3)} Z" fill="${Ink}"/>`,
-    );
-    parts.push(text({x: ax, y: ay - 7.5}, 'N', 2.6, {bold: true, anchor: 'middle'}));
+    // North arrow: true north, turned from the plan's y axis by the site's north angle.
+    parts.push(northArrowSvg({x: left + barLength + 16, y: top + 14}, northAngle));
 
     parts.push(titleBlockSvg(layout.width, layout.height, info, `Floor plan · 1:${layout.scale} (A4)`));
     return parts.join('');

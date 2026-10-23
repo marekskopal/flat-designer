@@ -13,7 +13,7 @@ import {
     untracked,
     viewChild,
 } from '@angular/core';
-import {PlanPoint, Room, Scene} from '@app/models/scene';
+import {PlanPoint, Room, Scene, SunTime} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
 
@@ -74,6 +74,8 @@ export class ViewerComponent {
     public readonly night = input(false);
     /** The flat's lights (light parts, LED strips) are on. */
     public readonly lightsOn = input(false);
+    /** The clock time on site the sun stands at (with the scene's location); null: the default afternoon sun. */
+    public readonly sunTime = input<SunTime | null>(null);
     /** Presentation quality (ambient occlusion, antialiasing, supersampling) instead of the fast one. */
     public readonly presentation = input(false);
     /** The measure tool: clicks in the top view place two points and show their distance (before any edit tool). */
@@ -192,6 +194,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
         effect(() => this.engine()?.setLighting(this.night(), this.lightsOn()));
+        effect(() => this.engine()?.setSunTime(this.sunTime()));
         effect(() => this.engine()?.setQuality(this.presentation() ? 'presentation' : 'fast'));
         effect(() => {
             const fetcher = this.modelFetcher();

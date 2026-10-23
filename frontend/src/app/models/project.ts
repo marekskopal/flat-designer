@@ -7,6 +7,13 @@ export interface Project {
     name: string;
     address: string | null;
     description: string | null;
+    /** Degrees clockwise from plan north (+y) to true north, 0–359. */
+    northAngle: number;
+    /** Where the building stands, degrees (north and east positive); both null when not set. */
+    latitude: number | null;
+    longitude: number | null;
+    /** IANA name the sun's clock time is read in; null: local solar time. */
+    timeZone: string | null;
     ownerId: number | null;
     ownerName: string | null;
     /** Ordered by level. A project always has at least one. */
@@ -19,10 +26,15 @@ export interface Project {
     updatedAt: string;
 }
 
+/** An update replaces all fields; the site fields left out are 0 / none. */
 export interface ProjectInput {
     name: string;
     address: string | null;
     description: string | null;
+    northAngle?: number;
+    latitude?: number | null;
+    longitude?: number | null;
+    timeZone?: string | null;
 }
 
 export interface FloorInput {

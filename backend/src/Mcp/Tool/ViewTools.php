@@ -7,6 +7,7 @@ namespace FlatDesigner\Mcp\Tool;
 use FlatDesigner\Dto\SavedViewDto;
 use FlatDesigner\Dto\SavedViewInputDto;
 use FlatDesigner\Dto\SavedViewSettingsDto;
+use FlatDesigner\Dto\SunTimeDto;
 use FlatDesigner\Model\Entity\SavedView;
 use FlatDesigner\Service\Project\SavedViewProvider;
 use Mcp\Capability\Attribute\McpTool;
@@ -66,6 +67,9 @@ final readonly class ViewTools
 	 * @param bool $dimensions dimension lines (plan view)
 	 * @param bool $night after dark: no daylight
 	 * @param bool|null $lightsOn the flat's lights; null = on at night, off by day
+	 * @param int|null $sunMonth with `sunHour`: the sun on the 21st of this month (1–12), from the project's location and north
+	 *   angle (update_project); null = the default afternoon sun
+	 * @param float|null $sunHour clock time on site of the sun, 0–24 (e.g. 15.5 = 15:30)
 	 * @param bool $presentation presentation quality (ambient occlusion, antialiasing), as for screenshots
 	 * @param array<string, int>|null $variants the variant per variant set (see the schema)
 	 */
@@ -87,6 +91,8 @@ final readonly class ViewTools
 		bool $dimensions = false,
 		bool $night = false,
 		?bool $lightsOn = null,
+		?int $sunMonth = null,
+		?float $sunHour = null,
 		bool $presentation = true,
 		#[Schema(definition: self::VariantsSchema)]
 		?array $variants = null,
@@ -101,6 +107,7 @@ final readonly class ViewTools
 			'dimensions' => $dimensions,
 			'night' => $night,
 			'lightsOn' => $lightsOn,
+			'sun' => SunTimeDto::fields($sunMonth, $sunHour),
 			'presentation' => $presentation,
 			'variants' => $variants,
 		]));

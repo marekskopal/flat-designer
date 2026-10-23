@@ -16,6 +16,30 @@
                     <span class="field__label">Description</span>
                     <textarea class="input" rows="3" formControlName="description"></textarea>
                 </label>
+                <fieldset class="site">
+                    <legend class="field__label">Site (for the sun)</legend>
+                    <label class="field">
+                        <span class="field__label">North, ° clockwise from plan up</span>
+                        <input class="input" type="number" min="0" max="359" step="1" formControlName="northAngle" />
+                    </label>
+                    <label class="field">
+                        <span class="field__label">Latitude, ° (north +)</span>
+                        <input class="input" type="number" min="-90" max="90" step="any" formControlName="latitude" placeholder="e.g. 50.08" />
+                    </label>
+                    <label class="field">
+                        <span class="field__label">Longitude, ° (east +)</span>
+                        <input class="input" type="number" min="-180" max="180" step="any" formControlName="longitude" placeholder="e.g. 14.42" />
+                    </label>
+                    <label class="field">
+                        <span class="field__label">Time zone</span>
+                        <input class="input" type="text" list="time-zones" formControlName="timeZone" placeholder="e.g. Europe/Prague" />
+                        <datalist id="time-zones">
+                            @for (zone of timeZones; track zone) {
+                                <option [value]="zone"></option>
+                            }
+                        </datalist>
+                    </label>
+                </fieldset>
                 <div class="form__actions">
                     <button type="button" class="btn btn--ghost" (click)="editingDetails.set(false)">Cancel</button>
                     <button type="submit" class="btn btn--primary" [disabled]="detailsForm.invalid || busy()">Save</button>
@@ -27,6 +51,14 @@
                     <h1 class="page__title">{{ project.name }}</h1>
                     @if (project.address) {
                         <p class="head__address">{{ project.address }}</p>
+                    }
+                    @if (project.latitude !== null && project.longitude !== null) {
+                        <p class="head__address">
+                            {{ project.latitude | number: '1.0-4' }}°, {{ project.longitude | number: '1.0-4' }}°
+                            @if (project.northAngle !== 0) {
+                                · north {{ project.northAngle }}° clockwise from plan up
+                            }
+                        </p>
                     }
                     @if (project.description) {
                         <p class="head__description">{{ project.description }}</p>

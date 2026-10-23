@@ -114,6 +114,25 @@ export function text(
     return `<text ${attributes}>${escapeXml(value)}</text>`;
 }
 
+/**
+ * A north arrow about `at` (its centre), turned `northAngle` degrees clockwise from the paper's up as true north lies
+ * from plan north; `scale` 1 is 9 mm long. The N stays upright beyond its tip.
+ */
+export function northArrowSvg(at: Vec2, northAngle: number, scale = 1): string {
+    const s = scale;
+    const corners: Vec2[] = [
+        {x: at.x, y: at.y - 6 * s},
+        {x: at.x + 2.6 * s, y: at.y + 3 * s},
+        {x: at.x, y: at.y + 1.2 * s},
+        {x: at.x - 2.6 * s, y: at.y + 3 * s},
+    ];
+    const arrow = `M ${corners.map((c) => `${n(c.x)} ${n(c.y)}`).join(' L ')} Z`;
+    const turn = northAngle % 360 === 0 ? '' : ` transform="rotate(${n(northAngle)} ${n(at.x)} ${n(at.y)})"`;
+    const radians = (northAngle * Math.PI) / 180;
+    const letter = {x: at.x + Math.sin(radians) * 8.6 * s, y: at.y - Math.cos(radians) * 8.6 * s + 0.9 * s};
+    return `<path d="${arrow}" fill="${Ink}"${turn}/>${text(letter, 'N', 2.6 * s, {bold: true, anchor: 'middle'})}`;
+}
+
 /** Estimated width of a text in mm. */
 export function textWidth(value: string, size: number): number {
     return value.length * size * CharWidth;

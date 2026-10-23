@@ -24,7 +24,7 @@ final readonly class ProjectTools
 {
 	private const int MaxChanges = 100;
 
-	private const array Clearable = ['address', 'description'];
+	private const array Clearable = ['address', 'description', 'location', 'timeZone'];
 
 	public function __construct(
 		private ToolContext $context,
@@ -51,7 +51,8 @@ final readonly class ProjectTools
 
 	#[McpTool(
 		name: 'get_project',
-		description: 'Get a project: name, address, floors (ids, names, levels), revision, latest version number.',
+		description: 'Get a project: name, address, site (north angle, location, time zone), floors (ids, names, levels), revision, '
+			. 'latest version number.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function getProject(int $projectId): ProjectDto
@@ -78,22 +79,40 @@ final readonly class ProjectTools
 	/**
 	 * @param string|null $address street address of the building; an empty string clears it, as `clear` does
 	 * @param string|null $description free notes about the project; an empty string clears it, as `clear` does
-	 * @param list<string>|null $clear fields to set to none: "address", "description"
+	 * @param int|null $northAngle where true north lies, degrees clockwise from plan north (+y), 0–359
+	 * @param float|null $latitude where the building stands, degrees north (south negative); with `longitude`
+	 * @param float|null $longitude degrees east (west negative); with `latitude`
+	 * @param string|null $timeZone IANA time zone of the site, e.g. "Europe/Prague" (the sun's clock time is read in it)
+	 * @param list<string>|null $clear fields to set to none: "address", "description", "location" (latitude and longitude),
+	 *   "timeZone"
 	 */
-	#[McpTool(name: 'update_project', description: 'Change a project\'s name, address or description. Only the given fields change.')]
+	#[McpTool(
+		name: 'update_project',
+		description: 'Change a project\'s name, address, description or site: the north angle and the location (latitude, '
+			. 'longitude, time zone) the viewer\'s sun is placed from. Only the given fields change.',
+	)]
 	public function updateProject(
 		int $projectId,
 		?string $name = null,
 		?string $address = null,
 		?string $description = null,
+		?int $northAngle = null,
+		?float $latitude = null,
+		?float $longitude = null,
+		?string $timeZone = null,
 		?array $clear = null,
 	): ProjectDto {
 		$project = $this->context->project($projectId);
 		$cleared = array_keys(ToolContext::fields([], $clear, self::Clearable));
+		$noLocation = in_array('location', $cleared, true);
 		$input = new ProjectInputDto(
 			name: $name ?? $project->name,
 			address: in_array('address', $cleared, true) ? null : ($address ?? $project->address),
 			description: in_array('description', $cleared, true) ? null : ($description ?? $project->description),
+			northAngle: $northAngle ?? $project->northAngle,
+			latitude: $noLocation ? null : ($latitude ?? $project->latitude),
+			longitude: $noLocation ? null : ($longitude ?? $project->longitude),
+			timeZone: in_array('timeZone', $cleared, true) ? null : ($timeZone ?? $project->timeZone),
 		);
 
 		return $this->projectProvider->toDto($this->projectProvider->update($project, $input));

@@ -237,6 +237,30 @@ export interface Scene {
     models?: SceneModel[];
     /** The project files the `Custom` items show as pictures; absent in older versions. */
     pictures?: number[];
+    /** Where the building stands, for the sun; absent in older versions. */
+    location?: SiteLocation | null;
+}
+
+/** The project's orientation and place on the earth (`LocationDto`). */
+export interface SiteLocation {
+    /** Degrees clockwise from plan north (+y) to true north, 0–359. */
+    northAngle: number;
+    /** Degrees, north positive; null with `longitude` when the place is not set. */
+    latitude: number | null;
+    /** Degrees, east positive. */
+    longitude: number | null;
+    /** IANA name (e.g. Europe/Prague) the sun's clock time is read in; null: local solar time. */
+    timeZone: string | null;
+}
+
+/** The scene says where its building stands (a latitude and longitude), so the sun can be placed at a time. */
+export const hasSiteLocation = (scene: Scene | null): boolean =>
+    scene?.location != null && scene.location.latitude !== null && scene.location.longitude !== null;
+
+/** A moment to place the sun at: the 21st of `month` (1–12) at `hour` (0–24, fractional) clock time on site. */
+export interface SunTime {
+    month: number;
+    hour: number;
 }
 
 /** A 3D model as the scene carries it: its native size (mm) to scale it by, and its credits. */

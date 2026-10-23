@@ -10,6 +10,7 @@ use FlatDesigner\Service\Project\ProjectProvider;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(ProjectController::class)]
 #[CoversClass(ProjectProvider::class)]
@@ -76,6 +77,55 @@ final class ProjectControllerTest extends IntegrationTestCase
 		$body = $this->jsonBody($response);
 		self::assertSame('Renamed', $body['name']);
 		self::assertSame('Praha', $body['address']);
+	}
+
+	public function testUpdateSetsTheSiteWhichTheScenesCarry(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$site = ['northAngle' => 15, 'latitude' => 50.08, 'longitude' => 14.42, 'timeZone' => 'Europe/Prague'];
+
+		$response = $this->request('PUT', self::path($project->id), ['name' => 'Flat', ...$site], $user);
+
+		self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+		$body = $this->jsonBody($response);
+		self::assertSame($site, array_intersect_key($body, $site));
+		$scene = $this->jsonBody($this->request(
+			'GET',
+			str_replace(
+				['{projectId:number}', '{floorId:number}'],
+				[(string) $project->id, (string) self::firstFloorId($body)],
+				Routes::ProjectFloorScene->value,
+			),
+			authenticatedAs: $user,
+		));
+		self::assertSame($site, $scene['location']);
+
+		// An update without them clears them, as it does the address.
+		$cleared = $this->jsonBody($this->request('PUT', self::path($project->id), ['name' => 'Flat'], $user));
+		self::assertSame(
+			['northAngle' => 0, 'latitude' => null, 'longitude' => null, 'timeZone' => null],
+			array_intersect_key($cleared, $site),
+		);
+	}
+
+	public function testUpdateRefusesAnInvalidSite(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$invalid = [
+			['northAngle' => 360],
+			['northAngle' => -1],
+			['latitude' => 50.0],
+			['latitude' => 91.0, 'longitude' => 14.0],
+			['latitude' => 50.0, 'longitude' => 181.0],
+			['timeZone' => 'Europe/Atlantis'],
+		];
+
+		foreach ($invalid as $site) {
+			$response = $this->request('PUT', self::path($project->id), ['name' => 'Flat', ...$site], $user);
+			self::assertSame(422, $response->getStatusCode(), json_encode($site, JSON_THROW_ON_ERROR));
+		}
 	}
 
 	public function testOthersCannotUpdateOrDelete(): void

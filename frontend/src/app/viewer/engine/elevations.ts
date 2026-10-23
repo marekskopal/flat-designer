@@ -36,6 +36,7 @@ import {
     line,
     Margin,
     Muted,
+    northArrowSvg,
     Padding,
     PaperLong,
     PaperShort,
@@ -275,7 +276,7 @@ export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo): 
 
     return pages.map((placed, page) => {
         const body = placed.map(({face, at}) => faceSvg(face, at, context));
-        body.push(keyPlanSvg(room, faces, {x: area.left, y: area.top}));
+        body.push(keyPlanSvg(room, faces, {x: area.left, y: area.top}, scene.location?.northAngle ?? 0));
         body.push(legendSvg(finishes, {x: area.left, y: area.top + KeyPlanSize + LegendGap}));
         body.push(frameSvg(width, height));
         const pageNote = pages.length > 1 ? ` · ${page + 1}/${pages.length}` : '';
@@ -861,8 +862,8 @@ function dimension(positions: number[], across: number, orientation: 'horizontal
     return parts;
 }
 
-/** The room's outline in a 45 mm square with the faces' letters inside their edges, north up. */
-function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2): string {
+/** The room's outline in a 45 mm square with the faces' letters inside their edges, plan north up; a north arrow beside it. */
+function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2, northAngle: number): string {
     const box = KeyPlanSize;
     const xs = room.polygon.map(([x]) => x);
     const ys = room.polygon.map(([, y]) => y);
@@ -875,6 +876,8 @@ function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2): stri
         rect(at, box, box, {stroke: Ink, width: 0.2}),
         text({x: at.x + 1.5, y: at.y + 3.5}, truncate(`${room.code} ${room.name}`, box - 3, 2.2), 2.2, {bold: true}),
         path(room.polygon.map(([x, y]) => toPaper({x, y})), true, {fill: '#ffffff', stroke: Ink, width: 0.4}),
+        // In the side column's spare width right of the box, clear of the outline and the title.
+        northArrowSvg({x: at.x + box + (SideColumn - box) / 2, y: at.y + 10}, northAngle, 0.5),
     ];
     for (const face of faces) {
         const mid = {x: (face.a.x + face.b.x) / 2, y: (face.a.y + face.b.y) / 2};

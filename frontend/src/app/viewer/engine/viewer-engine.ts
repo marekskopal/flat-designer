@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Room, Scene, Underlay, Wall} from '@app/models/scene';
+import {Item, PlanPoint, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -87,6 +87,7 @@ import {
 } from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {Walkthrough, WalkthroughFov} from './walkthrough';
@@ -105,9 +106,14 @@ interface CameraTween {
 const BackgroundColor = '#e8e4dd';
 /** The sky after dark. */
 const NightBackgroundColor = '#1b2029';
-/** Daylight (sun, sky, reflections) by day and by night: at night only a faint blue sky light is left. */
-const Daylight = {sun: 2.4, sky: 1.4, environment: 0.45};
-const Nightlight = {sun: 0, sky: 0.05, environment: 0.03};
+/**
+ * Daylight (sun, sky, reflections) by day and by night: at night only a faint blue sky light is left. The sun's height
+ * blends between them (`daylightAt()`).
+ */
+const Daylight = {sun: 2.4, sky: 1.4, skyColor: '#fbf8f2', environment: 0.45};
+const Nightlight = {sky: 0.05, skyColor: '#5a6f99', environment: 0.03};
+/** The sun's distance from the plan centre beyond the radius its shadow covers, m. */
+const SunDistance = 20;
 const HighlightColor = '#d9822b';
 const TweenDuration = 900;
 /** Framing of a floor with nothing on it yet (plan mm). */
@@ -246,6 +252,9 @@ export class ViewerEngine {
     private readonly sky = new THREE.HemisphereLight('#fbf8f2', '#a9a196', Daylight.sky);
     /** After dark: no sun, the flat lit by its own lights. */
     private night = false;
+    /** The clock time on site the sun stands at; null: the default afternoon sun. */
+    private sunTime: SunTime | null = null;
+    private sunAngles: SunAngles = DefaultSun;
     /** The fixture lights (light parts, LED strips) are on. */
     private lightsOn = false;
     private quality: RenderQuality = 'fast';
@@ -988,16 +997,32 @@ export class ViewerEngine {
     public setLighting(night: boolean, lightsOn: boolean): void {
         this.night = night;
         this.lightsOn = lightsOn;
-        const daylight = night ? Nightlight : Daylight;
-        this.sun.intensity = daylight.sun;
-        // No sun, no shadow pass for it.
-        this.sun.castShadow = !night;
-        this.sky.intensity = daylight.sky;
-        this.sky.color.set(night ? '#5a6f99' : '#fbf8f2');
-        this.scene.environmentIntensity = daylight.environment;
-        this.scene.background = new THREE.Color(night ? NightBackgroundColor : BackgroundColor);
+        this.applyDaylight();
         this.applyLights();
         this.refreshShadows();
+    }
+
+    /**
+     * The sun at a clock time on site (the 21st of the month), from the scene's location and north angle; null, or a
+     * scene without a location, keeps the default afternoon sun from the south-west. Below the horizon it is gone and
+     * the sky fades as at dusk.
+     */
+    public setSunTime(time: SunTime | null): void {
+        this.sunTime = time;
+        this.fitSunShadow();
+        this.refreshShadows();
+    }
+
+    /** The sun, sky and background for the night switch and the sun's height. */
+    private applyDaylight(): void {
+        const daylight = this.night ? {sun: 0, sky: 0} : daylightAt(this.sunAngles.elevation);
+        this.sun.intensity = Daylight.sun * daylight.sun;
+        // No sun, no shadow pass for it.
+        this.sun.castShadow = daylight.sun > 0;
+        this.sky.intensity = THREE.MathUtils.lerp(Nightlight.sky, Daylight.sky, daylight.sky);
+        this.sky.color.set(Nightlight.skyColor).lerp(new THREE.Color(Daylight.skyColor), daylight.sky);
+        this.scene.environmentIntensity = THREE.MathUtils.lerp(Nightlight.environment, Daylight.environment, daylight.sky);
+        this.scene.background = new THREE.Color(NightBackgroundColor).lerp(new THREE.Color(BackgroundColor), daylight.sky);
     }
 
     private applyLights(): void {
@@ -1484,7 +1509,7 @@ export class ViewerEngine {
 
         this.scene.add(this.sky);
 
-        // Afternoon sun from the south-west, entering through the living-room windows.
+        // Placed by `fitSunShadow()`: by default an afternoon sun from the south-west.
         this.sun.castShadow = true;
         const shadowSize = sunShadowMapSize('fast', this.renderer.capabilities.maxTextureSize);
         this.sun.shadow.mapSize.set(shadowSize, shadowSize);
@@ -1505,10 +1530,14 @@ export class ViewerEngine {
         this.scene.add(ground);
     }
 
+    /** The sun towards its direction at the clock time, its shadow camera covering the plan. */
     private fitSunShadow(): void {
+        this.sunAngles = sunAt(this.sceneData?.location, this.sunTime, new Date().getFullYear());
+        const direction = sunDirection(this.sceneData?.location?.northAngle ?? 0, this.sunAngles);
         const center = this.planCenter();
         const radius = Math.hypot(this.bounds.maxX - this.bounds.minX, this.bounds.maxY - this.bounds.minY) * MM * 0.6 + 2;
-        this.sun.position.set(center.x - 9, 14, center.z + 12);
+        const distance = radius + SunDistance;
+        this.sun.position.set(center.x + direction.x * distance, center.y + direction.y * distance, center.z + direction.z * distance);
         this.sun.target.position.copy(center);
         const cam = this.sun.shadow.camera;
         cam.left = -radius;
@@ -1516,8 +1545,9 @@ export class ViewerEngine {
         cam.top = radius;
         cam.bottom = -radius;
         cam.near = 1;
-        cam.far = 60;
+        cam.far = distance + radius + 10;
         cam.updateProjectionMatrix();
+        this.applyDaylight();
     }
 
     private createLabel(room: Room): CSS2DObject {

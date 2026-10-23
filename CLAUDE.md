@@ -259,6 +259,21 @@ format is the text in `FurnitureTools::Format`.
   upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
   beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
 
+## Site and sun (FD-39)
+
+- A project's site: `northAngle` (true north, degrees clockwise from plan +y), `latitude` / `longitude` (both or
+  neither, entered by hand; there is no geocoding) and `timeZone` (IANA). These are project details, edited with the
+  name (`ProjectProvider::applySite()`, MCP `update_project`; `detailsChanged`, no revision). The scene carries them as
+  `location` (`LocationDto`), and snapshots keep it at their top level for the version's scenes. A restore leaves the
+  project's own.
+- `viewer/engine/sun.ts` (framework-free): `sunPosition()` (NOAA), `sunInstant()` (clock time in the zone, else local
+  solar time), `sunDirection()` (turned by the north angle) and `daylightAt()` (the sun and sky fade around the
+  horizon). `ViewerEngine.setSunTime()` places the sun in `fitSunShadow()`. Without a location or a time, the default
+  sun (`DefaultSun`, afternoon from the south-west, turned by the north angle) stays.
+- A sun time (`SunTimeDto`, `{month, hour}`: the 21st of the month at that clock time) is a Display option
+  (`SunTimeComponent`, shown when the scene has a location), kept by saved views and share links (`sun`; null or
+  missing means the default sun). The north arrows of the plan PDF and the elevations' key plans follow `northAngle`.
+
 ## Lighting
 
 - Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with

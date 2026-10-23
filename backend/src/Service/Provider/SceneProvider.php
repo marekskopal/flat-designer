@@ -7,6 +7,7 @@ namespace FlatDesigner\Service\Provider;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Dto\GroupDto;
 use FlatDesigner\Dto\ItemDto;
+use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\RoomDto;
@@ -100,6 +101,7 @@ final readonly class SceneProvider
 			underlay: $underlay === null ? null : UnderlayDto::fromEntity($underlay),
 			models: array_map(fn (ModelAsset $model): SceneModelDto => SceneModelDto::fromEntity($model), array_values($models)),
 			pictures: $this->shownPictures->byItems($floor->project, $items),
+			location: LocationDto::fromEntity($floor->project),
 		);
 	}
 

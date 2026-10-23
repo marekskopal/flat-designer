@@ -28,7 +28,7 @@ import {ExportComponent} from '@app/export/export.component';
 import {Comment, commentPinsOf} from '@app/models/comment';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
-import {PlanPoint, Room, RoomType} from '@app/models/scene';
+import {hasSiteLocation, PlanPoint, Room, RoomType, SunTime} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {CommentService} from '@app/services/comment.service';
@@ -43,9 +43,11 @@ import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {Selection} from '@app/viewer/engine/selection';
+import {isSunDown} from '@app/viewer/engine/sun';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
+import {SunTimeComponent} from '@app/viewer/sun-time.component';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 import {switchMap} from 'rxjs';
@@ -88,6 +90,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         SavedViewsComponent,
         ExportComponent,
         CommentsComponent,
+        SunTimeComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -215,10 +218,16 @@ export class ViewerPageComponent {
     protected readonly ceilingsVisible = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
-    /** After dark; the lights follow it (on at night) until switched by hand. */
+    /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
     protected readonly night = signal(false);
     private readonly lightsChoice = signal<boolean | null>(null);
-    protected readonly lightsOn = computed(() => this.lightsChoice() ?? this.night());
+    protected readonly lightsOn = computed(() => this.lightsChoice() ?? (this.night() || this.sunDown()));
+    /** The chosen sun time has the sun below the horizon: the viewer draws it as night. */
+    private readonly sunDown = computed(() => isSunDown(this.viewedScene()?.location, this.sunTime(), new Date().getFullYear()));
+    /** Where the sun stands (with the project's location); null: the default afternoon sun. */
+    protected readonly sunTime = signal<SunTime | null>(null);
+    /** The sun can be placed at a time: the scene knows where the building stands. */
+    protected readonly hasLocation = computed(() => hasSiteLocation(this.viewedScene()));
     /** Presentation quality, for screenshots: slower, so off while working. */
     protected readonly presentation = signal(false);
     /** The measure tool (top view only); an edit tool turns it off and the other way round. */
@@ -254,6 +263,7 @@ export class ViewerPageComponent {
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
             night: this.night(),
+            sun: this.sunTime(),
             presentation: this.presentation(),
         };
     });
@@ -378,7 +388,8 @@ export class ViewerPageComponent {
             return;
         }
         if (update.type === 'detailsChanged') {
-            // The name in the header, also over a saved version; the reloaded scene is the same.
+            // The name in the header, also over a saved version, and the site's location in the working copy's scene (a
+            // saved version keeps the one it was saved with).
             this.data.reload();
             return;
         }
@@ -660,6 +671,7 @@ export class ViewerPageComponent {
         this.dimensionsVisible.set(settings.dimensions);
         this.night.set(settings.night);
         this.lightsChoice.set(settings.lightsOn);
+        this.sunTime.set(settings.sun ?? null);
         this.presentation.set(settings.presentation);
         const hasVariants = Object.keys(settings.variants).length > 0;
         this.variantOverride.set(scene !== null && hasVariants ? {revision: scene.revision ?? -1, variants: settings.variants} : null);
@@ -702,6 +714,7 @@ export class ViewerPageComponent {
             dimensions: this.dimensionsVisible(),
             night: this.night(),
             lightsOn: this.lightsChoice(),
+            sun: this.sunTime(),
             presentation: this.presentation(),
             variants,
         };

@@ -32,6 +32,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		'sectionHeight' => 1300,
 		'dimensions' => true,
 		'night' => true,
+		'sun' => ['month' => 6, 'hour' => 15.5],
 		'presentation' => true,
 		'exports' => false,
 		'comments' => 'read',
@@ -159,7 +160,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		// Without the flags (a link from before dimension lines, the night view and the quality), they are off; exports are
 		// allowed and comments hidden.
 		self::assertSame(
-			[...$settings, 'dimensions' => false, 'night' => false, 'presentation' => false, 'exports' => true, 'comments' => 'hidden'],
+			[...$settings, 'dimensions' => false, 'night' => false, 'sun' => null, 'presentation' => false, 'exports' => true, 'comments' => 'hidden'],
 			$body['settings'],
 		);
 		self::assertSame($expiresAt, $body['expiresAt']);

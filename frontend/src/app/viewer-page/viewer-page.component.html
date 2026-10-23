@@ -7,6 +7,7 @@
     [dimensionsVisible]="dimensionsVisible()"
     [night]="night()"
     [lightsOn]="lightsOn()"
+    [sunTime]="sunTime()"
     [presentation]="presentation()"
     [measuring]="measureActive()"
     [calibrating]="editor.calibration() !== null"
@@ -256,6 +257,9 @@
             <input type="checkbox" [checked]="lightsOn()" (change)="toggleLights()" />
             <span>Lights on</span>
         </label>
+        @if (hasLocation()) {
+            <fd-sun-time [(time)]="sunTime" />
+        }
         <label class="toggle">
             <input type="checkbox" [checked]="presentation()" (change)="presentation.set(!presentation())" />
             <span>Presentation quality</span>
