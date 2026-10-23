@@ -1,8 +1,9 @@
+import {levelText} from '@app/core/level-text';
 import {Floor, Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {planLayout, planSheet, roomScheduleSheets} from './plan-drawing';
-import {levelText, PaperLong, PaperShort, SheetInfo} from './sheet-svg';
+import {PaperLong, PaperShort, SheetInfo} from './sheet-svg';
 
 const wall = (id: number, start: PlanPoint, end: PlanPoint, openings: Opening[] = []): Wall => ({
     id,

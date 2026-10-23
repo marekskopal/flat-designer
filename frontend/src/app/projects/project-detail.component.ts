@@ -4,6 +4,7 @@ import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
+import {levelText} from '@app/core/level-text';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
@@ -15,7 +16,6 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareService} from '@app/services/share.service';
 import {ShareLinkFormComponent} from '@app/share/share-link-form.component';
-import {levelText} from '@app/viewer/engine/sheet-svg';
 import {filter, switchMap} from 'rxjs';
 
 /** One project: its details, floors (the working copy), room and electrical schedules, saved versions, share links and files. */

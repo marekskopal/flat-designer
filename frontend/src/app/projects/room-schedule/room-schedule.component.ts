@@ -1,9 +1,9 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, effect, inject, input, signal} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {levelText} from '@app/core/level-text';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {ProjectService} from '@app/services/project.service';
-import {levelText} from '@app/viewer/engine/sheet-svg';
 
 /**
  * The project's room schedule: per floor the rooms' net area, perimeter, clear height and volume, with the

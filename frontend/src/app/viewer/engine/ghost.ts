@@ -6,8 +6,7 @@ import {MM, polylineSegments, Vec2, wallFaces, wallJoints} from './plan-geometry
 /** The floor below the shown one, traced in the top view: its walls and room outlines. */
 export type GhostFloor = Pick<Scene, 'walls' | 'rooms'>;
 
-const WallColor = '#3d6fa8';
-const RoomColor = '#3d6fa8';
+const GhostColor = '#3d6fa8';
 /** Over the underlay (0.002), under nothing: the lines draw without a depth test. */
 const GhostY = 0.003;
 
@@ -26,13 +25,13 @@ export function buildGhost(floor: GhostFloor): THREE.Group {
         const outline = [...left, ...[...right].reverse()];
         return polylineSegments([...outline, outline[0]]);
     });
-    group.add(ghostLines(wallSegments, new THREE.LineBasicMaterial({color: WallColor, transparent: true, opacity: 0.55}), 'ghost-walls'));
+    group.add(ghostLines(wallSegments, new THREE.LineBasicMaterial({color: GhostColor, transparent: true, opacity: 0.55}), 'ghost-walls'));
 
     const roomSegments = floor.rooms.flatMap((room) => {
         const outline = room.polygon.map(([x, y]): Vec2 => ({x, y}));
         return outline.length < 2 ? [] : polylineSegments([...outline, outline[0]]);
     });
-    const dashed = new THREE.LineDashedMaterial({color: RoomColor, transparent: true, opacity: 0.4, dashSize: 0.15, gapSize: 0.1});
+    const dashed = new THREE.LineDashedMaterial({color: GhostColor, transparent: true, opacity: 0.4, dashSize: 0.15, gapSize: 0.1});
     const rooms = ghostLines(roomSegments, dashed, 'ghost-rooms');
     rooms.computeLineDistances();
     group.add(rooms);

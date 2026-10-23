@@ -1,3 +1,4 @@
+import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
 import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
 
@@ -26,7 +27,6 @@ import {
 import {
     frameSvg,
     Ink,
-    levelText,
     line,
     Margin,
     Muted,

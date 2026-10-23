@@ -40,7 +40,7 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   finished floor level above the project datum ±0.000 and `slabThickness` the slab under it (the viewer's slab). A new
   floor without them stands on the tallest wall of the floor below plus its slab, or hangs under the one above
   (`FloorStack`; 300 mm slabs at level 0 and below, 250 above); snapshots from before them are stacked the same way. The
-  sheets, the schedules and the project page write the level as `levelText()` (`+3.000`). REST `…/floors`, MCP
+  sheets, the schedules and the project page write the level as `levelText()` in `core/level-text.ts` (`+3.000`). REST `…/floors`, MCP
   `add_floor` / `update_floor` / `delete_floor`.
 - Ghost of the floor below (FD-71): the viewer page loads the scene of the floor with the highest level under the shown
   one (from the same version) while its Display toggle "Floor below" is on (by default in edit mode), and reloads it

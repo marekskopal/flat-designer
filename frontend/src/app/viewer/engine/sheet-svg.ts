@@ -1,3 +1,4 @@
+import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
 
 import {Vec2} from './plan-geometry';
@@ -56,11 +57,6 @@ export function sheetSvg(width: number, height: number, body: readonly string[])
 /** The frame around the drawing. */
 export function frameSvg(width: number, height: number): string {
     return rect({x: Margin, y: Margin}, width - 2 * Margin, height - 2 * Margin, {stroke: Ink, width: 0.35});
-}
-
-/** A level in metres as plans write them: ±0.000, +3.000, −0.150. */
-export function levelText(mm: number): string {
-    return `${mm === 0 ? '±' : mm > 0 ? '+' : '−'}${(Math.abs(mm) / 1000).toFixed(3)}`;
 }
 
 /**

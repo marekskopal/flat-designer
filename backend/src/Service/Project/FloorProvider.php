@@ -18,7 +18,9 @@ final readonly class FloorProvider
 	private const int MaxNameLength = 255;
 	private const int MinLevel = -10;
 	private const int MaxLevel = 100;
-	private const int MaxElevation = 100000;
+
+	/** mm; room for the default stacking up to `MaxLevel`. */
+	private const int MaxElevation = 500000;
 	private const int MaxSlabThickness = 1000;
 
 	public function __construct(

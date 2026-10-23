@@ -1,8 +1,8 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal} from '@angular/core';
+import {levelText} from '@app/core/level-text';
 import {ElectricalSchedule, FloorElectrical} from '@app/models/electrical-schedule';
 import {ProjectService} from '@app/services/project.service';
-import {levelText} from '@app/viewer/engine/sheet-svg';
 
 import {CategoryLabels, rowValues, totalsSummary} from './electrical-labels';
 

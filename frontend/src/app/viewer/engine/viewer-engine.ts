@@ -2074,7 +2074,8 @@ export class ViewerEngine {
             this.previewWall(bent.wall, bent.fits);
             return;
         }
-        const others = (this.sceneData?.walls ?? [])
+        // The other walls' ends, and those of the floor below while it is traced.
+        const others = [...(this.sceneData?.walls ?? []), ...this.ghostWalls]
             .filter((w) => w.id !== wall.id)
             .flatMap((w) => [
                 {x: w.startX, y: w.startY},

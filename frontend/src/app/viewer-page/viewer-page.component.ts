@@ -190,7 +190,7 @@ export class ViewerPageComponent {
         const below = floors.filter((f) => level !== undefined && f.level < level);
         return below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a));
     });
-    /** Shows the floor below by hand; null follows edit mode. */
+    /** Shows the floor below by hand on this floor; null follows edit mode. */
     private readonly floorBelowChoice = signal<boolean | null>(null);
     protected readonly floorBelowShown = computed(() => this.floorBelow() !== null && (this.floorBelowChoice() ?? this.editor.enabled()));
     /** The floor below's scene, loaded only while it is shown (from the same version as this floor). */
@@ -400,6 +400,7 @@ export class ViewerPageComponent {
         // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
         effect(() => {
             this.floorId();
+            this.floorBelowChoice.set(null);
             this.editor.select(null);
             this.sharing.set(null);
             this.activeCommentId.set(null);
@@ -440,8 +441,9 @@ export class ViewerPageComponent {
         }
         if (update.revision > (this.scene()?.revision ?? -1)) {
             this.data.reload();
-            // The change may have been on the floor below.
-            this.floorBelowScene.reload();
+            if (update.floorId === null || update.floorId === this.floorBelow()?.id) {
+                this.floorBelowScene.reload();
+            }
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
                 const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
