@@ -2,7 +2,7 @@ import {Item, SceneModel} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildModelItemBody, ModelLibrary} from './models';
+import {buildModelItemBody, ModelLibrary, withoutTransmission} from './models';
 
 const model: SceneModel = {
     id: 7,
@@ -93,5 +93,18 @@ describe('buildModelItemBody', () => {
             expect(missing.userData['modelPending']).toBe(false);
             expect(((missing.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial).color.getHexString()).toBe('c0504d');
         }
+    });
+});
+
+describe('withoutTransmission', () => {
+    it('makes transmissive glass transparent and leaves other materials', () => {
+        const glass = new THREE.MeshPhysicalMaterial({transmission: 1});
+        const wood = new THREE.MeshStandardMaterial();
+        const root = new THREE.Group().add(new THREE.Mesh(new THREE.BoxGeometry(), glass), new THREE.Mesh(new THREE.BoxGeometry(), wood));
+        withoutTransmission(root);
+        expect(glass.transmission).toBe(0);
+        expect(glass.transparent).toBe(true);
+        expect(glass.opacity).toBeCloseTo(0.15);
+        expect(wood.transparent).toBe(false);
     });
 });

@@ -351,9 +351,12 @@ function tilted(object: THREE.Object3D, part: ResolvedPart): THREE.Object3D {
     return pivot;
 }
 
-/** Clear glass; one per mesh, disposed with it (not one of the library's materials). */
+/**
+ * Clear glass; one per mesh, disposed with it (not one of the library's materials). Transparent rather than transmissive:
+ * a transmissive material in view makes three.js render the whole scene a second time every frame (FD-58).
+ */
 function glassMaterial(): THREE.Material {
-    return new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transmission: 0.9, transparent: true, opacity: 0.35});
+    return new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transparent: true, opacity: 0.15, depthWrite: false});
 }
 
 function box(part: ResolvedPart, material: THREE.Material): THREE.Mesh {

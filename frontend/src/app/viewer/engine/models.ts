@@ -22,7 +22,7 @@ export class ModelLibrary {
 
     public constructor(fetch: ModelFetcher) {
         this.templates = new AssetLoader(
-            (modelId) => fetch(modelId).then((bytes) => this.gltf.parseAsync(bytes, '')).then((gltf) => centred(gltf.scene)),
+            (modelId) => fetch(modelId).then((bytes) => this.gltf.parseAsync(bytes, '')).then((gltf) => centred(withoutTransmission(gltf.scene))),
             disposeTemplate,
             true,
         );
@@ -131,4 +131,28 @@ function placeholder(item: Item, missing: boolean): THREE.Mesh {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(item.width * MM, item.height * MM, item.depth * MM), material);
     mesh.position.y = (item.height * MM) / 2;
     return mesh;
+}
+
+/** See-through glass of a transmissive model (`KHR_materials_transmission`), the light let through. */
+const TransmissionOpacity = 0.15;
+
+/**
+ * Turns the transmissive materials of a model into transparent ones: a transmissive material in view makes three.js render
+ * the whole scene a second time every frame, for a refraction a thin glass hardly shows (FD-58).
+ */
+export function withoutTransmission(root: THREE.Object3D): THREE.Object3D {
+    root.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) {
+            return;
+        }
+        for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+            if (material instanceof THREE.MeshPhysicalMaterial && material.transmission > 0) {
+                material.opacity = Math.min(material.opacity, 1 - material.transmission * (1 - TransmissionOpacity));
+                material.transmission = 0;
+                material.transparent = true;
+                material.depthWrite = false;
+            }
+        }
+    });
+    return root;
 }
