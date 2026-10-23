@@ -75,6 +75,11 @@ export class SharedViewerPageComponent {
     protected readonly settings = computed(() => this.shared()?.settings ?? null);
     /** The shared scene with the guest's own variant choices. */
     protected readonly scene = linkedSignal<Scene | null>(() => this.shared()?.scene ?? null);
+    /** The floors under the shared one, when the link draws all floors. */
+    protected readonly stack = computed<readonly Scene[] | null>(() => {
+        const shared = this.shared();
+        return shared?.settings.allFloors === true ? (shared.stack ?? []) : null;
+    });
     protected readonly error = computed(() => {
         const error = this.data.error();
         if (error === undefined) {

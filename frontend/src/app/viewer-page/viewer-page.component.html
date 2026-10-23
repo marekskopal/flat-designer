@@ -16,6 +16,7 @@
     [pictureFetcher]="pictureFetcher"
     [underlayVisible]="editor.underlayVisible()"
     [ghost]="ghost()"
+    [stack]="stack()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
@@ -269,6 +270,12 @@
             <label class="toggle">
                 <input type="checkbox" [checked]="editor.underlayVisible()" (change)="editor.underlayVisible.set(!editor.underlayVisible())" />
                 <span>Plan underlay</span>
+            </label>
+        }
+        @if (floorBelow() !== null) {
+            <label class="toggle" title="Show the floors below this one under it; the floors above are left out">
+                <input type="checkbox" [checked]="allFloors()" (change)="allFloors.set(!allFloors())" />
+                <span>All floors</span>
             </label>
         }
         @if (floorBelow(); as below) {

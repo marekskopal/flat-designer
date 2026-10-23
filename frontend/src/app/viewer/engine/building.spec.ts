@@ -321,10 +321,24 @@ describe('buildFloor', () => {
 });
 
 describe('buildSlab', () => {
-    it("hangs the floor's slab under its level, round the walls", () => {
-        const slab = buildSlab([wall], 250, new MaterialLibrary([], 1));
-        const box = new THREE.Box3().setFromObject(slab);
+    const materials = new MaterialLibrary([], 1);
+    const hall = {id: 1, type: 'Hallway', polygon: [[150, 150], [3850, 150], [3850, 2850], [150, 2850]]} as unknown as Room;
+    const garden = {id: 2, type: 'Garden', polygon: [[0, 5000], [9000, 5000], [9000, 9000], [0, 9000]]} as unknown as Room;
+
+    it("hangs the floor's slab under its level", () => {
+        const box = new THREE.Box3().setFromObject(buildSlab([wall], [], 250, materials));
         expect(box.max.y).toBeCloseTo(0);
         expect(box.min.y).toBeCloseTo(-0.25);
+    });
+
+    it('lies under the rooms and the walls, not under gardens', () => {
+        const box = new THREE.Box3().setFromObject(buildSlab([wall], [hall, garden], 250, materials));
+        // The wall runs along y = 0, 300 mm thick; the hall reaches y = 2850; the garden from y = 5000 has no slab.
+        expect(box.min.z).toBeCloseTo(-2.85);
+        expect(box.max.z).toBeCloseTo(0.15);
+    });
+
+    it('is empty on an empty floor', () => {
+        expect(buildSlab([], [], 300, materials).geometry.getAttribute('position')).toBeUndefined();
     });
 });

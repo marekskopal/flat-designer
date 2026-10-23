@@ -203,6 +203,48 @@ final class ModelAssetControllerTest extends IntegrationTestCase
 		self::assertSame(404, $this->request('GET', $path($unused))->getStatusCode());
 	}
 
+	public function testAllFloorsLinksLoadTheModelsOfTheFloorsBelow(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$ground = Fixture::firstFloor($project);
+		$plant = $this->projectModel($user, $project, 'Plant', Glb::box([-0.2, 0.0, -0.2], [0.2, 0.9, 0.2]));
+		$this->request(
+			'POST',
+			Fixture::elementsPath($project, $ground->id),
+			['kind' => 'Model', 'modelId' => $plant, 'x' => 500, 'y' => 500],
+			$user,
+		);
+		$attic = $this->jsonBody($this->request(
+			'POST',
+			str_replace('{projectId:number}', (string) $project->id, Routes::ProjectFloors->value),
+			['name' => 'Attic', 'level' => 1],
+			$user,
+		));
+		self::assertIsInt($attic['id']);
+		$settings = ['views' => ['overview'], 'initialView' => 'overview', 'ceilings' => false, 'labels' => true, 'sectionHeight' => null];
+		$token = function (bool $allFloors) use ($user, $project, $attic, $settings): string {
+			$link = $this->jsonBody($this->request(
+				'POST',
+				str_replace('{projectId:number}', (string) $project->id, Routes::ProjectShareLinks->value),
+				['floorId' => $attic['id'], 'name' => 'Attic', 'settings' => [...$settings, 'allFloors' => $allFloors]],
+				$user,
+			));
+			self::assertIsString($link['token']);
+
+			return $link['token'];
+		};
+		$path = static fn (string $token): string => str_replace(
+			['{token:[a-f0-9]+}', '{modelId:number}'],
+			[$token, (string) $plant],
+			Routes::ShareModelContent->value,
+		);
+
+		// The plant stands on the ground floor: only a link drawing the floors below lets guests load it.
+		self::assertSame(404, $this->request('GET', $path($token(false)))->getStatusCode());
+		self::assertSame(200, $this->request('GET', $path($token(true)))->getStatusCode());
+	}
+
 	public function testStoredFilesGoWithTheProjectOrTheLibraryOwner(): void
 	{
 		$admin = Fixture::createAdmin();

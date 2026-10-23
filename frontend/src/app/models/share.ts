@@ -45,6 +45,8 @@ export interface ShareSettings {
     exports?: boolean;
     /** The floor's open review comments: hidden, shown, or guests may add some; missing in older links (hidden). */
     comments?: ShareComments;
+    /** The floors under the shared one are drawn below it (`SharedView.stack`); missing in older links. */
+    allFloors?: boolean;
 }
 
 export interface ShareLink {
@@ -81,6 +83,8 @@ export interface SharedView {
     projectName: string;
     settings: ShareSettings;
     scene: Scene;
+    /** With `settings.allFloors`: the scenes of the floors under the shared one, lowest first. Missing in older servers. */
+    stack?: Scene[];
 }
 
 export const ShareViewLabels: Record<ShareView, string> = {overview: '3D', top: 'Plan', walkthrough: 'Walk'};

@@ -17,6 +17,8 @@ export interface SavedViewSettings {
     /** The sun at a clock time on site; null: the default afternoon sun. Missing in views saved before it. */
     sun?: SunTime | null;
     presentation: boolean;
+    /** The floors under it are drawn below it; missing in views saved before stacked floors. */
+    allFloors?: boolean;
     /** The variant shown per variant set: set id → group id. */
     variants: Record<string, number>;
 }

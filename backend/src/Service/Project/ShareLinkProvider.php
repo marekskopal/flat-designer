@@ -142,8 +142,15 @@ final readonly class ShareLinkProvider
 			return null;
 		}
 		[$link, $scene] = $shared;
+		$settings = self::readSettings($link);
 
-		return new SharedViewDto(name: $link->name, projectName: $link->project->name, settings: self::readSettings($link), scene: $scene);
+		return new SharedViewDto(
+			name: $link->name,
+			projectName: $link->project->name,
+			settings: $settings,
+			scene: $scene,
+			stack: $settings->allFloors ? $this->snapshotService->getScenesBelow($link->version->snapshot, $link->floorId) : [],
+		);
 	}
 
 	/** A 3D model a guest's view draws (listed in its scene's `models`); null for any other. */
@@ -187,7 +194,8 @@ final readonly class ShareLinkProvider
 	}
 
 	/**
-	 * The link and the ids of the models and pictures its floor draws, without decoding the snapshot each time.
+	 * The link and the ids of the models and pictures its floor draws (with `allFloors`, also the floors under it),
+	 * without decoding the snapshot each time.
 	 *
 	 * @return array{ShareLink, array{models: list<int>, pictures: list<int>}}|null
 	 */
@@ -203,6 +211,14 @@ final readonly class ShareLinkProvider
 			$link->floorId,
 			fn (): ?stdClass => $this->snapshotService->getFloorScene($version->snapshot, $link->floorId),
 		);
+		if ($ids !== null && self::readSettings($link)->allFloors) {
+			$below = $this->assetIds->below(
+				$version->id,
+				$link->floorId,
+				fn (): array => $this->snapshotService->getScenesBelow($version->snapshot, $link->floorId),
+			);
+			$ids = ['models' => [...$ids['models'], ...$below['models']], 'pictures' => [...$ids['pictures'], ...$below['pictures']]];
+		}
 
 		return $ids === null ? null : [$link, $ids];
 	}

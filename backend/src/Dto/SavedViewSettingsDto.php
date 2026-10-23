@@ -13,7 +13,7 @@ use stdClass;
 /**
  * How a saved view shows its floor: the view mode (`overview`, the 3D view, or `top`, the plan; an eye-level shot is a 3D
  * camera at eye height), the 3D camera (null = the default framing), the display options (`sun`: the sun at a clock time
- * on site, null = the default afternoon sun) and the active variant of each
+ * on site, null = the default afternoon sun; `allFloors` draws the floors under it below) and the active variant of each
  * variant set (`variants`: set id → group id; sets left out show their current variant).
  */
 final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, JsonSerializable
@@ -32,6 +32,7 @@ final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, Json
 		public bool $presentation,
 		public array $variants,
 		public ?SunTimeDto $sun = null,
+		public bool $allFloors = false,
 	) {
 	}
 
@@ -55,6 +56,7 @@ final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, Json
 			presentation: self::flag($data, 'presentation', false),
 			variants: self::variants($data['variants'] ?? null),
 			sun: SunTimeDto::optional($data),
+			allFloors: self::flag($data, 'allFloors', false),
 		);
 	}
 
@@ -72,6 +74,7 @@ final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, Json
 			'lightsOn' => $this->lightsOn,
 			'sun' => $this->sun,
 			'presentation' => $this->presentation,
+			'allFloors' => $this->allFloors,
 			'variants' => $this->variantsObject(),
 		];
 	}

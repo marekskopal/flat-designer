@@ -91,6 +91,8 @@ export class ViewerComponent {
     public readonly underlayVisible = input(true);
     /** The floor below, traced in the top view; null shows none. */
     public readonly ghost = input<GhostFloor | null>(null);
+    /** All floors: the scenes of the floors to draw under this one (null: this floor only). */
+    public readonly stack = input<readonly Scene[] | null>(null);
     /** With `measuring`: the two points clicked next calibrate the underlay (`calibrated`). */
     public readonly calibrating = input(false);
     /** Section plane height in mm; null shows everything. */
@@ -216,6 +218,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setUnderlay(this.underlay(), this.underlayImage()));
         effect(() => this.engine()?.setUnderlayVisible(this.underlayVisible()));
         effect(() => this.engine()?.setGhost(this.ghost()));
+        effect(() => this.engine()?.setStack(this.stack()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));

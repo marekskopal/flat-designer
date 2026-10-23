@@ -144,26 +144,23 @@ final readonly class ProjectSnapshotService
 	 */
 	public function getFloorScene(string $snapshot, int $floorId): ?stdClass
 	{
-		$data = $this->decode($snapshot, false);
-		if (!$data instanceof stdClass || !is_array($data->floors ?? null)) {
-			throw new InvalidSnapshotException('Snapshot has no floors.');
-		}
+		return SnapshotScenes::of(
+			$this->decode($snapshot, false),
+			$floorId,
+			false,
+			fn (): SnapshotReader => $this->read($snapshot),
+		)[0] ?? null;
+	}
 
-		foreach ($data->floors as $entry) {
-			if ($entry instanceof stdClass && $entry->floor instanceof stdClass && $entry->floor->id === $floorId) {
-				$scene = clone $entry;
-				$scene->floor = FloorStack::sceneFloor(
-					$entry->floor,
-					fn (): array => FloorStack::ofSnapshot($this->read($snapshot))[$floorId],
-				);
-				$scene->materials = $data->materials ?? [];
-				$scene->location = $data->location ?? null;
-
-				return $scene;
-			}
-		}
-
-		return null;
+	/**
+	 * The stored scenes of the floors under one (of a lower level), lowest first, as `getFloorScene()` gives them, with
+	 * the snapshot decoded once. Empty when the floor is gone or nothing lies under it.
+	 *
+	 * @return list<stdClass>
+	 */
+	public function getScenesBelow(string $snapshot, int $floorId): array
+	{
+		return SnapshotScenes::of($this->decode($snapshot, false), $floorId, true, fn (): SnapshotReader => $this->read($snapshot));
 	}
 
 	/**

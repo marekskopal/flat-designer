@@ -39,6 +39,29 @@ final class SharedAssetIds
 		return $this->entries[$key];
 	}
 
+	/**
+	 * The models and pictures of the floors under a shared floor (the all floors view), remembered the same way.
+	 *
+	 * @param callable(): list<stdClass> $scenes decodes their scenes when they are not remembered yet
+	 * @return array{models: list<int>, pictures: list<int>}
+	 */
+	public function below(int $versionId, int $floorId, callable $scenes): array
+	{
+		$key = $versionId . ':' . $floorId . ':below';
+		if (!isset($this->entries[$key])) {
+			$decoded = $scenes();
+			if (count($this->entries) >= self::MaxEntries) {
+				array_shift($this->entries);
+			}
+			$this->entries[$key] = [
+				'models' => array_merge([], ...array_map(fn (stdClass $s): array => self::ids($s->models ?? null), $decoded)),
+				'pictures' => array_merge([], ...array_map(fn (stdClass $s): array => self::ints($s->pictures ?? null), $decoded)),
+			];
+		}
+
+		return $this->entries[$key];
+	}
+
 	/** Forgets everything, for tests that reuse version ids. */
 	public function clear(): void
 	{

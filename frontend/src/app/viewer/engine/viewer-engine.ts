@@ -77,7 +77,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
-import {buildPlot, groundUnder, highlightPlot, lowestGround} from './plots';
+import {buildPlot, groundUnder, highlightPlot} from './plots';
 import {
     PresentationPipeline,
     PresentationPixelRatio,
@@ -89,6 +89,7 @@ import {
 } from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {buildContextFloor, floorOffset, floorPoints, floorsBelow, stackGround} from './stack';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
@@ -322,6 +323,9 @@ export class ViewerEngine {
     /** The floor below, traced in the top view (`setGhost()`), and its walls for the snapping. */
     private ghost: THREE.Group | null = null;
     private ghostWalls: readonly Wall[] = [];
+    /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
+    private stackScenes: readonly Scene[] | null = null;
+    private stackLayers: {scene: Scene; group: THREE.Group}[] = [];
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -470,11 +474,13 @@ export class ViewerEngine {
         const previous = this.sceneData;
         // Pictures of files deleted since go plain, and a fresh scene listing a file lets a failed load try again: their
         // items are redrawn. Models the same way.
-        const changedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
-        const changedModels = new Set(this.modelLibrary?.sync((scene.models ?? []).map((m) => m.id)) ?? []);
+        const changedPictures = new Set(this.pictureLibrary?.sync(this.stackPictures(scene)) ?? []);
+        const changedModels = new Set(this.modelLibrary?.sync(this.stackModels(scene)) ?? []);
+        let rebuilt = false;
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
             this.applyChanges(previous, scene, changedPictures, changedModels);
         } else {
+            rebuilt = true;
             const started = performance.now();
             this.build(scene);
             this.buildMs = performance.now() - started;
@@ -482,18 +488,27 @@ export class ViewerEngine {
         this.sceneData = scene;
         this.showVariants(scene);
         this.applyLights();
+        // The floors under a new floor (or with new materials) are drawn anew; the same floor's only move with its level.
+        if (rebuilt || this.loadedFloorId !== scene.floor.id) {
+            this.rebuildStack();
+        } else {
+            this.placeStack();
+        }
 
-        const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
-        const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
-        this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
-        this.fitSunShadow();
-        this.fitGround(scene);
         if (this.loadedFloorId !== scene.floor.id) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
                 this.onWalkthroughEnd();
             }
-            this.setView('overview', false);
+            if (this.stackScenes !== null && previous !== null && this.loadedFloorId !== null) {
+                // All floors stay where they are on the screen: the view moves with the shown floor's level.
+                const dy = floorOffset(previous, scene) * MM;
+                this.camera.position.y += dy;
+                this.controls.target.y += dy;
+                this.controls.update();
+            } else {
+                this.setView('overview', false);
+            }
         }
         if (this.walkthrough === null) {
             this.leafStates.reset(scene.walls);
@@ -540,6 +555,8 @@ export class ViewerEngine {
     }
 
     private build(scene: Scene): void {
+        // The layers share the floor's materials, which go with its content.
+        this.clearStack();
         this.clearContent();
 
         const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
@@ -643,9 +660,10 @@ export class ViewerEngine {
             this.corners = corners;
             this.indexWalls();
         }
-        if (wallsChanged || previous.floor.slabThickness !== scene.floor.slabThickness) {
+        // The slab lies under the rooms and the walls.
+        if (wallsChanged || rooms.removed.length > 0 || rooms.changed.length > 0 || previous.floor.slabThickness !== scene.floor.slabThickness) {
             this.disposeObject(parts.slab);
-            parts.slab = buildSlab(scene.walls, scene.floor.slabThickness, materials);
+            parts.slab = buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials);
             parts.root.add(parts.slab);
         }
 
@@ -1174,7 +1192,12 @@ export class ViewerEngine {
     public setModelFetcher(fetcher: ModelFetcher): void {
         this.modelLibrary?.dispose();
         this.modelLibrary = new ModelLibrary(fetcher);
-        this.modelLibrary.onLoaded = (modelId): void => this.rebuildModelItems(modelId);
+        this.modelLibrary.onLoaded = (modelId): void => {
+            this.rebuildModelItems(modelId);
+            if (this.stackLayers.some((l) => (l.scene.models ?? []).some((m) => modelId === null || m.id === modelId))) {
+                this.rebuildStack();
+            }
+        };
         if (this.sceneData !== null) {
             this.rebuildModelItems(null);
         }
@@ -1183,7 +1206,12 @@ export class ViewerEngine {
     public setPictureFetcher(fetcher: PictureFetcher): void {
         this.pictureLibrary?.dispose();
         this.pictureLibrary = new PictureLibrary(fetcher);
-        this.pictureLibrary.onLoaded = (fileId): void => this.rebuildPictureItems(fileId);
+        this.pictureLibrary.onLoaded = (fileId): void => {
+            this.rebuildPictureItems(fileId);
+            if (this.stackLayers.some((l) => (l.scene.pictures ?? []).some((id) => fileId === null || id === fileId))) {
+                this.rebuildStack();
+            }
+        };
         if (this.sceneData !== null) {
             this.rebuildPictureItems(null);
         }
@@ -1593,6 +1621,7 @@ export class ViewerEngine {
         window.removeEventListener('keydown', this.handleKeyDown, true);
         this.walkthrough?.dispose();
         this.walkthrough = null;
+        this.clearStack();
         this.clearContent();
         this.removeDimensions();
         this.setUnderlay(null, null);
@@ -1646,7 +1675,66 @@ export class ViewerEngine {
 
     /** The surroundings' ground under the lowest plot or room, so nothing below the floor's level is buried in it. */
     private fitGround(scene: Scene): void {
-        this.surroundings.position.y = lowestGround(scene.plots ?? [], scene.rooms) * MM + GroundDiscY;
+        this.surroundings.position.y = stackGround(scene, this.stackLayers.map((l) => l.scene)) * MM + GroundDiscY;
+    }
+
+    /**
+     * The all floors view: the floors under the shown one are drawn below it at their levels (`scenes` may hold any of
+     * the project's floors; those at the shown one's level and above are left out). Null shows this floor only. While
+     * it is on, switching floors keeps the view where it is.
+     */
+    public setStack(scenes: readonly Scene[] | null): void {
+        this.invalidate();
+        this.stackScenes = scenes;
+        if (this.sceneData !== null) {
+            this.pictureLibrary?.sync(this.stackPictures(this.sceneData));
+            this.modelLibrary?.sync(this.stackModels(this.sceneData));
+        }
+        this.rebuildStack();
+    }
+
+    /** Draws the floors under the shown one anew. */
+    private rebuildStack(): void {
+        this.clearStack();
+        const shown = this.sceneData;
+        if (shown !== null && this.materials !== null) {
+            for (const scene of floorsBelow(this.stackScenes ?? [], shown)) {
+                const group = buildContextFloor(scene, this.materials, this.itemAssets(scene));
+                this.stackLayers.push({scene, group});
+                this.scene.add(group);
+            }
+        }
+        this.placeStack();
+    }
+
+    /** Lifts the layers to their levels against the shown floor, and fits the framing, sun and ground to all of them. */
+    private placeStack(): void {
+        const shown = this.sceneData;
+        if (shown === null) {
+            return;
+        }
+        for (const layer of this.stackLayers) {
+            layer.group.position.y = floorOffset(layer.scene, shown) * MM;
+        }
+        const points = [shown, ...this.stackLayers.map((l) => l.scene)].flatMap(floorPoints);
+        this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
+        this.fitSunShadow();
+        this.fitGround(shown);
+        this.refreshShadows();
+    }
+
+    private clearStack(): void {
+        this.stackLayers.forEach((layer) => this.disposeObject(layer.group));
+        this.stackLayers = [];
+    }
+
+    /** The models the shown floor and the stack draw, so the library keeps them all. */
+    private stackModels(scene: Scene): number[] {
+        return [scene, ...(this.stackScenes ?? [])].flatMap((s) => (s.models ?? []).map((m) => m.id));
+    }
+
+    private stackPictures(scene: Scene): number[] {
+        return [scene, ...(this.stackScenes ?? [])].flatMap((s) => s.pictures ?? []);
     }
 
     /** The sun towards its direction at the clock time, its shadow camera covering the plan. */

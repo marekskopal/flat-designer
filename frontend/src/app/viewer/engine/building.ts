@@ -1,5 +1,6 @@
 import {Opening, PlanPoint, Plot, Room, Scene, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import {
     ceilingSteps,
@@ -31,14 +32,13 @@ import {
     NoCorners,
     openingFrame,
     openingLeaves,
-    pointOnWall,
-    polygonBounds,
     SlidingDoorOverlap,
     SquareEnds,
     tileGrid,
     Vec2,
     WallCorners,
     WallEnds,
+    wallFaces,
     WallFrame,
     wallFrame,
     WallGap,
@@ -47,7 +47,6 @@ import {
     wallOutline,
     WallPiece,
     wallPieces,
-    wallSamples,
     WindowFrameBar,
 } from './plan-geometry';
 import {buildPlot, groundUnder} from './plots';
@@ -94,7 +93,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root,
         ceilings,
         ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
-        slab: buildSlab(scene.walls, scene.floor.slabThickness, materials),
+        slab: buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials),
         rooms: new Map(),
         plots: new Map(),
         walls: new Map(),
@@ -156,35 +155,38 @@ export function addRoom(parts: BuildingParts, room: RoomParts, roomId: number): 
     }
 }
 
-/** The slab under the floor, `thickness` mm deep, round the walls. */
-export function buildSlab(walls: readonly Wall[], thickness: number, materials: MaterialLibrary): THREE.Mesh {
-    // The ends of the centre lines, and the joints between the pieces of a curved one.
-    const points = walls.flatMap((w) => {
-        const frame = wallFrame(w);
-        return frame.length > 0
-            ? wallSamples(frame, 0, frame.length).map((along): [number, number] => {
-                const p = pointOnWall(frame, along);
-                return [p.x, p.y];
-            })
-            : [[w.startX, w.startY] as [number, number]];
-    });
-    const maxThickness = Math.max(...walls.map((w) => w.thickness), 0) / 2;
-    const b = polygonBounds(points);
-    const minX = b.minX - maxThickness;
-    const maxX = b.maxX + maxThickness;
-    const minY = b.minY - maxThickness;
-    const maxY = b.maxY + maxThickness;
+/** Rooms on the ground itself, which have no slab under them. */
+const UnslabbedRooms: readonly Room['type'][] = ['Garden', 'Path', 'Driveway'];
 
-    const slab = boxAt(
-        materials.plain('#d6d1c8', 0.95),
-        minX * MM,
-        -thickness * MM,
-        -maxY * MM,
-        (maxX - minX) * MM,
-        thickness * MM,
-        (maxY - minY) * MM,
-    );
+/**
+ * The slab under the floor, `thickness` mm deep: under its rooms (not gardens, paths and driveways, which lie on the
+ * ground) and its walls' footprints, so an upper floor's slab roofs only what it covers. The outlines are extruded and
+ * merged into one mesh; where they overlap, their faces lie inside the solid or coincide.
+ */
+export function buildSlab(walls: readonly Wall[], rooms: readonly Room[], thickness: number, materials: MaterialLibrary): THREE.Mesh {
+    const joints = wallJoints(walls);
+    const outlines: Vec2[][] = [
+        ...rooms.filter((r) => !UnslabbedRooms.includes(r.type)).map((r) => r.polygon.map(([x, y]): Vec2 => ({x, y}))),
+        ...walls.map((wall) => {
+            const {left, right} = wallFaces(wall, joints.get(wall.id));
+            return [...left, ...[...right].reverse()];
+        }),
+    ].filter((outline) => outline.length >= 3);
+    const pieces = outlines.map((outline) => {
+        const shape = new THREE.Shape(outline.map((p) => new THREE.Vector2(p.x * MM, p.y * MM)));
+        const geometry = new THREE.ExtrudeGeometry(shape, {depth: thickness * MM, bevelEnabled: false});
+        geometry.rotateX(-Math.PI / 2);
+        geometry.translate(0, -thickness * MM, 0);
+        // Merged pieces need the same attributes; the slab has no texture.
+        geometry.deleteAttribute('uv');
+        return geometry;
+    });
+    const geometry = pieces.length === 0 ? new THREE.BufferGeometry() : mergeGeometries(pieces);
+    pieces.forEach((piece) => piece !== geometry && piece.dispose());
+
+    const slab = new THREE.Mesh(geometry, materials.plain('#d6d1c8', 0.95));
     slab.castShadow = false;
+    slab.receiveShadow = true;
     slab.name = 'slab';
     return slab;
 }

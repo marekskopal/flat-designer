@@ -28,7 +28,7 @@ import {ExportComponent} from '@app/export/export.component';
 import {Comment, commentPinsOf} from '@app/models/comment';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
-import {hasSiteLocation, isOutdoorRoom, PlanPoint, Room, RoomType, SunTime} from '@app/models/scene';
+import {hasSiteLocation, isOutdoorRoom, PlanPoint, Room, RoomType, Scene, SunTime} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {CommentService} from '@app/services/comment.service';
@@ -211,6 +211,30 @@ export class ViewerPageComponent {
         const {walls, rooms} = this.floorBelowScene.value();
         return {walls, rooms};
     });
+    /** All floors: the floors under this one are drawn below it at their levels, those above are left out. */
+    protected readonly allFloors = signal(false);
+    /** The floors under this one (any level below it), drawn in the all floors view. */
+    private readonly floorsUnder = computed(() => {
+        const floors = this.floors();
+        const level = floors.find((f) => f.id === this.floorId())?.level;
+        return level === undefined ? [] : floors.filter((f) => f.level < level);
+    });
+    /** Their scenes, loaded while the all floors view is on (from the same version as this floor). */
+    private readonly stackData = resource({
+        params: () => {
+            const floorIds = this.floorsUnder().map((f) => f.id);
+            return !this.allFloors() || floorIds.length === 0 ? undefined : {projectId: this.projectId(), floorIds, versionId: this.version()};
+        },
+        // Quietly: a floor that does not load is just not drawn.
+        loader: async ({params}) =>
+            Promise.all(params.floorIds.map((id) => this.projects.getScene(params.projectId, id, params.versionId, {quiet: true}))),
+    });
+    protected readonly stack = computed<readonly Scene[] | null>(() => {
+        if (!this.allFloors()) {
+            return null;
+        }
+        return this.stackData.hasValue() ? this.stackData.value() : [];
+    });
     /** The measure tool is on, for measuring or to pick the underlay's calibration points. */
     protected readonly measureActive = computed(() => this.measuring() || this.editor.calibration() !== null);
     protected readonly project = computed(() => (this.data.hasValue() ? this.data.value().project : null));
@@ -294,6 +318,7 @@ export class ViewerPageComponent {
             night: this.night(),
             sun: this.sunTime(),
             presentation: this.presentation(),
+            allFloors: this.allFloors(),
         };
     });
     /** For the editor panel: where new elements are placed. */
@@ -443,6 +468,9 @@ export class ViewerPageComponent {
             this.data.reload();
             if (update.floorId === null || update.floorId === this.floorBelow()?.id) {
                 this.floorBelowScene.reload();
+            }
+            if (update.floorId === null || this.floorsUnder().some((f) => f.id === update.floorId)) {
+                this.stackData.reload();
             }
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
@@ -711,6 +739,7 @@ export class ViewerPageComponent {
         this.lightsChoice.set(settings.lightsOn);
         this.sunTime.set(settings.sun ?? null);
         this.presentation.set(settings.presentation);
+        this.allFloors.set(settings.allFloors ?? false);
         const hasVariants = Object.keys(settings.variants).length > 0;
         this.variantOverride.set(scene !== null && hasVariants ? {revision: scene.revision ?? -1, variants: settings.variants} : null);
         if (settings.view === 'overview' && settings.camera !== null) {
@@ -754,6 +783,7 @@ export class ViewerPageComponent {
             lightsOn: this.lightsChoice(),
             sun: this.sunTime(),
             presentation: this.presentation(),
+            allFloors: this.allFloors(),
             variants,
         };
     }

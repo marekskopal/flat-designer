@@ -46,7 +46,18 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   one (from the same version) while its Display toggle "Floor below" is on (by default in edit mode), and reloads it
   with live updates. `ViewerEngine.setGhost()` draws its wall outlines and dashed room outlines over the plan without a
   depth test, only while `isTopDown()` (`viewer/engine/ghost.ts`, not pickable). Draw walls and the measure tool snap
-  to its wall ends and centre lines (`ghostWalls` of `snapDrawPoint()` / `snapMeasurePoint()`).
+  to its wall ends and centre lines (`ghostWalls` of `snapDrawPoint()` / `snapMeasurePoint()`; wall drags too).
+- All floors (FD-72): the Display toggle loads the scenes of every floor under the shown one, and
+  `ViewerEngine.setStack()` draws them below it (`viewer/engine/stack.ts`, `buildContextFloor()`: the same builders,
+  lifted by `floorOffset()`, outside the pickable `content` and tagged `userData.contextFloor`; ceilings shown, doors as
+  outside a walk, their fixture lights off). The shown floor stays at y = 0 and editable, cut by the wall cut as before;
+  the floors above are left out, so cutting at another floor means showing it. While the stack is on, switching floors
+  keeps the view (the camera moves with the level). The framing, the sun's shadow and the ground disc fit all layers
+  (`floorPoints()`, `stackGround()`); the model and picture libraries keep the stack's assets. A slab lies under its
+  floor's rooms (not gardens, paths, driveways) and wall footprints, extruded and merged (`buildSlab()`), so an upper
+  slab roofs only what it covers. Saved views and share links keep it as `allFloors`; a share link with it serves the
+  floors below in `SharedViewDto::$stack` (`ProjectSnapshotService::getScenesBelow()`, `SnapshotScenes`) and their
+  models and pictures (`SharedAssetIds::below()`). The glTF export holds the shown floor only.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
