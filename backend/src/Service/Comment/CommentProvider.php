@@ -16,6 +16,7 @@ use FlatDesigner\Model\Repository\CommentRepository;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
 use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use MarekSkopal\ORM\ORM;
 
 /**
  * The review comments of a project: threads pinned to a point of a floor, with one level of replies. They are not floor
@@ -34,7 +35,9 @@ final readonly class CommentProvider
 	public function __construct(
 		private CommentRepository $commentRepository,
 		private FloorRepository $floorRepository,
+		private CommentNumbering $numbering,
 		private ProjectUpdatePublisher $publisher,
+		private ORM $orm,
 	) {
 	}
 
@@ -79,7 +82,7 @@ final readonly class CommentProvider
 		$floor = $this->floorRepository->findOneInProject($project->id, $floorId)
 			?? throw new ProjectException(sprintf('Floor %d is not a floor of this project.', $floorId), 422);
 
-		return $this->add($actor, $project, $floor, $input);
+		return $this->orm->getTransactionProvider()->transaction(fn (): Comment => $this->add($actor, $project, $floor, $input));
 	}
 
 	/** Changes the text and/or whether the thread is resolved; nothing is written (or published) when neither changes. */
@@ -128,7 +131,10 @@ final readonly class CommentProvider
 		return CommentDto::fromEntity($comment, $reader);
 	}
 
-	/** A thread or a reply on a floor of the project, which the caller has checked. */
+	/**
+	 * A thread or a reply on a floor of the project, which the caller has checked. The caller runs this in a transaction,
+	 * which keeps the floor's thread numbering locked (`CommentNumbering::next()`).
+	 */
 	public function add(CommentActor $actor, Project $project, Floor $floor, CommentInputDto $input): Comment
 	{
 		$parent = null;
@@ -156,7 +162,7 @@ final readonly class CommentProvider
 			project: $project,
 			floor: $floor,
 			parent: $parent,
-			number: $parent === null ? $this->commentRepository->lastNumber($floor->id) + 1 : null,
+			number: $parent === null ? $this->numbering->next($floor) : null,
 			x: $x,
 			y: $y,
 			z: $z,

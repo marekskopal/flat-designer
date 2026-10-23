@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Comment;
 
-use DateTimeImmutable;
 use FlatDesigner\Dto\CommentInputDto;
 use FlatDesigner\Model\Entity\Comment;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\ShareLink;
-use FlatDesigner\Model\Repository\CommentRepository;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Service\Project\Exception\ProjectException;
+use MarekSkopal\ORM\ORM;
 
 /**
  * The review comments a share link's guests see and write: the open threads of the link's floor (in the working copy,
@@ -21,13 +20,14 @@ final readonly class SharedComments
 {
 	public const int MaxGuestNameLength = 100;
 
-	/** Comments a share link's guests may write per hour, all together. */
+	/** Comments a share link's guests may write per hour, all together (deleted ones count too: `GuestCommentLog`). */
 	public const int GuestCommentsPerHour = 30;
 
 	public function __construct(
 		private CommentProvider $commentProvider,
-		private CommentRepository $commentRepository,
 		private FloorRepository $floorRepository,
+		private GuestCommentLog $log,
+		private ORM $orm,
 	) {
 	}
 
@@ -65,11 +65,14 @@ final readonly class SharedComments
 		if ($name === '' || mb_strlen($name) > self::MaxGuestNameLength) {
 			throw new ProjectException(sprintf('Your name is required (at most %d characters).', self::MaxGuestNameLength), 422);
 		}
-		if ($this->commentRepository->countByShareLinkSince($link->id, new DateTimeImmutable('-1 hour')) >= self::GuestCommentsPerHour) {
-			throw new ProjectException('Too many comments through this link. Try again later.', 429);
-		}
 		$floor = $this->floor($link) ?? throw new ProjectException('The shared floor no longer exists.', 404);
 
-		return $this->commentProvider->add(CommentActor::guest($name, $link), $link->project, $floor, $input);
+		return $this->orm->getTransactionProvider()->transaction(function () use ($link, $name, $floor, $input): Comment {
+			if (!$this->log->admit($link, self::GuestCommentsPerHour)) {
+				throw new ProjectException('Too many comments through this link. Try again later.', 429);
+			}
+
+			return $this->commentProvider->add(CommentActor::guest($name, $link), $link->project, $floor, $input);
+		});
 	}
 }

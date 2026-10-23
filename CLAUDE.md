@@ -371,18 +371,24 @@ format is the text in `FurnitureTools::Format`.
 
 - `Comment` (`comments`, `Service/Comment`): a thread pinned to a point of a floor (x, y plan mm, z above the floor),
   with one level of replies (`parent`; a reply takes the thread's point). Only a thread is resolved (`resolvedAt`) and
-  numbered (`number`, counted up per floor, never reused: the pin's label, the same for owner, guests and agents). The
-  author is a user, an agent (`createdBy` plus the MCP client, `CommentActor::of()` from `ActorContext`) or a share link
+  numbered (`number`, unique per floor and never reused: the pin's label, the same for owner, guests and agents). The
+  count is `floors.last_comment_number`, which `CommentNumbering` bumps under the project row lock (taken first, as the
+  editor does) and the floor's; it is not mapped on
+  `Floor`, as persisting a floor would write a stale count back. The author is a user, an agent (`createdBy` plus the MCP client, `CommentActor::of()` from `ActorContext`) or a share link
   guest (`guestName`, `shareLink`). Only the author edits the text; a person deletes any comment, an agent only its own.
 - They are not floor content: no revision, no undo, not in snapshots. A change sends `commentsChanged`. A version
   restore carries them over to the restored floors (`CommentKeeper`, with `FloorMatcher`: the same level and name, else
-  the same level; `SnapshotViewRestorer` uses it too). The viewer shows them on the working copy only.
+  the same level; `SnapshotViewRestorer` uses it too). The numbering continues after the floors it came from
+  (`RestoredThreadNumbers`); where two floors meet on one, a thread whose number is taken there gets the next one.
+  The viewer shows them on the working copy only.
 - REST `…/comments` (`?floorId=`, `?resolved=0`), MCP `list_comments` / `add_comment` / `resolve_comment` /
   `delete_comment`.
 - Share links: `ShareSettingsDto.comments` is `hidden` (also older links), `read` or `write`. `GET|POST
   /api/shares/{token}/comments` (`SharedCommentController`, open in `AuthorizationMiddleware`) reads the open threads
   of the link's floor in the working copy and takes a guest's comment, at most `SharedComments::GuestCommentsPerHour`
-  per link. After a restore the floor is found by the link's `floorName`.
+  per link. The posts are counted in `guest_comment_posts` (`GuestCommentLog`, under the project row lock), so deleting
+  the comments, or a restore dropping them, does not refill the limit. After a restore the floor is found by the link's
+  `floorName`.
 - Viewer: `viewer/engine/comments.ts` draws the pins (CSS2D badges, dimmed above the wall cut). The comment tool
   (`setCommenting()`, key C) reports the surface point under a click and takes clicks before the measure and edit
   tools. `app/comments/CommentsComponent` is the panel of both viewer pages. Agents are told that guest comments are

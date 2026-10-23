@@ -8,10 +8,14 @@ use FlatDesigner\Controller\CommentController;
 use FlatDesigner\Controller\SharedCommentController;
 use FlatDesigner\Dto\CommentDto;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
+use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Comment\CommentActor;
 use FlatDesigner\Service\Comment\CommentKeeper;
+use FlatDesigner\Service\Comment\CommentNumbering;
 use FlatDesigner\Service\Comment\CommentProvider;
+use FlatDesigner\Service\Comment\GuestCommentLog;
+use FlatDesigner\Service\Comment\RestoredThreadNumbers;
 use FlatDesigner\Service\Comment\SharedComments;
 use FlatDesigner\Tests\Support\AppHarness;
 use FlatDesigner\Tests\Support\EditorTestCase;
@@ -24,6 +28,9 @@ use Psr\Http\Message\ResponseInterface;
 #[CoversClass(CommentProvider::class)]
 #[CoversClass(SharedComments::class)]
 #[CoversClass(CommentKeeper::class)]
+#[CoversClass(CommentNumbering::class)]
+#[CoversClass(RestoredThreadNumbers::class)]
+#[CoversClass(GuestCommentLog::class)]
 #[CoversClass(CommentActor::class)]
 #[CoversClass(CommentDto::class)]
 final class CommentControllerTest extends EditorTestCase
@@ -83,6 +90,12 @@ final class CommentControllerTest extends EditorTestCase
 		// A deleted thread's number is not reused.
 		$third = $this->jsonBody($this->comment(['x' => 0, 'y' => 0, 'z' => 0, 'body' => 'Third']));
 		self::assertSame(3, $third['number']);
+		// Nor is the last thread's.
+		self::assertSame(
+			200,
+			$this->request('DELETE', $this->commentPath(self::id($third)), authenticatedAs: $this->user)->getStatusCode(),
+		);
+		self::assertSame(4, $this->jsonBody($this->comment(['x' => 0, 'y' => 0, 'z' => 0, 'body' => 'Fourth']))['number']);
 
 		// Resolving a resolved thread again changes nothing and publishes nothing.
 		$published = count(AppHarness::mercureHub()->messages());
@@ -181,6 +194,60 @@ final class CommentControllerTest extends EditorTestCase
 			429,
 			$this->guestComment($token, ['guestName' => 'Bot', 'x' => 0, 'y' => 0, 'z' => 0, 'body' => 'Spam'])->getStatusCode(),
 		);
+
+		// Deleting the comments does not let the link post again.
+		foreach ($this->listed() as $comment) {
+			$this->request('DELETE', $this->commentPath(self::id($comment)), authenticatedAs: $this->user);
+		}
+		self::assertSame([], $this->listed());
+		self::assertSame(
+			429,
+			$this->guestComment($token, ['guestName' => 'Bot', 'x' => 0, 'y' => 0, 'z' => 0, 'body' => 'Spam'])->getStatusCode(),
+		);
+	}
+
+	public function testARestoreContinuesTheNumberingOfTheFloorsItMerges(): void
+	{
+		// The version has one floor; the working copy gets a second one on the same level.
+		$versionId = self::id(
+			$this->jsonBody(
+				$this->request(
+					'POST',
+					str_replace('{projectId:number}', (string) $this->project->id, Routes::ProjectVersions->value),
+					[],
+					$this->user,
+				),
+			),
+		);
+		$first = $this->floor;
+		self::assertSame(1, $this->jsonBody($this->comment(['x' => 0, 'y' => 0, 'z' => 0, 'body' => 'One']))['number']);
+		$deleted = self::id($this->jsonBody($this->comment(['x' => 0, 'y' => 0, 'z' => 0, 'body' => 'Two'])));
+		$this->request('DELETE', $this->commentPath($deleted), authenticatedAs: $this->user);
+
+		$created = $this->request(
+			'POST',
+			str_replace('{projectId:number}', (string) $this->project->id, Routes::ProjectFloors->value),
+			['name' => 'Mezzanine', 'level' => $first->level],
+			$this->user,
+		);
+		self::assertSame(201, $created->getStatusCode(), (string) $created->getBody());
+		$this->floor = Fixture::service(FloorRepository::class)->findOneInProject($this->project->id, self::id($this->jsonBody($created)))
+			?? self::fail('The new floor is missing.');
+		self::assertSame(1, $this->jsonBody($this->comment(['x' => 0, 'y' => 0, 'z' => 0, 'body' => 'Mezzanine one']))['number']);
+
+		$restore = str_replace(
+			['{projectId:number}', '{versionId:number}'],
+			[(string) $this->project->id, (string) $versionId],
+			Routes::ProjectVersionRestore->value,
+		);
+		self::assertSame(200, $this->request('POST', $restore, [], $this->user)->getStatusCode());
+
+		// Both floors' threads land on the restored floor: the first keeps its number, the second takes the next after
+		// both floors' numbering (#2 was given and deleted), and new threads continue from there.
+		$this->floor = Fixture::firstFloor($this->project);
+		self::assertSame(['One', 'Mezzanine one'], array_column($this->listed(), 'body'));
+		self::assertSame([1, 3], array_column($this->listed(), 'number'));
+		self::assertSame(4, $this->jsonBody($this->comment(['x' => 0, 'y' => 0, 'z' => 0, 'body' => 'After']))['number']);
 	}
 
 	public function testAVersionRestoreKeepsTheComments(): void
