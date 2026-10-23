@@ -333,6 +333,8 @@ function ceilingSurface(room: Room, profile: VaultProfile | null, material: THRE
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     const surface = new THREE.Mesh(geometry, material);
+    // Shades the room, so the sun reaches in only through the windows (also while the ceilings are hidden).
+    surface.castShadow = true;
     surface.receiveShadow = true;
     return surface;
 }
@@ -354,6 +356,7 @@ export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[]
         geometry.setIndex([0, 1, 2, 0, 2, 3]);
         geometry.computeVertexNormals();
         const face = new THREE.Mesh(geometry, material);
+        face.castShadow = true;
         face.receiveShadow = true;
         group.add(face);
     }

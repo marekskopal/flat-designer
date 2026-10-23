@@ -354,6 +354,12 @@ export class ViewerEngine {
     private loads = 0;
     private sectionHeight: number | null = null;
     private ceilingsVisible = true;
+    /**
+     * While the ceilings are hidden, they still shade the rooms: these stand-ins share their geometry and cast their
+     * shadows but draw nothing (no colour, no depth, not even under the GTAO pass's override material).
+     */
+    private readonly shadowStandIns = new THREE.Group();
+    private readonly shadowOnlyMaterial = shadowOnlyMaterial();
     private joints = new Map<number, WallEnds>();
     /** Corner windows by wall id (`cornerWindows()`), as the walls were built. */
     private corners = new Map<number, WallCorners>();
@@ -418,6 +424,7 @@ export class ViewerEngine {
         this.overlay.add(this.handles);
         this.drawLayer.name = 'drawing';
         this.scene.add(this.drawLayer);
+        this.scene.add(this.shadowStandIns);
         this.measureLayer.name = 'measure';
         this.overlay.add(this.measureLayer);
         this.measureLabel.element.className = 'measure-label';
@@ -1015,6 +1022,9 @@ export class ViewerEngine {
             this.cameraMovedAt = now;
         }
         this.renderedMoving = false;
+        if (this.renderer.shadowMap.needsUpdate) {
+            this.updateShadowStandIns();
+        }
         if (this.presentation === null) {
             this.renderer.render(this.scene, this.camera);
         } else if (this.stillFrames || now - this.cameraMovedAt >= PresentationSettleMs) {
@@ -1023,6 +1033,30 @@ export class ViewerEngine {
             this.presentation.renderMoving();
             this.renderedMoving = true;
         }
+    }
+
+    /** Stands in for the hidden ceilings (and the beams hiding with them) in the shadow pass about to run. */
+    private updateShadowStandIns(): void {
+        this.shadowStandIns.clear();
+        if (this.ceilingsVisible || this.content === null || this.parts === null) {
+            return;
+        }
+        this.content.updateMatrixWorld(true);
+        const add = (o: THREE.Object3D): void => {
+            if (o instanceof THREE.Mesh && o.castShadow) {
+                const standIn = new THREE.Mesh(o.geometry, this.shadowOnlyMaterial);
+                standIn.matrixAutoUpdate = false;
+                standIn.matrix.copy(o.matrixWorld);
+                standIn.castShadow = true;
+                this.shadowStandIns.add(standIn);
+            }
+        };
+        this.parts.ceilings.traverse(add);
+        this.items.forEach((item) => {
+            if (item.visible) {
+                item.traverse((o) => o.userData['ceilingPart'] === true && o.traverse(add));
+            }
+        });
     }
 
     public setLighting(night: boolean, lightsOn: boolean): void {
@@ -1547,6 +1581,8 @@ export class ViewerEngine {
         this.handleGeometry.dispose();
         this.handleCoreGeometry.dispose();
         this.handleMaterials.forEach((m) => m.dispose());
+        this.shadowStandIns.clear();
+        this.shadowOnlyMaterial.dispose();
         this.scene.environment?.dispose();
         this.controls.dispose();
         this.renderer.dispose();
@@ -3022,6 +3058,13 @@ function createOutline(): THREE.Mesh {
     edges.renderOrder = 3;
     box.add(edges);
     return box;
+}
+
+/** Casts its mesh's shadow and draws nothing, in the scene pass as under an override material. */
+function shadowOnlyMaterial(): THREE.Material {
+    const material = new THREE.MeshBasicMaterial({colorWrite: false, depthWrite: false, side: THREE.DoubleSide});
+    material.allowOverride = false;
+    return material;
 }
 
 /** Visible itself and in every ancestor (hidden ceilings must not catch clicks). */
