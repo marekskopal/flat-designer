@@ -160,23 +160,26 @@ const UnslabbedRooms: readonly Room['type'][] = ['Garden', 'Path', 'Driveway'];
 
 /**
  * The slab under the floor, `thickness` mm deep: under its rooms (not gardens, paths and driveways, which lie on the
- * ground) and its walls' footprints, so an upper floor's slab roofs only what it covers. The outlines are extruded and
- * merged into one mesh; where they overlap, their faces lie inside the solid or coincide.
+ * ground; a room's piece hangs under its own floor elevation) and its walls' footprints, so an upper floor's slab
+ * roofs only what it covers. The outlines are extruded and merged into one mesh; where they overlap, their faces lie
+ * inside the solid or coincide.
  */
 export function buildSlab(walls: readonly Wall[], rooms: readonly Room[], thickness: number, materials: MaterialLibrary): THREE.Mesh {
     const joints = wallJoints(walls);
-    const outlines: Vec2[][] = [
-        ...rooms.filter((r) => !UnslabbedRooms.includes(r.type)).map((r) => r.polygon.map(([x, y]): Vec2 => ({x, y}))),
+    const outlines: {outline: Vec2[]; top: number}[] = [
+        ...rooms
+            .filter((r) => !UnslabbedRooms.includes(r.type))
+            .map((r) => ({outline: r.polygon.map(([x, y]): Vec2 => ({x, y})), top: r.floorElevation ?? 0})),
         ...walls.map((wall) => {
             const {left, right} = wallFaces(wall, joints.get(wall.id));
-            return [...left, ...[...right].reverse()];
+            return {outline: [...left, ...[...right].reverse()], top: 0};
         }),
-    ].filter((outline) => outline.length >= 3);
-    const pieces = outlines.map((outline) => {
+    ].filter(({outline}) => outline.length >= 3);
+    const pieces = outlines.map(({outline, top}) => {
         const shape = new THREE.Shape(outline.map((p) => new THREE.Vector2(p.x * MM, p.y * MM)));
         const geometry = new THREE.ExtrudeGeometry(shape, {depth: thickness * MM, bevelEnabled: false});
         geometry.rotateX(-Math.PI / 2);
-        geometry.translate(0, -thickness * MM, 0);
+        geometry.translate(0, (top - thickness) * MM, 0);
         // Merged pieces need the same attributes; the slab has no texture.
         geometry.deleteAttribute('uv');
         return geometry;

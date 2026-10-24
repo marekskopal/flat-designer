@@ -1,4 +1,4 @@
-import {PlanPoint, Scene} from '@app/models/scene';
+import {Item, PlanPoint, Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {buildBuilding} from './building';
@@ -9,13 +9,20 @@ import {MaterialLibrary} from './materials';
 import {lowestGround} from './plots';
 import {hiddenItemIds} from './variants';
 
+/** A floor drawn under the shown one: its group and its items by id, so an item can be drawn anew when its asset loads. */
+export interface ContextFloor {
+    scene: Scene;
+    group: THREE.Group;
+    items: Map<number, THREE.Object3D>;
+}
+
 /**
  * A floor below the shown one in the all floors view, drawn by the same builders as the shown floor but not editable:
  * the group carries `userData.contextFloor` (the floor's id) and lies outside the engine's pickable content. Its
  * ceilings show, its doors stand as outside a walk (open, French windows closed) and the items of other variants are
  * hidden. Its fixture lights are created switched off, and stay so.
  */
-export function buildContextFloor(scene: Scene, materials: MaterialLibrary, assets: ItemAssets): THREE.Group {
+export function buildContextFloor(scene: Scene, materials: MaterialLibrary, assets: ItemAssets): ContextFloor {
     const group = new THREE.Group();
     group.name = `floor:${scene.floor.name}`;
     group.userData = {contextFloor: scene.floor.id};
@@ -26,15 +33,39 @@ export function buildContextFloor(scene: Scene, materials: MaterialLibrary, asse
     leaves.reset(scene.walls);
     leaves.apply(leafObjects(parts.root));
 
+    const layer: ContextFloor = {scene, group, items: new Map()};
+    rebuildContextItems(layer, () => true, materials, assets, () => undefined);
+    return layer;
+}
+
+/**
+ * Draws the layer's items `rebuild` picks anew (all of them for a fresh layer), e.g. those whose model or picture has
+ * loaded; `dispose` frees the objects they replace.
+ */
+export function rebuildContextItems(
+    layer: ContextFloor,
+    rebuild: (item: Item) => boolean,
+    materials: MaterialLibrary,
+    assets: ItemAssets,
+    dispose: (object: THREE.Object3D) => void,
+): void {
+    const {scene} = layer;
     const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
     const definitions = definitionLibrary(scene.definitions);
     const hidden = hiddenItemIds(scene);
     for (const item of scene.items) {
+        if (!rebuild(item)) {
+            continue;
+        }
+        const previous = layer.items.get(item.id);
+        if (previous !== undefined) {
+            dispose(previous);
+        }
         const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, assets);
         object.visible = !hidden.has(item.id);
-        group.add(object);
+        layer.items.set(item.id, object);
+        layer.group.add(object);
     }
-    return group;
 }
 
 /** The floors of `stack` that lie under the shown one, by level, lowest first. */

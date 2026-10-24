@@ -338,6 +338,14 @@ describe('buildSlab', () => {
         expect(box.max.z).toBeCloseTo(0.15);
     });
 
+    it("hangs a room's piece under its own floor elevation", () => {
+        const polygon = [[5000, 0], [8000, 0], [8000, 3000], [5000, 3000]];
+        const terrace = {id: 3, type: 'Terrace', polygon, floorElevation: -450} as unknown as Room;
+        const box = new THREE.Box3().setFromObject(buildSlab([], [terrace], 300, materials));
+        expect(box.max.y).toBeCloseTo(-0.45);
+        expect(box.min.y).toBeCloseTo(-0.75);
+    });
+
     it('is empty on an empty floor', () => {
         expect(buildSlab([], [], 300, materials).geometry.getAttribute('position')).toBeUndefined();
     });

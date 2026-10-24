@@ -184,12 +184,16 @@ export class ViewerPageComponent {
         this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,
     );
     /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
-    protected readonly floorBelow = computed(() => {
-        const floors = this.floors();
-        const level = floors.find((f) => f.id === this.floorId())?.level;
-        const below = floors.filter((f) => level !== undefined && f.level < level);
-        return below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a));
-    });
+    protected readonly floorBelow = computed(
+        () => {
+            const floors = this.floors();
+            const level = floors.find((f) => f.id === this.floorId())?.level;
+            const below = floors.filter((f) => level !== undefined && f.level < level);
+            return below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a));
+        },
+        // A reloaded project lists the floors anew: the same floor must not load its scene again.
+        {equal: (a, b) => a?.id === b?.id && a?.name === b?.name},
+    );
     /** Shows the floor below by hand on this floor; null follows edit mode. */
     private readonly floorBelowChoice = signal<boolean | null>(null);
     protected readonly floorBelowShown = computed(() => this.floorBelow() !== null && (this.floorBelowChoice() ?? this.editor.enabled()));
@@ -214,20 +218,25 @@ export class ViewerPageComponent {
     /** All floors: the floors under this one are drawn below it at their levels, those above are left out. */
     protected readonly allFloors = signal(false);
     /** The floors under this one (any level below it), drawn in the all floors view. */
-    private readonly floorsUnder = computed(() => {
-        const floors = this.floors();
-        const level = floors.find((f) => f.id === this.floorId())?.level;
-        return level === undefined ? [] : floors.filter((f) => f.level < level);
-    });
+    private readonly floorsUnder = computed(
+        () => {
+            const floors = this.floors();
+            const level = floors.find((f) => f.id === this.floorId())?.level;
+            return level === undefined ? [] : floors.filter((f) => f.level < level);
+        },
+        {equal: (a, b) => a.length === b.length && a.every((f, i) => f.id === b[i].id)},
+    );
     /** Their scenes, loaded while the all floors view is on (from the same version as this floor). */
     private readonly stackData = resource({
         params: () => {
             const floorIds = this.floorsUnder().map((f) => f.id);
             return !this.allFloors() || floorIds.length === 0 ? undefined : {projectId: this.projectId(), floorIds, versionId: this.version()};
         },
-        // Quietly: a floor that does not load is just not drawn.
-        loader: async ({params}) =>
-            Promise.all(params.floorIds.map((id) => this.projects.getScene(params.projectId, id, params.versionId, {quiet: true}))),
+        // Quietly: a floor that does not load is just not drawn, the others are.
+        loader: async ({params}) => {
+            const loads = params.floorIds.map((id) => this.projects.getScene(params.projectId, id, params.versionId, {quiet: true}));
+            return (await Promise.allSettled(loads)).flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+        },
     });
     protected readonly stack = computed<readonly Scene[] | null>(() => {
         if (!this.allFloors()) {

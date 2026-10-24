@@ -89,7 +89,7 @@ import {
 } from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
-import {buildContextFloor, floorOffset, floorPoints, floorsBelow, stackGround} from './stack';
+import {buildContextFloor, ContextFloor, floorOffset, floorPoints, floorsBelow, rebuildContextItems, stackGround} from './stack';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
@@ -325,7 +325,7 @@ export class ViewerEngine {
     private ghostWalls: readonly Wall[] = [];
     /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
     private stackScenes: readonly Scene[] | null = null;
-    private stackLayers: {scene: Scene; group: THREE.Group}[] = [];
+    private stackLayers: ContextFloor[] = [];
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -1194,9 +1194,7 @@ export class ViewerEngine {
         this.modelLibrary = new ModelLibrary(fetcher);
         this.modelLibrary.onLoaded = (modelId): void => {
             this.rebuildModelItems(modelId);
-            if (this.stackLayers.some((l) => (l.scene.models ?? []).some((m) => modelId === null || m.id === modelId))) {
-                this.rebuildStack();
-            }
+            this.rebuildStackItems((item) => item.kind === 'Model' && (modelId === null || item.modelId === modelId));
         };
         if (this.sceneData !== null) {
             this.rebuildModelItems(null);
@@ -1208,9 +1206,8 @@ export class ViewerEngine {
         this.pictureLibrary = new PictureLibrary(fetcher);
         this.pictureLibrary.onLoaded = (fileId): void => {
             this.rebuildPictureItems(fileId);
-            if (this.stackLayers.some((l) => (l.scene.pictures ?? []).some((id) => fileId === null || id === fileId))) {
-                this.rebuildStack();
-            }
+            // Which items show the file is read off the drawn objects for the shown floor; a layer's are drawn anew by kind.
+            this.rebuildStackItems((item) => item.kind === 'Custom');
         };
         if (this.sceneData !== null) {
             this.rebuildPictureItems(null);
@@ -1699,9 +1696,9 @@ export class ViewerEngine {
         const shown = this.sceneData;
         if (shown !== null && this.materials !== null) {
             for (const scene of floorsBelow(this.stackScenes ?? [], shown)) {
-                const group = buildContextFloor(scene, this.materials, this.itemAssets(scene));
-                this.stackLayers.push({scene, group});
-                this.scene.add(group);
+                const layer = buildContextFloor(scene, this.materials, this.itemAssets(scene));
+                this.stackLayers.push(layer);
+                this.scene.add(layer.group);
             }
         }
         this.placeStack();
@@ -1720,6 +1717,18 @@ export class ViewerEngine {
         this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
         this.fitGround(shown);
+        this.refreshShadows();
+    }
+
+    /** Draws the stack's items `rebuild` picks anew (an asset of theirs has loaded), like `rebuildItems()` for the shown floor. */
+    private rebuildStackItems(rebuild: (item: Item) => boolean): void {
+        const materials = this.materials;
+        if (materials === null || this.stackLayers.length === 0) {
+            return;
+        }
+        for (const layer of this.stackLayers) {
+            rebuildContextItems(layer, rebuild, materials, this.itemAssets(layer.scene), (object) => this.disposeObject(object));
+        }
         this.refreshShadows();
     }
 
@@ -1742,7 +1751,10 @@ export class ViewerEngine {
         this.sunAngles = sunAt(this.sceneData?.location, this.sunTime, new Date().getFullYear());
         const direction = sunDirection(this.sceneData?.location?.northAngle ?? 0, this.sunAngles);
         const center = this.planCenter();
-        const radius = Math.hypot(this.bounds.maxX - this.bounds.minX, this.bounds.maxY - this.bounds.minY) * MM * 0.6 + 2;
+        // The floors under the shown one lie below the plan: the box reaches down to the lowest one's slab.
+        const shown = this.sceneData;
+        const depth = Math.max(0, ...this.stackLayers.map((l) => -floorOffset(l.scene, shown ?? l.scene) + l.scene.floor.slabThickness)) * MM;
+        const radius = Math.hypot(this.bounds.maxX - this.bounds.minX, this.bounds.maxY - this.bounds.minY) * MM * 0.6 + 2 + depth;
         const distance = radius + SunDistance;
         this.sun.position.set(center.x + direction.x * distance, center.y + direction.y * distance, center.z + direction.z * distance);
         this.sun.target.position.copy(center);

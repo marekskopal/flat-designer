@@ -38,11 +38,18 @@ final class SnapshotScenes
 			fn (array $f): bool => $level !== null && ($below ? $f['level'] < $level : $f['id'] === $floorId),
 		);
 		usort($chosen, fn (array $a, array $b): int => $a['level'] <=> $b['level']);
+		// An older snapshot's floors are stacked once, for all the scenes that need it.
+		$stack = null;
+		$stacked = function () use (&$stack, $read): array {
+			$stack ??= FloorStack::ofSnapshot($read());
 
-		return array_map(function (array $f) use ($data, $read): stdClass {
+			return $stack;
+		};
+
+		return array_map(function (array $f) use ($data, $stacked): stdClass {
 			$scene = clone $f['entry'];
 			$id = $f['id'];
-			$scene->floor = FloorStack::sceneFloor($f['floor'], fn (): array => FloorStack::ofSnapshot($read())[$id]);
+			$scene->floor = FloorStack::sceneFloor($f['floor'], fn (): array => $stacked()[$id]);
 			$scene->materials = $data->materials ?? [];
 			$scene->location = $data->location ?? null;
 

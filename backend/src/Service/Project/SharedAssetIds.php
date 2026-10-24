@@ -24,19 +24,11 @@ final class SharedAssetIds
 	 */
 	public function of(int $versionId, int $floorId, callable $scene): ?array
 	{
-		$key = $versionId . ':' . $floorId;
-		if (!isset($this->entries[$key])) {
+		return $this->remember($versionId . ':' . $floorId, function () use ($scene): ?array {
 			$decoded = $scene();
-			if ($decoded === null) {
-				return null;
-			}
-			if (count($this->entries) >= self::MaxEntries) {
-				array_shift($this->entries);
-			}
-			$this->entries[$key] = ['models' => self::ids($decoded->models ?? null), 'pictures' => self::ints($decoded->pictures ?? null)];
-		}
 
-		return $this->entries[$key];
+			return $decoded === null ? null : self::assetsOf([$decoded]);
+		});
 	}
 
 	/**
@@ -47,19 +39,45 @@ final class SharedAssetIds
 	 */
 	public function below(int $versionId, int $floorId, callable $scenes): array
 	{
-		$key = $versionId . ':' . $floorId . ':below';
+		return $this->remember(
+			$versionId . ':' . $floorId . ':below',
+			fn (): array => self::assetsOf($scenes()),
+		) ?? ['models' => [], 'pictures' => []];
+	}
+
+	/**
+	 * The entry under `$key`, computed by `$compute` when it is not remembered yet (null is not remembered); the oldest
+	 * entry goes once there are `MaxEntries`.
+	 *
+	 * @param callable(): ?array{models: list<int>, pictures: list<int>} $compute
+	 * @return array{models: list<int>, pictures: list<int>}|null
+	 */
+	private function remember(string $key, callable $compute): ?array
+	{
 		if (!isset($this->entries[$key])) {
-			$decoded = $scenes();
+			$entry = $compute();
+			if ($entry === null) {
+				return null;
+			}
 			if (count($this->entries) >= self::MaxEntries) {
 				array_shift($this->entries);
 			}
-			$this->entries[$key] = [
-				'models' => array_merge([], ...array_map(fn (stdClass $s): array => self::ids($s->models ?? null), $decoded)),
-				'pictures' => array_merge([], ...array_map(fn (stdClass $s): array => self::ints($s->pictures ?? null), $decoded)),
-			];
+			$this->entries[$key] = $entry;
 		}
 
 		return $this->entries[$key];
+	}
+
+	/**
+	 * @param list<stdClass> $scenes
+	 * @return array{models: list<int>, pictures: list<int>}
+	 */
+	private static function assetsOf(array $scenes): array
+	{
+		return [
+			'models' => array_merge([], ...array_map(fn (stdClass $s): array => self::ids($s->models ?? null), $scenes)),
+			'pictures' => array_merge([], ...array_map(fn (stdClass $s): array => self::ints($s->pictures ?? null), $scenes)),
+		];
 	}
 
 	/** Forgets everything, for tests that reuse version ids. */

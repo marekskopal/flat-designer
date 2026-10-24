@@ -74,8 +74,9 @@ describe('buildContextFloor', () => {
     const materials = new MaterialLibrary([], 1);
 
     it('draws the floor tagged as context, with its walls and slab', () => {
-        const group = buildContextFloor(ground, materials, {models: new Map(), modelLibrary: null, pictures: null});
+        const {group, items} = buildContextFloor(ground, materials, {models: new Map(), modelLibrary: null, pictures: null});
         expect(group.userData).toEqual({contextFloor: 2});
+        expect(items.size).toBe(0);
         const names: string[] = [];
         group.traverse((o) => names.push(o.name));
         expect(names).toContain('slab');
