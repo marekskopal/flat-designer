@@ -35,6 +35,7 @@
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
+    [walkFloorHandler]="walkToFloor"
     [comments]="commentPins()"
     [activeCommentId]="activeCommentId()"
     [commentsVisible]="commentsVisible()"
@@ -59,7 +60,7 @@
 }
 
 @if (walking() && touchWalk) {
-    <fd-walk-pad [viewer]="viewerRef" />
+    <fd-walk-pad [viewer]="viewerRef" [floorUp]="walkFloors().up?.name ?? null" [floorDown]="walkFloors().down?.name ?? null" />
 } @else if (walking()) {
     <div class="walk-hint" role="status">
         @if (!walkLocked()) {
@@ -70,6 +71,9 @@
         }
         <span>
             <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around · <kbd>E</kbd> open/close ·
+            @if (walkFloors().up !== null || walkFloors().down !== null) {
+                <kbd>PgUp</kbd><kbd>PgDn</kbd> floor up/down ·
+            }
             <kbd>Esc</kbd> back to 3D
         </span>
     </div>

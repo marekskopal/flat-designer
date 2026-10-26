@@ -236,6 +236,11 @@ export class ViewerEngine {
     public onWalkthroughLock: (locked: boolean) => void = () => undefined;
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
+    /**
+     * The walker asks for the floor above (+1) or below (−1); true when the page goes there (it then loads that floor,
+     * and the walk carries on there).
+     */
+    public onWalkthroughFloor: (step: 1 | -1) => boolean = () => false;
     /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
     public onDrawWalls: (points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean> = () => Promise.resolve(false);
     /** A click with the room tool inside walls that close around the point. */
@@ -326,6 +331,8 @@ export class ViewerEngine {
     /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
     private stackScenes: readonly Scene[] | null = null;
     private stackLayers: ContextFloor[] = [];
+    /** Where the walker stood when they asked for another floor: the walk goes on there once it is loaded. */
+    private floorWalk: Vec2 | null = null;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -495,7 +502,12 @@ export class ViewerEngine {
             this.placeStack();
         }
 
-        if (this.loadedFloorId !== scene.floor.id) {
+        // The walk goes on on another floor the walker asked for; any other floor ends it.
+        const walkTo = this.loadedFloorId !== scene.floor.id && this.walkthrough !== null && this.floorWalk !== null
+            ? this.floorWalkStart(scene, this.floorWalk)
+            : null;
+        this.floorWalk = null;
+        if (this.loadedFloorId !== scene.floor.id && walkTo === null) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
                 this.onWalkthroughEnd();
@@ -515,11 +527,21 @@ export class ViewerEngine {
         } else {
             this.leafStates.sync(scene.walls);
         }
+        if (walkTo !== null) {
+            // A floor walked onto starts as a walk does: every door closed but the one the walker comes in by.
+            this.leafStates.closeAll();
+            if (walkTo.openingId !== undefined) {
+                this.leafStates.setOpen(walkTo.openingId, true, false);
+            }
+        }
         this.leafStates.apply(this.leaves);
         this.refreshShadows();
         this.walkthrough?.setColliders(sceneColliders(scene));
         this.walkthrough?.setFloorLevels(floorLevels(scene));
         this.updateLeafColliders();
+        if (walkTo !== null) {
+            this.walkthrough?.moveTo(walkTo.position, walkTo.yaw);
+        }
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
         this.setPicked(this.picked);
@@ -1486,6 +1508,7 @@ export class ViewerEngine {
         };
         walkthrough.onLockChange = (locked): void => this.onWalkthroughLock(locked);
         walkthrough.onUse = (): void => this.toggleDoor(this.aim?.openingId ?? null);
+        walkthrough.onFloor = (step): void => this.walkToFloor(step);
         this.walkthrough = walkthrough;
         // Every door starts closed but the entrance, open at once: swinging open it could sweep the walker aside.
         this.leafStates.closeAll();
@@ -1496,6 +1519,29 @@ export class ViewerEngine {
         this.updateLeafColliders();
         this.refreshShadows();
         walkthrough.lock();
+    }
+
+    /**
+     * Walks to the floor above (+1) or below (−1), as PageUp / PageDown do: the page loads it, and the walker stands at
+     * the same plan point there (or at its entrance). Nothing happens without such a floor.
+     */
+    public walkToFloor(step: 1 | -1): void {
+        const walkthrough = this.walkthrough;
+        if (walkthrough !== null && this.onWalkthroughFloor(step)) {
+            this.floorWalk = walkthrough.where();
+        }
+    }
+
+    /**
+     * Where the walk goes on on a floor walked onto: the same plan point when it lies in one of the floor's rooms (the
+     * view keeps its direction), else where a walk of that floor starts.
+     */
+    private floorWalkStart(scene: Scene, point: Vec2): {position: Vec2; yaw?: number; openingId?: number} {
+        if (scene.rooms.some((r) => pointInPolygon(point, r.polygon))) {
+            return {position: point};
+        }
+        const start = this.walkStart(scene);
+        return {position: start.position, yaw: Math.atan2(-start.direction.x, start.direction.y), openingId: start.openingId};
     }
 
     /** Keys held on the on-screen arrows of a touch walk (`KeyboardEvent.code` values). */
@@ -1517,6 +1563,7 @@ export class ViewerEngine {
         }
         this.walkthrough.dispose();
         this.walkthrough = null;
+        this.floorWalk = null;
         this.setAim(null);
         // Back to the display state: doors open, French windows closed.
         this.leafStates.reset(this.sceneData?.walls ?? [], true);

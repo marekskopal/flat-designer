@@ -1,7 +1,8 @@
 import {Plot, Room} from '@app/models/scene';
+import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {floorLevels} from './walkthrough';
+import {floorLevels, Walkthrough} from './walkthrough';
 
 const square = (x: number, y: number, side: number): Room['polygon'] => [[x, y], [x + side, y], [x + side, y + side], [x, y + side]];
 const room = (polygon: Room['polygon'], floorElevation?: number): Room => ({
@@ -40,5 +41,38 @@ describe('floorLevels', () => {
         expect(levels({x: 8000, y: 8000})).toBe(-300);
         expect(levels({x: 30000, y: 0})).toBe(0);
         expect(floorLevels({rooms: []})({x: 0, y: 0})).toBe(0);
+    });
+});
+
+describe('Walkthrough between floors', () => {
+    const start = (): {walk: Walkthrough; camera: THREE.PerspectiveCamera; steps: number[]} => {
+        const camera = new THREE.PerspectiveCamera();
+        const walk = new Walkthrough(camera, document.createElement('div'), [], {x: 1000, y: 2000}, 0.5);
+        const steps: number[] = [];
+        walk.onFloor = (step): void => void steps.push(step);
+        return {walk, camera, steps};
+    };
+    const press = (code: string, repeat = false): void => void document.dispatchEvent(new KeyboardEvent('keydown', {code, repeat}));
+
+    it('asks for the floor above or below once per press of PageUp or PageDown', () => {
+        const {walk, steps} = start();
+        press('PageUp');
+        press('PageUp', true);
+        press('PageDown');
+        walk.dispose();
+        expect(steps).toEqual([1, -1]);
+    });
+
+    it('moves the walker to a point, keeping the view unless given a direction', () => {
+        const {walk, camera} = start();
+        const yaw = camera.rotation.y;
+        walk.moveTo({x: 4000, y: 3000});
+        expect(walk.where()).toEqual({x: 4000, y: 3000});
+        expect(camera.position.x).toBeCloseTo(4);
+        expect(camera.position.z).toBeCloseTo(-3);
+        expect(camera.rotation.y).toBeCloseTo(yaw);
+        walk.moveTo({x: 0, y: 0}, Math.PI);
+        expect(camera.getWorldDirection(new THREE.Vector3()).z).toBeCloseTo(1);
+        walk.dispose();
     });
 });

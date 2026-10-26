@@ -27,6 +27,8 @@ const RightKeys = ['KeyD', 'ArrowRight'];
 const MoveKeys = new Set([...ForwardKeys, ...BackwardKeys, ...LeftKeys, ...RightKeys]);
 /** Opens or closes the door the walker looks at. */
 const UseKey = 'KeyE';
+/** Take the walker to the floor above or below. */
+const FloorKeys: Record<string, 1 | -1> = {PageUp: 1, PageDown: -1};
 
 /** Where the walker stands on the floor's level, mm: plan point → height of the floor under it. */
 export type FloorLevels = (point: Vec2) => number;
@@ -57,7 +59,8 @@ export function walkthroughTouchMode(): boolean {
  * pointer is locked to the canvas. Positions are plan millimetres; the eye stays at eye height over the floor
  * underfoot (`floorLevels()`: a room's floor elevation, a plot's ground level). The walker collides with the walls and
  * with door leaves and sashes, whose colliders change as they swing (`setLeafColliders()`). E asks to open or
- * close the door in view (`onUse`).
+ * close the door in view (`onUse`), PageUp / PageDown asks for the floor above or below (`onFloor`; `moveTo()` puts the
+ * walker there, keeping the pointer lock and the view's direction).
  * Esc ends it: the browser releases the pointer lock (the key itself never reaches the page while locked),
  * or, before the lock was acquired, the keydown arrives here. In touch mode (`walkthroughTouchMode()`) a finger
  * dragging the canvas looks around, and `end()` stands in for Esc.
@@ -69,6 +72,8 @@ export class Walkthrough {
     public onLockChange: (locked: boolean) => void = () => undefined;
     /** E was pressed: open or close the door in view. */
     public onUse: () => void = () => undefined;
+    /** PageUp (+1) or PageDown (−1) was pressed: walk to the floor above or below. */
+    public onFloor: (step: 1 | -1) => void = () => undefined;
 
     private readonly keys = new Set<string>();
     /** Keys held on the on-screen arrows. */
@@ -146,6 +151,24 @@ export class Walkthrough {
     /** Keys held on the on-screen arrows (codes as in `KeyboardEvent.code`), replacing the previous ones. */
     public setVirtualKeys(codes: readonly string[]): void {
         this.virtualKeys = new Set(codes);
+    }
+
+    /** Where the walker stands, plan mm. */
+    public where(): Vec2 {
+        return this.position;
+    }
+
+    /**
+     * Puts the walker at a plan point (another floor: set its colliders and levels first), facing `yaw` if given;
+     * the pitch and the pointer lock stay.
+     */
+    public moveTo(position: Vec2, yaw?: number): void {
+        this.position = collideCircle(position, BodyRadius, this.colliders());
+        if (yaw !== undefined) {
+            this.yaw = yaw;
+        }
+        this.underfoot = null;
+        this.applyCamera();
     }
 
     /** Ends the walk as Esc does (notifies `onExit`). */
@@ -233,6 +256,14 @@ export class Walkthrough {
         if (event.code === UseKey) {
             if (!event.repeat) {
                 this.onUse();
+            }
+            return;
+        }
+        const step = FloorKeys[event.code];
+        if (step !== undefined) {
+            event.preventDefault();
+            if (!event.repeat) {
+                this.onFloor(step);
             }
             return;
         }

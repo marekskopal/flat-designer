@@ -14,13 +14,24 @@ const SectorThreshold = Math.cos((67.5 * Math.PI) / 180);
 /**
  * On-screen controls of a walk on a touch screen: arrows in the corner hold W/A/S/D while the thumb rests on them
  * (sliding between them changes direction, the corners between two arrows walk diagonally), a bar on top says
- * how to look around and ends the walk in place of Esc.
+ * how to look around, takes the walker to the floor above or below (as PageUp / PageDown) and ends the walk in place
+ * of Esc.
  */
 @Component({
     selector: 'fd-walk-pad',
     template: `
         <div class="bar" role="status">
             <span>Drag the view to look around · tap a door to open it</span>
+            @if (floorUp(); as name) {
+                <button type="button" class="bar__floor" [attr.aria-label]="'Up to ' + name" (click)="viewer().walkToFloor(1)">
+                    ↑ {{ name }}
+                </button>
+            }
+            @if (floorDown(); as name) {
+                <button type="button" class="bar__floor" [attr.aria-label]="'Down to ' + name" (click)="viewer().walkToFloor(-1)">
+                    ↓ {{ name }}
+                </button>
+            }
             <button type="button" class="bar__exit" (click)="viewer().endWalkthrough()">Back to 3D</button>
         </div>
         <div
@@ -60,6 +71,16 @@ const SectorThreshold = Math.cos((67.5 * Math.PI) / 180);
             font-size: $font-size-12;
             color: $color-text-muted;
             white-space: nowrap;
+        }
+
+        .bar__floor {
+            padding: 6px 12px;
+            border: 1px solid $color-border;
+            border-radius: 999px;
+            background: transparent;
+            font-size: $font-size-12;
+            font-weight: 600;
+            color: $color-text;
         }
 
         .bar__exit {
@@ -152,6 +173,9 @@ const SectorThreshold = Math.cos((67.5 * Math.PI) / 180);
 })
 export class WalkPadComponent {
     public readonly viewer = input.required<ViewerComponent>();
+    /** The names of the floors above and below, where the walker can go; null where there is none. */
+    public readonly floorUp = input<string | null>(null);
+    public readonly floorDown = input<string | null>(null);
 
     protected readonly directions: Direction[] = ['up', 'left', 'right', 'down'];
     protected readonly held = signal<Direction[]>([]);

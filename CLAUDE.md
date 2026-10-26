@@ -429,6 +429,11 @@ format is the text in `FurnitureTools::Format`.
   - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle, or its current
     position along the wall for a sliding or pocket leaf (`Leaf.motion`).
   - Items do not block.
+- Between floors (FD-73): PageUp / PageDown (the walk pad's floor buttons on touch) ask the page for the next floor up
+  or down (`walkFloorHandler`); it navigates there, and `load()` of that floor keeps the walk going
+  (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`): the walker stands at the same plan point if it lies in one of
+  the floor's rooms, else where a walk of the floor starts, with its doors closed as at a walk's start. Any other
+  floor change ends the walk. Share links have one floor, so guests cannot.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
   tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.

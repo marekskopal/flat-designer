@@ -68,9 +68,13 @@ any of them, and the walkthrough can move between floors.
 
 ## Phase 4: walk between floors (FD-36 sub-task)
 
-- The walkthrough in the all floors view: PageUp / PageDown (and a walk pad button) move the walker to the same plan
-  point on the next floor up or down, falling back to that floor's `entranceWalkStart()` when the point is outside
-  it. Colliders, `floorLevels()` and door leaves (`LeafStates`) switch to that floor's layer.
+- PageUp / PageDown (and the walk pad's floor buttons) move the walker to the same plan point on the next floor up or
+  down, falling back to where a walk of that floor starts (`entranceWalkStart()`) when the point lies in none of its
+  rooms.
+- As built: the page switches the shown floor (as the floor bar does) and the engine keeps the walk going on it, with
+  the same `Walkthrough` and pointer lock (which could not be taken again without a click). The colliders,
+  `floorLevels()` and door leaves are the shown floor's, so no per-layer state is needed, and the floor above can be
+  walked to too. It works with or without the all floors view.
 
 ## Follow-up: stairs (FD-37)
 

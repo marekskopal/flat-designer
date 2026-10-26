@@ -114,6 +114,11 @@ export class ViewerComponent {
     public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean>>(() =>
         Promise.resolve(false),
     );
+    /**
+     * Takes the walker to the floor above (+1) or below (−1): true when the page goes there (the walk carries on on it).
+     * Without one, PageUp / PageDown do nothing.
+     */
+    public readonly walkFloorHandler = input<(step: 1 | -1) => boolean>(() => false);
     /** Pins of the review comments, numbered. */
     public readonly comments = input<CommentPin[]>([]);
     /** The thread open in the panel, its pin highlighted. */
@@ -160,6 +165,7 @@ export class ViewerComponent {
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
+            engine.onWalkthroughFloor = (step): boolean => this.walkFloorHandler()(step);
             engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
@@ -278,6 +284,11 @@ export class ViewerComponent {
     /** Keys held on the on-screen arrows of a touch walk (`KeyboardEvent.code` values). */
     public setWalkKeys(codes: readonly string[]): void {
         this.engine()?.setWalkKeys(codes);
+    }
+
+    /** Walks to the floor above (+1) or below (−1), as PageUp / PageDown do. */
+    public walkToFloor(step: 1 | -1): void {
+        this.engine()?.walkToFloor(step);
     }
 
     /** Ends the walk as Esc does (`walkthroughEnded` follows). */

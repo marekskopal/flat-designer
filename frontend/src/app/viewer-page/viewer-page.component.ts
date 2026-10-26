@@ -591,6 +591,31 @@ export class ViewerPageComponent {
     }
 
     /** A run of walls drawn in the viewer. */
+    /** The floors next above and below this one, for walking between floors; null where there is none. */
+    protected readonly walkFloors = computed(() => {
+        const floors = this.floors();
+        const level = floors.find((f) => f.id === this.floorId())?.level;
+        if (level === undefined) {
+            return {up: null, down: null};
+        }
+        const above = floors.filter((f) => f.level > level);
+        const below = floors.filter((f) => f.level < level);
+        return {
+            up: above.length === 0 ? null : above.reduce((a, b) => (b.level < a.level ? b : a)),
+            down: below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a)),
+        };
+    });
+
+    /** PageUp / PageDown in a walk: goes to the next floor up or down, where the walk carries on. */
+    protected readonly walkToFloor = (step: 1 | -1): boolean => {
+        const floor = step > 0 ? this.walkFloors().up : this.walkFloors().down;
+        if (floor === null) {
+            return false;
+        }
+        void this.router.navigate(['/projects', this.projectId(), 'floors', floor.id], {queryParamsHandling: 'preserve'});
+        return true;
+    };
+
     protected readonly drawWalls = (points: PlanPoint[], closed: boolean, sagittas: number[] | null): Promise<boolean> =>
         this.editor.drawWalls(points, closed, sagittas);
 
