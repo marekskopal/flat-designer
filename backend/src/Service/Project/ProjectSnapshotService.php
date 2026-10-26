@@ -144,23 +144,18 @@ final readonly class ProjectSnapshotService
 	 */
 	public function getFloorScene(string $snapshot, int $floorId): ?stdClass
 	{
-		return SnapshotScenes::of(
-			$this->decode($snapshot, false),
-			$floorId,
-			false,
-			fn (): SnapshotReader => $this->read($snapshot),
-		)[0] ?? null;
+		return $this->getFloorScenes($snapshot, $floorId)['scene'];
 	}
 
 	/**
-	 * The stored scenes of the floors under one (of a lower level), lowest first, as `getFloorScene()` gives them, with
-	 * the snapshot decoded once. Empty when the floor is gone or nothing lies under it.
+	 * The stored scene of one floor and those of the floors under it (of a lower level, lowest first), shaped alike,
+	 * from one decode of the snapshot. The scene is null when the floor is gone.
 	 *
-	 * @return list<stdClass>
+	 * @return array{scene: ?stdClass, below: list<stdClass>}
 	 */
-	public function getScenesBelow(string $snapshot, int $floorId): array
+	public function getFloorScenes(string $snapshot, int $floorId): array
 	{
-		return SnapshotScenes::of($this->decode($snapshot, false), $floorId, true, fn (): SnapshotReader => $this->read($snapshot));
+		return SnapshotScenes::of($this->decode($snapshot, false), $floorId, fn (): SnapshotReader => $this->read($snapshot));
 	}
 
 	/**

@@ -7,6 +7,7 @@ import {
     effect,
     inject,
     input,
+    linkedSignal,
     numberAttribute,
     resource,
     signal,
@@ -183,17 +184,25 @@ export class ViewerPageComponent {
     protected readonly underlayImage = computed(() =>
         this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,
     );
-    /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
-    protected readonly floorBelow = computed(
+    /** The floors under this one (any level below it), lowest first; compared by id, as a reloaded project lists them anew. */
+    private readonly floorsUnder = computed(
         () => {
-            const floors = this.floors();
-            const level = floors.find((f) => f.id === this.floorId())?.level;
-            const below = floors.filter((f) => level !== undefined && f.level < level);
-            return below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a));
+            const level = this.floors().find((f) => f.id === this.floorId())?.level;
+            return level === undefined ? [] : this.floors().filter((f) => f.level < level).sort((a, b) => a.level - b.level);
         },
-        // A reloaded project lists the floors anew: the same floor must not load its scene again.
-        {equal: (a, b) => a?.id === b?.id && a?.name === b?.name},
+        {equal: (a, b) => a.length === b.length && a.every((f, i) => f.id === b[i].id && f.name === b[i].name)},
     );
+    /** The floors next above and below this one, for walking between floors; null where there is none. */
+    protected readonly walkFloors = computed(
+        () => {
+            const level = this.floors().find((f) => f.id === this.floorId())?.level;
+            const above = level === undefined ? [] : this.floors().filter((f) => f.level > level);
+            return {up: above.length === 0 ? null : above.reduce((a, b) => (b.level < a.level ? b : a)), down: this.floorsUnder().at(-1) ?? null};
+        },
+        {equal: (a, b) => a.up?.id === b.up?.id && a.up?.name === b.up?.name && a.down === b.down},
+    );
+    /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
+    protected readonly floorBelow = computed(() => this.walkFloors().down);
     /** Shows the floor below by hand on this floor; null follows edit mode. */
     private readonly floorBelowChoice = signal<boolean | null>(null);
     protected readonly floorBelowShown = computed(() => this.floorBelow() !== null && (this.floorBelowChoice() ?? this.editor.enabled()));
@@ -217,16 +226,7 @@ export class ViewerPageComponent {
     });
     /** All floors: the floors under this one are drawn below it at their levels, those above are left out. */
     protected readonly allFloors = signal(false);
-    /** The floors under this one (any level below it), drawn in the all floors view. */
-    private readonly floorsUnder = computed(
-        () => {
-            const floors = this.floors();
-            const level = floors.find((f) => f.id === this.floorId())?.level;
-            return level === undefined ? [] : floors.filter((f) => f.level < level);
-        },
-        {equal: (a, b) => a.length === b.length && a.every((f, i) => f.id === b[i].id)},
-    );
-    /** Their scenes, loaded while the all floors view is on (from the same version as this floor). */
+    /** The scenes of the floors under this one, loaded while the all floors view is on (from the same version as this floor). */
     private readonly stackData = resource({
         params: () => {
             const floorIds = this.floorsUnder().map((f) => f.id);
@@ -238,12 +238,12 @@ export class ViewerPageComponent {
             return (await Promise.allSettled(loads)).flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
         },
     });
-    protected readonly stack = computed<readonly Scene[] | null>(() => {
-        if (!this.allFloors()) {
-            return null;
-        }
-        return this.stackData.hasValue() ? this.stackData.value() : [];
+    /** The loaded scenes, kept while the next load is under way so the layers do not vanish for the round trip. */
+    private readonly stackScenes = linkedSignal<readonly Scene[] | null, readonly Scene[]>({
+        source: () => (this.stackData.hasValue() ? this.stackData.value() : null),
+        computation: (scenes, previous) => scenes ?? previous?.value ?? [],
     });
+    protected readonly stack = computed<readonly Scene[] | null>(() => (this.allFloors() ? this.stackScenes() : null));
     /** The measure tool is on, for measuring or to pick the underlay's calibration points. */
     protected readonly measureActive = computed(() => this.measuring() || this.editor.calibration() !== null);
     protected readonly project = computed(() => (this.data.hasValue() ? this.data.value().project : null));
@@ -591,29 +591,14 @@ export class ViewerPageComponent {
     }
 
     /** A run of walls drawn in the viewer. */
-    /** The floors next above and below this one, for walking between floors; null where there is none. */
-    protected readonly walkFloors = computed(() => {
-        const floors = this.floors();
-        const level = floors.find((f) => f.id === this.floorId())?.level;
-        if (level === undefined) {
-            return {up: null, down: null};
-        }
-        const above = floors.filter((f) => f.level > level);
-        const below = floors.filter((f) => f.level < level);
-        return {
-            up: above.length === 0 ? null : above.reduce((a, b) => (b.level < a.level ? b : a)),
-            down: below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a)),
-        };
-    });
-
-    /** PageUp / PageDown in a walk: goes to the next floor up or down, where the walk carries on. */
-    protected readonly walkToFloor = (step: 1 | -1): boolean => {
+    /** PageUp / PageDown in a walk: goes to the next floor up or down, where the walk carries on; its id, or null. */
+    protected readonly walkToFloor = (step: 1 | -1): number | null => {
         const floor = step > 0 ? this.walkFloors().up : this.walkFloors().down;
         if (floor === null) {
-            return false;
+            return null;
         }
         void this.router.navigate(['/projects', this.projectId(), 'floors', floor.id], {queryParamsHandling: 'preserve'});
-        return true;
+        return floor.id;
     };
 
     protected readonly drawWalls = (points: PlanPoint[], closed: boolean, sagittas: number[] | null): Promise<boolean> =>

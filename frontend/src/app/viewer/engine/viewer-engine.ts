@@ -237,10 +237,10 @@ export class ViewerEngine {
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
     /**
-     * The walker asks for the floor above (+1) or below (−1); true when the page goes there (it then loads that floor,
-     * and the walk carries on there).
+     * The walker asks for the floor above (+1) or below (−1); the id of the floor the page goes to (it then loads that
+     * floor, and the walk carries on there), null when there is none.
      */
-    public onWalkthroughFloor: (step: 1 | -1) => boolean = () => false;
+    public onWalkthroughFloor: (step: 1 | -1) => number | null = () => null;
     /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
     public onDrawWalls: (points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean> = () => Promise.resolve(false);
     /** A click with the room tool inside walls that close around the point. */
@@ -331,8 +331,8 @@ export class ViewerEngine {
     /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
     private stackScenes: readonly Scene[] | null = null;
     private stackLayers: ContextFloor[] = [];
-    /** Where the walker stood when they asked for another floor: the walk goes on there once it is loaded. */
-    private floorWalk: Vec2 | null = null;
+    /** Where the walker stood when they asked for another floor, and which: the walk goes on there once it is loaded. */
+    private floorWalk: {floorId: number; point: Vec2} | null = null;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -502,11 +502,14 @@ export class ViewerEngine {
             this.placeStack();
         }
 
-        // The walk goes on on another floor the walker asked for; any other floor ends it.
-        const walkTo = this.loadedFloorId !== scene.floor.id && this.walkthrough !== null && this.floorWalk !== null
-            ? this.floorWalkStart(scene, this.floorWalk)
+        // The walk goes on on the floor the walker asked for; any other floor ends it (a reload of the same floor
+        // while the asked one is on its way changes nothing).
+        const walkTo = this.loadedFloorId !== scene.floor.id && this.walkthrough !== null && this.floorWalk?.floorId === scene.floor.id
+            ? this.floorWalkStart(scene, this.floorWalk.point)
             : null;
-        this.floorWalk = null;
+        if (this.loadedFloorId !== scene.floor.id) {
+            this.floorWalk = null;
+        }
         if (this.loadedFloorId !== scene.floor.id && walkTo === null) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
@@ -805,12 +808,12 @@ export class ViewerEngine {
     }
 
     /** Whether the item as drawn has a picture of one of the files (of any file with null); only Custom items have them. */
-    private showsPicture(item: Item, fileIds: ReadonlySet<number> | null): boolean {
+    private showsPicture(item: Item, fileIds: ReadonlySet<number> | null, objects: ReadonlyMap<number, THREE.Object3D> = this.items): boolean {
         if (item.kind !== 'Custom' || fileIds?.size === 0) {
             return false;
         }
         let shows = false;
-        this.items.get(item.id)?.traverse((o) => {
+        objects.get(item.id)?.traverse((o) => {
             const id = o.userData['pictureId'] as number | null | undefined;
             shows ||= typeof id === 'number' && (fileIds === null || fileIds.has(id));
         });
@@ -1228,8 +1231,8 @@ export class ViewerEngine {
         this.pictureLibrary = new PictureLibrary(fetcher);
         this.pictureLibrary.onLoaded = (fileId): void => {
             this.rebuildPictureItems(fileId);
-            // Which items show the file is read off the drawn objects for the shown floor; a layer's are drawn anew by kind.
-            this.rebuildStackItems((item) => item.kind === 'Custom');
+            const fileIds = fileId === null ? null : new Set([fileId]);
+            this.rebuildStackItems((item, layer) => this.showsPicture(item, fileIds, layer.items));
         };
         if (this.sceneData !== null) {
             this.rebuildPictureItems(null);
@@ -1527,8 +1530,9 @@ export class ViewerEngine {
      */
     public walkToFloor(step: 1 | -1): void {
         const walkthrough = this.walkthrough;
-        if (walkthrough !== null && this.onWalkthroughFloor(step)) {
-            this.floorWalk = walkthrough.where();
+        const floorId = walkthrough === null ? null : this.onWalkthroughFloor(step);
+        if (walkthrough !== null && floorId !== null) {
+            this.floorWalk = {floorId, point: walkthrough.where()};
         }
     }
 
@@ -1731,23 +1735,31 @@ export class ViewerEngine {
         this.invalidate();
         this.stackScenes = scenes;
         if (this.sceneData !== null) {
-            this.pictureLibrary?.sync(this.stackPictures(this.sceneData));
-            this.modelLibrary?.sync(this.stackModels(this.sceneData));
+            // The libraries now keep the stack's assets too; a failed one listed again is tried again, as at a load.
+            const pictures = new Set(this.pictureLibrary?.sync(this.stackPictures(this.sceneData)) ?? []);
+            const models = new Set(this.modelLibrary?.sync(this.stackModels(this.sceneData)) ?? []);
+            const showsModel = (item: Item): boolean => item.kind === 'Model' && item.modelId != null && models.has(item.modelId);
+            this.rebuildItems((item) => this.showsPicture(item, pictures) || showsModel(item));
         }
         this.rebuildStack();
     }
 
-    /** Draws the floors under the shown one anew. */
+    /** Draws the floors under the shown one: those drawn already from the same scene stay, the others anew. */
     private rebuildStack(): void {
-        this.clearStack();
         const shown = this.sceneData;
-        if (shown !== null && this.materials !== null) {
-            for (const scene of floorsBelow(this.stackScenes ?? [], shown)) {
-                const layer = buildContextFloor(scene, this.materials, this.itemAssets(scene));
-                this.stackLayers.push(layer);
-                this.scene.add(layer.group);
-            }
-        }
+        const materials = this.materials;
+        const wanted = shown === null || materials === null ? [] : floorsBelow(this.stackScenes ?? [], shown);
+        const kept = new Map(
+            this.stackLayers
+                .filter((layer) => wanted.some((scene) => scene.floor.id === layer.scene.floor.id && sameJson(scene, layer.scene)))
+                .map((layer) => [layer.scene.floor.id, layer]),
+        );
+        this.stackLayers.filter((layer) => !kept.has(layer.scene.floor.id)).forEach((layer) => this.disposeObject(layer.group));
+        this.stackLayers = wanted.map((scene) => {
+            const layer = kept.get(scene.floor.id) ?? buildContextFloor(scene, materials as MaterialLibrary, this.itemAssets(scene));
+            this.scene.add(layer.group);
+            return layer;
+        });
         this.placeStack();
     }
 
@@ -1768,13 +1780,14 @@ export class ViewerEngine {
     }
 
     /** Draws the stack's items `rebuild` picks anew (an asset of theirs has loaded), like `rebuildItems()` for the shown floor. */
-    private rebuildStackItems(rebuild: (item: Item) => boolean): void {
+    private rebuildStackItems(rebuild: (item: Item, layer: ContextFloor) => boolean): void {
         const materials = this.materials;
         if (materials === null || this.stackLayers.length === 0) {
             return;
         }
         for (const layer of this.stackLayers) {
-            rebuildContextItems(layer, rebuild, materials, this.itemAssets(layer.scene), (object) => this.disposeObject(object));
+            const dispose = (object: THREE.Object3D): void => this.disposeObject(object);
+            rebuildContextItems(layer, (item) => rebuild(item, layer), materials, this.itemAssets(layer.scene), dispose);
         }
         this.refreshShadows();
     }

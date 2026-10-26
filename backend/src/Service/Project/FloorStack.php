@@ -138,23 +138,33 @@ final class FloorStack
 	 */
 	public static function ofSnapshot(SnapshotReader $data): array
 	{
+		$entries = $data->objects('floors');
 		$stored = [];
-		$floors = [];
-		foreach ($data->objects('floors') as $entry) {
+		foreach ($entries as $entry) {
 			$floor = $entry->object('floor');
 			$elevation = $floor->nullableInt('elevation');
 			$slab = $floor->nullableInt('slabThickness');
-			if ($elevation !== null && $slab !== null) {
-				$stored[$floor->int('id')] = ['elevation' => $elevation, 'slabThickness' => $slab];
+			if ($elevation === null || $slab === null) {
+				$stored = null;
+				break;
 			}
-			$floors[$floor->int('id')] = [
-				'level' => $floor->int('level'),
+			$stored[$floor->int('id')] = ['elevation' => $elevation, 'slabThickness' => $slab];
+		}
+		if ($stored !== null) {
+			return $stored;
+		}
+
+		// An older snapshot: its walls are read only then.
+		$floors = [];
+		foreach ($entries as $entry) {
+			$floors[$entry->object('floor')->int('id')] = [
+				'level' => $entry->object('floor')->int('level'),
 				'tallestWall' => self::tallestWall(
 					array_map(fn (SnapshotReader $wall): int => $wall->int('height'), $entry->objects('walls')),
 				),
 			];
 		}
 
-		return count($stored) === count($floors) ? $stored : self::stack($floors);
+		return self::stack($floors);
 	}
 }

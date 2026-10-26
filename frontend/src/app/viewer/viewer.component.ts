@@ -115,10 +115,10 @@ export class ViewerComponent {
         Promise.resolve(false),
     );
     /**
-     * Takes the walker to the floor above (+1) or below (−1): true when the page goes there (the walk carries on on it).
-     * Without one, PageUp / PageDown do nothing.
+     * Takes the walker to the floor above (+1) or below (−1): the id of the floor the page goes to (the walk carries on
+     * on it), null when there is none. Without a handler, PageUp / PageDown do nothing.
      */
-    public readonly walkFloorHandler = input<(step: 1 | -1) => boolean>(() => false);
+    public readonly walkFloorHandler = input<(step: 1 | -1) => number | null>(() => null);
     /** Pins of the review comments, numbered. */
     public readonly comments = input<CommentPin[]>([]);
     /** The thread open in the panel, its pin highlighted. */
@@ -165,7 +165,7 @@ export class ViewerComponent {
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
-            engine.onWalkthroughFloor = (step): boolean => this.walkFloorHandler()(step);
+            engine.onWalkthroughFloor = (step): number | null => this.walkFloorHandler()(step);
             engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
