@@ -34,7 +34,30 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
 ## Domain conventions
 
 - All stored lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the
-  floor, x points east and y points north. The viewer converts with `MM` (0.001) and maps plan y to scene −z.
+  ground floor, x points east and y points north; all floors of a project share it, so they stack. The viewer converts
+  with `MM` (0.001) and maps plan y to scene −z.
+- Stacked floors (FD-36, plan in `docs/stacked-floors-plan.md`): a floor's `level` orders it, `elevation` is its
+  finished floor level above the project datum ±0.000 and `slabThickness` the slab under it (the viewer's slab). A new
+  floor without them stands on the tallest wall of the floor below plus its slab, or hangs under the one above
+  (`FloorStack`; 300 mm slabs at level 0 and below, 250 above); snapshots from before them are stacked the same way. The
+  sheets, the schedules and the project page write the level as `levelText()` in `core/level-text.ts` (`+3.000`). REST `…/floors`, MCP
+  `add_floor` / `update_floor` / `delete_floor`.
+- Ghost of the floor below (FD-71): the viewer page loads the scene of the floor with the highest level under the shown
+  one (from the same version) while its Display toggle "Floor below" is on (by default in edit mode), and reloads it
+  with live updates. `ViewerEngine.setGhost()` draws its wall outlines and dashed room outlines over the plan without a
+  depth test, only while `isTopDown()` (`viewer/engine/ghost.ts`, not pickable). Draw walls and the measure tool snap
+  to its wall ends and centre lines (`ghostWalls` of `snapDrawPoint()` / `snapMeasurePoint()`; wall drags too).
+- All floors (FD-72): the Display toggle loads the scenes of every floor under the shown one, and
+  `ViewerEngine.setStack()` draws them below it (`viewer/engine/stack.ts`, `buildContextFloor()`: the same builders,
+  lifted by `floorOffset()`, outside the pickable `content` and tagged `userData.contextFloor`; ceilings shown, doors as
+  outside a walk, their fixture lights off). The shown floor stays at y = 0 and editable, cut by the wall cut as before;
+  the floors above are left out, so cutting at another floor means showing it. Switching floors keeps the view as it
+  was turned (only the first floor shown starts at the overview); with the stack on, the camera moves with the level. The framing, the sun's shadow and the ground disc fit all layers
+  (`floorPoints()`, `stackGround()`); the model and picture libraries keep the stack's assets. A slab lies under its
+  floor's rooms (not gardens, paths, driveways) and wall footprints, extruded and merged (`buildSlab()`), so an upper
+  slab roofs only what it covers. Saved views and share links keep it as `allFloors`; a share link with it serves the
+  floors below in `SharedViewDto::$stack` (`ProjectSnapshotService::getScenesBelow()`, `SnapshotScenes`) and their
+  models and pictures (`SharedAssetIds::below()`). The glTF export holds the shown floor only.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
@@ -406,6 +429,11 @@ format is the text in `FurnitureTools::Format`.
   - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle, or its current
     position along the wall for a sliding or pocket leaf (`Leaf.motion`).
   - Items do not block.
+- Between floors (FD-73): PageUp / PageDown (the walk pad's floor buttons on touch) ask the page for the next floor up
+  or down (`walkFloorHandler`); it navigates there, and `load()` of that floor keeps the walk going
+  (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`): the walker stands at the same plan point if it lies in one of
+  the floor's rooms, else where a walk of the floor starts, with its doors closed as at a walk's start. Any other
+  floor change ends the walk. Share links have one floor, so guests cannot.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
   tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.

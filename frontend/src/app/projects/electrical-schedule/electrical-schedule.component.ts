@@ -1,5 +1,6 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal} from '@angular/core';
+import {levelText} from '@app/core/level-text';
 import {ElectricalSchedule, FloorElectrical} from '@app/models/electrical-schedule';
 import {ProjectService} from '@app/services/project.service';
 
@@ -31,6 +32,7 @@ export class ElectricalScheduleComponent {
     protected readonly categoryLabels = CategoryLabels;
     protected readonly rowValues = rowValues;
     protected readonly totalsSummary = totalsSummary;
+    protected readonly levelText = levelText;
 
     private readonly projects = inject(ProjectService);
     /** Bumped by every load; an older request that comes back late is dropped. */

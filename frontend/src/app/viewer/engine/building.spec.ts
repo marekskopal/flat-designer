@@ -2,7 +2,7 @@ import {Material, Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildFloor, buildRoom, buildWall, buildWallFinishes} from './building';
+import {buildFloor, buildRoom, buildSlab, buildWall, buildWallFinishes} from './building';
 import {MaterialLibrary} from './materials';
 import {alongWall, MM, WallEnds, wallFrame} from './plan-geometry';
 import {detectRoom} from './room-detect';
@@ -317,5 +317,36 @@ describe('buildFloor', () => {
         expect(uvAt(floor, 0, 0)).toEqual([1000, 1000]);
         expect(uvAt(floor, 2000, 0)).toEqual([1000, -1000]);
         expect(uvAt(floor, 2000, 1000)).toEqual([2000, -1000]);
+    });
+});
+
+describe('buildSlab', () => {
+    const materials = new MaterialLibrary([], 1);
+    const hall = {id: 1, type: 'Hallway', polygon: [[150, 150], [3850, 150], [3850, 2850], [150, 2850]]} as unknown as Room;
+    const garden = {id: 2, type: 'Garden', polygon: [[0, 5000], [9000, 5000], [9000, 9000], [0, 9000]]} as unknown as Room;
+
+    it("hangs the floor's slab under its level", () => {
+        const box = new THREE.Box3().setFromObject(buildSlab([wall], [], 250, materials));
+        expect(box.max.y).toBeCloseTo(0);
+        expect(box.min.y).toBeCloseTo(-0.25);
+    });
+
+    it('lies under the rooms and the walls, not under gardens', () => {
+        const box = new THREE.Box3().setFromObject(buildSlab([wall], [hall, garden], 250, materials));
+        // The wall runs along y = 0, 300 mm thick; the hall reaches y = 2850; the garden from y = 5000 has no slab.
+        expect(box.min.z).toBeCloseTo(-2.85);
+        expect(box.max.z).toBeCloseTo(0.15);
+    });
+
+    it("hangs a room's piece under its own floor elevation", () => {
+        const polygon = [[5000, 0], [8000, 0], [8000, 3000], [5000, 3000]];
+        const terrace = {id: 3, type: 'Terrace', polygon, floorElevation: -450} as unknown as Room;
+        const box = new THREE.Box3().setFromObject(buildSlab([], [terrace], 300, materials));
+        expect(box.max.y).toBeCloseTo(-0.45);
+        expect(box.min.y).toBeCloseTo(-0.75);
+    });
+
+    it('is empty on an empty floor', () => {
+        expect(buildSlab([], [], 300, materials).geometry.getAttribute('position')).toBeUndefined();
     });
 });

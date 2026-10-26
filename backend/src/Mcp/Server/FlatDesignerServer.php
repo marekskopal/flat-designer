@@ -23,8 +23,10 @@ final readonly class FlatDesignerServer
 		(floor outlines), walls (centre lines) with openings (doors, windows) and items (custom-made furniture,
 		appliances, sanitary ware, fences, …).
 
-		Units and coordinates: all lengths are whole millimetres in plan coordinates of the floor — origin at the
-		inner south-west corner, x grows east, y grows north. Items are boxes given by the centre of their
+		Units and coordinates: all lengths are whole millimetres in plan coordinates — origin at the inner
+		south-west corner of the ground floor, x grows east, y grows north; all floors of a project share them,
+		so an upper floor's walls stand over those below. A floor's `elevation` is its finished floor level above
+		±0.000 and `slabThickness` the slab under it (update_floor). Items are boxes given by the centre of their
 		footprint (x, y), bottom elevation z and width × depth × height; rotation is degrees counter-clockwise,
 		0 = front facing south (−y), 90 = east, 180 = north, 270 = west. Openings sit on a wall at `offset` mm
 		from the wall's start point. Items forming one piece of furniture (a kitchen run, a hall stand) share a

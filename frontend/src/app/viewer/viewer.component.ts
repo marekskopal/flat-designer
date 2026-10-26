@@ -20,6 +20,7 @@ import {environment} from '@environments/environment';
 import {CommentPin, CommentPoint} from './engine/comments';
 import {EditorTool, ToolStatus} from './engine/drawing';
 import {BenchmarkOptions, BenchmarkResult, ViewerStats} from './engine/frame-stats';
+import {GhostFloor} from './engine/ghost';
 import {MeasureStatus} from './engine/measure';
 import {ModelFetcher} from './engine/models';
 import {PictureFetcher} from './engine/pictures';
@@ -88,6 +89,10 @@ export class ViewerComponent {
     public readonly underlayImage = input<TexImageSource | null>(null);
     /** The underlay in the top view. */
     public readonly underlayVisible = input(true);
+    /** The floor below, traced in the top view; null shows none. */
+    public readonly ghost = input<GhostFloor | null>(null);
+    /** All floors: the scenes of the floors to draw under this one (null: this floor only). */
+    public readonly stack = input<readonly Scene[] | null>(null);
     /** With `measuring`: the two points clicked next calibrate the underlay (`calibrated`). */
     public readonly calibrating = input(false);
     /** Section plane height in mm; null shows everything. */
@@ -109,6 +114,11 @@ export class ViewerComponent {
     public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean>>(() =>
         Promise.resolve(false),
     );
+    /**
+     * Takes the walker to the floor above (+1) or below (−1): the id of the floor the page goes to (the walk carries on
+     * on it), null when there is none. Without a handler, PageUp / PageDown do nothing.
+     */
+    public readonly walkFloorHandler = input<(step: 1 | -1) => number | null>(() => null);
     /** Pins of the review comments, numbered. */
     public readonly comments = input<CommentPin[]>([]);
     /** The thread open in the panel, its pin highlighted. */
@@ -124,7 +134,7 @@ export class ViewerComponent {
     public readonly walkthroughLocked = output<boolean>();
     /** The door the walker looks at (within reach) and whether it is open; null when none. */
     public readonly walkthroughAim = output<DoorAim | null>();
-    /** A scene was built (a new floor starts at the overview; set another view from here). */
+    /** A scene was built (the first floor shown starts at the overview, another floor keeps the view; set another from here). */
     public readonly loaded = output<Scene>();
     /** A click with the room tool inside closed walls: the point to outline a room around. */
     public readonly roomDetect = output<PlanPoint>();
@@ -155,6 +165,7 @@ export class ViewerComponent {
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
+            engine.onWalkthroughFloor = (step): number | null => this.walkFloorHandler()(step);
             engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
@@ -212,6 +223,8 @@ export class ViewerComponent {
         effect(() => this.engine()?.setCalibrating(this.calibrating()));
         effect(() => this.engine()?.setUnderlay(this.underlay(), this.underlayImage()));
         effect(() => this.engine()?.setUnderlayVisible(this.underlayVisible()));
+        effect(() => this.engine()?.setGhost(this.ghost()));
+        effect(() => this.engine()?.setStack(this.stack()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));
@@ -271,6 +284,11 @@ export class ViewerComponent {
     /** Keys held on the on-screen arrows of a touch walk (`KeyboardEvent.code` values). */
     public setWalkKeys(codes: readonly string[]): void {
         this.engine()?.setWalkKeys(codes);
+    }
+
+    /** Walks to the floor above (+1) or below (−1), as PageUp / PageDown do. */
+    public walkToFloor(step: 1 | -1): void {
+        this.engine()?.walkToFloor(step);
     }
 
     /** Ends the walk as Esc does (`walkthroughEnded` follows). */

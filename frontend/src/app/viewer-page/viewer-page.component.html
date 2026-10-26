@@ -15,6 +15,8 @@
     [modelFetcher]="modelFetcher"
     [pictureFetcher]="pictureFetcher"
     [underlayVisible]="editor.underlayVisible()"
+    [ghost]="ghost()"
+    [stack]="stack()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
@@ -33,6 +35,7 @@
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
+    [walkFloorHandler]="walkToFloor"
     [comments]="commentPins()"
     [activeCommentId]="activeCommentId()"
     [commentsVisible]="commentsVisible()"
@@ -57,7 +60,7 @@
 }
 
 @if (walking() && touchWalk) {
-    <fd-walk-pad [viewer]="viewerRef" />
+    <fd-walk-pad [viewer]="viewerRef" [floorUp]="walkFloors().up?.name ?? null" [floorDown]="walkFloors().down?.name ?? null" />
 } @else if (walking()) {
     <div class="walk-hint" role="status">
         @if (!walkLocked()) {
@@ -68,6 +71,9 @@
         }
         <span>
             <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around · <kbd>E</kbd> open/close ·
+            @if (walkFloors().up !== null || walkFloors().down !== null) {
+                <kbd>PgUp</kbd><kbd>PgDn</kbd> floor up/down ·
+            }
             <kbd>Esc</kbd> back to 3D
         </span>
     </div>
@@ -268,6 +274,18 @@
             <label class="toggle">
                 <input type="checkbox" [checked]="editor.underlayVisible()" (change)="editor.underlayVisible.set(!editor.underlayVisible())" />
                 <span>Plan underlay</span>
+            </label>
+        }
+        @if (floorBelow() !== null) {
+            <label class="toggle" title="Show the floors below this one under it; the floors above are left out">
+                <input type="checkbox" [checked]="allFloors()" (change)="allFloors.set(!allFloors())" />
+                <span>All floors</span>
+            </label>
+        }
+        @if (floorBelow(); as below) {
+            <label class="toggle" title="Trace the walls and rooms of the floor below in the plan">
+                <input type="checkbox" [checked]="floorBelowShown()" (change)="toggleFloorBelow()" />
+                <span>Floor below ({{ below.name }})</span>
             </label>
         }
         <label class="slider">

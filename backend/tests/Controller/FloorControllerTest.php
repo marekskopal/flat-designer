@@ -26,8 +26,21 @@ final class FloorControllerTest extends IntegrationTestCase
 		$atticId = $this->jsonBody($created)['id'];
 		self::assertIsInt($atticId);
 
+		// Stacked on the ground floor's walls (2600 mm by default) and its own slab.
+		self::assertSame([2850, 250], [$this->jsonBody($created)['elevation'], $this->jsonBody($created)['slabThickness']]);
+
 		$renamed = $this->request('PUT', self::path(Routes::ProjectFloor, $project->id, $atticId), ['name' => 'Loft', 'level' => 2], $user);
-		self::assertSame(['id' => $atticId, 'name' => 'Loft', 'level' => 2], $this->jsonBody($renamed));
+		self::assertSame(
+			['id' => $atticId, 'name' => 'Loft', 'level' => 2, 'elevation' => 2850, 'slabThickness' => 250],
+			$this->jsonBody($renamed),
+		);
+		$moved = $this->request(
+			'PUT',
+			self::path(Routes::ProjectFloor, $project->id, $atticId),
+			['name' => 'Loft', 'level' => 2, 'elevation' => 6000, 'slabThickness' => 200],
+			$user,
+		);
+		self::assertSame([6000, 200], [$this->jsonBody($moved)['elevation'], $this->jsonBody($moved)['slabThickness']]);
 
 		self::assertSame(
 			200,
@@ -59,6 +72,15 @@ final class FloorControllerTest extends IntegrationTestCase
 			)->getStatusCode(),
 		);
 		self::assertSame(
+			422,
+			$this->request(
+				'POST',
+				self::path(Routes::ProjectFloors, $project->id),
+				['name' => 'X', 'level' => 1, 'slabThickness' => 2000],
+				$user,
+			)->getStatusCode(),
+		);
+		self::assertSame(
 			400,
 			$this->request(
 				'POST',
@@ -80,7 +102,10 @@ final class FloorControllerTest extends IntegrationTestCase
 			$this->request('GET', self::path(Routes::ProjectFloorScene, $project->id, $floor->id), authenticatedAs: $user),
 		);
 
-		self::assertSame(['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0], $scene['floor']);
+		self::assertSame(
+			['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0, 'elevation' => 0, 'slabThickness' => 300],
+			$scene['floor'],
+		);
 		self::assertIsList($scene['rooms']);
 		self::assertCount(1, $scene['rooms']);
 		self::assertIsList($scene['walls']);

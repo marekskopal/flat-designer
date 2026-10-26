@@ -51,7 +51,7 @@ final readonly class ProjectTools
 
 	#[McpTool(
 		name: 'get_project',
-		description: 'Get a project: name, address, site (north angle, location, time zone), floors (ids, names, levels), revision, '
+		description: 'Get a project: name, address, site (north angle, location, time zone), floors (ids, names, levels, elevations, slab thicknesses), revision, '
 			. 'latest version number.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
@@ -137,11 +137,65 @@ final readonly class ProjectTools
 	/**
 	 * @param string $name e.g. "2. NP" or "Basement"
 	 * @param int $level storey order: 0 = ground floor, 1 = first floor, -1 = basement
+	 * @param int|null $elevation mm, the finished floor level above the project datum ±0.000; by default the floor stands
+	 *   on the tallest wall of the floor below (or hangs under the one above), plus its slab
+	 * @param int|null $slabThickness mm, the slab under the floor (0–1000); by default 300 at level 0 and below, else 250
 	 */
-	#[McpTool(name: 'add_floor', description: 'Add an empty floor (storey) to a project.')]
-	public function addFloor(int $projectId, string $name, int $level): FloorDto
+	#[McpTool(
+		name: 'add_floor',
+		description: 'Add an empty floor (storey) to a project. All floors share the plan coordinates, so draw its walls over '
+			. 'those of the floor below.',
+	)]
+	public function addFloor(int $projectId, string $name, int $level, ?int $elevation = null, ?int $slabThickness = null): FloorDto
 	{
-		return FloorDto::fromEntity($this->floorProvider->create($this->context->project($projectId), new FloorInputDto($name, $level)));
+		return FloorDto::fromEntity(
+			$this->floorProvider->create($this->context->project($projectId), new FloorInputDto($name, $level, $elevation, $slabThickness)),
+		);
+	}
+
+	/**
+	 * @param string|null $name e.g. "2. NP"
+	 * @param int|null $level storey order: 0 = ground floor, 1 = first floor, -1 = basement
+	 * @param int|null $elevation mm, the finished floor level above the project datum ±0.000
+	 * @param int|null $slabThickness mm, the slab under the floor (0–1000)
+	 */
+	#[McpTool(
+		name: 'update_floor',
+		description: 'Rename a floor or change its level, elevation or slab thickness. Only the given fields change; the '
+			. 'other floors do not move.',
+	)]
+	public function updateFloor(
+		int $projectId,
+		int $floorId,
+		?string $name = null,
+		?int $level = null,
+		?int $elevation = null,
+		?int $slabThickness = null,
+	): FloorDto {
+		$floor = $this->context->floor($projectId, $floorId);
+
+		return FloorDto::fromEntity(
+			$this->floorProvider->update(
+				$floor,
+				new FloorInputDto($name ?? $floor->name, $level ?? $floor->level, $elevation, $slabThickness),
+			),
+		);
+	}
+
+	#[McpTool(
+		name: 'delete_floor',
+		description: 'Delete a floor with its rooms, walls and items. A project keeps at least one floor. Saved versions keep '
+			. 'it, so a version restore brings it back; ask the user to confirm first.',
+		annotations: new ToolAnnotations(destructiveHint: true),
+	)]
+	/** @return FloorDto the deleted floor */
+	public function deleteFloor(int $projectId, int $floorId): FloorDto
+	{
+		$floor = $this->context->floor($projectId, $floorId);
+		$deleted = FloorDto::fromEntity($floor);
+		$this->floorProvider->delete($floor);
+
+		return $deleted;
 	}
 
 	/** @return list<ProjectVersionDto> */

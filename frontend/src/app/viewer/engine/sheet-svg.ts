@@ -1,3 +1,4 @@
+import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
 
 import {Vec2} from './plan-geometry';
@@ -31,6 +32,8 @@ export interface Sheet {
 export interface SheetInfo {
     projectName: string;
     floorName: string;
+    /** mm above ±0.000, written after the floor's name. */
+    floorElevation: number;
     address: string | null;
     date: Date;
 }
@@ -66,7 +69,8 @@ export function titleBlockSvg(width: number, height: number, info: SheetInfo, ca
     const right = width - Margin;
     const blockLeft = right - 110;
     const x = blockLeft + 4;
-    const floor = info.address === null || info.address === '' ? info.floorName : `${info.floorName} · ${info.address}`;
+    const name = `${info.floorName} ${levelText(info.floorElevation)}`;
+    const floor = info.address === null || info.address === '' ? name : `${name} · ${info.address}`;
     return [
         line({x: Margin, y: top}, {x: right, y: top}, {stroke: Ink, width: 0.25}),
         line({x: blockLeft, y: top}, {x: blockLeft, y: bottom}, {stroke: Ink, width: 0.25}),

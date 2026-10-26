@@ -27,6 +27,9 @@ final readonly class WallHandler implements ElementHandler
 {
 	public const int MinLength = 100;
 
+	/** mm, the height of a new wall. */
+	public const int DefaultHeight = 2600;
+
 	public function __construct(
 		private WallRepository $wallRepository,
 		private OpeningRepository $openingRepository,
@@ -64,7 +67,7 @@ final readonly class WallHandler implements ElementHandler
 			'endY' => 0,
 			'sagitta' => 0,
 			'thickness' => 100,
-			'height' => 2600,
+			'height' => self::DefaultHeight,
 			'materialId' => null,
 			'leftFinishes' => null,
 			'rightFinishes' => null,

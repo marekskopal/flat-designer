@@ -23,7 +23,7 @@
                     <tbody>
                         @if (s.floors.length > 1) {
                             <tr class="floor">
-                                <th colspan="4" scope="rowgroup">{{ floor.name }}</th>
+                                <th colspan="4" scope="rowgroup">{{ floor.name }} {{ levelText(floor.elevation) }}</th>
                             </tr>
                         }
                         @for (room of floor.rooms; track room.id) {

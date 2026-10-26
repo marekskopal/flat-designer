@@ -31,11 +31,13 @@ export interface MeasureSnapOptions {
     joints: ReadonlyMap<number, WallEnds>;
     /** The first point, to line the second one up with. */
     from: Vec2 | null;
+    /** Walls of the floor below while it is traced (`ghost.ts`): their ends and centre lines are snapped to as well. */
+    ghostWalls?: readonly Wall[];
 }
 
 /**
  * Where a measure point goes: onto a wall end or a corner of the wall faces, onto a face or a centre line,
- * in line with the first point, else the pointer itself (whole mm).
+ * in line with the first point, else the pointer itself (whole mm). The floor below adds its wall ends and centre lines.
  */
 export function snapMeasurePoint(cursor: Vec2, options: MeasureSnapOptions): SnapResult {
     const {radius, walls, joints, from} = options;
@@ -47,6 +49,10 @@ export function snapMeasurePoint(cursor: Vec2, options: MeasureSnapOptions): Sna
         const {left, right} = wallFaces(wall, joints.get(wall.id));
         points.push(start, end, left[0], left[left.length - 1], right[0], right[right.length - 1]);
         lines.push(...polylineSegments(left), ...polylineSegments(right), ...centreLineSegments(wall));
+    }
+    for (const wall of options.ghostWalls ?? []) {
+        points.push({x: wall.startX, y: wall.startY}, {x: wall.endX, y: wall.endY});
+        lines.push(...centreLineSegments(wall));
     }
     return snapPoint(cursor, {grid: 1, radius, points, lines, anchors: from === null ? [] : [from]});
 }

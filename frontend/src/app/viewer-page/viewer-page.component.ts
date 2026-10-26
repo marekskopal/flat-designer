@@ -7,6 +7,7 @@ import {
     effect,
     inject,
     input,
+    linkedSignal,
     numberAttribute,
     resource,
     signal,
@@ -28,7 +29,7 @@ import {ExportComponent} from '@app/export/export.component';
 import {Comment, commentPinsOf} from '@app/models/comment';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
-import {hasSiteLocation, isOutdoorRoom, PlanPoint, Room, RoomType, SunTime} from '@app/models/scene';
+import {hasSiteLocation, isOutdoorRoom, PlanPoint, Room, RoomType, Scene, SunTime} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {CommentService} from '@app/services/comment.service';
@@ -39,6 +40,7 @@ import {SavedViewService} from '@app/services/saved-view.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {ToolStatus} from '@app/viewer/engine/drawing';
+import {GhostFloor} from '@app/viewer/engine/ghost';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
@@ -182,6 +184,66 @@ export class ViewerPageComponent {
     protected readonly underlayImage = computed(() =>
         this.underlayFileId() !== null && this.underlayFile.hasValue() ? this.underlayFile.value() : null,
     );
+    /** The floors under this one (any level below it), lowest first; compared by id, as a reloaded project lists them anew. */
+    private readonly floorsUnder = computed(
+        () => {
+            const level = this.floors().find((f) => f.id === this.floorId())?.level;
+            return level === undefined ? [] : this.floors().filter((f) => f.level < level).sort((a, b) => a.level - b.level);
+        },
+        {equal: (a, b) => a.length === b.length && a.every((f, i) => f.id === b[i].id && f.name === b[i].name)},
+    );
+    /** The floors next above and below this one, for walking between floors; null where there is none. */
+    protected readonly walkFloors = computed(
+        () => {
+            const level = this.floors().find((f) => f.id === this.floorId())?.level;
+            const above = level === undefined ? [] : this.floors().filter((f) => f.level > level);
+            return {up: above.length === 0 ? null : above.reduce((a, b) => (b.level < a.level ? b : a)), down: this.floorsUnder().at(-1) ?? null};
+        },
+        {equal: (a, b) => a.up?.id === b.up?.id && a.up?.name === b.up?.name && a.down === b.down},
+    );
+    /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
+    protected readonly floorBelow = computed(() => this.walkFloors().down);
+    /** Shows the floor below by hand on this floor; null follows edit mode. */
+    private readonly floorBelowChoice = signal<boolean | null>(null);
+    protected readonly floorBelowShown = computed(() => this.floorBelow() !== null && (this.floorBelowChoice() ?? this.editor.enabled()));
+    /** The floor below's scene, loaded only while it is shown (from the same version as this floor). */
+    private readonly floorBelowScene = resource({
+        params: () => {
+            const below = this.floorBelow();
+            return below === null || !this.floorBelowShown()
+                ? undefined
+                : {projectId: this.projectId(), floorId: below.id, versionId: this.version()};
+        },
+        // Quietly: without it the plan just shows no trace of the floor below.
+        loader: async ({params}) => this.projects.getScene(params.projectId, params.floorId, params.versionId, {quiet: true}),
+    });
+    protected readonly ghost = computed<GhostFloor | null>(() => {
+        if (!this.floorBelowShown() || !this.floorBelowScene.hasValue()) {
+            return null;
+        }
+        const {walls, rooms} = this.floorBelowScene.value();
+        return {walls, rooms};
+    });
+    /** All floors: the floors under this one are drawn below it at their levels, those above are left out. */
+    protected readonly allFloors = signal(false);
+    /** The scenes of the floors under this one, loaded while the all floors view is on (from the same version as this floor). */
+    private readonly stackData = resource({
+        params: () => {
+            const floorIds = this.floorsUnder().map((f) => f.id);
+            return !this.allFloors() || floorIds.length === 0 ? undefined : {projectId: this.projectId(), floorIds, versionId: this.version()};
+        },
+        // Quietly: a floor that does not load is just not drawn, the others are.
+        loader: async ({params}) => {
+            const loads = params.floorIds.map((id) => this.projects.getScene(params.projectId, id, params.versionId, {quiet: true}));
+            return (await Promise.allSettled(loads)).flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+        },
+    });
+    /** The loaded scenes, kept while the next load is under way so the layers do not vanish for the round trip. */
+    private readonly stackScenes = linkedSignal<readonly Scene[] | null, readonly Scene[]>({
+        source: () => (this.stackData.hasValue() ? this.stackData.value() : null),
+        computation: (scenes, previous) => scenes ?? previous?.value ?? [],
+    });
+    protected readonly stack = computed<readonly Scene[] | null>(() => (this.allFloors() ? this.stackScenes() : null));
     /** The measure tool is on, for measuring or to pick the underlay's calibration points. */
     protected readonly measureActive = computed(() => this.measuring() || this.editor.calibration() !== null);
     protected readonly project = computed(() => (this.data.hasValue() ? this.data.value().project : null));
@@ -265,6 +327,7 @@ export class ViewerPageComponent {
             night: this.night(),
             sun: this.sunTime(),
             presentation: this.presentation(),
+            allFloors: this.allFloors(),
         };
     });
     /** For the editor panel: where new elements are placed. */
@@ -371,6 +434,7 @@ export class ViewerPageComponent {
         // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
         effect(() => {
             this.floorId();
+            this.floorBelowChoice.set(null);
             this.editor.select(null);
             this.sharing.set(null);
             this.activeCommentId.set(null);
@@ -411,6 +475,12 @@ export class ViewerPageComponent {
         }
         if (update.revision > (this.scene()?.revision ?? -1)) {
             this.data.reload();
+            if (update.floorId === null || update.floorId === this.floorBelow()?.id) {
+                this.floorBelowScene.reload();
+            }
+            if (update.floorId === null || this.floorsUnder().some((f) => f.id === update.floorId)) {
+                this.stackData.reload();
+            }
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
                 const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
@@ -521,6 +591,16 @@ export class ViewerPageComponent {
     }
 
     /** A run of walls drawn in the viewer. */
+    /** PageUp / PageDown in a walk: goes to the next floor up or down, where the walk carries on; its id, or null. */
+    protected readonly walkToFloor = (step: 1 | -1): number | null => {
+        const floor = step > 0 ? this.walkFloors().up : this.walkFloors().down;
+        if (floor === null) {
+            return null;
+        }
+        void this.router.navigate(['/projects', this.projectId(), 'floors', floor.id], {queryParamsHandling: 'preserve'});
+        return floor.id;
+    };
+
     protected readonly drawWalls = (points: PlanPoint[], closed: boolean, sagittas: number[] | null): Promise<boolean> =>
         this.editor.drawWalls(points, closed, sagittas);
 
@@ -594,6 +674,10 @@ export class ViewerPageComponent {
 
     private areaOf(matches: (type: RoomType) => boolean): number {
         return this.rooms().filter((r) => matches(r.type)).reduce((sum, r) => sum + r.area, 0);
+    }
+
+    protected toggleFloorBelow(): void {
+        this.floorBelowChoice.set(!this.floorBelowShown());
     }
 
     protected onSectionInput(event: Event): void {
@@ -674,6 +758,7 @@ export class ViewerPageComponent {
         this.lightsChoice.set(settings.lightsOn);
         this.sunTime.set(settings.sun ?? null);
         this.presentation.set(settings.presentation);
+        this.allFloors.set(settings.allFloors ?? false);
         const hasVariants = Object.keys(settings.variants).length > 0;
         this.variantOverride.set(scene !== null && hasVariants ? {revision: scene.revision ?? -1, variants: settings.variants} : null);
         if (settings.view === 'overview' && settings.camera !== null) {
@@ -717,6 +802,7 @@ export class ViewerPageComponent {
             lightsOn: this.lightsChoice(),
             sun: this.sunTime(),
             presentation: this.presentation(),
+            allFloors: this.allFloors(),
             variants,
         };
     }

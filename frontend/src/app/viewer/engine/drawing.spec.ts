@@ -27,6 +27,13 @@ describe('snapDrawPoint', () => {
         expect(snapDrawPoint({x: 2013, y: 60}, options)).toEqual({point: {x: 2013, y: 0}, kind: 'line'});
     });
 
+    it('snaps onto the walls of the floor below like its own', () => {
+        const below = {...wall, id: 9, startX: 0, startY: 5000, endX: 4000, endY: 5000};
+        expect(snapDrawPoint({x: 40, y: 4960}, options).kind).not.toBe('point');
+        expect(snapDrawPoint({x: 40, y: 4960}, {...options, ghostWalls: [below]})).toEqual({point: {x: 0, y: 5000}, kind: 'point'});
+        expect(snapDrawPoint({x: 2013, y: 5060}, {...options, ghostWalls: [below]})).toEqual({point: {x: 2013, y: 5000}, kind: 'line'});
+    });
+
     it('turns a segment to a multiple of 15° from the previous point, with its length on the grid', () => {
         const from = {x: 10000, y: 10000};
         const snapped = snapDrawPoint({x: 10000 + 2121, y: 10000 + 2160}, {...options, walls: [], points: [from]});

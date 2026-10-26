@@ -36,6 +36,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		'presentation' => true,
 		'exports' => false,
 		'comments' => 'read',
+		'allFloors' => false,
 	];
 
 	public function testCreatingALinkSavesAVersionAndGuestsSeeIt(): void
@@ -73,9 +74,51 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertSame('Test Project', $view['projectName']);
 		self::assertSame(self::Settings, $view['settings']);
 		self::assertIsArray($view['scene']);
-		self::assertSame(['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0], $view['scene']['floor']);
+		self::assertSame(
+			['id' => $floor->id, 'name' => 'Ground floor', 'level' => 0, 'elevation' => 0, 'slabThickness' => 300],
+			$view['scene']['floor'],
+		);
 		self::assertIsList($view['scene']['walls']);
 		self::assertCount(1, $view['scene']['walls']);
+	}
+
+	public function testAllFloorsLinksShowTheFloorsBelow(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		Fixture::furnishFloor(Fixture::firstFloor($project));
+		$attic = $this->jsonBody(
+			$this->request('POST', self::path(Routes::ProjectFloors, $project->id), ['name' => 'Attic', 'level' => 1], $user),
+		);
+		self::assertIsInt($attic['id']);
+		$link = $this->jsonBody($this->request(
+			'POST',
+			self::path(Routes::ProjectShareLinks, $project->id),
+			['floorId' => $attic['id'], 'name' => 'House', 'settings' => [...self::Settings, 'allFloors' => true]],
+			$user,
+		));
+
+		$view = $this->jsonBody($this->request('GET', self::sharePath(self::stringField($link['token']))));
+		self::assertIsArray($view['scene']);
+		self::assertIsArray($view['scene']['floor']);
+		self::assertSame('Attic', $view['scene']['floor']['name']);
+		self::assertIsList($view['stack']);
+		self::assertCount(1, $view['stack']);
+		self::assertIsArray($view['stack'][0]);
+		self::assertIsArray($view['stack'][0]['floor']);
+		self::assertSame(['Ground floor', 0], [$view['stack'][0]['floor']['name'], $view['stack'][0]['floor']['elevation']]);
+		self::assertIsList($view['stack'][0]['walls']);
+		self::assertCount(1, $view['stack'][0]['walls']);
+		self::assertIsList($view['stack'][0]['materials']);
+
+		// A link of one floor shows no other.
+		$single = $this->jsonBody($this->request(
+			'POST',
+			self::path(Routes::ProjectShareLinks, $project->id),
+			['floorId' => $attic['id'], 'name' => 'Attic', 'settings' => self::Settings],
+			$user,
+		));
+		self::assertSame([], $this->jsonBody($this->request('GET', self::sharePath(self::stringField($single['token']))))['stack']);
 	}
 
 	public function testGuestSeesTheFloorAsItWasWhenShared(): void
@@ -157,10 +200,19 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertSame(200, $updated->getStatusCode());
 		$body = $this->jsonBody($updated);
 		self::assertSame('Renamed', $body['name']);
-		// Without the flags (a link from before dimension lines, the night view and the quality), they are off; exports are
-		// allowed and comments hidden.
+		// Without the flags (a link from before dimension lines, the night view, the quality and stacked floors), they are
+		// off; exports are allowed and comments hidden.
 		self::assertSame(
-			[...$settings, 'dimensions' => false, 'night' => false, 'sun' => null, 'presentation' => false, 'exports' => true, 'comments' => 'hidden'],
+			[
+				...$settings,
+				'dimensions' => false,
+				'night' => false,
+				'sun' => null,
+				'presentation' => false,
+				'exports' => true,
+				'comments' => 'hidden',
+				'allFloors' => false,
+			],
 			$body['settings'],
 		);
 		self::assertSame($expiresAt, $body['expiresAt']);

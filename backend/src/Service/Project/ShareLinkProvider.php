@@ -137,13 +137,23 @@ final readonly class ShareLinkProvider
 	/** The guest's view of a link; null when the token is unknown or the link expired. */
 	public function findSharedView(string $token): ?SharedViewDto
 	{
-		$shared = $this->sharedScene($token);
-		if ($shared === null) {
+		$link = $this->activeLink($token);
+		if ($link === null) {
 			return null;
 		}
-		[$link, $scene] = $shared;
+		['scene' => $scene, 'below' => $below] = $this->snapshotService->getFloorScenes($link->version->snapshot, $link->floorId);
+		if ($scene === null) {
+			return null;
+		}
+		$settings = self::readSettings($link);
 
-		return new SharedViewDto(name: $link->name, projectName: $link->project->name, settings: self::readSettings($link), scene: $scene);
+		return new SharedViewDto(
+			name: $link->name,
+			projectName: $link->project->name,
+			settings: $settings,
+			scene: $scene,
+			stack: $settings->allFloors ? $below : [],
+		);
 	}
 
 	/** A 3D model a guest's view draws (listed in its scene's `models`); null for any other. */
@@ -174,20 +184,8 @@ final readonly class ShareLinkProvider
 	}
 
 	/**
-	 * The link and its frozen floor scene; null when the token is unknown, the link expired or the floor is gone.
-	 *
-	 * @return array{ShareLink, stdClass}|null
-	 */
-	private function sharedScene(string $token): ?array
-	{
-		$link = $this->activeLink($token);
-		$scene = $link === null ? null : $this->snapshotService->getFloorScene($link->version->snapshot, $link->floorId);
-
-		return $link === null || $scene === null ? null : [$link, $scene];
-	}
-
-	/**
-	 * The link and the ids of the models and pictures its floor draws, without decoding the snapshot each time.
+	 * The link and the ids of the models and pictures its floor draws (with `allFloors`, also the floors under it),
+	 * without decoding the snapshot each time.
 	 *
 	 * @return array{ShareLink, array{models: list<int>, pictures: list<int>}}|null
 	 */
@@ -203,6 +201,14 @@ final readonly class ShareLinkProvider
 			$link->floorId,
 			fn (): ?stdClass => $this->snapshotService->getFloorScene($version->snapshot, $link->floorId),
 		);
+		if ($ids !== null && self::readSettings($link)->allFloors) {
+			$below = $this->assetIds->below(
+				$version->id,
+				$link->floorId,
+				fn (): array => $this->snapshotService->getFloorScenes($version->snapshot, $link->floorId)['below'],
+			);
+			$ids = ['models' => [...$ids['models'], ...$below['models']], 'pictures' => [...$ids['pictures'], ...$below['pictures']]];
+		}
 
 		return $ids === null ? null : [$link, $ids];
 	}

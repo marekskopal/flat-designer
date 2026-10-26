@@ -35,6 +35,7 @@ import {
     sceneCounters,
     ViewerStats,
 } from './frame-stats';
+import {buildGhost, disposeGhost, GhostFloor} from './ghost';
 import {exportTree, toGlb} from './gltf-export';
 import {buildItem, ItemAssets} from './items';
 import {applyFixtureLights} from './lights';
@@ -76,7 +77,7 @@ import {
     wallFrame,
     wallJoints,
 } from './plan-geometry';
-import {buildPlot, groundUnder, highlightPlot, lowestGround} from './plots';
+import {buildPlot, groundUnder, highlightPlot} from './plots';
 import {
     PresentationPipeline,
     PresentationPixelRatio,
@@ -88,6 +89,7 @@ import {
 } from './presentation';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
+import {buildContextFloor, ContextFloor, floorOffset, floorPoints, floorsBelow, rebuildContextItems, stackGround} from './stack';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
@@ -234,6 +236,11 @@ export class ViewerEngine {
     public onWalkthroughLock: (locked: boolean) => void = () => undefined;
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
+    /**
+     * The walker asks for the floor above (+1) or below (−1); the id of the floor the page goes to (it then loads that
+     * floor, and the walk carries on there), null when there is none.
+     */
+    public onWalkthroughFloor: (step: 1 | -1) => number | null = () => null;
     /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
     public onDrawWalls: (points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean> = () => Promise.resolve(false);
     /** A click with the room tool inside walls that close around the point. */
@@ -318,6 +325,14 @@ export class ViewerEngine {
     private pictureLibrary: PictureLibrary | null = null;
     private underlayImage: TexImageSource | null = null;
     private underlayVisible = true;
+    /** The floor below, traced in the top view (`setGhost()`), and its walls for the snapping. */
+    private ghost: THREE.Group | null = null;
+    private ghostWalls: readonly Wall[] = [];
+    /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
+    private stackScenes: readonly Scene[] | null = null;
+    private stackLayers: ContextFloor[] = [];
+    /** Where the walker stood when they asked for another floor, and which: the walk goes on there once it is loaded. */
+    private floorWalk: {floorId: number; point: Vec2} | null = null;
     private highlight: THREE.Mesh | null = null;
     /** Translucent box with edges around the selected item, wall, opening or group; follows it while dragged. */
     private outline: THREE.Mesh | null = null;
@@ -456,7 +471,8 @@ export class ViewerEngine {
 
     /**
      * Shows a scene. Another state of the floor already shown (an edit, a live update) only rebuilds the
-     * elements that changed; a different floor, or changed materials, builds everything anew.
+     * elements that changed; a different floor, or changed materials, builds everything anew. Another floor keeps the
+     * camera (the first one shown is framed in the overview).
      */
     public load(scene: Scene): void {
         this.invalidate();
@@ -466,11 +482,13 @@ export class ViewerEngine {
         const previous = this.sceneData;
         // Pictures of files deleted since go plain, and a fresh scene listing a file lets a failed load try again: their
         // items are redrawn. Models the same way.
-        const changedPictures = new Set(this.pictureLibrary?.sync(scene.pictures ?? []) ?? []);
-        const changedModels = new Set(this.modelLibrary?.sync((scene.models ?? []).map((m) => m.id)) ?? []);
+        const changedPictures = new Set(this.pictureLibrary?.sync(this.stackPictures(scene)) ?? []);
+        const changedModels = new Set(this.modelLibrary?.sync(this.stackModels(scene)) ?? []);
+        let rebuilt = false;
         if (previous !== null && this.parts !== null && previous.floor.id === scene.floor.id && sameJson(previous.materials, scene.materials)) {
             this.applyChanges(previous, scene, changedPictures, changedModels);
         } else {
+            rebuilt = true;
             const started = performance.now();
             this.build(scene);
             this.buildMs = performance.now() - started;
@@ -478,29 +496,59 @@ export class ViewerEngine {
         this.sceneData = scene;
         this.showVariants(scene);
         this.applyLights();
+        // The floors under a new floor (or with new materials) are drawn anew; the same floor's only move with its level.
+        if (rebuilt || this.loadedFloorId !== scene.floor.id) {
+            this.rebuildStack();
+        } else {
+            this.placeStack();
+        }
 
-        const wallPoints = scene.walls.flatMap((w) => [[w.startX, w.startY], [w.endX, w.endY]] as [number, number][]);
-        const points = [...wallPoints, ...scene.rooms.flatMap((r) => r.polygon)];
-        this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
-        this.fitSunShadow();
-        this.fitGround(scene);
+        // The walk goes on on the floor the walker asked for; any other floor ends it (a reload of the same floor
+        // while the asked one is on its way changes nothing).
+        const walkTo = this.loadedFloorId !== scene.floor.id && this.walkthrough !== null && this.floorWalk?.floorId === scene.floor.id
+            ? this.floorWalkStart(scene, this.floorWalk.point)
+            : null;
         if (this.loadedFloorId !== scene.floor.id) {
+            this.floorWalk = null;
+        }
+        if (this.loadedFloorId !== scene.floor.id && walkTo === null) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
                 this.onWalkthroughEnd();
             }
-            this.setView('overview', false);
+            if (previous !== null && this.loadedFloorId !== null) {
+                // Another floor of the project keeps the view as it was turned. With all floors shown they stay where
+                // they are on the screen: the view moves with the shown floor's level.
+                if (this.stackScenes !== null) {
+                    const dy = floorOffset(previous, scene) * MM;
+                    this.camera.position.y += dy;
+                    this.controls.target.y += dy;
+                }
+                this.controls.update();
+            } else {
+                this.setView('overview', false);
+            }
         }
         if (this.walkthrough === null) {
             this.leafStates.reset(scene.walls);
         } else {
             this.leafStates.sync(scene.walls);
         }
+        if (walkTo !== null) {
+            // A floor walked onto starts as a walk does: every door closed but the one the walker comes in by.
+            this.leafStates.closeAll();
+            if (walkTo.openingId !== undefined) {
+                this.leafStates.setOpen(walkTo.openingId, true, false);
+            }
+        }
         this.leafStates.apply(this.leaves);
         this.refreshShadows();
         this.walkthrough?.setColliders(sceneColliders(scene));
         this.walkthrough?.setFloorLevels(floorLevels(scene));
         this.updateLeafColliders();
+        if (walkTo !== null) {
+            this.walkthrough?.moveTo(walkTo.position, walkTo.yaw);
+        }
         this.loadedFloorId = scene.floor.id;
         this.setSelection(this.selection);
         this.setPicked(this.picked);
@@ -536,6 +584,8 @@ export class ViewerEngine {
     }
 
     private build(scene: Scene): void {
+        // The layers share the floor's materials, which go with its content.
+        this.clearStack();
         this.clearContent();
 
         const anisotropy = this.renderer.capabilities.getMaxAnisotropy();
@@ -637,10 +687,13 @@ export class ViewerEngine {
             }
             this.joints = joints;
             this.corners = corners;
-            this.disposeObject(parts.slab);
-            parts.slab = buildSlab(scene.walls, materials);
-            parts.root.add(parts.slab);
             this.indexWalls();
+        }
+        // The slab lies under the rooms and the walls.
+        if (wallsChanged || rooms.removed.length > 0 || rooms.changed.length > 0 || previous.floor.slabThickness !== scene.floor.slabThickness) {
+            this.disposeObject(parts.slab);
+            parts.slab = buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials);
+            parts.root.add(parts.slab);
         }
 
         // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground:
@@ -759,12 +812,12 @@ export class ViewerEngine {
     }
 
     /** Whether the item as drawn has a picture of one of the files (of any file with null); only Custom items have them. */
-    private showsPicture(item: Item, fileIds: ReadonlySet<number> | null): boolean {
+    private showsPicture(item: Item, fileIds: ReadonlySet<number> | null, objects: ReadonlyMap<number, THREE.Object3D> = this.items): boolean {
         if (item.kind !== 'Custom' || fileIds?.size === 0) {
             return false;
         }
         let shows = false;
-        this.items.get(item.id)?.traverse((o) => {
+        objects.get(item.id)?.traverse((o) => {
             const id = o.userData['pictureId'] as number | null | undefined;
             shows ||= typeof id === 'number' && (fileIds === null || fileIds.has(id));
         });
@@ -1168,7 +1221,10 @@ export class ViewerEngine {
     public setModelFetcher(fetcher: ModelFetcher): void {
         this.modelLibrary?.dispose();
         this.modelLibrary = new ModelLibrary(fetcher);
-        this.modelLibrary.onLoaded = (modelId): void => this.rebuildModelItems(modelId);
+        this.modelLibrary.onLoaded = (modelId): void => {
+            this.rebuildModelItems(modelId);
+            this.rebuildStackItems((item) => item.kind === 'Model' && (modelId === null || item.modelId === modelId));
+        };
         if (this.sceneData !== null) {
             this.rebuildModelItems(null);
         }
@@ -1177,7 +1233,11 @@ export class ViewerEngine {
     public setPictureFetcher(fetcher: PictureFetcher): void {
         this.pictureLibrary?.dispose();
         this.pictureLibrary = new PictureLibrary(fetcher);
-        this.pictureLibrary.onLoaded = (fileId): void => this.rebuildPictureItems(fileId);
+        this.pictureLibrary.onLoaded = (fileId): void => {
+            this.rebuildPictureItems(fileId);
+            const fileIds = fileId === null ? null : new Set([fileId]);
+            this.rebuildStackItems((item, layer) => this.showsPicture(item, fileIds, layer.items));
+        };
         if (this.sceneData !== null) {
             this.rebuildPictureItems(null);
         }
@@ -1203,6 +1263,24 @@ export class ViewerEngine {
             this.underlay = buildUnderlay(underlay, image);
             this.underlay.visible = false;
             this.scene.add(this.underlay);
+        }
+    }
+
+    /**
+     * Traces the floor below in the top view (null hides it): its walls and rooms as faint lines over the plan. Drawing
+     * walls and measuring snap to its wall ends and centre lines too.
+     */
+    public setGhost(floor: GhostFloor | null): void {
+        this.invalidate();
+        if (this.ghost !== null) {
+            disposeGhost(this.ghost);
+            this.ghost = null;
+        }
+        this.ghostWalls = floor?.walls ?? [];
+        if (floor !== null) {
+            this.ghost = buildGhost(floor);
+            this.ghost.visible = false;
+            this.scene.add(this.ghost);
         }
     }
 
@@ -1437,6 +1515,7 @@ export class ViewerEngine {
         };
         walkthrough.onLockChange = (locked): void => this.onWalkthroughLock(locked);
         walkthrough.onUse = (): void => this.toggleDoor(this.aim?.openingId ?? null);
+        walkthrough.onFloor = (step): void => this.walkToFloor(step);
         this.walkthrough = walkthrough;
         // Every door starts closed but the entrance, open at once: swinging open it could sweep the walker aside.
         this.leafStates.closeAll();
@@ -1447,6 +1526,30 @@ export class ViewerEngine {
         this.updateLeafColliders();
         this.refreshShadows();
         walkthrough.lock();
+    }
+
+    /**
+     * Walks to the floor above (+1) or below (−1), as PageUp / PageDown do: the page loads it, and the walker stands at
+     * the same plan point there (or at its entrance). Nothing happens without such a floor.
+     */
+    public walkToFloor(step: 1 | -1): void {
+        const walkthrough = this.walkthrough;
+        const floorId = walkthrough === null ? null : this.onWalkthroughFloor(step);
+        if (walkthrough !== null && floorId !== null) {
+            this.floorWalk = {floorId, point: walkthrough.where()};
+        }
+    }
+
+    /**
+     * Where the walk goes on on a floor walked onto: the same plan point when it lies in one of the floor's rooms (the
+     * view keeps its direction), else where a walk of that floor starts.
+     */
+    private floorWalkStart(scene: Scene, point: Vec2): {position: Vec2; yaw?: number; openingId?: number} {
+        if (scene.rooms.some((r) => pointInPolygon(point, r.polygon))) {
+            return {position: point};
+        }
+        const start = this.walkStart(scene);
+        return {position: start.position, yaw: Math.atan2(-start.direction.x, start.direction.y), openingId: start.openingId};
     }
 
     /** Keys held on the on-screen arrows of a touch walk (`KeyboardEvent.code` values). */
@@ -1468,6 +1571,7 @@ export class ViewerEngine {
         }
         this.walkthrough.dispose();
         this.walkthrough = null;
+        this.floorWalk = null;
         this.setAim(null);
         // Back to the display state: doors open, French windows closed.
         this.leafStates.reset(this.sceneData?.walls ?? [], true);
@@ -1569,9 +1673,11 @@ export class ViewerEngine {
         window.removeEventListener('keydown', this.handleKeyDown, true);
         this.walkthrough?.dispose();
         this.walkthrough = null;
+        this.clearStack();
         this.clearContent();
         this.removeDimensions();
         this.setUnderlay(null, null);
+        this.setGhost(null);
         this.modelLibrary?.dispose();
         this.pictureLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
@@ -1621,7 +1727,87 @@ export class ViewerEngine {
 
     /** The surroundings' ground under the lowest plot or room, so nothing below the floor's level is buried in it. */
     private fitGround(scene: Scene): void {
-        this.surroundings.position.y = lowestGround(scene.plots ?? [], scene.rooms) * MM + GroundDiscY;
+        this.surroundings.position.y = stackGround(scene, this.stackLayers.map((l) => l.scene)) * MM + GroundDiscY;
+    }
+
+    /**
+     * The all floors view: the floors under the shown one are drawn below it at their levels (`scenes` may hold any of
+     * the project's floors; those at the shown one's level and above are left out). Null shows this floor only. While
+     * it is on, switching floors moves the view with the level, so the building stays where it is on the screen.
+     */
+    public setStack(scenes: readonly Scene[] | null): void {
+        this.invalidate();
+        this.stackScenes = scenes;
+        if (this.sceneData !== null) {
+            // The libraries now keep the stack's assets too; a failed one listed again is tried again, as at a load.
+            const pictures = new Set(this.pictureLibrary?.sync(this.stackPictures(this.sceneData)) ?? []);
+            const models = new Set(this.modelLibrary?.sync(this.stackModels(this.sceneData)) ?? []);
+            const showsModel = (item: Item): boolean => item.kind === 'Model' && item.modelId != null && models.has(item.modelId);
+            this.rebuildItems((item) => this.showsPicture(item, pictures) || showsModel(item));
+        }
+        this.rebuildStack();
+    }
+
+    /** Draws the floors under the shown one: those drawn already from the same scene stay, the others anew. */
+    private rebuildStack(): void {
+        const shown = this.sceneData;
+        const materials = this.materials;
+        const wanted = shown === null || materials === null ? [] : floorsBelow(this.stackScenes ?? [], shown);
+        const kept = new Map(
+            this.stackLayers
+                .filter((layer) => wanted.some((scene) => scene.floor.id === layer.scene.floor.id && sameJson(scene, layer.scene)))
+                .map((layer) => [layer.scene.floor.id, layer]),
+        );
+        this.stackLayers.filter((layer) => !kept.has(layer.scene.floor.id)).forEach((layer) => this.disposeObject(layer.group));
+        this.stackLayers = wanted.map((scene) => {
+            const layer = kept.get(scene.floor.id) ?? buildContextFloor(scene, materials as MaterialLibrary, this.itemAssets(scene));
+            this.scene.add(layer.group);
+            return layer;
+        });
+        this.placeStack();
+    }
+
+    /** Lifts the layers to their levels against the shown floor, and fits the framing, sun and ground to all of them. */
+    private placeStack(): void {
+        const shown = this.sceneData;
+        if (shown === null) {
+            return;
+        }
+        for (const layer of this.stackLayers) {
+            layer.group.position.y = floorOffset(layer.scene, shown) * MM;
+        }
+        const points = [shown, ...this.stackLayers.map((l) => l.scene)].flatMap(floorPoints);
+        this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
+        this.fitSunShadow();
+        this.fitGround(shown);
+        this.refreshShadows();
+    }
+
+    /** Draws the stack's items `rebuild` picks anew (an asset of theirs has loaded), like `rebuildItems()` for the shown floor. */
+    private rebuildStackItems(rebuild: (item: Item, layer: ContextFloor) => boolean): void {
+        const materials = this.materials;
+        if (materials === null || this.stackLayers.length === 0) {
+            return;
+        }
+        for (const layer of this.stackLayers) {
+            const dispose = (object: THREE.Object3D): void => this.disposeObject(object);
+            rebuildContextItems(layer, (item) => rebuild(item, layer), materials, this.itemAssets(layer.scene), dispose);
+        }
+        this.refreshShadows();
+    }
+
+    private clearStack(): void {
+        this.stackLayers.forEach((layer) => this.disposeObject(layer.group));
+        this.stackLayers = [];
+    }
+
+    /** The models the shown floor and the stack draw, so the library keeps them all. */
+    private stackModels(scene: Scene): number[] {
+        return [scene, ...(this.stackScenes ?? [])].flatMap((s) => (s.models ?? []).map((m) => m.id));
+    }
+
+    private stackPictures(scene: Scene): number[] {
+        return [scene, ...(this.stackScenes ?? [])].flatMap((s) => s.pictures ?? []);
     }
 
     /** The sun towards its direction at the clock time, its shadow camera covering the plan. */
@@ -1629,7 +1815,10 @@ export class ViewerEngine {
         this.sunAngles = sunAt(this.sceneData?.location, this.sunTime, new Date().getFullYear());
         const direction = sunDirection(this.sceneData?.location?.northAngle ?? 0, this.sunAngles);
         const center = this.planCenter();
-        const radius = Math.hypot(this.bounds.maxX - this.bounds.minX, this.bounds.maxY - this.bounds.minY) * MM * 0.6 + 2;
+        // The floors under the shown one lie below the plan: the box reaches down to the lowest one's slab.
+        const shown = this.sceneData;
+        const depth = Math.max(0, ...this.stackLayers.map((l) => -floorOffset(l.scene, shown ?? l.scene) + l.scene.floor.slabThickness)) * MM;
+        const radius = Math.hypot(this.bounds.maxX - this.bounds.minX, this.bounds.maxY - this.bounds.minY) * MM * 0.6 + 2 + depth;
         const distance = radius + SunDistance;
         this.sun.position.set(center.x + direction.x * distance, center.y + direction.y * distance, center.z + direction.z * distance);
         this.sun.target.position.copy(center);
@@ -1765,6 +1954,9 @@ export class ViewerEngine {
         }
         if (this.underlay !== null) {
             this.underlay.visible = this.underlayVisible && topDown;
+        }
+        if (this.ghost !== null) {
+            this.ghost.visible = topDown;
         }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
         this.renderMain();
@@ -2046,7 +2238,8 @@ export class ViewerEngine {
             this.previewWall(bent.wall, bent.fits);
             return;
         }
-        const others = (this.sceneData?.walls ?? [])
+        // The other walls' ends, and those of the floor below while it is traced.
+        const others = [...(this.sceneData?.walls ?? []), ...this.ghostWalls]
             .filter((w) => w.id !== wall.id)
             .flatMap((w) => [
                 {x: w.startX, y: w.startY},
@@ -2388,7 +2581,7 @@ export class ViewerEngine {
         const from = this.measurement.b === null ? this.measurement.a : null;
         // Calibration points are features of the image, which the drawn walls would only pull them away from.
         const radius = free || this.calibrating ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
-        return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from});
+        return snapMeasurePoint(point, {radius, walls: this.sceneData?.walls ?? [], joints: this.joints, from, ghostWalls: this.ghostWalls});
     }
 
     /** Redraws the measurement (line, points, distance label) and reports the readout. */
@@ -2507,7 +2700,13 @@ export class ViewerEngine {
 
     private snapRunPoint(point: Vec2, free: boolean): SnapResult {
         const radius = free ? 0 : (SnapPixels * this.metresPerPixel()) / MM;
-        return snapDrawPoint(point, {grid: free ? 1 : DragSnap, radius, walls: this.sceneData?.walls ?? [], points: this.run?.points ?? []});
+        return snapDrawPoint(point, {
+            grid: free ? 1 : DragSnap,
+            radius,
+            walls: this.sceneData?.walls ?? [],
+            points: this.run?.points ?? [],
+            ghostWalls: this.ghostWalls,
+        });
     }
 
     /** The segment of the run waiting for its curve: the last one, or the one closing the run. */

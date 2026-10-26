@@ -28,6 +28,8 @@ export interface FloorSchedule {
     id: number;
     name: string;
     level: number;
+    /** mm above ±0.000. */
+    elevation: number;
     rooms: RoomScheduleRow[];
     indoor: ScheduleTotal;
     outdoor: ScheduleTotal;

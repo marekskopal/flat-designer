@@ -82,6 +82,18 @@ final class SavedViewControllerTest extends EditorTestCase
 		self::assertNull($plain['sun']);
 	}
 
+	public function testKeepsTheAllFloorsView(): void
+	{
+		$settings = $this->jsonBody($this->save(['settings' => ['view' => 'overview', 'allFloors' => true]]))['settings'];
+		self::assertIsArray($settings);
+		self::assertTrue($settings['allFloors']);
+
+		// Views saved before it show their floor only.
+		$plain = $this->jsonBody($this->save(['name' => 'Plain', 'settings' => ['view' => 'overview']]))['settings'];
+		self::assertIsArray($plain);
+		self::assertFalse($plain['allFloors']);
+	}
+
 	public function testAVersionRestoreBringsTheViewsBackOnTheNewFloor(): void
 	{
 		[$setId, $island, $table] = $this->variantSet();

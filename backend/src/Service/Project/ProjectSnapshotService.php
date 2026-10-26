@@ -53,6 +53,8 @@ use const JSON_THROW_ON_ERROR;
  * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
  * plots: [PlotDto]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
+ * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
+ * and walls by `FloorStack`)
  * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` missing in snapshots taken before they
  * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
@@ -121,13 +123,18 @@ final readonly class ProjectSnapshotService
 	/** @return list<FloorDto> */
 	public function getFloors(string $snapshot): array
 	{
+		$data = $this->read($snapshot);
+		$stack = FloorStack::ofSnapshot($data);
+
 		return array_map(
 			fn (SnapshotReader $entry): FloorDto => new FloorDto(
 				id: $entry->object('floor')->int('id'),
 				name: $entry->object('floor')->string('name'),
 				level: $entry->object('floor')->int('level'),
+				elevation: $stack[$entry->object('floor')->int('id')]['elevation'],
+				slabThickness: $stack[$entry->object('floor')->int('id')]['slabThickness'],
 			),
-			$this->read($snapshot)->objects('floors'),
+			$data->objects('floors'),
 		);
 	}
 
@@ -137,22 +144,18 @@ final readonly class ProjectSnapshotService
 	 */
 	public function getFloorScene(string $snapshot, int $floorId): ?stdClass
 	{
-		$data = $this->decode($snapshot, false);
-		if (!$data instanceof stdClass || !is_array($data->floors ?? null)) {
-			throw new InvalidSnapshotException('Snapshot has no floors.');
-		}
+		return $this->getFloorScenes($snapshot, $floorId)['scene'];
+	}
 
-		foreach ($data->floors as $entry) {
-			if ($entry instanceof stdClass && $entry->floor instanceof stdClass && $entry->floor->id === $floorId) {
-				$scene = clone $entry;
-				$scene->materials = $data->materials ?? [];
-				$scene->location = $data->location ?? null;
-
-				return $scene;
-			}
-		}
-
-		return null;
+	/**
+	 * The stored scene of one floor and those of the floors under it (of a lower level, lowest first), shaped alike,
+	 * from one decode of the snapshot. The scene is null when the floor is gone.
+	 *
+	 * @return array{scene: ?stdClass, below: list<stdClass>}
+	 */
+	public function getFloorScenes(string $snapshot, int $floorId): array
+	{
+		return SnapshotScenes::of($this->decode($snapshot, false), $floorId, fn (): SnapshotReader => $this->read($snapshot));
 	}
 
 	/**
@@ -184,10 +187,17 @@ final readonly class ProjectSnapshotService
 		$allSetIds = [];
 		/** @var array<int, ItemGroup> $allGroupIds */
 		$allGroupIds = [];
+		$stack = FloorStack::ofSnapshot($data);
 
 		foreach ($data->objects('floors') as $entry) {
 			$floorData = $entry->object('floor');
-			$floor = $this->stamp(new Floor(project: $project, name: $floorData->string('name'), level: $floorData->int('level')));
+			$floor = $this->stamp(new Floor(
+				project: $project,
+				name: $floorData->string('name'),
+				level: $floorData->int('level'),
+				elevation: $stack[$floorData->int('id')]['elevation'],
+				slabThickness: $stack[$floorData->int('id')]['slabThickness'],
+			));
 			$this->floorRepository->persist($floor);
 			$floorIds[$floorData->int('id')] = $floor;
 

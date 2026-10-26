@@ -82,6 +82,7 @@ final readonly class ShareLinkTools
 	 * @param bool $presentation render in the presentation quality (ambient occlusion, antialiasing; slower)
 	 * @param bool $exports let the guest download the plan (PDF, SVG), the wall elevations (PDF) and the 3D model (glTF)
 	 * @param string $comments the floor's review comments: "hidden", "read" (the open threads) or "write" (guests may add some too)
+	 * @param bool $allFloors draw the floors under the shared one below it (the floors above are never shown)
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working; null = never
 	 */
 	#[McpTool(
@@ -108,6 +109,7 @@ final readonly class ShareLinkTools
 		bool $presentation = false,
 		bool $exports = true,
 		string $comments = 'hidden',
+		bool $allFloors = false,
 		?string $expiresAt = null,
 	): ShareLinkDto {
 		$views ??= ['overview', 'top'];
@@ -124,6 +126,7 @@ final readonly class ShareLinkTools
 			'presentation' => $presentation,
 			'exports' => $exports,
 			'comments' => $comments,
+			'allFloors' => $allFloors,
 		]);
 		$link = $this->shareLinkProvider->create(
 			$this->context->user(),
@@ -148,6 +151,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $presentation render in the presentation quality
 	 * @param bool|null $exports let the guest download the plan (PDF, SVG), the wall elevations (PDF) and the 3D model (glTF)
 	 * @param string|null $comments the floor's review comments: "hidden", "read" or "write"
+	 * @param bool|null $allFloors draw the floors under the shared one below it
 	 * @param string|null $expiresAt ISO 8601 date-time when the link stops working
 	 * @param list<string>|null $clear fields to reset: "camera" (default framing), "sectionHeight" (no cut), "sun" (the default
 	 *   afternoon sun), "expiresAt" (never)
@@ -176,6 +180,7 @@ final readonly class ShareLinkTools
 		?bool $presentation = null,
 		?bool $exports = null,
 		?string $comments = null,
+		?bool $allFloors = null,
 		?string $expiresAt = null,
 		?array $clear = null,
 	): ShareLinkDto {
@@ -196,6 +201,7 @@ final readonly class ShareLinkTools
 				'presentation' => $presentation,
 				'exports' => $exports,
 				'comments' => $comments,
+				'allFloors' => $allFloors,
 				'expiresAt' => $expiresAt,
 			],
 			$clear,

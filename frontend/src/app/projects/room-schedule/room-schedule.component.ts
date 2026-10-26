@@ -1,6 +1,7 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, effect, inject, input, signal} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {levelText} from '@app/core/level-text';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {ProjectService} from '@app/services/project.service';
 
@@ -20,6 +21,7 @@ export class RoomScheduleComponent {
     public readonly revision = input.required<number>();
 
     protected readonly schedule = signal<RoomSchedule | null>(null);
+    protected readonly levelText = levelText;
 
     private readonly projects = inject(ProjectService);
     /** Bumped by every load; an older request that comes back late is dropped. */

@@ -16,7 +16,8 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * dark, lit by its lights; `sun` places the sun at a clock time on site, null = the default afternoon sun; `presentation`
  * renders in the presentation quality) and whether the guest may download the
  * exports (`exports`: the plan as PDF or SVG, the wall elevations, the 3D model as glTF), and whether the guest sees the
- * floor's open review comments or may also write them (`comments`). Stored as JSON in `ShareLink::$settings`.
+ * floor's open review comments or may also write them (`comments`), and whether the floors under the shared one are drawn
+ * below it (`allFloors`). Stored as JSON in `ShareLink::$settings`.
  */
 final readonly class ShareSettingsDto implements ArrayFactoryInterface
 {
@@ -34,6 +35,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 		public bool $presentation = false,
 		public bool $exports = true,
 		public ShareCommentsEnum $comments = ShareCommentsEnum::Hidden,
+		public bool $allFloors = false,
 	) {
 	}
 
@@ -60,6 +62,8 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 			comments: array_key_exists('comments', $data) ? self::comments(
 				BodyReader::string($data, 'comments'),
 			) : ShareCommentsEnum::Hidden,
+			// Links saved before stacked floors show their floor only.
+			allFloors: array_key_exists('allFloors', $data) && BodyReader::bool($data, 'allFloors'),
 		);
 	}
 

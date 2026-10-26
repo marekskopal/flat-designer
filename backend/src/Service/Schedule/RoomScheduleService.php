@@ -44,6 +44,7 @@ final readonly class RoomScheduleService
 			id: $floor->id,
 			name: $floor->name,
 			level: $floor->level,
+			elevation: $floor->elevation,
 			rooms: $rows,
 			indoor: ScheduleTotalDto::of(self::rows($rows, outdoor: false)),
 			outdoor: ScheduleTotalDto::of(self::rows($rows, outdoor: true)),

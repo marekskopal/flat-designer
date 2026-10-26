@@ -279,7 +279,8 @@ CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHP
 ## Conventions
 
 - Lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the
-  floor, x points east and y points north.
+  ground floor, x points east and y points north; all floors of a project share it, so they stack. A floor has an
+  elevation (its finished floor level above ±0.000) and a slab thickness.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south.
 - Walls are centre lines with a thickness, straight or curved (an arc given by its sagitta). Openings are positioned by
   their offset along the wall from its start.

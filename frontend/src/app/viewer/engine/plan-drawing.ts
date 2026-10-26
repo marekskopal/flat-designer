@@ -1,3 +1,4 @@
+import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
 import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
 
@@ -522,7 +523,7 @@ function roomLabel(room: Room, scale: number): Label {
     const elevation = room.floorElevation ?? 0;
     // The floor's height against the floor's level, in metres as levels are written on plans (+0.450, −0.150), when
     // the room is wide enough for it beside the area.
-    const level = `${area} · ${elevation > 0 ? '+' : '−'}${(Math.abs(elevation) / 1000).toFixed(3)}`;
+    const level = `${area} · ${levelText(elevation)}`;
     const meta = elevation !== 0 && textWidth(level, MetaSize) <= width ? level : area;
     return {
         at,

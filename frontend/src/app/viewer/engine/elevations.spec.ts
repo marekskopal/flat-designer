@@ -1,4 +1,4 @@
-import {Item, Material, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {Floor, Item, Material, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {elevationSheets, faceLetter, gridLines, itemsAgainst, layoutFaces, roomElevationSheets, roomFaces} from './elevations';
@@ -71,10 +71,11 @@ const box = (south: Partial<Wall> = {}): Wall[] => [
     wall(4, [-150, 3150], [-150, -150]),
 ];
 
-const scene = (fields: Partial<Scene>): Scene =>
-    ({floor: {id: 1, name: 'Ground floor', level: 0}, materials: [tiles], rooms: [room], walls: box(), items: [], ...fields}) as Scene;
+const ground: Floor = {id: 1, name: 'Ground floor', level: 0, elevation: 0, slabThickness: 300};
 
-const info: SheetInfo = {projectName: 'Flat', floorName: 'Ground floor', address: null, date: new Date(2026, 9, 21)};
+const scene = (fields: Partial<Scene>): Scene => ({floor: ground, materials: [tiles], rooms: [room], walls: box(), items: [], ...fields}) as Scene;
+
+const info: SheetInfo = {projectName: 'Flat', floorName: 'Ground floor', floorElevation: 0, address: null, date: new Date(2026, 9, 21)};
 
 /** The tile joints drawn on a sheet. */
 const joints = (svg: string): number => (svg.match(/stroke="#7d786f" stroke-width="0.08"/g) ?? []).length;

@@ -71,6 +71,7 @@ final readonly class ViewTools
 	 *   angle (update_project); null = the default afternoon sun
 	 * @param float|null $sunHour clock time on site of the sun, 0–24 (e.g. 15.5 = 15:30)
 	 * @param bool $presentation presentation quality (ambient occlusion, antialiasing), as for screenshots
+	 * @param bool $allFloors draw the floors under this one below it
 	 * @param array<string, int>|null $variants the variant per variant set (see the schema)
 	 */
 	#[McpTool(
@@ -94,6 +95,7 @@ final readonly class ViewTools
 		?int $sunMonth = null,
 		?float $sunHour = null,
 		bool $presentation = true,
+		bool $allFloors = false,
 		#[Schema(definition: self::VariantsSchema)]
 		?array $variants = null,
 	): SavedViewDto {
@@ -109,6 +111,7 @@ final readonly class ViewTools
 			'lightsOn' => $lightsOn,
 			'sun' => SunTimeDto::fields($sunMonth, $sunHour),
 			'presentation' => $presentation,
+			'allFloors' => $allFloors,
 			'variants' => $variants,
 		]));
 		$existing = $this->viewProvider->findByName($project, $name);
