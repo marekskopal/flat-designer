@@ -317,6 +317,23 @@ format is the text in `FurnitureTools::Format`.
   at eye height over the floor underfoot (`floorLevels()`: the smallest room there, else the plot, else 0); steps do
   not block it.
 
+## Stairs (FD-37)
+
+- The plan is `docs/stairs-plan.md`. A `Stair` (`stairs`, element type `Stair`, `StairHandler` through `SceneEditor`:
+  undo, change log; REST `…/stairs`, MCP `add_stair` / `update_stair` / `delete_stair`) belongs to the floor it starts
+  on and climbs to the next one up. (x, y) is the middle of the first step's front edge and `rotation` the walking-up
+  direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights)
+  or Spiral (`width` is then the diameter); `firstFlight` is the risers up to the landing (null halves them), `turn`
+  the way it turns or winds. Also `going`, `construction` (Solid, Stringers, Open), `railing` and two materials.
+- The rise comes from the floors (`StairRise`): the next floor up's elevation minus the floor's, or the tallest wall
+  plus a 250 mm slab on the top floor. It is not a field: the scene carries it as `stairRise`, so a floor's new
+  elevation changes the steps without changing (or blocking the undo of) the stair. `risers` null takes as few risers
+  as keep each at most 180 mm; a count given must make them 140–220 mm (checked when the stair changes).
+- The scene's `stairsBelow` (`StairsBelowDto`) are the floor below's stairs with their rise: they cut their voids (the
+  stair's footprint) through this floor. Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive
+  `stairRise` and `stairsBelow` from its other floors (`SnapshotStairs`).
+- The geometry (treads, landings, footprint, walk line) is TS only, as the ceilings are; the backend checks ranges.
+
 ## Lighting
 
 - Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with

@@ -17,6 +17,7 @@ final readonly class SceneDto
 	 * @param list<VariantSetDto> $variantSets
 	 * @param list<SceneDefinitionDto> $definitions the furniture definitions of the Custom items
 	 * @param list<SceneModelDto> $models the 3D models of the Model items
+	 * @param list<StairDto> $stairs
 	 * @param list<int> $pictures the project files the Custom items show as pictures (their `image` parameters)
 	 */
 	public function __construct(
@@ -37,6 +38,11 @@ final readonly class SceneDto
 		/** Where the project's building stands, for the sun. */
 		public ?LocationDto $location = null,
 		public array $plots = [],
+		/** This floor's stairs, climbing `stairRise` mm to the next floor up (`StairRise`). */
+		public array $stairs = [],
+		public int $stairRise = 0,
+		/** The floor below's stairs that come up through this floor and cut their voids through it. */
+		public ?StairsBelowDto $stairsBelow = null,
 	)
 	{
 	}

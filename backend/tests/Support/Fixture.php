@@ -14,6 +14,10 @@ use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
+use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
+use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
+use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
+use FlatDesigner\Model\Entity\Enum\StairTurnEnum;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
@@ -22,6 +26,7 @@ use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
@@ -30,6 +35,7 @@ use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Authentication\TokenService;
 use FlatDesigner\Service\Project\ProjectProvider;
@@ -101,7 +107,10 @@ final class Fixture
 		return self::service(FloorRepository::class)->findByProject($project->id)[0];
 	}
 
-	/** One room with tiling, a wall with a door and finishes of its own and two items (one with empty params) on the floor. */
+	/**
+	 * One room with tiling, a plot, an L stair, a wall with a door and finishes of its own and two items (one with empty
+	 * params) on the floor.
+	 */
 	public static function furnishFloor(Floor $floor): void
 	{
 		$material = self::service(MaterialRepository::class)->findAllOrdered()[0] ?? null;
@@ -126,6 +135,23 @@ final class Fixture
 		);
 		$plot->groundLevel = -300;
 		self::service(PlotRepository::class)->persist(self::stamp($plot));
+		self::service(StairRepository::class)->persist(self::stamp(new Stair(
+			floor: $floor,
+			name: 'Main stairs',
+			shape: StairShapeEnum::LShaped,
+			x: 3000,
+			y: 500,
+			rotation: 90,
+			width: 1000,
+			going: 280,
+			risers: null,
+			firstFlight: 5,
+			turn: StairTurnEnum::Right,
+			gap: 100,
+			construction: StairConstructionEnum::Stringers,
+			railing: StairRailingEnum::Both,
+			treadMaterial: $material,
+		)));
 
 		$wall = self::stamp(new Wall(
 			floor: $floor,
