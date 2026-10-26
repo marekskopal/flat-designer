@@ -134,7 +134,7 @@ export class ViewerComponent {
     public readonly walkthroughLocked = output<boolean>();
     /** The door the walker looks at (within reach) and whether it is open; null when none. */
     public readonly walkthroughAim = output<DoorAim | null>();
-    /** A scene was built (a new floor starts at the overview; set another view from here). */
+    /** A scene was built (the first floor shown starts at the overview, another floor keeps the view; set another from here). */
     public readonly loaded = output<Scene>();
     /** A click with the room tool inside closed walls: the point to outline a room around. */
     public readonly roomDetect = output<PlanPoint>();

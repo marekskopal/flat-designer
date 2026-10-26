@@ -51,8 +51,8 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `ViewerEngine.setStack()` draws them below it (`viewer/engine/stack.ts`, `buildContextFloor()`: the same builders,
   lifted by `floorOffset()`, outside the pickable `content` and tagged `userData.contextFloor`; ceilings shown, doors as
   outside a walk, their fixture lights off). The shown floor stays at y = 0 and editable, cut by the wall cut as before;
-  the floors above are left out, so cutting at another floor means showing it. While the stack is on, switching floors
-  keeps the view (the camera moves with the level). The framing, the sun's shadow and the ground disc fit all layers
+  the floors above are left out, so cutting at another floor means showing it. Switching floors keeps the view as it
+  was turned (only the first floor shown starts at the overview); with the stack on, the camera moves with the level. The framing, the sun's shadow and the ground disc fit all layers
   (`floorPoints()`, `stackGround()`); the model and picture libraries keep the stack's assets. A slab lies under its
   floor's rooms (not gardens, paths, driveways) and wall footprints, extruded and merged (`buildSlab()`), so an upper
   slab roofs only what it covers. Saved views and share links keep it as `allFloors`; a share link with it serves the

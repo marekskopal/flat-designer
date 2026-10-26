@@ -471,7 +471,8 @@ export class ViewerEngine {
 
     /**
      * Shows a scene. Another state of the floor already shown (an edit, a live update) only rebuilds the
-     * elements that changed; a different floor, or changed materials, builds everything anew.
+     * elements that changed; a different floor, or changed materials, builds everything anew. Another floor keeps the
+     * camera (the first one shown is framed in the overview).
      */
     public load(scene: Scene): void {
         this.invalidate();
@@ -515,11 +516,14 @@ export class ViewerEngine {
                 this.stopWalkthrough(false);
                 this.onWalkthroughEnd();
             }
-            if (this.stackScenes !== null && previous !== null && this.loadedFloorId !== null) {
-                // All floors stay where they are on the screen: the view moves with the shown floor's level.
-                const dy = floorOffset(previous, scene) * MM;
-                this.camera.position.y += dy;
-                this.controls.target.y += dy;
+            if (previous !== null && this.loadedFloorId !== null) {
+                // Another floor of the project keeps the view as it was turned. With all floors shown they stay where
+                // they are on the screen: the view moves with the shown floor's level.
+                if (this.stackScenes !== null) {
+                    const dy = floorOffset(previous, scene) * MM;
+                    this.camera.position.y += dy;
+                    this.controls.target.y += dy;
+                }
                 this.controls.update();
             } else {
                 this.setView('overview', false);
@@ -1729,7 +1733,7 @@ export class ViewerEngine {
     /**
      * The all floors view: the floors under the shown one are drawn below it at their levels (`scenes` may hold any of
      * the project's floors; those at the shown one's level and above are left out). Null shows this floor only. While
-     * it is on, switching floors keeps the view where it is.
+     * it is on, switching floors moves the view with the level, so the building stays where it is on the screen.
      */
     public setStack(scenes: readonly Scene[] | null): void {
         this.invalidate();
