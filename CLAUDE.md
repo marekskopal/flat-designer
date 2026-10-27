@@ -334,7 +334,20 @@ format is the text in `FurnitureTools::Format`.
   whose stairs climb to this one, so a mezzanine on the same level gets none) with their rise: they cut their voids (the
   stair's footprint) through this floor. Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive
   `stairRise` and `stairsBelow` from its other floors (`SnapshotStairs`).
-- The geometry (treads, landings, footprint, walk line) is TS only, as the ceilings are; the backend checks ranges.
+- The geometry is TS only, as the ceilings are; the backend checks ranges. `viewer/engine/stairs.ts`:
+  `stairGeometry(stair, rise)` lays out the flights (`StairFlight`: origin, direction, base, first riser, risers),
+  landings, every tread with its top, the footprint, the walking line and the handrail paths (`RailHeight` over the
+  nosings; the outer rail runs round the landing); `stairRisers()` / `stairFirstFlight()` twin the backend's rules.
+  `buildStair()` draws it in a group at (x, y) tagged `stairId` (merged; a solid flight is the sawtooth over a sloping
+  soffit, with a section-fill twin; stringers get tread and riser boards; a spiral is wedge treads round a pole).
+  `BuildingParts.stairs` holds them; `buildStairsBelow()` draws `stairsBelow` under the floor, untagged and not
+  pickable (`parts.stairsBelow`, hidden while the stack draws that floor). The voids are `sceneVoids()`: the floor
+  below's footprints are cut out of the slab and the room floors, the floor's own out of its flat ceilings (vaults stay
+  whole), by `cutVoids()` (`polygon-clipping`, so a void over an outline's edge notches it; `cutShape()` makes the
+  `THREE.Shape`). `applyChanges()` rebuilds a changed stair (all when `stairRise` changed) and the rooms its old or new
+  footprint reaches (`roomsCutBy()`); a changed `stairsBelow` rebuilds the slab and those rooms. Stairs are selected,
+  dragged (x, y), nudged and turned with R like items; the inspector's `stair` fields get `stairRise` beside them for
+  the step hint (`stairStepHint()`, 2R + G).
 
 ## Lighting
 

@@ -1,5 +1,6 @@
 import {OpeningType} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
+import {stairRisers} from '@app/viewer/engine/stairs';
 
 import {isCustom} from './custom-params';
 
@@ -52,6 +53,37 @@ export interface FieldDef {
     when?: (element: Record<string, unknown>) => boolean;
     /** The label for the element at hand, in place of `label` (e.g. the compass side of a wall face). */
     labelOf?: (element: Record<string, unknown>) => string;
+    /** A note under the field about the element at hand (a derived value, a warning); null for none. */
+    hint?: (element: Record<string, unknown>) => string | null;
+}
+
+const StairShapeLabels: Readonly<Record<string, string>> = {
+    Straight: 'Straight',
+    LShaped: 'L (quarter landing)',
+    UShaped: 'U (half landing)',
+    Spiral: 'Spiral',
+};
+const hasLanding = (stair: Record<string, unknown>): boolean => stair['shape'] === 'LShaped' || stair['shape'] === 'UShaped';
+
+/** Comfortable stairs: twice the riser plus the going, mm. */
+const StepRuleMin = 600;
+const StepRuleMax = 650;
+
+/**
+ * The riser the stair gets over its floor's rise (`stairRise`, put beside the stair's fields by the panel) and the
+ * step rule 2R + G, with a warning when it falls outside 600–650 mm.
+ */
+export function stairStepHint(stair: Record<string, unknown>): string | null {
+    const rise = stair['stairRise'];
+    const going = stair['going'];
+    if (typeof rise !== 'number' || typeof going !== 'number' || rise <= 0) {
+        return null;
+    }
+    const count = stairRisers(rise, typeof stair['risers'] === 'number' ? stair['risers'] : null);
+    const riser = rise / count;
+    const rule = 2 * riser + going;
+    const comfort = rule < StepRuleMin || rule > StepRuleMax ? ` — outside the comfortable ${StepRuleMin}–${StepRuleMax}` : '';
+    return `${count} risers of ${riser.toFixed(0)} mm over ${rise} mm; 2R + G = ${rule.toFixed(0)} mm${comfort}`;
 }
 
 const ItemKinds = [
@@ -245,6 +277,45 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
         {key: 'groundLevel', label: 'Ground level (+ above, − below the floor)', type: 'int', unit: 'mm'},
         {key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
+    ],
+    stair: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'shape', label: 'Shape', type: 'select', options: Object.keys(StairShapeLabels), optionLabels: StairShapeLabels},
+        {key: 'x', label: 'First riser X', type: 'int', unit: 'mm', half: true},
+        {key: 'y', label: 'First riser Y', type: 'int', unit: 'mm', half: true},
+        {key: 'rotation', label: 'Walking-up direction (0 north, counter-clockwise)', type: 'int', unit: '°'},
+        {
+            key: 'width',
+            label: 'Width',
+            labelOf: (stair) => (stair['shape'] === 'Spiral' ? 'Diameter' : 'Flight width'),
+            type: 'int',
+            unit: 'mm',
+            half: true,
+        },
+        {key: 'going', label: 'Going (tread depth)', type: 'int', unit: 'mm', half: true},
+        {key: 'risers', label: 'Risers (empty: as the rise needs)', type: 'int', nullable: true, hint: stairStepHint},
+        {key: 'firstFlight', label: 'Risers up to the landing (empty: half)', type: 'int', nullable: true, half: true, when: hasLanding},
+        {
+            key: 'turn',
+            label: 'Turns',
+            type: 'select',
+            options: ['Left', 'Right'],
+            half: true,
+            when: (stair) => hasLanding(stair) || stair['shape'] === 'Spiral',
+        },
+        {key: 'gap', label: 'Gap between the flights', type: 'int', unit: 'mm', half: true, when: (stair) => stair['shape'] === 'UShaped'},
+        {
+            key: 'construction',
+            label: 'Construction',
+            type: 'select',
+            options: ['Solid', 'Stringers', 'Open'],
+            optionLabels: {Solid: 'Solid (concrete)', Stringers: 'Stringers', Open: 'Open (floating treads)'},
+            half: true,
+            when: (stair) => stair['shape'] !== 'Spiral',
+        },
+        {key: 'railing', label: 'Handrail (walking up)', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {key: 'treadMaterialId', label: 'Tread material', type: 'material', nullable: true, half: true},
+        {key: 'structureMaterialId', label: 'Structure material', type: 'material', nullable: true, half: true},
     ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},

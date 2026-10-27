@@ -17,6 +17,7 @@ const KindLabels: Record<ElementKind, string> = {
     opening: 'Door / window',
     room: 'Room',
     plot: 'Plot',
+    stair: 'Stairs',
     group: 'Group',
     variantSet: 'Variant set',
 };
@@ -218,6 +219,9 @@ export class EditorPanelComponent {
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
                 void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
+        } else if (choice === 'stair') {
+            // The first riser at the view's centre (or the selected room's), walking up north.
+            void this.editor.create('stair', {x: at.x, y: at.y});
         } else if (choice === 'plot') {
             // Its boundary comes from the backend: a rectangle round the floor's walls and rooms.
             void this.editor.create('plot', {});
@@ -310,13 +314,13 @@ export class EditorPanelComponent {
         }
     }
 
-    /** Arrow keys nudge the selected item, R turns it by 90°. */
+    /** Arrow keys nudge the selected item or stairs, R turns it by 90°. */
     private moveItem(event: KeyboardEvent): void {
         const selected = this.selected();
-        if (selected?.kind !== 'item') {
+        if (selected?.kind !== 'item' && selected?.kind !== 'stair') {
             return;
         }
-        const item = selected.element as unknown as Item;
+        const item = selected.element as unknown as Pick<Item, 'id' | 'x' | 'y' | 'rotation'>;
         const step = event.shiftKey ? NudgeStepCoarse : NudgeStep;
         const moves: Record<string, Partial<Item>> = {
             ArrowLeft: {x: item.x - step},
@@ -329,7 +333,7 @@ export class EditorPanelComponent {
         const fields = moves[event.key];
         if (fields !== undefined) {
             event.preventDefault();
-            void this.editor.update('item', item.id, fields);
+            void this.editor.update(selected.kind, item.id, fields);
         }
     }
 
@@ -351,6 +355,11 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             return find(scene.rooms);
         case 'plot':
             return find(scene.plots ?? []);
+        case 'stair': {
+            // The rise is the floor's, not the stair's: the inspector's step hint reads it beside the fields.
+            const stair = find(scene.stairs ?? []);
+            return stair === null ? null : {...stair, stairRise: scene.stairRise ?? 0};
+        }
         case 'opening':
             return find(scene.walls.flatMap((w): Opening[] => w.openings));
         case 'group':

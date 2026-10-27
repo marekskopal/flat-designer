@@ -68,6 +68,13 @@ describe('stackGround', () => {
         const sunken = floor(2, 0, 0, {plots: [{id: 1, polygon: [], groundMaterialId: null, groundLevel: -400} as unknown as Plot]});
         expect(stackGround(first, [sunken])).toBe(-3250);
     });
+
+    it('goes down to the floor below when its stairs come up through the shown one and the stack does not draw it', () => {
+        const stairsBelow = {floorId: 2, rise: 2850, stairs: [{id: 1} as unknown as Scene['items'][number]]} as unknown as Scene['stairsBelow'];
+        expect(stackGround(floor(3, 1, 2850, {stairsBelow}), [])).toBe(-2850);
+        expect(stackGround(floor(3, 1, 2850, {stairsBelow}), [ground])).toBe(-2850);
+        expect(stackGround(floor(3, 1, 2850, {stairsBelow: {floorId: 2, rise: 2850, stairs: []}}), [])).toBe(0);
+    });
 });
 
 describe('buildContextFloor', () => {

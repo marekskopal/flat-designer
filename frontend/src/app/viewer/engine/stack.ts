@@ -28,6 +28,8 @@ export function buildContextFloor(scene: Scene, materials: MaterialLibrary, asse
     group.userData = {contextFloor: scene.floor.id};
 
     const parts = buildBuilding(scene, materials);
+    // The floor below draws its own stairs in the stack, so the copies coming up through this one would double them.
+    parts.stairsBelow.visible = false;
     group.add(parts.root);
     const leaves = new LeafStates();
     leaves.reset(scene.walls);
@@ -89,10 +91,18 @@ export function floorPoints(scene: Pick<Scene, 'walls' | 'rooms'>): PlanPoint[] 
     ];
 }
 
-/** The lowest ground of the shown floor and the floors under it, mm against the shown floor's level. */
+/**
+ * The lowest ground of the shown floor and the floors under it, mm against the shown floor's level. Stairs coming up
+ * from a floor the stack does not draw (`stairsBelow`) take the ground down to that floor's level, so they show in
+ * their voids rather than stand buried in it.
+ */
 export function stackGround(shown: Scene, below: readonly Scene[]): number {
+    const stairsBelow = shown.stairsBelow ?? null;
+    const drawn = below.some((s) => s.floor.id === stairsBelow?.floorId);
+    const stairwell = stairsBelow !== null && stairsBelow.stairs.length > 0 && !drawn ? -stairsBelow.rise : 0;
     return Math.min(
         lowestGround(shown.plots ?? [], shown.rooms),
+        stairwell,
         ...below.map((s) => floorOffset(s, shown) + lowestGround(s.plots ?? [], s.rooms)),
     );
 }

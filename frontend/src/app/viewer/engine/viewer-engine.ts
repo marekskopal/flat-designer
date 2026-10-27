@@ -1,4 +1,4 @@
-import {isOutdoorRoom, Item, PlanPoint, Plot, Room, Scene, SunTime, Underlay, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, PlanPoint, Plot, Room, Scene, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -90,6 +90,7 @@ import {
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {buildContextFloor, ContextFloor, floorOffset, floorPoints, floorsBelow, rebuildContextItems, stackGround} from './stack';
+import {buildStair, buildStairsBelow, roomsCutBy, sceneVoids, stairFootprints} from './stairs';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
@@ -196,6 +197,7 @@ interface DragBase {
 type Drag = DragBase &
     (
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
+        | {kind: 'stair'; stair: Stair; object: THREE.Object3D; x: number; y: number}
         | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
@@ -689,10 +691,50 @@ export class ViewerEngine {
             this.corners = corners;
             this.indexWalls();
         }
+        // The stairs: a changed one (every one when the floor's rise changed, as their steps follow it) is drawn anew,
+        // and the rooms its void cut before or cuts now get their ceilings cut again. The floor below's stairs cut the
+        // slab and the room floors.
+        const voids = sceneVoids(scene);
+        const stairs = diffById(previous.stairs ?? [], scene.stairs ?? []);
+        const riseChanged = (previous.stairRise ?? 0) !== (scene.stairRise ?? 0);
+        const rebuiltStairs = riseChanged ? (scene.stairs ?? []) : stairs.changed;
+        const voidRooms = new Set<number>();
+        if (riseChanged || stairs.removed.length > 0 || stairs.changed.length > 0) {
+            const changedIds = new Set([...stairs.removed, ...rebuiltStairs.map((s) => s.id)]);
+            for (const id of changedIds) {
+                const group = parts.stairs.get(id);
+                if (group !== undefined) {
+                    this.disposeObject(group);
+                    parts.stairs.delete(id);
+                }
+            }
+            for (const stair of rebuiltStairs) {
+                const group = buildStair(stair, scene.stairRise ?? 0, materials, parts.sectionMaterial);
+                parts.stairs.set(stair.id, group);
+                parts.root.add(group);
+            }
+            const was = stairFootprints((previous.stairs ?? []).filter((s) => changedIds.has(s.id)), previous.stairRise ?? 0);
+            const now = stairFootprints(rebuiltStairs, scene.stairRise ?? 0);
+            roomsCutBy(scene.rooms, [...was, ...now]).forEach((id) => voidRooms.add(id));
+        }
+        const belowChanged = !sameJson(previous.stairsBelow ?? null, scene.stairsBelow ?? null);
+        if (belowChanged) {
+            this.disposeObject(parts.stairsBelow);
+            parts.stairsBelow = buildStairsBelow(scene.stairsBelow, materials, parts.sectionMaterial);
+            parts.root.add(parts.stairsBelow);
+            roomsCutBy(scene.rooms, [...sceneVoids(previous).below, ...voids.below]).forEach((id) => voidRooms.add(id));
+        }
+
         // The slab lies under the rooms and the walls.
-        if (wallsChanged || rooms.removed.length > 0 || rooms.changed.length > 0 || previous.floor.slabThickness !== scene.floor.slabThickness) {
+        if (
+            wallsChanged ||
+            belowChanged ||
+            rooms.removed.length > 0 ||
+            rooms.changed.length > 0 ||
+            previous.floor.slabThickness !== scene.floor.slabThickness
+        ) {
             this.disposeObject(parts.slab);
-            parts.slab = buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials);
+            parts.slab = buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below);
             parts.root.add(parts.slab);
         }
 
@@ -711,13 +753,15 @@ export class ViewerEngine {
             }
             this.highlightPlots();
         }
-        const rebuiltRooms = plotsChanged ? scene.rooms.filter((r) => changedRooms.has(r.id) || (r.floorElevation ?? 0) !== 0) : rooms.changed;
+        const rebuiltRooms = scene.rooms.filter(
+            (r) => changedRooms.has(r.id) || (plotsChanged && (r.floorElevation ?? 0) !== 0) || voidRooms.has(r.id),
+        );
 
         for (const id of [...rooms.removed, ...rebuiltRooms.map((r) => r.id)]) {
             this.removeRoom(id);
         }
         for (const room of rebuiltRooms) {
-            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? []), room.id);
+            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids), room.id);
             const label = this.createLabel(room);
             this.labels.set(room.id, label);
             content.add(label);
@@ -1776,6 +1820,11 @@ export class ViewerEngine {
         for (const layer of this.stackLayers) {
             layer.group.position.y = floorOffset(layer.scene, shown) * MM;
         }
+        // The floor below's stairs show through this floor's voids, unless the stack draws that floor itself.
+        if (this.parts !== null) {
+            const belowId = shown.stairsBelow?.floorId ?? null;
+            this.parts.stairsBelow.visible = !this.stackLayers.some((layer) => layer.scene.floor.id === belowId);
+        }
         const points = [shown, ...this.stackLayers.map((l) => l.scene)].flatMap(floorPoints);
         this.bounds = points.length > 0 ? polygonBounds(points) : EmptyFloorBounds;
         this.fitSunShadow();
@@ -2124,6 +2173,12 @@ export class ViewerEngine {
             if (item !== undefined && object !== undefined) {
                 drag = {kind: 'item', plane, grab, moved: false, item, object, x: item.x, y: item.y};
             }
+        } else if (selection.kind === 'stair') {
+            const stair = (scene.stairs ?? []).find((s) => s.id === selection.id);
+            const object = this.parts?.stairs.get(selection.id);
+            if (stair !== undefined && object !== undefined) {
+                drag = {kind: 'stair', plane, grab, moved: false, stair, object, x: stair.x, y: stair.y};
+            }
         } else if (selection.kind === 'group') {
             const members = scene.items
                 .filter((i) => i.groupId === selection.id)
@@ -2182,10 +2237,12 @@ export class ViewerEngine {
         const delta = {x: point.x - drag.grab.x, y: point.y - drag.grab.y};
 
         switch (drag.kind) {
-            case 'item': {
+            case 'item':
+            case 'stair': {
                 const step = free ? 1 : DragSnap;
-                drag.x = snapToGrid(drag.item.x + delta.x, step);
-                drag.y = snapToGrid(drag.item.y + delta.y, step);
+                const element = drag.kind === 'item' ? drag.item : drag.stair;
+                drag.x = snapToGrid(element.x + delta.x, step);
+                drag.y = snapToGrid(element.y + delta.y, step);
                 drag.object.position.x = drag.x * MM;
                 drag.object.position.z = -drag.y * MM;
                 break;
@@ -2393,6 +2450,11 @@ export class ViewerEngine {
                     edit = {selection: {kind: 'item', id: drag.item.id}, fields: {x: drag.x, y: drag.y}};
                 }
                 break;
+            case 'stair':
+                if (drag.x !== drag.stair.x || drag.y !== drag.stair.y) {
+                    edit = {selection: {kind: 'stair', id: drag.stair.id}, fields: {x: drag.x, y: drag.y}};
+                }
+                break;
             case 'group':
                 if (drag.dx !== 0 || drag.dy !== 0) {
                     edit = {selection: {kind: 'group', id: drag.groupId}, fields: {dx: drag.dx, dy: drag.dy}};
@@ -2444,7 +2506,12 @@ export class ViewerEngine {
 
     /** Puts a dragged element back where the scene has it. */
     private restore(drag: Drag): void {
-        const members = drag.kind === 'item' ? [drag] : drag.kind === 'group' ? drag.members : [];
+        const members =
+            drag.kind === 'item' || drag.kind === 'stair'
+                ? [{item: drag.kind === 'item' ? drag.item : drag.stair, object: drag.object}]
+                : drag.kind === 'group'
+                  ? drag.members
+                  : [];
         for (const {item, object} of members) {
             object.position.x = item.x * MM;
             object.position.z = -item.y * MM;
@@ -2947,7 +3014,8 @@ export class ViewerEngine {
             return;
         }
         const room = {...drag.outline.element, polygon: drag.polygon};
-        const floor = buildFloor(room, materials, groundUnder(room, this.sceneData?.plots ?? []));
+        const voids = this.sceneData === null ? [] : sceneVoids(this.sceneData).below;
+        const floor = buildFloor(room, materials, groundUnder(room, this.sceneData?.plots ?? []), voids);
         const original = parts.rooms.get(room.id);
         this.setPreview(original === undefined ? [] : [original.floor], [floor]);
         this.setSelectedRoom(room.id, floor);
@@ -3142,6 +3210,8 @@ export class ViewerEngine {
                 return objects([selection.id], this.walls);
             case 'opening':
                 return objects([selection.id], this.openings);
+            case 'stair':
+                return objects([selection.id], this.parts?.stairs ?? new Map<number, THREE.Object3D>());
             default:
                 return [];
         }
