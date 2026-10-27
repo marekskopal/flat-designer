@@ -41,6 +41,7 @@ final readonly class WallTools
 	 * @param int|null $materialId surface material from list_materials
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands (e.g. tiling 0–2100) on the face left of start → end, instead of the room's wallFinishes
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
+	 * @param bool|null $upToRoof true: the wall rises to the underside of the roofs over it, a gable (default false)
 	 */
 	#[McpTool(
 		name: 'add_wall',
@@ -63,6 +64,7 @@ final readonly class WallTools
 		?array $leftFinishes = null,
 		#[Schema(definition: self::FaceFinishesSchema)]
 		?array $rightFinishes = null,
+		?bool $upToRoof = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -81,6 +83,7 @@ final readonly class WallTools
 				'materialId' => $materialId,
 				'leftFinishes' => $leftFinishes,
 				'rightFinishes' => $rightFinishes,
+				'upToRoof' => $upToRoof,
 			]),
 		);
 	}
@@ -132,6 +135,8 @@ final readonly class WallTools
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft"
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands on the face left of start → end, instead of the room's wallFinishes; [] = none
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
+	 * @param bool|null $upToRoof true: the wall rises to the underside of the roofs over it (a gable; it still stops at `height`
+	 *   where no roof is over it); every wall is cut at that underside anyway
 	 * @param list<string>|null $clear fields to set to none: "materialId"; "leftFinishes", "rightFinishes" (the face takes the room's bands again)
 	 */
 	#[McpTool(
@@ -157,6 +162,7 @@ final readonly class WallTools
 		?array $leftFinishes = null,
 		#[Schema(definition: self::FaceFinishesSchema)]
 		?array $rightFinishes = null,
+		?bool $upToRoof = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -177,6 +183,7 @@ final readonly class WallTools
 				'materialId' => $materialId,
 				'leftFinishes' => $leftFinishes,
 				'rightFinishes' => $rightFinishes,
+				'upToRoof' => $upToRoof,
 			], $clear, ['materialId', 'leftFinishes', 'rightFinishes']),
 		);
 	}

@@ -18,6 +18,7 @@ final readonly class SceneDto
 	 * @param list<SceneDefinitionDto> $definitions the furniture definitions of the Custom items
 	 * @param list<SceneModelDto> $models the 3D models of the Model items
 	 * @param list<StairDto> $stairs
+	 * @param list<RoofDto> $roofs with their windows
 	 * @param list<int> $pictures the project files the Custom items show as pictures (their `image` parameters)
 	 */
 	public function __construct(
@@ -43,6 +44,8 @@ final readonly class SceneDto
 		public int $stairRise = 0,
 		/** The floor below's stairs that come up through this floor and cut their voids through it. */
 		public ?StairsBelowDto $stairsBelow = null,
+		/** The roofs over this floor; their heights count from its level. */
+		public array $roofs = [],
 	)
 	{
 	}

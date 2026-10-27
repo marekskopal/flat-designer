@@ -1,5 +1,5 @@
 import {Change, EditResult} from '@app/models/editor';
-import {Item, Opening, Scene, Stair, Wall} from '@app/models/scene';
+import {Item, Opening, Roof, RoofWindow, Scene, Stair, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {patchScene} from './scene-patch';
@@ -163,6 +163,56 @@ describe('patchScene', () => {
         const changed = {...stair, shape: 'LShaped'} as unknown as Record<string, unknown>;
         expect(patchScene({...added!, revision: 7}, result('Stair', 5, changed))?.stairs?.[0].shape).toBe('LShaped');
         expect(patchScene({...added!, revision: 7}, result('Stair', 5, null))?.stairs).toEqual([]);
+    });
+
+    it('changes and removes roofs keeping their windows, and reloads for a roof that comes in', () => {
+        const skylight: RoofWindow = {
+            id: 11,
+            name: 'Skylight',
+            type: 'CentrePivot',
+            along: 0,
+            across: -1000,
+            width: 780,
+            length: 1180,
+            frameMaterialId: null,
+        };
+        const roof: Roof = {
+            id: 6,
+            name: 'Roof',
+            shape: 'Gable',
+            x: 2000,
+            y: 1500,
+            rotation: 0,
+            width: 4300,
+            depth: 3300,
+            eaveHeight: 2600,
+            pitch: 35,
+            overhang: 400,
+            vergeOverhang: 200,
+            thickness: 250,
+            parapet: null,
+            coveringMaterialId: null,
+            soffitMaterialId: null,
+            windows: [skylight],
+        };
+        const {windows: _, ...fields} = roof;
+        const roofed = {...scene, roofs: [roof]};
+
+        expect(patchScene(scene, result('Roof', 6, fields as unknown as Record<string, unknown>))).toBeNull();
+        const changed = patchScene(roofed, result('Roof', 6, {...fields, shape: 'Hip'} as unknown as Record<string, unknown>));
+        expect(changed?.roofs).toEqual([{...roof, shape: 'Hip'}]);
+        expect(patchScene(roofed, result('Roof', 6, null))?.roofs).toEqual([]);
+    });
+
+    it('moves, adds and removes roof windows within their roof', () => {
+        const roof = {id: 6, windows: [{id: 11, name: 'A', along: 0}]} as unknown as Roof;
+        const roofed = {...scene, roofs: [roof]};
+        const moved = patchScene(roofed, result('RoofWindow', 11, {id: 11, roofId: 6, name: 'A', along: 500}));
+        expect(moved?.roofs?.[0].windows).toEqual([{id: 11, name: 'A', along: 500}]);
+        const added = patchScene(roofed, result('RoofWindow', 12, {id: 12, roofId: 6, name: 'B', along: -500}));
+        expect(added?.roofs?.[0].windows.map((w) => w.id)).toEqual([11, 12]);
+        expect(patchScene(roofed, result('RoofWindow', 11, null))?.roofs?.[0].windows).toEqual([]);
+        expect(patchScene(roofed, result('RoofWindow', 13, {id: 13, roofId: 99, name: 'C'}))).toBeNull();
     });
 
     it('applies every change of a batch', () => {

@@ -1,12 +1,12 @@
 import {Change, EditResult} from '@app/models/editor';
-import {Group, Item, Opening, Plot, Room, Scene, Stair, VariantSet, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Plot, Roof, RoofWindow, Room, Scene, Stair, VariantSet, Wall} from '@app/models/scene';
 
 /**
  * The scene after an edit, undo or redo, built from the result's element state instead of loading the
  * floor again; a batch (a group operation) applies each of its changes in order. Null when the result
  * cannot be applied safely: the project moved on by more than this one change (someone else edited
- * meanwhile), a wall came back with openings the result does not carry, or an item uses a furniture
- * definition the scene does not have.
+ * meanwhile), a wall came back with openings the result does not carry, a roof came in (its windows are not in
+ * the result), or an item uses a furniture definition the scene does not have.
  */
 export function patchScene(scene: Scene, result: EditResult): Scene | null {
     const change = result.change;
@@ -58,6 +58,10 @@ function patchElements(scene: Scene, change: Change, element: Record<string, unk
             return patchWall(scene, id, element);
         case 'Opening':
             return patchOpening(scene, id, element);
+        case 'Roof':
+            return patchRoof(scene, id, element);
+        case 'RoofWindow':
+            return patchRoofWindow(scene, id, element);
         case 'Group': {
             const group = element as unknown as Group | null;
             // Items of a deleted group no longer belong to it.
@@ -101,6 +105,34 @@ function patchOpening(scene: Scene, id: number, element: Record<string, unknown>
     }
     const walls = withoutOpening.map((w) => (w.id === wallId ? {...w, openings: [...w.openings, opening].sort((a, b) => a.offset - b.offset)} : w));
     return {...scene, walls};
+}
+
+/**
+ * A roof's state leaves out its windows, which stay. One that was not in the scene (added, or back by undo or redo) may
+ * have windows the result does not carry, so the scene is loaded again.
+ */
+function patchRoof(scene: Scene, id: number, element: Record<string, unknown> | null): Scene | null {
+    const roofs = scene.roofs ?? [];
+    if (element === null) {
+        return {...scene, roofs: roofs.filter((r) => r.id !== id)};
+    }
+    const current = roofs.find((r) => r.id === id);
+    if (current === undefined) {
+        return null;
+    }
+    return {...scene, roofs: upsert(roofs, id, {...(element as unknown as Omit<Roof, 'windows'>), windows: current.windows})};
+}
+
+function patchRoofWindow(scene: Scene, id: number, element: Record<string, unknown> | null): Scene | null {
+    const roofs = (scene.roofs ?? []).map((r) => (r.windows.some((w) => w.id === id) ? {...r, windows: r.windows.filter((w) => w.id !== id)} : r));
+    if (element === null) {
+        return {...scene, roofs};
+    }
+    const {roofId, ...window} = element as unknown as RoofWindow & {roofId: number};
+    if (!roofs.some((r) => r.id === roofId)) {
+        return null;
+    }
+    return {...scene, roofs: roofs.map((r) => (r.id === roofId ? {...r, windows: [...r.windows, window].sort((a, b) => a.id - b.id)} : r))};
 }
 
 /** The list with the element replaced in place, appended, or (null) removed. */

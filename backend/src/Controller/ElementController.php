@@ -38,6 +38,8 @@ final readonly class ElementController
 		'variant-sets' => ElementTypeEnum::VariantSet,
 		'plots' => ElementTypeEnum::Plot,
 		'stairs' => ElementTypeEnum::Stair,
+		'roofs' => ElementTypeEnum::Roof,
+		'roof-windows' => ElementTypeEnum::RoofWindow,
 	];
 
 	public function __construct(

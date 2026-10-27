@@ -66,13 +66,17 @@ and knee walls for attics, and roof windows.
 | `overhang` | Eaves overhang beyond the footprint (default 400) |
 | `vergeOverhang` | Gable / shed verge overhang (default 200) |
 | `thickness` | Rafters and covering, measured square to the slope (default 250) |
-| `parapet` | Flat only: a parapet's height above the roof (null none) |
+| `parapet` | Flat only: a parapet's height above the roof (null none); refused on the other shapes |
 | `coveringMaterialId`, `soffitMaterialId` | Materials (seed tiles, slate, standing seam metal, membrane, a timber soffit) |
 
-`RoofWindow` (`roof_windows`, soft-deleted): `roofId`, `x`, `y` (plan centre; the plane under it is found by the
-point), `width` (across the slope), `length` (along it), `type` (`CentrePivot`, `TopHung`: the look of the sash),
-`frameMaterialId`. Validated by `RoofWindowPlacement`: on a sloped plane, inside it with 300 mm to its edges, ridge
-and hips, not overlapping another roof window.
+`RoofWindow` (`roof_windows`, soft-deleted): `roofId`, `along`, `across` (its centre in the roof's frame: mm along the
+ridge and across it from the roof's centre, so it moves with the roof; the plane under it is found by the point),
+`width` (across the slope), `length` (up it), `type` (`CentrePivot`, `TopHung`: the look of the sash),
+`frameMaterialId`. Validated by `RoofWindowPlacement`: on a pitched plane, 300 mm (in plan) inside it, clear of the
+eaves, verges, ridge and hips, not overlapping another window of that plane; checked only when the placement is set
+anew, as a changed roof does not check its windows (one it left behind is still renamed and undone, and the viewer
+leaves it out). A new window sits low on the front plane, 400 mm in plan above its eaves, where a hip's triangle is
+widest.
 
 `Wall.upToRoof` (bool, default false).
 
@@ -83,9 +87,12 @@ and hips, not overlapping another roof window.
   A deleted roof hides its windows until undo brings it back, as a deleted wall hides its openings.
 - `WallHandler`: `upToRoof` in `fields()` / `normalize()` / `apply()` / restorable fields.
 - `RoofGeometry` (PHP) and `roof-geometry.ts` with the fixture: `roofPlanes(roof)` (each plane's plan polygon with the
-  overhang, its normal and height function; gable ends as vertical triangles), `roofUndersideAt(roofs, x, y)` (the
-  highest underside over the point, null outside), `roofTopAt()`, the ridge / hip / eaves lines.
-- Scene: `roofs` with their `windows`; snapshots keep them (`SnapshotRoofRestorer`, remapping roof window parents).
+  overhang, and its underside as a height at the roof's centre plus a gradient), `roofUndersideAt()` / `roofTopAt()`,
+  `roofsUndersideAt(roofs, x, y)` (the highest underside over the point, null outside), `roofPlaneAt()` and the ridge
+  height. The ridge, hip and eaves lines for drawing follow from the planes (TS only, phase 2 / 5).
+- Scene: `roofs` with their `windows`; snapshots keep them (`SnapshotRoofRestorer`). The scene patch applies roof and
+  roof window changes, and reloads when a roof comes in (added, or back by undo or redo), as its windows are not in the
+  result.
 - REST through `ElementController` (`…/roofs`, `…/roof-windows`); MCP `add_roof` / `update_roof` / `delete_roof`,
   `add_roof_window` / `update_roof_window` / `delete_roof_window`, `update_wall` `upToRoof`; `get_floor` lists them;
   the server instructions say how to roof a floor (add_roof, then `upToRoof` on the gable walls).

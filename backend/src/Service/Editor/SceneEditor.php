@@ -179,8 +179,12 @@ final readonly class SceneEditor
 		}
 
 		$copy = array_intersect_key($handler->state($element), array_flip($handler->fields()));
-		if ($type === ElementTypeEnum::Item && is_int($copy['x'] ?? null)) {
+		// A copy beside the original: an item or roof a little east of it, a roof window along the ridge past it.
+		if (($type === ElementTypeEnum::Item || $type === ElementTypeEnum::Roof) && is_int($copy['x'] ?? null)) {
 			$copy['x'] += GroupEditor::DuplicateShift;
+		}
+		if ($type === ElementTypeEnum::RoofWindow && is_int($copy['along'] ?? null) && is_int($copy['width'] ?? null)) {
+			$copy['along'] += $copy['width'] + GroupEditor::DuplicateShift;
 		}
 
 		// An item's copy is checked against the source: what the source shows (a picture file deleted since) stays allowed.

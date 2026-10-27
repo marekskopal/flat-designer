@@ -349,6 +349,33 @@ format is the text in `FurnitureTools::Format`.
   dragged (x, y), nudged and turned with R like items; the inspector's `stair` fields get `stairRise` beside them for
   the step hint (`stairStepHint()`, 2R + G).
 
+## Roofs (FD-38)
+
+- The plan is `docs/roofs-plan.md`. A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,
+  change log; REST `…/roofs`, MCP `add_roof` / `update_roof` / `delete_roof`) belongs to the floor it covers, its heights
+  counting from that floor's level. It is a rectangle, the eaves line: `width` × `depth` centred on (x, y), the ridge
+  along the width, turned by `rotation`. `shape` is Gable, Hip (a pyramid over a square), Shed (rising from the front,
+  −y at 0°) or Flat (`parapet`); the underside is `eaveHeight` along the eaves line and rises at `pitch`, reaching
+  `overhang` past the eaves and `vergeOverhang` past the gables; `thickness` is square to the slope. A new roof without
+  a size takes the rectangle round the walls' outer faces, turned along the longest exterior wall, the ridge along the
+  longer side, the eaves at the tallest wall. An L- or T-shaped house takes several roofs.
+- The geometry exists twice: `RoofGeometry` (`Service/Editor/Geometry`) and `viewer/engine/roof-geometry.ts` (planes in
+  plan, `undersideAt` / `topAt`, the highest underside of several roofs, the plane over a point), kept identical by
+  `backend/tests/fixtures/roof-geometry.json`. **Always change both twins and add a fixture case in the same change.**
+- Roof windows (`RoofWindow`, `roof_windows`, element type `RoofWindow`, REST `…/roof-windows`, MCP `add_roof_window` /
+  `update_roof_window` / `delete_roof_window`) are listed in their roof's `windows`, as openings are in their wall's. A
+  window lies `along` / `across` the ridge from the roof's centre, in the roof's frame, so it moves with the roof; it is
+  `width` across the slope and `length` up it, on a pitched plane, `RoofWindowPlacement::Margin` inside the plane in
+  plan and clear of the plane's other windows; a new one sits low on the front plane. The placement is checked only
+  when it is set anew (a changed roof does not check its windows, so one it left behind is still renamed and undone).
+  A deleted roof hides its windows until undo brings it back; the scene patch reloads when a roof comes in, as its
+  windows are not in the result. A copy of a roof window lands past it along the ridge, a copy of a roof 100 mm east.
+  Only a flat roof has a `parapet`.
+- Walls: every wall of the floor is cut at the underside of the roofs over it; one with `upToRoof` rises to it (a
+  gable). `StructureSize` stops a column or beam at the roof where it is lower than the ceiling. Snapshots keep
+  `roofs` (`SnapshotRoofRestorer`) and the walls' `upToRoof`. Seeded coverings: `roof-tiles-clay`, `roof-slate`,
+  `roof-metal-seam`, `roof-membrane`.
+
 ## Lighting
 
 - Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with

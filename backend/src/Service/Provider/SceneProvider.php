@@ -11,6 +11,8 @@ use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\PlotDto;
+use FlatDesigner\Dto\RoofDto;
+use FlatDesigner\Dto\RoofWindowDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
@@ -27,6 +29,7 @@ use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Plot;
+use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\VariantSet;
@@ -38,6 +41,8 @@ use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
+use FlatDesigner\Model\Repository\RoofRepository;
+use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
@@ -62,6 +67,8 @@ final readonly class SceneProvider
 		private StairRepository $stairRepository,
 		private StairRise $stairRise,
 		private ShownPictures $shownPictures,
+		private RoofRepository $roofRepository,
+		private RoofWindowRepository $roofWindowRepository,
 	) {
 	}
 
@@ -120,7 +127,20 @@ final readonly class SceneProvider
 			stairs: $this->stairs($floor),
 			stairRise: $this->stairRise->of($floor, $floors, $walls),
 			stairsBelow: $this->stairsBelow($floor, $floors),
+			roofs: $this->roofs($floor),
 		);
+	}
+
+	/** @return list<RoofDto> with their windows */
+	private function roofs(Floor $floor): array
+	{
+		$roofs = $this->roofRepository->findByFloor($floor->id);
+		$windowsByRoof = [];
+		foreach ($this->roofWindowRepository->findByRoofs(array_map(fn (Roof $roof): int => $roof->id, $roofs)) as $window) {
+			$windowsByRoof[$window->roof->id][] = RoofWindowDto::fromEntity($window);
+		}
+
+		return array_map(fn (Roof $roof): RoofDto => RoofDto::fromEntity($roof, $windowsByRoof[$roof->id] ?? []), $roofs);
 	}
 
 	/** @return list<StairDto> */

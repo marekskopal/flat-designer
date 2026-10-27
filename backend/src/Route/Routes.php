@@ -44,9 +44,9 @@ enum Routes: string
 	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
 	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
 	case ProjectFloorUnderlay = '/api/projects/{projectId:number}/floors/{floorId:number}/underlay';
-	case ProjectFloorElements = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs}';
-	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs|groups|variant-sets}/{elementId:number}';
-	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs|groups|variant-sets}/{elementId:number}/duplicate';
+	case ProjectFloorElements = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs|roofs|roof-windows}';
+	case ProjectFloorElement = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs|roofs|roof-windows|groups|variant-sets}/{elementId:number}';
+	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs|roofs|roof-windows|groups|variant-sets}/{elementId:number}/duplicate';
 	case ProjectFloorWallPolyline = '/api/projects/{projectId:number}/floors/{floorId:number}/walls/polyline';
 	case ProjectFloorRoomDetect = '/api/projects/{projectId:number}/floors/{floorId:number}/rooms/detect';
 	case ProjectFloorGroups = '/api/projects/{projectId:number}/floors/{floorId:number}/groups';

@@ -21,6 +21,8 @@ use FlatDesigner\Model\Entity\ProjectChange;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ProjectMaterialPrice;
 use FlatDesigner\Model\Entity\ProjectVersion;
+use FlatDesigner\Model\Entity\Roof;
+use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\SavedView;
 use FlatDesigner\Model\Entity\ShareLink;
@@ -46,6 +48,8 @@ use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Model\Repository\ProjectMaterialPriceRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
+use FlatDesigner\Model\Repository\RoofRepository;
+use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\SavedViewRepository;
 use FlatDesigner\Model\Repository\ShareLinkRepository;
@@ -91,6 +95,8 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			RoomRepository::class,
 			PlotRepository::class,
 			StairRepository::class,
+			RoofRepository::class,
+			RoofWindowRepository::class,
 			WallRepository::class,
 			OpeningRepository::class,
 			ItemRepository::class,
@@ -129,6 +135,8 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
 		$this->addRepository($container, $orm, PlotRepository::class, Plot::class);
 		$this->addRepository($container, $orm, StairRepository::class, Stair::class);
+		$this->addRepository($container, $orm, RoofRepository::class, Roof::class);
+		$this->addRepository($container, $orm, RoofWindowRepository::class, RoofWindow::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);
 		$this->addRepository($container, $orm, OpeningRepository::class, Opening::class);
 		$this->addRepository($container, $orm, ItemRepository::class, Item::class);

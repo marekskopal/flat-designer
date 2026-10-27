@@ -9,12 +9,15 @@ use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Service\Project\ProjectSnapshotService;
 use FlatDesigner\Service\Project\ProjectVersionProvider;
 use FlatDesigner\Tests\Support\Fixture;
 use FlatDesigner\Tests\Support\IntegrationTestCase;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(ProjectVersionController::class)]
 #[CoversClass(ProjectVersionProvider::class)]
@@ -187,6 +190,58 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertSame([null, null], $this->restoredWallFinishes($user, $project->id));
 	}
 
+	public function testRestoreKeepsRoofsAndGablesAndOlderSnapshotsHaveNone(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$versionId = $this->saveVersion($user, $project->id);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		$roofs = $this->restoredScene($user, $project->id)['roofs'];
+		self::assertIsList($roofs);
+		self::assertCount(1, $roofs);
+		self::assertIsArray($roofs[0]);
+		self::assertSame(
+			['Main roof', 'Hip', 40, 280],
+			[$roofs[0]['name'], $roofs[0]['shape'], $roofs[0]['pitch'], $roofs[0]['thickness']],
+		);
+		self::assertIsList($roofs[0]['windows']);
+		self::assertIsArray($roofs[0]['windows'][0]);
+		self::assertSame(
+			['Skylight', 'TopHung', -900],
+			[$roofs[0]['windows'][0]['name'], $roofs[0]['windows'][0]['type'], $roofs[0]['windows'][0]['across']],
+		);
+		self::assertTrue($this->restoredWall($user, $project->id)['upToRoof']);
+
+		// Snapshots saved before roofs.
+		$pdo = Fixture::service(DatabaseInterface::class)->getPdo();
+		$select = FurnitureSeeds::prepare($pdo, 'SELECT snapshot FROM project_versions WHERE id = ?');
+		$select->execute([$versionId]);
+		$data = JsonDecoder::decodeObject((string) $select->fetchColumn());
+		self::assertIsList($data['floors']);
+		$floors = [];
+		foreach ($data['floors'] as $entry) {
+			self::assertIsArray($entry);
+			self::assertIsList($entry['walls']);
+			unset($entry['roofs']);
+			$entry['walls'] = array_map(static function (mixed $wall): array {
+				self::assertIsArray($wall);
+				unset($wall['upToRoof']);
+
+				return $wall;
+			}, $entry['walls']);
+			$floors[] = $entry;
+		}
+		$data['floors'] = $floors;
+		$update = FurnitureSeeds::prepare($pdo, 'UPDATE project_versions SET snapshot = ? WHERE id = ?');
+		$update->execute([json_encode($data, JSON_THROW_ON_ERROR), $versionId]);
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		self::assertSame([], $this->restoredScene($user, $project->id)['roofs']);
+		self::assertFalse($this->restoredWall($user, $project->id)['upToRoof']);
+	}
+
 	public function testRestoreKeepsCurvedWallsAndOlderSnapshotsHaveStraightOnes(): void
 	{
 		$user = Fixture::createUser();
@@ -261,6 +316,21 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		$wall = $this->restoredWall($user, $projectId);
 
 		return [$wall['leftFinishes'], $wall['rightFinishes']];
+	}
+
+	/** @return array<mixed> the scene of the project's first floor */
+	private function restoredScene(User $user, int $projectId): array
+	{
+		$projectBody = $this->jsonBody($this->request('GET', self::path(Routes::Project, $projectId), authenticatedAs: $user));
+		self::assertIsList($projectBody['floors']);
+		self::assertIsArray($projectBody['floors'][0]);
+		self::assertIsInt($projectBody['floors'][0]['id']);
+
+		return $this->jsonBody($this->request(
+			'GET',
+			self::path(Routes::ProjectFloorScene, $projectId, null, $projectBody['floors'][0]['id']),
+			authenticatedAs: $user,
+		));
 	}
 
 	/** @return array<mixed> the first wall of the project's first floor */

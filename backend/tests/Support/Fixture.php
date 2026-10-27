@@ -13,6 +13,8 @@ use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
+use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
 use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
 use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
@@ -25,6 +27,8 @@ use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Project;
+use FlatDesigner\Model\Entity\Roof;
+use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\User;
@@ -34,6 +38,8 @@ use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
+use FlatDesigner\Model\Repository\RoofRepository;
+use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -108,8 +114,8 @@ final class Fixture
 	}
 
 	/**
-	 * One room with tiling, a plot, an L stair, a wall with a door and finishes of its own and two items (one with empty
-	 * params) on the floor.
+	 * One room with tiling, a plot, an L stair, a hip roof with a window, a wall rising to the roof with a door and
+	 * finishes of its own and two items (one with empty params) on the floor.
 	 */
 	public static function furnishFloor(Floor $floor): void
 	{
@@ -152,6 +158,33 @@ final class Fixture
 			railing: StairRailingEnum::Both,
 			treadMaterial: $material,
 		)));
+		$roof = self::stamp(new Roof(
+			floor: $floor,
+			name: 'Main roof',
+			shape: RoofShapeEnum::Hip,
+			x: 2000,
+			y: 1500,
+			rotation: 0,
+			width: 4300,
+			depth: 3300,
+			eaveHeight: 2600,
+			pitch: 40,
+			overhang: 500,
+			vergeOverhang: 0,
+			thickness: 280,
+			coveringMaterial: $material,
+		));
+		self::service(RoofRepository::class)->persist($roof);
+		self::service(RoofWindowRepository::class)->persist(self::stamp(new RoofWindow(
+			roof: $roof,
+			name: 'Skylight',
+			type: RoofWindowTypeEnum::TopHung,
+			along: 0,
+			across: -900,
+			width: 550,
+			length: 780,
+			frameMaterial: $material,
+		)));
 
 		$wall = self::stamp(new Wall(
 			floor: $floor,
@@ -167,6 +200,7 @@ final class Fixture
 		));
 		$wall->leftFinishes = $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":2100}]';
 		$wall->rightFinishes = '[]';
+		$wall->upToRoof = true;
 		self::service(WallRepository::class)->persist($wall);
 		$door = self::stamp(new Opening(
 			wall: $wall,
