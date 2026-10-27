@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
-import {MM, polygonBounds, Vec2} from './plan-geometry';
+import {MM, polygonBounds, Vec2, WallCollider, wallFrame} from './plan-geometry';
 
 /** mm, the highest riser an automatic count gives (`StairRise::MaxAutoRiser`). */
 export const MaxAutoRiser = 180;
@@ -697,4 +697,154 @@ function sectionTwin(mesh: THREE.Mesh, sectionMaterial: THREE.Material): THREE.M
     twin.position.copy(mesh.position);
     twin.rotation.copy(mesh.rotation);
     return twin;
+}
+
+// --- Walking the stairs (FD-78) ---
+
+/** mm of walking line from its end (going up) or its start (going down) where the walker goes on to the next floor. */
+export const StairLanding = 400;
+/** Half the thickness of the colliders along a stair's sides and a void's edges, mm: thin, so a narrow flight stays walkable. */
+const StairSideHalf = 10;
+/** How far round a spiral's circle, in treads, the walker steps on or off at its end. */
+const SpiralOpening = 0.75;
+
+/**
+ * A stair the walker may walk on: its walking line and footprint in plan mm, and how far its floor lies under the
+ * shown one (0 for the floor's own stairs, −rise for those coming up from below). `below` marks the latter. `open`
+ * says whether a footprint edge (by its middle) is where the walker steps on (the floor's own stairs) or off (those
+ * from below).
+ */
+export interface StairPath {
+    walk: StairLinePoint[];
+    footprint: Vec2[];
+    width: number;
+    offset: number;
+    below: boolean;
+    /** The walking line's plan length, mm. */
+    length: number;
+    open: (middle: Vec2) => boolean;
+}
+
+/** Where a plan point lies along a stair's walking line: `s` mm from its start, at `height` above the stair's floor. */
+export interface StairSpot {
+    path: StairPath;
+    s: number;
+    height: number;
+}
+
+/** The stairs of a scene the walker may walk: its own and those coming up through it from below. */
+export function stairPaths(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBelow'>): StairPath[] {
+    const path = (stair: Stair, rise: number, below: boolean): StairPath => {
+        const geometry = stairGeometry(stair, rise);
+        const walk = geometry.walkLine;
+        let length = 0;
+        for (let i = 1; i < walk.length; i++) {
+            length += Math.hypot(walk[i].point.x - walk[i - 1].point.x, walk[i].point.y - walk[i - 1].point.y);
+        }
+        return {walk, footprint: geometry.footprint, width: geometry.width, offset: below ? -rise : 0, below, length, open: opening(geometry, below)};
+    };
+    const below = scene.stairsBelow ?? null;
+    return [
+        ...(scene.stairs ?? []).map((stair) => path(stair, scene.stairRise ?? 0, false)),
+        ...(below?.stairs ?? []).map((stair) => path(stair, below?.rise ?? 0, true)),
+    ];
+}
+
+/**
+ * Which footprint edges are open at the end of the stair the walker steps on or off by: within half the flight's
+ * width of that end of the walking line, or, round a spiral (whose width is its diameter), within `SpiralOpening`
+ * treads of the first (or last) riser's angle.
+ */
+function opening(geometry: StairGeometry, below: boolean): (middle: Vec2) => boolean {
+    const walk = geometry.walkLine;
+    const end = walk[below ? walk.length - 1 : 0]?.point;
+    if (end === undefined) {
+        return () => false;
+    }
+    const spiral = geometry.spiral;
+    if (spiral === null) {
+        return (middle) => Math.hypot(middle.x - end.x, middle.y - end.y) < (geometry.width / 2) * 0.9;
+    }
+    const at = below ? spiral.start + (geometry.risers - 1) * spiral.step : spiral.start;
+    const reach = Math.abs(spiral.step) * SpiralOpening;
+    return (middle) => {
+        const angle = (Math.atan2(middle.y - spiral.centre.y, middle.x - spiral.centre.x) * 180) / Math.PI;
+        const off = Math.abs(((angle - at + 540) % 360) - 180);
+        return off <= reach;
+    };
+}
+
+/**
+ * The stair under a plan point and where it lies along its walking line, or null off every stair. The height follows
+ * the walking line, a smooth ramp over the treads. Where stretches of walking line pass over or beside one another (a
+ * U's flights, a spiral winding over itself, an upper stair standing over the void of the one below), the one nearest
+ * `near` (the height the walker stands at, against the floor's level) wins, so the walker does not jump between
+ * flights; without it, the nearest in plan.
+ */
+export function stairSpot(paths: readonly StairPath[], point: Vec2, near?: number): StairSpot | null {
+    const candidates: {path: StairPath; s: number; height: number; distance: number}[] = [];
+    for (const path of paths) {
+        if (!pointInOutline(point, path.footprint)) {
+            continue;
+        }
+        let s0 = 0;
+        for (let i = 1; i < path.walk.length; i++) {
+            const a = path.walk[i - 1];
+            const b = path.walk[i];
+            const dx = b.point.x - a.point.x;
+            const dy = b.point.y - a.point.y;
+            const length = Math.hypot(dx, dy);
+            const t = length < 1e-6 ? 0 : Math.min(1, Math.max(0, ((point.x - a.point.x) * dx + (point.y - a.point.y) * dy) / (length * length)));
+            const distance = Math.hypot(point.x - (a.point.x + dx * t), point.y - (a.point.y + dy * t));
+            candidates.push({path, s: s0 + length * t, height: a.height + (b.height - a.height) * t, distance});
+            s0 += length;
+        }
+    }
+    if (candidates.length === 0) {
+        return null;
+    }
+    const best = Math.min(...candidates.map((c) => c.distance));
+    const close = candidates.filter((c) => c.distance <= best + c.path.width / 2);
+    const level = (c: {path: StairPath; height: number}): number => c.path.offset + c.height;
+    const pick =
+        near === undefined
+            ? close.reduce((a, b) => (b.distance < a.distance ? b : a))
+            : close.reduce((a, b) => (Math.abs(level(b) - near) < Math.abs(level(a) - near) ? b : a));
+    return {path: pick.path, s: pick.s, height: pick.height};
+}
+
+/**
+ * What the walker bumps into at the stairs: the sides of the floor's own stairs (open where they start, so the walker
+ * steps on, closed at the top, where the walk goes on upstairs), and the edges of the voids of the stairs coming up
+ * from below (open where they arrive, closed elsewhere: the stairwell's railing). `StairPath.open` tells the edges.
+ */
+export function stairColliders(paths: readonly StairPath[]): WallCollider[] {
+    const colliders: WallCollider[] = [];
+    for (const path of paths) {
+        path.footprint.forEach((a, i) => {
+            const b = path.footprint[(i + 1) % path.footprint.length];
+            if (path.open({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2})) {
+                return;
+            }
+            const frame = wallFrame({startX: a.x, startY: a.y, endX: b.x, endY: b.y});
+            if (frame.length > 0) {
+                colliders.push({frame, from: 0, to: frame.length, halfThickness: StairSideHalf});
+            }
+        });
+    }
+    return colliders;
+}
+
+/**
+ * Whether the walker at `spot` goes on to another floor: +1 near the top of the floor's own stairs, −1 near the
+ * bottom of those coming up from below; 0 otherwise.
+ */
+export function stairFloorStep(spot: StairSpot | null): 1 | -1 | 0 {
+    if (spot === null) {
+        return 0;
+    }
+    if (!spot.path.below && spot.path.length - spot.s < StairLanding) {
+        return 1;
+    }
+    return spot.path.below && spot.s < StairLanding ? -1 : 0;
 }

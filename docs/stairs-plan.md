@@ -80,7 +80,8 @@ Validation: riser 140–220 mm, going 200–350 mm, within the floor's coordinat
   same stair down.
 - The stair's sides and the void's edges block the walker, except where you step on and off.
 - Reaching the top switches to the floor above, reaching the bottom from upstairs to the floor below (the FD-73
-  mechanism), keeping the spot and the height. The floor above is loaded ahead while the walker is near a stair.
+  mechanism), keeping the spot and the height. As built, the floor is loaded when the walker reaches the end of the
+  stair (not ahead), and the floor above is not drawn while climbing.
 
 ## Not included
 

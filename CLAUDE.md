@@ -314,8 +314,8 @@ format is the text in `FurnitureTools::Format`.
   `groundLevel` (mm, ±10000) moves its ground, which is cut out under the rooms lying lower than it (`groundHoles()`, so
   the house's rooms show on a raised plot); the surroundings' disc goes under the lowest plot or room
   (`lowestGround()`). Changed rooms rebuild the plots and changed plots the levelled rooms. The walkthrough's eye stays
-  at eye height over the floor underfoot (`floorLevels()`: the smallest room there, else the plot, else 0); steps do
-  not block it.
+  at eye height over the floor underfoot (`floorLevels()`: a stair there, else the smallest room, else the plot, else
+  0); steps do not block it.
 
 ## Stairs (FD-37)
 
@@ -466,6 +466,17 @@ format is the text in `FurnitureTools::Format`.
   (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`): the walker stands at the same plan point if it lies in one of
   the floor's rooms, else where a walk of the floor starts, with its doors closed as at a walk's start. Any other
   floor change ends the walk. Share links have one floor, so guests cannot.
+- Stairs (FD-78, `stairs.ts`): `stairPaths()` are the floor's own stairs and those coming up through it (`stairsBelow`,
+  under the floor by their rise), laid out once per `load()` (`walkStairs`) for the colliders and `floorLevels()`. Over
+  one, the eye follows the walking line (`stairSpot()`, a smooth ramp; where lines pass beside or over one another, a
+  U's flights, a spiral's windings, an upper stair over the void of the lower one, the stretch nearest the walker's
+  last height wins: `Walkthrough` passes it, and `setFloorLevels(levels, level)` carries it over to a floor walked
+  onto). `stairColliders()` block a stair's sides, open where the floor's own stairs start and where those from below
+  arrive (`StairPath.open`: half the flight's width, or a tread's turn round a spiral; the stairwell's other edges are
+  its railing, and an upper floor's walls over a stairwell block too). Within `StairLanding` of the top, or of the
+  bottom of a stair from below, `ViewerEngine.followStairs()` walks to the next floor as PageUp / PageDown do; the
+  walker keeps the spot they have reached when it loads, and no further floor until they leave the landing zone
+  (`stairArrival`). While climbing, the floor above is not drawn until it loads.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
   tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.

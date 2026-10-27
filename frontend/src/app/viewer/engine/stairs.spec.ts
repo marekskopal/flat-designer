@@ -12,10 +12,14 @@ import {
     RailHeight,
     RailRadius,
     roomsCutBy,
+    stairColliders,
     stairFirstFlight,
+    stairFloorStep,
     stairGeometry,
     stairHeightAt,
+    stairPaths,
     stairRisers,
+    stairSpot,
 } from './stairs';
 
 const stair: Stair = {
@@ -293,5 +297,64 @@ describe('buildStair', () => {
         new THREE.Raycaster(new THREE.Vector3(1, 5, -2.2), new THREE.Vector3(0, -1, 0)).intersectObject(group, true, hits);
         expect(hits).toHaveLength(0);
         expect(buildStairsBelow(null, materials, materials.sectionFill()).children).toHaveLength(0);
+    });
+});
+
+describe('walking the stairs', () => {
+    // 4 risers of 180 over 720 mm, 3 treads of 270: the walking line runs from (1000, 2000) north to (1000, 2810).
+    const short: Stair = {...stair, risers: 4};
+    const own = stairPaths({stairs: [short], stairRise: 720, stairsBelow: null});
+    const below = stairPaths({stairs: [], stairRise: 2600, stairsBelow: {floorId: 3, rise: 720, stairs: [short]}});
+
+    it('ramps along the walking line, and is off the stair outside its footprint', () => {
+        expect(stairSpot(own, {x: 1000, y: 2000})?.height).toBeCloseTo(0);
+        expect(stairSpot(own, {x: 1200, y: 2405})?.height).toBeCloseTo(360);
+        expect(stairSpot(own, {x: 1000, y: 2800})?.height).toBeCloseTo(720 * (800 / 810));
+        expect(stairSpot(own, {x: 1000, y: 1900})).toBeNull();
+        // The stairs from below lie under the floor by their rise.
+        expect(below[0].offset).toBe(-720);
+    });
+
+    it("keeps to the flight nearest the walker's height where the line passes beside itself", () => {
+        const u = stairPaths({stairs: [{...stair, shape: 'UShaped', risers: 10, firstFlight: 5, gap: 0}], stairRise: 1800, stairsBelow: null});
+        // On the landing, between the end of the first flight and the start of the second, the height is the landing's.
+        expect(stairSpot(u, {x: 1000, y: 3400}, 900)?.height).toBeCloseTo(900);
+        expect(stairSpot(u, {x: 1000, y: 2100}, 100)?.height).toBeLessThan(200);
+    });
+
+    it('arriving from below under an upper stair standing over the void, stays at the floor rather than on the upper flight', () => {
+        // The same straight stair on both floors, standing over the void: at the top of the lower one the walker is at
+        // the floor's level, not a storey up on the upper one's last step.
+        const both = stairPaths({stairs: [short], stairRise: 720, stairsBelow: {floorId: 3, rise: 720, stairs: [short]}});
+        const spot = stairSpot(both, {x: 1000, y: 2805}, 0);
+        expect(spot?.path.below).toBe(true);
+        expect(spot === null ? null : spot.path.offset + spot.height).toBeCloseTo(0, -1);
+        // Having climbed the upper one to the same spot, the walker is on it.
+        expect(stairSpot(both, {x: 1000, y: 2805}, 700)?.path.below).toBe(false);
+    });
+
+    it('opens a spiral only round its first riser (or last, from below), not a third of the circle', () => {
+        const spiral = stairPaths({stairs: [{...stair, shape: 'Spiral', width: 1400, risers: 12}], stairRise: 2400, stairsBelow: null});
+        const open = 32 - stairColliders(spiral).length;
+        expect(open).toBeGreaterThanOrEqual(2);
+        expect(open).toBeLessThanOrEqual(6);
+    });
+
+    it('blocks the sides, opens where the floor\'s stairs start and where the stairs from below arrive', () => {
+        // The straight stair's footprint has four edges: the start is open downstairs, the end upstairs.
+        expect(stairColliders(own)).toHaveLength(3);
+        expect(stairColliders(below)).toHaveLength(3);
+        const openStart = (colliders: ReturnType<typeof stairColliders>): boolean =>
+            !colliders.some((c) => Math.abs(c.frame.start.y - 2000) < 1 && Math.abs(c.frame.start.y + c.frame.dir.y * c.frame.length - 2000) < 1);
+        expect(openStart(stairColliders(own))).toBe(true);
+        expect(openStart(stairColliders(below))).toBe(false);
+    });
+
+    it('goes on upstairs near the top of the floor\'s stairs, downstairs near the bottom of those from below', () => {
+        expect(stairFloorStep(stairSpot(own, {x: 1000, y: 2700}))).toBe(1);
+        expect(stairFloorStep(stairSpot(own, {x: 1000, y: 2300}))).toBe(0);
+        expect(stairFloorStep(stairSpot(below, {x: 1000, y: 2100}))).toBe(-1);
+        expect(stairFloorStep(stairSpot(below, {x: 1000, y: 2700}))).toBe(0);
+        expect(stairFloorStep(null)).toBe(0);
     });
 });

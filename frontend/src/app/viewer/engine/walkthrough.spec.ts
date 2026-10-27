@@ -2,6 +2,7 @@ import {Plot, Room} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
+import {stairPaths} from './stairs';
 import {floorLevels, Walkthrough} from './walkthrough';
 
 const square = (x: number, y: number, side: number): Room['polygon'] => [[x, y], [x + side, y], [x + side, y + side], [x, y + side]];
@@ -74,5 +75,25 @@ describe('Walkthrough between floors', () => {
         walk.moveTo({x: 0, y: 0}, Math.PI);
         expect(camera.getWorldDirection(new THREE.Vector3()).z).toBeCloseTo(1);
         walk.dispose();
+    });
+});
+
+describe('floorLevels on stairs', () => {
+    const stair = {
+        id: 1, name: 'Stairs', shape: 'Straight', x: 1000, y: 500, rotation: 0, width: 900, going: 270, risers: 4, firstFlight: null,
+        turn: 'Left', gap: 100, construction: 'Solid', railing: 'Right', treadMaterialId: null, structureMaterialId: null,
+    } as const;
+    const hall = room(square(0, 0, 3000));
+
+    it("climbs the floor's own stairs over the room's floor", () => {
+        const levels = floorLevels({rooms: [hall]}, stairPaths({stairs: [stair], stairRise: 720, stairsBelow: null}));
+        expect(levels({x: 1000, y: 905})).toBeCloseTo(360);
+        expect(levels({x: 2500, y: 905})).toBe(0);
+    });
+
+    it('goes down into the void of the stairs from below, under the floor by their rise', () => {
+        const levels = floorLevels({rooms: [hall]}, stairPaths({stairs: [], stairRise: 2600, stairsBelow: {floorId: 2, rise: 720, stairs: [stair]}}));
+        expect(levels({x: 1000, y: 1310})).toBeCloseTo(0);
+        expect(levels({x: 1000, y: 500})).toBeCloseTo(-720);
     });
 });

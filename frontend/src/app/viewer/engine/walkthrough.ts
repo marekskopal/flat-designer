@@ -2,6 +2,7 @@ import {Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {collideCircle, MM, pointInPolygon, polygonSignedArea, Vec2, WallCollider} from './plan-geometry';
+import {StairPath, stairSpot} from './stairs';
 
 /** Eye level of a 180 cm tall person, mm above the floor. */
 const EyeHeight = 1630;
@@ -30,20 +31,28 @@ const UseKey = 'KeyE';
 /** Take the walker to the floor above or below. */
 const FloorKeys: Record<string, 1 | -1> = {PageUp: 1, PageDown: -1};
 
-/** Where the walker stands on the floor's level, mm: plan point → height of the floor under it. */
-export type FloorLevels = (point: Vec2) => number;
+/**
+ * Where the walker stands on the floor's level, mm: plan point → height of the floor under it. `near` is the height
+ * the walker stood at last, for a stair whose walking line passes over itself.
+ */
+export type FloorLevels = (point: Vec2, near?: number) => number;
 
 /**
- * The height of what is underfoot at a plan point, mm against the floor's level: the floor of the room there (the
- * smallest one where rooms overlap: a terrace inside a garden), else the ground of the plot there, else the floor's
- * level. Steps do not block the walk. Keeps only the outlines and levels, not the scene.
+ * The height of what is underfoot at a plan point, mm against the floor's level: a stair there (the floor's own going
+ * up, or one coming up from below through its void: `stairSpot()`, a smooth ramp along its walking line; `stairs` are
+ * `stairPaths()` of the scene, computed once by the caller), else the floor of the room there (the smallest one where
+ * rooms overlap: a terrace inside a garden), else the ground of the plot there, else the floor's level. Steps do not
+ * block the walk. Keeps only the outlines and levels, not the scene.
  */
-export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>): FloorLevels {
+export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>, stairs: readonly StairPath[] = []): FloorLevels {
     const rooms = scene.rooms
         .map((r) => ({polygon: r.polygon, level: r.floorElevation ?? 0, area: Math.abs(polygonSignedArea(r.polygon))}))
         .sort((a, b) => a.area - b.area);
     const plots = (scene.plots ?? []).map((p) => ({polygon: p.polygon, level: p.groundLevel ?? 0}));
-    return (point) => [...rooms, ...plots].find((o) => pointInPolygon(point, o.polygon))?.level ?? 0;
+    return (point, near) => {
+        const spot = stairs.length === 0 ? null : stairSpot(stairs, point, near);
+        return spot !== null ? spot.path.offset + spot.height : ([...rooms, ...plots].find((o) => pointInPolygon(point, o.polygon))?.level ?? 0);
+    };
 }
 
 /**
@@ -87,6 +96,8 @@ export class Walkthrough {
     private leafColliders: readonly WallCollider[] = [];
     /** The floor level under the walker, looked up again only once they move. */
     private underfoot: {x: number; y: number; level: number} | null = null;
+    /** The height last stood at, which a stair passing over itself is read against. */
+    private lastLevel = 0;
     private pitch = 0;
     private locked = false;
     private active = true;
@@ -135,9 +146,16 @@ export class Walkthrough {
         this.collide();
     }
 
-    /** Rooms or plots changed (a live update of the floor): the eye follows their levels. */
-    public setFloorLevels(levels: FloorLevels): void {
+    /**
+     * Rooms, plots or stairs changed (a live update of the floor, or another floor): the eye follows their levels.
+     * `level` is the height the walker stands at against the new floor's level, when the caller knows it (a stair walked
+     * onto another floor), so a stair passing over itself keeps them on their flight.
+     */
+    public setFloorLevels(levels: FloorLevels, level?: number): void {
         this.levels = levels;
+        if (level !== undefined) {
+            this.lastLevel = level;
+        }
         this.underfoot = null;
         this.applyCamera();
     }
@@ -156,6 +174,11 @@ export class Walkthrough {
     /** Where the walker stands, plan mm. */
     public where(): Vec2 {
         return this.position;
+    }
+
+    /** The height the walker stands at, mm against the floor's level (a stair's step, a sunken terrace). */
+    public level(): number {
+        return this.lastLevel;
     }
 
     /**
@@ -239,7 +262,8 @@ export class Walkthrough {
     private applyCamera(): void {
         const {x, y} = this.position;
         if (this.underfoot === null || this.underfoot.x !== x || this.underfoot.y !== y) {
-            this.underfoot = {x, y, level: this.levels(this.position)};
+            this.underfoot = {x, y, level: this.levels(this.position, this.lastLevel)};
+            this.lastLevel = this.underfoot.level;
         }
         this.camera.position.set(x * MM, (EyeHeight + this.underfoot.level) * MM, -y * MM);
         this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
