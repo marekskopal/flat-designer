@@ -31,6 +31,7 @@ use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
+use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
@@ -56,6 +57,7 @@ final readonly class SceneProvider
 		private ItemGroupRepository $groupRepository,
 		private VariantSetRepository $variantSetRepository,
 		private FloorUnderlayRepository $underlayRepository,
+		private FloorRepository $floorRepository,
 		private PlotRepository $plotRepository,
 		private StairRepository $stairRepository,
 		private StairRise $stairRise,
@@ -92,6 +94,7 @@ final readonly class SceneProvider
 		ksort($definitions);
 		ksort($models);
 		$underlay = $this->underlayRepository->findByFloor($floor->id);
+		$floors = $this->floorRepository->findByProject($floor->project->id);
 
 		return new SceneDto(
 			floor: FloorDto::fromEntity($floor),
@@ -115,8 +118,8 @@ final readonly class SceneProvider
 			location: LocationDto::fromEntity($floor->project),
 			plots: array_map(fn (Plot $plot): PlotDto => PlotDto::fromEntity($plot), $this->plotRepository->findByFloor($floor->id)),
 			stairs: $this->stairs($floor),
-			stairRise: $this->stairRise->of($floor),
-			stairsBelow: $this->stairsBelow($floor),
+			stairRise: $this->stairRise->of($floor, $floors, $walls),
+			stairsBelow: $this->stairsBelow($floor, $floors),
 		);
 	}
 
@@ -126,12 +129,16 @@ final readonly class SceneProvider
 		return array_map(fn (Stair $stair): StairDto => StairDto::fromEntity($stair), $this->stairRepository->findByFloor($floor->id));
 	}
 
-	/** The stairs of the floor below that come up through this one; null without a floor below. */
-	private function stairsBelow(Floor $floor): ?StairsBelowDto
+	/**
+	 * The stairs of the floor below that come up through this one; null without a floor below.
+	 *
+	 * @param list<Floor> $floors the project's floors
+	 */
+	private function stairsBelow(Floor $floor, array $floors): ?StairsBelowDto
 	{
-		$below = $this->stairRise->floorBelow($floor);
+		$below = $this->stairRise->floorBelow($floor, $floors);
 
-		return $below === null ? null : new StairsBelowDto($below->id, $this->stairRise->of($below), $this->stairs($below));
+		return $below === null ? null : new StairsBelowDto($below->id, $this->stairRise->of($below, $floors), $this->stairs($below));
 	}
 
 	/** @return list<MaterialDto> */

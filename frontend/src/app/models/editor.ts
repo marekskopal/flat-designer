@@ -3,7 +3,7 @@
 export interface Change {
     id: number;
     operation: 'Create' | 'Update' | 'Delete';
-    elementType: 'Item' | 'Wall' | 'Opening' | 'Room' | 'Plot' | 'Group' | 'VariantSet';
+    elementType: 'Item' | 'Wall' | 'Opening' | 'Room' | 'Plot' | 'Stair' | 'Group' | 'VariantSet';
     elementId: number;
     floorId: number | null;
     summary: string;

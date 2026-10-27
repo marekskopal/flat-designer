@@ -14,16 +14,23 @@ use stdClass;
  */
 final readonly class SnapshotStairs
 {
-	/** @var list<array{level: int, elevation: int}> */
+	/** @var list<array{id: int, level: int, elevation: int}> */
 	private array $levels;
+
+	/** @var array<int, array{entry: stdClass, floor: stdClass, id: int, level: int}> by id */
+	private array $floors;
 
 	/**
 	 * @param list<array{entry: stdClass, floor: stdClass, id: int, level: int}> $floors
 	 * @param array<int, stdClass> $sceneFloors the floors as the scenes serve them (with their elevations), by id
 	 */
-	public function __construct(private array $floors, private array $sceneFloors)
+	public function __construct(array $floors, private array $sceneFloors)
 	{
-		$this->levels = array_map(fn (array $f): array => ['level' => $f['level'], 'elevation' => $this->elevation($f)], $floors);
+		$this->floors = array_column($floors, null, 'id');
+		$this->levels = array_map(
+			fn (array $f): array => ['id' => $f['id'], 'level' => $f['level'], 'elevation' => $this->elevation($f)],
+			$floors,
+		);
 	}
 
 	/** @param array{entry: stdClass, floor: stdClass, id: int, level: int} $floor the scene's floor */
@@ -31,17 +38,11 @@ final readonly class SnapshotStairs
 	{
 		$scene->stairs = self::stairs($floor);
 		$scene->stairRise = $this->rise($floor);
-		$below = null;
-		foreach ($this->floors as $other) {
-			$key = [$other['level'], $this->elevation($other)];
-			if ($other['level'] < $floor['level'] && ($below === null || $key > [$below['level'], $this->elevation($below)])) {
-				$below = $other;
-			}
-		}
+		$below = StairRise::below($floor['id'], $floor['level'], $this->levels);
 		$scene->stairsBelow = $below === null ? null : [
 			'floorId' => $below['id'],
-			'rise' => $this->rise($below),
-			'stairs' => self::stairs($below)];
+			'rise' => $this->rise($this->floors[$below['id']]),
+			'stairs' => self::stairs($this->floors[$below['id']])];
 	}
 
 	/** @param array{entry: stdClass, floor: stdClass, id: int, level: int} $floor */

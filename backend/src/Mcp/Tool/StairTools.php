@@ -89,8 +89,8 @@ final readonly class StairTools
 	}
 
 	/**
-	 * @param string|null $shape "Straight" | "LShaped" | "UShaped" | "Spiral" (a spiral's width is its diameter: give one of
-	 *   1200–4000 with it)
+	 * @param string|null $shape "Straight" | "LShaped" | "UShaped" | "Spiral" (a spiral's width is its diameter, 1200–4000;
+	 *   a shape change keeps the width where the new shape allows it, else takes the shape's default)
 	 * @param int|null $rotation degrees counter-clockwise of the walking-up direction (0 = north)
 	 * @param int|null $risers number of risers (clear it to count them from the rise)
 	 * @param list<string>|null $clear fields to set to none: "risers" (counted from the rise), "firstFlight" (halved),

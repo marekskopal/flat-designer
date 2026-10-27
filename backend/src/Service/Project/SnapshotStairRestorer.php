@@ -13,9 +13,8 @@ use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Repository\StairRepository;
-use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
 
-/** Restores a floor's stairs from a snapshot. */
+/** Restores a floor's stairs from a snapshot. An enum value it does not know (a case renamed since) takes the default, as the openings' do. */
 final readonly class SnapshotStairRestorer
 {
 	public function __construct(private StairRepository $stairRepository)
@@ -35,7 +34,7 @@ final readonly class SnapshotStairRestorer
 			$stair = new Stair(
 				floor: $floor,
 				name: $data->string('name'),
-				shape: StairShapeEnum::tryFrom($data->string('shape')) ?? throw new InvalidSnapshotException('Unknown stair shape.'),
+				shape: StairShapeEnum::tryFrom($data->string('shape')) ?? StairShapeEnum::Straight,
 				x: $data->int('x'),
 				y: $data->int('y'),
 				rotation: $data->int('rotation'),

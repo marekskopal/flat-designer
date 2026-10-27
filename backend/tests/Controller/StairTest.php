@@ -56,8 +56,57 @@ final class StairTest extends EditorTestCase
 
 	public function testASpiralIsAsWideAsItsDiameter(): void
 	{
-		self::assertSame(1600, $this->create('stairs', ['shape' => 'Spiral'])['width']);
+		$spiral = $this->create('stairs', ['shape' => 'Spiral']);
+		self::assertSame(1600, $spiral['width']);
 		self::assertSame(422, $this->edit('POST', 'stairs', body: ['shape' => 'Spiral', 'width' => 900])->getStatusCode());
+
+		// A shape change keeps a width the new shape allows, else takes its default: a 3.5 m spiral is too wide a flight.
+		$wide = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($spiral), ['width' => 3500]))['element'];
+		self::assertIsArray($wide);
+		self::assertSame(3500, $wide['width']);
+		$straight = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($spiral), ['shape' => 'Straight']))['element'];
+		self::assertIsArray($straight);
+		self::assertSame(['Straight', 900], [$straight['shape'], $straight['width']]);
+		$narrow = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($spiral), ['width' => 1400, 'shape' => 'Spiral']))['element'];
+		self::assertIsArray($narrow);
+		self::assertSame(1400, $narrow['width']);
+		$back = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($spiral), ['shape' => 'LShaped']))['element'];
+		self::assertIsArray($back);
+		self::assertSame(1400, $back['width']);
+	}
+
+	public function testAMezzanineOnTheSameLevelSharesNoStairs(): void
+	{
+		$this->create('stairs', []);
+		$floors = Fixture::service(FloorProvider::class);
+		$first = $floors->create($this->project, new FloorInputDto('First floor', 1, 3000));
+		$mezzanine = $floors->create($this->project, new FloorInputDto('Mezzanine', 1, 3200));
+		// The ground floor's stairs climb to the lower of the two and come up through it alone.
+		self::assertSame(3000, $this->scene()['stairRise']);
+		$scene = fn (int $floorId): array => $this->jsonBody($this->request(
+			'GET',
+			sprintf('/api/projects/%d/floors/%d/scene', $this->project->id, $floorId),
+			authenticatedAs: $this->user,
+		));
+		self::assertIsArray($scene($first->id)['stairsBelow']);
+		self::assertNull($scene($mezzanine->id)['stairsBelow']);
+	}
+
+	public function testAChangedRiseDoesNotBlockEditingTheStair(): void
+	{
+		// 16 risers over 2850 mm are 178 mm each; over 4000 mm they would be 250 mm, which only a new count is held to.
+		$stair = $this->create('stairs', ['shape' => 'LShaped', 'risers' => 16, 'firstFlight' => 8]);
+		$floors = Fixture::service(FloorProvider::class);
+		$floors->create($this->project, new FloorInputDto('First floor', 1, 4000));
+		$moved = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($stair), ['x' => 3000, 'name' => 'Main stairs']))['element'];
+		self::assertIsArray($moved);
+		self::assertSame([3000, 16, 8], [$moved['x'], $moved['risers'], $moved['firstFlight']]);
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'stairs', self::id($stair), ['risers' => 17])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'stairs', self::id($stair), ['firstFlight' => 20])->getStatusCode());
+		$counted = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($stair), ['risers' => 20, 'firstFlight' => 10]))['element'];
+		self::assertIsArray($counted);
+		self::assertSame(20, $counted['risers']);
 	}
 
 	public function testTheRiseComesFromTheFloorAbove(): void

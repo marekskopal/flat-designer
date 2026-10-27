@@ -17,8 +17,9 @@ height and a railing. A stair cuts a void through the slab above, and the walkth
   slab above and needs the floor-to-floor height. It follows Plot's path: entity, migration, `ElementTypeEnum::Stair`,
   `StairHandler` through `SceneEditor` (undo, change log), REST `…/stairs`, snapshot and restore, MCP tools.
 - **The rise comes from the floors.** It is the next floor up's elevation minus the stair's floor's; the scene carries
-  `floorAbove`. Without a floor above, the tallest wall plus a 250 mm slab. `risers` null means as many as keep each
-  riser at most 180 mm. Changing a floor's elevation changes the stair.
+  it as `stairRise`. Without a floor above, the tallest wall plus the slab a floor stacked on it would get. `risers`
+  null means as many as keep each riser at most 180 mm. Changing a floor's elevation changes the stair (and never
+  blocks editing or undoing it: a riser count is checked only when set).
 - **The void is the stair's whole footprint**, in the slab and room floors of the floor above and in the ceiling of the
   room it stands in below. A smaller headroom-based opening can come later.
 - **Landings first, winders later:** L with a quarter landing, U with a half landing.
@@ -49,9 +50,9 @@ Validation: riser 140–220 mm, going 200–350 mm, within the floor's coordinat
 
 - `Stair` entity, `stairs` table (soft-deleted), `StairDto`, `StairHandler` (`fields()`, `normalize()`, `apply()`,
   `restorableFields()`).
-- The scene's `stairs`, `stairsBelow` (the floor below's stairs reaching this floor) and `floorAbove` (for the rise).
-- Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive `stairsBelow` and `floorAbove` from its
-  other floors (`SnapshotScenes`).
+- The scene's `stairs`, `stairRise` and `stairsBelow` (the floor below's stairs reaching this floor, with their rise).
+- Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive `stairRise` and `stairsBelow` from its
+  other floors (`SnapshotStairs`, called by `SnapshotScenes`).
 - REST through `ElementController`; MCP `add_stair` / `update_stair` / `delete_stair`; `get_floor` lists them.
 - CLAUDE.md. Tests: handler validation, undo, snapshot round trip, MCP.
 

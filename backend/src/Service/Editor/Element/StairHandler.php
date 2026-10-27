@@ -133,21 +133,27 @@ final readonly class StairHandler implements ElementHandler
 	}
 
 	/**
-	 * Checks the fields; a riser count is checked against the floors' rise (each riser 140–220 mm), the landing's
-	 * split against the count. Fields a shape does not use keep their values.
+	 * Checks the fields. A riser count is checked against the floors' rise (each riser 140–220 mm) and the landing's
+	 * split against the count, but only when they are set anew: the rise changes with the floors, and a stair whose
+	 * count no longer fits is still moved, renamed and undone (the viewer shows the riser it gets). Fields a shape does
+	 * not use keep their values; a shape change that leaves the stored width out of the new shape's range (a spiral's
+	 * diameter is wider) takes the shape's default width.
 	 *
 	 * @return array<string, mixed>
 	 */
 	public function normalize(Floor $floor, array $state, ?AEntity $current): array
 	{
+		$stair = $current === null ? null : self::cast($current);
 		$fields = new FieldReader($state);
 		$shape = $fields->enum('shape', StairShapeEnum::class);
-		$width = $shape === StairShapeEnum::Spiral
-			? $fields->int('width', self::MinSpiralDiameter, self::MaxSpiralDiameter)
-			: $fields->int('width', self::MinWidth, self::MaxWidth);
+		$width = $this->width($fields, $shape, $stair);
 		$risers = $fields->nullableInt('risers', 2, self::MaxRisers);
-		$rise = $this->stairRise->of($floor);
-		if ($risers !== null) {
+		$firstFlight = $fields->nullableInt('firstFlight', 1, self::MaxRisers);
+		$risersChanged = $stair === null || $risers !== $stair->risers;
+		$landingChanged = $stair === null || $firstFlight !== $stair->firstFlight || $shape !== $stair->shape;
+		$rise = null;
+		if ($risers !== null && $risersChanged) {
+			$rise = $this->stairRise->of($floor);
 			$riser = $rise / $risers;
 			if ($riser < StairRise::MinRiser || $riser > StairRise::MaxRiser) {
 				throw EditException::invalid(sprintf(
@@ -160,10 +166,11 @@ final readonly class StairHandler implements ElementHandler
 				));
 			}
 		}
-		$firstFlight = $fields->nullableInt('firstFlight', 1, self::MaxRisers);
-		$count = StairRise::risers($rise, $risers);
-		if ($shape->hasLanding() && $firstFlight !== null && $firstFlight >= $count) {
-			throw EditException::invalid(sprintf('Field "firstFlight" must be fewer than the stair\'s %d risers.', $count));
+		if ($shape->hasLanding() && $firstFlight !== null && ($risersChanged || $landingChanged)) {
+			$count = StairRise::risers($rise ?? $this->stairRise->of($floor), $risers);
+			if ($firstFlight >= $count) {
+				throw EditException::invalid(sprintf('Field "firstFlight" must be fewer than the stair\'s %d risers.', $count));
+			}
 		}
 		$treadMaterialId = $fields->nullableId('treadMaterialId');
 		$structureMaterialId = $fields->nullableId('structureMaterialId');
@@ -230,6 +237,20 @@ final readonly class StairHandler implements ElementHandler
 	public function label(array $state): string
 	{
 		return sprintf('stairs "%s"', is_string($state['name'] ?? null) ? $state['name'] : '?');
+	}
+
+	/** The width in the shape's range; the stored width of another shape, left as it was, gives way to the default. */
+	private function width(FieldReader $fields, StairShapeEnum $shape, ?Stair $current): int
+	{
+		[$min, $max] = $shape === StairShapeEnum::Spiral
+			? [self::MinSpiralDiameter, self::MaxSpiralDiameter]
+			: [self::MinWidth, self::MaxWidth];
+		$width = $fields->raw('width');
+		if ($current !== null && $shape !== $current->shape && $width === $current->width && ($width < $min || $width > $max)) {
+			return $shape === StairShapeEnum::Spiral ? self::DefaultSpiralDiameter : self::DefaultWidth;
+		}
+
+		return $fields->int('width', $min, $max);
 	}
 
 	/** @param array<string, mixed> $state normalised */
