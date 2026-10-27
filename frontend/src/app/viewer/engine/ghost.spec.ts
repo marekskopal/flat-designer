@@ -49,6 +49,19 @@ describe('buildGhost', () => {
         }
     });
 
+    it("traces the floor's stairs: their footprint and treads", () => {
+        const stair = {
+            id: 1, name: 'Stairs', shape: 'Straight', x: 1000, y: 500, rotation: 0, width: 900, going: 270, risers: 4, firstFlight: null,
+            turn: 'Left', gap: 100, construction: 'Solid', railing: 'Right', treadMaterialId: null, structureMaterialId: null,
+        } as const;
+        const traced = buildGhost({walls, rooms: [room], stairs: [stair], stairRise: 720});
+        const lines = traced.getObjectByName('ghost-stairs') as THREE.LineSegments;
+        // The footprint and three treads, four sides each.
+        expect(planPoints(lines)).toHaveLength(4 * 4 * 2);
+        expect(planPoints(lines)).toContainEqual({x: 550, y: 1310});
+        expect(buildGhost({walls, rooms: [room]}).getObjectByName('ghost-stairs')).toBeUndefined();
+    });
+
     it('disposes of its lines and leaves the scene', () => {
         const scene = new THREE.Scene();
         scene.add(ghost);

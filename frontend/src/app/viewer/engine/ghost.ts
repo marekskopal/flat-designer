@@ -2,9 +2,10 @@ import {Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {MM, polylineSegments, Vec2, wallFaces, wallJoints} from './plan-geometry';
+import {stairGeometry} from './stairs';
 
-/** The floor below the shown one, traced in the top view: its walls and room outlines. */
-export type GhostFloor = Pick<Scene, 'walls' | 'rooms'>;
+/** The floor below the shown one, traced in the top view: its walls, room outlines and stairs. */
+export type GhostFloor = Pick<Scene, 'walls' | 'rooms'> & Partial<Pick<Scene, 'stairs' | 'stairRise'>>;
 
 const GhostColor = '#3d6fa8';
 /** Over the underlay (0.002), under nothing: the lines draw without a depth test. */
@@ -35,6 +36,17 @@ export function buildGhost(floor: GhostFloor): THREE.Group {
     const rooms = ghostLines(roomSegments, dashed, 'ghost-rooms');
     rooms.computeLineDistances();
     group.add(rooms);
+
+    // The stairs: their footprints and treads, so a stairwell can be lined up over them.
+    const stairSegments = (floor.stairs ?? []).flatMap((stair) => {
+        const geometry = stairGeometry(stair, floor.stairRise ?? 0);
+        return [geometry.footprint, ...geometry.treads.map((t) => t.outline), ...geometry.landings.map((l) => l.outline)]
+            .filter((outline) => outline.length >= 2)
+            .flatMap((outline) => polylineSegments([...outline, outline[0]]));
+    });
+    if (stairSegments.length > 0) {
+        group.add(ghostLines(stairSegments, new THREE.LineBasicMaterial({color: GhostColor, transparent: true, opacity: 0.45}), 'ghost-stairs'));
+    }
     return group;
 }
 
