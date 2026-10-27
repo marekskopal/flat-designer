@@ -13,4 +13,5 @@ enum ElementTypeEnum: string
 	case Group = 'Group';
 	case VariantSet = 'VariantSet';
 	case Plot = 'Plot';
+	case Stair = 'Stair';
 }

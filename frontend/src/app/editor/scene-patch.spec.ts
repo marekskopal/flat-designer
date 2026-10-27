@@ -1,5 +1,5 @@
 import {Change, EditResult} from '@app/models/editor';
-import {Item, Opening, Scene, Wall} from '@app/models/scene';
+import {Item, Opening, Scene, Stair, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {patchScene} from './scene-patch';
@@ -137,6 +137,32 @@ describe('patchScene', () => {
         expect(added?.plots).toEqual([plot]);
         expect(patchScene({...added!, revision: 7}, result('Plot', 4, {...plot, name: 'Lot'}))?.plots?.[0].name).toBe('Lot');
         expect(patchScene({...added!, revision: 7}, result('Plot', 4, null))?.plots).toEqual([]);
+    });
+
+    it('adds, changes and removes stairs, also in scenes saved before them', () => {
+        const stair: Stair = {
+            id: 5,
+            name: 'Stairs',
+            shape: 'Straight',
+            x: 1000,
+            y: 500,
+            rotation: 0,
+            width: 900,
+            going: 270,
+            risers: null,
+            firstFlight: null,
+            turn: 'Left',
+            gap: 100,
+            construction: 'Solid',
+            railing: 'Right',
+            treadMaterialId: null,
+            structureMaterialId: null,
+        };
+        const added = patchScene(scene, result('Stair', 5, stair as unknown as Record<string, unknown>));
+        expect(added?.stairs).toEqual([stair]);
+        const changed = {...stair, shape: 'LShaped'} as unknown as Record<string, unknown>;
+        expect(patchScene({...added!, revision: 7}, result('Stair', 5, changed))?.stairs?.[0].shape).toBe('LShaped');
+        expect(patchScene({...added!, revision: 7}, result('Stair', 5, null))?.stairs).toEqual([]);
     });
 
     it('applies every change of a batch', () => {

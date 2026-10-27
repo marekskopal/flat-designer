@@ -1,5 +1,5 @@
 import {Change, EditResult} from '@app/models/editor';
-import {Group, Item, Opening, Plot, Room, Scene, VariantSet, Wall} from '@app/models/scene';
+import {Group, Item, Opening, Plot, Room, Scene, Stair, VariantSet, Wall} from '@app/models/scene';
 
 /**
  * The scene after an edit, undo or redo, built from the result's element state instead of loading the
@@ -52,6 +52,8 @@ function patchElements(scene: Scene, change: Change, element: Record<string, unk
         }
         case 'Plot':
             return {...scene, plots: upsert(scene.plots ?? [], id, element as unknown as Plot | null)};
+        case 'Stair':
+            return {...scene, stairs: upsert(scene.stairs ?? [], id, element as unknown as Stair | null)};
         case 'Wall':
             return patchWall(scene, id, element);
         case 'Opening':

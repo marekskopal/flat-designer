@@ -87,6 +87,50 @@ export interface Plot {
     groundLevel?: number;
 }
 
+export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral';
+export type StairTurn = 'Left' | 'Right';
+export type StairConstruction = 'Solid' | 'Stringers' | 'Open';
+export type StairRailing = 'None' | 'Left' | 'Right' | 'Both';
+
+/**
+ * Stairs from their floor up to the next one (`StairDto`, FD-37). The rise is not a field but the scene's `stairRise`.
+ * (x, y) is the middle of the first step's front edge and `rotation` the walking-up direction.
+ */
+export interface Stair {
+    id: number;
+    name: string;
+    shape: StairShape;
+    x: number;
+    y: number;
+    /** Degrees counter-clockwise, 0 walks up north (+y). */
+    rotation: number;
+    /** mm, the flight's width; a spiral's diameter. */
+    width: number;
+    /** mm, a tread's depth. */
+    going: number;
+    /** Null: as few as keep each riser at most 180 mm. */
+    risers: number | null;
+    /** L and U: risers up to the landing; null halves them. */
+    firstFlight: number | null;
+    /** The way an L or U turns, or a spiral winds. */
+    turn: StairTurn;
+    /** mm between the flights of a U. */
+    gap: number;
+    construction: StairConstruction;
+    /** Which side has a railing, walking up. */
+    railing: StairRailing;
+    treadMaterialId: number | null;
+    structureMaterialId: number | null;
+}
+
+/** The floor below's stairs that come up through a floor (`StairsBelowDto`): their voids cut through it. */
+export interface StairsBelow {
+    floorId: number;
+    /** mm, their rise. */
+    rise: number;
+    stairs: Stair[];
+}
+
 export interface Room {
     id: number;
     code: string;
@@ -266,6 +310,12 @@ export interface Scene {
     pictures?: number[];
     /** The land around the building; absent in older versions. */
     plots?: Plot[];
+    /** The stairs starting on this floor; absent in older versions. */
+    stairs?: Stair[];
+    /** mm the floor's stairs climb (`StairRise`): to the next floor up, or over the tallest wall on the top floor; absent in older versions. */
+    stairRise?: number;
+    /** The stairs of the floor below coming up through this one; null without a floor below, absent in older versions. */
+    stairsBelow?: StairsBelow | null;
     /** Where the building stands, for the sun; absent in older versions. */
     location?: SiteLocation | null;
 }

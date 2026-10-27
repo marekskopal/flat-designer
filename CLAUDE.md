@@ -314,8 +314,40 @@ format is the text in `FurnitureTools::Format`.
   `groundLevel` (mm, ±10000) moves its ground, which is cut out under the rooms lying lower than it (`groundHoles()`, so
   the house's rooms show on a raised plot); the surroundings' disc goes under the lowest plot or room
   (`lowestGround()`). Changed rooms rebuild the plots and changed plots the levelled rooms. The walkthrough's eye stays
-  at eye height over the floor underfoot (`floorLevels()`: the smallest room there, else the plot, else 0); steps do
-  not block it.
+  at eye height over the floor underfoot (`floorLevels()`: a stair there, else the smallest room, else the plot, else
+  0); steps do not block it.
+
+## Stairs (FD-37)
+
+- The plan is `docs/stairs-plan.md`. A `Stair` (`stairs`, element type `Stair`, `StairHandler` through `SceneEditor`:
+  undo, change log; REST `…/stairs`, MCP `add_stair` / `update_stair` / `delete_stair`) belongs to the floor it starts
+  on and climbs to the next one up. (x, y) is the middle of the first step's front edge and `rotation` the walking-up
+  direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights)
+  or Spiral (`width` is then the diameter); `firstFlight` is the risers up to the landing (null halves them), `turn`
+  the way it turns or winds. Also `going`, `construction` (Solid, Stringers, Open), `railing` and two materials.
+- The rise comes from the floors (`StairRise`): the next floor up's elevation minus the floor's (`above()`: the lowest
+  of the higher levels), or the tallest wall plus the slab a floor stacked on it would get (`FloorStack::defaultSlab()`)
+  on the top floor. It is not a field: the scene carries it as `stairRise`, so a floor's new elevation changes the steps
+  without changing (or blocking the undo of) the stair. `risers` null takes as few risers as keep each at most 180 mm; a
+  count given must make them 140–220 mm, checked only when the count (or the landing's split) is set anew.
+- The scene's `stairsBelow` (`StairsBelowDto`) are the stairs of the floor below (`below()`: the highest lower floor
+  whose stairs climb to this one, so a mezzanine on the same level gets none) with their rise: they cut their voids (the
+  stair's footprint) through this floor. Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive
+  `stairRise` and `stairsBelow` from its other floors (`SnapshotStairs`).
+- The geometry is TS only, as the ceilings are; the backend checks ranges. `viewer/engine/stairs.ts`:
+  `stairGeometry(stair, rise)` lays out the flights (`StairFlight`: origin, direction, base, first riser, risers),
+  landings, every tread with its top, the footprint, the walking line and the handrail paths (`RailHeight` over the
+  nosings; the outer rail runs round the landing); `stairRisers()` / `stairFirstFlight()` twin the backend's rules.
+  `buildStair()` draws it in a group at (x, y) tagged `stairId` (merged; a solid flight is the sawtooth over a sloping
+  soffit, with a section-fill twin; stringers get tread and riser boards; a spiral is wedge treads round a pole).
+  `BuildingParts.stairs` holds them; `buildStairsBelow()` draws `stairsBelow` under the floor, untagged and not
+  pickable (`parts.stairsBelow`, hidden while the stack draws that floor). The voids are `sceneVoids()`: the floor
+  below's footprints are cut out of the slab and the room floors, the floor's own out of its flat ceilings (vaults stay
+  whole), by `cutVoids()` (`polygon-clipping`, so a void over an outline's edge notches it; `cutShape()` makes the
+  `THREE.Shape`). `applyChanges()` rebuilds a changed stair (all when `stairRise` changed) and the rooms its old or new
+  footprint reaches (`roomsCutBy()`); a changed `stairsBelow` rebuilds the slab and those rooms. Stairs are selected,
+  dragged (x, y), nudged and turned with R like items; the inspector's `stair` fields get `stairRise` beside them for
+  the step hint (`stairStepHint()`, 2R + G).
 
 ## Lighting
 
@@ -434,6 +466,17 @@ format is the text in `FurnitureTools::Format`.
   (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`): the walker stands at the same plan point if it lies in one of
   the floor's rooms, else where a walk of the floor starts, with its doors closed as at a walk's start. Any other
   floor change ends the walk. Share links have one floor, so guests cannot.
+- Stairs (FD-78, `stairs.ts`): `stairPaths()` are the floor's own stairs and those coming up through it (`stairsBelow`,
+  under the floor by their rise), laid out once per `load()` (`walkStairs`) for the colliders and `floorLevels()`. Over
+  one, the eye follows the walking line (`stairSpot()`, a smooth ramp; where lines pass beside or over one another, a
+  U's flights, a spiral's windings, an upper stair over the void of the lower one, the stretch nearest the walker's
+  last height wins: `Walkthrough` passes it, and `setFloorLevels(levels, level)` carries it over to a floor walked
+  onto). `stairColliders()` block a stair's sides, open where the floor's own stairs start and where those from below
+  arrive (`StairPath.open`: half the flight's width, or a tread's turn round a spiral; the stairwell's other edges are
+  its railing, and an upper floor's walls over a stairwell block too). Within `StairLanding` of the top, or of the
+  bottom of a stair from below, `ViewerEngine.followStairs()` walks to the next floor as PageUp / PageDown do; the
+  walker keeps the spot they have reached when it loads, and no further floor until they leave the landing zone
+  (`stairArrival`). While climbing, the floor above is not drawn until it loads.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
   tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.

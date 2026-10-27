@@ -50,6 +50,7 @@ import {
     WindowFrameBar,
 } from './plan-geometry';
 import {buildPlot, groundUnder} from './plots';
+import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
 import {alignTiles, turnLevelUvs} from './tiling';
 
 /** Bars of a French window sash, mm. */
@@ -66,6 +67,10 @@ export interface BuildingParts {
     rooms: Map<number, RoomParts>;
     /** Plots (their ground and boundary) keyed by plot id. */
     plots: Map<number, THREE.Group>;
+    /** The floor's stairs keyed by stair id. */
+    stairs: Map<number, THREE.Group>;
+    /** The floor below's stairs coming up through this floor (`buildStairsBelow()`); hidden while the stack draws that floor. */
+    stairsBelow: THREE.Group;
     /** Wall groups (with their doors and windows) keyed by wall id. */
     walls: Map<number, THREE.Group>;
     /** Fill of wall cores revealed by the section plane, shared by all walls. */
@@ -81,32 +86,42 @@ export interface RoomParts {
 }
 
 /**
- * Builds the static architecture: slab, floors, ceilings, walls with their doors and windows. The parts are
- * kept apart so a changed room or wall can be rebuilt on its own (`buildRoom`, `buildWall`).
+ * Builds the static architecture: slab, floors, ceilings, walls with their doors and windows, stairs. The parts are
+ * kept apart so a changed room or wall can be rebuilt on its own (`buildRoom`, `buildWall`). The stairs' voids
+ * (`sceneVoids()`) are cut through the slab and room floors (the floor below's stairs) and the flat ceilings (its own).
  */
 export function buildBuilding(scene: Scene, materials: MaterialLibrary): BuildingParts {
     const root = new THREE.Group();
     root.name = 'building';
     const ceilings = new THREE.Group();
     ceilings.name = 'ceilings';
+    const voids = sceneVoids(scene);
+    const sectionMaterial = materials.sectionFill();
     const parts: BuildingParts = {
         root,
         ceilings,
         ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
-        slab: buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials),
+        slab: buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below),
         rooms: new Map(),
         plots: new Map(),
+        stairs: new Map(),
+        stairsBelow: buildStairsBelow(scene.stairsBelow, materials, sectionMaterial),
         walls: new Map(),
-        sectionMaterial: materials.sectionFill(),
+        sectionMaterial,
     };
-    root.add(parts.slab);
+    root.add(parts.slab, parts.stairsBelow);
 
     for (const room of scene.rooms) {
-        addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? []), room.id);
+        addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids), room.id);
     }
     for (const plot of scene.plots ?? []) {
         const group = buildPlot(plot, materials, scene.rooms);
         parts.plots.set(plot.id, group);
+        root.add(group);
+    }
+    for (const stair of scene.stairs ?? []) {
+        const group = buildStair(stair, scene.stairRise ?? 0, materials, sectionMaterial);
+        parts.stairs.set(stair.id, group);
         root.add(group);
     }
 
@@ -125,12 +140,19 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
 
 /**
  * Floor, ceiling and wall finishes of one room (the finishes leave the walls' door openings free), all at the room's
- * floor elevation; the floor's edge steps down (or up) to the ground of the plot the room lies on.
+ * floor elevation; the floor's edge steps down (or up) to the ground of the plot the room lies on. The stairs' voids
+ * are cut out of the floor (the floor below's stairs) and a flat ceiling (the floor's own).
  */
-export function buildRoom(room: Room, walls: readonly Wall[], materials: MaterialLibrary, plots: readonly Plot[] = []): RoomParts {
+export function buildRoom(
+    room: Room,
+    walls: readonly Wall[],
+    materials: MaterialLibrary,
+    plots: readonly Plot[] = [],
+    voids: SceneVoids = NoVoids,
+): RoomParts {
     const parts: RoomParts = {
-        floor: buildFloor(room, materials, groundUnder(room, plots)),
-        ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials),
+        floor: buildFloor(room, materials, groundUnder(room, plots), voids.below),
+        ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials, voids.own),
         finishes: buildRoomFinishes(room, walls, materials),
     };
     parts.ceiling?.position.setY(parts.ceiling.position.y + (room.floorElevation ?? 0) * MM);
@@ -162,9 +184,15 @@ const UnslabbedRooms: readonly Room['type'][] = ['Garden', 'Path', 'Driveway'];
  * The slab under the floor, `thickness` mm deep: under its rooms (not gardens, paths and driveways, which lie on the
  * ground; a room's piece hangs under its own floor elevation) and its walls' footprints, so an upper floor's slab
  * roofs only what it covers. The outlines are extruded and merged into one mesh; where they overlap, their faces lie
- * inside the solid or coincide.
+ * inside the solid or coincide. The `voids` (the stairs coming up from the floor below) are cut out of every piece.
  */
-export function buildSlab(walls: readonly Wall[], rooms: readonly Room[], thickness: number, materials: MaterialLibrary): THREE.Mesh {
+export function buildSlab(
+    walls: readonly Wall[],
+    rooms: readonly Room[],
+    thickness: number,
+    materials: MaterialLibrary,
+    voids: readonly PlanPoint[][] = [],
+): THREE.Mesh {
     const joints = wallJoints(walls);
     const outlines: {outline: Vec2[]; top: number}[] = [
         ...rooms
@@ -175,9 +203,14 @@ export function buildSlab(walls: readonly Wall[], rooms: readonly Room[], thickn
             return {outline: [...left, ...[...right].reverse()], top: 0};
         }),
     ].filter(({outline}) => outline.length >= 3);
-    const pieces = outlines.map(({outline, top}) => {
-        const shape = new THREE.Shape(outline.map((p) => new THREE.Vector2(p.x * MM, p.y * MM)));
-        const geometry = new THREE.ExtrudeGeometry(shape, {depth: thickness * MM, bevelEnabled: false});
+    const cut = outlines.flatMap(({outline, top}) =>
+        cutVoids(
+            outline.map((p): PlanPoint => [p.x, p.y]),
+            voids,
+        ).map((piece) => ({piece, top})),
+    );
+    const pieces = cut.map(({piece, top}) => {
+        const geometry = new THREE.ExtrudeGeometry(cutShape(piece), {depth: thickness * MM, bevelEnabled: false});
         geometry.rotateX(-Math.PI / 2);
         geometry.translate(0, (top - thickness) * MM, 0);
         // Merged pieces need the same attributes; the slab has no texture.
@@ -194,17 +227,24 @@ export function buildSlab(walls: readonly Wall[], rooms: readonly Room[], thickn
     return slab;
 }
 
-function roomShape(room: Room): THREE.Shape {
-    return new THREE.Shape(room.polygon.map(([x, y]) => new THREE.Vector2(x * MM, y * MM)));
+/** The room's outline less the voids, as one geometry in plan (x, y). */
+function roomSurface(room: Room, voids: readonly PlanPoint[][]): THREE.BufferGeometry {
+    const pieces = cutVoids(room.polygon, voids).map((piece) => new THREE.ShapeGeometry(cutShape(piece)));
+    if (pieces.length === 1) {
+        return pieces[0];
+    }
+    const geometry = pieces.length === 0 ? new THREE.BufferGeometry() : mergeGeometries(pieces);
+    pieces.forEach((piece) => piece.dispose());
+    return geometry;
 }
 
 /**
  * The room's floor at its elevation; `ground` (mm) is the level beside it, the plot's ground or the floor's level,
- * which the floor's edge steps down or up to when the two differ.
+ * which the floor's edge steps down or up to when the two differ. The `voids` (stairs coming up from below) are cut out.
  */
-export function buildFloor(room: Room, materials: MaterialLibrary, ground = 0): THREE.Mesh {
+export function buildFloor(room: Room, materials: MaterialLibrary, ground = 0, voids: readonly PlanPoint[][] = []): THREE.Mesh {
     // Shape in plan (x, y); rotating −90° about x lays it flat with plan y → scene −z. UVs stay in metres.
-    const geometry = new THREE.ShapeGeometry(roomShape(room));
+    const geometry = roomSurface(room, voids);
     geometry.rotateX(-Math.PI / 2);
     const grid = tileGrid(room);
     const material = materials.get(room.floorMaterialId);
@@ -272,14 +312,15 @@ const VaultSegments = 8;
 
 /**
  * The ceiling: a flat surface at the ceiling height, or vaults arching between beams (in their own material, white
- * paint by default). Faces down, seen from inside the room.
+ * paint by default). Faces down, seen from inside the room. A flat ceiling has the `voids` (the room's stairs going
+ * up) cut out; a vaulted one stays whole.
  */
-function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Group {
+function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly PlanPoint[][] = []): THREE.Group {
     const group = new THREE.Group();
     group.name = `ceiling:${room.code}`;
     const material = room.ceilingMaterialId == null ? materials.plain('#f7f6f3', 0.95) : materials.get(room.ceilingMaterialId);
     const profile = vaultProfile(room);
-    group.add(ceilingSurface(room, profile, material));
+    group.add(ceilingSurface(room, profile, material, voids));
     if (profile === null) {
         return group;
     }
@@ -305,30 +346,36 @@ function buildCeiling(room: Room, materials: MaterialLibrary): THREE.Group {
  * The ceiling's surface over the room's outline: one flat piece, or strips across the beams lifted to the vault
  * profile. UVs are metres along and across the beams.
  */
-function ceilingSurface(room: Room, profile: VaultProfile | null, material: THREE.Material): THREE.Mesh {
+function ceilingSurface(room: Room, profile: VaultProfile | null, material: THREE.Material, voids: readonly PlanPoint[][] = []): THREE.Mesh {
     const frame = vaultFrame(room.vaultAngle ?? 0);
     const along = (p: {x: number; y: number}): number => p.x * frame.u.x + p.y * frame.u.y;
     const across = (p: {x: number; y: number}): number => p.x * frame.v.x + p.y * frame.v.y;
     const outline = counterClockwise(room.polygon).map(([x, y]) => ({x, y}));
-    let strips = [outline];
+    let strips: {contour: Vec2[]; holes: Vec2[][]}[] = [{contour: outline, holes: []}];
     if (profile !== null) {
         const vs = outline.map(across);
         const breaks = vaultBreaks(Math.min(...vs), Math.max(...vs), profile, VaultSegments);
-        strips = breaks.slice(1).map((hi, i) => clipToBand(outline, frame.v, breaks[i], hi));
+        strips = breaks.slice(1).map((hi, i) => ({contour: clipToBand(outline, frame.v, breaks[i], hi), holes: []}));
+    } else if (voids.length > 0) {
+        strips = cutVoids(room.polygon, voids).map((piece) => ({
+            contour: counterClockwise(piece.outer.map((p): PlanPoint => [p.x, p.y])).map(([x, y]) => ({x, y})),
+            holes: piece.holes,
+        }));
     }
 
     const positions: number[] = [];
     const uvs: number[] = [];
     const indices: number[] = [];
-    for (const strip of strips.filter((s) => s.length >= 3)) {
+    for (const strip of strips.filter((s) => s.contour.length >= 3)) {
         const base = positions.length / 3;
-        for (const p of strip) {
+        for (const p of [...strip.contour, ...strip.holes.flat()]) {
             const height = profile === null ? (room.ceilingHeight ?? 0) : vaultHeight(across(p), profile);
             positions.push(p.x * MM, height * MM, -p.y * MM);
             uvs.push(along(p) * MM, across(p) * MM);
         }
         // Counter-clockwise in plan is clockwise seen from below once plan y becomes −z: the faces look down.
-        for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(strip.map((p) => new THREE.Vector2(p.x, p.y)), [])) {
+        const toVector = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x, p.y);
+        for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(strip.contour.map(toVector), strip.holes.map((hole) => hole.map(toVector)))) {
             indices.push(base + i, base + k, base + j);
         }
     }

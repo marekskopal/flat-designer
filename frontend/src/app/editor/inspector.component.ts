@@ -85,6 +85,10 @@ export class InspectorComponent {
         return formatFieldValue(def, this.element()[def.key]);
     }
 
+    protected hint(def: FieldDef): string | null {
+        return def.hint?.(this.element()) ?? null;
+    }
+
     /** The element's size (mm), which the definition's form evaluates at. */
     protected size(key: 'width' | 'depth' | 'height'): number {
         const value = this.element()[key];

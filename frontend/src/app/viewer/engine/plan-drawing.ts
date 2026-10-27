@@ -48,6 +48,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
+import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
 import {hiddenItemIds} from './variants';
 
 // The floor plan as a drawing on paper (A4, in paper mm): walls cut at `PlanCutHeight`, doors with their swings,
@@ -146,8 +147,9 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const itemShapes = items.map(itemShape);
     const walls = wallShapes(scene.walls);
     const openings = scene.walls.flatMap(openingShapes);
+    const stairs = stairPlanShapes(scene);
 
-    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings]);
+    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes]);
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
@@ -165,10 +167,10 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     };
     const dimensions = dimensionLabels(scene, s).filter(free);
     const itemLabels = items.flatMap((item) => itemLabel(item, s)).filter(free);
-    const labels = [...itemLabels, ...roomLabels, ...dimensions];
+    const labels = [...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
 
     const body = [
-        ...[...plots, ...rooms, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) =>
+        ...[...plots, ...rooms, ...stairs.shapes, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map((shape) =>
             shapeSvg(shape, toPaper),
         ),
         ...labels.map((label) => labelSvg(label, toPaper)),
@@ -423,6 +425,90 @@ function slideShapes(frame: WallFrame, leaf: Leaf, opening: Opening): Shape[] {
             leafRect(0, OutlineStyle),
         ]
         : [leafRect(leaf.travel, HiddenStyle), leafRect(0, OutlineStyle)];
+}
+
+/** The arrowhead of a walking line, plan mm. */
+const StairArrow = 250;
+const StairStyle: Style = {fill: ItemFill, stroke: Ink, width: 0.18};
+const StairHiddenStyle: Style = {stroke: Muted, width: 0.15, dash: '1 0.7'};
+const VoidStyle: Style = {stroke: Ink, width: 0.25};
+
+/**
+ * The stairs on the plan. The floor's own: the treads and landings under the cut drawn, those above it dashed, a
+ * break line across the flight where the cut passes, and the walking line from the first riser with an arrow and
+ * "UP". The floor below's stairs coming up through this floor: the void's outline, their treads dashed below it and
+ * their walking line arriving here.
+ */
+function stairPlanShapes(scene: Scene): {shapes: Shape[]; labels: Label[]} {
+    const shapes: Shape[] = [];
+    const labels: Label[] = [];
+    for (const stair of scene.stairs ?? []) {
+        const geometry = stairGeometry(stair, scene.stairRise ?? 0);
+        const steps = [...geometry.landings, ...geometry.treads].sort((a, b) => a.top - b.top);
+        for (const step of steps) {
+            shapes.push({points: step.outline, closed: true, style: step.top <= PlanCutHeight ? StairStyle : StairHiddenStyle});
+        }
+        const cutTread = geometry.treads.find((t) => t.top > PlanCutHeight);
+        if (cutTread !== undefined) {
+            shapes.push(breakLine(cutTread.outline));
+        }
+        shapes.push(...walkLineShapes(geometry.walkLine));
+        const start = geometry.walkLine[0];
+        if (start !== undefined) {
+            // On the first tread, half a going up the walking line.
+            const angle = stairAngle(geometry);
+            const at = {x: start.point.x + Math.cos(angle) * (stair.going / 2), y: start.point.y + Math.sin(angle) * (stair.going / 2)};
+            labels.push({at, lines: [{text: 'UP', size: 1.8, bold: true}], angle});
+        }
+    }
+    const below = scene.stairsBelow ?? null;
+    for (const stair of below?.stairs ?? []) {
+        const geometry = stairGeometry(stair, below?.rise ?? 0);
+        for (const step of [...geometry.landings, ...geometry.treads]) {
+            shapes.push({points: step.outline, closed: true, style: StairHiddenStyle});
+        }
+        shapes.push({points: geometry.footprint, closed: true, style: VoidStyle});
+        shapes.push(...walkLineShapes(geometry.walkLine));
+    }
+    return {shapes, labels};
+}
+
+/** The cut through a flight: a line across the tread's front edge with a zigzag in its middle. */
+function breakLine(outline: readonly Vec2[]): Shape {
+    const [a, b] = [outline[0], outline[outline.length - 1]];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const normal = {x: -dy / length, y: dx / length};
+    const at = (t: number, off: number): Vec2 => ({x: a.x + dx * t + normal.x * off, y: a.y + dy * t + normal.y * off});
+    return {points: [at(0, 0), at(0.42, 0), at(0.47, 80), at(0.53, -80), at(0.58, 0), at(1, 0)], closed: false, style: VoidStyle};
+}
+
+/** A walking line with an arrowhead at its end. */
+function walkLineShapes(walk: readonly StairLinePoint[]): Shape[] {
+    if (walk.length < 2) {
+        return [];
+    }
+    const points = walk.map((p) => p.point);
+    const end = points[points.length - 1];
+    const before = points[points.length - 2];
+    const length = Math.hypot(end.x - before.x, end.y - before.y) || 1;
+    const d = {x: (end.x - before.x) / length, y: (end.y - before.y) / length};
+    const side = {x: -d.y, y: d.x};
+    const head = (s: number): Vec2 => ({
+        x: end.x - d.x * StairArrow + side.x * s * StairArrow * 0.4,
+        y: end.y - d.y * StairArrow + side.y * s * StairArrow * 0.4,
+    });
+    return [
+        {points, closed: false, style: ThinStyle},
+        {points: [head(1), end, head(-1)], closed: false, style: ThinStyle},
+    ];
+}
+
+/** The plan angle (radians) of the stair's first stretch of walking line, for its "UP". */
+function stairAngle(geometry: StairGeometry): number {
+    const [a, b] = geometry.walkLine;
+    return b === undefined ? 0 : Math.atan2(b.point.y - a.point.y, b.point.x - a.point.x);
 }
 
 /** An item's footprint: a column filled like the walls, an item above the cut (a wall cabinet, a beam, a lamp) dashed. */

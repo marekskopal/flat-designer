@@ -11,6 +11,7 @@ use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\PlotHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
+use FlatDesigner\Service\Editor\Element\StairHandler;
 use FlatDesigner\Service\Editor\Element\VariantSetHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
 
@@ -24,6 +25,7 @@ final readonly class ElementHandlers
 		private GroupHandler $groupHandler,
 		private VariantSetHandler $variantSetHandler,
 		private PlotHandler $plotHandler,
+		private StairHandler $stairHandler,
 	) {
 	}
 
@@ -37,6 +39,7 @@ final readonly class ElementHandlers
 			ElementTypeEnum::Group => $this->groupHandler,
 			ElementTypeEnum::VariantSet => $this->variantSetHandler,
 			ElementTypeEnum::Plot => $this->plotHandler,
+			ElementTypeEnum::Stair => $this->stairHandler,
 		};
 	}
 }

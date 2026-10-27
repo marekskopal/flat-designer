@@ -221,8 +221,8 @@ export class ViewerPageComponent {
         if (!this.floorBelowShown() || !this.floorBelowScene.hasValue()) {
             return null;
         }
-        const {walls, rooms} = this.floorBelowScene.value();
-        return {walls, rooms};
+        const {walls, rooms, stairs, stairRise} = this.floorBelowScene.value();
+        return {walls, rooms, stairs, stairRise};
     });
     /** All floors: the floors under this one are drawn below it at their levels, those above are left out. */
     protected readonly allFloors = signal(false);

@@ -237,6 +237,34 @@ describe('buildFloor', () => {
         throw new Error(`No vertex at ${x}, ${y}`);
     };
 
+    it('cuts the stairs\' voids out of the floor, the slab and a flat ceiling', () => {
+        const triangles = (object: THREE.Object3D): number => {
+            let count = 0;
+            object.traverse((o) => {
+                if (o instanceof THREE.Mesh) {
+                    const geometry = o.geometry as THREE.BufferGeometry;
+                    count += (geometry.index?.count ?? geometry.getAttribute('position').count) / 3;
+                }
+            });
+            return count;
+        };
+        const inside: PlanPoint[] = [
+            [500, 250],
+            [1000, 250],
+            [1000, 750],
+            [500, 750],
+        ];
+        const plain = buildFloor(room(), materials);
+        const holed = buildFloor(room(), materials, 0, [inside]);
+        expect(triangles(plain)).toBe(2);
+        expect(triangles(holed)).toBeGreaterThan(2);
+        // The slab, and the room's own stairs' void in its ceiling.
+        expect(triangles(buildSlab([], [room()], 300, materials, [inside]))).toBeGreaterThan(triangles(buildSlab([], [room()], 300, materials)));
+        const parts = buildRoom(room(), [], materials, [], {own: [inside], below: []});
+        expect(triangles(parts.ceiling as THREE.Group)).toBeGreaterThan(2);
+        expect(triangles(parts.floor)).toBe(2);
+    });
+
     it('lifts a raised floor, its ceiling with it, and closes the step with an edge down to the floor level', () => {
         const deck = {...room(), floorElevation: 450};
         const parts = buildRoom(deck, [], materials);

@@ -37,6 +37,7 @@ final readonly class ElementController
 		'groups' => ElementTypeEnum::Group,
 		'variant-sets' => ElementTypeEnum::VariantSet,
 		'plots' => ElementTypeEnum::Plot,
+		'stairs' => ElementTypeEnum::Stair,
 	];
 
 	public function __construct(

@@ -51,11 +51,11 @@ use const JSON_THROW_ON_ERROR;
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], location: LocationDto, floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
  * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
- * plots: [PlotDto]}],
+ * plots: [PlotDto], stairs: [StairDto]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
  * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
  * and walls by `FloorStack`)
- * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` missing in snapshots taken before they
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` missing in snapshots taken before they
  * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
@@ -81,6 +81,7 @@ final readonly class ProjectSnapshotService
 		private SnapshotDefinitionRestorer $definitionRestorer,
 		private SnapshotUnderlayRestorer $underlayRestorer,
 		private SnapshotPlotRestorer $plotRestorer,
+		private SnapshotStairRestorer $stairRestorer,
 		private SnapshotViewRestorer $viewRestorer,
 		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
@@ -104,6 +105,7 @@ final readonly class ProjectSnapshotService
 				'models' => $scene->models,
 				'pictures' => $scene->pictures,
 				'plots' => $scene->plots,
+				'stairs' => $scene->stairs,
 			];
 		}
 
@@ -204,6 +206,7 @@ final readonly class ProjectSnapshotService
 			$this->underlayRestorer->restore($project, $floor, $entry);
 			$roomIds = $this->restoreRooms($floor, $entry->objects('rooms'), $materials);
 			$this->plotRestorer->restore($floor, $entry, $materials);
+			$this->stairRestorer->restore($floor, $entry, $materials);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
 			$setIds = $this->restoreVariantSets($floor, $sets);

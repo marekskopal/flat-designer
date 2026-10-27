@@ -15,6 +15,8 @@ use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
 use FlatDesigner\Dto\SceneModelDto;
+use FlatDesigner\Dto\StairDto;
+use FlatDesigner\Dto\StairsBelowDto;
 use FlatDesigner\Dto\UnderlayDto;
 use FlatDesigner\Dto\VariantSetDto;
 use FlatDesigner\Dto\WallDto;
@@ -26,8 +28,10 @@ use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
+use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\FloorUnderlayRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
@@ -35,8 +39,10 @@ use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
+use FlatDesigner\Service\Editor\StairRise;
 use FlatDesigner\Service\Project\ShownPictures;
 
 /** Builds the viewer's scene of one floor of the working copy. */
@@ -51,7 +57,10 @@ final readonly class SceneProvider
 		private ItemGroupRepository $groupRepository,
 		private VariantSetRepository $variantSetRepository,
 		private FloorUnderlayRepository $underlayRepository,
+		private FloorRepository $floorRepository,
 		private PlotRepository $plotRepository,
+		private StairRepository $stairRepository,
+		private StairRise $stairRise,
 		private ShownPictures $shownPictures,
 	) {
 	}
@@ -85,6 +94,7 @@ final readonly class SceneProvider
 		ksort($definitions);
 		ksort($models);
 		$underlay = $this->underlayRepository->findByFloor($floor->id);
+		$floors = $this->floorRepository->findByProject($floor->project->id);
 
 		return new SceneDto(
 			floor: FloorDto::fromEntity($floor),
@@ -107,7 +117,28 @@ final readonly class SceneProvider
 			pictures: $this->shownPictures->byItems($floor->project, $items),
 			location: LocationDto::fromEntity($floor->project),
 			plots: array_map(fn (Plot $plot): PlotDto => PlotDto::fromEntity($plot), $this->plotRepository->findByFloor($floor->id)),
+			stairs: $this->stairs($floor),
+			stairRise: $this->stairRise->of($floor, $floors, $walls),
+			stairsBelow: $this->stairsBelow($floor, $floors),
 		);
+	}
+
+	/** @return list<StairDto> */
+	private function stairs(Floor $floor): array
+	{
+		return array_map(fn (Stair $stair): StairDto => StairDto::fromEntity($stair), $this->stairRepository->findByFloor($floor->id));
+	}
+
+	/**
+	 * The stairs of the floor below that come up through this one; null without a floor below.
+	 *
+	 * @param list<Floor> $floors the project's floors
+	 */
+	private function stairsBelow(Floor $floor, array $floors): ?StairsBelowDto
+	{
+		$below = $this->stairRise->floorBelow($floor, $floors);
+
+		return $below === null ? null : new StairsBelowDto($below->id, $this->stairRise->of($below, $floors), $this->stairs($below));
 	}
 
 	/** @return list<MaterialDto> */

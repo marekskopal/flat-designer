@@ -10,7 +10,8 @@ use stdClass;
 
 /**
  * Floor scenes served straight from a decoded snapshot (`ProjectSnapshotService::getFloorScene()` /
- * `getFloorScenes()`), shaped like `SceneDto`: the floor's entry with the snapshot's materials and location, its floor
+ * `getFloorScenes()`), shaped like `SceneDto`: the floor's entry with the snapshot's materials and location, the stairs'
+ * rise and the stairs coming up from below (`SnapshotStairs`), its floor
  * stacked by `FloorStack` when the snapshot predates stacked floors. Decoded to objects rather than arrays so empty JSON
  * objects (item params) stay objects when re-encoded.
  */
@@ -43,13 +44,21 @@ final class SnapshotScenes
 			return $stack;
 		};
 
+		$sceneFloors = [];
+		foreach ($floors as $f) {
+			$id = $f['id'];
+			$sceneFloors[$id] = FloorStack::sceneFloor($f['floor'], fn (): array => $stacked()[$id]);
+		}
+		$stairs = new SnapshotStairs($floors, $sceneFloors);
+
 		$result = ['scene' => null, 'below' => []];
 		foreach ($chosen as $f) {
 			$scene = clone $f['entry'];
 			$id = $f['id'];
-			$scene->floor = FloorStack::sceneFloor($f['floor'], fn (): array => $stacked()[$id]);
+			$scene->floor = $sceneFloors[$id];
 			$scene->materials = $data->materials ?? [];
 			$scene->location = $data->location ?? null;
+			$stairs->addTo($scene, $f);
 			if ($id === $floorId) {
 				$result['scene'] = $scene;
 			} else {

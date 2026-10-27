@@ -1,5 +1,5 @@
 import {levelText} from '@app/core/level-text';
-import {Floor, Item, Opening, PlanPoint, Room, Scene, Wall} from '@app/models/scene';
+import {Floor, Item, Opening, PlanPoint, Room, Scene, Stair, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {planLayout, planSheet, roomScheduleSheets} from './plan-drawing';
@@ -286,6 +286,45 @@ describe('planSheet fixes from review', () => {
         const svg = planSheet(scene({items: [item(1, {kind: 'Column', name: 'C1', width: 300, depth: 300, params: {shape: 'round'}})]}), info).svg;
         const column = svg.match(/<path d="M[^"]*" fill="#2f2c28"\/>/g)?.find((p) => (p.match(/ L /g) ?? []).length === 31);
         expect(column).toBeDefined();
+    });
+});
+
+describe('planSheet stairs', () => {
+    const stair: Stair = {
+        id: 1,
+        name: 'Stairs',
+        shape: 'Straight',
+        x: 2000,
+        y: 200,
+        rotation: 0,
+        width: 900,
+        going: 250,
+        risers: 12,
+        firstFlight: null,
+        turn: 'Left',
+        gap: 100,
+        construction: 'Solid',
+        railing: 'Right',
+        treadMaterialId: null,
+        structureMaterialId: null,
+    };
+    const treadPaths = (svg: string, dashed: boolean): number =>
+        (svg.match(/<path d="[^"]*Z"[^>]*\/>/g) ?? []).filter(
+            (p) => p.includes('stroke-dasharray') === dashed && p.includes('#f3f0ea') !== dashed,
+        ).length;
+
+    it("draws a stair's treads under the cut, those above dashed, the break line and the walking line with UP", () => {
+        // 12 risers of 200: the treads at 200 … 1200 are under the 1300 mm cut, the five from 1400 up above it.
+        const sheet = planSheet(scene({stairs: [stair], stairRise: 2400}), info);
+        expect(treadPaths(sheet.svg, false)).toBe(6);
+        expect(treadPaths(sheet.svg, true)).toBe(5);
+        expect(texts(sheet.svg)).toContain('UP');
+    });
+
+    it("outlines the void of the floor below's stairs with their treads dashed, and no UP", () => {
+        const sheet = planSheet(scene({stairsBelow: {floorId: 9, rise: 2400, stairs: [stair]}}), {...info, floorName: 'First floor'});
+        expect(treadPaths(sheet.svg, true)).toBe(11);
+        expect(texts(sheet.svg)).not.toContain('UP');
     });
 });
 
