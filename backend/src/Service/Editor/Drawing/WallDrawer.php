@@ -23,7 +23,7 @@ final readonly class WallDrawer
 	public const int MaxPoints = 200;
 
 	/** Fields shared by every wall of the run. */
-	public const array SharedFields = ['name', 'type', 'thickness', 'height', 'materialId'];
+	public const array SharedFields = ['name', 'type', 'thickness', 'height', 'materialId', 'upToRoof'];
 
 	private ElementHandler $walls;
 

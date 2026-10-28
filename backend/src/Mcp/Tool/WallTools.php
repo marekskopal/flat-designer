@@ -96,6 +96,7 @@ final readonly class WallTools
 	 * @param int|null $height mm, for every wall (default 2600)
 	 * @param string|null $type "Exterior" | "Interior" | "Shaft" (default Interior)
 	 * @param int|null $materialId surface material from list_materials
+	 * @param bool|null $upToRoof true: every wall rises to the underside of the roofs over it, as gables do (default false)
 	 */
 	#[McpTool(
 		name: 'add_walls',
@@ -113,6 +114,7 @@ final readonly class WallTools
 		?string $name = null,
 		?int $materialId = null,
 		?array $sagittas = null,
+		?bool $upToRoof = null,
 	): EditResultDto {
 		return $this->wallDrawer->drawWalls(
 			$this->context->user(),
@@ -125,6 +127,7 @@ final readonly class WallTools
 				'type' => $type,
 				'name' => $name,
 				'materialId' => $materialId,
+				'upToRoof' => $upToRoof,
 			]),
 			sagittas: $sagittas === null ? null : BodyReader::intList(['sagittas' => $sagittas], 'sagittas'),
 		);

@@ -399,10 +399,15 @@ final class McpServerTest extends IntegrationTestCase
 			'points' => [[-150, -150], [4150, -150], [4150, 3150], [-150, 3150]],
 			'closed' => true,
 			'thickness' => 300,
+			'upToRoof' => true,
 		]);
 		self::assertIsArray($walls);
 		self::assertIsList($walls['batch']);
 		self::assertCount(4, $walls['batch']);
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertIsList($floor['walls']);
+		self::assertSame([true, true, true, true], array_column($floor['walls'], 'upToRoof'));
 
 		$outline = $this->client->call('find_room_outline', $ids + ['x' => 2000, 'y' => 1500]);
 		self::assertSame(['polygon' => [[0, 0], [4000, 0], [4000, 3000], [0, 3000]]], $outline);

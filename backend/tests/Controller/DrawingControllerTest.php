@@ -60,6 +60,13 @@ final class DrawingControllerTest extends EditorTestCase
 		self::assertCount(4, $this->sceneList('walls'));
 	}
 
+	public function testARunOfGablesRisesToTheRoof(): void
+	{
+		$this->drawWalls(['points' => [[0, 0], [0, 3000], [4000, 3000]], 'upToRoof' => true]);
+
+		self::assertSame([true, true], array_column($this->sceneList('walls'), 'upToRoof'));
+	}
+
 	public function testAnInvalidSegmentChangesNothing(): void
 	{
 		$revision = $this->revision();

@@ -18,7 +18,7 @@ final readonly class RoofTools
 	private const string Shape = 'A roof covers a rectangle, its eaves line: width × depth centred on (x, y), the ridge along the width, '
 		. 'turned by rotation. The underside is eaveHeight above the floor\'s level along the eaves line and rises at pitch inwards; '
 		. 'it reaches overhang past the eaves and vergeOverhang past the gables. Every wall of the floor is cut at the underside of '
-		. 'the roofs over it; a wall with upToRoof (update_wall) rises to it, as a gable does. An L- or T-shaped house takes two '
+		. 'the roofs over it; a wall with upToRoof (add_wall, add_walls, update_wall) rises to it, as a gable does. An L- or T-shaped house takes two '
 		. 'or three roofs.';
 
 	private const string Placement = 'A roof window lies in the plane of a pitched roof under its centre, which is given in the roof\'s '

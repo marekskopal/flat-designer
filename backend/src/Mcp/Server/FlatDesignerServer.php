@@ -62,7 +62,7 @@ final readonly class FlatDesignerServer
 		stand straight, so they have to be narrow enough for the curve. Stairs (add_stair) go on the floor they start
 		from and climb to the next one up, cutting their void through it. A roof (add_roof) goes on the floor it
 		covers; without a size it covers the floor's walls. Every wall is cut at the roof's underside, and the walls
-		under its gables are set to rise to it (update_wall upToRoof). Roof windows are added with add_roof_window.
+		under its gables are set to rise to it (upToRoof on add_wall, add_walls or update_wall). Roof windows are added with add_roof_window.
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);
