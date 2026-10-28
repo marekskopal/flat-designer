@@ -158,7 +158,13 @@ final readonly class SceneProvider
 	{
 		$below = $this->stairRise->floorBelow($floor, $floors);
 
-		return $below === null ? null : new StairsBelowDto($below->id, $this->stairRise->of($below, $floors), $this->stairs($below));
+		if ($below === null) {
+			return null;
+		}
+		// A stair with a rise of its own (garden steps) stays on its floor.
+		$through = array_values(array_filter($this->stairs($below), static fn (StairDto $stair): bool => $stair->rise === null));
+
+		return new StairsBelowDto($below->id, $this->stairRise->of($below, $floors), $through);
 	}
 
 	/** @return list<MaterialDto> */

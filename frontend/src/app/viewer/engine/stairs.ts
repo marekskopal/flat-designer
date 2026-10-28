@@ -136,11 +136,13 @@ export function flightRun(flight: StairFlight, going: number): number {
 }
 
 /**
- * Lays out a stair climbing `rise` mm. (x, y) is the middle of the first riser and `rotation` the walking-up direction.
+ * Lays out a stair climbing `floorRise` mm, or its own `rise`. (x, y) is the middle of the first riser and `rotation` the walking-up direction.
  * A straight stair is one flight; an L stair turns on a square quarter landing, a U stair comes back beside itself
  * over a half landing (`gap` between the flights); a spiral winds round a pole, `width` being its diameter.
  */
-export function stairGeometry(stair: Stair, rise: number): StairGeometry {
+export function stairGeometry(stair: Stair, floorRise: number): StairGeometry {
+    // A stair with a rise of its own (garden or deck steps, FD-87) climbs that, not to the next floor.
+    const rise = stair.rise ?? floorRise;
     const risers = stairRisers(rise, stair.risers);
     const riser = rise / risers;
     const going = stair.going;
@@ -400,7 +402,11 @@ export function stairFootprints(stairs: readonly Stair[], rise: number): PlanPoi
 export function sceneVoids(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBelow'>): SceneVoids {
     const below = scene.stairsBelow ?? null;
     return {
-        own: stairFootprints(scene.stairs ?? [], scene.stairRise ?? 0),
+        // Garden and deck steps (a rise of their own) stay on their floor: no void.
+        own: stairFootprints(
+            (scene.stairs ?? []).filter((s) => s.rise == null),
+            scene.stairRise ?? 0,
+        ),
         below: below === null ? [] : stairFootprints(below.stairs, below.rise),
     };
 }
@@ -470,7 +476,7 @@ export function buildStair(stair: Stair, rise: number, materials: MaterialLibrar
     const group = new THREE.Group();
     group.name = `stair:${stair.name}`;
     group.userData = {stairId: stair.id};
-    group.position.set(stair.x * MM, 0, -stair.y * MM);
+    group.position.set(stair.x * MM, (stair.baseZ ?? 0) * MM, -stair.y * MM);
 
     const solid = stair.construction === 'Solid' && stair.shape !== 'Spiral';
     const structure =
@@ -710,9 +716,10 @@ const SpiralOpening = 0.75;
 
 /**
  * A stair the walker may walk on: its walking line and footprint in plan mm, and how far its floor lies under the
- * shown one (0 for the floor's own stairs, −rise for those coming up from below). `below` marks the latter. `open`
- * says whether a footprint edge (by its middle) is where the walker steps on (the floor's own stairs) or off (those
- * from below).
+ * shown one (0 for the floor's own stairs, or their `baseZ`; −rise for those coming up from below). `below` marks the
+ * latter, `free` the floor's own with a rise of their own (garden steps, FD-87), which lead to no other floor and are
+ * open at both ends. `open` says whether a footprint edge (by its middle) is where the walker steps on (the floor's own
+ * stairs) or off (those from below).
  */
 export interface StairPath {
     walk: StairLinePoint[];
@@ -720,6 +727,7 @@ export interface StairPath {
     width: number;
     offset: number;
     below: boolean;
+    free: boolean;
     /** The walking line's plan length, mm. */
     length: number;
     open: (middle: Vec2) => boolean;
@@ -741,8 +749,15 @@ export function stairPaths(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBe
         for (let i = 1; i < walk.length; i++) {
             length += Math.hypot(walk[i].point.x - walk[i - 1].point.x, walk[i].point.y - walk[i - 1].point.y);
         }
-        return {walk, footprint: geometry.footprint, width: geometry.width, offset: below ? -rise : 0, below, length, open: opening(geometry, below)};
+        const free = !below && stair.rise != null;
+        const offset = below ? -rise : (stair.baseZ ?? 0);
+        const open = free ? either(opening(geometry, false), opening(geometry, true)) : opening(geometry, below);
+        return {walk, footprint: geometry.footprint, width: geometry.width, offset, below, free, length, open};
     };
+    const either =
+        (a: (middle: Vec2) => boolean, b: (middle: Vec2) => boolean) =>
+        (middle: Vec2): boolean =>
+            a(middle) || b(middle);
     const below = scene.stairsBelow ?? null;
     return [
         ...(scene.stairs ?? []).map((stair) => path(stair, scene.stairRise ?? 0, false)),
@@ -840,7 +855,7 @@ export function stairColliders(paths: readonly StairPath[]): WallCollider[] {
  * bottom of those coming up from below; 0 otherwise.
  */
 export function stairFloorStep(spot: StairSpot | null): 1 | -1 | 0 {
-    if (spot === null) {
+    if (spot === null || spot.path.free) {
         return 0;
     }
     if (!spot.path.below && spot.path.length - spot.s < StairLanding) {

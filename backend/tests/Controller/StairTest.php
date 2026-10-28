@@ -147,6 +147,43 @@ final class StairTest extends EditorTestCase
 		self::assertSame(422, $this->edit('POST', 'stairs', body: ['railing' => 'Middle'])->getStatusCode());
 	}
 
+	public function testGardenStepsHaveARiseOfTheirOwnAndStayOnTheirFloor(): void
+	{
+		// Over 900 mm: 5 risers of 180 mm; 3 would be 300 mm, too high.
+		$steps = $this->create('stairs', ['x' => 9000, 'y' => 2000, 'rise' => 900, 'baseZ' => -900, 'risers' => 5]);
+		self::assertSame([900, -900, 5], [$steps['rise'], $steps['baseZ'], $steps['risers']]);
+		self::assertSame(422, $this->edit('POST', 'stairs', body: ['rise' => 900, 'risers' => 3])->getStatusCode());
+		// Fewer than two risers of 140 mm.
+		self::assertSame(422, $this->edit('POST', 'stairs', body: ['rise' => 200])->getStatusCode());
+		$this->create('stairs', []);
+
+		// Only the stair up to the next floor comes up through it; a version keeps both fields.
+		$upper = Fixture::service(FloorProvider::class)->create($this->project, new FloorInputDto('First floor', 1, 3000));
+		$above = $this->jsonBody($this->request(
+			'GET',
+			sprintf('/api/projects/%d/floors/%d/scene', $this->project->id, $upper->id),
+			authenticatedAs: $this->user,
+		));
+		self::assertIsArray($above['stairsBelow']);
+		self::assertIsList($above['stairsBelow']['stairs']);
+		self::assertCount(1, $above['stairsBelow']['stairs']);
+		$versionId = $this->jsonBody(
+			$this->request('POST', sprintf('/api/projects/%d/versions', $this->project->id), [], $this->user),
+		)['id'];
+		self::assertIsInt($versionId);
+		$version = fn (int $floorId): array => $this->jsonBody($this->request(
+			'GET',
+			sprintf('/api/projects/%d/versions/%d/floors/%d/scene', $this->project->id, $versionId, $floorId),
+			authenticatedAs: $this->user,
+		));
+		self::assertIsList($version($this->floor->id)['stairs']);
+		self::assertSame([900, null], array_column($version($this->floor->id)['stairs'], 'rise'));
+		$first = $version($upper->id);
+		self::assertIsArray($first['stairsBelow']);
+		self::assertIsList($first['stairsBelow']['stairs']);
+		self::assertCount(1, $first['stairsBelow']['stairs']);
+	}
+
 	public function testAVersionKeepsTheStairsAndTheirRise(): void
 	{
 		$this->create('stairs', ['shape' => 'UShaped', 'gap' => 200]);

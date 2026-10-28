@@ -153,6 +153,22 @@ describe('buildWallFinishes', () => {
         expect(pieces(group, 'herringbone')).toHaveLength(3);
     });
 
+    it('stops a band at a wall\'s sloping top', () => {
+        // The south wall's top falls from 2000 at its start (x −50) to 800 at its end (x 2050): the 1200 band is whole
+        // until the top comes down to it (x about 1350) and follows it down past there.
+        const sloping: Wall = {...south([{materialId: 2, bottom: 0, top: 1200}]), height: 2000, heightEnd: 800};
+        const group = buildWallFinishes(room, [sloping], materials);
+        group.updateMatrixWorld(true);
+        const terrazzo = pieces(group, 'terrazzo');
+        const topAt = (x: number): number => {
+            const ray = new THREE.Raycaster(new THREE.Vector3(x * MM, 5, -0.001), new THREE.Vector3(0, -1, 0));
+            return Math.round(ray.intersectObjects(terrazzo)[0].point.y / MM);
+        };
+
+        expect(topAt(500)).toBe(1200);
+        expect(topAt(1900)).toBe(886);
+    });
+
     it('leaves a face with an empty list bare, and gives the room\'s bands to a face without its own', () => {
         expect(pieces(buildWallFinishes(room, [south([])], materials), 'herringbone')).toHaveLength(3);
         expect(pieces(buildWallFinishes(room, [south(null)], materials), 'herringbone')).toHaveLength(4);

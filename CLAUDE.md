@@ -319,12 +319,30 @@ format is the text in `FurnitureTools::Format`.
   down to the ground along the outline (`groundBeside()`; an indoor room's never up, as its walls stand there). A room
   is cut out of the ground where its floor lies below it anywhere (`groundHoles()`; a draped one where its elevation
   is negative). An item with `onGround` (`items.on_ground`) counts its z from the ground under its centre
-  (`ItemAssets.plots`; the sheets take `itemsOverFloor()`); a plot change rebuilds those items and every room. The
+  (`ItemAssets.plots`); a plot change rebuilds those items and every room. The
   walkthrough follows the ground and stops at slopes over 35° between two points on sloping ground
   (`FloorLevels.tooSteep`). The plan PDF draws contours every 0.5 m (the full metres heavier) and the spot heights with
   their levels. Editing: a selected plot's spot heights get blue handles in the top view (dragged); a
   double-click on its ground adds one at the ground's height, on a handle removes it; the inspector's `spots` field
   (`SpotHeightsComponent`) types them.
+- Site walls (FD-87): a wall's top may slope, `heightEnd` being its height at the end (`height` at the start, both
+  against the floor's level), and its bottom lie on a base (`baseStart` → `baseEnd`) or follow the ground (`onGround`,
+  the plots' `groundAt()`; PHP `Ground` with `Terrain`). The backend twins are `WallTop` (with `heightEnd`) and
+  `WallBottom` (`WallBase` checks the top stands 50 mm over the base and keeps the openings' sills on the bottom, when an
+  opening is placed anew or the wall gets a new base); the viewer's are `wallTopAt(wall, roofs, frame)` and
+  `wallBottomAt()` (`under-roof.ts`). Such a wall is built like one under roofs (`profiledWallPiece()`: `profileRuns()`
+  with a bottom per station, `curvedPrismAt()` with per-point bottoms; on the ground the faces are densified every
+  250 mm), stands on no slab (`isSiteWall()`), and a plot change rebuilds the walls on the ground. The own top and base
+  are linear along the wall, so `roofBreaks()` / `RoofBreaks` take them as `slopes` and the solids, the plan cut
+  (`cutStretches()`), the finish bands (`finishLining()` under `wallCap`), the open-air elevation faces and the
+  quantities (`RoomFaceUnderRoof`) bend where they cross a level. Turning the wall round turns the slope and the base
+  round too, as the finishes (`WallBase::turnedRound()`), and a wall on the ground moved along it keeps its sills on
+  it. Garden walls take the wall's `materialId` (exposed concrete, stone).
+- Fences (`Fence` items, `outdoor.ts`): `params.style` `Mesh` (welded mesh over an optional `baseBoard`, the default) or
+  `Boards` (vertical boards on two rails); `follow` `Rake` (the panels run with the ground) or `Step` (each bay level
+  over the highest ground under it) stands the fence on the ground (`standsOnGround()` in `items.ts`: `onGround` or
+  `fenceFollows()`; the sheets take `itemsOverFloor()`; the ground along its width comes from `ItemAssets.plots`); `gate: true` makes it one sliding leaf of boards on a track, `open` (0–1)
+  of its width slid along +x.
 - Levels: a room's `floorElevation` (mm, ±3000; a terrace a step down, a raised deck) lifts everything the room draws
   (`buildRoom()`: floor, ceiling and finishes, whose opening gaps are brought down to the room's floor; `buildFloor()`
   adds the upright `floor-edge`, 2 mm inside the outline, stepping to the ground beside the room: its plot's
@@ -350,6 +368,11 @@ format is the text in `FurnitureTools::Format`.
   on the top floor. It is not a field: the scene carries it as `stairRise`, so a floor's new elevation changes the steps
   without changing (or blocking the undo of) the stair. `risers` null takes as few risers as keep each at most 180 mm; a
   count given must make them 140–220 mm, checked only when the count (or the landing's split) is set anew.
+- Garden steps (FD-87): a stair with a `rise` of its own (100–6000 mm) climbs that from `baseZ` (its first riser's
+  height against the floor's level) instead of to the next floor: `stairGeometry()` takes it over the floor's rise, it
+  cuts no void (left out of `sceneVoids().own` and of `stairsBelow` in `SceneProvider` / `SnapshotStairs`), and the walk
+  climbs it from its base, open at both ends and leading to no other floor (`StairPath.free`). Deck steps, the steps
+  down a slope and a stair to a garden terrace are such stairs.
 - The scene's `stairsBelow` (`StairsBelowDto`) are the stairs of the floor below (`below()`: the highest lower floor
   whose stairs climb to this one, so a mezzanine on the same level gets none) with their rise: they cut their voids (the
   stair's footprint) through this floor. Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive

@@ -21,11 +21,15 @@ final readonly class RoofBreaks
 	 * @param Point $p
 	 * @param Point $q
 	 * @param list<float> $levels heights (mm above the floor's level)
+	 * @param list<array{float, float}> $slopes heights sloping straight from p to q (a wall's sloping top, FD-87)
 	 * @return list<float>
 	 */
-	public static function along(array $roofs, array $p, array $q, array $levels): array
+	public static function along(array $roofs, array $p, array $q, array $levels, array $slopes = []): array
 	{
 		$lines = array_map(static fn (float $level): array => [$level, 0.0], $levels);
+		foreach ($slopes as [$atP, $atQ]) {
+			$lines[] = [$atP, $atQ - $atP];
+		}
 		$ts = [0.0, 1.0];
 		foreach ($roofs as $roof) {
 			array_push($ts, ...self::edges($roof, $p, $q));

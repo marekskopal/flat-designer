@@ -29,6 +29,14 @@ class Stair extends AEntity
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
 
+	/** A rise of its own, mm (FD-87): the stair does not climb to the next floor (garden steps, deck steps); null: it does. */
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $rise = null;
+
+	/** Where its first riser stands, mm against the floor's level. */
+	#[Column(type: Type::Int)]
+	public int $baseZ = 0;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

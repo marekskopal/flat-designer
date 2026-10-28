@@ -25,13 +25,23 @@ final readonly class OpeningHead
 	 * makes it rise to the roof or stop at its height; null for any other change, whose heads are not checked (a roof
 	 * lowered since does not block renaming or undoing the wall).
 	 *
-	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, ...} $next
+	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, heightEnd: int|null, ...} $next
 	 * @param list<Roof> $roofs
 	 */
 	public static function wallTopIfReshaped(Wall $wall, array $next, WallLine $line, array $roofs): ?WallTop
 	{
-		$was = [$wall->startX, $wall->startY, $wall->endX, $wall->endY, $wall->sagitta, $wall->thickness, $wall->height, $wall->upToRoof];
-		$is = [$next['startX'], $next['startY'], $next['endX'], $next['endY'], $next['sagitta'], $next['thickness'], $next['height'], $next['upToRoof']];
+		$was = [$wall->startX, $wall->startY, $wall->endX, $wall->endY, $wall->sagitta, $wall->thickness, $wall->height, $wall->upToRoof, $wall->heightEnd];
+		$is = [
+			$next['startX'],
+			$next['startY'],
+			$next['endX'],
+			$next['endY'],
+			$next['sagitta'],
+			$next['thickness'],
+			$next['height'],
+			$next['upToRoof'],
+			$next['heightEnd'],
+		];
 		if ($was === $is) {
 			return null;
 		}
@@ -41,6 +51,7 @@ final readonly class OpeningHead
 			$next['height'],
 			$next['upToRoof'],
 			array_map(fn (Roof $roof): RoofGeometry => RoofGeometry::fromRoof($roof), $roofs),
+			$next['heightEnd'],
 		);
 	}
 
@@ -65,7 +76,10 @@ final readonly class OpeningHead
 			return;
 		}
 		if (!$top->underRoof($offset, $offset + $width)) {
-			throw EditException::invalid(sprintf('Sill plus height exceeds the wall height (%d mm).', $wallHeight));
+			throw EditException::invalid(sprintf(
+				$limit === $wallHeight ? 'Sill plus height exceeds the wall height (%d mm).' : 'Sill plus height exceeds the wall\'s sloping top over the opening (%d mm).',
+				$limit,
+			));
 		}
 
 		throw EditException::invalid(sprintf('Sill plus height exceeds the wall\'s top over the opening (%d mm, under the roof).', $limit));

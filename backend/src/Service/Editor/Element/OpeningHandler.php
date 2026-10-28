@@ -49,6 +49,7 @@ final readonly class OpeningHandler implements ElementHandler
 		private MaterialResolver $materialResolver,
 		private OpeningLook $look,
 		private RoofRepository $roofRepository,
+		private WallBase $wallBase,
 	) {
 	}
 
@@ -109,7 +110,8 @@ final readonly class OpeningHandler implements ElementHandler
 
 		$length = WallHandler::length($wall);
 		$roofs = array_map(fn (Roof $roof): RoofGeometry => RoofGeometry::fromRoof($roof), $this->roofRepository->findByFloor($floor->id));
-		$top = new WallTop(WallLine::fromWall($wall), $wall->height, $wall->upToRoof, $roofs);
+		$line = WallLine::fromWall($wall);
+		$top = new WallTop($line, $wall->height, $wall->upToRoof, $roofs, $wall->heightEnd);
 		$offset = $fields->int('offset', 0, $length);
 		$width = $fields->int('width', 100, $length);
 		// A gable wall rising to the roof holds openings above its height.
@@ -123,6 +125,7 @@ final readonly class OpeningHandler implements ElementHandler
 		// Checked when it is set anew only: a roof lowered since does not block renaming or undoing the opening.
 		if (OpeningHead::placedAnew($currentOpening, $offset, $width, $sillHeight, $height)) {
 			OpeningHead::check($top, $wall->height, $offset, $width, $sillHeight + $height);
+			$this->wallBase->checkSill($wall, $line, $offset, $width, $sillHeight);
 		}
 
 		$type = $fields->enum('type', OpeningTypeEnum::class);

@@ -297,6 +297,11 @@ final readonly class ProjectSnapshotService
 			$wall->rightFinishes = $data->nullableFinishes('rightFinishes');
 			// Snapshots taken before roofs have no wall rising to one.
 			$wall->upToRoof = $data->raw('upToRoof') === true;
+			// Snapshots taken before site walls (FD-87): level, on the floor.
+			$wall->heightEnd = $data->nullableInt('heightEnd');
+			$wall->baseStart = $data->nullableInt('baseStart') ?? 0;
+			$wall->baseEnd = $data->nullableInt('baseEnd') ?? 0;
+			$wall->onGround = $data->raw('onGround') === true;
 			$this->wallRepository->persist($wall);
 
 			foreach ($data->objects('openings') as $opening) {

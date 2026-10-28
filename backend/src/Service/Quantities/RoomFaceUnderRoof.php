@@ -13,6 +13,7 @@ use FlatDesigner\Service\Editor\Geometry\RoofBreaks;
 use FlatDesigner\Service\Editor\Geometry\RoofCover;
 use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 use FlatDesigner\Service\Editor\Geometry\Spans;
+use FlatDesigner\Service\Editor\Geometry\WallLine;
 
 /**
  * A room's wall face under the roofs (FD-38): its bands and paint as `RoomSurfaces` counts them, up to a top that follows
@@ -50,21 +51,25 @@ final readonly class RoomFaceUnderRoof
 		}
 		$floor = (float) $room->floorElevation;
 		$length = max(sqrt(($b[0] - $a[0]) ** 2 + ($b[1] - $a[1]) ** 2), 1e-9);
-		$top = static function (float $along) use ($cover, $a, $b, $length, $floor, $face, $wallTop): float {
+		// The wall's own top along the edge: level, or sloping to `heightEnd` at the wall's end (FD-87).
+		$wallHeight = self::wallHeight($face['wall'], $a, $b);
+		$top = static function (float $along) use ($cover, $a, $b, $length, $floor, $face, $wallTop, $wallHeight): float {
 			$t = $along / $length;
 			$underside = RoofGeometry::undersideOf($cover->roofs, $a[0] + ($b[0] - $a[0]) * $t, $a[1] + ($b[1] - $a[1]) * $t);
-			$height = (float) $face['wall']->height;
+			$height = $wallHeight($t);
 			$wall = $underside === null ? $height : ($face['wall']->upToRoof ? $underside - $floor : min($height, $underside - $floor));
 
 			return max($wallTop === null ? $wall : min($wall, $wallTop), 0.0);
 		};
 
 		$amounts = [];
+		$slopes = $face['wall']->heightEnd === null ? [] : [[$wallHeight(0.0) + $floor, $wallHeight(1.0) + $floor]];
 		$cuts = self::cuts($face, RoofBreaks::along(
 			$cover->roofs,
 			$a,
 			$b,
 			array_map(static fn (float $level): float => $level + $floor, $levels),
+			$slopes,
 		), $length);
 		for ($i = 1, $count = count($cuts); $i < $count; $i++) {
 			[$x0, $x1] = [$cuts[$i - 1], $cuts[$i]];
@@ -77,6 +82,28 @@ final readonly class RoomFaceUnderRoof
 		}
 
 		return $amounts;
+	}
+
+	/**
+	 * The wall's height at 0–1 along the edge a → b: its `height`, sloping straight to `heightEnd` at the wall's end
+	 * (the edge runs along a stretch of the wall, wherever along it).
+	 *
+	 * @param array{float, float} $a
+	 * @param array{float, float} $b
+	 * @return callable(float): float
+	 */
+	private static function wallHeight(WallDto $wall, array $a, array $b): callable
+	{
+		$height = (float) $wall->height;
+		if ($wall->heightEnd === null) {
+			return static fn (): float => $height;
+		}
+		$line = WallLine::fromDto($wall);
+		$length = max($line->length(), 1e-9);
+		$fraction = static fn (array $point): float => max(0.0, min(1.0, $line->along($point) / $length));
+		[$atA, $atB] = [$height + ($wall->heightEnd - $height) * $fraction($a), $height + ($wall->heightEnd - $height) * $fraction($b)];
+
+		return static fn (float $t): float => $atA + ($atB - $atA) * $t;
 	}
 
 	/**

@@ -42,6 +42,10 @@ final readonly class WallTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands (e.g. tiling 0–2100) on the face left of start → end, instead of the room's wallFinishes
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
 	 * @param bool|null $upToRoof true: the wall rises to the underside of the roofs over it, a gable (default false)
+	 * @param int|null $heightEnd a sloping top: its height at the end, from `height` at the start in a straight line (a garden wall down a drive); null keeps it level
+	 * @param int|null $baseStart the wall's bottom at the start, mm above (+) or below (−) the floor's level (default 0)
+	 * @param int|null $baseEnd the bottom at the end (default 0); openings' sills stay on or above it
+	 * @param bool|null $onGround true: the bottom follows the ground of the floor's plots instead (a retaining or garden wall on a slope); heights stay against the floor's level
 	 */
 	#[McpTool(
 		name: 'add_wall',
@@ -65,6 +69,10 @@ final readonly class WallTools
 		#[Schema(definition: self::FaceFinishesSchema)]
 		?array $rightFinishes = null,
 		?bool $upToRoof = null,
+		?int $heightEnd = null,
+		?int $baseStart = null,
+		?int $baseEnd = null,
+		?bool $onGround = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -84,6 +92,10 @@ final readonly class WallTools
 				'leftFinishes' => $leftFinishes,
 				'rightFinishes' => $rightFinishes,
 				'upToRoof' => $upToRoof,
+				'heightEnd' => $heightEnd,
+				'baseStart' => $baseStart,
+				'baseEnd' => $baseEnd,
+				'onGround' => $onGround,
 			]),
 		);
 	}
@@ -141,7 +153,12 @@ final readonly class WallTools
 	 * @param bool|null $upToRoof true: the wall rises to the underside of the roofs over it (a gable; it still stops at `height`
 	 *   where no roof is over it); every wall is cut at that underside anyway. Openings stay under the wall's top over them,
 	 *   so a gable takes windows above `height`
-	 * @param list<string>|null $clear fields to set to none: "materialId"; "leftFinishes", "rightFinishes" (the face takes the room's bands again)
+	 * @param int|null $heightEnd a sloping top: its height at the end, from `height` at the start in a straight line (a garden wall down a drive); null keeps it level
+	 * @param int|null $baseStart the wall's bottom at the start, mm above (+) or below (−) the floor's level (default 0)
+	 * @param int|null $baseEnd the bottom at the end (default 0); openings' sills stay on or above it
+	 * @param bool|null $onGround true: the bottom follows the ground of the floor's plots instead (a retaining or garden wall on a slope); heights stay against the floor's level
+	 * @param list<string>|null $clear fields to set to none: "materialId"; "leftFinishes", "rightFinishes" (the face takes the room's bands again);
+	 *   "heightEnd" (a level top again)
 	 */
 	#[McpTool(
 		name: 'update_wall',
@@ -167,6 +184,10 @@ final readonly class WallTools
 		#[Schema(definition: self::FaceFinishesSchema)]
 		?array $rightFinishes = null,
 		?bool $upToRoof = null,
+		?int $heightEnd = null,
+		?int $baseStart = null,
+		?int $baseEnd = null,
+		?bool $onGround = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -188,7 +209,11 @@ final readonly class WallTools
 				'leftFinishes' => $leftFinishes,
 				'rightFinishes' => $rightFinishes,
 				'upToRoof' => $upToRoof,
-			], $clear, ['materialId', 'leftFinishes', 'rightFinishes']),
+				'heightEnd' => $heightEnd,
+				'baseStart' => $baseStart,
+				'baseEnd' => $baseEnd,
+				'onGround' => $onGround,
+			], $clear, ['materialId', 'leftFinishes', 'rightFinishes', 'heightEnd']),
 		);
 	}
 

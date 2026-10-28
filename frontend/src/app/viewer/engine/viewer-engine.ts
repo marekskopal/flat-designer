@@ -38,7 +38,7 @@ import {
 } from './frame-stats';
 import {buildGhost, disposeGhost, GhostFloor} from './ghost';
 import {exportTree, toGlb} from './gltf-export';
-import {buildItem, ItemAssets} from './items';
+import {buildItem, ItemAssets, standsOnGround} from './items';
 import {applyFixtureLights} from './lights';
 import {MaterialLibrary} from './materials';
 import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
@@ -712,7 +712,7 @@ export class ViewerEngine {
                 this.showsPicture(i, changedPictures) ||
                 (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)) ||
                 (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)) ||
-                (plotsChanged && i.onGround === true),
+                (plotsChanged && standsOnGround(i)),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -731,7 +731,7 @@ export class ViewerEngine {
 
         const walls = diffById(previous.walls, scene.walls);
         const wallsChanged = walls.removed.length > 0 || walls.changed.length > 0;
-        if (wallsChanged || roofsChanged) {
+        if (wallsChanged || roofsChanged || (plotsChanged && scene.walls.some((w) => w.onGround === true))) {
             const joints = wallJoints(scene.walls);
             const corners = cornerWindows(scene.walls);
             const changedIds = new Set(walls.changed.map((w) => w.id));
@@ -744,10 +744,12 @@ export class ViewerEngine {
                     underChangedRoofs(wallOutline(wallFrame(wall), wall.thickness, 0, wallFrame(wall).length).map((p) => [p.x, p.y])) ||
                     changedIds.has(wall.id) ||
                     !sameJson(this.joints.get(wall.id), joints.get(wall.id)) ||
-                    !sameJson(this.corners.get(wall.id), corners.get(wall.id))
+                    !sameJson(this.corners.get(wall.id), corners.get(wall.id)) ||
+                    (plotsChanged && wall.onGround === true)
                 ) {
                     this.removeWall(wall.id);
-                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), floorRoofs);
+                    const ground = scene.plots ?? [];
+                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), floorRoofs, ground);
                     parts.walls.set(wall.id, group);
                     parts.root.add(group);
                 }
@@ -3215,7 +3217,8 @@ export class ViewerEngine {
         }));
         const joints = wallJoints([...(this.sceneData?.walls ?? []), ...drawn]);
         const roofs = this.sceneData?.roofs ?? [];
-        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs)));
+        const plots = this.sceneData?.plots ?? [];
+        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs, plots)));
     }
 
     /** Markers of a run in the overlay: its points, and the pointer (green when snapped). */
@@ -3248,6 +3251,7 @@ export class ViewerEngine {
             wallJoints(walls).get(wall.id),
             cornerWindows(walls).get(wall.id),
             scene.roofs ?? [],
+            scene.plots ?? [],
         );
         const original = parts.walls.get(wall.id);
         this.setPreview(original === undefined ? [] : [original], [group]);

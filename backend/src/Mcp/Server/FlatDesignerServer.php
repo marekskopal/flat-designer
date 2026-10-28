@@ -65,7 +65,9 @@ final readonly class FlatDesignerServer
 		under its gables are set to rise to it (upToRoof on add_wall, add_walls or update_wall). Roof windows are added with add_roof_window.
 		A plot (add_plot) is the land round the building; on a slope give it spot heights (terrain on add_plot, or
 		set_terrain with points or contour lines, z against the floor's level): gardens, paths and driveways follow
-		the ground, rooms below it are cut out of it, and items with onGround stand on it.
+		the ground, rooms below it are cut out of it, and items with onGround stand on it. Garden and retaining
+		walls slope (heightEnd) and stand on a base or the ground (baseStart / baseEnd, onGround); garden steps are
+		stairs with a rise of their own (rise, baseZ); fences follow the slope (params follow).
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);

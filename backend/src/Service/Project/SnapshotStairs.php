@@ -42,7 +42,11 @@ final readonly class SnapshotStairs
 		$scene->stairsBelow = $below === null ? null : [
 			'floorId' => $below['id'],
 			'rise' => $this->rise($this->floors[$below['id']]),
-			'stairs' => self::stairs($this->floors[$below['id']])];
+			// A stair with a rise of its own (garden steps) stays on its floor.
+			'stairs' => array_values(array_filter(
+				self::stairs($this->floors[$below['id']]),
+				static fn (mixed $stair): bool => !($stair instanceof stdClass) || ($stair->rise ?? null) === null,
+			))];
 	}
 
 	/** @param array{entry: stdClass, floor: stdClass, id: int, level: int} $floor */

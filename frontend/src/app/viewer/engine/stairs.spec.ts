@@ -12,6 +12,7 @@ import {
     RailHeight,
     RailRadius,
     roomsCutBy,
+    sceneVoids,
     stairColliders,
     stairFirstFlight,
     stairFloorStep,
@@ -356,5 +357,29 @@ describe('walking the stairs', () => {
         expect(stairFloorStep(stairSpot(below, {x: 1000, y: 2100}))).toBe(-1);
         expect(stairFloorStep(stairSpot(below, {x: 1000, y: 2700}))).toBe(0);
         expect(stairFloorStep(null)).toBe(0);
+    });
+});
+
+describe('garden steps (FD-87)', () => {
+    const steps: Stair = {...stair, rise: 900, baseZ: -900};
+
+    it('climb a rise of their own from their base, and cut no void', () => {
+        const geometry = stairGeometry(steps, 2850);
+
+        expect([geometry.rise, geometry.risers]).toEqual([900, 5]);
+        expect(sceneVoids({stairs: [steps, stair], stairRise: 2850, stairsBelow: null}).own).toHaveLength(1);
+        const group = buildStair(steps, 2850, new MaterialLibrary([], 1), new THREE.MeshBasicMaterial());
+        expect(Math.round(group.position.y * 1000)).toBe(-900);
+    });
+
+    it('are walked from their base, open at both ends, and lead to no other floor', () => {
+        const [path] = stairPaths({stairs: [steps], stairRise: 2850, stairsBelow: null});
+        const top = path.walk[path.walk.length - 1].point;
+        const spot = stairSpot([path], {x: top.x, y: top.y - 50});
+
+        expect([path.free, path.offset]).toEqual([true, -900]);
+        expect(spot).not.toBeNull();
+        expect(stairFloorStep(spot)).toBe(0);
+        expect(spot!.path.offset + spot!.height).toBeGreaterThan(-100);
     });
 });

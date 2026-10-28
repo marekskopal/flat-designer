@@ -12,6 +12,7 @@ import {
     wallFacesAlongEdge,
     wallSpansAlongEdge,
 } from './ceilings';
+import {itemsOverFloor} from './items';
 import {herringboneLength, herringboneTiles} from './materials';
 import {
     acrossWall,
@@ -53,8 +54,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
-import {itemsOverFloor} from './terrain';
-import {CeilingUnderRoof, FloorRoofs, roofBreaks, roofsReach} from './under-roof';
+import {CeilingUnderRoof, FloorRoofs, HeightAt, roofBreaks, roofsReach, wallHeightAt, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
 
 // Wall elevations for tiling and joinery: per room, every wall face along its outline seen from inside the room, on
@@ -247,8 +247,21 @@ function curvedFace(
  */
 function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along: readonly Wall[], roofs: FloorRoofs, straight: boolean): Vec2[] {
     if (room.ceilingHeight === null) {
-        const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
-        return [{x: 0, y: height}, {x: length, y: height}];
+        // The tallest of the walls on the edge; one with a sloping top (FD-87) is followed along it.
+        const slopes = along.map((w) => wallHeightAt(w, wallFrame(w))).filter((h): h is HeightAt => h !== null);
+        if (slopes.length === 0) {
+            const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
+            return [{x: 0, y: height}, {x: length, y: height}];
+        }
+        const tops = along.map((w) => wallTopAt(w, roofs, wallFrame(w)) ?? ((): number => w.height));
+        const atX = (x: number): Vec2 => {
+            const point = pointAt(length - x);
+            return {x, y: Math.max(0, ...tops.map((t) => t(point)))};
+        };
+        const ts = straight
+            ? roofBreaks(pointAt(length), pointAt(0), roofs, [], slopes)
+            : Array.from({length: Math.max(2, Math.ceil(length / 20)) + 1}, (_, i) => i / Math.max(2, Math.ceil(length / 20)));
+        return ts.map((u) => atX(u * length));
     }
     const vaulted = vaultProfile(room) !== null;
     if (!vaulted && roofs.length === 0) {

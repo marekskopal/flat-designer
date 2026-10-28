@@ -72,11 +72,11 @@ const StepRuleMin = 600;
 const StepRuleMax = 650;
 
 /**
- * The riser the stair gets over its floor's rise (`stairRise`, put beside the stair's fields by the panel) and the
- * step rule 2R + G, with a warning when it falls outside 600–650 mm.
+ * The riser the stair gets over its own rise or its floor's (`stairRise`, put beside the stair's fields by the panel)
+ * and the step rule 2R + G, with a warning when it falls outside 600–650 mm.
  */
 export function stairStepHint(stair: Record<string, unknown>): string | null {
-    const rise = stair['stairRise'];
+    const rise = typeof stair['rise'] === 'number' ? stair['rise'] : stair['stairRise'];
     const going = stair['going'];
     if (typeof rise !== 'number' || typeof going !== 'number' || rise <= 0) {
         return null;
@@ -179,6 +179,10 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'thickness', label: 'Thickness', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
         {key: 'upToRoof', label: 'Up to the roof (a gable)', type: 'bool'},
+        {key: 'heightEnd', label: 'Height at the end (empty: level top)', type: 'int', unit: 'mm', nullable: true},
+        {key: 'onGround', label: 'Stands on the ground (a garden wall on a slope)', type: 'bool'},
+        {key: 'baseStart', label: 'Bottom at the start', type: 'int', unit: 'mm', half: true, when: (wall) => wall['onGround'] !== true},
+        {key: 'baseEnd', label: 'Bottom at the end', type: 'int', unit: 'mm', half: true, when: (wall) => wall['onGround'] !== true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
         {
             key: 'leftFinishes',
@@ -328,6 +332,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
         },
         {key: 'going', label: 'Going (tread depth)', type: 'int', unit: 'mm', half: true},
+        {key: 'rise', label: 'Own rise (garden steps; empty: to the next floor)', type: 'int', unit: 'mm', nullable: true, half: true},
+        {key: 'baseZ', label: 'First riser at', type: 'int', unit: 'mm', half: true},
         {key: 'risers', label: 'Risers (empty: as the rise needs)', type: 'int', nullable: true, hint: stairStepHint},
         {key: 'firstFlight', label: 'Risers up to the landing (empty: half)', type: 'int', nullable: true, half: true, when: hasLanding},
         {

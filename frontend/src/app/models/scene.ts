@@ -129,6 +129,13 @@ export interface Stair {
     railing: StairRailing;
     treadMaterialId: number | null;
     structureMaterialId: number | null;
+    /**
+     * A rise of its own, mm (FD-87): the stair does not climb to the next floor (garden or deck steps) and cuts no void;
+     * null or missing: the floor's `stairRise`.
+     */
+    rise?: number | null;
+    /** Where its first riser stands, mm against the floor's level; missing: 0. */
+    baseZ?: number;
 }
 
 export type RoofShape = 'Gable' | 'Hip' | 'Shed' | 'Flat';
@@ -305,6 +312,13 @@ export interface Wall {
     openings: Opening[];
     /** The wall rises to the underside of the roofs over it (a gable) instead of stopping at `height`; missing in older snapshots. */
     upToRoof?: boolean;
+    /** The top's height at the end (a straight slope from `height`, FD-87); null or missing: level. */
+    heightEnd?: number | null;
+    /** The bottom at the start and the end, mm against the floor's level; missing: 0. */
+    baseStart?: number;
+    baseEnd?: number;
+    /** The bottom follows the ground of the floor's plots instead of the base. */
+    onGround?: boolean;
 }
 
 export interface Item {

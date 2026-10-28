@@ -41,6 +41,14 @@ final readonly class StairHandler implements ElementHandler
 
 	private const int MaxRisers = 60;
 
+	/** A rise of its own (FD-87): two risers at least (2 × 140 mm), at most a storey and a half, mm. */
+	private const int MinOwnRise = 2 * StairRise::MinRiser;
+
+	private const int MaxOwnRise = 6000;
+
+	/** How far the first riser may stand above or below the floor's level, mm (as a plot's ground). */
+	private const int MaxBaseZ = 10000;
+
 	/** mm between the flights of a U stair. */
 	private const int MaxGap = 1000;
 
@@ -79,6 +87,8 @@ final readonly class StairHandler implements ElementHandler
 			'railing',
 			'treadMaterialId',
 			'structureMaterialId',
+			'rise',
+			'baseZ',
 		];
 	}
 
@@ -113,6 +123,8 @@ final readonly class StairHandler implements ElementHandler
 			'railing' => StairRailingEnum::Right->value,
 			'treadMaterialId' => null,
 			'structureMaterialId' => null,
+			'rise' => null,
+			'baseZ' => 0,
 		];
 	}
 
@@ -149,11 +161,13 @@ final readonly class StairHandler implements ElementHandler
 		$width = $this->width($fields, $shape, $stair);
 		$risers = $fields->nullableInt('risers', 2, self::MaxRisers);
 		$firstFlight = $fields->nullableInt('firstFlight', 1, self::MaxRisers);
-		$risersChanged = $stair === null || $risers !== $stair->risers;
+		// Missing in changes logged before outdoor stairs: to the next floor, from the floor's level.
+		$ownRise = $fields->nullableInt('rise', self::MinOwnRise, self::MaxOwnRise);
+		$risersChanged = $stair === null || $risers !== $stair->risers || $ownRise !== $stair->rise;
 		$landingChanged = $stair === null || $firstFlight !== $stair->firstFlight || $shape !== $stair->shape;
 		$rise = null;
 		if ($risers !== null && $risersChanged) {
-			$rise = $this->stairRise->of($floor);
+			$rise = $ownRise ?? $this->stairRise->of($floor);
 			$riser = $rise / $risers;
 			if ($riser < StairRise::MinRiser || $riser > StairRise::MaxRiser) {
 				throw EditException::invalid(sprintf(
@@ -167,7 +181,7 @@ final readonly class StairHandler implements ElementHandler
 			}
 		}
 		if ($shape->hasLanding() && $firstFlight !== null && ($risersChanged || $landingChanged)) {
-			$count = StairRise::risers($rise ?? $this->stairRise->of($floor), $risers);
+			$count = StairRise::risers($rise ?? $ownRise ?? $this->stairRise->of($floor), $risers);
 			if ($firstFlight >= $count) {
 				throw EditException::invalid(sprintf('Field "firstFlight" must be fewer than the stair\'s %d risers.', $count));
 			}
@@ -193,6 +207,8 @@ final readonly class StairHandler implements ElementHandler
 			'railing' => $fields->enum('railing', StairRailingEnum::class)->value,
 			'treadMaterialId' => $treadMaterialId,
 			'structureMaterialId' => $structureMaterialId,
+			'rise' => $ownRise,
+			'baseZ' => $fields->raw('baseZ') === null ? 0 : $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ),
 		];
 	}
 
@@ -276,6 +292,8 @@ final readonly class StairHandler implements ElementHandler
 		$stair->railing = $railing;
 		$stair->treadMaterial = $this->materialResolver->resolve($fields->nullableId('treadMaterialId'));
 		$stair->structureMaterial = $this->materialResolver->resolve($fields->nullableId('structureMaterialId'));
+		$stair->rise = $fields->nullableInt('rise', self::MinOwnRise, self::MaxOwnRise);
+		$stair->baseZ = $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ);
 		$this->stairRepository->persist($stair);
 	}
 

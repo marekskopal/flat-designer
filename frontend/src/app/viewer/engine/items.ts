@@ -1,4 +1,4 @@
-import {Item, Plot, Room, SceneModel} from '@app/models/scene';
+import {Item, Plot, Room, Scene, SceneModel} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {buildCustomItemBody, DefinitionLibrary} from './custom/custom';
@@ -6,7 +6,7 @@ import {buildKitchenItemBody} from './kitchen';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {buildModelItemBody, ModelLibrary} from './models';
-import {buildOutdoorItemBody} from './outdoor';
+import {buildOutdoorItemBody, fenceFollows, GroundAlong} from './outdoor';
 import {PictureLibrary} from './pictures';
 import {MM, tileGrid} from './plan-geometry';
 import {buildSanitaryItemBody} from './sanitary';
@@ -50,6 +50,27 @@ export function buildItem(
     return object;
 }
 
+/** Whether an item stands on the plots' ground: `onGround`, or a fence following it (FD-86, FD-87). */
+export function standsOnGround(item: Pick<Item, 'kind' | 'params' | 'onGround'>): boolean {
+    return item.onGround === true || fenceFollows(item);
+}
+
+/** The scene's items with their z against the floor's level: an item on the ground gets the ground under it added. */
+export function itemsOverFloor(scene: Pick<Scene, 'items' | 'plots'>): Item[] {
+    const plots = scene.plots ?? [];
+    return scene.items.map((item) => (standsOnGround(item) ? {...item, z: item.z + Math.round(groundAt(plots, item.x, item.y))} : item));
+}
+
+/** The ground along a fence's width (item-local x, mm) against the ground under its centre; undefined for other kinds. */
+function groundAlong(item: Item, plots: readonly Plot[]): GroundAlong | undefined {
+    if (item.kind !== 'Fence' || plots.length === 0) {
+        return undefined;
+    }
+    const r = THREE.MathUtils.degToRad(item.rotation);
+    const centre = groundAt(plots, item.x, item.y);
+    return (x) => groundAt(plots, item.x + x * Math.cos(r), item.y + x * Math.sin(r)) - centre;
+}
+
 /** The item as `buildItem()` builds it, before merging: a mesh per part (`userData.partName` on a `Custom` item's). */
 export function buildItemParts(
     item: Item,
@@ -63,11 +84,11 @@ export function buildItemParts(
         buildModelItemBody(item, assets.models, assets.modelLibrary) ??
         buildKitchenItemBody(item, materials) ??
         buildSanitaryItemBody(item, materials) ??
-        buildOutdoorItemBody(item, materials) ??
+        buildOutdoorItemBody(item, materials, groundAlong(item, assets.plots ?? [])) ??
         buildStructureItemBody(item, materials) ??
         new THREE.Group();
     object.name = `item:${item.name}`;
-    const ground = item.onGround === true ? groundAt(assets.plots ?? [], item.x, item.y) : 0;
+    const ground = standsOnGround(item) ? groundAt(assets.plots ?? [], item.x, item.y) : 0;
     object.position.set(item.x * MM, (item.z + ground) * MM, -item.y * MM);
     object.rotation.y = THREE.MathUtils.degToRad(item.rotation);
     object.userData = {...object.userData, itemId: item.id};

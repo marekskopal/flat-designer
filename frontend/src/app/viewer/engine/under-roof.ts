@@ -1,8 +1,9 @@
-import {PlanPoint, RoofWindow, Room, Wall} from '@app/models/scene';
+import {PlanPoint, Plot, RoofWindow, Room, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Pair, Polygon, Ring} from 'polygon-clipping';
 
-import {Bounds, polygonBounds, polygonSignedArea, Vec2} from './plan-geometry';
+import {alongWall, Bounds, polygonBounds, polygonSignedArea, Vec2, WallFrame} from './plan-geometry';
 import {roofHalfExtent, roofLocal, roofPlanes, RoofShapeFields, roofsUndersideAt, roofToPlan, roofWindowLayouts} from './roof-geometry';
+import {groundAt} from './terrain';
 
 /**
  * What stands under the roofs of a floor (FD-38): the walls' tops, cut by the roofs' underside or rising to it, and the
@@ -27,21 +28,63 @@ export type HeightAt = (p: Vec2) => number;
 /** The roofs whose underside a floor's walls and ceilings meet (with their windows, cut out of sloped ceilings). */
 export type FloorRoofs = readonly (RoofShapeFields & {windows?: readonly RoofWindow[]})[];
 
+/** How far along a wall a plan point lies, as a fraction of its length (0 at its start, 1 at its end). */
+const fractionAlong = (frame: WallFrame, p: Vec2): number => (frame.length > 0 ? Math.max(0, Math.min(1, alongWall(frame, p) / frame.length)) : 0);
+
 /**
- * The top of a wall at a plan point: its height, cut by the roofs' underside where that is lower, or with `upToRoof`
- * the underside wherever a roof is over it. Null without roofs, as the wall is then its height everywhere.
+ * A wall's own top at a plan point, sloping straight from `height` at its start to `heightEnd` at its end along the
+ * wall on `frame` (FD-87); null when it is level. Linear along any line, so `roofBreaks()` takes it as a slope.
  */
-export function wallTopAt(wall: Pick<Wall, 'height' | 'upToRoof'>, roofs: FloorRoofs): HeightAt | null {
-    if (roofs.length === 0) {
+export function wallHeightAt(wall: Pick<Wall, 'height' | 'heightEnd'>, frame: WallFrame): HeightAt | null {
+    const end = wall.heightEnd ?? null;
+    if (end === null || end === wall.height) {
         return null;
     }
+    return (p) => wall.height + (end - wall.height) * fractionAlong(frame, p);
+}
+
+/**
+ * The top of a wall at a plan point: its height (with `heightEnd` sloping straight to it along the wall on `frame`,
+ * FD-87), cut by the roofs' underside where that is lower, or with `upToRoof` the underside wherever a roof is over it.
+ * Null without roofs and slope, as the wall is then its height everywhere. The twin is `WallTop`.
+ */
+export function wallTopAt(wall: Pick<Wall, 'height' | 'upToRoof' | 'heightEnd'>, roofs: FloorRoofs, frame?: WallFrame): HeightAt | null {
+    const own = frame === undefined ? null : wallHeightAt(wall, frame);
+    if (roofs.length === 0 && own === null) {
+        return null;
+    }
+    const height: HeightAt = own ?? ((): number => wall.height);
     return (p) => {
+        const h = height(p);
+        if (roofs.length === 0) {
+            return h;
+        }
         const underside = roofsUndersideAt(roofs, p.x, p.y);
         if (underside === null) {
-            return wall.height;
+            return h;
         }
-        return wall.upToRoof === true ? underside : Math.min(wall.height, underside);
+        return wall.upToRoof === true ? underside : Math.min(h, underside);
     };
+}
+
+/**
+ * The bottom of a wall at a plan point (FD-87): on the floor's level, on its base sloping from `baseStart` to `baseEnd`
+ * along it, or with `onGround` on the ground of the `plots`. Null on the floor's level. The twin is `WallBottom` (which
+ * reads the ground under the centre line; here each face stands on the ground beside it).
+ */
+export function wallBottomAt(
+    wall: Pick<Wall, 'baseStart' | 'baseEnd' | 'onGround'>,
+    frame: WallFrame,
+    plots: readonly Plot[],
+): HeightAt | null {
+    if (wall.onGround === true) {
+        return (p) => groundAt(plots, p.x, p.y);
+    }
+    const [start, end] = [wall.baseStart ?? 0, wall.baseEnd ?? 0];
+    if (start === 0 && end === 0) {
+        return null;
+    }
+    return (p) => start + (end - start) * fractionAlong(frame, p);
 }
 
 /** A linear function of plan points, `k + g · p`. */
@@ -81,19 +124,30 @@ export function roofsReach(bounds: Bounds, roofs: FloorRoofs): boolean {
     return roofs.some((roof) => planeFunctions(roof).some((plane) => overlap(plane.bounds, bounds)));
 }
 
-/** The lowest `top` along p → q: a top under the roofs is piecewise linear, so it is lowest at a break or an end. */
-export function lowestTopAlong(p: Vec2, q: Vec2, top: HeightAt, roofs: FloorRoofs, levels: readonly number[] = []): number {
-    return Math.min(...roofBreaks(p, q, roofs, levels).map((t) => top(lerp(p, q, t))));
+/**
+ * The lowest `top` along p → q: a top under the roofs (and a wall's own sloping top, among the `slopes`) is piecewise
+ * linear, so it is lowest at a break or an end.
+ */
+export function lowestTopAlong(
+    p: Vec2,
+    q: Vec2,
+    top: HeightAt,
+    roofs: FloorRoofs,
+    levels: readonly number[] = [],
+    slopes: readonly HeightAt[] = [],
+): number {
+    return Math.min(...roofBreaks(p, q, roofs, levels, slopes).map((t) => top(lerp(p, q, t))));
 }
 
 const valueOf = (f: Linear, p: Vec2): number => f.k + f.g.x * p.x + f.g.y * p.y;
 
 /**
  * Where along the line p → q (0–1) a height under the roofs may bend or step: where the line crosses a roof's edge,
- * where two planes meet (a ridge, a hip, two roofs) and where a plane reaches one of `levels` (a wall's height, a
- * ceiling's). Ascending, with 0 and 1; more than needed is harmless, as a height is linear between them.
+ * where two planes meet (a ridge, a hip, two roofs) and where a plane, or one of the `slopes` (heights linear along the
+ * line: a wall's own sloping top or base, FD-87), reaches one of `levels` (a wall's height, a ceiling's) or another.
+ * Ascending, with 0 and 1; more than needed is harmless, as a height is linear between them. The twin is `RoofBreaks`.
  */
-export function roofBreaks(p: Vec2, q: Vec2, roofs: FloorRoofs, levels: readonly number[]): number[] {
+export function roofBreaks(p: Vec2, q: Vec2, roofs: FloorRoofs, levels: readonly number[], slopes: readonly HeightAt[] = []): number[] {
     const ts = [0, 1];
     const push = (t: number): void => {
         if (Number.isFinite(t) && t > 0 && t < 1) {
@@ -101,6 +155,10 @@ export function roofBreaks(p: Vec2, q: Vec2, roofs: FloorRoofs, levels: readonly
         }
     };
     const lines: [number, number][] = levels.map((level) => [level, 0]);
+    for (const slope of slopes) {
+        const at = slope(p);
+        lines.push([at, slope(q) - at]);
+    }
     for (const roof of roofs) {
         const a = roofLocal(roof, p.x, p.y);
         const b = roofLocal(roof, q.x, q.y);
@@ -133,18 +191,21 @@ export function roofBreaks(p: Vec2, q: Vec2, roofs: FloorRoofs, levels: readonly
     return sorted.filter((t, i) => i === 0 || (t - sorted[i - 1]) * length > 0.01 || t === 1);
 }
 
-/** A stretch of a solid under the roofs: its two faces' points in plan and the top over each point. */
+/** A stretch of a solid under the roofs: its two faces' points in plan, the top over each point and the bottom under it. */
 export interface ProfileRun {
     right: Vec2[];
     left: Vec2[];
     rightTop: number[];
     leftTop: number[];
+    rightBottom: number[];
+    leftBottom: number[];
 }
 
 /**
  * An upright solid between two faces (`right`, `left`: polylines in plan with as many points, as `curvedPrismAt()` takes
  * them) under a top following `top`, cut where the top bends (`roofBreaks()` on either face) and split where it steps (at
- * a roof's edge: each run then ends in a face of its own).
+ * a roof's edge: each run then ends in a face of its own). It stands on `bottom` at each station (0 without). The
+ * `slopes` (the wall's own sloping top and base) bend it where they cross the `levels` or one another.
  */
 export function profileRuns(
     right: readonly Vec2[],
@@ -152,10 +213,12 @@ export function profileRuns(
     top: HeightAt,
     roofs: FloorRoofs,
     levels: readonly number[],
+    bottom: HeightAt = () => 0,
+    slopes: readonly HeightAt[] = [],
 ): ProfileRun[] {
     const stations: {r: Vec2; l: Vec2}[] = [];
     for (let i = 1; i < right.length; i++) {
-        const us = [...roofBreaks(right[i - 1], right[i], roofs, levels), ...roofBreaks(left[i - 1], left[i], roofs, levels)]
+        const us = [...roofBreaks(right[i - 1], right[i], roofs, levels, slopes), ...roofBreaks(left[i - 1], left[i], roofs, levels, slopes)]
             .sort((x, y) => x - y)
             .filter((u, k, all) => k === 0 || u - all[k - 1] > 1e-7);
         for (const u of us) {
@@ -167,12 +230,15 @@ export function profileRuns(
     }
 
     const runs: ProfileRun[] = [];
-    let run: ProfileRun = {right: [], left: [], rightTop: [], leftTop: []};
+    const empty = (): ProfileRun => ({right: [], left: [], rightTop: [], leftTop: [], rightBottom: [], leftBottom: []});
+    let run = empty();
     const add = (station: {r: Vec2; l: Vec2}, r: number, l: number): void => {
         run.right.push(station.r);
         run.left.push(station.l);
         run.rightTop.push(r);
         run.leftTop.push(l);
+        run.rightBottom.push(bottom(station.r));
+        run.leftBottom.push(bottom(station.l));
     };
     // The top just before and just after a station, from the neighbouring stations.
     const nudge = 1e-6;
@@ -184,7 +250,7 @@ export function profileRuns(
         if (before !== null && after !== null && (Math.abs(before[0] - after[0]) > Same || Math.abs(before[1] - after[1]) > Same)) {
             add(station, before[0], before[1]);
             runs.push(run);
-            run = {right: [], left: [], rightTop: [], leftTop: []};
+            run = empty();
             add(station, after[0], after[1]);
             return;
         }

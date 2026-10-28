@@ -4,6 +4,7 @@ import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '
 import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
+import {itemsOverFloor} from './items';
 import {
     Bounds,
     cornerWindows,
@@ -52,8 +53,8 @@ import {
     truncate,
 } from './sheet-svg';
 import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
-import {hasTerrain, itemsOverFloor, plotTerrain, terrainContours} from './terrain';
-import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallTopAt} from './under-roof';
+import {hasTerrain, plotTerrain, terrainContours} from './terrain';
+import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallHeightAt, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
 
 // The floor plan as a drawing on paper (A4, in paper mm): walls cut at `PlanCutHeight`, doors with their swings,
@@ -419,13 +420,22 @@ function cutsThrough(opening: Opening, level: number): boolean {
  * it). The top is piecewise linear (`roofBreaks()`), and every height the answer turns on is a break, so the middle of
  * a stretch decides for all of it.
  */
-function cutStretches(frame: WallFrame, piece: WallPiece, top: HeightAt, roofs: FloorRoofs, wallHeight: number): [number, number][] {
+function cutStretches(
+    frame: WallFrame,
+    piece: WallPiece,
+    top: HeightAt,
+    roofs: FloorRoofs,
+    wallHeight: number,
+    slope: HeightAt | null = null,
+): [number, number][] {
     const levels = [PlanCutHeight, 2 * piece.bottom, 2 * piece.top, wallHeight, piece.top];
+    // A sloping top (FD-87) bends where it crosses the cut, or where half of it does (a low wall's cut).
+    const slopes: HeightAt[] = slope === null ? [] : [slope, (p): number => slope(p) / 2];
     const spans: [number, number][] = [];
     const samples = wallSamples(frame, piece.from, piece.to);
     for (let i = 1; i < samples.length; i++) {
         const [a, b] = [samples[i - 1], samples[i]];
-        const ts = roofBreaks(pointOnWall(frame, a), pointOnWall(frame, b), roofs, levels);
+        const ts = roofBreaks(pointOnWall(frame, a), pointOnWall(frame, b), roofs, levels, slopes);
         for (let k = 1; k < ts.length; k++) {
             const [s0, s1] = [a + (b - a) * ts[k - 1], a + (b - a) * ts[k]];
             const height = top(pointOnWall(frame, (s0 + s1) / 2));
@@ -460,13 +470,14 @@ function wallShapes(walls: readonly Wall[], roofs: FloorRoofs = []): Shape[] {
             return [];
         }
         const level = cutLevel(wall);
-        const top = wallTopAt(wall, roofs);
-        const pieces = wallPieces(frame.length, wall.height, shownOpenings(wall, frame, top, roofs))
+        const top = wallTopAt(wall, roofs, frame);
+        const slope = wallHeightAt(wall, frame);
+        const pieces = wallPieces(frame.length, wall.height, shownOpenings(wall, frame, top, roofs, slope))
             .flatMap((p) => {
                 if (top === null) {
                     return p.bottom <= level && level < p.top ? [p] : [];
                 }
-                return cutStretches(frame, p, top, roofs, wall.height).map(([from, to]) => ({...p, from, to}));
+                return cutStretches(frame, p, top, roofs, wall.height, slope).map(([from, to]) => ({...p, from, to}));
             })
             .sort((a, b) => a.from - b.from);
         const merged: typeof pieces = [];
@@ -518,9 +529,12 @@ const HiddenStyle: Style = {stroke: Muted, width: 0.15, dash: '1 0.7'};
  * high window, a hatch) is dashed in the solid wall.
  */
 /** The wall's openings the roofs leave wall for (`buildWall()` draws the same): all of them without roofs. */
-function shownOpenings(wall: Wall, frame: WallFrame, top: HeightAt | null, roofs: FloorRoofs): Opening[] {
+function shownOpenings(wall: Wall, frame: WallFrame, top: HeightAt | null, roofs: FloorRoofs, slope: HeightAt | null = null): Opening[] {
+    const slopes = slope === null ? [] : [slope];
     return wall.openings.filter(
-        (o) => top === null || o.sillHeight < lowestTopAlong(pointOnWall(frame, o.offset), pointOnWall(frame, o.offset + o.width), top, roofs),
+        (o) =>
+            top === null ||
+            o.sillHeight < lowestTopAlong(pointOnWall(frame, o.offset), pointOnWall(frame, o.offset + o.width), top, roofs, [], slopes),
     );
 }
 
@@ -530,9 +544,9 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
     if (!(wallPath.length > 0)) {
         return [];
     }
-    const top = wallTopAt(wall, roofs);
+    const top = wallTopAt(wall, roofs, wallPath);
     const h = wall.thickness / 2;
-    return shownOpenings(wall, wallPath, top, roofs).flatMap((opening): Shape[] => {
+    return shownOpenings(wall, wallPath, top, roofs, wallHeightAt(wall, wallPath)).flatMap((opening): Shape[] => {
         const from = opening.offset;
         const to = opening.offset + opening.width;
         // Under a roof the cut over the opening follows the wall's top there.
@@ -620,10 +634,12 @@ function stairPlanShapes(scene: Scene): {shapes: Shape[]; labels: Label[]} {
     for (const stair of scene.stairs ?? []) {
         const geometry = stairGeometry(stair, scene.stairRise ?? 0);
         const steps = [...geometry.landings, ...geometry.treads].sort((a, b) => a.top - b.top);
+        // Garden steps stand at their base: the cut is that much lower against them.
+        const cut = PlanCutHeight - (stair.baseZ ?? 0);
         for (const step of steps) {
-            shapes.push({points: step.outline, closed: true, style: step.top <= PlanCutHeight ? StairStyle : StairHiddenStyle});
+            shapes.push({points: step.outline, closed: true, style: step.top <= cut ? StairStyle : StairHiddenStyle});
         }
-        const cutTread = geometry.treads.find((t) => t.top > PlanCutHeight);
+        const cutTread = geometry.treads.find((t) => t.top > cut);
         if (cutTread !== undefined) {
             shapes.push(breakLine(cutTread.outline));
         }

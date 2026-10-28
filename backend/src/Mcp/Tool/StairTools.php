@@ -13,12 +13,13 @@ use Mcp\Schema\ToolAnnotations;
 /** Stairs from a floor up to the next one; they cut their void through the floor above. */
 final readonly class StairTools
 {
-	private const array Clearable = ['risers', 'firstFlight', 'treadMaterialId', 'structureMaterialId'];
+	private const array Clearable = ['risers', 'firstFlight', 'treadMaterialId', 'structureMaterialId', 'rise'];
 
 	private const string Rise = 'The stair climbs from its floor to the next one up (get_floor\'s stairRise, mm: the floors\' elevations, '
 		. 'or the floor\'s tallest wall plus a 250 mm slab on the top floor); risers null splits that into as few steps as keep '
 		. 'each at most 180 mm (at least 2), a count given must make each 140–220 mm. It cuts a void as large as its footprint '
-		. 'through the floor above.';
+		. 'through the floor above. A stair with a rise of its own (garden steps, steps off a deck, a stair down the slope) climbs '
+		. 'that far from baseZ instead, stays on its floor and cuts no void.';
 
 	public function __construct(private ToolContext $context, private SceneEditor $editor)
 	{
@@ -43,6 +44,8 @@ final readonly class StairTools
 	 * @param string|null $railing "Right" (default) | "Left" | "Both" | "None", seen walking up; it also runs round the void upstairs
 	 * @param int|null $treadMaterialId the treads, from list_materials (default the structure's)
 	 * @param int|null $structureMaterialId the flight, stringers or spine, from list_materials (default concrete grey)
+	 * @param int|null $rise a rise of its own, mm (100–6000): the stair does not climb to the next floor (garden or deck steps); default none
+	 * @param int|null $baseZ where its first riser stands, mm above (+) or below (−) the floor's level (default 0)
 	 */
 	#[McpTool(name: 'add_stair', description: 'Add stairs on a floor, from it up to the next floor. ' . self::Rise)]
 	public function addStair(
@@ -63,6 +66,8 @@ final readonly class StairTools
 		?string $railing = null,
 		?int $treadMaterialId = null,
 		?int $structureMaterialId = null,
+		?int $rise = null,
+		?int $baseZ = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -84,6 +89,8 @@ final readonly class StairTools
 				'railing' => $railing,
 				'treadMaterialId' => $treadMaterialId,
 				'structureMaterialId' => $structureMaterialId,
+				'rise' => $rise,
+				'baseZ' => $baseZ,
 			]),
 		);
 	}
@@ -94,7 +101,9 @@ final readonly class StairTools
 	 * @param int|null $rotation degrees counter-clockwise of the walking-up direction (0 = north)
 	 * @param int|null $risers number of risers (clear it to count them from the rise)
 	 * @param list<string>|null $clear fields to set to none: "risers" (counted from the rise), "firstFlight" (halved),
-	 *   "treadMaterialId", "structureMaterialId"
+	 *   "treadMaterialId", "structureMaterialId", "rise" (to the next floor again)
+	 * @param int|null $rise a rise of its own, mm (100–6000): the stair does not climb to the next floor (garden or deck steps); default none
+	 * @param int|null $baseZ where its first riser stands, mm above (+) or below (−) the floor's level (default 0)
 	 */
 	#[McpTool(name: 'update_stair', description: 'Change stairs. Only the given fields change. ' . self::Rise)]
 	public function updateStair(
@@ -116,6 +125,8 @@ final readonly class StairTools
 		?string $railing = null,
 		?int $treadMaterialId = null,
 		?int $structureMaterialId = null,
+		?int $rise = null,
+		?int $baseZ = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -140,6 +151,8 @@ final readonly class StairTools
 					'railing' => $railing,
 					'treadMaterialId' => $treadMaterialId,
 					'structureMaterialId' => $structureMaterialId,
+					'rise' => $rise,
+					'baseZ' => $baseZ,
 				],
 				$clear,
 				self::Clearable,

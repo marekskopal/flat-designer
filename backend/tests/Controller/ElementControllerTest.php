@@ -555,6 +555,73 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame([[$band], []], [$this->sceneList('walls')[0]['leftFinishes'], $this->sceneList('walls')[0]['rightFinishes']]);
 	}
 
+	public function testSiteWallsSlopeAndStandOnABaseOrTheGround(): void
+	{
+		// A garden wall down a drive: 2000 mm high at its start, 800 at its end, from −600 to −1200 below the floor.
+		$wall = $this->create('walls', [
+			'startX' => 0,
+			'startY' => 0,
+			'endX' => 6000,
+			'endY' => 0,
+			'height' => 2000,
+			'heightEnd' => 800,
+			'baseStart' => -600,
+			'baseEnd' => -1200,
+		]);
+		self::assertSame([800, -600, -1200, false], [$wall['heightEnd'], $wall['baseStart'], $wall['baseEnd'], $wall['onGround']]);
+		// Its top must stand over its base at both ends.
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['baseEnd' => 780])->getStatusCode());
+
+		// A gate: its head under the sloping top (1280 mm at x 3600), its sill on the base (−960 there).
+		$opening = fn (int $sill, int $height): int => $this->edit(
+			'POST',
+			'openings',
+			body: [
+				'wallId' => self::id(
+					$wall,
+				),
+				'type' => 'Passage',
+				'offset' => 2400,
+				'width' => 1200,
+				'sillHeight' => $sill,
+				'height' => $height],
+		)->getStatusCode();
+		self::assertSame(422, $opening(0, 1500));
+		self::assertSame(201, $opening(0, 1250));
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['baseStart' => 200, 'baseEnd' => 0])->getStatusCode());
+
+		// Turned round, the slope and the base stay where they are on the plan.
+		$turned = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => 6000, 'endX' => 0]));
+		self::assertIsArray($turned['element']);
+		self::assertSame(
+			[800, 2000, -1200, -600],
+			[$turned['element']['height'], $turned['element']['heightEnd'], $turned['element']['baseStart'], $turned['element']['baseEnd']],
+		);
+		self::assertSame(200, $this->undo()->getStatusCode());
+
+		// On the ground: its bottom is the plot's (+300 under it), so a passage from the floor's level no longer stands on it.
+		$this->create('plots', ['polygon' => [[-5000, -5000], [10000, -5000], [10000, 5000], [-5000, 5000]], 'groundLevel' => 300]);
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['onGround' => true])->getStatusCode());
+	}
+
+	public function testAWallOnTheGroundMovedUphillKeepsItsOpeningsOnIt(): void
+	{
+		// The ground rises 0.1 mm per mm northwards.
+		$this->create('plots', [
+			'polygon' => [[-5000, -5000], [10000, -5000], [10000, 15000], [-5000, 15000]],
+			'terrain' => [[-5000, -5000, -500], [10000, -5000, -500], [-5000, 15000, 1500], [10000, 15000, 1500]],
+		]);
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 6000, 'endY' => 0, 'height' => 1800, 'onGround' => true]);
+		$this->create(
+			'openings',
+			['wallId' => self::id($wall), 'type' => 'Passage', 'offset' => 2000, 'width' => 1000, 'sillHeight' => 100, 'height' => 1600],
+		);
+
+		// At y 0 the ground is at 0; 4 m uphill it is at +400, over the passage's sill.
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['startY' => 4000, 'endY' => 4000])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', self::id($wall), ['startY' => -4000, 'endY' => -4000])->getStatusCode());
+	}
+
 	public function testCurvedWalls(): void
 	{
 		// Chord 4000, sagitta 1000: a radius of 2500 and 4636 mm along the arc.

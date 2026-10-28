@@ -7,6 +7,7 @@ namespace FlatDesigner\Tests\Controller;
 use FlatDesigner\Controller\ProjectVersionController;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Furniture\FurnitureSeeds;
@@ -240,6 +241,33 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
 		self::assertSame([], $this->restoredScene($user, $project->id)['roofs']);
 		self::assertFalse($this->restoredWall($user, $project->id)['upToRoof']);
+	}
+
+	public function testRestoreKeepsSiteWallsAndGardenSteps(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$walls = Fixture::service(WallRepository::class);
+		foreach ($walls->findByFloor($floor->id) as $wall) {
+			[$wall->heightEnd, $wall->baseStart, $wall->baseEnd, $wall->onGround] = [1800, -400, -200, true];
+			$walls->persist($wall);
+		}
+		$stairs = Fixture::service(StairRepository::class);
+		foreach ($stairs->findByFloor($floor->id) as $stair) {
+			[$stair->rise, $stair->baseZ] = [600, -300];
+			$stairs->persist($stair);
+		}
+		$versionId = $this->saveVersion($user, $project->id);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		$wall = $this->restoredWall($user, $project->id);
+		self::assertSame([1800, -400, -200, true], [$wall['heightEnd'], $wall['baseStart'], $wall['baseEnd'], $wall['onGround']]);
+		$restored = $this->restoredScene($user, $project->id)['stairs'];
+		self::assertIsList($restored);
+		self::assertIsArray($restored[0]);
+		self::assertSame([600, -300], [$restored[0]['rise'], $restored[0]['baseZ']]);
 	}
 
 	public function testRestoreKeepsCurvedWallsAndOlderSnapshotsHaveStraightOnes(): void

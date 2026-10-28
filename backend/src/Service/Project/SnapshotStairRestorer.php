@@ -49,6 +49,9 @@ final readonly class SnapshotStairRestorer
 				treadMaterial: $materials[$data->nullableInt('treadMaterialId') ?? 0] ?? null,
 				structureMaterial: $materials[$data->nullableInt('structureMaterialId') ?? 0] ?? null,
 			);
+			// Snapshots taken before outdoor stairs (FD-87): to the next floor, from the floor's level.
+			$stair->rise = $data->nullableInt('rise');
+			$stair->baseZ = $data->nullableInt('baseZ') ?? 0;
 			$stair->createdAt = new DateTimeImmutable();
 			$stair->updatedAt = $stair->createdAt;
 			$this->stairRepository->persist($stair);

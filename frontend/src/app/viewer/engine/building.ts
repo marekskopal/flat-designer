@@ -55,7 +55,19 @@ import {buildRoof, buildRoofOutline} from './roofs';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
 import {Terrain} from './terrain';
 import {alignTiles, turnLevelUvs} from './tiling';
-import {ceilingParts, FloorRoofs, HeightAt, lowestTopAlong, outlineWithout, ProfileRun, profileRuns, runsAreLevel, wallTopAt} from './under-roof';
+import {
+    ceilingParts,
+    FloorRoofs,
+    HeightAt,
+    lowestTopAlong,
+    outlineWithout,
+    ProfileRun,
+    profileRuns,
+    runsAreLevel,
+    wallBottomAt,
+    wallHeightAt,
+    wallTopAt,
+} from './under-roof';
 
 /** Bars of a French window sash, mm. */
 const SashBar = 55;
@@ -152,7 +164,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     const joints = wallJoints(scene.walls);
     const corners = cornerWindows(scene.walls);
     for (const wall of scene.walls) {
-        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), roofs);
+        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), roofs, scene.plots ?? []);
         parts.walls.set(wall.id, group);
         root.add(group);
     }
@@ -230,6 +242,11 @@ export function addRoom(parts: BuildingParts, room: RoomParts, roomId: number): 
     }
 }
 
+/** A wall standing on a base or on the ground rather than on the floor (FD-87). */
+export function isSiteWall(wall: Pick<Wall, 'baseStart' | 'baseEnd' | 'onGround'>): boolean {
+    return wall.onGround === true || (wall.baseStart ?? 0) !== 0 || (wall.baseEnd ?? 0) !== 0;
+}
+
 /** Rooms on the ground itself, which have no slab under them. */
 const UnslabbedRooms: readonly Room['type'][] = ['Garden', 'Path', 'Driveway'];
 
@@ -251,7 +268,8 @@ export function buildSlab(
         ...rooms
             .filter((r) => !UnslabbedRooms.includes(r.type))
             .map((r) => ({outline: r.polygon.map(([x, y]): Vec2 => ({x, y})), top: r.floorElevation ?? 0})),
-        ...walls.map((wall) => {
+        // A site wall (on a base or the ground, FD-87) has a footing of its own, not the floor's slab.
+        ...walls.filter((wall) => !isSiteWall(wall)).map((wall) => {
             const {left, right} = wallFaces(wall, joints.get(wall.id));
             return {outline: [...left, ...[...right].reverse()], top: 0};
         }),
@@ -568,6 +586,7 @@ export function buildWall(
     ends: WallEnds = SquareEnds,
     corners: WallCorners = NoCorners,
     roofs: FloorRoofs = [],
+    plots: readonly Plot[] = [],
 ): THREE.Group {
     const frame = wallFrame(wall);
     const group = new THREE.Group();
@@ -577,15 +596,21 @@ export function buildWall(
     group.rotation.y = frame.angle;
 
     const material = materials.get(wall.materialId);
-    const top = wallTopAt(wall, roofs);
+    const top = wallTopAt(wall, roofs, frame);
+    const bottom = wallBottomAt(wall, frame, plots);
+    // The wall's own sloping top and base are linear along it: the solids bend where they cross a level.
+    const slopes = [wallHeightAt(wall, frame), wall.onGround === true ? null : bottom].filter((s): s is HeightAt => s !== null);
     // An opening the roofs leave no wall for (its sill above the lowest top over it) is left out, and the wall is solid there.
     const underTop = (opening: Opening): boolean =>
         top === null ||
-        opening.sillHeight < lowestTopAlong(pointOnWall(frame, opening.offset), pointOnWall(frame, opening.offset + opening.width), top, roofs);
+        opening.sillHeight <
+            lowestTopAlong(pointOnWall(frame, opening.offset), pointOnWall(frame, opening.offset + opening.width), top, roofs, [], slopes);
     const openings = wall.openings.filter(underTop);
 
     for (const piece of wallPieces(frame.length, wall.height, openings)) {
-        const meshes = (top === null ? null : profiledWallPiece(material, piece, frame, wall, ends, top, roofs)) ?? [
+        const profiled =
+            top === null && bottom === null ? null : profiledWallPiece(material, piece, frame, wall, ends, top, roofs, bottom, slopes);
+        const meshes = profiled ?? [
             frame.arc === undefined
                 ? wallPieceMesh(material, piece, frame.length, wall.thickness, ends)
                 : curvedWallPieceMesh(material, piece, frame, wall.thickness, ends),
@@ -620,11 +645,37 @@ function placeOnFrame(object: THREE.Object3D, frame: WallFrame, target: WallFram
     object.rotation.y = target.angle - frame.angle;
 }
 
+/** On the ground, a wall's faces are stood up through points at most this far apart (mm), following it. */
+const GroundStep = 250;
+
 /**
- * A piece of a wall under roofs, its top following `top` (a piece reaching the wall's top) or capped by it (a lower
- * one: under a window, behind a niche): its outline (`wallOutline()`) stood up in runs (`profileRuns()`) up to the top
- * over each point, never under the piece's bottom. Null when the roofs leave the piece as it is, which is then drawn as
- * usual; empty when they take all of it. Tagged with the niche behind which it is, like `wallPieceMesh()`.
+ * A wall outline (`wallOutline()`: one face's points, then the other's back) with points added along both faces in the
+ * same places, so no segment is longer than `step` and the faces keep as many points as each other.
+ */
+function densified(outline: readonly Vec2[], step: number): Vec2[] {
+    const half = outline.length / 2;
+    const a = outline.slice(0, half);
+    const b = outline.slice(half).reverse();
+    const lerp = (p: Vec2, q: Vec2, t: number): Vec2 => ({x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t});
+    const [da, db]: Vec2[][] = [[a[0]], [b[0]]];
+    for (let i = 1; i < half; i++) {
+        const longer = Math.max(Math.hypot(a[i].x - a[i - 1].x, a[i].y - a[i - 1].y), Math.hypot(b[i].x - b[i - 1].x, b[i].y - b[i - 1].y));
+        const n = Math.max(1, Math.ceil(longer / step));
+        for (let k = 1; k <= n; k++) {
+            da.push(lerp(a[i - 1], a[i], k / n));
+            db.push(lerp(b[i - 1], b[i], k / n));
+        }
+    }
+    return [...da, ...db.reverse()];
+}
+
+/**
+ * A piece of a wall under roofs or with a sloping top (`top`), or on a base or the ground (`bottom`), FD-87: its top
+ * follows `top` (a piece reaching the wall's top) or is capped by it (a lower one: under a window, behind a niche); a
+ * piece from the floor stands on `bottom`. Its outline (`wallOutline()`, densified on the ground) stood up in runs
+ * (`profileRuns()`) up to the top over each point, never under the piece's bottom. Null when it is the piece as it is,
+ * which is then drawn as usual; empty when nothing is left of it. Tagged with the niche behind which it is, like
+ * `wallPieceMesh()`.
  */
 function profiledWallPiece(
     material: THREE.Material,
@@ -632,23 +683,35 @@ function profiledWallPiece(
     frame: WallFrame,
     wall: Wall,
     ends: WallEnds,
-    top: HeightAt,
+    top: HeightAt | null,
     roofs: FloorRoofs,
+    bottom: HeightAt | null,
+    slopes: readonly HeightAt[] = [],
 ): THREE.Mesh[] | null {
+    const wallTop = top ?? ((): number => wall.height);
     const reachesTop = piece.top >= wall.height;
-    const pieceTop: HeightAt = (p) => Math.max(piece.bottom, reachesTop ? top(p) : Math.min(piece.top, top(p)));
-    const outline = wallOutline(frame, wall.thickness, piece.from, piece.to, ends, piece.recess);
+    let pieceBottom: HeightAt = (): number => piece.bottom;
+    if (bottom !== null) {
+        pieceBottom = piece.bottom === 0 ? bottom : (p): number => Math.max(piece.bottom, bottom(p));
+    }
+    const pieceTop: HeightAt = (p) => Math.max(pieceBottom(p), reachesTop ? wallTop(p) : Math.min(piece.top, wallTop(p)));
+    let outline = wallOutline(frame, wall.thickness, piece.from, piece.to, ends, piece.recess);
+    if (wall.onGround === true) {
+        outline = densified(outline, GroundStep);
+    }
     const half = outline.length / 2;
-    const runs = profileRuns(outline.slice(0, half), outline.slice(half).reverse(), pieceTop, roofs, [piece.top, piece.bottom, wall.height]);
-    if (runsAreLevel(runs, piece.top)) {
+    const levels = [piece.top, piece.bottom, wall.height];
+    const runs = profileRuns(outline.slice(0, half), outline.slice(half).reverse(), pieceTop, roofs, levels, pieceBottom, slopes);
+    if (bottom === null && runsAreLevel(runs, piece.top)) {
         return null;
     }
     const local = wallLocal(frame);
-    return runs
-        .filter((run) => !runsAreLevel([run], piece.bottom))
-        .map((run: ProfileRun) => {
+    const solid = (run: ProfileRun): boolean =>
+        run.rightTop.some((h, i) => h - run.rightBottom[i] > 0.5) || run.leftTop.some((h, i) => h - run.leftBottom[i] > 0.5);
+    return runs.filter(solid).map((run: ProfileRun) => {
             const tops = {right: run.rightTop.map((h) => h * MM), left: run.leftTop.map((h) => h * MM)};
-            const mesh = curvedPrismAt(material, run.right.map(local), run.left.map(local), piece.bottom * MM, tops);
+            const bottoms = {right: run.rightBottom.map((h) => h * MM), left: run.leftBottom.map((h) => h * MM)};
+            const mesh = curvedPrismAt(material, run.right.map(local), run.left.map(local), bottoms, tops);
             if (piece.recess !== undefined) {
                 mesh.userData = {openingId: piece.recess.openingId};
             }
@@ -753,7 +816,11 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         const gaps = wallGapsAlongEdge(a, b, walls).map((gap) => ({...gap, bottom: gap.bottom - elevation, top: gap.top - elevation}));
         const segments = finishSegments(room, a, b, length, walls);
         // Along a curved wall the edge is one of the pieces of its face: the bands' UVs run on along the arc.
-        const curved = wallFacesAlongEdge(a, b, walls).find((face) => (face.wall.sagitta ?? 0) !== 0);
+        const faces = wallFacesAlongEdge(a, b, walls);
+        const curved = faces.find((face) => (face.wall.sagitta ?? 0) !== 0);
+        // Under a wall with a sloping top (FD-87) the bands stop at it.
+        const sloping = faces.map((face) => wallHeightAt(face.wall, wallFrame(face.wall))).filter((h): h is HeightAt => h !== null);
+        const wallCap: HeightAt | null = sloping.length === 0 ? null : (p): number => Math.min(...sloping.map((h) => h(p)));
 
         const edge = new THREE.Group();
         edge.position.set(ax * MM, 0, -ay * MM);
@@ -779,9 +846,13 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
                 for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
                     const from = segment.from + piece.from;
                     const bottom = band.bottom + piece.bottom;
-                    const lining = roofs.length === 0
-                        ? null
-                        : finishLining(material, a, b, from, segment.from + piece.to, bottom, band.bottom + piece.top, elevation, roofs, curved);
+                    const lining =
+                        roofs.length === 0 && wallCap === null
+                            ? null
+                            : finishLining(material, a, b, from, segment.from + piece.to, bottom, band.bottom + piece.top, elevation, roofs, {
+                                  curved,
+                                  wallCap,
+                              });
                     if (lining !== null) {
                         lining.forEach((mesh) => edge.add(mesh));
                         continue;
@@ -811,7 +882,8 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
  * A piece of a finish band on the room edge a → b (`from`–`to` along it, `bottom`–`top` above the room's floor at
  * `elevation`) stopping at the `roofs`' underside: in the edge's group (x along it, z into the lining), in runs as
  * `profileRuns()` gives them, UVs running on from the edge's start (along the arc of a `curved` wall's face, as
- * `arcFaceUvs()` lays them). Null when the roofs leave it whole.
+ * `arcFaceUvs()` lays them), and under `wallCap` (the wall's own sloping top, against the floor's level). Null when
+ * the roofs and the cap leave it whole.
  */
 function finishLining(
     material: THREE.Material,
@@ -823,7 +895,7 @@ function finishLining(
     top: number,
     elevation: number,
     roofs: FloorRoofs,
-    curved: EdgeFace | undefined,
+    {curved, wallCap}: {curved: EdgeFace | undefined; wallCap: HeightAt | null},
 ): THREE.Mesh[] | null {
     const length = Math.hypot(b.x - a.x, b.y - a.y);
     const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
@@ -832,12 +904,13 @@ function finishLining(
     const at = (along: number): Vec2 => ({x: a.x + dir.x * along, y: a.y + dir.y * along});
     const face = [at(from), at(to)];
     const room = face.map((p) => ({x: p.x + inward.x, y: p.y + inward.y}));
-    const cap = wallTopAt({height: top + elevation, upToRoof: false}, roofs);
-    if (cap === null) {
+    const roofCap = wallTopAt({height: top + elevation, upToRoof: false}, roofs);
+    if (roofCap === null && wallCap === null) {
         return null;
     }
+    const cap: HeightAt = (p) => Math.min(roofCap?.(p) ?? top + elevation, wallCap?.(p) ?? Infinity);
     const bandTop: HeightAt = (p) => Math.max(bottom, cap(p) - elevation);
-    const runs = profileRuns(face, room, bandTop, roofs, [top + elevation, bottom + elevation]);
+    const runs = profileRuns(face, room, bandTop, roofs, [top + elevation, bottom + elevation], () => 0, wallCap === null ? [] : [wallCap]);
     if (runsAreLevel(runs, top)) {
         return null;
     }

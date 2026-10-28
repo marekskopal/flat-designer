@@ -1,4 +1,4 @@
-import {Item, PlanPoint, Plot, Scene, SpotHeight} from '@app/models/scene';
+import {PlanPoint, Plot, SpotHeight} from '@app/models/scene';
 
 import {pointInPolygon} from './plan-geometry';
 
@@ -100,12 +100,6 @@ export function plotAt(plots: readonly Plot[], x: number, y: number): Plot | und
 export function groundAt(plots: readonly Plot[], x: number, y: number): number {
     const plot = plotAt(plots, x, y);
     return plot === undefined ? 0 : terrainAt(plotTerrain(plot), x, y);
-}
-
-/** The scene's items with their z against the floor's level: an item on the ground gets the ground under it added. */
-export function itemsOverFloor(scene: Pick<Scene, 'items' | 'plots'>): Item[] {
-    const plots = scene.plots ?? [];
-    return scene.items.map((item) => (item.onGround === true ? {...item, z: item.z + Math.round(groundAt(plots, item.x, item.y))} : item));
 }
 
 /**
