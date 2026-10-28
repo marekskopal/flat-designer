@@ -12,6 +12,7 @@ use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
@@ -36,6 +37,7 @@ final readonly class WallHandler implements ElementHandler
 		private OpeningRepository $openingRepository,
 		private MaterialResolver $materialResolver,
 		private WallFinishBands $wallFinishBands,
+		private RoofRepository $roofRepository,
 	) {
 	}
 
@@ -207,7 +209,7 @@ final readonly class WallHandler implements ElementHandler
 	 * taken as it is when it differs from the current offsets; otherwise a moved start point shifts them so
 	 * every opening keeps its place on the plan.
 	 *
-	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, ...} $next
+	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, ...} $next
 	 * @return array<int, int> offset by opening id
 	 */
 	private function openingOffsets(Wall $wall, array $next, int $length, mixed $requested): array
@@ -230,9 +232,13 @@ final readonly class WallHandler implements ElementHandler
 		}
 
 		$radius = $new->arc()['radius'] ?? null;
+		$top = OpeningHead::wallTopIfReshaped($wall, $next, $new, $this->roofRepository->findByFloor($wall->floor->id));
 		foreach ($openings as $opening) {
-			// Sliding and pocket doors also keep the wall their open leaf slides along; on a curved wall it has to stay shallow.
-			if (!OpeningPlacement::fits($opening, $offsets[$opening->id], $length, $next['thickness'], $next['height'], $radius)) {
+			$offset = $offsets[$opening->id];
+			// Sliding and pocket doors also keep the wall their open leaf slides along; on a curved wall it has to stay
+			// shallow; under the roofs the head stays under the wall's top.
+			$headRoom = OpeningHead::headRoom($top, $offset, $opening->width);
+			if (!OpeningPlacement::fits($opening, $offset, $length, $next['thickness'], $headRoom, $radius)) {
 				throw EditException::invalid(sprintf('Opening "%s" would no longer fit the wall.', $opening->name));
 			}
 		}

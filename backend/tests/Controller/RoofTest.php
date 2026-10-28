@@ -197,6 +197,40 @@ final class RoofTest extends EditorTestCase
 		self::assertSame([false], array_column($this->sceneList('walls'), 'upToRoof'));
 	}
 
+	public function testOpeningsStayUnderTheWallsTopUnderTheRoof(): void
+	{
+		// The underside rises from 2600 at y 0 and 6000 to 5600 at the ridge (y 3000).
+		$roof = $this->create(
+			'roofs',
+			['x' => 4000, 'y' => 3000, 'width' => 8000, 'depth' => 6000, 'pitch' => 45, 'overhang' => 0, 'vergeOverhang' => 0],
+		);
+		$gable = $this->create('walls', ['startX' => 100, 'startY' => 0, 'endX' => 100, 'endY' => 6000, 'upToRoof' => true]);
+		$window = ['wallId' => self::id($gable), 'type' => 'Window', 'offset' => 2600, 'width' => 800];
+
+		// Above the wall's 2600 mm, under the gable's 5200 at the window's sides.
+		$high = $this->create('openings', $window + ['sillHeight' => 3000, 'height' => 1500]);
+		self::assertSame([3000, 1500], [$high['sillHeight'], $high['height']]);
+		$tooHigh = $this->edit('POST', 'openings', body: ['offset' => 1000, 'sillHeight' => 3000, 'height' => 1000] + $window);
+		self::assertSame(422, $tooHigh->getStatusCode());
+		self::assertStringContainsString('top over the opening (3600 mm, under the roof)', (string) $tooHigh->getBody());
+		// Lowered to its height, the wall would leave the window above it.
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($gable), ['upToRoof' => false])->getStatusCode());
+		// A roof lowered since leaves the window in the roof, but renaming it or the wall, and undoing, still work.
+		self::assertSame(200, $this->edit('PATCH', 'roofs', self::id($roof), ['eaveHeight' => 1600])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'openings', self::id($high), ['name' => 'Gable window'])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', self::id($gable), ['name' => 'West gable'])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($high), ['width' => 900])->getStatusCode());
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame(200, $this->undo()->getStatusCode());
+
+		// A partition 3 m high is cut by the slope: 2700 mm high at its start.
+		$partition = $this->create('walls', ['startX' => 4000, 'startY' => 100, 'endX' => 4000, 'endY' => 3000, 'height' => 3000]);
+		$door = ['wallId' => self::id($partition), 'type' => 'Passage', 'offset' => 0, 'width' => 800, 'sillHeight' => 0];
+		self::assertSame(422, $this->edit('POST', 'openings', body: $door + ['height' => 2800])->getStatusCode());
+		self::assertSame(201, $this->edit('POST', 'openings', body: $door + ['height' => 2700])->getStatusCode());
+	}
+
 	public function testAColumnUnderARoofReachesIt(): void
 	{
 		$polygon = [[0, 0], [8000, 0], [8000, 6000], [0, 6000]];

@@ -21,6 +21,7 @@ import {
     wallFrame,
     wallJoints,
     wallOutline,
+    WallPiece,
     wallPieces,
     wallSamples,
 } from './plan-geometry';
@@ -49,6 +50,7 @@ import {
     truncate,
 } from './sheet-svg';
 import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
+import {FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
 
 // The floor plan as a drawing on paper (A4, in paper mm): walls cut at `PlanCutHeight`, doors with their swings,
@@ -145,8 +147,8 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const rooms = scene.rooms.map(roomShape);
     const plots = (scene.plots ?? []).map(plotShape);
     const itemShapes = items.map(itemShape);
-    const walls = wallShapes(scene.walls);
-    const openings = scene.walls.flatMap(openingShapes);
+    const walls = wallShapes(scene.walls, scene.roofs ?? []);
+    const openings = scene.walls.flatMap((wall) => openingShapes(wall, scene.roofs ?? []));
     const stairs = stairPlanShapes(scene);
 
     const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes]);
@@ -279,7 +281,12 @@ function roomShape(room: Room): Shape {
 
 /** The level at which a wall is cut: `PlanCutHeight`, or half its height for a wall lower than that. */
 function cutLevel(wall: Pick<Wall, 'height'>): number {
-    return wall.height > PlanCutHeight ? PlanCutHeight : wall.height / 2;
+    return levelFor(wall.height);
+}
+
+/** The cut through a wall `top` mm high: `PlanCutHeight`, or half the height of a knee wall under it (drawn as a low wall). */
+function levelFor(top: number): number {
+    return top > PlanCutHeight ? PlanCutHeight : top / 2;
 }
 
 /** Whether the plan's cut passes through an opening (the wall is open there in the plan). */
@@ -288,11 +295,44 @@ function cutsThrough(opening: Opening, level: number): boolean {
 }
 
 /**
+ * The stretches (mm along the centre line) of a piece the plan's cut passes through under the roofs: where the cut
+ * (`levelFor()` the wall's `top` there) lies between the piece's bottom and its top (the wall's for a piece reaching
+ * it). The top is piecewise linear (`roofBreaks()`), and every height the answer turns on is a break, so the middle of
+ * a stretch decides for all of it.
+ */
+function cutStretches(frame: WallFrame, piece: WallPiece, top: HeightAt, roofs: FloorRoofs, wallHeight: number): [number, number][] {
+    const levels = [PlanCutHeight, 2 * piece.bottom, 2 * piece.top, wallHeight, piece.top];
+    const spans: [number, number][] = [];
+    const samples = wallSamples(frame, piece.from, piece.to);
+    for (let i = 1; i < samples.length; i++) {
+        const [a, b] = [samples[i - 1], samples[i]];
+        const ts = roofBreaks(pointOnWall(frame, a), pointOnWall(frame, b), roofs, levels);
+        for (let k = 1; k < ts.length; k++) {
+            const [s0, s1] = [a + (b - a) * ts[k - 1], a + (b - a) * ts[k]];
+            const height = top(pointOnWall(frame, (s0 + s1) / 2));
+            const level = levelFor(height);
+            const pieceTop = piece.top >= wallHeight ? height : Math.min(piece.top, height);
+            if (!(height > 0) || piece.bottom > level || level >= pieceTop) {
+                continue;
+            }
+            const last = spans.at(-1);
+            if (last !== undefined && s0 <= last[1] + 0.5) {
+                last[1] = s1;
+            } else {
+                spans.push([s0, s1]);
+            }
+        }
+    }
+    return spans;
+}
+
+/**
  * The cut walls, filled: the wall pieces that reach the cut level (a niche's piece thinner by its depth), merged
  * where they touch, with the mitred corners of `wallJoints()` at the wall ends, except at a corner window, where the
- * corner stays open.
+ * corner stays open. Under the `roofs` the cut follows the wall's top (`wallTopAt()`): where the roof brings it under
+ * `PlanCutHeight`, the wall is drawn as a low wall, cut at half its top, as a knee wall is.
  */
-function wallShapes(walls: readonly Wall[]): Shape[] {
+function wallShapes(walls: readonly Wall[], roofs: FloorRoofs = []): Shape[] {
     const joints = wallJoints(walls);
     const corners = cornerWindows(walls);
     return walls.flatMap((wall) => {
@@ -301,8 +341,14 @@ function wallShapes(walls: readonly Wall[]): Shape[] {
             return [];
         }
         const level = cutLevel(wall);
-        const pieces = wallPieces(frame.length, wall.height, wall.openings)
-            .filter((p) => p.bottom <= level && level < p.top)
+        const top = wallTopAt(wall, roofs);
+        const pieces = wallPieces(frame.length, wall.height, shownOpenings(wall, frame, top, roofs))
+            .flatMap((p) => {
+                if (top === null) {
+                    return p.bottom <= level && level < p.top ? [p] : [];
+                }
+                return cutStretches(frame, p, top, roofs, wall.height).map(([from, to]) => ({...p, from, to}));
+            })
             .sort((a, b) => a.from - b.from);
         const merged: typeof pieces = [];
         for (const piece of pieces) {
@@ -352,16 +398,26 @@ const HiddenStyle: Style = {stroke: Muted, width: 0.15, dash: '1 0.7'};
  * pocket; a niche's original face dashed. A passage is just the gap. An opening the cut does not pass through (a
  * high window, a hatch) is dashed in the solid wall.
  */
-function openingShapes(wall: Wall): Shape[] {
+/** The wall's openings the roofs leave wall for (`buildWall()` draws the same): all of them without roofs. */
+function shownOpenings(wall: Wall, frame: WallFrame, top: HeightAt | null, roofs: FloorRoofs): Opening[] {
+    return wall.openings.filter(
+        (o) => top === null || o.sillHeight < lowestTopAlong(pointOnWall(frame, o.offset), pointOnWall(frame, o.offset + o.width), top, roofs),
+    );
+}
+
+/** The doors, windows and niches of a wall: open in the cut with their symbols, or dashed above or below it. */
+function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
     const wallPath = wallFrame(wall);
     if (!(wallPath.length > 0)) {
         return [];
     }
-    const level = cutLevel(wall);
+    const top = wallTopAt(wall, roofs);
     const h = wall.thickness / 2;
-    return wall.openings.flatMap((opening): Shape[] => {
+    return shownOpenings(wall, wallPath, top, roofs).flatMap((opening): Shape[] => {
         const from = opening.offset;
         const to = opening.offset + opening.width;
+        // Under a roof the cut over the opening follows the wall's top there.
+        const level = top === null ? cutLevel(wall) : levelFor(top(pointOnWall(wallPath, (from + to) / 2)));
         const sign = opening.side === 'Right' ? -1 : 1;
         if (opening.type === 'Niche') {
             // A niche follows its wall's curve.

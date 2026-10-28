@@ -374,7 +374,9 @@ format is the text in `FurnitureTools::Format`.
 - Viewer (`viewer/engine/roofs.ts`): `buildRoof()` draws a roof in its own frame, a group at its centre turned by its
   rotation: each plane a slab (covering on top with UVs in metres along the slope, soffit under it and along its edges),
   caps on the ridge and hips, a flat roof's parapet; tagged `roofId`, merged, with section-fill twins. Roofs go into
-  `parts.ceilings`, so they hide with the ceilings (and the wall cut removes them in the plan). `buildRoofOutline()`
+  `parts.roofBodies`, shown by the Display toggle Roof (`setRoofsVisible()`, on by default; saved views and share links
+  keep it as `roofs`, missing meaning shown; hidden, they still shade the floor, as hidden ceilings do), and the wall cut
+  removes them in the plan. `buildRoofOutline()`
   draws the top view's stand-in (the outline with the overhangs dashed, the eaves line, ridge and hips) in
   `parts.roofOutlines`, shown only while `isTopDown()` and lifted to just under the wall cut (`roofOutlineHeight()`: the
   plan camera is a perspective one), with an undrawn band along the outline that picks the roof; it is `planOnly`, left
@@ -382,10 +384,26 @@ format is the text in `FurnitureTools::Format`.
   (`resizeRoofByCorner()`, the opposite corner fixed), nudged and turned with R like items. `floorPoints()` includes the
   roofs' outlines, so the framing and the sun's shadow cover the overhangs. The Add menu's Building → Roof over the floor
   takes the backend's default rectangle.
-- Walls: every wall of the floor is cut at the underside of the roofs over it; one with `upToRoof` rises to it (a
-  gable). `StructureSize` stops a column or beam at the roof where it is lower than the ceiling. Snapshots keep
-  `roofs` (`SnapshotRoofRestorer`) and the walls' `upToRoof`. Seeded coverings: `roof-tiles-clay`, `roof-slate`,
-  `roof-metal-seam`, `roof-membrane`.
+- Walls: every wall of the floor is cut at the underside of the roofs over it; one with `upToRoof` (the inspector's
+  "Up to the roof") rises to it (a gable). `StructureSize` stops a column or beam at the roof where it is lower than
+  the ceiling. Snapshots keep `roofs` (`SnapshotRoofRestorer`) and the walls' `upToRoof`. Seeded coverings:
+  `roof-tiles-clay`, `roof-slate`, `roof-metal-seam`, `roof-membrane`.
+- Under the roofs (FD-81, `viewer/engine/under-roof.ts`, TS only): `wallTopAt()` is a wall's top at a plan point.
+  Every such height is piecewise linear along a line, and `roofBreaks()` finds where it bends (roof edges, ridges,
+  hips, a level reached), so `profileRuns()` cuts a solid there and splits it where the top steps (a wall running out
+  from under a roof). `buildWall()` builds a piece the roofs change that way (`curvedPrismAt()` takes a top per
+  point), and leaves out an opening whose sill is above the lowest top over it, the wall solid there; finish bands stop
+  at the underside (`finishLining()`).
+  A flat ceiling slopes where the roof comes lower than its height (`ceilingParts()`, `polygon-clipping`; the highest
+  roof where they overlap), `CeilingUnderRoof` (10 mm) under the roof's soffit so the two do not flicker;
+  `ceilingHeightAt()` (pendants) and `ceilingSteps()` (with `atB` where a step slopes) follow it. Vaults are not cut.
+  The plan PDF's cut follows the wall's top (a wall the roof brings under the cut is drawn as a low wall, as a knee
+  wall is). A roof change rebuilds the walls, rooms (with their finishes), ceiling steps and Custom items the roof
+  reached before or reaches now (`roofsReach()`). The Roof toggle hides the stack's roofs too (`ContextFloor.roofs`).
+  The backend keeps an opening's head under the wall's top over it (`WallTop`: the lower of the wall's two faces,
+  sampled along the wall; `OpeningHead`), so a gable takes windows above the wall's height. Like a roof window's
+  placement, it is checked only when the opening is placed anew or the wall reshaped, so a roof lowered since does
+  not block renaming or undoing them.
 
 ## Lighting
 

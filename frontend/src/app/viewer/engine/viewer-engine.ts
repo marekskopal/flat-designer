@@ -77,6 +77,7 @@ import {
     wallFaces,
     wallFrame,
     wallJoints,
+    wallOutline,
 } from './plan-geometry';
 import {buildPlot, groundUnder, highlightPlot} from './plots';
 import {
@@ -105,6 +106,7 @@ import {
     stairSpot,
 } from './stairs';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
+import {roofsReach} from './under-roof';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {floorLevels, Walkthrough, WalkthroughFov} from './walkthrough';
@@ -402,6 +404,7 @@ export class ViewerEngine {
     private loads = 0;
     private sectionHeight: number | null = null;
     private ceilingsVisible = true;
+    private roofsVisible = true;
     /**
      * While the ceilings are hidden, they still shade the rooms: these stand-ins share their geometry and cast their
      * shadows but draw nothing (no colour, no depth, not even under the GTAO pass's override material).
@@ -639,6 +642,7 @@ export class ViewerEngine {
 
         this.parts = buildBuilding(scene, this.materials);
         this.parts.ceilings.visible = this.ceilingsVisible;
+        this.parts.roofBodies.visible = this.roofsVisible;
         content.add(this.parts.root);
         this.joints = wallJoints(scene.walls);
         this.corners = cornerWindows(scene.walls);
@@ -677,6 +681,15 @@ export class ViewerEngine {
 
         const rooms = diffById(previous.rooms, scene.rooms);
         const items = diffById(previous.items, scene.items);
+        // Walls, ceilings, finishes and pendants under the roofs follow them: a roof change rebuilds those the roof
+        // reached before or reaches now.
+        const floorRoofs = scene.roofs ?? [];
+        const roofs = diffById(previous.roofs ?? [], floorRoofs);
+        const roofsChanged = roofs.removed.length > 0 || roofs.changed.length > 0;
+        const roofIds = new Set([...roofs.removed, ...roofs.changed.map((r) => r.id)]);
+        const touchedRoofs = [...roofs.changed, ...(previous.roofs ?? []).filter((r) => roofIds.has(r.id))];
+        const underChangedRoofs = (points: readonly PlanPoint[]): boolean => roofsChanged && roofsReach(polygonBounds(points), touchedRoofs);
+        const roofTouchedRooms = new Set(scene.rooms.filter((r) => underChangedRoofs(r.polygon)).map((r) => r.id));
         // Tiled items follow their room's tile grid; Custom items their definition.
         const changedRooms = new Set(rooms.changed.map((r) => r.id));
         const changedItems = new Set(items.changed.map((i) => i.id));
@@ -688,7 +701,8 @@ export class ViewerEngine {
                 (i.roomId !== null && changedRooms.has(i.roomId)) ||
                 (i.definitionId !== null && changedDefinitions.has(i.definitionId)) ||
                 this.showsPicture(i, changedPictures) ||
-                (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)),
+                (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)) ||
+                (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -707,7 +721,7 @@ export class ViewerEngine {
 
         const walls = diffById(previous.walls, scene.walls);
         const wallsChanged = walls.removed.length > 0 || walls.changed.length > 0;
-        if (wallsChanged) {
+        if (wallsChanged || roofsChanged) {
             const joints = wallJoints(scene.walls);
             const corners = cornerWindows(scene.walls);
             const changedIds = new Set(walls.changed.map((w) => w.id));
@@ -717,12 +731,13 @@ export class ViewerEngine {
             for (const wall of scene.walls) {
                 // A moved wall also changes the mitres of the walls it meets, a window the corner windows.
                 if (
+                    underChangedRoofs(wallOutline(wallFrame(wall), wall.thickness, 0, wallFrame(wall).length).map((p) => [p.x, p.y])) ||
                     changedIds.has(wall.id) ||
                     !sameJson(this.joints.get(wall.id), joints.get(wall.id)) ||
                     !sameJson(this.corners.get(wall.id), corners.get(wall.id))
                 ) {
                     this.removeWall(wall.id);
-                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id));
+                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), floorRoofs);
                     parts.walls.set(wall.id, group);
                     parts.root.add(group);
                 }
@@ -766,7 +781,6 @@ export class ViewerEngine {
         }
 
         // The roofs: a changed one is drawn anew, with its outline.
-        const roofs = diffById(previous.roofs ?? [], scene.roofs ?? []);
         for (const id of [...roofs.removed, ...roofs.changed.map((r) => r.id)]) {
             const built = parts.roofs.get(id);
             if (built !== undefined) {
@@ -806,22 +820,22 @@ export class ViewerEngine {
             this.highlightPlots();
         }
         const rebuiltRooms = scene.rooms.filter(
-            (r) => changedRooms.has(r.id) || (plotsChanged && (r.floorElevation ?? 0) !== 0) || voidRooms.has(r.id),
+            (r) => roofTouchedRooms.has(r.id) || changedRooms.has(r.id) || (plotsChanged && (r.floorElevation ?? 0) !== 0) || voidRooms.has(r.id),
         );
 
         for (const id of [...rooms.removed, ...rebuiltRooms.map((r) => r.id)]) {
             this.removeRoom(id);
         }
         for (const room of rebuiltRooms) {
-            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids), room.id);
+            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, floorRoofs), room.id);
             const label = this.createLabel(room);
             this.labels.set(room.id, label);
             content.add(label);
         }
-        if (wallsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
-            // Steps between ceilings depend on the neighbouring rooms and on which edges have walls.
+        if (wallsChanged || roofsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
+            // Steps between ceilings depend on the neighbouring rooms, on which edges have walls and on the roofs.
             this.disposeObject(parts.ceilingSteps);
-            parts.ceilingSteps = buildCeilingSteps(scene.rooms, scene.walls, materials);
+            parts.ceilingSteps = buildCeilingSteps(scene.rooms, scene.walls, materials, floorRoofs);
             parts.ceilings.add(parts.ceilingSteps);
         }
         if (wallsChanged) {
@@ -841,7 +855,7 @@ export class ViewerEngine {
                 if (roomParts.finishes !== null) {
                     this.disposeObject(roomParts.finishes);
                 }
-                roomParts.finishes = buildRoomFinishes(room, scene.walls, materials);
+                roomParts.finishes = buildRoomFinishes(room, scene.walls, materials, floorRoofs);
                 if (roomParts.finishes !== null) {
                     parts.root.add(roomParts.finishes);
                 }
@@ -894,7 +908,12 @@ export class ViewerEngine {
 
     /** Takes an object out of the scene and frees its geometry (and materials the library does not share). */
     private itemAssets(scene: Scene): ItemAssets {
-        return {models: new Map((scene.models ?? []).map((m) => [m.id, m])), modelLibrary: this.modelLibrary, pictures: this.pictureLibrary};
+        return {
+            models: new Map((scene.models ?? []).map((m) => [m.id, m])),
+            modelLibrary: this.modelLibrary,
+            pictures: this.pictureLibrary,
+            roofs: scene.roofs ?? [],
+        };
     }
 
     /** Draws the `Model` items of a model that finished loading (all of them with null), in place of their placeholders. */
@@ -1109,6 +1128,16 @@ export class ViewerEngine {
         this.refreshShadows();
     }
 
+    /** Shows or hides the roofs, the floors below's too; hidden, the shown floor's still shade the floor under them. */
+    public setRoofsVisible(visible: boolean): void {
+        this.roofsVisible = visible;
+        if (this.parts !== null) {
+            this.parts.roofBodies.visible = visible;
+        }
+        this.stackLayers.forEach((layer) => (layer.roofs.visible = visible));
+        this.refreshShadows();
+    }
+
     /** Shows or hides the parts of an item that belong to the ceiling (a beam) with the ceilings. */
     private showCeilingParts(object: THREE.Object3D): void {
         object.traverse((o) => {
@@ -1185,10 +1214,10 @@ export class ViewerEngine {
         }
     }
 
-    /** Stands in for the hidden ceilings (and the beams hiding with them) in the shadow pass about to run. */
+    /** Stands in for the hidden ceilings (and the beams hiding with them) and roofs in the shadow pass about to run. */
     private updateShadowStandIns(): void {
         this.shadowStandIns.clear();
-        if (this.ceilingsVisible || this.content === null || this.parts === null) {
+        if ((this.ceilingsVisible && this.roofsVisible) || this.content === null || this.parts === null) {
             return;
         }
         this.content.updateMatrixWorld(true);
@@ -1201,6 +1230,12 @@ export class ViewerEngine {
                 this.shadowStandIns.add(standIn);
             }
         };
+        if (!this.roofsVisible) {
+            this.parts.roofBodies.traverse(add);
+        }
+        if (this.ceilingsVisible) {
+            return;
+        }
         this.parts.ceilings.traverse(add);
         this.items.forEach((item) => {
             if (item.visible) {
@@ -1905,6 +1940,7 @@ export class ViewerEngine {
         this.stackLayers.filter((layer) => !kept.has(layer.scene.floor.id)).forEach((layer) => this.disposeObject(layer.group));
         this.stackLayers = wanted.map((scene) => {
             const layer = kept.get(scene.floor.id) ?? buildContextFloor(scene, materials as MaterialLibrary, this.itemAssets(scene));
+            layer.roofs.visible = this.roofsVisible;
             this.scene.add(layer.group);
             return layer;
         });
@@ -3110,7 +3146,8 @@ export class ViewerEngine {
             openings: [],
         }));
         const joints = wallJoints([...(this.sceneData?.walls ?? []), ...drawn]);
-        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id))));
+        const roofs = this.sceneData?.roofs ?? [];
+        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs)));
     }
 
     /** Markers of a run in the overlay: its points, and the pointer (green when snapped). */
@@ -3136,7 +3173,14 @@ export class ViewerEngine {
             return;
         }
         const walls = scene.walls.map((w) => (w.id === wall.id ? wall : w));
-        const group = buildWall(wall, materials, parts.sectionMaterial, wallJoints(walls).get(wall.id), cornerWindows(walls).get(wall.id));
+        const group = buildWall(
+            wall,
+            materials,
+            parts.sectionMaterial,
+            wallJoints(walls).get(wall.id),
+            cornerWindows(walls).get(wall.id),
+            scene.roofs ?? [],
+        );
         const original = parts.walls.get(wall.id);
         this.setPreview(original === undefined ? [] : [original], [group]);
 
@@ -3195,8 +3239,8 @@ export class ViewerEngine {
         highlightRoofOutline(outline, true);
         const body = buildRoof(resized, materials, this.parts.sectionMaterial);
         this.setPreview([built.roof, built.outline], [body, outline]);
-        // With the other roofs (hidden with the ceilings) and outlines (at their height over the plan).
-        this.parts.ceilings.add(body);
+        // With the other roofs (hidden with them) and outlines (at their height over the plan).
+        this.parts.roofBodies.add(body);
         this.parts.roofOutlines.add(outline);
     }
 

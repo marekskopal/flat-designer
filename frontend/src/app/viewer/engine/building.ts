@@ -32,6 +32,7 @@ import {
     NoCorners,
     openingFrame,
     openingLeaves,
+    pointOnWall,
     SlidingDoorOverlap,
     SquareEnds,
     tileGrid,
@@ -53,6 +54,7 @@ import {buildPlot, groundUnder} from './plots';
 import {buildRoof, buildRoofOutline} from './roofs';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
 import {alignTiles, turnLevelUvs} from './tiling';
+import {ceilingParts, FloorRoofs, HeightAt, lowestTopAlong, outlineWithout, ProfileRun, profileRuns, runsAreLevel, wallTopAt} from './under-roof';
 
 /** Bars of a French window sash, mm. */
 const SashBar = 55;
@@ -74,8 +76,10 @@ export interface BuildingParts {
     stairsBelow: THREE.Group;
     /** Wall groups (with their doors and windows) keyed by wall id. */
     walls: Map<number, THREE.Group>;
-    /** Roofs (in `ceilings`, so they hide with them) and their top-view outlines (in `roofOutlines`), keyed by roof id. */
+    /** Roofs (in `roofBodies`) and their top-view outlines (in `roofOutlines`), keyed by roof id. */
     roofs: Map<number, RoofParts>;
+    /** The roofs, toggled separately (the Display's Roof) to look into the floor under them. */
+    roofBodies: THREE.Group;
     /** The roofs' outlines, shown in the top view only. */
     roofOutlines: THREE.Group;
     /** Fill of wall cores revealed by the section plane, shared by all walls. */
@@ -106,11 +110,12 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     const ceilings = new THREE.Group();
     ceilings.name = 'ceilings';
     const voids = sceneVoids(scene);
+    const roofs = scene.roofs ?? [];
     const sectionMaterial = materials.sectionFill();
     const parts: BuildingParts = {
         root,
         ceilings,
-        ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials),
+        ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials, roofs),
         slab: buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below),
         rooms: new Map(),
         plots: new Map(),
@@ -118,15 +123,17 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         stairsBelow: buildStairsBelow(scene.stairsBelow, materials, sectionMaterial),
         walls: new Map(),
         roofs: new Map(),
+        roofBodies: new THREE.Group(),
         roofOutlines: new THREE.Group(),
         sectionMaterial,
     };
     parts.roofOutlines.name = 'roof-outlines';
     parts.roofOutlines.visible = false;
-    root.add(parts.slab, parts.stairsBelow, parts.roofOutlines);
+    parts.roofBodies.name = 'roofs';
+    root.add(parts.slab, parts.stairsBelow, parts.roofBodies, parts.roofOutlines);
 
     for (const room of scene.rooms) {
-        addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids), room.id);
+        addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, roofs), room.id);
     }
     for (const plot of scene.plots ?? []) {
         const group = buildPlot(plot, materials, scene.rooms);
@@ -142,7 +149,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     const joints = wallJoints(scene.walls);
     const corners = cornerWindows(scene.walls);
     for (const wall of scene.walls) {
-        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id));
+        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), roofs);
         parts.walls.set(wall.id, group);
         root.add(group);
     }
@@ -156,11 +163,11 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     return parts;
 }
 
-/** Builds a roof and its outline into the building: the roof with the ceilings, the outline with the others. */
+/** Builds a roof and its outline into the building: the roof with the other roofs, the outline with the others. */
 export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLibrary): RoofParts {
     const built = {roof: buildRoof(roof, materials, parts.sectionMaterial), outline: buildRoofOutline(roof)};
     parts.roofs.set(roof.id, built);
-    parts.ceilings.add(built.roof);
+    parts.roofBodies.add(built.roof);
     parts.roofOutlines.add(built.outline);
     return built;
 }
@@ -168,7 +175,8 @@ export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLib
 /**
  * Floor, ceiling and wall finishes of one room (the finishes leave the walls' door openings free), all at the room's
  * floor elevation; the floor's edge steps down (or up) to the ground of the plot the room lies on. The stairs' voids
- * are cut out of the floor (the floor below's stairs) and a flat ceiling (the floor's own).
+ * are cut out of the floor (the floor below's stairs) and a flat ceiling (the floor's own). Under the floor's `roofs`
+ * the ceiling and the finishes follow their underside.
  */
 export function buildRoom(
     room: Room,
@@ -176,20 +184,21 @@ export function buildRoom(
     materials: MaterialLibrary,
     plots: readonly Plot[] = [],
     voids: SceneVoids = NoVoids,
+    roofs: FloorRoofs = [],
 ): RoomParts {
     const parts: RoomParts = {
         floor: buildFloor(room, materials, groundUnder(room, plots), voids.below),
-        ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials, voids.own),
-        finishes: buildRoomFinishes(room, walls, materials),
+        ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials, voids.own, roofs),
+        finishes: buildRoomFinishes(room, walls, materials, roofs),
     };
     parts.ceiling?.position.setY(parts.ceiling.position.y + (room.floorElevation ?? 0) * MM);
     return parts;
 }
 
 /** A room's wall finishes and skirting; null when it has neither and no wall face has bands of its own. */
-export function buildRoomFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group | null {
+export function buildRoomFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary, roofs: FloorRoofs = []): THREE.Group | null {
     const needed = room.wallFinishes.length > 0 || room.skirtingHeight != null || walls.some(hasFaceFinishes);
-    return needed ? buildWallFinishes(room, walls, materials) : null;
+    return needed ? buildWallFinishes(room, walls, materials, roofs) : null;
 }
 
 /** Puts a room's parts into the building (ceilings into their own group). */
@@ -340,14 +349,15 @@ const VaultSegments = 8;
 /**
  * The ceiling: a flat surface at the ceiling height, or vaults arching between beams (in their own material, white
  * paint by default). Faces down, seen from inside the room. A flat ceiling has the `voids` (the room's stairs going
- * up) cut out; a vaulted one stays whole.
+ * up) cut out and slopes under the `roofs` where they come lower (`ceilingParts()`); a vaulted one stays whole.
  */
-function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly PlanPoint[][] = []): THREE.Group {
+function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly PlanPoint[][] = [], roofs: FloorRoofs = []): THREE.Group {
     const group = new THREE.Group();
     group.name = `ceiling:${room.code}`;
     const material = room.ceilingMaterialId == null ? materials.plain('#f7f6f3', 0.95) : materials.get(room.ceilingMaterialId);
     const profile = vaultProfile(room);
-    group.add(ceilingSurface(room, profile, material, voids));
+    const underRoofs = profile === null && roofs.length > 0 ? ceilingUnderRoofs(room, material, voids, roofs) : null;
+    group.add(underRoofs ?? ceilingSurface(room, profile, material, voids));
     if (profile === null) {
         return group;
     }
@@ -369,13 +379,56 @@ function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly Pl
     return group;
 }
 
+/** A part of a downward-facing surface: its outline in plan with holes, and the height (mm) over each of its points. */
+interface SurfacePart {
+    contour: Vec2[];
+    holes: Vec2[][];
+    heightAt: (p: Vec2) => number;
+}
+
+/** UVs (metres) of a room's level surfaces: along and across the beams of its vault, or plan x and y without one. */
+function ceilingUv(room: Room): (p: Vec2) => [number, number] {
+    const frame = vaultFrame(room.vaultAngle ?? 0);
+    return (p) => [(p.x * frame.u.x + p.y * frame.u.y) * MM, (p.x * frame.v.x + p.y * frame.v.y) * MM];
+}
+
+/**
+ * A surface seen from below (a ceiling) over `parts` in plan: counter-clockwise in plan is clockwise seen from below
+ * once plan y becomes −z, so the faces look down. It shades the room, so the sun reaches in only through the windows
+ * (also while the ceilings are hidden).
+ */
+function downwardSurface(material: THREE.Material, parts: readonly SurfacePart[], uv: (p: Vec2) => [number, number]): THREE.Mesh {
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    for (const part of parts.filter((s) => s.contour.length >= 3)) {
+        const base = positions.length / 3;
+        for (const p of [...part.contour, ...part.holes.flat()]) {
+            positions.push(p.x * MM, part.heightAt(p) * MM, -p.y * MM);
+            uvs.push(...uv(p));
+        }
+        const toVector = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x, p.y);
+        for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(part.contour.map(toVector), part.holes.map((hole) => hole.map(toVector)))) {
+            indices.push(base + i, base + k, base + j);
+        }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    const surface = new THREE.Mesh(geometry, material);
+    surface.castShadow = true;
+    surface.receiveShadow = true;
+    return surface;
+}
+
 /**
  * The ceiling's surface over the room's outline: one flat piece, or strips across the beams lifted to the vault
  * profile. UVs are metres along and across the beams.
  */
 function ceilingSurface(room: Room, profile: VaultProfile | null, material: THREE.Material, voids: readonly PlanPoint[][] = []): THREE.Mesh {
     const frame = vaultFrame(room.vaultAngle ?? 0);
-    const along = (p: {x: number; y: number}): number => p.x * frame.u.x + p.y * frame.u.y;
     const across = (p: {x: number; y: number}): number => p.x * frame.v.x + p.y * frame.v.y;
     const outline = counterClockwise(room.polygon).map(([x, y]) => ({x, y}));
     let strips: {contour: Vec2[]; holes: Vec2[][]}[] = [{contour: outline, holes: []}];
@@ -390,45 +443,45 @@ function ceilingSurface(room: Room, profile: VaultProfile | null, material: THRE
         }));
     }
 
-    const positions: number[] = [];
-    const uvs: number[] = [];
-    const indices: number[] = [];
-    for (const strip of strips.filter((s) => s.contour.length >= 3)) {
-        const base = positions.length / 3;
-        for (const p of [...strip.contour, ...strip.holes.flat()]) {
-            const height = profile === null ? (room.ceilingHeight ?? 0) : vaultHeight(across(p), profile);
-            positions.push(p.x * MM, height * MM, -p.y * MM);
-            uvs.push(along(p) * MM, across(p) * MM);
-        }
-        // Counter-clockwise in plan is clockwise seen from below once plan y becomes −z: the faces look down.
-        const toVector = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x, p.y);
-        for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(strip.contour.map(toVector), strip.holes.map((hole) => hole.map(toVector)))) {
-            indices.push(base + i, base + k, base + j);
-        }
+    const heightAt = (p: Vec2): number => (profile === null ? (room.ceilingHeight ?? 0) : vaultHeight(across(p), profile));
+    return downwardSurface(material, strips.map((strip) => ({...strip, heightAt})), ceilingUv(room));
+}
+
+/**
+ * A flat ceiling under roofs: its parts (`ceilingParts()`) laid flat or on the roof planes, with the room's floor
+ * elevation taken off (the group stands on it). Null when no roof comes lower than the ceiling anywhere in the room.
+ */
+function ceilingUnderRoofs(room: Room, material: THREE.Material, voids: readonly PlanPoint[][], roofs: FloorRoofs): THREE.Mesh | null {
+    const parts = ceilingParts(room, outlineWithout(room.polygon, voids), roofs);
+    if (parts === null) {
+        return null;
     }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.setIndex(indices);
-    geometry.computeVertexNormals();
-    const surface = new THREE.Mesh(geometry, material);
-    // Shades the room, so the sun reaches in only through the windows (also while the ceilings are hidden).
-    surface.castShadow = true;
-    surface.receiveShadow = true;
-    return surface;
+    const elevation = room.floorElevation ?? 0;
+    const ring = (points: readonly Vec2[]): Vec2[] => counterClockwise(points.map((p): PlanPoint => [p.x, p.y])).map(([x, y]) => ({x, y}));
+    return downwardSurface(
+        material,
+        // Counter-clockwise in plan, holes clockwise, as the triangulation wants them.
+        parts.map((part) => ({
+            contour: ring(part.outer),
+            holes: part.holes.map((hole) => ring(hole).reverse()),
+            heightAt: (p) => part.heightAt(p) - elevation,
+        })),
+        ceilingUv(room),
+    );
 }
 
 /** Upright faces closing the step between ceilings of different heights in an open plan (`ceilingSteps`). */
-export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
+export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[], materials: MaterialLibrary, roofs: FloorRoofs = []): THREE.Group {
     const group = new THREE.Group();
     group.name = 'ceiling-steps';
     const material = materials.plain('#f7f6f3', 0.95, 0, THREE.DoubleSide);
-    for (const step of ceilingSteps(rooms, walls)) {
+    for (const step of ceilingSteps(rooms, walls, roofs)) {
         const geometry = new THREE.BufferGeometry();
+        const atB = step.atB ?? step;
         const corners = [
             [step.a.x, step.bottom, step.a.y],
-            [step.b.x, step.bottom, step.b.y],
-            [step.b.x, step.top, step.b.y],
+            [step.b.x, atB.bottom, step.b.y],
+            [step.b.x, atB.top, step.b.y],
             [step.a.x, step.top, step.a.y],
         ].flatMap(([x, h, y]) => [x * MM, h * MM, -y * MM]);
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(corners, 3));
@@ -447,7 +500,8 @@ export function buildCeilingSteps(rooms: readonly Room[], walls: readonly Wall[]
  * y up, z across with −z on the left of the wall direction. Solid pieces leave the openings empty; doors and windows
  * are added into them, on a curved wall built straight on the tangent at their middle (`openingFrame()`). `ends`
  * mitres the end pieces where the wall meets another one in a corner; `corners` names the corner windows at its ends
- * (`cornerWindows()`).
+ * (`cornerWindows()`). Under the floor's `roofs` the wall's top follows their underside (`wallTopAt()`: cut by it, or
+ * risen to it with `upToRoof`), and an opening whose sill is above the lowest top over it is left out, the wall solid.
  */
 export function buildWall(
     wall: Wall,
@@ -455,6 +509,7 @@ export function buildWall(
     sectionMaterial: THREE.Material,
     ends: WallEnds = SquareEnds,
     corners: WallCorners = NoCorners,
+    roofs: FloorRoofs = [],
 ): THREE.Group {
     const frame = wallFrame(wall);
     const group = new THREE.Group();
@@ -464,21 +519,30 @@ export function buildWall(
     group.rotation.y = frame.angle;
 
     const material = materials.get(wall.materialId);
+    const top = wallTopAt(wall, roofs);
+    // An opening the roofs leave no wall for (its sill above the lowest top over it) is left out, and the wall is solid there.
+    const underTop = (opening: Opening): boolean =>
+        top === null ||
+        opening.sillHeight < lowestTopAlong(pointOnWall(frame, opening.offset), pointOnWall(frame, opening.offset + opening.width), top, roofs);
+    const openings = wall.openings.filter(underTop);
 
-    for (const piece of wallPieces(frame.length, wall.height, wall.openings)) {
-        const mesh = frame.arc === undefined
-            ? wallPieceMesh(material, piece, frame.length, wall.thickness, ends)
-            : curvedWallPieceMesh(material, piece, frame, wall.thickness, ends);
-        group.add(mesh);
-
-        // Same box drawn inside-out in a flat dark colour: invisible normally, it fills the cut once the
-        // section plane slices through the wall.
-        const cap = new THREE.Mesh(mesh.geometry, sectionMaterial);
-        cap.position.copy(mesh.position);
-        group.add(cap);
+    for (const piece of wallPieces(frame.length, wall.height, openings)) {
+        const meshes = (top === null ? null : profiledWallPiece(material, piece, frame, wall, ends, top, roofs)) ?? [
+            frame.arc === undefined
+                ? wallPieceMesh(material, piece, frame.length, wall.thickness, ends)
+                : curvedWallPieceMesh(material, piece, frame, wall.thickness, ends),
+        ];
+        for (const mesh of meshes) {
+            group.add(mesh);
+            // Same box drawn inside-out in a flat dark colour: invisible normally, it fills the cut once the
+            // section plane slices through the wall.
+            const cap = new THREE.Mesh(mesh.geometry, sectionMaterial);
+            cap.position.copy(mesh.position);
+            group.add(cap);
+        }
     }
 
-    for (const opening of wall.openings.filter((o) => o.type !== 'Niche')) {
+    for (const opening of openings.filter((o) => o.type !== 'Niche')) {
         const part = isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners);
         if (frame.arc !== undefined) {
             placeOnFrame(part, frame, openingFrame(frame, opening));
@@ -499,17 +563,57 @@ function placeOnFrame(object: THREE.Object3D, frame: WallFrame, target: WallFram
 }
 
 /**
+ * A piece of a wall under roofs, its top following `top` (a piece reaching the wall's top) or capped by it (a lower
+ * one: under a window, behind a niche): its outline (`wallOutline()`) stood up in runs (`profileRuns()`) up to the top
+ * over each point, never under the piece's bottom. Null when the roofs leave the piece as it is, which is then drawn as
+ * usual; empty when they take all of it. Tagged with the niche behind which it is, like `wallPieceMesh()`.
+ */
+function profiledWallPiece(
+    material: THREE.Material,
+    piece: WallPiece,
+    frame: WallFrame,
+    wall: Wall,
+    ends: WallEnds,
+    top: HeightAt,
+    roofs: FloorRoofs,
+): THREE.Mesh[] | null {
+    const reachesTop = piece.top >= wall.height;
+    const pieceTop: HeightAt = (p) => Math.max(piece.bottom, reachesTop ? top(p) : Math.min(piece.top, top(p)));
+    const outline = wallOutline(frame, wall.thickness, piece.from, piece.to, ends, piece.recess);
+    const half = outline.length / 2;
+    const runs = profileRuns(outline.slice(0, half), outline.slice(half).reverse(), pieceTop, roofs, [piece.top, piece.bottom, wall.height]);
+    if (runsAreLevel(runs, piece.top)) {
+        return null;
+    }
+    const local = wallLocal(frame);
+    return runs
+        .filter((run) => !runsAreLevel([run], piece.bottom))
+        .map((run: ProfileRun) => {
+            const tops = {right: run.rightTop.map((h) => h * MM), left: run.leftTop.map((h) => h * MM)};
+            const mesh = curvedPrismAt(material, run.right.map(local), run.left.map(local), piece.bottom * MM, tops);
+            if (piece.recess !== undefined) {
+                mesh.userData = {openingId: piece.recess.openingId};
+            }
+            return mesh;
+        });
+}
+
+/**
  * A piece of a curved wall: its outline (`wallOutline()`, mitred at the wall's ends, thinner behind a niche) stood up
  * with smooth faces. Tagged with the niche behind which it is, like `wallPieceMesh()`.
  */
-function curvedWallPieceMesh(material: THREE.Material, piece: WallPiece, frame: WallFrame, thickness: number, ends: WallEnds): THREE.Mesh {
-    const outline = wallOutline(frame, thickness, piece.from, piece.to, ends, piece.recess);
-    // In the wall group: x along the chord, z across it with the left at −z.
-    const local = outline.map((p) => {
+/** Plan points into a wall's group (metres): x along the chord from the start, z across it with the left at −z. */
+function wallLocal(frame: WallFrame): (p: Vec2) => {x: number; z: number} {
+    return (p) => {
         const dx = p.x - frame.start.x;
         const dy = p.y - frame.start.y;
         return {x: (dx * frame.dir.x + dy * frame.dir.y) * MM, z: -(dx * frame.normal.x + dy * frame.normal.y) * MM};
-    });
+    };
+}
+
+function curvedWallPieceMesh(material: THREE.Material, piece: WallPiece, frame: WallFrame, thickness: number, ends: WallEnds): THREE.Mesh {
+    const outline = wallOutline(frame, thickness, piece.from, piece.to, ends, piece.recess);
+    const local = outline.map(wallLocal(frame));
     const half = local.length / 2;
     const mesh = curvedPrismAt(material, local.slice(0, half), local.slice(half).reverse(), piece.bottom * MM, piece.top * MM);
     if (piece.recess !== undefined) {
@@ -568,9 +672,9 @@ const SkirtingThickness = 15;
  * boards along the walls (`skirtingPieces`: not across open edges or doorways). A wall face with bands of its own
  * (`leftFinishes` / `rightFinishes`) gets those instead of the room's. Door openings on the edge stay free; UVs
  * continue across pieces from the room corner and the floor, and tiles are then put on the room's tile grid
- * (`alignTiles`), the one its floor uses.
+ * (`alignTiles`), the one its floor uses. Under the floor's `roofs` a band stops at their underside (`finishLining()`).
  */
-export function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary): THREE.Group {
+export function buildWallFinishes(room: Room, walls: readonly Wall[], materials: MaterialLibrary, roofs: FloorRoofs = []): THREE.Group {
     const group = new THREE.Group();
     // Clicking a tiled wall selects the room the tiling belongs to.
     group.userData = {roomId: room.id};
@@ -617,6 +721,13 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
                 for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
                     const from = segment.from + piece.from;
                     const bottom = band.bottom + piece.bottom;
+                    const lining = roofs.length === 0
+                        ? null
+                        : finishLining(material, a, b, from, segment.from + piece.to, bottom, band.bottom + piece.top, elevation, roofs, curved);
+                    if (lining !== null) {
+                        lining.forEach((mesh) => edge.add(mesh));
+                        continue;
+                    }
                     const width = (piece.to - piece.from) * MM;
                     const height = (piece.top - piece.bottom) * MM;
                     const geometry = worldUvBox(width, height, LiningThickness * MM, {u: from * MM, v: bottom * MM});
@@ -636,6 +747,61 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
     alignTiles(group, tileGrid(room), materials);
     mergeStatic(group);
     return group;
+}
+
+/**
+ * A piece of a finish band on the room edge a → b (`from`–`to` along it, `bottom`–`top` above the room's floor at
+ * `elevation`) stopping at the `roofs`' underside: in the edge's group (x along it, z into the lining), in runs as
+ * `profileRuns()` gives them, UVs running on from the edge's start (along the arc of a `curved` wall's face, as
+ * `arcFaceUvs()` lays them). Null when the roofs leave it whole.
+ */
+function finishLining(
+    material: THREE.Material,
+    a: Vec2,
+    b: Vec2,
+    from: number,
+    to: number,
+    bottom: number,
+    top: number,
+    elevation: number,
+    roofs: FloorRoofs,
+    curved: EdgeFace | undefined,
+): THREE.Mesh[] | null {
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    // The room is on the left of the edge.
+    const inward = {x: -dir.y * LiningThickness, y: dir.x * LiningThickness};
+    const at = (along: number): Vec2 => ({x: a.x + dir.x * along, y: a.y + dir.y * along});
+    const face = [at(from), at(to)];
+    const room = face.map((p) => ({x: p.x + inward.x, y: p.y + inward.y}));
+    const cap = wallTopAt({height: top + elevation, upToRoof: false}, roofs);
+    if (cap === null) {
+        return null;
+    }
+    const bandTop: HeightAt = (p) => Math.max(bottom, cap(p) - elevation);
+    const runs = profileRuns(face, room, bandTop, roofs, [top + elevation, bottom + elevation]);
+    if (runsAreLevel(runs, top)) {
+        return null;
+    }
+    return runs
+        .filter((run) => !runsAreLevel([run], bottom))
+        .map((run) => {
+            const x = (p: Vec2): number => ((p.x - a.x) * dir.x + (p.y - a.y) * dir.y) * MM;
+            const mesh = curvedPrismAt(
+                material,
+                run.right.map((p) => ({x: x(p), z: 0})),
+                run.left.map((p) => ({x: x(p), z: LiningThickness * MM})),
+                bottom * MM,
+                {right: run.rightTop.map((h) => h * MM), left: run.leftTop.map((h) => h * MM)},
+                x(run.right[0]),
+            );
+            if (curved !== undefined) {
+                arcFaceUvs(mesh.geometry, {x: 0, y: 0}, a, b, curved);
+            }
+            mesh.castShadow = false;
+            mesh.receiveShadow = true;
+            return mesh;
+        });
 }
 
 /**

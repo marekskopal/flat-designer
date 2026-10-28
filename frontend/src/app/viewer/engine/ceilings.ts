@@ -1,6 +1,7 @@
 import {PlanPoint, Room, Wall} from '@app/models/scene';
 
 import {counterClockwise, edgeStretch, edgeWall, pointInPolygon, Vec2, wallGapsAlongEdge} from './plan-geometry';
+import {CeilingUnderRoof, FloorRoofs, roofBreaks, roomCeilingAt} from './under-roof';
 
 /** Directions of a vaulted ceiling in plan: `u` along the beams, `v` across them (u turned 90° counter-clockwise). */
 export interface VaultFrame {
@@ -45,13 +46,15 @@ export function vaultHeight(v: number, profile: VaultProfile): number {
 }
 
 /**
- * Height (mm) of the room's ceiling surface at a plan point: its ceiling height, or on a vaulted ceiling the vault
- * there, or the underside of a beam. Null for an open-air room.
+ * Height (mm, from the room's floor) of the room's ceiling surface at a plan point: its ceiling height, lower where the
+ * floor's `roofs` slope under it (`roomCeilingAt()`), or on a vaulted ceiling the vault there, or the underside of a
+ * beam. Null for an open-air room.
  */
-export function ceilingHeightAt(room: Room, x: number, y: number): number | null {
+export function ceilingHeightAt(room: Room, x: number, y: number, roofs: FloorRoofs = []): number | null {
     const profile = vaultProfile(room);
     if (profile === null) {
-        return room.ceilingHeight;
+        const height = roomCeilingAt(room, roofs, {x, y});
+        return height === null ? null : height - (room.floorElevation ?? 0);
     }
     const v = dot({x, y}, vaultFrame(room.vaultAngle ?? 0).v);
     const inBay = v - Math.floor(v / profile.spacing) * profile.spacing;
@@ -322,12 +325,16 @@ export function skirtingPieces(a: Vec2, b: Vec2, walls: readonly Wall[]): [numbe
     return subtractSpans(wallSpansAlongEdge(a, b, walls), doorways);
 }
 
-/** An upright face where one room's ceiling is lower than its neighbour's across an edge without a wall. */
+/**
+ * An upright face where one room's ceiling is lower than its neighbour's across an edge without a wall: `bottom` and
+ * `top` at `a`, and at `b` too unless `atB` (under a roof, where the ceilings slope) says otherwise.
+ */
 export interface CeilingStep {
     a: Vec2;
     b: Vec2;
     bottom: number;
     top: number;
+    atB?: {bottom: number; top: number};
 }
 
 /** How far across an open edge the neighbouring room is looked for, mm. */
@@ -337,8 +344,9 @@ const NeighbourProbe = 60;
  * The faces closing the gap between ceilings of different heights where rooms meet without a wall (an open-plan
  * corridor with a lower ceiling beside the living room): from the lower ceiling up to the higher one, along the lower
  * room's open edges. Heights are above the floor's level: a room's ceiling height counts from its own floor elevation.
+ * Under the floor's `roofs` the ceilings slope (`roomCeilingAt()`), so a step follows them and ends where they meet.
  */
-export function ceilingSteps(rooms: readonly Room[], walls: readonly Wall[]): CeilingStep[] {
+export function ceilingSteps(rooms: readonly Room[], walls: readonly Wall[], roofs: FloorRoofs = []): CeilingStep[] {
     const steps: CeilingStep[] = [];
     for (const room of rooms) {
         if (room.ceilingHeight === null) {
@@ -362,16 +370,43 @@ export function ceilingSteps(rooms: readonly Room[], walls: readonly Wall[]): Ce
                 const probe = {x: ax + dir.x * mid + outward.x * NeighbourProbe, y: ay + dir.y * mid + outward.y * NeighbourProbe};
                 const neighbour = rooms.find((r) => r.id !== room.id && r.ceilingHeight !== null && pointInPolygon(probe, r.polygon));
                 const top = neighbour?.ceilingHeight == null ? null : neighbour.ceilingHeight + (neighbour.floorElevation ?? 0);
-                if (top !== null && top > bottom) {
-                    steps.push({
-                        a: {x: ax + dir.x * from, y: ay + dir.y * from},
-                        b: {x: ax + dir.x * to, y: ay + dir.y * to},
-                        bottom,
-                        top,
-                    });
+                const p = {x: ax + dir.x * from, y: ay + dir.y * from};
+                const q = {x: ax + dir.x * to, y: ay + dir.y * to};
+                if (neighbour !== undefined && top !== null && roofs.length > 0) {
+                    steps.push(...slopedSteps(room, neighbour, roofs, p, q));
+                } else if (top !== null && top > bottom) {
+                    steps.push({a: p, b: q, bottom, top});
                 }
             }
         });
+    }
+    return steps;
+}
+
+/** The steps from `room`'s ceiling up to `neighbour`'s along p → q under roofs: split where the ceilings bend or cross. */
+function slopedSteps(room: Room, neighbour: Room, roofs: FloorRoofs, p: Vec2, q: Vec2): CeilingStep[] {
+    const levels = [room, neighbour].map((r) => (r.ceilingHeight ?? 0) + (r.floorElevation ?? 0) + CeilingUnderRoof);
+    const at = (t: number): Vec2 => ({x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t});
+    const heights = (t: number): [number, number] => [roomCeilingAt(room, roofs, at(t)) ?? 0, roomCeilingAt(neighbour, roofs, at(t)) ?? 0];
+    const ts = roofBreaks(p, q, roofs, levels);
+    // Where the neighbour's ceiling comes down to the room's, the step ends.
+    for (let i = ts.length - 1; i > 0; i--) {
+        const [r0, n0] = heights(ts[i - 1]);
+        const [r1, n1] = heights(ts[i]);
+        const d0 = n0 - r0;
+        const d1 = n1 - r1;
+        if (d0 * d1 < 0) {
+            ts.splice(i, 0, ts[i - 1] + ((ts[i] - ts[i - 1]) * d0) / (d0 - d1));
+        }
+    }
+    const steps: CeilingStep[] = [];
+    for (let i = 1; i < ts.length; i++) {
+        const [r0, n0] = heights(ts[i - 1]);
+        const [r1, n1] = heights(ts[i]);
+        const [rm, nm] = heights((ts[i - 1] + ts[i]) / 2);
+        if (nm - rm > 0.5) {
+            steps.push({a: at(ts[i - 1]), b: at(ts[i]), bottom: r0, top: Math.max(n0, r0), atB: {bottom: r1, top: Math.max(n1, r1)}});
+        }
     }
     return steps;
 }

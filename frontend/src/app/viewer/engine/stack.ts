@@ -15,6 +15,8 @@ export interface ContextFloor {
     scene: Scene;
     group: THREE.Group;
     items: Map<number, THREE.Object3D>;
+    /** Its roofs, which follow the Display's Roof toggle like the shown floor's. */
+    roofs: THREE.Group;
 }
 
 /**
@@ -36,7 +38,7 @@ export function buildContextFloor(scene: Scene, materials: MaterialLibrary, asse
     leaves.reset(scene.walls);
     leaves.apply(leafObjects(parts.root));
 
-    const layer: ContextFloor = {scene, group, items: new Map()};
+    const layer: ContextFloor = {scene, group, items: new Map(), roofs: parts.roofBodies};
     rebuildContextItems(layer, () => true, materials, assets, () => undefined);
     return layer;
 }
@@ -64,7 +66,8 @@ export function rebuildContextItems(
         if (previous !== undefined) {
             dispose(previous);
         }
-        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, assets);
+        // Its pendants hang from its own roofs, not the shown floor's.
+        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, {...assets, roofs: scene.roofs ?? []});
         object.visible = !hidden.has(item.id);
         layer.items.set(item.id, object);
         layer.group.add(object);

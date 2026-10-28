@@ -164,6 +164,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'sagitta', label: 'Curve: middle off the straight line (+ left, 0 straight)', type: 'int', unit: 'mm'},
         {key: 'thickness', label: 'Thickness', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
+        {key: 'upToRoof', label: 'Up to the roof (a gable)', type: 'bool'},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
         {
             key: 'leftFinishes',

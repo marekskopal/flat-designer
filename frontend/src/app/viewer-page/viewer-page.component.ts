@@ -278,6 +278,7 @@ export class ViewerPageComponent {
     /** Readout of the active drawing tool. */
     protected readonly toolStatus = signal<ToolStatus | null>(null);
     protected readonly ceilingsVisible = signal(false);
+    protected readonly roofsVisible = signal(true);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
     /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
@@ -321,6 +322,7 @@ export class ViewerPageComponent {
             view,
             camera: () => this.viewer().cameraPose(),
             ceilings: this.ceilingsVisible(),
+            roofs: this.roofsVisible(),
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
@@ -508,6 +510,7 @@ export class ViewerPageComponent {
         // Eye level: closed rooms, without labels floating through the walls or a selection outline.
         this.editor.select(null);
         this.ceilingsVisible.set(true);
+        this.roofsVisible.set(true);
         this.labelsVisible.set(false);
         this.sectionSlider.set(SectionMax);
         this.activeView.set('walkthrough');
@@ -666,7 +669,9 @@ export class ViewerPageComponent {
 
     protected selectRoom(room: Room): void {
         this.editor.select({kind: 'room', id: room.id});
+        // Seen from above: no ceiling or roof in the way.
         this.ceilingsVisible.set(false);
+        this.roofsVisible.set(false);
         this.labelsVisible.set(true);
         this.activeView.set('overview');
         this.viewer().focusRoom(room);
@@ -751,6 +756,7 @@ export class ViewerPageComponent {
         this.measuring.set(false);
         this.setView(settings.view, false);
         this.ceilingsVisible.set(settings.ceilings);
+        this.roofsVisible.set(settings.roofs ?? true);
         this.labelsVisible.set(settings.labels);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
         this.dimensionsVisible.set(settings.dimensions);
@@ -795,6 +801,7 @@ export class ViewerPageComponent {
             view: view === 'top' ? 'top' : 'overview',
             camera: view === 'top' ? null : this.viewer().cameraPose(),
             ceilings: this.ceilingsVisible(),
+            roofs: this.roofsVisible(),
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),

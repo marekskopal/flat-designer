@@ -10,6 +10,7 @@ import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
 import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
+import {FloorRoofs} from '../under-roof';
 import {evaluateDefinition, ResolvedPart} from './definition';
 import {taperedLeg} from './legs';
 
@@ -52,7 +53,8 @@ const PictureFaceOffset = 0.5;
  * along the width, +z out of the front); the parts' frame (left-bottom-back corner origin) is shifted by half the width
  * and depth. When the definition is missing or does not evaluate at the item's size, a translucent red box of the item
  * size stands in, with the reason in `userData.definitionError`. `picture` parts show their image from `pictures` (plain
- * while it loads, or without a library); `cable` parts run on the ceiling of the item's `room`. Null for other kinds.
+ * while it loads, or without a library); `cable` parts run on the ceiling of the item's `room`, sloping under the floor's
+ * `roofs`. Null for other kinds.
  */
 export function buildCustomItemBody(
     item: Item,
@@ -60,6 +62,7 @@ export function buildCustomItemBody(
     definitions: DefinitionLibrary,
     pictures: PictureLibrary | null = null,
     room?: Room,
+    roofs: FloorRoofs = [],
 ): THREE.Group | null {
     if (item.kind !== 'Custom') {
         return null;
@@ -77,7 +80,7 @@ export function buildCustomItemBody(
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
-            const mesh = tilted(buildPart(part, item, material, materials, pictures, room), part);
+            const mesh = tilted(buildPart(part, item, material, materials, pictures, room, roofs), part);
             mesh.name = `part:${part.name}`;
             mesh.userData['partName'] = part.name;
             mesh.position.x -= (item.width / 2) * MM;
@@ -121,6 +124,7 @@ function buildPart(
     materials: MaterialLibrary,
     pictures: PictureLibrary | null,
     room: Room | undefined,
+    roofs: FloorRoofs,
 ): THREE.Object3D {
     const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
     switch (part.type) {
@@ -153,7 +157,7 @@ function buildPart(
         case 'light':
             return buildLight(part);
         case 'cable':
-            return buildCable(part, item, material('vertical'), room);
+            return buildCable(part, item, material('vertical'), room, roofs);
         default:
             return box(part, material(grain));
     }
@@ -220,7 +224,7 @@ function buildLight(part: ResolvedPart): THREE.Group {
  * points and the rose are fixed to the room's real ceiling, also a vault, and the cable drapes over what hangs lower
  * between them (a beam).
  */
-function buildCable(part: ResolvedPart, item: Item, material: THREE.Material, room: Room | undefined): THREE.Group {
+function buildCable(part: ResolvedPart, item: Item, material: THREE.Material, room: Room | undefined, roofs: FloorRoofs): THREE.Group {
     const group = new THREE.Group();
     const radius = Math.max(Math.min(part.w, part.d) / 2, 1);
     const sag = typeof part.props['sag'] === 'number' ? Math.max(part.props['sag'], 0) : 0;
@@ -238,7 +242,7 @@ function buildCable(part: ResolvedPart, item: Item, material: THREE.Material, ro
         }
         const plan = partsPointToPlan(item, p.x, p.z);
         // The room's ceiling counts from its own floor; the item's z from the floor's level.
-        const height = ceilingHeightAt(room, plan.x, plan.y);
+        const height = ceilingHeightAt(room, plan.x, plan.y, roofs);
         return height === null ? top : height + (room.floorElevation ?? 0) - item.z;
     };
 

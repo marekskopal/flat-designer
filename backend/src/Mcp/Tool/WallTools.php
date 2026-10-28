@@ -136,7 +136,8 @@ final readonly class WallTools
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $leftFinishes finish bands on the face left of start → end, instead of the room's wallFinishes; [] = none
 	 * @param list<array{materialId: int, bottom: int, top: int}>|null $rightFinishes the same on the face right of start → end
 	 * @param bool|null $upToRoof true: the wall rises to the underside of the roofs over it (a gable; it still stops at `height`
-	 *   where no roof is over it); every wall is cut at that underside anyway
+	 *   where no roof is over it); every wall is cut at that underside anyway. Openings stay under the wall's top over them,
+	 *   so a gable takes windows above `height`
 	 * @param list<string>|null $clear fields to set to none: "materialId"; "leftFinishes", "rightFinishes" (the face takes the room's bands again)
 	 */
 	#[McpTool(

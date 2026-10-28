@@ -8,7 +8,7 @@ import {FixtureLight, LumenScale, WhiteBalance} from './lights';
 const MaxTextureSize = 2048;
 
 /**
- * A copy of the shown floor (`content`) for a glTF file: the ceilings (with the roofs) and the items' ceiling parts
+ * A copy of the shown floor (`content`) for a glTF file: the ceilings, the roofs and the items' ceiling parts
  * shown; the room labels, the selection highlight, the roofs' top-view outlines (`planOnly`), the section-fill twins
  * (`sectionMaterial`) and hidden items (other variants) left out. Items, walls, openings, rooms and roofs are named after
  * their scene elements (furniture parts after the part), and
@@ -42,7 +42,7 @@ export function exportTree(content: THREE.Object3D, scene: Scene, sectionMateria
 
     const removed: THREE.Object3D[] = [];
     copy.traverse((o) => {
-        if (o.name === 'ceilings' || o.userData['ceilingPart'] === true) {
+        if (o.name === 'ceilings' || o.name === 'roofs' || o.userData['ceilingPart'] === true) {
             o.visible = true;
         }
         const material = o instanceof THREE.Mesh ? (o.material as THREE.Material | THREE.Material[]) : null;

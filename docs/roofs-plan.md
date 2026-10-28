@@ -49,7 +49,7 @@ and knee walls for attics, and roof windows.
   opening host polymorphic would touch every reader of `wall.openings` (wall pieces, spans, finishes, walkthrough,
   plan, elevations) for a host that shares none of that logic.
 - **Visibility.** The roof is above the wall cut, so the section plane already removes it in the plan view and while
-  cutting. It is tagged like the ceilings and hides with the ceilings toggle. In edit mode, the top view draws its
+  cutting. It hides with its own Display toggle, Roof (on by default). In edit mode, the top view draws its
   footprint (with overhang) as a dashed outline in the overlay, tagged `roofId`, to select and drag it, as plots are.
 
 ## Fields
@@ -130,6 +130,13 @@ widest.
   plane, the rest flat. `ceilingSteps()` samples the heights along the shared edge.
 - Plan-cut code (`PlanCutHeight`, `plan-drawing.ts`) uses the profile at the cut: a knee wall under 1300 mm is drawn
   as a low wall, as today.
+
+- As built: the profile is evaluated over the wall's footprint, not only its centre line, so a raised eaves wall
+  meets the slope on both faces; pieces the roofs leave alone are built as before. The geometry is in
+  `viewer/engine/under-roof.ts`. The ceiling lies 10 mm under the roof's soffit, as both show in a walk. The
+  backend's `WallTop` bounds an opening's head by sampling both faces every 25 mm, when the opening or the wall's shape
+  is set anew (a roof lowered since leaves the openings as they are, as it leaves roof windows). The wall inspector got
+  "Up to the roof". Elevations are left for phase 5.
 
 ## Phase 4: roof windows
 
