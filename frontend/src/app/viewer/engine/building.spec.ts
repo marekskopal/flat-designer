@@ -255,7 +255,7 @@ describe('buildFloor', () => {
             [500, 750],
         ];
         const plain = buildFloor(room(), materials);
-        const holed = buildFloor(room(), materials, 0, [inside]);
+        const holed = buildFloor(room(), materials, () => 0, [inside]);
         expect(triangles(plain)).toBe(2);
         expect(triangles(holed)).toBeGreaterThan(2);
         // The slab, and the room's own stairs' void in its ceiling.
@@ -295,6 +295,35 @@ describe('buildFloor', () => {
         // Level with the ground beside it: no edge.
         const level = buildRoom({...room(), floorElevation: -300}, [], materials, lawn);
         expect(level.floor.getObjectByName('floor-edge')).toBeUndefined();
+    });
+
+    it('steps the floor edge down to a sloping ground along it, never up inside an indoor room', () => {
+        const boundary: PlanPoint[] = [[-5000, -5000], [9000, -5000], [9000, 9000], [-5000, 9000]];
+        // Falling eastwards 0.1 mm per mm: +100 at x 0, −100 at x 2000.
+        const terrain: [number, number, number][] = [[-5000, -5000, 600], [-5000, 9000, 600], [9000, -5000, -800], [9000, 9000, -800]];
+        const slope = [{id: 1, name: 'Plot', polygon: boundary, area: 0, groundMaterialId: null, groundLevel: 0, terrain}];
+        const edge = buildRoom(room(), [], materials, slope).floor.getObjectByName('floor-edge') as THREE.Mesh;
+        const box = new THREE.Box3().setFromObject(edge);
+
+        // From the floor mesh (2 mm over 0) down to −100 at the east end; at the west end the ground is above the
+        // floor, where the walls stand, so no edge rises there.
+        expect([box.min.y, box.max.y].map((y) => Math.round(y * 1000))).toEqual([-100, 2]);
+        // An open-air room's edge rises to the ground too: a sunken terrace's step.
+        const terrace = buildRoom({...room(), type: 'Terrace'}, [], materials, slope).floor.getObjectByName('floor-edge') as THREE.Mesh;
+        expect(Math.round(new THREE.Box3().setFromObject(terrace).max.y * 1000)).toBe(100);
+    });
+
+    it('lays a garden on a sloping ground, its floor elevation above it', () => {
+        const boundary: PlanPoint[] = [[-5000, -5000], [9000, -5000], [9000, 9000], [-5000, 9000]];
+        const terrain: [number, number, number][] = [[-5000, -5000, 600], [-5000, 9000, 600], [9000, -5000, -800], [9000, 9000, -800]];
+        const slope = [{id: 1, name: 'Plot', polygon: boundary, area: 0, groundMaterialId: null, groundLevel: 0, terrain}];
+        const floor = buildRoom({...room(), type: 'Garden', floorElevation: 30}, [], materials, slope).floor;
+        const box = new THREE.Box3().setFromObject(floor);
+
+        expect(floor.position.y).toBe(0);
+        // The ground falls from +100 to −100 across it; the garden lies 30 mm (and the floor's 2 mm lift) above it.
+        expect([box.min.y, box.max.y].map((y) => Math.round(y * 1000))).toEqual([-68, 132]);
+        expect(floor.getObjectByName('floor-edge')).toBeUndefined();
     });
 
     it('lifts the wall finishes with the floor and keeps the door openings where they are', () => {

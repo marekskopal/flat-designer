@@ -1,4 +1,4 @@
-import {Opening, PlanPoint, Plot, Roof, Room, Scene, Wall, WallFinish} from '@app/models/scene';
+import {isOutdoorRoom, Opening, PlanPoint, Plot, Roof, Room, Scene, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -50,9 +50,10 @@ import {
     wallPieces,
     WindowFrameBar,
 } from './plan-geometry';
-import {buildPlot, groundUnder} from './plots';
+import {buildPlot, drapedGeometry, drapedOn, groundBeside} from './plots';
 import {buildRoof, buildRoofOutline} from './roofs';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
+import {Terrain} from './terrain';
 import {alignTiles, turnLevelUvs} from './tiling';
 import {ceilingParts, FloorRoofs, HeightAt, lowestTopAlong, outlineWithout, ProfileRun, profileRuns, runsAreLevel, wallTopAt} from './under-roof';
 
@@ -189,7 +190,8 @@ export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLib
 
 /**
  * Floor, ceiling and wall finishes of one room (the finishes leave the walls' door openings free), all at the room's
- * floor elevation; the floor's edge steps down (or up) to the ground of the plot the room lies on. The stairs' voids
+ * floor elevation; the floor's edge steps down (or up) to the ground of the plot the room lies on. A garden, path or
+ * driveway on a sloping plot follows its ground instead (`drapedOn()`). The stairs' voids
  * are cut out of the floor (the floor below's stairs) and a flat ceiling (the floor's own). Under the floor's `roofs`
  * the ceiling and the finishes follow their underside.
  */
@@ -202,7 +204,7 @@ export function buildRoom(
     roofs: FloorRoofs = [],
 ): RoomParts {
     const parts: RoomParts = {
-        floor: buildFloor(room, materials, groundUnder(room, plots), voids.below),
+        floor: buildFloor(room, materials, groundBeside(room, plots), voids.below, drapedOn(room, plots)),
         ceiling: room.ceilingHeight === null ? null : buildCeiling(room, materials, voids.own, roofs),
         finishes: buildRoomFinishes(room, walls, materials, roofs),
     };
@@ -289,14 +291,31 @@ function roomSurface(room: Room, voids: readonly PlanPoint[][]): THREE.BufferGeo
     return geometry;
 }
 
+/** The ground beside a room at a plan point, mm: the plot's (flat or sloping), else the floor's level. */
+export type GroundLevel = (x: number, y: number) => number;
+
 /**
  * The room's floor at its elevation; `ground` (mm) is the level beside it, the plot's ground or the floor's level,
- * which the floor's edge steps down or up to when the two differ. The `voids` (stairs coming up from below) are cut out.
+ * which the floor's edge steps down or up to where the two differ (an indoor room's only down: its walls stand where
+ * the ground is higher). On a `draped` terrain the floor follows it, `floorElevation` above it, with no edge. The
+ * `voids` (stairs coming up from below) are cut out.
  */
-export function buildFloor(room: Room, materials: MaterialLibrary, ground = 0, voids: readonly PlanPoint[][] = []): THREE.Mesh {
-    // Shape in plan (x, y); rotating −90° about x lays it flat with plan y → scene −z. UVs stay in metres.
-    const geometry = roomSurface(room, voids);
-    geometry.rotateX(-Math.PI / 2);
+export function buildFloor(
+    room: Room,
+    materials: MaterialLibrary,
+    ground: GroundLevel = () => 0,
+    voids: readonly PlanPoint[][] = [],
+    draped: Terrain | null = null,
+): THREE.Mesh {
+    const elevation = room.floorElevation ?? 0;
+    let geometry: THREE.BufferGeometry;
+    if (draped !== null) {
+        geometry = drapedGeometry(room.polygon, voids, draped, elevation + FloorLift);
+    } else {
+        // Shape in plan (x, y); rotating −90° about x lays it flat with plan y → scene −z. UVs stay in metres.
+        geometry = roomSurface(room, voids);
+        geometry.rotateX(-Math.PI / 2);
+    }
     const grid = tileGrid(room);
     const material = materials.get(room.floorMaterialId);
     // Laid tiles get their UVs from `alignTiles` below; the other patterns (planks, wood) are turned here.
@@ -304,18 +323,27 @@ export function buildFloor(room: Room, materials: MaterialLibrary, ground = 0, v
         turnLevelUvs(geometry, grid);
     }
     const floor = new THREE.Mesh(geometry, material);
-    const elevation = room.floorElevation ?? 0;
-    floor.position.y = (FloorLift + elevation) * MM;
+    floor.position.y = draped === null ? (FloorLift + elevation) * MM : 0;
     floor.receiveShadow = true;
     floor.name = `floor:${room.code}`;
     floor.userData = {roomId: room.id};
     alignTiles(floor, grid, materials);
-    if (elevation !== ground) {
+    if (draped === null) {
         // From the floor mesh, which sits `FloorLift` over the floor's elevation, down to the ground beside it.
-        floor.add(buildFloorEdge(room.polygon, ground - elevation - FloorLift, materials));
+        const drop = (x: number, y: number): number => {
+            const d = ground(x, y) - elevation;
+            return isOutdoorRoom(room) ? d : Math.min(0, d);
+        };
+        const edge = buildFloorEdge(room.polygon, drop, materials);
+        if (edge !== null) {
+            floor.add(edge);
+        }
     }
     return floor;
 }
+
+/** The floor's edge is drawn in pieces at most this long (mm), so it follows a sloping ground. */
+const FloorEdgeStep = 500;
 
 /** The floor mesh's height over the room's floor elevation, mm, so it draws over the slab and the plots' ground. */
 const FloorLift = 2;
@@ -326,13 +354,16 @@ const FloorEdgeColor = '#b9b2a6';
 const FloorEdgeInset = 2;
 
 /**
- * The upright face round a room whose floor is off the ground beside it: from the room's floor (the parent's height,
- * so y 0 here) down, or up, `drop` mm to that ground — a raised deck's side, a sunken terrace's step. Both sides show.
+ * The upright face round a room whose floor is off the ground beside it: from the room's floor mesh (the parent's
+ * height, `FloorLift` over the floor, so y 0 here) down, or up, to the ground `drop(x, y)` mm off the floor — a raised
+ * deck's side, a sunken terrace's step — in pieces at most `FloorEdgeStep` long. Both sides show. Null where the
+ * floor is level with the ground all round.
  */
-function buildFloorEdge(polygon: readonly PlanPoint[], drop: number, materials: MaterialLibrary): THREE.Mesh {
+function buildFloorEdge(polygon: readonly PlanPoint[], drop: (x: number, y: number) => number, materials: MaterialLibrary): THREE.Mesh | null {
     const positions: number[] = [];
     const indices: number[] = [];
     const outline = counterClockwise(polygon);
+    let level = true;
     outline.forEach(([ax, ay], i) => {
         const [bx, by] = outline[(i + 1) % outline.length];
         const length = Math.hypot(bx - ax, by - ay);
@@ -342,11 +373,23 @@ function buildFloorEdge(polygon: readonly PlanPoint[], drop: number, materials: 
         // Counter-clockwise: the room is on the left, so the left normal points inwards.
         const nx = (-(by - ay) / length) * FloorEdgeInset;
         const ny = ((bx - ax) / length) * FloorEdgeInset;
-        const [x0, y0, x1, y1] = [(ax + nx) * MM, -(ay + ny) * MM, (bx + nx) * MM, -(by + ny) * MM];
-        const base = positions.length / 3;
-        positions.push(x0, 0, y0, x1, 0, y1, x1, drop * MM, y1, x0, drop * MM, y0);
-        indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        const pieces = Math.ceil(length / FloorEdgeStep);
+        for (let p = 0; p < pieces; p++) {
+            const [s0, s1] = [p / pieces, (p + 1) / pieces];
+            const [px0, py0] = [ax + (bx - ax) * s0, ay + (by - ay) * s0];
+            const [px1, py1] = [ax + (bx - ax) * s1, ay + (by - ay) * s1];
+            const [g0, g1] = [drop(px0, py0), drop(px1, py1)];
+            level &&= g0 === 0 && g1 === 0;
+            const [d0, d1] = [g0 - FloorLift, g1 - FloorLift];
+            const [x0, y0, x1, y1] = [(px0 + nx) * MM, -(py0 + ny) * MM, (px1 + nx) * MM, -(py1 + ny) * MM];
+            const base = positions.length / 3;
+            positions.push(x0, 0, y0, x1, 0, y1, x1, d1 * MM, y1, x0, d0 * MM, y0);
+            indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        }
     });
+    if (level) {
+        return null;
+    }
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setIndex(indices);

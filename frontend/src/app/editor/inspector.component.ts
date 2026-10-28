@@ -2,11 +2,12 @@ import {ChangeDetectionStrategy, Component, computed, input, output, signal} fro
 import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
 import {ProjectFile} from '@app/models/project';
-import {Group, Material, Room, SceneDefinition, SceneModel} from '@app/models/scene';
+import {Group, Material, Room, SceneDefinition, SceneModel, SpotHeight} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CustomParamsComponent} from './custom-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
+import {SpotHeightsComponent} from './spot-heights.component';
 
 export interface FieldChange {
     key: string;
@@ -19,7 +20,7 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
-    imports: [CustomParamsComponent],
+    imports: [CustomParamsComponent, SpotHeightsComponent],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -99,6 +100,12 @@ export class InspectorComponent {
     protected params(def: FieldDef): Record<string, unknown> {
         const value = this.element()[def.key];
         return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+    }
+
+    /** A plot's spot heights (none in older versions). */
+    protected spots(def: FieldDef): SpotHeight[] {
+        const value = this.element()[def.key];
+        return Array.isArray(value) ? (value as SpotHeight[]) : [];
     }
 
     protected commitValue(def: FieldDef, value: unknown): void {

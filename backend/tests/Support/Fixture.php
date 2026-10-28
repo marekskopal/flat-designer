@@ -140,6 +140,7 @@ final class Fixture
 			groundMaterial: $material,
 		);
 		$plot->groundLevel = -300;
+		$plot->terrain = '[[-3000,-3000,-300],[9000,8000,450]]';
 		self::service(PlotRepository::class)->persist(self::stamp($plot));
 		self::service(StairRepository::class)->persist(self::stamp(new Stair(
 			floor: $floor,
@@ -264,6 +265,23 @@ final class Fixture
 			material: null,
 			params: null,
 		)));
+		$planter = self::stamp(new Item(
+			floor: $floor,
+			room: null,
+			kind: ItemKindEnum::Box,
+			name: 'Planter',
+			x: 7000,
+			y: 6000,
+			z: 0,
+			width: 800,
+			depth: 400,
+			height: 450,
+			rotation: 0,
+			material: null,
+			params: null,
+		));
+		$planter->onGround = true;
+		$items->persist($planter);
 	}
 
 	/**

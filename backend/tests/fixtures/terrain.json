@@ -1,0 +1,53 @@
+{
+	"description": "Plot terrain from spot heights (FD-86): Terrain.php and viewer/engine/terrain.ts. heights are the ground at the queries, mm (±0.01); vertices and triangles count the spot heights plus the boundary corners and their triangulation.",
+	"cases": [
+		{
+			"name": "flat without spot heights",
+			"points": [],
+			"polygon": [[-5000, -5000], [5000, -5000], [5000, 5000], [-5000, 5000]],
+			"groundLevel": -300,
+			"queries": [[0, 0], [4000, -2000], [9000, 9000]],
+			"expected": {"vertices": 0, "triangles": 0, "heights": [-300, -300, -300]}
+		},
+		{
+			"name": "single spot height: flat at its height",
+			"points": [[100, 200, 750]],
+			"polygon": [[-5000, -5000], [5000, -5000], [5000, 5000], [-5000, 5000]],
+			"groundLevel": 0,
+			"queries": [[0, 0], [-4900, 4900], [20000, 0]],
+			"expected": {"vertices": 5, "triangles": 4, "heights": [750, 750, 750]}
+		},
+		{
+			"name": "collinear spot heights: a line, the boundary corners from its ends",
+			"points": [[-3000, 0, 0], [0, 0, 600], [3000, 0, 300]],
+			"polygon": [[-5000, -5000], [5000, -5000], [5000, 5000], [-5000, 5000]],
+			"groundLevel": 0,
+			"queries": [[-1500, 0], [-1500, 4000], [1500, -2500], [4500, 4500], [-6000, 0]],
+			"expected": {"vertices": 7, "triangles": 8, "heights": [300, 195, 420, 330, 0]}
+		},
+		{
+			"name": "a plane over a square, extended to the plot",
+			"points": [[-4000, -4000, 0], [4000, -4000, 800], [4000, 4000, 400], [-4000, 4000, -400]],
+			"polygon": [[-6000, -6000], [6000, -6000], [6000, 6000], [-6000, 6000]],
+			"groundLevel": 0,
+			"queries": [[0, 0], [2000, -1000], [-4000, 4000], [5000, 0], [-6000, -6000], [6000, 6000], [9000, 0]],
+			"expected": {"vertices": 8, "triangles": 10, "heights": [200, 450, -400, 566.667, 0, 400, 600]}
+		},
+		{
+			"name": "a regular grid (co-circular points)",
+			"points": [[0, 0, 0], [5000, 0, 200], [10000, 0, 100], [0, 5000, 500], [5000, 5000, 900], [10000, 5000, 300], [0, 10000, 1200], [5000, 10000, 1000], [10000, 10000, 700]],
+			"polygon": [[-1000, -1000], [11000, -1000], [11000, 11000], [-1000, 11000]],
+			"groundLevel": 0,
+			"queries": [[2500, 2500], [7500, 2500], [2500, 7500], [7500, 7500], [5000, 2500], [1000, 9000], [-1000, 5000], [10500, 10500]],
+			"expected": {"vertices": 13, "triangles": 20, "heights": [350, 500, 1050, 650, 550, 1140, 600, 700]}
+		},
+		{
+			"name": "a slope from the street down to the garden, a concave plot",
+			"points": [[-7000, 2000, 2960], [-7000, 9000, 3100], [0, 10000, 1800], [0, -500, 2000], [9500, 9000, 0], [9500, 400, 0], [14000, 5000, -500], [30000, 5000, -2500]],
+			"polygon": [[-9000, -1500], [32000, -1500], [32000, 11000], [10000, 11000], [10000, 6000], [5000, 6000], [5000, 11000], [-9000, 11000]],
+			"groundLevel": 0,
+			"queries": [[-8000, 0], [-3000, 5000], [4500, 4000], [9000, 5000], [12000, 5000], [20000, 0], [31000, 10000], [7500, 10000], [0, 0]],
+			"expected": {"vertices": 16, "triangles": 24, "heights": [2943.729, 2327.075, 1033.318, 131.836, -277.778, -1166.667, -2416.667, 396.588, 1990.476]}
+		}
+	]
+}

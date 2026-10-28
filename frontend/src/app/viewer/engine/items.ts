@@ -1,4 +1,4 @@
-import {Item, Room, SceneModel} from '@app/models/scene';
+import {Item, Plot, Room, SceneModel} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {buildCustomItemBody, DefinitionLibrary} from './custom/custom';
@@ -11,6 +11,7 @@ import {PictureLibrary} from './pictures';
 import {MM, tileGrid} from './plan-geometry';
 import {buildSanitaryItemBody} from './sanitary';
 import {buildStructureItemBody} from './structure';
+import {groundAt} from './terrain';
 import {alignTiles} from './tiling';
 import {FloorRoofs} from './under-roof';
 
@@ -24,6 +25,8 @@ export interface ItemAssets {
     pictures: PictureLibrary | null;
     /** The floor's roofs, under which a pendant's ceiling slopes. */
     roofs?: FloorRoofs;
+    /** The floor's plots, whose ground an item `onGround` stands on. */
+    plots?: readonly Plot[];
 }
 
 const NoAssets: ItemAssets = {models: new Map(), modelLibrary: null, pictures: null};
@@ -64,7 +67,8 @@ export function buildItemParts(
         buildStructureItemBody(item, materials) ??
         new THREE.Group();
     object.name = `item:${item.name}`;
-    object.position.set(item.x * MM, item.z * MM, -item.y * MM);
+    const ground = item.onGround === true ? groundAt(assets.plots ?? [], item.x, item.y) : 0;
+    object.position.set(item.x * MM, (item.z + ground) * MM, -item.y * MM);
     object.rotation.y = THREE.MathUtils.degToRad(item.rotation);
     object.userData = {...object.userData, itemId: item.id};
     alignTiles(object, tileGrid(room), materials);

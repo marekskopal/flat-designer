@@ -49,7 +49,8 @@ final readonly class ItemTools
 	 * @param int|null $width mm along the front (default from list_item_kinds)
 	 * @param int|null $depth mm front to back
 	 * @param int|null $height mm
-	 * @param int|null $z bottom elevation above the floor, mm
+	 * @param int|null $z bottom elevation above the floor, mm (with onGround: above the ground under the item's centre)
+	 * @param bool|null $onGround z counts from the sloping ground of the plot under the item (trees, a shed, garden furniture) (default false)
 	 * @param int|null $rotation degrees counter-clockwise; 0 = front facing south, 90 east, 180 north, 270 west
 	 * @param int|null $roomId room the item belongs to (from get_floor)
 	 * @param int|null $groupId group (piece of furniture) the item is part of (from get_floor)
@@ -80,6 +81,7 @@ final readonly class ItemTools
 		?array $params = null,
 		?int $definitionId = null,
 		?int $modelId = null,
+		?bool $onGround = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -101,6 +103,7 @@ final readonly class ItemTools
 				'params' => $params,
 				'definitionId' => $definitionId,
 				'modelId' => $modelId,
+				'onGround' => $onGround,
 			]),
 		);
 	}
@@ -110,6 +113,7 @@ final readonly class ItemTools
 	 * @param int|null $x footprint centre, mm east
 	 * @param int|null $y footprint centre, mm north
 	 * @param int|null $z bottom elevation, mm
+	 * @param bool|null $onGround z counts from the ground of the plot under the item instead of the floor's level
 	 * @param int|null $rotation degrees counter-clockwise, 0 = front facing south
 	 * @param int|null $groupId group to move the item into (from get_floor)
 	 * @param array<string, mixed>|null $params replaces all params of the item
@@ -143,6 +147,7 @@ final readonly class ItemTools
 		?array $params = null,
 		?int $definitionId = null,
 		?int $modelId = null,
+		?bool $onGround = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -166,6 +171,7 @@ final readonly class ItemTools
 				'params' => $params,
 				'definitionId' => $definitionId,
 				'modelId' => $modelId,
+				'onGround' => $onGround,
 			], $clear, self::Clearable),
 		);
 	}

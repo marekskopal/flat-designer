@@ -1,4 +1,4 @@
-import {isOutdoorRoom, Item, PlanPoint, Plot, Roof, RoofWindow, Room, Scene, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, PlanPoint, Plot, Roof, RoofWindow, Room, Scene, SpotHeight, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -79,7 +79,7 @@ import {
     wallJoints,
     wallOutline,
 } from './plan-geometry';
-import {buildPlot, groundUnder, highlightPlot} from './plots';
+import {buildPlot, drapedOn, groundBeside, highlightPlot} from './plots';
 import {
     PresentationPipeline,
     PresentationPixelRatio,
@@ -107,6 +107,7 @@ import {
     stairSpot,
 } from './stairs';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
+import {hasTerrain, plotTerrain, terrainAt} from './terrain';
 import {roofsMeet, roofsReach} from './under-roof';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
@@ -170,6 +171,7 @@ const HandleColors = {
     snapped: '#2f9e6b',
     invalid: '#d64545',
     midpoint: '#f3c08f',
+    spot: '#4f7fc4',
 } as const;
 type HandleState = keyof typeof HandleColors;
 
@@ -182,6 +184,7 @@ type HandleRole =
     | {role: 'vertex'; index: number}
     | {role: 'midpoint'; index: number}
     | {role: 'roofCorner'; index: number}
+    | {role: 'spot'; index: number}
     | {role: 'draw'};
 
 /** Wall fields of a run being drawn, for its preview. */
@@ -224,6 +227,7 @@ type Drag = DragBase &
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
         | {kind: 'vertex'; outline: Outlined; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
+        | {kind: 'spot'; plot: Plot; index: number; terrain: SpotHeight[]}
     );
 
 /** Where a roof's eaves rectangle lies (plan mm), as a corner drag changes it. */
@@ -692,6 +696,9 @@ export class ViewerEngine {
         const touchedRoofs = [...roofs.changed, ...(previous.roofs ?? []).filter((r) => roofIds.has(r.id))];
         const underChangedRoofs = (points: readonly PlanPoint[]): boolean => roofsChanged && roofsReach(polygonBounds(points), touchedRoofs);
         const roofTouchedRooms = new Set(scene.rooms.filter((r) => underChangedRoofs(r.polygon)).map((r) => r.id));
+        // The ground: items standing on it and rooms, whose floor or edge follows it, go with a changed plot.
+        const plots = diffById(previous.plots ?? [], scene.plots ?? []);
+        const plotsChanged = plots.removed.length > 0 || plots.changed.length > 0;
         // Tiled items follow their room's tile grid; Custom items their definition.
         const changedRooms = new Set(rooms.changed.map((r) => r.id));
         const changedItems = new Set(items.changed.map((i) => i.id));
@@ -704,7 +711,8 @@ export class ViewerEngine {
                 (i.definitionId !== null && changedDefinitions.has(i.definitionId)) ||
                 this.showsPicture(i, changedPictures) ||
                 (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)) ||
-                (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)),
+                (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)) ||
+                (plotsChanged && i.onGround === true),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -811,10 +819,8 @@ export class ViewerEngine {
             parts.root.add(parts.slab);
         }
 
-        // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground:
-        // changed rooms rebuild every plot, changed plots the rooms off the floor's level.
-        const plots = diffById(previous.plots ?? [], scene.plots ?? []);
-        const plotsChanged = plots.removed.length > 0 || plots.changed.length > 0;
+        // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground
+        // (a garden on a slope follows it): changed rooms rebuild every plot, changed plots every room.
         const roomsChanged = rooms.removed.length > 0 || rooms.changed.length > 0;
         if (plotsChanged || roomsChanged) {
             parts.plots.forEach((group) => this.disposeObject(group));
@@ -827,7 +833,7 @@ export class ViewerEngine {
             this.highlightPlots();
         }
         const rebuiltRooms = scene.rooms.filter(
-            (r) => roofTouchedRooms.has(r.id) || changedRooms.has(r.id) || (plotsChanged && (r.floorElevation ?? 0) !== 0) || voidRooms.has(r.id),
+            (r) => roofTouchedRooms.has(r.id) || changedRooms.has(r.id) || plotsChanged || voidRooms.has(r.id),
         );
 
         for (const id of [...rooms.removed, ...rebuiltRooms.map((r) => r.id)]) {
@@ -920,6 +926,7 @@ export class ViewerEngine {
             modelLibrary: this.modelLibrary,
             pictures: this.pictureLibrary,
             roofs: scene.roofs ?? [],
+            plots: scene.plots ?? [],
         };
     }
 
@@ -2297,6 +2304,9 @@ export class ViewerEngine {
         if (outline === null) {
             return null;
         }
+        if (role.role === 'spot' && outline.kind === 'plot') {
+            return {kind: 'spot', plane, grab, moved: false, plot: outline.element, index: role.index, terrain: outline.element.terrain ?? []};
+        }
         const original = outline.element.polygon;
         if (role.role === 'vertex') {
             const index = role.index;
@@ -2478,6 +2488,14 @@ export class ViewerEngine {
                 drag.fits = slid.fits;
                 const wall = {...drag.wall, openings: drag.wall.openings.map((o) => (o.id === drag.openingId ? {...o, offset: slid.offset} : o))};
                 this.previewWall(wall, slid.fits);
+                break;
+            }
+            case 'spot': {
+                const step = free ? 1 : DragSnap;
+                const [x0, y0] = (drag.plot.terrain ?? [])[drag.index];
+                const [x, y] = [snapToGrid(x0 + delta.x, step), snapToGrid(y0 + delta.y, step)];
+                drag.terrain = drag.terrain.map((p, i): SpotHeight => (i === drag.index ? [x, y, p[2]] : p));
+                this.previewPlot({...drag.plot, terrain: drag.terrain});
                 break;
             }
             case 'vertex': {
@@ -2708,6 +2726,11 @@ export class ViewerEngine {
                 }
                 break;
             }
+            case 'spot':
+                if (!sameJson(drag.terrain, drag.plot.terrain ?? [])) {
+                    edit = {selection: {kind: 'plot', id: drag.plot.id}, fields: {terrain: drag.terrain}};
+                }
+                break;
             case 'vertex':
                 if (drag.valid && (drag.inserted || !sameJson(drag.polygon, drag.outline.element.polygon))) {
                     edit = {selection: {kind: drag.outline.kind, id: drag.outline.element.id}, fields: {polygon: drag.polygon}};
@@ -2787,6 +2810,10 @@ export class ViewerEngine {
             return;
         }
         const role = (this.pickHandle(event)?.object.userData as {handle?: HandleRole} | undefined)?.handle;
+        if (outline.kind === 'plot' && (role === undefined || role.role === 'spot')) {
+            this.editSpotHeight(outline.element, role?.role === 'spot' ? role.index : null, event);
+            return;
+        }
         if (role?.role !== 'vertex') {
             return;
         }
@@ -3240,6 +3267,40 @@ export class ViewerEngine {
     }
 
     /** Shows the dragged outline of a room (its floor, highlight, label) or plot (its ground and boundary), and the handles. */
+    /**
+     * Double-click on a selected plot: on a spot height's handle it removes it; on the plot's own ground it adds one
+     * there at the ground's current height (to 10 mm), which the inspector then changes.
+     */
+    private editSpotHeight(plot: Plot, index: number | null, event: MouseEvent): void {
+        const terrain = plot.terrain ?? [];
+        if (index !== null) {
+            void this.onEdit({kind: 'plot', id: plot.id}, {terrain: terrain.filter((_, i) => i !== index)});
+            return;
+        }
+        const hit = this.pick(event);
+        const picked = selectionOf(hit?.object ?? null);
+        if (hit === undefined || picked?.kind !== 'plot' || picked.id !== plot.id) {
+            return;
+        }
+        const [x, y] = [Math.round(hit.point.x / MM), Math.round(-hit.point.z / MM)];
+        const z = Math.round(terrainAt(plotTerrain(plot), x, y) / 10) * 10;
+        void this.onEdit({kind: 'plot', id: plot.id}, {terrain: [...terrain, [x, y, z]]});
+    }
+
+    /** Shows a plot as a drag changes it (its ground and boundary), and the handles. */
+    private previewPlot(plot: Plot): void {
+        const parts = this.parts;
+        const materials = this.materials;
+        if (parts === null || materials === null) {
+            return;
+        }
+        const preview = buildPlot(plot, materials, this.sceneData?.rooms ?? []);
+        highlightPlot(preview, true);
+        const original = parts.plots.get(plot.id);
+        this.setPreview(original === undefined ? [] : [original], [preview]);
+        this.updateHandles();
+    }
+
     private previewOutline(drag: Extract<Drag, {kind: 'vertex'}>): void {
         const parts = this.parts;
         const materials = this.materials;
@@ -3247,16 +3308,13 @@ export class ViewerEngine {
             return;
         }
         if (drag.outline.kind === 'plot') {
-            const plot = buildPlot({...drag.outline.element, polygon: drag.polygon}, materials);
-            highlightPlot(plot, true);
-            const original = parts.plots.get(drag.outline.element.id);
-            this.setPreview(original === undefined ? [] : [original], [plot]);
-            this.updateHandles();
+            this.previewPlot({...drag.outline.element, polygon: drag.polygon});
             return;
         }
         const room = {...drag.outline.element, polygon: drag.polygon};
         const voids = this.sceneData === null ? [] : sceneVoids(this.sceneData).below;
-        const floor = buildFloor(room, materials, groundUnder(room, this.sceneData?.plots ?? []), voids);
+        const plots = this.sceneData?.plots ?? [];
+        const floor = buildFloor(room, materials, groundBeside(room, plots), voids, drapedOn(room, plots));
         const original = parts.rooms.get(room.id);
         this.setPreview(original === undefined ? [] : [original.floor], [floor]);
         this.setSelectedRoom(room.id, floor);
@@ -3365,15 +3423,22 @@ export class ViewerEngine {
             const dragged = drag?.kind === 'vertex' && drag.outline.kind === outline.kind && drag.outline.element.id === outline.element.id;
             const vertexDrag = dragged ? drag : null;
             const polygon = vertexDrag?.polygon ?? outline.element.polygon;
+            // On a sloping plot the handles lie on its ground.
+            const terrain = outline.kind === 'plot' && hasTerrain(outline.element) ? plotTerrain(outline.element) : null;
+            const lift = (x: number, y: number): number => (terrain === null ? 0 : terrainAt(terrain, x, y) * MM) + 0.02;
             polygon.forEach(([x, y], index) => {
                 let state: HandleState = 'normal';
                 if (vertexDrag?.index === index) {
                     state = handleState(vertexDrag.valid, vertexDrag.snap);
                 }
-                this.addHandle({x, y}, 0.02, {role: 'vertex', index}, state);
+                this.addHandle({x, y}, lift(x, y), {role: 'vertex', index}, state);
             });
             if (vertexDrag === null) {
-                edgeMidpoints(polygon).forEach((p, index) => this.addHandle(p, 0.02, {role: 'midpoint', index}, 'midpoint'));
+                edgeMidpoints(polygon).forEach((p, index) => this.addHandle(p, lift(p.x, p.y), {role: 'midpoint', index}, 'midpoint'));
+            }
+            if (outline.kind === 'plot') {
+                const spots = drag?.kind === 'spot' && drag.plot.id === outline.element.id ? drag.terrain : (outline.element.terrain ?? []);
+                spots.forEach(([x, y, z], index) => this.addHandle({x, y}, z * MM + 0.02, {role: 'spot', index}, 'spot'));
             }
         }
     }

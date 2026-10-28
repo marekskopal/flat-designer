@@ -43,6 +43,31 @@ final class JsonDecoder
 		return $points;
 	}
 
+	/** @return list<array{int, int, int}> */
+	public static function decodeSpotHeights(string $json): array
+	{
+		$data = self::decode($json);
+		if (!is_array($data) || !array_is_list($data)) {
+			throw new RuntimeException('Expected a JSON list of spot heights.');
+		}
+
+		$points = [];
+		foreach ($data as $point) {
+			if (
+				!is_array($point)
+				|| count($point) !== 3
+				|| !is_int($point[0] ?? null)
+				|| !is_int($point[1] ?? null)
+				|| !is_int($point[2] ?? null)
+			) {
+				throw new RuntimeException('Spot height must be three integers.');
+			}
+			$points[] = [$point[0], $point[1], $point[2]];
+		}
+
+		return $points;
+	}
+
 	/** @return list<array{materialId: int, bottom: int, top: int}> */
 	public static function decodeWallFinishes(string $json): array
 	{

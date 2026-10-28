@@ -111,7 +111,7 @@ final class FloorControllerTest extends IntegrationTestCase
 		self::assertIsList($scene['walls']);
 		self::assertCount(1, $scene['walls']);
 		self::assertIsList($scene['items']);
-		self::assertCount(2, $scene['items']);
+		self::assertCount(3, $scene['items']);
 	}
 
 	public function testFloorsOfOtherProjectsAreNotFound(): void

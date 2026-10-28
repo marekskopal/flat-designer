@@ -53,6 +53,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
+import {itemsOverFloor} from './terrain';
 import {CeilingUnderRoof, FloorRoofs, roofBreaks, roofsReach} from './under-roof';
 import {hiddenItemIds} from './variants';
 
@@ -286,7 +287,7 @@ export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo): 
     };
     const {scale, pages} = layoutFaces(faces, area);
     const hidden = hiddenItemIds(scene);
-    const items = scene.items.filter((i) => !hidden.has(i.id) && (i.roomId === room.id || pointInPolygon(i, room.polygon)));
+    const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id) && (i.roomId === room.id || pointInPolygon(i, room.polygon)));
     let clipIds = 0;
     const context: FaceContext = {room, walls: scene.walls, items, materials, scale, clipId: () => `clip-${clipIds++}`};
 

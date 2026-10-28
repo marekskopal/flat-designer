@@ -1,9 +1,10 @@
-import {Plot, Room} from '@app/models/scene';
+import {Item, Plot, Room} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
+import {buildItem} from './items';
 import {MaterialLibrary} from './materials';
-import {buildPlot, groundHoles, groundUnder, highlightPlot, lowestGround} from './plots';
+import {buildPlot, drapedOn, groundBeside, groundHoles, groundUnder, highlightPlot, lowestGround} from './plots';
 import {selectionOf} from './selection';
 
 const plot: Plot = {id: 7, name: 'Parcel', polygon: [[-3000, -2000], [9000, -2000], [9000, 8000], [-3000, 8000]], area: 120, groundMaterialId: null};
@@ -97,5 +98,88 @@ describe('buildPlot', () => {
         expect(material.color.getHexString()).not.toBe(plain);
         highlightPlot(group, false);
         expect(material.color.getHexString()).toBe(plain);
+    });
+});
+
+describe('a sloping plot', () => {
+    const materials = new MaterialLibrary([], 1);
+    // Falling 3 m from the west (street) to the east (garden) across a 20 m plot.
+    const slope: Plot = {
+        ...plot,
+        polygon: [[0, 0], [20000, 0], [20000, 10000], [0, 10000]],
+        terrain: [[0, 0, 3000], [0, 10000, 3000], [20000, 0, 0], [20000, 10000, 0]],
+    };
+    const groundAt = (group: THREE.Object3D, x: number, y: number): number | null => {
+        group.updateMatrixWorld(true);
+        const ground = group.getObjectByName('ground') as THREE.Mesh;
+        const hit = new THREE.Raycaster(new THREE.Vector3(x * 0.001, 50, -y * 0.001), new THREE.Vector3(0, -1, 0)).intersectObject(ground)[0];
+        return hit === undefined ? null : Math.round(hit.point.y * 1000);
+    };
+    const house = (floorElevation: number, type: Room['type'] = 'Living'): Room => ({
+        ...room([[8000, 2000], [14000, 2000], [14000, 8000], [8000, 8000]], floorElevation),
+        type,
+    });
+
+    it('lays the ground on the spot heights, a plane between them', () => {
+        const group = buildPlot(slope, materials);
+
+        expect(group.position.y).toBe(0);
+        // 10 mm under the ground, as a flat plot's.
+        expect(groundAt(group, 5000, 5000)).toBe(2240);
+        expect(groundAt(group, 15000, 1000)).toBe(740);
+        expect(lowestGround([slope])).toBe(0);
+        expect(lowestGround([{...slope, terrain: [[0, 0, -800]]}])).toBe(-800);
+    });
+
+    it('cuts out the rooms set into the slope, not those above it nor the gardens on it', () => {
+        // The ground reaches 1800 mm at the house's west wall: a floor at 0 lies below it there.
+        expect(groundHoles(slope, [house(0)])).toEqual([house(0).polygon]);
+        expect(groundHoles(slope, [house(1900)])).toEqual([]);
+        expect(groundHoles(slope, [house(0, 'Garden')])).toEqual([]);
+        // A garden a step down into the slope is cut out, so the ground does not cover it.
+        expect(groundHoles(slope, [house(-150, 'Garden')])).toEqual([house(-150, 'Garden').polygon]);
+        expect(groundAt(buildPlot(slope, materials, [house(0)]), 11000, 5000)).toBeNull();
+    });
+
+    it('drapes gardens, paths and driveways on it, and knows the ground beside a room', () => {
+        expect(drapedOn(house(0, 'Garden'), [slope])).not.toBeNull();
+        expect(drapedOn(house(0, 'Terrace'), [slope])).toBeNull();
+        expect(drapedOn(house(0, 'Garden'), [plot])).toBeNull();
+        expect(groundBeside(house(0), [slope])(8000, 5000)).toBeCloseTo(1800);
+        expect(groundUnder(house(0), [slope])).toBeCloseTo(1350);
+    });
+
+    it('stands an item on the ground under its centre when it is on the ground', () => {
+        const tree: Item = {
+            id: 3,
+            roomId: null,
+            groupId: null,
+            kind: 'Box',
+            definitionId: null,
+            name: 'Tree',
+            x: 10000,
+            y: 5000,
+            z: 100,
+            width: 600,
+            depth: 600,
+            height: 4000,
+            rotation: 0,
+            materialId: null,
+            params: {},
+        };
+        const assets = {models: new Map(), modelLibrary: null, pictures: null, plots: [slope]};
+
+        expect(Math.round(buildItem({...tree, onGround: true}, materials, undefined, new Map(), assets).position.y * 1000)).toBe(1600);
+        expect(Math.round(buildItem(tree, materials, undefined, new Map(), assets).position.y * 1000)).toBe(100);
+    });
+
+    it('draws the boundary along the ground', () => {
+        const boundary = buildPlot(slope, materials).getObjectByName('boundary') as THREE.LineLoop;
+        const position = boundary.geometry.getAttribute('position');
+
+        // 20 m edges in 500 mm pieces, 10 m edges in 500 mm pieces.
+        expect(position.count).toBe(2 * 40 + 2 * 20);
+        expect(Math.round(position.getY(0) * 1000)).toBe(3004);
+        expect(Math.round(position.getY(40) * 1000)).toBe(4);
     });
 });

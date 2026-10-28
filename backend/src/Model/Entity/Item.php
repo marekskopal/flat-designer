@@ -39,6 +39,10 @@ class Item extends AEntity
 	#[ManyToOne(entityClass: ItemGroup::class, nullable: true)]
 	public ?ItemGroup $group = null;
 
+	/** `z` counts from the ground under the item's centre (its plot's terrain, FD-86) instead of the floor's level. */
+	#[Column(type: Type::Boolean)]
+	public bool $onGround = false;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

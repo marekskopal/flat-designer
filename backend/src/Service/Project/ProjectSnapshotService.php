@@ -420,6 +420,8 @@ final readonly class ProjectSnapshotService
 			// Snapshots taken before Custom items existed have no definition ids, before Model items no model ids.
 			$item->definition = $definitions[$data->nullableInt('definitionId') ?? 0] ?? null;
 			$item->model = $this->modelLink->forProject($floor->project, $data->nullableInt('modelId'));
+			// Snapshots taken before terrain (FD-86): on the floor's level.
+			$item->onGround = $data->raw('onGround') === true;
 			$this->itemRepository->persist($item);
 		}
 	}

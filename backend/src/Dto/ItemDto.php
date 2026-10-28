@@ -31,6 +31,7 @@ final readonly class ItemDto
 		public int $rotation,
 		public ?int $materialId,
 		public array|stdClass $params,
+		public bool $onGround = false,
 	) {
 	}
 
@@ -57,6 +58,7 @@ final readonly class ItemDto
 			materialId: $item->material?->id,
 			// An empty PHP array would encode as `[]`; keep params a JSON object for the client.
 			params: $params === [] ? new stdClass() : $params,
+			onGround: $item->onGround,
 		);
 	}
 }

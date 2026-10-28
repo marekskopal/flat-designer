@@ -20,7 +20,8 @@ export type FieldType =
     | 'bool'
     | 'definition'
     | 'model'
-    | 'custom';
+    | 'custom'
+    | 'spots';
 
 /** Opening types in the order of the inspector and the Add menu. */
 export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
@@ -151,8 +152,16 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
         {key: 'depth', label: 'Depth', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
-        {key: 'z', label: 'Elevation', type: 'int', unit: 'mm', half: true},
+        {
+            key: 'z',
+            label: 'Elevation',
+            labelOf: (item) => (item['onGround'] === true ? 'Above the ground' : 'Elevation'),
+            type: 'int',
+            unit: 'mm',
+            half: true,
+        },
         {key: 'rotation', label: 'Rotation', type: 'int', unit: '°'},
+        {key: 'onGround', label: 'Stands on the ground (a sloping plot)', type: 'bool'},
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
         {key: 'groupId', label: 'Group', type: 'group', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
@@ -301,6 +310,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
         {key: 'groundLevel', label: 'Ground level (+ above, − below the floor)', type: 'int', unit: 'mm'},
+        {key: 'terrain', label: 'Spot heights (sloping ground)', type: 'spots'},
         {key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
     ],
     stair: [

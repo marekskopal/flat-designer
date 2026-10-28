@@ -9,6 +9,7 @@ use FlatDesigner\Service\Editor\Element\PlotHandler;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(PlotHandler::class)]
 final class PlotTest extends EditorTestCase
@@ -63,6 +64,50 @@ final class PlotTest extends EditorTestCase
 		self::assertSame([-450], array_column($this->sceneList('plots'), 'groundLevel'));
 		self::assertSame(200, $this->undo()->getStatusCode());
 		self::assertSame([0], array_column($this->sceneList('plots'), 'groundLevel'));
+	}
+
+	public function testSpotHeightsAreKeptAndUndone(): void
+	{
+		$plot = $this->create('plots', ['polygon' => self::Boundary]);
+		self::assertSame([], $plot['terrain']);
+
+		$terrain = [[-1000, 0, 2960], [11000, 0, 0], [11000, 8000, -300]];
+		$this->edit('PATCH', 'plots', self::id($plot), ['terrain' => $terrain]);
+		self::assertSame([$terrain], array_column($this->sceneList('plots'), 'terrain'));
+		$this->edit('PATCH', 'plots', self::id($plot), ['terrain' => []]);
+		self::assertSame([[]], array_column($this->sceneList('plots'), 'terrain'));
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([$terrain], array_column($this->sceneList('plots'), 'terrain'));
+	}
+
+	public function testRefusesBadSpotHeights(): void
+	{
+		$bad = [
+			[[0, 0]],
+			[[0, 0, 'high']],
+			[[0, 0, 10001]],
+			[[2000000, 0, 0]],
+			// Closer than 10 mm.
+			[[0, 0, 0], [5, 9, 100]],
+		];
+		foreach ($bad as $terrain) {
+			self::assertSame(
+				422,
+				$this->edit('POST', 'plots', body: ['polygon' => self::Boundary, 'terrain' => $terrain])->getStatusCode(),
+				json_encode($terrain, JSON_THROW_ON_ERROR),
+			);
+		}
+	}
+
+	public function testAnItemStandsOnTheGround(): void
+	{
+		$tree = $this->create('items', ['kind' => 'Box', 'x' => 3000, 'y' => 2000, 'onGround' => true]);
+		self::assertTrue($tree['onGround']);
+		self::assertFalse($this->create('items', ['kind' => 'Box', 'x' => 0, 'y' => 0])['onGround']);
+
+		$this->edit('PATCH', 'items', self::id($tree), ['onGround' => false]);
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([true, false], array_column($this->sceneList('items'), 'onGround'));
 	}
 
 	public function testARoomFloorLiesAboveOrBelowTheFloorsLevel(): void

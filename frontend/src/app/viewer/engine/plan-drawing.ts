@@ -52,6 +52,7 @@ import {
     truncate,
 } from './sheet-svg';
 import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
+import {hasTerrain, itemsOverFloor, plotTerrain, terrainContours} from './terrain';
 import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
 
@@ -145,9 +146,10 @@ export function planLayout(bounds: Bounds): PlanLayout {
 /** The floor plan on one A4 page, with the title block, a scale bar and a north arrow. */
 export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number} {
     const hidden = hiddenItemIds(scene);
-    const items = scene.items.filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
+    const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
     const rooms = scene.rooms.map(roomShape);
     const plots = (scene.plots ?? []).map(plotShape);
+    const contours = (scene.plots ?? []).flatMap(contourShapes);
     const itemShapes = items.map(itemShape);
     const walls = wallShapes(scene.walls, scene.roofs ?? []);
     const openings = scene.walls.flatMap((wall) => openingShapes(wall, scene.roofs ?? []));
@@ -158,6 +160,7 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
+    const crosses = (scene.plots ?? []).flatMap((plot) => spotHeightCrosses(plot, s));
 
     // Room names first, then the dimensions and the item names where they do not run into the text placed before them.
     const roomLabels = scene.rooms.map((room) => roomLabel(room, s));
@@ -171,13 +174,15 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
         return true;
     };
     const dimensions = dimensionLabels(scene, s).filter(free);
+    const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s)).filter(free);
     const itemLabels = items.flatMap((item) => itemLabel(item, s)).filter(free);
-    const labels = [...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
+    const labels = [...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
 
     const body = [
-        ...[...plots, ...rooms, ...stairs.shapes, ...roofs, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map(
-            (shape) => shapeSvg(shape, toPaper),
-        ),
+        ...[
+            ...[...plots, ...contours, ...crosses, ...rooms, ...stairs.shapes, ...roofs, ...walls, ...openings, ...itemShapes],
+            ...labels.flatMap((l) => l.shapes ?? []),
+        ].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
         planBandSvg(layout, info, scene.location?.northAngle ?? 0),
@@ -342,6 +347,47 @@ function roofPlanShapes(roofs: FloorRoofs): Shape[] {
     }
     return [...dashed, ...seen, ...sections];
 }
+
+/** Contour lines of a sloping plot, mm apart; every `ContourMajor` mm drawn heavier. */
+const ContourInterval = 500;
+const ContourMajor = 1000;
+
+/**
+ * The contour lines of a plot's sloping ground (`terrainContours()`) inside its boundary, under the rooms; the house
+ * draws over them.
+ */
+function contourShapes(plot: Plot): Shape[] {
+    if (!hasTerrain(plot)) {
+        return [];
+    }
+    return terrainContours(plotTerrain(plot), ContourInterval).flatMap(({level, segments}) => {
+        const style: Style = {stroke: ContourColor, width: level % ContourMajor === 0 ? 0.18 : 0.09};
+        return segments
+            .filter(([a, b]) => pointInPolygon({x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2}, plot.polygon))
+            .map(([a, b]): Shape => ({points: [{x: a[0], y: a[1]}, {x: b[0], y: b[1]}], closed: false, style}));
+    });
+}
+const ContourColor = '#9a8f7c';
+
+/** A plot's spot heights as small crosses. */
+function spotHeightCrosses(plot: Plot, scale: number): Shape[] {
+    const arm = SpotArm * scale;
+    const style: Style = {stroke: Ink, width: 0.13};
+    return (plot.terrain ?? []).flatMap(([x, y]): Shape[] => [
+        {points: [{x: x - arm, y: y - arm}, {x: x + arm, y: y + arm}], closed: false, style},
+        {points: [{x: x - arm, y: y + arm}, {x: x + arm, y: y - arm}], closed: false, style},
+    ]);
+}
+
+/** The levels of a plot's spot heights (+1.250) beside their crosses, where they do not run into other text. */
+function spotHeightLabels(plot: Plot, scale: number): Label[] {
+    return (plot.terrain ?? []).map(([x, y, z]) => ({
+        at: {x: x + 3.2 * scale, y: y - 1.6 * scale},
+        lines: [{text: levelText(z), size: 1.5, color: Muted}],
+    }));
+}
+/** Half the spot height's cross, paper mm. */
+const SpotArm = 0.7;
 
 /** A plot's boundary: the dash-dot line of a property line. */
 function plotShape(plot: Plot): Shape {

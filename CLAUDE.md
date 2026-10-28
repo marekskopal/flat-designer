@@ -305,6 +305,26 @@ format is the text in `FurnitureTools::Format`.
   engine's `Outlined` vertex drag). The plan PDF draws the boundary as a dash-dot property line. Paths and lawns on it
   are rooms (the types `Path` and `Driveway`, with the seeded `paving-concrete-grey` and `asphalt`); fences are
   `Fence` items.
+- Sloping terrain (FD-86): a plot's `terrain` is spot heights `[x, y, z]` (mm, z against the floor's level, at least
+  10 mm apart, `SpotHeights`; MCP `terrain` on `add_plot` / `update_plot`, and `set_terrain` taking points and contour
+  lines, `ContourLines`). The ground is their Delaunay triangulation extended to the boundary: each boundary corner
+  takes the height the spot heights give it, and all are triangulated together, so the plot is covered and each
+  triangle is planar; outside it the nearest point of the outline counts; without spot heights the ground is flat at
+  `groundLevel`. The twins are `Terrain` / `Delaunay` (`Service/Editor/Geometry`) and `terrain.ts` (`terrainOf()`,
+  `terrainAt()`, `plotTerrain()` cached per plot object, `groundAt()`), kept identical by
+  `backend/tests/fixtures/terrain.json` (the same arithmetic in the same order, so co-circular grids triangulate
+  alike). **Always change both twins and add a fixture case in the same change.** The viewer cuts the plot and the
+  rooms draped on it along the triangles (`drapedGeometry()` in `plots.ts`). Gardens, paths and driveways on a sloping
+  plot follow it (`drapedOn()`, `floorElevation` lifting them); other rooms keep their flat floor, and its edge steps
+  down to the ground along the outline (`groundBeside()`; an indoor room's never up, as its walls stand there). A room
+  is cut out of the ground where its floor lies below it anywhere (`groundHoles()`; a draped one where its elevation
+  is negative). An item with `onGround` (`items.on_ground`) counts its z from the ground under its centre
+  (`ItemAssets.plots`; the sheets take `itemsOverFloor()`); a plot change rebuilds those items and every room. The
+  walkthrough follows the ground and stops at slopes over 35° between two points on sloping ground
+  (`FloorLevels.tooSteep`). The plan PDF draws contours every 0.5 m (the full metres heavier) and the spot heights with
+  their levels. Editing: a selected plot's spot heights get blue handles in the top view (dragged); a
+  double-click on its ground adds one at the ground's height, on a handle removes it; the inspector's `spots` field
+  (`SpotHeightsComponent`) types them.
 - Levels: a room's `floorElevation` (mm, ±3000; a terrace a step down, a raised deck) lifts everything the room draws
   (`buildRoom()`: floor, ceiling and finishes, whose opening gaps are brought down to the room's floor; `buildFloor()`
   adds the upright `floor-edge`, 2 mm inside the outline, stepping to the ground beside the room: its plot's

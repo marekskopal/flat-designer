@@ -55,7 +55,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params', 'onGround'];
 	}
 
 	/** @return list<string> */
@@ -104,6 +104,7 @@ final readonly class ItemHandler implements ElementHandler
 			'rotation' => 0,
 			'materialId' => null,
 			'params' => [],
+			'onGround' => false,
 		];
 	}
 
@@ -172,6 +173,8 @@ final readonly class ItemHandler implements ElementHandler
 			'rotation' => (($fields->int('rotation', -3600, 3600, 'degrees') % 360) + 360) % 360,
 			'materialId' => $materialId,
 			'params' => $params,
+			// Missing in older change states: on the floor's level.
+			'onGround' => $fields->bool('onGround'),
 		];
 		$this->customValidator->validate(
 			$floor->project,
@@ -254,6 +257,7 @@ final readonly class ItemHandler implements ElementHandler
 		$item->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$params = $fields->raw('params');
 		$item->params = $params === [] || $params === null ? null : json_encode($params, JSON_THROW_ON_ERROR);
+		$item->onGround = $fields->bool('onGround');
 		$this->itemRepository->persist($item);
 	}
 

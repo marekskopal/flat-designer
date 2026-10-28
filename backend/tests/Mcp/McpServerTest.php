@@ -165,6 +165,7 @@ final class McpServerTest extends IntegrationTestCase
 			'save_view',
 			'set_floor_underlay',
 			'set_material_prices',
+			'set_terrain',
 			'switch_variant',
 			'undo',
 			'ungroup',
@@ -629,6 +630,42 @@ final class McpServerTest extends IntegrationTestCase
 		$floorId = Fixture::firstFloor($this->project)->id;
 		$isError = false;
 		$this->client->call('delete_floor', ['projectId' => $this->project->id, 'floorId' => $floorId], $isError);
+		self::assertTrue($isError);
+	}
+
+	public function testSetsTheTerrainFromSpotHeightsAndContours(): void
+	{
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$plot = $this->client->call('add_plot', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'polygon' => [[-5000, -5000], [15000, -5000], [15000, 15000], [-5000, 15000]],
+			'terrain' => [[0, 0, 100]],
+		]);
+		self::assertIsArray($plot);
+		self::assertIsArray($plot['element']);
+		self::assertSame([[0, 0, 100]], $plot['element']['terrain']);
+		self::assertIsInt($plot['element']['id']);
+
+		$set = $this->client->call('set_terrain', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'plotId' => $plot['element']['id'],
+			'points' => [[0, 0, 2960]],
+			// 5 m long: sampled at 1667 mm; its start lies on the spot height, which wins.
+			'contours' => [['z' => 0, 'points' => [[0, 5], [5000, 5]]]],
+		]);
+		self::assertIsArray($set);
+		self::assertIsArray($set['element']);
+		self::assertSame([[0, 0, 2960], [1667, 5, 0], [3333, 5, 0], [5000, 5, 0]], $set['element']['terrain']);
+
+		$isError = false;
+		$this->client->call('set_terrain', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'plotId' => $plot['element']['id'],
+			'contours' => [['z' => 0, 'points' => [[0, 0]]]],
+		], $isError);
 		self::assertTrue($isError);
 	}
 

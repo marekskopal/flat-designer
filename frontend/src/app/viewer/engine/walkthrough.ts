@@ -1,8 +1,10 @@
-import {Scene} from '@app/models/scene';
+import {PlanPoint, Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {collideCircle, MM, pointInPolygon, polygonSignedArea, Vec2, WallCollider} from './plan-geometry';
+import {drapedOn} from './plots';
 import {StairPath, stairSpot} from './stairs';
+import {hasTerrain, plotTerrain, Terrain, terrainAt} from './terrain';
 
 /** Eye level of a 180 cm tall person, mm above the floor. */
 const EyeHeight = 1630;
@@ -33,26 +35,55 @@ const FloorKeys: Record<string, 1 | -1> = {PageUp: 1, PageDown: -1};
 
 /**
  * Where the walker stands on the floor's level, mm: plan point → height of the floor under it. `near` is the height
- * the walker stood at last, for a stair whose walking line passes over itself.
+ * the walker stood at last, for a stair whose walking line passes over itself. `tooSteep` tells whether a step
+ * between two points climbs or drops the ground steeper than `MaxSlope` (stairs and room floors never do).
  */
-export type FloorLevels = (point: Vec2, near?: number) => number;
+export type FloorLevels = ((point: Vec2, near?: number) => number) & {tooSteep?: (from: Vec2, to: Vec2) => boolean};
+
+/** The steepest sloping ground the walker goes up or down, as rise over run (35°). */
+const MaxSlope = Math.tan(THREE.MathUtils.degToRad(35));
 
 /**
  * The height of what is underfoot at a plan point, mm against the floor's level: a stair there (the floor's own going
  * up, or one coming up from below through its void: `stairSpot()`, a smooth ramp along its walking line; `stairs` are
  * `stairPaths()` of the scene, computed once by the caller), else the floor of the room there (the smallest one where
- * rooms overlap: a terrace inside a garden), else the ground of the plot there, else the floor's level. Steps do not
- * block the walk. Keeps only the outlines and levels, not the scene.
+ * rooms overlap: a terrace inside a garden; a garden, path or driveway on a sloping plot follows its ground), else the
+ * ground of the plot there (sloping with spot heights), else the floor's level. Steps do not block the walk; the
+ * sloping ground does where it is steeper than `MaxSlope`. Keeps only the outlines and levels, not the scene.
  */
 export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>, stairs: readonly StairPath[] = []): FloorLevels {
-    const rooms = scene.rooms
-        .map((r) => ({polygon: r.polygon, level: r.floorElevation ?? 0, area: Math.abs(polygonSignedArea(r.polygon))}))
+    const plots = scene.plots ?? [];
+    type Level = {polygon: PlanPoint[]; level: number; terrain: Terrain | null};
+    const rooms: (Level & {area: number})[] = scene.rooms
+        .map((r) => ({
+            polygon: r.polygon,
+            level: r.floorElevation ?? 0,
+            terrain: drapedOn(r, plots),
+            area: Math.abs(polygonSignedArea(r.polygon)),
+        }))
         .sort((a, b) => a.area - b.area);
-    const plots = (scene.plots ?? []).map((p) => ({polygon: p.polygon, level: p.groundLevel ?? 0}));
-    return (point, near) => {
+    const all: Level[] = [...rooms, ...plots.map((p): Level => ({polygon: p.polygon, level: 0, terrain: plotTerrain(p)}))];
+    const under = (point: Vec2): Level | undefined => all.find((o) => pointInPolygon(point, o.polygon));
+    const height = (o: Level | undefined, point: Vec2): number =>
+        o === undefined ? 0 : o.level + (o.terrain === null ? 0 : terrainAt(o.terrain, point.x, point.y));
+    const levels: FloorLevels = (point, near) => {
         const spot = stairs.length === 0 ? null : stairSpot(stairs, point, near);
-        return spot !== null ? spot.path.offset + spot.height : ([...rooms, ...plots].find((o) => pointInPolygon(point, o.polygon))?.level ?? 0);
+        return spot !== null ? spot.path.offset + spot.height : height(under(point), point);
     };
+    if (plots.some(hasTerrain)) {
+        // Between two points on sloping ground (the plot's, or a garden draped on it); a step onto or off a flat floor
+        // is a step, which never blocks.
+        levels.tooSteep = (from, to): boolean => {
+            const a = under(from);
+            const b = under(to);
+            if (a?.terrain == null || b?.terrain == null || (stairs.length > 0 && stairSpot(stairs, to) !== null)) {
+                return false;
+            }
+            const run = Math.hypot(to.x - from.x, to.y - from.y);
+            return run > 0 && Math.abs(height(b, to) - height(a, from)) > MaxSlope * run;
+        };
+    }
+    return levels;
 }
 
 /**
@@ -220,7 +251,11 @@ export class Walkthrough {
         const colliders = this.colliders();
         const steps = Math.ceil(distance / MaxStep);
         for (let i = 0; i < steps; i++) {
-            this.position = collideCircle({x: this.position.x + dx / steps, y: this.position.y + dy / steps}, BodyRadius, colliders);
+            const next = collideCircle({x: this.position.x + dx / steps, y: this.position.y + dy / steps}, BodyRadius, colliders);
+            if (this.levels.tooSteep?.(this.position, next) === true) {
+                break;
+            }
+            this.position = next;
         }
         this.applyCamera();
     }

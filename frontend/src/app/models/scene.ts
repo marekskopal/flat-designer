@@ -41,6 +41,9 @@ export type ItemKind =
 
 export type PlanPoint = [number, number];
 
+/** A spot height of a plot's terrain: x, y in plan mm and z, mm against the floor's level (FD-86). */
+export type SpotHeight = [number, number, number];
+
 export interface Floor {
     id: number;
     name: string;
@@ -85,6 +88,11 @@ export interface Plot {
     groundMaterialId: number | null;
     /** mm the ground lies above (+) or below (−) the floor's level; missing in older versions: 0. */
     groundLevel?: number;
+    /**
+     * Spot heights of a sloping ground (`terrain.ts`); without them the ground is flat at `groundLevel`. Missing in
+     * older versions.
+     */
+    terrain?: SpotHeight[];
 }
 
 export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral';
@@ -313,6 +321,8 @@ export interface Item {
     x: number;
     y: number;
     z: number;
+    /** z counts from the ground under the item's centre (its plot's terrain), not the floor's level; missing in older versions. */
+    onGround?: boolean;
     width: number;
     depth: number;
     height: number;

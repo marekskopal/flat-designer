@@ -170,6 +170,33 @@ describe('planSheet', () => {
         expect(sheet.svg).toContain('stroke-dasharray="6 1.2 0.6 1.2"');
     });
 
+    it('draws the contour lines and spot heights of a sloping plot', () => {
+        const polygon: PlanPoint[] = [[-3000, -3000], [12000, -3000], [12000, 9000], [-3000, 9000]];
+        const terrain: [number, number, number][] = [[-3000, -3000, 1250], [-3000, 9000, 1250], [12000, -3000, -250], [12000, 9000, -250]];
+        const plot = {id: 7, name: 'Parcel', polygon, area: 180, groundMaterialId: null, terrain};
+        const svg = planSheet(scene({plots: [plot]}), info).svg;
+        const labels = texts(svg);
+
+        expect(labels).toContain('+1.250');
+        expect(labels).toContain('−0.250');
+        // Contours at 0, +0.5 and +1.0 m: the full metres heavier.
+        expect(svg.match(/stroke="#9a8f7c" stroke-width="0.18"/g)?.length).toBeGreaterThan(0);
+        expect(svg.match(/stroke="#9a8f7c" stroke-width="0.09"/g)?.length).toBeGreaterThan(0);
+        expect(planSheet(scene({plots: [{...plot, terrain: []}]}), info).svg).not.toContain('#9a8f7c');
+    });
+
+    it('draws an item standing on high ground as one above the cut', () => {
+        const polygon: PlanPoint[] = [[-3000, -3000], [12000, -3000], [12000, 9000], [-3000, 9000]];
+        const terrain: [number, number, number][] = [[-3000, -3000, 2000], [-3000, 9000, 2000], [12000, -3000, 2000], [12000, 9000, 2000]];
+        const plot = {id: 7, name: 'Parcel', polygon, area: 180, groundMaterialId: null, terrain};
+        const shed = item(1, {name: 'Shed', x: 8000, y: 6000, z: 0, width: 2000, depth: 2000});
+        const onGround = planSheet(scene({plots: [plot], items: [{...shed, onGround: true}]}), info).svg;
+        const onFloor = planSheet(scene({plots: [plot], items: [shed]}), info).svg;
+
+        expect(texts(onFloor)).toContain('Shed');
+        expect(texts(onGround)).not.toContain('Shed');
+    });
+
     it('dimensions only the room edges along a wall, not where open-plan rooms meet', () => {
         const labels = texts(planSheet(scene({walls: box().filter((w) => w.id !== 2)}), info).svg);
 

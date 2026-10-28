@@ -66,8 +66,9 @@ export function rebuildContextItems(
         if (previous !== undefined) {
             dispose(previous);
         }
-        // Its pendants hang from its own roofs, not the shown floor's.
-        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, {...assets, roofs: scene.roofs ?? []});
+        // Its pendants hang from its own roofs, its items on its own ground, not the shown floor's.
+        const floorAssets = {...assets, roofs: scene.roofs ?? [], plots: scene.plots ?? []};
+        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, floorAssets);
         object.visible = !hidden.has(item.id);
         layer.items.set(item.id, object);
         layer.group.add(object);
