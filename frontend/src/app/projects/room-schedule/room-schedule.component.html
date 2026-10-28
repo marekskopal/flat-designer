@@ -26,13 +26,16 @@
                         <th class="num">Perimeter m</th>
                         <th class="num">Clear height m</th>
                         <th class="num">Volume m³</th>
+                        @if (underRoofs()) {
+                            <th class="num" title="Floor area with a clear height of at least 1.2 m under the roof">Area ≥ 1.2 m, m²</th>
+                        }
                     </tr>
                 </thead>
                 @for (floor of s.floors; track floor.id) {
                     <tbody>
                         @if (s.floors.length > 1) {
                             <tr class="floor">
-                                <th colspan="5" scope="rowgroup">{{ floor.name }} {{ levelText(floor.elevation) }}</th>
+                                <th [attr.colspan]="columns()" scope="rowgroup">{{ floor.name }} {{ levelText(floor.elevation) }}</th>
                             </tr>
                         }
                         @for (room of floor.rooms; track room.id) {
@@ -43,21 +46,24 @@
                                 </td>
                                 <td class="num">{{ room.area | number: '1.2-2' }}</td>
                                 <td class="num">{{ room.perimeter | number: '1.2-2' }}</td>
-                                <td class="num">{{ room.clearHeight === null ? '–' : (room.clearHeight / 1000 | number: '1.2-2') }}</td>
+                                <td class="num">{{ clearHeight(room) }}</td>
                                 <td class="num">{{ room.volume === null ? '–' : (room.volume | number: '1.1-1') }}</td>
+                                @if (underRoofs()) {
+                                    <td class="num">{{ room.headroomArea === null ? '' : (room.headroomArea | number: '1.2-2') }}</td>
+                                }
                             </tr>
                         }
                         @if (s.floors.length > 1) {
                             <tr class="subtotal">
                                 <td>Indoor, {{ floor.name }}</td>
                                 <td class="num">{{ floor.indoor.area | number: '1.2-2' }}</td>
-                                <td colspan="3"></td>
+                                <td [attr.colspan]="columns() - 2"></td>
                             </tr>
                             @if (floor.outdoor.rooms > 0) {
                                 <tr class="subtotal">
                                     <td>Outdoor, {{ floor.name }}</td>
                                     <td class="num">{{ floor.outdoor.area | number: '1.2-2' }}</td>
-                                    <td colspan="3"></td>
+                                    <td [attr.colspan]="columns() - 2"></td>
                                 </tr>
                             }
                         }
@@ -67,13 +73,13 @@
                     <tr class="total">
                         <td>Indoor total ({{ s.indoor.rooms }} {{ s.indoor.rooms === 1 ? 'room' : 'rooms' }})</td>
                         <td class="num">{{ s.indoor.area | number: '1.2-2' }}</td>
-                        <td colspan="3"></td>
+                        <td [attr.colspan]="columns() - 2"></td>
                     </tr>
                     @if (s.outdoor.rooms > 0) {
                         <tr class="total">
                             <td>Outdoor total (terraces, gardens)</td>
                             <td class="num">{{ s.outdoor.area | number: '1.2-2' }}</td>
-                            <td colspan="3"></td>
+                            <td [attr.colspan]="columns() - 2"></td>
                         </tr>
                     }
                 </tfoot>

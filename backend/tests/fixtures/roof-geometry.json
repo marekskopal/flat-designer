@@ -1,0 +1,1362 @@
+{
+ "description": "Cases for the roof geometry twins: RoofGeometry (PHP, Service/Editor/Geometry) and roof-geometry.ts (TS, viewer/engine). roof is a roof's fields; expected lists its planes (outline in plan, counter-clockwise from the eaves; the underside over it is height + gradient · (p − centre)), its ridge height and, per probe point, the underside, the top and the index of the plane over it (all null where the roof does not reach). Per window (along, across, width, length in the roof's frame): the index of its plane and its corners counter-clockwise from the low left (null plane: off the roof or a flat roof), and whether it fits 300 mm inside its plane. Lengths in mm above the floor's level, compared within 0.01. junctions: roofs of one floor, and per roof the plan area (m², within 0.001) of each of its planes where it is the top, its underside the highest (exactly where planes cross; parallel planes within 0.5 mm are the earlier roof's). rooms: a room under roofs, its clear height range (mm, within 0.01), volume (m³) and area with a clear height of at least 1.2 m and ceiling area along the slope (m², all within 0.001).",
+ "cases": [
+  {
+   "name": "a gable along plan x, at 45°",
+   "roof": {
+    "shape": "Gable",
+    "x": 5000,
+    "y": 4000,
+    "rotation": 0,
+    "width": 10000,
+    "depth": 8000,
+    "eaveHeight": 2600,
+    "pitch": 45,
+    "overhang": 400,
+    "vergeOverhang": 200,
+    "thickness": 250
+   },
+   "expected": {
+    "ridgeHeight": 6600.0,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": -200.0,
+        "y": -400.0
+       },
+       {
+        "x": 10200.0,
+        "y": -400.0
+       },
+       {
+        "x": 10200.0,
+        "y": 4000.0
+       },
+       {
+        "x": -200.0,
+        "y": 4000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": 1.0
+      },
+      "height": 6600.0
+     },
+     {
+      "polygon": [
+       {
+        "x": 10200.0,
+        "y": 8400.0
+       },
+       {
+        "x": -200.0,
+        "y": 8400.0
+       },
+       {
+        "x": -200.0,
+        "y": 4000.0
+       },
+       {
+        "x": 10200.0,
+        "y": 4000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": -1.0
+      },
+      "height": 6600.0
+     }
+    ],
+    "probes": [
+     {
+      "x": 5000,
+      "y": 4000,
+      "underside": 6600.0,
+      "top": 6953.553,
+      "plane": 1
+     },
+     {
+      "x": 5000,
+      "y": 0,
+      "underside": 2600.0,
+      "top": 2953.553,
+      "plane": 0
+     },
+     {
+      "x": 5000,
+      "y": -400,
+      "underside": 2200.0,
+      "top": 2553.553,
+      "plane": 0
+     },
+     {
+      "x": 5000,
+      "y": -401,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 10200,
+      "y": 4000,
+      "underside": 6600.0,
+      "top": 6953.553,
+      "plane": 1
+     },
+     {
+      "x": 10201,
+      "y": 4000,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 2000,
+      "y": 6000,
+      "underside": 4600.0,
+      "top": 4953.553,
+      "plane": 1
+     },
+     {
+      "x": 0,
+      "y": 8400,
+      "underside": 2200.0,
+      "top": 2553.553,
+      "plane": 1
+     }
+    ],
+    "windows": [
+     {
+      "along": 1000,
+      "across": -2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 610.0,
+        "y": -2417.193
+       },
+       {
+        "x": 1390.0,
+        "y": -2417.193
+       },
+       {
+        "x": 1390.0,
+        "y": -1582.807
+       },
+       {
+        "x": 610.0,
+        "y": -1582.807
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 4800,
+      "across": -2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 4410.0,
+        "y": -2417.193
+       },
+       {
+        "x": 5190.0,
+        "y": -2417.193
+       },
+       {
+        "x": 5190.0,
+        "y": -1582.807
+       },
+       {
+        "x": 4410.0,
+        "y": -1582.807
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": 1000,
+      "across": -200,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 610.0,
+        "y": -617.193
+       },
+       {
+        "x": 1390.0,
+        "y": -617.193
+       },
+       {
+        "x": 1390.0,
+        "y": 217.193
+       },
+       {
+        "x": 610.0,
+        "y": 217.193
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": 0,
+      "across": 6000,
+      "width": 780,
+      "length": 1180,
+      "plane": null,
+      "fits": false
+     },
+     {
+      "along": -2000,
+      "across": 2000,
+      "width": 1140,
+      "length": 1400,
+      "plane": 1,
+      "corners": [
+       {
+        "x": -1430.0,
+        "y": 2494.975
+       },
+       {
+        "x": -2570.0,
+        "y": 2494.975
+       },
+       {
+        "x": -2570.0,
+        "y": 1505.025
+       },
+       {
+        "x": -1430.0,
+        "y": 1505.025
+       }
+      ],
+      "fits": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "a gable turned 90°: the ridge runs north",
+   "roof": {
+    "shape": "Gable",
+    "rotation": 90,
+    "width": 9000,
+    "depth": 6000,
+    "pitch": 40,
+    "x": 0,
+    "y": 0,
+    "eaveHeight": 2600,
+    "overhang": 400,
+    "vergeOverhang": 200,
+    "thickness": 250
+   },
+   "expected": {
+    "ridgeHeight": 5117.299,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": 3400.0,
+        "y": -4700.0
+       },
+       {
+        "x": 3400.0,
+        "y": 4700.0
+       },
+       {
+        "x": 0.0,
+        "y": 4700.0
+       },
+       {
+        "x": 0.0,
+        "y": -4700.0
+       }
+      ],
+      "gradient": {
+       "x": -0.8391,
+       "y": 0.0
+      },
+      "height": 5117.299
+     },
+     {
+      "polygon": [
+       {
+        "x": -3400.0,
+        "y": 4700.0
+       },
+       {
+        "x": -3400.0,
+        "y": -4700.0
+       },
+       {
+        "x": 0.0,
+        "y": -4700.0
+       },
+       {
+        "x": 0.0,
+        "y": 4700.0
+       }
+      ],
+      "gradient": {
+       "x": 0.8391,
+       "y": 0.0
+      },
+      "height": 5117.299
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 5117.299,
+      "top": 5443.651,
+      "plane": 1
+     },
+     {
+      "x": 2000,
+      "y": 1000,
+      "underside": 3439.1,
+      "top": 3765.451,
+      "plane": 0
+     },
+     {
+      "x": -3000,
+      "y": -4500,
+      "underside": 2600.0,
+      "top": 2926.352,
+      "plane": 1
+     },
+     {
+      "x": -3400,
+      "y": 0,
+      "underside": 2264.36,
+      "top": 2590.712,
+      "plane": 1
+     },
+     {
+      "x": 3401,
+      "y": 0,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "a hip over a longer rectangle, turned 30°",
+   "roof": {
+    "shape": "Hip",
+    "rotation": 30,
+    "width": 12000,
+    "depth": 8000,
+    "pitch": 30,
+    "overhang": 500,
+    "eaveHeight": 2700,
+    "x": 0,
+    "y": 0,
+    "vergeOverhang": 200,
+    "thickness": 250
+   },
+   "expected": {
+    "ridgeHeight": 5009.401,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": -3379.165,
+        "y": -7147.114
+       },
+       {
+        "x": 7879.165,
+        "y": -647.114
+       },
+       {
+        "x": 1732.051,
+        "y": 1000.0
+       },
+       {
+        "x": -1732.051,
+        "y": -1000.0
+       }
+      ],
+      "gradient": {
+       "x": -0.288675,
+       "y": 0.5
+      },
+      "height": 5009.401
+     },
+     {
+      "polygon": [
+       {
+        "x": 7879.165,
+        "y": -647.114
+       },
+       {
+        "x": 3379.165,
+        "y": 7147.114
+       },
+       {
+        "x": 1732.051,
+        "y": 1000.0
+       }
+      ],
+      "gradient": {
+       "x": -0.5,
+       "y": -0.288675
+      },
+      "height": 6164.102
+     },
+     {
+      "polygon": [
+       {
+        "x": 3379.165,
+        "y": 7147.114
+       },
+       {
+        "x": -7879.165,
+        "y": 647.114
+       },
+       {
+        "x": -1732.051,
+        "y": -1000.0
+       },
+       {
+        "x": 1732.051,
+        "y": 1000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.288675,
+       "y": -0.5
+      },
+      "height": 5009.401
+     },
+     {
+      "polygon": [
+       {
+        "x": -7879.165,
+        "y": 647.114
+       },
+       {
+        "x": -3379.165,
+        "y": -7147.114
+       },
+       {
+        "x": -1732.051,
+        "y": -1000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.5,
+       "y": 0.288675
+      },
+      "height": 6164.102
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 5009.401,
+      "top": 5298.076,
+      "plane": 2
+     },
+     {
+      "x": 3000,
+      "y": 0,
+      "underside": 4143.376,
+      "top": 4432.051,
+      "plane": 0
+     },
+     {
+      "x": -5000,
+      "y": 1000,
+      "underside": 3066.025,
+      "top": 3354.701,
+      "plane": 2
+     },
+     {
+      "x": 6000,
+      "y": 3000,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 0,
+      "y": -4300,
+      "underside": 2859.401,
+      "top": 3148.076,
+      "plane": 0
+     },
+     {
+      "x": 5500,
+      "y": 3600,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "a hip over a square is a pyramid",
+   "roof": {
+    "shape": "Hip",
+    "width": 6000,
+    "depth": 6000,
+    "pitch": 35,
+    "overhang": 300,
+    "x": 0,
+    "y": 0,
+    "rotation": 0,
+    "eaveHeight": 2600,
+    "vergeOverhang": 200,
+    "thickness": 250
+   },
+   "expected": {
+    "ridgeHeight": 4700.623,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": -3300.0,
+        "y": -3300.0
+       },
+       {
+        "x": 3300.0,
+        "y": -3300.0
+       },
+       {
+        "x": 0.0,
+        "y": 0.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": 0.700208
+      },
+      "height": 4700.623
+     },
+     {
+      "polygon": [
+       {
+        "x": 3300.0,
+        "y": -3300.0
+       },
+       {
+        "x": 3300.0,
+        "y": 3300.0
+       },
+       {
+        "x": 0.0,
+        "y": 0.0
+       }
+      ],
+      "gradient": {
+       "x": -0.700208,
+       "y": 0.0
+      },
+      "height": 4700.623
+     },
+     {
+      "polygon": [
+       {
+        "x": 3300.0,
+        "y": 3300.0
+       },
+       {
+        "x": -3300.0,
+        "y": 3300.0
+       },
+       {
+        "x": 0.0,
+        "y": 0.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": -0.700208
+      },
+      "height": 4700.623
+     },
+     {
+      "polygon": [
+       {
+        "x": -3300.0,
+        "y": 3300.0
+       },
+       {
+        "x": -3300.0,
+        "y": -3300.0
+       },
+       {
+        "x": 0.0,
+        "y": 0.0
+       }
+      ],
+      "gradient": {
+       "x": 0.700208,
+       "y": 0.0
+      },
+      "height": 4700.623
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 4700.623,
+      "top": 5005.816,
+      "plane": 2
+     },
+     {
+      "x": 1000,
+      "y": 500,
+      "underside": 4000.415,
+      "top": 4305.609,
+      "plane": 1
+     },
+     {
+      "x": -2000,
+      "y": 2500,
+      "underside": 2950.104,
+      "top": 3255.297,
+      "plane": 2
+     },
+     {
+      "x": 3300,
+      "y": 3300,
+      "underside": 2389.938,
+      "top": 2695.131,
+      "plane": 2
+     },
+     {
+      "x": 3301,
+      "y": 0,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "a hip deeper than wide has its ridge across",
+   "roof": {
+    "shape": "Hip",
+    "x": 2000,
+    "y": -1000,
+    "width": 6000,
+    "depth": 10000,
+    "pitch": 25,
+    "rotation": 0,
+    "eaveHeight": 2600,
+    "overhang": 400,
+    "vergeOverhang": 200,
+    "thickness": 250
+   },
+   "expected": {
+    "ridgeHeight": 3998.923,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": -1400.0,
+        "y": -6400.0
+       },
+       {
+        "x": 5400.0,
+        "y": -6400.0
+       },
+       {
+        "x": 2000.0,
+        "y": -3000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": 0.466308
+      },
+      "height": 4931.538
+     },
+     {
+      "polygon": [
+       {
+        "x": 5400.0,
+        "y": -6400.0
+       },
+       {
+        "x": 5400.0,
+        "y": 4400.0
+       },
+       {
+        "x": 2000.0,
+        "y": 1000.0
+       },
+       {
+        "x": 2000.0,
+        "y": -3000.0
+       }
+      ],
+      "gradient": {
+       "x": -0.466308,
+       "y": 0.0
+      },
+      "height": 3998.923
+     },
+     {
+      "polygon": [
+       {
+        "x": 5400.0,
+        "y": 4400.0
+       },
+       {
+        "x": -1400.0,
+        "y": 4400.0
+       },
+       {
+        "x": 2000.0,
+        "y": 1000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": -0.466308
+      },
+      "height": 4931.538
+     },
+     {
+      "polygon": [
+       {
+        "x": -1400.0,
+        "y": 4400.0
+       },
+       {
+        "x": -1400.0,
+        "y": -6400.0
+       },
+       {
+        "x": 2000.0,
+        "y": -3000.0
+       },
+       {
+        "x": 2000.0,
+        "y": 1000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.466308,
+       "y": 0.0
+      },
+      "height": 3998.923
+     }
+    ],
+    "probes": [
+     {
+      "x": 2000,
+      "y": -1000,
+      "underside": 3998.923,
+      "top": 4274.767,
+      "plane": 3
+     },
+     {
+      "x": 2000,
+      "y": 2000,
+      "underside": 3532.615,
+      "top": 3808.46,
+      "plane": 2
+     },
+     {
+      "x": 4000,
+      "y": -1000,
+      "underside": 3066.308,
+      "top": 3342.152,
+      "plane": 1
+     },
+     {
+      "x": 2000,
+      "y": -5500,
+      "underside": 2833.154,
+      "top": 3108.998,
+      "plane": 0
+     },
+     {
+      "x": 5200,
+      "y": 4200,
+      "underside": 2506.738,
+      "top": 2782.583,
+      "plane": 2
+     }
+    ],
+    "windows": [
+     {
+      "along": 0,
+      "across": -4000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": -390.0,
+        "y": -4534.722
+       },
+       {
+        "x": 390.0,
+        "y": -4534.722
+       },
+       {
+        "x": 390.0,
+        "y": -3465.278
+       },
+       {
+        "x": -390.0,
+        "y": -3465.278
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 2000,
+      "across": 0,
+      "width": 780,
+      "length": 1180,
+      "plane": 1,
+      "corners": [
+       {
+        "x": 2534.722,
+        "y": -390.0
+       },
+       {
+        "x": 2534.722,
+        "y": 390.0
+       },
+       {
+        "x": 1465.278,
+        "y": 390.0
+       },
+       {
+        "x": 1465.278,
+        "y": -390.0
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": -2600,
+      "across": 1000,
+      "width": 780,
+      "length": 1180,
+      "plane": 3,
+      "corners": [
+       {
+        "x": -3134.722,
+        "y": 1390.0
+       },
+       {
+        "x": -3134.722,
+        "y": 610.0
+       },
+       {
+        "x": -2065.278,
+        "y": 610.0
+       },
+       {
+        "x": -2065.278,
+        "y": 1390.0
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": 0,
+      "across": 0,
+      "width": 780,
+      "length": 1180,
+      "plane": 3,
+      "corners": [
+       {
+        "x": -534.722,
+        "y": 390.0
+       },
+       {
+        "x": -534.722,
+        "y": -390.0
+       },
+       {
+        "x": 534.722,
+        "y": -390.0
+       },
+       {
+        "x": 534.722,
+        "y": 390.0
+       }
+      ],
+      "fits": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "a shed rises from the front eaves, turned 210°",
+   "roof": {
+    "shape": "Shed",
+    "rotation": 210,
+    "width": 7000,
+    "depth": 5000,
+    "pitch": 15,
+    "overhang": 600,
+    "vergeOverhang": 300,
+    "thickness": 200,
+    "x": 0,
+    "y": 0,
+    "eaveHeight": 2600
+   },
+   "expected": {
+    "ridgeHeight": 3939.746,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": 1740.897,
+        "y": 4584.679
+       },
+       {
+        "x": -4840.897,
+        "y": 784.679
+       },
+       {
+        "x": -1740.897,
+        "y": -4584.679
+       },
+       {
+        "x": 4840.897,
+        "y": -784.679
+       }
+      ],
+      "gradient": {
+       "x": 0.133975,
+       "y": -0.232051
+      },
+      "height": 3269.873
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 3269.873,
+      "top": 3476.928,
+      "plane": 0
+     },
+     {
+      "x": 1000,
+      "y": 1500,
+      "underside": 3055.771,
+      "top": 3262.827,
+      "plane": 0
+     },
+     {
+      "x": -1000,
+      "y": -2000,
+      "underside": 3600.0,
+      "top": 3807.055,
+      "plane": 0
+     },
+     {
+      "x": 3000,
+      "y": 0,
+      "underside": 3671.797,
+      "top": 3878.852,
+      "plane": 0
+     }
+    ],
+    "windows": [
+     {
+      "along": 1500,
+      "across": -1000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 1110.0,
+        "y": -1569.896
+       },
+       {
+        "x": 1890.0,
+        "y": -1569.896
+       },
+       {
+        "x": 1890.0,
+        "y": -430.104
+       },
+       {
+        "x": 1110.0,
+        "y": -430.104
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 0,
+      "across": 2000,
+      "width": 780,
+      "length": 1600,
+      "plane": 0,
+      "corners": [
+       {
+        "x": -390.0,
+        "y": 1227.259
+       },
+       {
+        "x": 390.0,
+        "y": 1227.259
+       },
+       {
+        "x": 390.0,
+        "y": 2772.741
+       },
+       {
+        "x": -390.0,
+        "y": 2772.741
+       }
+      ],
+      "fits": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "a flat roof ignores its pitch",
+   "roof": {
+    "shape": "Flat",
+    "width": 8000,
+    "depth": 6000,
+    "eaveHeight": 3000,
+    "pitch": 35,
+    "thickness": 300,
+    "overhang": 0,
+    "x": 0,
+    "y": 0,
+    "rotation": 0,
+    "vergeOverhang": 200
+   },
+   "expected": {
+    "ridgeHeight": 3000.0,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": -4000.0,
+        "y": -3000.0
+       },
+       {
+        "x": 4000.0,
+        "y": -3000.0
+       },
+       {
+        "x": 4000.0,
+        "y": 3000.0
+       },
+       {
+        "x": -4000.0,
+        "y": 3000.0
+       }
+      ],
+      "gradient": {
+       "x": 0.0,
+       "y": 0.0
+      },
+      "height": 3000.0
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 3000.0,
+      "top": 3300.0,
+      "plane": 0
+     },
+     {
+      "x": 4000,
+      "y": 3000,
+      "underside": 3000.0,
+      "top": 3300.0,
+      "plane": 0
+     },
+     {
+      "x": 4001,
+      "y": 0,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ],
+    "windows": [
+     {
+      "along": 0,
+      "across": 0,
+      "width": 780,
+      "length": 1180,
+      "plane": null,
+      "fits": false
+     }
+    ]
+   }
+  }
+ ],
+ "junctions": [
+  {
+   "name": "a wing runs into the main gable up to its ridge: the valleys cut a triangle out of its front plane",
+   "roofs": [
+    {
+     "shape": "Gable",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "width": 10000,
+     "depth": 8000,
+     "eaveHeight": 2600,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250
+    },
+    {
+     "shape": "Gable",
+     "x": 0,
+     "y": -4500,
+     "rotation": 90,
+     "width": 9000,
+     "depth": 4000,
+     "eaveHeight": 2600,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250
+    }
+   ],
+   "areas": [
+    [
+     36.0,
+     40.0
+    ],
+    [
+     12.0,
+     12.0
+    ]
+   ]
+  },
+  {
+   "name": "a steeper wing meets a turned hip, both with overhangs",
+   "roofs": [
+    {
+     "shape": "Hip",
+     "x": 0,
+     "y": 0,
+     "rotation": 30,
+     "width": 12000,
+     "depth": 8000,
+     "eaveHeight": 2600,
+     "pitch": 30,
+     "overhang": 500,
+     "vergeOverhang": 200,
+     "thickness": 250
+    },
+    {
+     "shape": "Gable",
+     "x": 2750,
+     "y": -4763,
+     "rotation": 120,
+     "width": 7000,
+     "depth": 4000,
+     "eaveHeight": 2800,
+     "pitch": 40,
+     "overhang": 300,
+     "vergeOverhang": 200,
+     "thickness": 300
+    }
+   ],
+   "areas": [
+    [
+     29.4368,
+     20.25,
+     38.25,
+     20.25
+    ],
+    [
+     15.2163,
+     15.2163
+    ]
+   ]
+  }
+ ],
+ "rooms": [
+  {
+   "name": "an attic room under a gable: the ceiling slopes to 1 m at the eaves",
+   "roofs": [
+    {
+     "shape": "Gable",
+     "x": 5000,
+     "y": 4000,
+     "rotation": 0,
+     "width": 10000,
+     "depth": 8000,
+     "eaveHeight": 1000,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250
+    }
+   ],
+   "room": {
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      10000,
+      0
+     ],
+     [
+      10000,
+      8000
+     ],
+     [
+      0,
+      8000
+     ]
+    ],
+    "ceilingHeight": 2500,
+    "floorElevation": 0
+   },
+   "expected": {
+    "minHeight": 1000,
+    "maxHeight": 2500,
+    "volume": 177.5,
+    "headroomArea": 76,
+    "ceilingArea": 92.4264
+   }
+  },
+  {
+   "name": "a raised room in the wing, under its valleys and the main roof",
+   "roofs": [
+    {
+     "shape": "Gable",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "width": 10000,
+     "depth": 8000,
+     "eaveHeight": 1200,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250
+    },
+    {
+     "shape": "Gable",
+     "x": 0,
+     "y": -4500,
+     "rotation": 90,
+     "width": 9000,
+     "depth": 4000,
+     "eaveHeight": 1200,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250
+    }
+   ],
+   "room": {
+    "polygon": [
+     [
+      -1800,
+      -8000
+     ],
+     [
+      1800,
+      -8000
+     ],
+     [
+      1800,
+      -1000
+     ],
+     [
+      -1800,
+      -1000
+     ]
+    ],
+    "ceilingHeight": 3500,
+    "floorElevation": 300
+   },
+   "expected": {
+    "minHeight": 1100,
+    "maxHeight": 3500,
+    "volume": 57.096,
+    "headroomArea": 24.34,
+    "ceilingArea": 35.0417
+   }
+  },
+  {
+   "name": "a room reaching out from under a turned shed, drawn clockwise",
+   "roofs": [
+    {
+     "shape": "Shed",
+     "x": 0,
+     "y": 0,
+     "rotation": 30,
+     "width": 6000,
+     "depth": 5000,
+     "eaveHeight": 900,
+     "pitch": 25,
+     "overhang": 400,
+     "vergeOverhang": 300,
+     "thickness": 200
+    }
+   ],
+   "room": {
+    "polygon": [
+     [
+      1000,
+      -1000
+     ],
+     [
+      1000,
+      4000
+     ],
+     [
+      7000,
+      4000
+     ],
+     [
+      7000,
+      -1000
+     ]
+    ],
+    "ceilingHeight": 2600,
+    "floorElevation": 0
+   },
+   "expected": {
+    "minHeight": 713.477,
+    "maxHeight": 2600,
+    "volume": 70.8731,
+    "headroomArea": 28.7682,
+    "ceilingArea": 30.8282
+   }
+  }
+ ]
+}

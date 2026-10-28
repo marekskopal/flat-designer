@@ -62,6 +62,7 @@ final readonly class ViewTools
 	 * @param string $view "overview" (3D) or "top" (plan)
 	 * @param array<string, mixed>|null $camera the 3D camera (see the schema)
 	 * @param bool $ceilings show ceilings
+	 * @param bool $roofs show the roofs (hide them to look into the floor under them)
 	 * @param bool $labels show room labels
 	 * @param int|null $sectionHeight wall cut, mm above the floor (900–2700); null = none
 	 * @param bool $dimensions dimension lines (plan view)
@@ -87,6 +88,7 @@ final readonly class ViewTools
 		#[Schema(definition: self::CameraSchema)]
 		?array $camera = null,
 		bool $ceilings = false,
+		bool $roofs = true,
 		bool $labels = true,
 		?int $sectionHeight = null,
 		bool $dimensions = false,
@@ -104,6 +106,7 @@ final readonly class ViewTools
 			'view' => $view,
 			'camera' => $camera,
 			'ceilings' => $ceilings,
+			'roofs' => $roofs,
 			'labels' => $labels,
 			'sectionHeight' => $sectionHeight,
 			'dimensions' => $dimensions,

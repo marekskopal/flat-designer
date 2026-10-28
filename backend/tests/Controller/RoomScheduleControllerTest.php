@@ -98,6 +98,51 @@ final class RoomScheduleControllerTest extends EditorTestCase
 		self::assertSame(404, $this->request('GET', $this->path(true), authenticatedAs: Fixture::createUser())->getStatusCode());
 	}
 
+	public function testMeasuresAnAtticUnderItsRoof(): void
+	{
+		// The fixture's attic: a 45° gable from 1 m at the eaves over a 10 × 8 m room with a 2.5 m ceiling.
+		$this->create('roofs', [
+			'shape' => 'Gable',
+			'x' => 5000,
+			'y' => 4000,
+			'width' => 10000,
+			'depth' => 8000,
+			'eaveHeight' => 1000,
+			'pitch' => 45,
+			'overhang' => 0,
+		]);
+		$this->create('rooms', [
+			'code' => 'A1',
+			'name' => 'Attic',
+			'type' => 'Bedroom',
+			'polygon' => [[0, 0], [10000, 0], [10000, 8000], [0, 8000]],
+			'ceilingHeight' => 2500,
+		]);
+		$this->create('rooms', [
+			'code' => 'B1',
+			'name' => 'Hall beside',
+			'type' => 'Hallway',
+			'polygon' => [[20000, 0], [22000, 0], [22000, 2000], [20000, 2000]],
+			'ceilingHeight' => 2500,
+		]);
+
+		$floor = $this->schedule(true)['floors'];
+		self::assertIsList($floor);
+		self::assertIsArray($floor[0]);
+		self::assertIsList($floor[0]['rooms']);
+		[$attic, $beside] = $floor[0]['rooms'];
+		self::assertIsArray($attic);
+		self::assertEquals(
+			['clearHeight' => 2500, 'minClearHeight' => 1000, 'volume' => 177.5, 'headroomArea' => 76.0],
+			array_intersect_key($attic, array_flip(['clearHeight', 'minClearHeight', 'volume', 'headroomArea'])),
+		);
+		self::assertIsArray($beside);
+		self::assertEquals(
+			['clearHeight' => 2500, 'minClearHeight' => null, 'volume' => 10.0, 'headroomArea' => null],
+			array_intersect_key($beside, array_flip(['clearHeight', 'minClearHeight', 'volume', 'headroomArea'])),
+		);
+	}
+
 	/** @return array<mixed> */
 	private static function measures(mixed $row): array
 	{

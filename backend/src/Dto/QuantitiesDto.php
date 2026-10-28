@@ -9,7 +9,7 @@ namespace FlatDesigner\Dto;
  * material (`materials`), the boards of the Custom furniture per material (`furniture`, from the cut list) and the
  * `total` of everything priced, in `currency`. `complete` is false when something has no price. Room costs count whole
  * pieces per room, the materials whole pieces for all rooms together, so the total may be a little less than the sum of
- * the rooms.
+ * the rooms. `roofs` lists each roof's covering and soffit (FD-38), whose materials count in the totals too.
  */
 final readonly class QuantitiesDto
 {
@@ -17,6 +17,7 @@ final readonly class QuantitiesDto
 	 * @param list<QuantityRoomDto> $rooms
 	 * @param list<QuantityMaterialDto> $materials
 	 * @param list<QuantityMaterialDto> $furniture
+	 * @param list<QuantityRoofDto> $roofs
 	 */
 	public function __construct(
 		public string $currency,
@@ -26,6 +27,7 @@ final readonly class QuantitiesDto
 		public array $furniture,
 		public float $total,
 		public bool $complete,
+		public array $roofs = [],
 	) {
 	}
 }

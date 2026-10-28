@@ -123,6 +123,53 @@ export interface Stair {
     structureMaterialId: number | null;
 }
 
+export type RoofShape = 'Gable' | 'Hip' | 'Shed' | 'Flat';
+export type RoofWindowType = 'CentrePivot' | 'TopHung';
+
+/**
+ * A roof over a floor (FD-38): the rectangle `width` × `depth` centred on (x, y), turned by `rotation` (degrees
+ * counter-clockwise; the ridge runs along the width), is the eaves line, where the underside is `eaveHeight` above the
+ * floor's level. The geometry is `roof-geometry.ts`.
+ */
+export interface Roof {
+    id: number;
+    name: string;
+    shape: RoofShape;
+    x: number;
+    y: number;
+    rotation: number;
+    width: number;
+    depth: number;
+    eaveHeight: number;
+    /** Degrees; unused by a flat roof. */
+    pitch: number;
+    /** mm past the eaves. */
+    overhang: number;
+    /** mm past a gable or a shed's sides. */
+    vergeOverhang: number;
+    /** mm, rafters and covering, square to the slope. */
+    thickness: number;
+    /** A flat roof's parapet, mm above it; null none. */
+    parapet: number | null;
+    coveringMaterialId: number | null;
+    soffitMaterialId: number | null;
+    windows: RoofWindow[];
+}
+
+/** A window in a roof's plane: its centre `along` the ridge and `across` it (+ to the back) from the roof's centre. */
+export interface RoofWindow {
+    id: number;
+    name: string;
+    type: RoofWindowType;
+    along: number;
+    across: number;
+    /** mm across the slope. */
+    width: number;
+    /** mm up the slope. */
+    length: number;
+    frameMaterialId: number | null;
+}
+
 /** The floor below's stairs that come up through a floor (`StairsBelowDto`): their voids cut through it. */
 export interface StairsBelow {
     floorId: number;
@@ -248,6 +295,8 @@ export interface Wall {
     /** The same on the face right of start → end. */
     rightFinishes: WallFinish[] | null;
     openings: Opening[];
+    /** The wall rises to the underside of the roofs over it (a gable) instead of stopping at `height`; missing in older snapshots. */
+    upToRoof?: boolean;
 }
 
 export interface Item {
@@ -316,6 +365,8 @@ export interface Scene {
     stairRise?: number;
     /** The stairs of the floor below coming up through this one; null without a floor below, absent in older versions. */
     stairsBelow?: StairsBelow | null;
+    /** The roofs over this floor; absent in older versions. */
+    roofs?: Roof[];
     /** Where the building stands, for the sun; absent in older versions. */
     location?: SiteLocation | null;
 }

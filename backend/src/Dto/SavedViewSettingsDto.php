@@ -13,8 +13,8 @@ use stdClass;
 /**
  * How a saved view shows its floor: the view mode (`overview`, the 3D view, or `top`, the plan; an eye-level shot is a 3D
  * camera at eye height), the 3D camera (null = the default framing), the display options (`sun`: the sun at a clock time
- * on site, null = the default afternoon sun; `allFloors` draws the floors under it below) and the active variant of each
- * variant set (`variants`: set id → group id; sets left out show their current variant).
+ * on site, null = the default afternoon sun; `allFloors` draws the floors under it below; `roofs` shows the roofs) and
+ * the active variant of each variant set (`variants`: set id → group id; sets left out show their current variant).
  */
 final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, JsonSerializable
 {
@@ -33,6 +33,7 @@ final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, Json
 		public array $variants,
 		public ?SunTimeDto $sun = null,
 		public bool $allFloors = false,
+		public bool $roofs = true,
 	) {
 	}
 
@@ -57,6 +58,8 @@ final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, Json
 			variants: self::variants($data['variants'] ?? null),
 			sun: SunTimeDto::optional($data),
 			allFloors: self::flag($data, 'allFloors', false),
+			// Views saved before the roofs show them.
+			roofs: self::flag($data, 'roofs', true),
 		);
 	}
 
@@ -67,6 +70,7 @@ final readonly class SavedViewSettingsDto implements ArrayFactoryInterface, Json
 			'view' => $this->view->value,
 			'camera' => $this->camera,
 			'ceilings' => $this->ceilings,
+			'roofs' => $this->roofs,
 			'labels' => $this->labels,
 			'sectionHeight' => $this->sectionHeight,
 			'dimensions' => $this->dimensions,

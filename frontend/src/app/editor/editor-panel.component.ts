@@ -1,9 +1,10 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
 import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
-import {Group, Item, Opening, OpeningType, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
+import {Group, Item, Opening, OpeningType, Roof, RoofWindow, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
+import {roofLocal} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {ActivityComponent} from './activity.component';
@@ -18,6 +19,8 @@ const KindLabels: Record<ElementKind, string> = {
     room: 'Room',
     plot: 'Plot',
     stair: 'Stairs',
+    roof: 'Roof',
+    roofWindow: 'Roof window',
     group: 'Group',
     variantSet: 'Variant set',
 };
@@ -97,6 +100,11 @@ export class EditorPanelComponent {
     protected readonly selectedWall = computed(() => {
         const selected = this.selected();
         return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
+    });
+    /** A pitched roof selected, which a roof window can be added to. */
+    protected readonly selectedPitchedRoof = computed(() => {
+        const selected = this.selected();
+        return selected?.kind === 'roof' && selected.element['shape'] !== 'Flat' ? (selected.element as unknown as Roof) : null;
     });
 
     /** Item kinds of the Add menu; columns and beams go under Building. */
@@ -219,6 +227,15 @@ export class EditorPanelComponent {
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
                 void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
+        } else if (choice === 'roof') {
+            // Its rectangle comes from the backend: round the floor's walls, the ridge along the longer side.
+            void this.editor.create('roof', {});
+        } else if (choice === 'roofWindow') {
+            // The backend puts it low on the roof's front plane.
+            const roof = this.selectedPitchedRoof();
+            if (roof !== null) {
+                void this.editor.create('roofWindow', {roofId: roof.id});
+            }
         } else if (choice === 'stair') {
             // The first riser at the view's centre (or the selected room's), walking up north.
             void this.editor.create('stair', {x: at.x, y: at.y});
@@ -314,10 +331,14 @@ export class EditorPanelComponent {
         }
     }
 
-    /** Arrow keys nudge the selected item or stairs, R turns it by 90°. */
+    /** Arrow keys nudge the selected item, stairs, roof or roof window by the step in plan, R turns the first three by 90°. */
     private moveItem(event: KeyboardEvent): void {
         const selected = this.selected();
-        if (selected?.kind !== 'item' && selected?.kind !== 'stair') {
+        if (selected?.kind === 'roofWindow') {
+            this.moveRoofWindow(event, selected.element as unknown as RoofWindow & {roofId: number});
+            return;
+        }
+        if (selected?.kind !== 'item' && selected?.kind !== 'stair' && selected?.kind !== 'roof') {
             return;
         }
         const item = selected.element as unknown as Pick<Item, 'id' | 'x' | 'y' | 'rotation'>;
@@ -335,6 +356,25 @@ export class EditorPanelComponent {
             event.preventDefault();
             void this.editor.update(selected.kind, item.id, fields);
         }
+    }
+
+    /** The arrows move the window as they do an item, in plan: the step is turned into the roof's frame (along and across the ridge). */
+    private moveRoofWindow(event: KeyboardEvent, window: RoofWindow & {roofId: number}): void {
+        const step = event.shiftKey ? NudgeStepCoarse : NudgeStep;
+        const moves: Record<string, {x: number; y: number}> = {
+            ArrowLeft: {x: -step, y: 0},
+            ArrowRight: {x: step, y: 0},
+            ArrowUp: {x: 0, y: step},
+            ArrowDown: {x: 0, y: -step},
+        };
+        const move = moves[event.key];
+        const roof = (this.scene().roofs ?? []).find((r) => r.id === window.roofId);
+        if (move === undefined || roof === undefined) {
+            return;
+        }
+        event.preventDefault();
+        const local = roofLocal({x: 0, y: 0, rotation: roof.rotation}, move.x, move.y);
+        void this.editor.update('roofWindow', window.id, {along: Math.round(window.along + local.x), across: Math.round(window.across + local.y)});
     }
 
     private selectedRoom(): Room | null {
@@ -360,6 +400,10 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             const stair = find(scene.stairs ?? []);
             return stair === null ? null : {...stair, stairRise: scene.stairRise ?? 0};
         }
+        case 'roof':
+            return find(scene.roofs ?? []);
+        case 'roofWindow':
+            return find((scene.roofs ?? []).flatMap((roof) => roof.windows.map((window) => ({...window, roofId: roof.id}))));
         case 'opening':
             return find(scene.walls.flatMap((w): Opening[] => w.openings));
         case 'group':

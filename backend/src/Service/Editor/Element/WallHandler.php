@@ -12,13 +12,15 @@ use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
 use FlatDesigner\Service\Editor\Geometry\WallLine;
 
 /**
- * Walls, straight or curved (`sagitta`, `WallCurve`), with optional wall finish bands per face (`leftFinishes` / `rightFinishes`, `WallFinishBands`). The state
+ * Walls, straight or curved (`sagitta`, `WallCurve`), with optional wall finish bands per face (`leftFinishes` / `rightFinishes`, `WallFinishBands`),
+ * rising to the roofs over them with `upToRoof` (FD-38; the viewer cuts every wall at their underside). The state
  * leaves out the openings (they are elements of their own) but keeps their offsets as `openingOffsets` ([{id, offset}]
  * by id): moving the start point shifts the offsets so the openings stay where they are on the plan, and undo restores
  * them exactly. A deleted wall hides its openings until undo brings it back.
@@ -35,6 +37,7 @@ final readonly class WallHandler implements ElementHandler
 		private OpeningRepository $openingRepository,
 		private MaterialResolver $materialResolver,
 		private WallFinishBands $wallFinishBands,
+		private RoofRepository $roofRepository,
 	) {
 	}
 
@@ -46,7 +49,7 @@ final readonly class WallHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'sagitta', 'thickness', 'height', 'materialId', 'leftFinishes', 'rightFinishes'];
+		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'sagitta', 'thickness', 'height', 'materialId', 'leftFinishes', 'rightFinishes', 'upToRoof'];
 	}
 
 	/** @return list<string> */
@@ -71,6 +74,7 @@ final readonly class WallHandler implements ElementHandler
 			'materialId' => null,
 			'leftFinishes' => null,
 			'rightFinishes' => null,
+			'upToRoof' => false,
 		];
 	}
 
@@ -122,6 +126,8 @@ final readonly class WallHandler implements ElementHandler
 			'materialId' => $materialId,
 			'leftFinishes' => $this->faceFinishes($fields->raw('leftFinishes'), 'leftFinishes'),
 			'rightFinishes' => $this->faceFinishes($fields->raw('rightFinishes'), 'rightFinishes'),
+			// Missing in changes logged before roofs.
+			'upToRoof' => $fields->bool('upToRoof'),
 		];
 
 		// Turning the wall round turns its faces round: unless the request sets the bands (undo, redo), they stay
@@ -203,7 +209,7 @@ final readonly class WallHandler implements ElementHandler
 	 * taken as it is when it differs from the current offsets; otherwise a moved start point shifts them so
 	 * every opening keeps its place on the plan.
 	 *
-	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, ...} $next
+	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, ...} $next
 	 * @return array<int, int> offset by opening id
 	 */
 	private function openingOffsets(Wall $wall, array $next, int $length, mixed $requested): array
@@ -226,9 +232,13 @@ final readonly class WallHandler implements ElementHandler
 		}
 
 		$radius = $new->arc()['radius'] ?? null;
+		$top = OpeningHead::wallTopIfReshaped($wall, $next, $new, $this->roofRepository->findByFloor($wall->floor->id));
 		foreach ($openings as $opening) {
-			// Sliding and pocket doors also keep the wall their open leaf slides along; on a curved wall it has to stay shallow.
-			if (!OpeningPlacement::fits($opening, $offsets[$opening->id], $length, $next['thickness'], $next['height'], $radius)) {
+			$offset = $offsets[$opening->id];
+			// Sliding and pocket doors also keep the wall their open leaf slides along; on a curved wall it has to stay
+			// shallow; under the roofs the head stays under the wall's top.
+			$headRoom = OpeningHead::headRoom($top, $offset, $opening->width);
+			if (!OpeningPlacement::fits($opening, $offset, $length, $next['thickness'], $headRoom, $radius)) {
 				throw EditException::invalid(sprintf('Opening "%s" would no longer fit the wall.', $opening->name));
 			}
 		}
@@ -318,6 +328,7 @@ final readonly class WallHandler implements ElementHandler
 		$wall->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$wall->leftFinishes = WallFinishBands::encodeFace($fields->raw('leftFinishes'));
 		$wall->rightFinishes = WallFinishBands::encodeFace($fields->raw('rightFinishes'));
+		$wall->upToRoof = $fields->bool('upToRoof');
 		$this->wallRepository->persist($wall);
 
 		$offsets = $fields->raw('openingOffsets');

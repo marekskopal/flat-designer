@@ -12,6 +12,7 @@ import {MM, tileGrid} from './plan-geometry';
 import {buildSanitaryItemBody} from './sanitary';
 import {buildStructureItemBody} from './structure';
 import {alignTiles} from './tiling';
+import {FloorRoofs} from './under-roof';
 
 /**
  * What items load on demand: the scene's 3D models by id with the library loading them (null: `Model` items show
@@ -21,6 +22,8 @@ export interface ItemAssets {
     models: ReadonlyMap<number, SceneModel>;
     modelLibrary: ModelLibrary | null;
     pictures: PictureLibrary | null;
+    /** The floor's roofs, under which a pendant's ceiling slopes. */
+    roofs?: FloorRoofs;
 }
 
 const NoAssets: ItemAssets = {models: new Map(), modelLibrary: null, pictures: null};
@@ -53,7 +56,7 @@ export function buildItemParts(
     assets: ItemAssets = NoAssets,
 ): THREE.Object3D {
     const object =
-        buildCustomItemBody(item, materials, definitions, assets.pictures, room) ??
+        buildCustomItemBody(item, materials, definitions, assets.pictures, room, assets.roofs) ??
         buildModelItemBody(item, assets.models, assets.modelLibrary) ??
         buildKitchenItemBody(item, materials) ??
         buildSanitaryItemBody(item, materials) ??

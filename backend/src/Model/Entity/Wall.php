@@ -35,6 +35,10 @@ class Wall extends AEntity
 	#[Column(type: Type::Text, nullable: true)]
 	public ?string $rightFinishes = null;
 
+	/** The wall rises to the underside of the roofs over it (a gable) instead of stopping at its `height` (FD-38). */
+	#[Column(type: Type::Boolean)]
+	public bool $upToRoof = false;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

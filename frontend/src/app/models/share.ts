@@ -27,6 +27,8 @@ export interface ShareSettings {
     /** Start of the 3D view; null = the default overview framing. Only with 'overview' allowed. */
     camera: CameraPose | null;
     ceilings: boolean;
+    /** The roofs; missing in links saved before them, which show them. */
+    roofs?: boolean;
     labels: boolean;
     /** Wall cut in mm; null = none. */
     sectionHeight: number | null;

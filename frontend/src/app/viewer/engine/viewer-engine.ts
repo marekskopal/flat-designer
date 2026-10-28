@@ -1,4 +1,4 @@
-import {isOutdoorRoom, Item, PlanPoint, Plot, Room, Scene, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, PlanPoint, Plot, Roof, RoofWindow, Room, Scene, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -7,6 +7,7 @@ import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightU
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import {
+    addRoof,
     addRoom,
     buildBuilding,
     buildCeilingSteps,
@@ -76,6 +77,7 @@ import {
     wallFaces,
     wallFrame,
     wallJoints,
+    wallOutline,
 } from './plan-geometry';
 import {buildPlot, groundUnder, highlightPlot} from './plots';
 import {
@@ -87,6 +89,8 @@ import {
     SunShadowRadius,
     viewChanged,
 } from './presentation';
+import {roofLocal, roofSlope, roofWindowFits} from './roof-geometry';
+import {buildRoof, buildRoofOutline, highlightRoofOutline, resizeRoofByCorner, roofCorners, RoofMinSide} from './roofs';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {buildContextFloor, ContextFloor, floorOffset, floorPoints, floorsBelow, rebuildContextItems, stackGround} from './stack';
@@ -103,6 +107,7 @@ import {
     stairSpot,
 } from './stairs';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
+import {roofsMeet, roofsReach} from './under-roof';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {floorLevels, Walkthrough, WalkthroughFov} from './walkthrough';
@@ -146,6 +151,8 @@ const MinWallLength = 100;
 const InputEvents = ['pointerdown', 'pointerup', 'pointerleave', 'dblclick', 'wheel'] as const;
 /** The floor level, where the drawing tools place points. */
 const FloorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+/** mm the roofs' top-view outlines lie under the wall cut. */
+const RoofOutlineBelowCut = 10;
 /** Snap grid for dragged elements, mm (Shift: whole mm, no snapping). */
 const DragSnap = 10;
 /** Dragging works only while the camera looks down steeply (Plan view), where plan moves are unambiguous. */
@@ -174,6 +181,7 @@ type HandleRole =
     | {role: 'wallStart' | 'wallEnd' | 'wallCurve'}
     | {role: 'vertex'; index: number}
     | {role: 'midpoint'; index: number}
+    | {role: 'roofCorner'; index: number}
     | {role: 'draw'};
 
 /** Wall fields of a run being drawn, for its preview. */
@@ -209,11 +217,17 @@ type Drag = DragBase &
     (
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
         | {kind: 'stair'; stair: Stair; object: THREE.Object3D; x: number; y: number}
+        | {kind: 'roof'; roof: Roof; objects: THREE.Object3D[]; x: number; y: number}
+        | {kind: 'roofCorner'; roof: Roof; index: number; current: RoofRectangle}
+        | {kind: 'roofWindow'; roof: Roof; window: RoofWindow; along: number; across: number}
         | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
         | {kind: 'vertex'; outline: Outlined; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
     );
+
+/** Where a roof's eaves rectangle lies (plan mm), as a corner drag changes it. */
+type RoofRectangle = Pick<Roof, 'x' | 'y' | 'width' | 'depth'>;
 
 /** The door (or walkable French window) the walker looks at, and whether it is open or opening. */
 export interface DoorAim {
@@ -392,6 +406,7 @@ export class ViewerEngine {
     private loads = 0;
     private sectionHeight: number | null = null;
     private ceilingsVisible = true;
+    private roofsVisible = true;
     /**
      * While the ceilings are hidden, they still shade the rooms: these stand-ins share their geometry and cast their
      * shadows but draw nothing (no colour, no depth, not even under the GTAO pass's override material).
@@ -581,6 +596,7 @@ export class ViewerEngine {
             this.walkthrough?.moveTo(walkTo.position, walkTo.yaw);
         }
         this.loadedFloorId = scene.floor.id;
+        this.placeRoofOutlines();
         this.setSelection(this.selection);
         this.setPicked(this.picked);
         if (this.pendingRun !== null && this.hasWallsAlong(scene, this.pendingRun)) {
@@ -628,6 +644,7 @@ export class ViewerEngine {
 
         this.parts = buildBuilding(scene, this.materials);
         this.parts.ceilings.visible = this.ceilingsVisible;
+        this.parts.roofBodies.visible = this.roofsVisible;
         content.add(this.parts.root);
         this.joints = wallJoints(scene.walls);
         this.corners = cornerWindows(scene.walls);
@@ -666,6 +683,15 @@ export class ViewerEngine {
 
         const rooms = diffById(previous.rooms, scene.rooms);
         const items = diffById(previous.items, scene.items);
+        // Walls, ceilings, finishes and pendants under the roofs follow them: a roof change rebuilds those the roof
+        // reached before or reaches now.
+        const floorRoofs = scene.roofs ?? [];
+        const roofs = diffById(previous.roofs ?? [], floorRoofs);
+        const roofsChanged = roofs.removed.length > 0 || roofs.changed.length > 0;
+        const roofIds = new Set([...roofs.removed, ...roofs.changed.map((r) => r.id)]);
+        const touchedRoofs = [...roofs.changed, ...(previous.roofs ?? []).filter((r) => roofIds.has(r.id))];
+        const underChangedRoofs = (points: readonly PlanPoint[]): boolean => roofsChanged && roofsReach(polygonBounds(points), touchedRoofs);
+        const roofTouchedRooms = new Set(scene.rooms.filter((r) => underChangedRoofs(r.polygon)).map((r) => r.id));
         // Tiled items follow their room's tile grid; Custom items their definition.
         const changedRooms = new Set(rooms.changed.map((r) => r.id));
         const changedItems = new Set(items.changed.map((i) => i.id));
@@ -677,7 +703,8 @@ export class ViewerEngine {
                 (i.roomId !== null && changedRooms.has(i.roomId)) ||
                 (i.definitionId !== null && changedDefinitions.has(i.definitionId)) ||
                 this.showsPicture(i, changedPictures) ||
-                (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)),
+                (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)) ||
+                (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -696,7 +723,7 @@ export class ViewerEngine {
 
         const walls = diffById(previous.walls, scene.walls);
         const wallsChanged = walls.removed.length > 0 || walls.changed.length > 0;
-        if (wallsChanged) {
+        if (wallsChanged || roofsChanged) {
             const joints = wallJoints(scene.walls);
             const corners = cornerWindows(scene.walls);
             const changedIds = new Set(walls.changed.map((w) => w.id));
@@ -706,12 +733,13 @@ export class ViewerEngine {
             for (const wall of scene.walls) {
                 // A moved wall also changes the mitres of the walls it meets, a window the corner windows.
                 if (
+                    underChangedRoofs(wallOutline(wallFrame(wall), wall.thickness, 0, wallFrame(wall).length).map((p) => [p.x, p.y])) ||
                     changedIds.has(wall.id) ||
                     !sameJson(this.joints.get(wall.id), joints.get(wall.id)) ||
                     !sameJson(this.corners.get(wall.id), corners.get(wall.id))
                 ) {
                     this.removeWall(wall.id);
-                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id));
+                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), floorRoofs);
                     parts.walls.set(wall.id, group);
                     parts.root.add(group);
                 }
@@ -754,6 +782,22 @@ export class ViewerEngine {
             roomsCutBy(scene.rooms, [...sceneVoids(previous).below, ...voids.below]).forEach((id) => voidRooms.add(id));
         }
 
+        // The roofs: a changed one is drawn anew, with its outline, and so are those it met before or meets now (their
+        // junctions with it).
+        const met = floorRoofs.filter((roof) => !roofIds.has(roof.id) && touchedRoofs.some((touched) => roofsMeet(roof, touched)));
+        for (const id of [...roofs.removed, ...roofs.changed.map((r) => r.id), ...met.map((r) => r.id)]) {
+            const built = parts.roofs.get(id);
+            if (built !== undefined) {
+                this.disposeObject(built.roof);
+                this.disposeObject(built.outline);
+                parts.roofs.delete(id);
+            }
+        }
+        [...roofs.changed, ...met].forEach((roof) => addRoof(parts, roof, materials, floorRoofs));
+        if (roofsChanged) {
+            this.highlightRoofs();
+        }
+
         // The slab lies under the rooms and the walls.
         if (
             wallsChanged ||
@@ -783,22 +827,22 @@ export class ViewerEngine {
             this.highlightPlots();
         }
         const rebuiltRooms = scene.rooms.filter(
-            (r) => changedRooms.has(r.id) || (plotsChanged && (r.floorElevation ?? 0) !== 0) || voidRooms.has(r.id),
+            (r) => roofTouchedRooms.has(r.id) || changedRooms.has(r.id) || (plotsChanged && (r.floorElevation ?? 0) !== 0) || voidRooms.has(r.id),
         );
 
         for (const id of [...rooms.removed, ...rebuiltRooms.map((r) => r.id)]) {
             this.removeRoom(id);
         }
         for (const room of rebuiltRooms) {
-            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids), room.id);
+            addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, floorRoofs), room.id);
             const label = this.createLabel(room);
             this.labels.set(room.id, label);
             content.add(label);
         }
-        if (wallsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
-            // Steps between ceilings depend on the neighbouring rooms and on which edges have walls.
+        if (wallsChanged || roofsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
+            // Steps between ceilings depend on the neighbouring rooms, on which edges have walls and on the roofs.
             this.disposeObject(parts.ceilingSteps);
-            parts.ceilingSteps = buildCeilingSteps(scene.rooms, scene.walls, materials);
+            parts.ceilingSteps = buildCeilingSteps(scene.rooms, scene.walls, materials, floorRoofs);
             parts.ceilings.add(parts.ceilingSteps);
         }
         if (wallsChanged) {
@@ -818,7 +862,7 @@ export class ViewerEngine {
                 if (roomParts.finishes !== null) {
                     this.disposeObject(roomParts.finishes);
                 }
-                roomParts.finishes = buildRoomFinishes(room, scene.walls, materials);
+                roomParts.finishes = buildRoomFinishes(room, scene.walls, materials, floorRoofs);
                 if (roomParts.finishes !== null) {
                     parts.root.add(roomParts.finishes);
                 }
@@ -871,7 +915,12 @@ export class ViewerEngine {
 
     /** Takes an object out of the scene and frees its geometry (and materials the library does not share). */
     private itemAssets(scene: Scene): ItemAssets {
-        return {models: new Map((scene.models ?? []).map((m) => [m.id, m])), modelLibrary: this.modelLibrary, pictures: this.pictureLibrary};
+        return {
+            models: new Map((scene.models ?? []).map((m) => [m.id, m])),
+            modelLibrary: this.modelLibrary,
+            pictures: this.pictureLibrary,
+            roofs: scene.roofs ?? [],
+        };
     }
 
     /** Draws the `Model` items of a model that finished loading (all of them with null), in place of their placeholders. */
@@ -953,6 +1002,7 @@ export class ViewerEngine {
         this.selection = selection;
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
         this.highlightPlots();
+        this.highlightRoofs();
 
         this.removeOutline();
         const objects = this.objectsOf(selection);
@@ -1085,6 +1135,16 @@ export class ViewerEngine {
         this.refreshShadows();
     }
 
+    /** Shows or hides the roofs, the floors below's too; hidden, the shown floor's still shade the floor under them. */
+    public setRoofsVisible(visible: boolean): void {
+        this.roofsVisible = visible;
+        if (this.parts !== null) {
+            this.parts.roofBodies.visible = visible;
+        }
+        this.stackLayers.forEach((layer) => (layer.roofs.visible = visible));
+        this.refreshShadows();
+    }
+
     /** Shows or hides the parts of an item that belong to the ceiling (a beam) with the ceilings. */
     private showCeilingParts(object: THREE.Object3D): void {
         object.traverse((o) => {
@@ -1161,10 +1221,10 @@ export class ViewerEngine {
         }
     }
 
-    /** Stands in for the hidden ceilings (and the beams hiding with them) in the shadow pass about to run. */
+    /** Stands in for the hidden ceilings (and the beams hiding with them) and roofs in the shadow pass about to run. */
     private updateShadowStandIns(): void {
         this.shadowStandIns.clear();
-        if (this.ceilingsVisible || this.content === null || this.parts === null) {
+        if ((this.ceilingsVisible && this.roofsVisible) || this.content === null || this.parts === null) {
             return;
         }
         this.content.updateMatrixWorld(true);
@@ -1177,6 +1237,12 @@ export class ViewerEngine {
                 this.shadowStandIns.add(standIn);
             }
         };
+        if (!this.roofsVisible) {
+            this.parts.roofBodies.traverse(add);
+        }
+        if (this.ceilingsVisible) {
+            return;
+        }
         this.parts.ceilings.traverse(add);
         this.items.forEach((item) => {
             if (item.visible) {
@@ -1373,6 +1439,7 @@ export class ViewerEngine {
     /** Cuts everything above `height` (mm) away; `null` shows the full height. */
     public setSectionHeight(height: number | null): void {
         this.sectionHeight = height;
+        this.placeRoofOutlines();
         this.updateHandles();
         this.commentPins.setSectionHeight(height);
         this.refreshShadows();
@@ -1731,6 +1798,34 @@ export class ViewerEngine {
         this.parts?.plots.forEach((group, id) => highlightPlot(group, selection?.kind === 'plot' && selection.id === id));
     }
 
+    /**
+     * Where the roofs' outlines lie in the top view (mm): just under the wall cut, or the walls' tops without one. The
+     * plan camera looks down in perspective, so they line up with the walls as drawn and stay above them for picking.
+     */
+    private roofOutlineHeight(): number {
+        const walls = this.sceneData?.walls ?? [];
+        const top = this.sectionHeight ?? Math.max(0, ...walls.map((w) => w.height));
+        return Math.max(top - RoofOutlineBelowCut, 0);
+    }
+
+    /** Lifts the roofs' outlines to `roofOutlineHeight()`; called when the scene or the wall cut changes. */
+    private placeRoofOutlines(): void {
+        if (this.parts !== null) {
+            this.parts.roofOutlines.position.y = this.roofOutlineHeight() * MM;
+        }
+    }
+
+    /** The roof a roof window of the shown floor is in. */
+    private roofOfWindow(windowId: number): Roof | undefined {
+        return (this.sceneData?.roofs ?? []).find((roof) => roof.windows.some((w) => w.id === windowId));
+    }
+
+    private highlightRoofs(): void {
+        const selection = this.selection;
+        const windowId = selection?.kind === 'roofWindow' ? selection.id : null;
+        this.parts?.roofs.forEach(({outline}, id) => highlightRoofOutline(outline, selection?.kind === 'roof' && selection.id === id, windowId));
+    }
+
     /** Tints the room's floor; `floor` overrides the room's own mesh (the preview while a corner is dragged). */
     private setSelectedRoom(roomId: number | null, floor?: THREE.Mesh): void {
         this.labels.forEach((label, id) => label.element.classList.toggle('selected', id === roomId));
@@ -1858,6 +1953,7 @@ export class ViewerEngine {
         this.stackLayers.filter((layer) => !kept.has(layer.scene.floor.id)).forEach((layer) => this.disposeObject(layer.group));
         this.stackLayers = wanted.map((scene) => {
             const layer = kept.get(scene.floor.id) ?? buildContextFloor(scene, materials as MaterialLibrary, this.itemAssets(scene));
+            layer.roofs.visible = this.roofsVisible;
             this.scene.add(layer.group);
             return layer;
         });
@@ -2061,6 +2157,13 @@ export class ViewerEngine {
         if (this.ghost !== null) {
             this.ghost.visible = topDown;
         }
+        if (this.parts !== null) {
+            this.parts.roofOutlines.visible = topDown;
+        }
+        if (this.outline !== null && (this.selection?.kind === 'roof' || this.selection?.kind === 'roofWindow')) {
+            // The roof is cut away over the plan, where its outline shows the selection.
+            this.outline.visible = !topDown;
+        }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
         this.renderMain();
         this.renderOverlay();
@@ -2185,6 +2288,11 @@ export class ViewerEngine {
             const mode = role.role === 'wallStart' ? 'start' : role.role === 'wallEnd' ? 'end' : 'curve';
             return wall === undefined ? null : {kind: 'wall', plane, grab, moved: false, wall, mode, current: wall, fits: true, snap: null};
         }
+        if (this.selection.kind === 'roof' && role.role === 'roofCorner') {
+            const roof = (scene.roofs ?? []).find((r) => r.id === this.selection?.id);
+            const current = roof === undefined ? null : {x: roof.x, y: roof.y, width: roof.width, depth: roof.depth};
+            return roof === undefined || current === null ? null : {kind: 'roofCorner', plane, grab, moved: false, roof, index: role.index, current};
+        }
         const outline = this.selectedOutline();
         if (outline === null) {
             return null;
@@ -2232,6 +2340,18 @@ export class ViewerEngine {
             const object = this.parts?.stairs.get(selection.id);
             if (stair !== undefined && object !== undefined) {
                 drag = {kind: 'stair', plane, grab, moved: false, stair, object, x: stair.x, y: stair.y};
+            }
+        } else if (selection.kind === 'roofWindow') {
+            const roof = this.roofOfWindow(selection.id);
+            const window = roof?.windows.find((w) => w.id === selection.id);
+            if (roof !== undefined && window !== undefined) {
+                drag = {kind: 'roofWindow', plane, grab, moved: false, roof, window, along: window.along, across: window.across};
+            }
+        } else if (selection.kind === 'roof') {
+            const roof = (scene.roofs ?? []).find((r) => r.id === selection.id);
+            const built = this.parts?.roofs.get(selection.id);
+            if (roof !== undefined && built !== undefined) {
+                drag = {kind: 'roof', plane, grab, moved: false, roof, objects: [built.roof, built.outline], x: roof.x, y: roof.y};
             }
         } else if (selection.kind === 'group') {
             const members = scene.items
@@ -2299,6 +2419,42 @@ export class ViewerEngine {
                 drag.y = snapToGrid(element.y + delta.y, step);
                 drag.object.position.x = drag.x * MM;
                 drag.object.position.z = -drag.y * MM;
+                break;
+            }
+            case 'roof': {
+                const step = free ? 1 : DragSnap;
+                drag.x = snapToGrid(drag.roof.x + delta.x, step);
+                drag.y = snapToGrid(drag.roof.y + delta.y, step);
+                for (const object of drag.objects) {
+                    object.position.x = drag.x * MM;
+                    object.position.z = -drag.y * MM;
+                }
+                break;
+            }
+            case 'roofWindow': {
+                // The pointer's move in the roof's frame: along the ridge and across it. The window stops where it would no
+                // longer fit its plane (it jumps the ridge), so the drop lands where the backend takes it; the plane's other
+                // windows are the backend's to refuse.
+                const step = free ? 1 : DragSnap;
+                const from = roofLocal(drag.roof, drag.grab.x, drag.grab.y);
+                const to = roofLocal(drag.roof, drag.grab.x + delta.x, drag.grab.y + delta.y);
+                const along = snapToGrid(drag.window.along + to.x - from.x, step);
+                const across = snapToGrid(drag.window.across + to.y - from.y, step);
+                if (roofWindowFits(drag.roof, {...drag.window, along, across})) {
+                    drag.along = along;
+                    drag.across = across;
+                }
+                const windows = drag.roof.windows.map((w) => (w.id === drag.window.id ? {...w, along: drag.along, across: drag.across} : w));
+                this.previewRoof(drag.roof, {}, windows);
+                break;
+            }
+            case 'roofCorner': {
+                const step = free ? 1 : DragSnap;
+                const corner = roofCorners(drag.roof)[drag.index];
+                const to = {x: snapToGrid(corner.x + delta.x, step), y: snapToGrid(corner.y + delta.y, step)};
+                drag.current = resizeRoofByCorner(drag.roof, drag.index, to, RoofMinSide);
+                this.previewRoof(drag.roof, drag.current);
+                this.updateHandles();
                 break;
             }
             case 'group': {
@@ -2509,6 +2665,23 @@ export class ViewerEngine {
                     edit = {selection: {kind: 'stair', id: drag.stair.id}, fields: {x: drag.x, y: drag.y}};
                 }
                 break;
+            case 'roof':
+                if (drag.x !== drag.roof.x || drag.y !== drag.roof.y) {
+                    edit = {selection: {kind: 'roof', id: drag.roof.id}, fields: {x: drag.x, y: drag.y}};
+                }
+                break;
+            case 'roofWindow':
+                if (drag.along !== drag.window.along || drag.across !== drag.window.across) {
+                    edit = {selection: {kind: 'roofWindow', id: drag.window.id}, fields: {along: drag.along, across: drag.across}};
+                }
+                break;
+            case 'roofCorner': {
+                const {x, y, width, depth} = drag.current;
+                if (x !== drag.roof.x || y !== drag.roof.y || width !== drag.roof.width || depth !== drag.roof.depth) {
+                    edit = {selection: {kind: 'roof', id: drag.roof.id}, fields: {x, y, width, depth}};
+                }
+                break;
+            }
             case 'group':
                 if (drag.dx !== 0 || drag.dy !== 0) {
                     edit = {selection: {kind: 'group', id: drag.groupId}, fields: {dx: drag.dx, dy: drag.dy}};
@@ -2569,6 +2742,12 @@ export class ViewerEngine {
         for (const {item, object} of members) {
             object.position.x = item.x * MM;
             object.position.z = -item.y * MM;
+        }
+        if (drag.kind === 'roof') {
+            for (const object of drag.objects) {
+                object.position.x = drag.roof.x * MM;
+                object.position.z = -drag.roof.y * MM;
+            }
         }
         this.clearPreview();
         this.setSelection(this.selection);
@@ -3008,7 +3187,8 @@ export class ViewerEngine {
             openings: [],
         }));
         const joints = wallJoints([...(this.sceneData?.walls ?? []), ...drawn]);
-        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id))));
+        const roofs = this.sceneData?.roofs ?? [];
+        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs)));
     }
 
     /** Markers of a run in the overlay: its points, and the pointer (green when snapped). */
@@ -3034,7 +3214,14 @@ export class ViewerEngine {
             return;
         }
         const walls = scene.walls.map((w) => (w.id === wall.id ? wall : w));
-        const group = buildWall(wall, materials, parts.sectionMaterial, wallJoints(walls).get(wall.id), cornerWindows(walls).get(wall.id));
+        const group = buildWall(
+            wall,
+            materials,
+            parts.sectionMaterial,
+            wallJoints(walls).get(wall.id),
+            cornerWindows(walls).get(wall.id),
+            scene.roofs ?? [],
+        );
         const original = parts.walls.get(wall.id);
         this.setPreview(original === undefined ? [] : [original], [group]);
 
@@ -3079,6 +3266,36 @@ export class ViewerEngine {
             label.position.set(c.x * MM, 0.05, -c.y * MM);
         }
         this.updateHandles();
+    }
+
+    /**
+     * A roof resized by a corner drag, or with a window moved, shown in place of the roof and its outline. Its body is
+     * rebuilt only while something of it is seen: in the plan view, where roofs are dragged, the wall cut usually takes
+     * all of it away, and the outline is cheap.
+     */
+    private previewRoof(roof: Roof, rectangle: Partial<RoofRectangle>, windows: RoofWindow[] = roof.windows): void {
+        const built = this.parts?.roofs.get(roof.id);
+        const materials = this.materials;
+        if (built === undefined || materials === null || this.parts === null) {
+            return;
+        }
+        const resized = {...roof, ...rectangle, windows};
+        const outline = buildRoofOutline(resized);
+        const windowId = this.selection?.kind === 'roofWindow' ? this.selection.id : null;
+        highlightRoofOutline(outline, windowId === null, windowId);
+        const others = (this.sceneData?.roofs ?? []).filter((r) => r.id !== roof.id);
+        const body = this.roofBodySeen(resized) ? buildRoof(resized, materials, this.parts.sectionMaterial, others) : null;
+        this.setPreview([built.roof, built.outline], body === null ? [outline] : [body, outline]);
+        // With the other roofs (hidden with them) and outlines (at their height over the plan).
+        if (body !== null) {
+            this.parts.roofBodies.add(body);
+        }
+        this.parts.roofOutlines.add(outline);
+    }
+
+    /** Whether anything of a roof's body is drawn: the Roof toggle on and the wall cut above the lowest point of its soffit, the overhang's edge. */
+    private roofBodySeen(roof: Roof): boolean {
+        return this.roofsVisible && (this.sectionHeight === null || this.sectionHeight > roof.eaveHeight - roof.overhang * roofSlope(roof));
     }
 
     private setPreview(hidden: THREE.Object3D[], added: THREE.Object3D[]): void {
@@ -3130,6 +3347,16 @@ export class ViewerEngine {
             // The middle of the centre line bends the wall.
             const frame = wallFrame(wall);
             this.addHandle(pointOnWall(frame, frame.length / 2), y, {role: 'wallCurve'}, active === 'curve' ? state : 'normal');
+        } else if (this.selection.kind === 'roof') {
+            const id = this.selection.id;
+            const roof = (scene.roofs ?? []).find((r) => r.id === id);
+            if (roof === undefined) {
+                return;
+            }
+            const current = drag?.kind === 'roofCorner' && drag.roof.id === id ? {...roof, ...drag.current} : roof;
+            // On the eaves line as the top view draws it.
+            const y = this.roofOutlineHeight() * MM;
+            roofCorners(current).forEach((corner, index) => this.addHandle(corner, y, {role: 'roofCorner', index}, 'normal'));
         } else {
             const outline = this.selectedOutline();
             if (outline === null) {
@@ -3266,6 +3493,16 @@ export class ViewerEngine {
                 return objects([selection.id], this.openings);
             case 'stair':
                 return objects([selection.id], this.parts?.stairs ?? new Map<number, THREE.Object3D>());
+            case 'roof': {
+                // Over the plan the roof's outline shows the selection instead; `tick()` hides the box there.
+                const roof = this.parts?.roofs.get(selection.id)?.roof;
+                return roof === undefined ? [] : [roof];
+            }
+            case 'roofWindow': {
+                const roof = this.roofOfWindow(selection.id);
+                const window = roof === undefined ? undefined : this.parts?.roofs.get(roof.id)?.windows.get(selection.id);
+                return window === undefined ? [] : [window];
+            }
             default:
                 return [];
         }

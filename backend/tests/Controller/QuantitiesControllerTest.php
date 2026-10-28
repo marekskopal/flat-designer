@@ -11,6 +11,8 @@ use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Quantities\MaterialPriceService;
 use FlatDesigner\Service\Quantities\PriceList;
 use FlatDesigner\Service\Quantities\QuantitiesService;
+use FlatDesigner\Service\Quantities\RoofSurfaces;
+use FlatDesigner\Service\Quantities\RoomFaceUnderRoof;
 use FlatDesigner\Service\Quantities\RoomSurfaces;
 use FlatDesigner\Tests\Support\AppHarness;
 use FlatDesigner\Tests\Support\EditorTestCase;
@@ -22,6 +24,8 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(QuantitiesController::class)]
 #[CoversClass(QuantitiesService::class)]
 #[CoversClass(RoomSurfaces::class)]
+#[CoversClass(RoomFaceUnderRoof::class)]
+#[CoversClass(RoofSurfaces::class)]
 #[CoversClass(PriceList::class)]
 #[CoversClass(MaterialPriceService::class)]
 final class QuantitiesControllerTest extends EditorTestCase
@@ -151,6 +155,58 @@ final class QuantitiesControllerTest extends EditorTestCase
 	}
 
 	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+
+	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+
+	/**
+	 * An attic under a 45° gable from 1 m at its eaves (over the room's long edges): the ceiling slopes within 1.5 m of
+	 * them, the walls are painted up to it, and the roof counts its covering and soffit along the slope.
+	 */
+	public function testAnAtticFollowsItsRoof(): void
+	{
+		foreach ([[[-100, -100], [10100, -100]], [[10100, -100], [10100, 8100]], [[10100, 8100], [-100, 8100]], [[-100, 8100], [-100, -100]]] as [$a, $b]) {
+			$this->create(
+				'walls',
+				['startX' => $a[0], 'startY' => $a[1], 'endX' => $b[0], 'endY' => $b[1], 'thickness' => 200, 'height' => 2600],
+			);
+		}
+		$this->create('rooms', ['name' => 'Attic', 'polygon' => [[0, 0], [10000, 0], [10000, 8000], [0, 8000]], 'ceilingHeight' => 2500]);
+		$roof = $this->create('roofs', [
+			'shape' => 'Gable',
+			'x' => 5000,
+			'y' => 4000,
+			'width' => 10000,
+			'depth' => 8000,
+			'eaveHeight' => 1000,
+			'pitch' => 45,
+			'overhang' => 0,
+			'vergeOverhang' => 0,
+		]);
+		$this->create('roof-windows', ['roofId' => self::id($roof), 'along' => 0, 'across' => -2000]);
+
+		$lines = $this->lines();
+		// 50 m² flat between the slopes, and 2 × 15 m² of plan under them, √2 times as large along them.
+		self::assertEqualsWithDelta(50 + 30 * sqrt(2), $lines['Ceiling:-']['area'], 0.01);
+		// The eaves walls up to 1 m; the gables up to 1 m at the eaves, 2.5 m between 1.5 m from them.
+		self::assertEqualsWithDelta(2 * 10 + 2 * (2 * 1.5 * 1.75 + 5 * 2.5), $lines['Wall:-']['area'], 0.01);
+
+		$quantities = $this->quantities();
+		$roofs = self::rows($quantities['roofs']);
+		self::assertCount(1, $roofs);
+		self::assertSame(1, $roofs[0]['windows']);
+		$roofLines = [];
+		foreach (self::rows($roofs[0]['lines']) as $line) {
+			$roofLines[self::stringField($line['surface'])] = $line;
+		}
+		// 10 × 8 m in plan, √2 times along the slope, less the 0.78 × 1.18 m window; clay tiles by default.
+		$slope = 80 * sqrt(2) - 0.78 * 1.18;
+		self::assertEqualsWithDelta($slope, $roofLines['RoofCovering']['area'], 0.01);
+		self::assertSame(self::material('roof-tiles-clay')->id, $roofLines['RoofCovering']['materialId']);
+		self::assertEqualsWithDelta($slope, $roofLines['Soffit']['area'], 0.01);
+		self::assertNull($roofLines['Soffit']['materialId']);
+		self::assertContains('Roof tiles, red clay (300 × 420)', array_column(self::rows($quantities['materials']), 'material'));
+	}
+
 	public function testAWallFaceTakesItsOwnFinish(): void
 	{
 		$terrazzo = self::material('terrazzo-white');

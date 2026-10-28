@@ -6,6 +6,7 @@
     [modelFetcher]="modelFetcher"
     [pictureFetcher]="pictureFetcher"
     [ceilingsVisible]="ceilingsVisible()"
+    [roofsVisible]="roofsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
     [night]="night()"
@@ -156,6 +157,10 @@
             <label class="toggle">
                 <input type="checkbox" [checked]="ceilingsVisible()" (change)="ceilingsVisible.set(!ceilingsVisible())" />
                 <span>Ceilings</span>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" [checked]="roofsVisible()" (change)="roofsVisible.set(!roofsVisible())" />
+                <span>Roof</span>
             </label>
             <label class="toggle">
                 <input type="checkbox" [checked]="labelsVisible()" (change)="labelsVisible.set(!labelsVisible())" />

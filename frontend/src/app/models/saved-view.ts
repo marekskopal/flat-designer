@@ -8,6 +8,8 @@ export interface SavedViewSettings {
     /** Null: the default framing of the floor. */
     camera: CameraPose | null;
     ceilings: boolean;
+    /** The roofs; missing in views saved before them, which show them. */
+    roofs?: boolean;
     labels: boolean;
     sectionHeight: number | null;
     dimensions: boolean;

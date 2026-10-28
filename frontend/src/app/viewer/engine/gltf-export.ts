@@ -8,9 +8,10 @@ import {FixtureLight, LumenScale, WhiteBalance} from './lights';
 const MaxTextureSize = 2048;
 
 /**
- * A copy of the shown floor (`content`) for a glTF file: the ceilings and the items' ceiling parts shown; the room
- * labels, the selection highlight, the section-fill twins (`sectionMaterial`) and hidden items (other variants) left
- * out. Items, walls, openings and rooms are named after their scene elements (furniture parts after the part), and
+ * A copy of the shown floor (`content`) for a glTF file: the ceilings, the roofs and the items' ceiling parts
+ * shown; the room labels, the selection highlight, the roofs' top-view outlines (`planOnly`), the section-fill twins
+ * (`sectionMaterial`) and hidden items (other variants) left out. Items, walls, openings, rooms and roofs are named after
+ * their scene elements (furniture parts after the part), and
  * `userData` is cleared.
  *
  * Lights: every fixture goes in switched on, in candela (the viewer's `LumenScale` undone) and in its real colour
@@ -29,6 +30,7 @@ export function exportTree(content: THREE.Object3D, scene: Scene, sectionMateria
         ...scene.walls.map((w): [string, string] => [`wallId:${w.id}`, w.name]),
         ...scene.walls.flatMap((w) => w.openings).map((o): [string, string] => [`openingId:${o.id}`, o.name]),
         ...scene.rooms.map((r): [string, string] => [`roomId:${r.id}`, r.name]),
+        ...(scene.roofs ?? []).map((r): [string, string] => [`roofId:${r.id}`, r.name]),
     ]);
     // The viewer's object for each copied one (a clone keeps the order of the children).
     const originals = new Map<THREE.Object3D, THREE.Object3D>();
@@ -40,7 +42,7 @@ export function exportTree(content: THREE.Object3D, scene: Scene, sectionMateria
 
     const removed: THREE.Object3D[] = [];
     copy.traverse((o) => {
-        if (o.name === 'ceilings' || o.userData['ceilingPart'] === true) {
+        if (o.name === 'ceilings' || o.name === 'roofs' || o.userData['ceilingPart'] === true) {
             o.visible = true;
         }
         const material = o instanceof THREE.Mesh ? (o.material as THREE.Material | THREE.Material[]) : null;
@@ -56,6 +58,7 @@ export function exportTree(content: THREE.Object3D, scene: Scene, sectionMateria
             sectionFill ||
             !o.visible ||
             o.userData['highlight'] === true ||
+            o.userData['planOnly'] === true ||
             o instanceof THREE.RectAreaLight ||
             unlit
         ) {
@@ -73,7 +76,7 @@ export function exportTree(content: THREE.Object3D, scene: Scene, sectionMateria
         if (typeof partName === 'string') {
             o.name = partName;
         }
-        for (const key of ['itemId', 'wallId', 'openingId', 'roomId']) {
+        for (const key of ['itemId', 'wallId', 'openingId', 'roomId', 'roofId']) {
             const name = names.get(`${key}:${String(o.userData[key])}`);
             if (name !== undefined && name !== '') {
                 // A room's floor and its wall finishes both carry the room.

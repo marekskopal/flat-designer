@@ -15,6 +15,7 @@ final readonly class WallDto
 	 * @param int $sagitta a curved wall: mm from the chord's midpoint to the centre line's arc, + to the left of start → end (0: straight)
 	 * @param list<WallFinishDto>|null $leftFinishes bands on the face left of start → end, overriding the room's (null: the room's)
 	 * @param list<WallFinishDto>|null $rightFinishes the same on the right face
+	 * @param bool $upToRoof the wall rises to the underside of the roofs over it (a gable) instead of stopping at `height`
 	 * @param list<OpeningDto> $openings
 	 */
 	public function __construct(
@@ -32,6 +33,7 @@ final readonly class WallDto
 		public ?array $leftFinishes,
 		public ?array $rightFinishes,
 		public array $openings,
+		public bool $upToRoof = false,
 	) {
 	}
 
@@ -53,6 +55,7 @@ final readonly class WallDto
 			leftFinishes: self::finishes($wall->leftFinishes),
 			rightFinishes: self::finishes($wall->rightFinishes),
 			openings: $openings,
+			upToRoof: $wall->upToRoof,
 		);
 	}
 

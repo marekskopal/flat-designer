@@ -51,11 +51,11 @@ use const JSON_THROW_ON_ERROR;
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], location: LocationDto, floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
  * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
- * plots: [PlotDto], stairs: [StairDto]}],
+ * plots: [PlotDto], stairs: [StairDto], roofs: [RoofDto with windows]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
  * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
  * and walls by `FloorStack`)
- * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` missing in snapshots taken before they
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` / `roofs` missing in snapshots taken before they
  * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
@@ -82,6 +82,7 @@ final readonly class ProjectSnapshotService
 		private SnapshotUnderlayRestorer $underlayRestorer,
 		private SnapshotPlotRestorer $plotRestorer,
 		private SnapshotStairRestorer $stairRestorer,
+		private SnapshotRoofRestorer $roofRestorer,
 		private SnapshotViewRestorer $viewRestorer,
 		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
@@ -106,6 +107,7 @@ final readonly class ProjectSnapshotService
 				'pictures' => $scene->pictures,
 				'plots' => $scene->plots,
 				'stairs' => $scene->stairs,
+				'roofs' => $scene->roofs,
 			];
 		}
 
@@ -207,6 +209,7 @@ final readonly class ProjectSnapshotService
 			$roomIds = $this->restoreRooms($floor, $entry->objects('rooms'), $materials);
 			$this->plotRestorer->restore($floor, $entry, $materials);
 			$this->stairRestorer->restore($floor, $entry, $materials);
+			$this->roofRestorer->restore($floor, $entry, $materials);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
 			$setIds = $this->restoreVariantSets($floor, $sets);
@@ -292,6 +295,8 @@ final readonly class ProjectSnapshotService
 			// Snapshots taken before face finishes have none (the rooms' bands); [] is kept, a bare face.
 			$wall->leftFinishes = $data->nullableFinishes('leftFinishes');
 			$wall->rightFinishes = $data->nullableFinishes('rightFinishes');
+			// Snapshots taken before roofs have no wall rising to one.
+			$wall->upToRoof = $data->raw('upToRoof') === true;
 			$this->wallRepository->persist($wall);
 
 			foreach ($data->objects('openings') as $opening) {

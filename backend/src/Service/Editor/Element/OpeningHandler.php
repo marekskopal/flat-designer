@@ -17,12 +17,16 @@ use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Opening;
+use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\OpeningRepository;
+use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
+use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 use FlatDesigner\Service\Editor\Geometry\WallLine;
+use FlatDesigner\Service\Editor\Geometry\WallTop;
 
 /**
  * Doors, passages and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must
@@ -44,6 +48,7 @@ final readonly class OpeningHandler implements ElementHandler
 		private WallRepository $wallRepository,
 		private MaterialResolver $materialResolver,
 		private OpeningLook $look,
+		private RoofRepository $roofRepository,
 	) {
 	}
 
@@ -103,17 +108,21 @@ final readonly class OpeningHandler implements ElementHandler
 		$wall = $this->wall($floor, $wallId);
 
 		$length = WallHandler::length($wall);
+		$roofs = array_map(fn (Roof $roof): RoofGeometry => RoofGeometry::fromRoof($roof), $this->roofRepository->findByFloor($floor->id));
+		$top = new WallTop(WallLine::fromWall($wall), $wall->height, $wall->upToRoof, $roofs);
 		$offset = $fields->int('offset', 0, $length);
 		$width = $fields->int('width', 100, $length);
-		$height = $fields->int('height', 100, $wall->height);
-		$sillHeight = $fields->int('sillHeight', 0, $wall->height);
+		// A gable wall rising to the roof holds openings above its height.
+		$height = $fields->int('height', 100, $top->highest());
+		$sillHeight = $fields->int('sillHeight', 0, $top->highest());
 		if ($offset + $width > $length) {
 			throw EditException::invalid(
 				sprintf('The opening ends %d mm past the end of the wall (%d mm long).', $offset + $width - $length, $length),
 			);
 		}
-		if ($sillHeight + $height > $wall->height) {
-			throw EditException::invalid(sprintf('Sill plus height exceeds the wall height (%d mm).', $wall->height));
+		// Checked when it is set anew only: a roof lowered since does not block renaming or undoing the opening.
+		if (OpeningHead::placedAnew($currentOpening, $offset, $width, $sillHeight, $height)) {
+			OpeningHead::check($top, $wall->height, $offset, $width, $sillHeight + $height);
 		}
 
 		$type = $fields->enum('type', OpeningTypeEnum::class);

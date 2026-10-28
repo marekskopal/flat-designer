@@ -349,6 +349,100 @@ format is the text in `FurnitureTools::Format`.
   dragged (x, y), nudged and turned with R like items; the inspector's `stair` fields get `stairRise` beside them for
   the step hint (`stairStepHint()`, 2R + G).
 
+## Roofs (FD-38)
+
+- The plan is `docs/roofs-plan.md`. A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,
+  change log; REST `…/roofs`, MCP `add_roof` / `update_roof` / `delete_roof`) belongs to the floor it covers, its heights
+  counting from that floor's level. It is a rectangle, the eaves line: `width` × `depth` centred on (x, y), the ridge
+  along the width, turned by `rotation`. `shape` is Gable, Hip (a pyramid over a square), Shed (rising from the front,
+  −y at 0°) or Flat (`parapet`); the underside is `eaveHeight` along the eaves line and rises at `pitch`, reaching
+  `overhang` past the eaves and `vergeOverhang` past the gables; `thickness` is square to the slope. A new roof without
+  a size takes the rectangle round the walls' outer faces, turned along the longest exterior wall, the ridge along the
+  longer side, the eaves at the tallest wall. An L- or T-shaped house takes several roofs.
+- The geometry exists twice: `RoofGeometry` (`Service/Editor/Geometry`) and `viewer/engine/roof-geometry.ts` (planes in
+  plan, `undersideAt` / `topAt`, the highest underside of several roofs, the plane over a point), kept identical by
+  `backend/tests/fixtures/roof-geometry.json`. **Always change both twins and add a fixture case in the same change.**
+- Roof windows (`RoofWindow`, `roof_windows`, element type `RoofWindow`, REST `…/roof-windows`, MCP `add_roof_window` /
+  `update_roof_window` / `delete_roof_window`) are listed in their roof's `windows`, as openings are in their wall's. A
+  window lies `along` / `across` the ridge from the roof's centre, in the roof's frame, so it moves with the roof; it is
+  `width` across the slope and `length` up it, on a pitched plane, `RoofWindowGeometry::Margin` inside the plane in
+  plan (`RoofWindowGeometry::corners()` / `fits()`, twinned as `roofWindowCorners()` / `roofWindowFits()` in the fixture) and
+  clear of the plane's other windows (`RoofWindowPlacement`); a new one sits low on the front plane, 400 mm in plan
+  above the eaves line (not the overhang's edge), or on the right side of a hip deeper than wide, whose front is a
+  triangle. The placement is checked only
+  when it is set anew (a changed roof does not check its windows, so one it left behind is still renamed and undone).
+  A deleted roof hides its windows until undo brings it back; the scene patch reloads when a roof comes in, as its
+  windows are not in the result. A copy of a roof window lands past it along the ridge, a copy of a roof 100 mm east.
+  Only a flat roof has a `parapet`; given another shape, it leaves the parapet behind.
+- Viewer (`viewer/engine/roofs.ts`): `buildRoof()` draws a roof in its own frame, a group at its centre turned by its
+  rotation: each plane a slab (covering on top with UVs in metres along the slope, soffit under it and along its edges),
+  caps on the ridge and hips, a flat roof's parapet; tagged `roofId`, merged, with section-fill twins. Roofs go into
+  `parts.roofBodies`, shown by the Display toggle Roof (`setRoofsVisible()`, on by default; saved views and share links
+  keep it as `roofs`, missing meaning shown; hidden, they still shade the floor, as hidden ceilings do), and the wall cut
+  removes them in the plan. `buildRoofOutline()`
+  draws the top view's stand-in (the outline with the overhangs dashed, the eaves line, ridge and hips) in
+  `parts.roofOutlines`, shown only while `isTopDown()` and lifted to just under the wall cut (`roofOutlineHeight()`: the
+  plan camera is a perspective one), with an undrawn band along the outline that picks the roof; it is `planOnly`, left
+  out of the glTF export. A selected roof is dragged by its outline and resized by its eaves corners
+  (`resizeRoofByCorner()`, the opposite corner fixed), nudged and turned with R like items. `floorPoints()` includes the
+  roofs' outlines, so the framing and the sun's shadow cover the overhangs. The Add menu's Building → Roof over the floor
+  takes the backend's default rectangle.
+- Roof windows in the viewer (FD-82): `roofWindowLayout()` (`roof-geometry.ts`, TS only over the twin) is a window
+  with every corner on its plane, plus its corners at the soffit: the hole is square to the slope, as the frame is, so
+  it lies thickness · sin(pitch) further up the slope there. A window the roof left behind has none and is not drawn.
+  `roofWindowLayouts()` caches a roof's per roof object (a changed roof or window is a new one). `buildRoof()` cuts the
+  holes out of the plane's slab (triangulated with holes, the sides lined) and adds `buildRoofWindow()`: frame from the
+  soffit to above the covering, sash (a centre-pivot handle bar at the top, a top-hung handle at the bottom), glass
+  without a shadow, flashing; tagged `roofWindowId` (`RoofParts.windows`). The roof's outline draws each window's
+  footprint with an undrawn face that picks it in the top view, where it is dragged along and across the roof, stopping
+  where it would no longer fit its plane (`roofWindowFits()`; the plane's other windows are the backend's to refuse) and
+  jumping the ridge; `previewRoof()` rebuilds the outline, and the body only while the wall cut leaves something of it
+  seen. The arrows nudge it by the plan step turned into the roof's frame. A sloped ceiling is opened under its windows
+  at the soffit (`ceilingParts()`). The Add menu's "Roof window in selected roof" (a pitched roof selected) and the
+  inspector's `roofWindow` fields edit them.
+- Walls: every wall of the floor is cut at the underside of the roofs over it; one with `upToRoof` (the inspector's
+  "Up to the roof") rises to it (a gable). `StructureSize` stops a column or beam at the roof where it is lower than
+  the ceiling. Snapshots keep `roofs` (`SnapshotRoofRestorer`) and the walls' `upToRoof`. Seeded coverings:
+  `roof-tiles-clay`, `roof-slate`, `roof-metal-seam`, `roof-membrane`.
+- Under the roofs (FD-81, `viewer/engine/under-roof.ts`, TS only): `wallTopAt()` is a wall's top at a plan point.
+  Every such height is piecewise linear along a line, and `roofBreaks()` finds where it bends (roof edges, ridges,
+  hips, a level reached), so `profileRuns()` cuts a solid there and splits it where the top steps (a wall running out
+  from under a roof). `buildWall()` builds a piece the roofs change that way (`curvedPrismAt()` takes a top per
+  point), and leaves out an opening whose sill is above the lowest top over it, the wall solid there; finish bands stop
+  at the underside (`finishLining()`).
+  A flat ceiling slopes where the roof comes lower than its height (`ceilingParts()`, `polygon-clipping`; the highest
+  roof where they overlap), `CeilingUnderRoof` (10 mm) under the roof's soffit so the two do not flicker;
+  `ceilingHeightAt()` (pendants) and `ceilingSteps()` (with `atB` where a step slopes) follow it. Vaults are not cut.
+  The plan PDF's cut follows the wall's top (a wall the roof brings under the cut is drawn as a low wall, as a knee
+  wall is). A roof change rebuilds the walls, rooms (with their finishes), ceiling steps and Custom items the roof
+  reached before or reaches now (`roofsReach()`). The Roof toggle hides the stack's roofs too (`ContextFloor.roofs`).
+  The backend keeps an opening's head under the wall's top over it (`WallTop`: the lower of the wall's two faces,
+  sampled along the wall; `OpeningHead`), so a gable takes windows above the wall's height. Like a roof window's
+  placement, it is checked only when the opening is placed anew or the wall reshaped, so a roof lowered since does
+  not block renaming or undoing them.
+- Junctions (FD-83): a plane of a roof is the top only where no other roof of the floor is higher (its underside), so
+  roofs meeting form valleys. The parts are twinned: `roofPlaneParts()` (`under-roof.ts`, `polygon-clipping`; the other
+  plane is clipped by the half-plane first, `clipBelow()`, as huge half-plane polygons break the library) draws them,
+  `RoofCover` (`Service/Editor/Geometry`, convex pieces by `ConvexClip`, Sutherland–Hodgman) measures them; the
+  junction cases of `roof-geometry.json` keep their areas alike. They cut exactly where planes cross; only parallel
+  planes within 0.5 mm are tied, the earlier roof's winning. `buildRoof(…, others)` builds each part (earcut, as a part
+  may be concave) and stops the caps there (`topStretches()`); a roof window lying where another roof is higher has no
+  slab to sit in and is left out, in the quantities too; a roof change rebuilds the roofs it met before or meets now
+  (`roofsMeet()`). The plan PDF draws each part's edges once: dashed above the cut (outline with the overhangs, ridges,
+  hips, valleys), solid where a slab lies wholly under `PlanCutHeight` (seen from above) and the slab's section filled
+  and outlined where the cut passes through it (an attic's eaves); and the roof windows. Elevation faces follow the
+  ceiling under the roofs (`faceTop()` at the `roofBreaks()` of the ceiling height plus `CeilingUnderRoof`).
+- Rooms under roofs: `RoomUnderRoof` (PHP) and `roomUnderRoofs()` (TS), kept identical by the room cases of
+  `roof-geometry.json`, give a room's clear height range, its volume under the slope, its area with at least 1.2 m
+  of headroom and its ceiling's area along the slope, on the roofs' underside itself (not the viewer's 10 mm gap); null
+  for open-air, vaulted and roofless rooms. The room schedule (`minClearHeight`, `headroomArea`, the volume) and the
+  PDF room schedule use them. Quantities: `RoomSurfaces` counts that ceiling area and takes the bands and paint up to
+  the wall's top under the roofs (cut by them, or with `upToRoof` rising to them) and the ceiling (`RoomFaceUnderRoof`:
+  exact, summed between the openings' edges and `RoofBreaks`, the twin of `roofBreaks()`); `RoofSurfaces` gives each
+  roof's covering (its material, else
+  the viewer's default tiles or membrane) and soffit along the slope without its windows, in `QuantitiesDto::$roofs`
+  with the number of windows (surfaces `RoofCovering` and `Soffit`, priced like the others).
+
 ## Lighting
 
 - Light sources are furniture definition parts. A `light` part is a point light, or a spot shining down, with
@@ -493,7 +587,7 @@ format is the text in `FurnitureTools::Format`.
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
   gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) are totalled separately. Only
-  PHP computes it, so there is no TS twin.
+  PHP computes it, except under roofs (`RoomUnderRoof`, twinned for the PDF's schedule; see Roofs).
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
   definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside

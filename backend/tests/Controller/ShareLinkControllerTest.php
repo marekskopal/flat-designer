@@ -37,6 +37,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		'exports' => false,
 		'comments' => 'read',
 		'allFloors' => false,
+		'roofs' => false,
 	];
 
 	public function testCreatingALinkSavesAVersionAndGuestsSeeIt(): void
@@ -201,7 +202,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		$body = $this->jsonBody($updated);
 		self::assertSame('Renamed', $body['name']);
 		// Without the flags (a link from before dimension lines, the night view, the quality and stacked floors), they are
-		// off; exports are allowed and comments hidden.
+		// off; exports are allowed, comments hidden and roofs shown.
 		self::assertSame(
 			[
 				...$settings,
@@ -212,6 +213,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 				'exports' => true,
 				'comments' => 'hidden',
 				'allFloors' => false,
+				'roofs' => true,
 			],
 			$body['settings'],
 		);

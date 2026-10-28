@@ -102,6 +102,7 @@ export class SharedViewerPageComponent {
     /** The guest hid the panel to see more of the floor (on a phone it covers the lower part of the screen). */
     protected readonly panelHidden = signal(false);
     protected readonly ceilingsVisible = signal(false);
+    protected readonly roofsVisible = signal(true);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
     /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
@@ -171,6 +172,7 @@ export class SharedViewerPageComponent {
             return;
         }
         this.ceilingsVisible.set(settings.ceilings);
+        this.roofsVisible.set(settings.roofs ?? true);
         this.labelsVisible.set(settings.labels);
         this.dimensionsVisible.set(settings.dimensions);
         this.night.set(settings.night ?? false);
@@ -220,6 +222,7 @@ export class SharedViewerPageComponent {
         this.walkPrompt.set(false);
         this.measuring.set(false);
         this.ceilingsVisible.set(true);
+        this.roofsVisible.set(true);
         this.labelsVisible.set(false);
         this.sectionSlider.set(SectionMax);
         this.activeView.set('walkthrough');

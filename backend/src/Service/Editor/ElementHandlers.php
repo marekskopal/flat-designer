@@ -10,6 +10,8 @@ use FlatDesigner\Service\Editor\Element\GroupHandler;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\PlotHandler;
+use FlatDesigner\Service\Editor\Element\RoofHandler;
+use FlatDesigner\Service\Editor\Element\RoofWindowHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
 use FlatDesigner\Service\Editor\Element\StairHandler;
 use FlatDesigner\Service\Editor\Element\VariantSetHandler;
@@ -26,6 +28,8 @@ final readonly class ElementHandlers
 		private VariantSetHandler $variantSetHandler,
 		private PlotHandler $plotHandler,
 		private StairHandler $stairHandler,
+		private RoofHandler $roofHandler,
+		private RoofWindowHandler $roofWindowHandler,
 	) {
 	}
 
@@ -40,6 +44,8 @@ final readonly class ElementHandlers
 			ElementTypeEnum::VariantSet => $this->variantSetHandler,
 			ElementTypeEnum::Plot => $this->plotHandler,
 			ElementTypeEnum::Stair => $this->stairHandler,
+			ElementTypeEnum::Roof => $this->roofHandler,
+			ElementTypeEnum::RoofWindow => $this->roofWindowHandler,
 		};
 	}
 }

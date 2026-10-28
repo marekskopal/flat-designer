@@ -33,8 +33,8 @@ final class SavedViewControllerTest extends EditorTestCase
 		self::assertIsArray($view['settings']);
 		// Unset options take their defaults; the variants are an object even when empty.
 		self::assertSame(
-			['view' => 'overview', 'ceilings' => false, 'labels' => true, 'night' => true, 'lightsOn' => null, 'presentation' => false],
-			array_intersect_key($view['settings'], array_flip(['view', 'ceilings', 'labels', 'night', 'lightsOn', 'presentation'])),
+			['view' => 'overview', 'ceilings' => false, 'roofs' => true, 'labels' => true, 'night' => true, 'lightsOn' => null],
+			array_intersect_key($view['settings'], array_flip(['view', 'ceilings', 'roofs', 'labels', 'night', 'lightsOn'])),
 		);
 		self::assertStringContainsString('"variants":{}', (string) $created->getBody());
 		self::assertIsInt($view['id']);
@@ -42,9 +42,12 @@ final class SavedViewControllerTest extends EditorTestCase
 		$updated = $this->request('PUT', $this->viewPath($view['id']), [
 			'floorId' => $this->floor->id,
 			'name' => 'Plan',
-			'settings' => ['view' => 'top', 'dimensions' => true],
+			'settings' => ['view' => 'top', 'dimensions' => true, 'roofs' => false],
 		], $this->user);
 		self::assertSame(200, $updated->getStatusCode());
+		$updatedSettings = $this->jsonBody($updated)['settings'];
+		self::assertIsArray($updatedSettings);
+		self::assertFalse($updatedSettings['roofs']);
 		$listed = $this->jsonList($this->request('GET', $this->viewsPath(), authenticatedAs: $this->user));
 		self::assertCount(1, $listed);
 		self::assertIsArray($listed[0]['settings']);

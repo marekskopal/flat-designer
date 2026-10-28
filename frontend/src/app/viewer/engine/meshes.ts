@@ -97,19 +97,29 @@ export function prismAt(material: THREE.Material, footprint: readonly {x: number
     return mesh;
 }
 
+/** The top of a prism over each point of its faces, metres (a wall under a roof). */
+export interface PrismTops {
+    right: readonly number[];
+    left: readonly number[];
+}
+
 /**
  * Upright solid between two faces given as polylines of the same number of points (x, z in the parent's frame,
  * metres), `right` and `left`, from their start to their end, from `bottom` to `top`: a piece of a curved wall. The
- * faces are smooth (normals averaged at the joints), the ends and the top and bottom flat. UVs are in metres: along
- * each face and up, top and bottom in x/z.
+ * faces are smooth (normals averaged at the joints), the ends and the bottom flat; the top is flat too, or with `top`
+ * per point it runs straight between them (a wall cut by a roof). UVs are in metres: along each face (from `uStart`)
+ * and up, top and bottom in x/z.
  */
 export function curvedPrismAt(
     material: THREE.Material,
     right: readonly {x: number; z: number}[],
     left: readonly {x: number; z: number}[],
     bottom: number,
-    top: number,
+    top: number | PrismTops,
+    uStart = 0,
 ): THREE.Mesh {
+    const topRight = (i: number): number => (typeof top === 'number' ? top : top.right[i]);
+    const topLeft = (i: number): number => (typeof top === 'number' ? top : top.left[i]);
     const positions: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
@@ -136,12 +146,12 @@ export function curvedPrismAt(
             const normal = new THREE.Vector3(after.z - before.z, 0, -(after.x - before.x)).normalize();
             return normal.dot(new THREE.Vector3(p.x - other[i].x, 0, p.z - other[i].z)) < 0 ? normal.negate() : normal;
         });
-    for (const [face, other] of [
-        [right, left],
-        [left, right],
+    for (const [face, other, faceTop] of [
+        [right, left, topRight],
+        [left, right, topLeft],
     ] as const) {
         const faceNormal = faceNormals(face, other);
-        let u = 0;
+        let u = uStart;
         for (let i = 1; i < face.length; i++) {
             const p = face[i - 1];
             const q = face[i];
@@ -153,7 +163,8 @@ export function curvedPrismAt(
                 uv: [along, y],
             });
             const [n0, n1] = [faceNormal[i - 1], faceNormal[i]];
-            quad(at(p, bottom, n0, u), at(q, bottom, n1, u + step), at(q, top, n1, u + step), at(p, top, n0, u), n0.clone().add(n1));
+            const [top0, top1] = [faceTop(i - 1), faceTop(i)];
+            quad(at(p, bottom, n0, u), at(q, bottom, n1, u + step), at(q, top1, n1, u + step), at(p, top0, n0, u), n0.clone().add(n1));
             u += step;
         }
     }
@@ -173,15 +184,31 @@ export function curvedPrismAt(
             normal.negate();
         }
         const side = (point: {x: number; z: number}, y: number): Vertex => ({...point, y, normal, uv: [Math.hypot(point.x - r.x, point.z - r.z), y]});
-        quad(side(r, bottom), side(l, bottom), side(l, top), side(r, top), normal);
+        quad(side(r, bottom), side(l, bottom), side(l, topLeft(i)), side(r, topRight(i)), normal);
     }
-    for (const [y, normal] of [
-        [top, new THREE.Vector3(0, 1, 0)],
-        [bottom, new THREE.Vector3(0, -1, 0)],
-    ] as const) {
-        for (let i = 1; i < right.length; i++) {
-            quad(flat(right[i - 1], y, normal), flat(right[i], y, normal), flat(left[i], y, normal), flat(left[i - 1], y, normal), normal);
+    const down = new THREE.Vector3(0, -1, 0);
+    for (let i = 1; i < right.length; i++) {
+        quad(flat(right[i - 1], bottom, down), flat(right[i], bottom, down), flat(left[i], bottom, down), flat(left[i - 1], bottom, down), down);
+        // The top's normal from its diagonals, upwards (straight up where it is flat).
+        const corner = (p: {x: number; z: number}, y: number): THREE.Vector3 => new THREE.Vector3(p.x, y, p.z);
+        const [r0, r1, l1, l0] = [
+            corner(right[i - 1], topRight(i - 1)),
+            corner(right[i], topRight(i)),
+            corner(left[i], topLeft(i)),
+            corner(left[i - 1], topLeft(i - 1)),
+        ];
+        const up = l1.clone().sub(r0).cross(r1.clone().sub(l0));
+        if (up.y < 0) {
+            up.negate();
         }
+        const normal = up.lengthSq() > 1e-18 ? up.normalize() : new THREE.Vector3(0, 1, 0);
+        quad(
+            flat(right[i - 1], topRight(i - 1), normal),
+            flat(right[i], topRight(i), normal),
+            flat(left[i], topLeft(i), normal),
+            flat(left[i - 1], topLeft(i - 1), normal),
+            normal,
+        );
     }
 
     const geometry = new THREE.BufferGeometry();

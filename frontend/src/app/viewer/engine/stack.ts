@@ -7,6 +7,7 @@ import {leafObjects, LeafStates} from './doors';
 import {buildItem, ItemAssets} from './items';
 import {MaterialLibrary} from './materials';
 import {lowestGround} from './plots';
+import {roofPlanes} from './roof-geometry';
 import {hiddenItemIds} from './variants';
 
 /** A floor drawn under the shown one: its group and its items by id, so an item can be drawn anew when its asset loads. */
@@ -14,6 +15,8 @@ export interface ContextFloor {
     scene: Scene;
     group: THREE.Group;
     items: Map<number, THREE.Object3D>;
+    /** Its roofs, which follow the Display's Roof toggle like the shown floor's. */
+    roofs: THREE.Group;
 }
 
 /**
@@ -35,7 +38,7 @@ export function buildContextFloor(scene: Scene, materials: MaterialLibrary, asse
     leaves.reset(scene.walls);
     leaves.apply(leafObjects(parts.root));
 
-    const layer: ContextFloor = {scene, group, items: new Map()};
+    const layer: ContextFloor = {scene, group, items: new Map(), roofs: parts.roofBodies};
     rebuildContextItems(layer, () => true, materials, assets, () => undefined);
     return layer;
 }
@@ -63,7 +66,8 @@ export function rebuildContextItems(
         if (previous !== undefined) {
             dispose(previous);
         }
-        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, assets);
+        // Its pendants hang from its own roofs, not the shown floor's.
+        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, {...assets, roofs: scene.roofs ?? []});
         object.visible = !hidden.has(item.id);
         layer.items.set(item.id, object);
         layer.group.add(object);
@@ -81,13 +85,15 @@ export function floorOffset(floor: Scene, shown: Scene): number {
 }
 
 /** The plan points a floor covers (its walls' ends and rooms' corners), for the framing and the sun's shadow. */
-export function floorPoints(scene: Pick<Scene, 'walls' | 'rooms'>): PlanPoint[] {
+export function floorPoints(scene: Pick<Scene, 'walls' | 'rooms'> & Partial<Pick<Scene, 'roofs'>>): PlanPoint[] {
     return [
         ...scene.walls.flatMap((w): PlanPoint[] => [
             [w.startX, w.startY],
             [w.endX, w.endY],
         ]),
         ...scene.rooms.flatMap((r) => r.polygon),
+        // The roofs with their overhangs.
+        ...(scene.roofs ?? []).flatMap((roof) => roofPlanes(roof).flatMap((plane) => plane.polygon.map((p): PlanPoint => [p.x, p.y]))),
     ];
 }
 

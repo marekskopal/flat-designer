@@ -28,13 +28,14 @@ final readonly class FloorTools
 	#[McpTool(
 		name: 'get_floor',
 		description: 'Everything on one floor: rooms (polygon outline, area m², ceiling height, floor material, wall finishes), '
-			. 'walls (centre line, thickness, height, type; leftFinishes / rightFinishes are a face\'s own finish bands in place of the room\'s) with their openings (doors/windows: offset from wall start, width, '
+			. 'walls (centre line, thickness, height, type; leftFinishes / rightFinishes are a face\'s own finish bands in place of the room\'s; upToRoof rises to the roof) with their openings (doors/windows: offset from wall start, width, '
 			. 'height, sill), items (kind, footprint centre x/y, elevation z, size, rotation, room, group, material, params), '
 			. 'groups (items forming one piece of furniture, see create_group; a group with variantSetId is a variant) and '
 			. 'variantSets (alternatives of which activeGroupId is shown; hiddenItemIds lists the items of the other variants) and '
 			. 'definitions (the furniture definitions of the Custom items, see get_furniture_definition) and underlay (the '
 			. 'plan image under the top view, see set_floor_underlay) and models (the 3D models of the Model items, see list_models) and stairs (from this floor '
-			. 'up, climbing stairRise mm, see add_stair) and stairsBelow (the floor below\'s, cutting their voids through this one). '
+			. 'up, climbing stairRise mm, see add_stair) and stairsBelow (the floor below\'s, cutting their voids through this one) and '
+			. 'roofs (over this floor, with their windows, see add_roof). '
 			. 'All in mm. Material ids refer to list_materials.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
@@ -57,6 +58,7 @@ final readonly class FloorTools
 			'stairs' => $scene->stairs,
 			'stairRise' => $scene->stairRise,
 			'stairsBelow' => $scene->stairsBelow,
+			'roofs' => $scene->roofs,
 		];
 	}
 
@@ -64,7 +66,9 @@ final readonly class FloorTools
 		name: 'get_room_schedule',
 		description: 'Room schedule of a project, or of one floor with floorId: per room the net floor area (m², inside the '
 			. 'wall faces), perimeter (m), clear height (mm, null for open-air rooms) and volume (m³), with indoor and outdoor '
-			. '(terrace, garden) totals per floor and for the whole project.',
+			. '(terrace, garden) totals per floor and for the whole project. A room under a roof has minClearHeight (mm, at '
+			. 'the eaves; clearHeight is then the highest), a volume under the slope and headroomArea (m² with at least '
+			. '1.2 m of clear height); both are null for other rooms.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function getRoomSchedule(int $projectId, ?int $floorId = null): RoomScheduleDto

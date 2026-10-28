@@ -68,6 +68,7 @@ export interface SelectEvent {
 export class ViewerComponent {
     public readonly scene = input<Scene | null>(null);
     public readonly ceilingsVisible = input(false);
+    public readonly roofsVisible = input(true);
     public readonly labelsVisible = input(true);
     /** Dimension lines along the room edges, in the top view. */
     public readonly dimensionsVisible = input(false);
@@ -197,11 +198,13 @@ export class ViewerComponent {
             engine.load(scene);
             // Re-apply the display state onto the freshly built scene graph.
             engine.setCeilingsVisible(untracked(this.ceilingsVisible));
+            engine.setRoofsVisible(untracked(this.roofsVisible));
             engine.setSelection(untracked(this.selection));
             engine.setInsetLeft(untracked(this.insetLeft));
             this.loaded.emit(scene);
         });
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
+        effect(() => this.engine()?.setRoofsVisible(this.roofsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
         effect(() => this.engine()?.setLighting(this.night(), this.lightsOn()));

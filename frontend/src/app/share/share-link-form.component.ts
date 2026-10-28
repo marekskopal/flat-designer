@@ -14,6 +14,8 @@ export interface ShareSource {
     /** Read when the link is saved, so the camera can still be moved while the form is open. */
     camera: () => CameraPose | null;
     ceilings: boolean;
+    /** Missing: shown. */
+    roofs?: boolean;
     labels: boolean;
     sectionHeight: number | null;
     dimensions: boolean;
@@ -98,7 +100,7 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
             @if (link() === null) {
                 <p class="field__hint">
                     Creating the link saves a version of the project: guests see this floor as it is now, later edits do not
-                    reach them. The display (ceilings, labels, wall cut, dimensions, night, sun time, quality, all floors) and the
+                    reach them. The display (ceilings, roof, labels, wall cut, dimensions, night, sun time, quality, all floors) and the
                     shown variants are kept too.
                 </p>
             }
@@ -286,6 +288,7 @@ export class ShareLinkFormComponent {
             initialView: value.initialView,
             camera,
             ceilings: display.ceilings,
+            roofs: display.roofs ?? true,
             labels: display.labels,
             sectionHeight: display.sectionHeight,
             dimensions: display.dimensions,

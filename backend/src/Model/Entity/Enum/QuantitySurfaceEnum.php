@@ -17,6 +17,10 @@ enum QuantitySurfaceEnum: string
 	case Skirting = 'Skirting';
 	/** Boards of the Custom furniture (the cut list). */
 	case Furniture = 'Furniture';
+	/** A roof's covering (tiles, slate, metal, membrane) over its planes, along the slope (FD-38). */
+	case RoofCovering = 'RoofCovering';
+	/** The underside of a roof's planes, along the slope. */
+	case Soffit = 'Soffit';
 
 	/** Name of what the viewer draws when the surface has no material. */
 	public function defaultMaterialName(): string
@@ -28,6 +32,8 @@ enum QuantitySurfaceEnum: string
 			self::Ceiling => 'White plaster',
 			self::Beams => 'White paint',
 			self::Skirting => 'White skirting',
+			self::RoofCovering => 'Roof covering (default)',
+			self::Soffit => 'White-painted soffit',
 		};
 	}
 

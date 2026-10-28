@@ -72,6 +72,7 @@ final readonly class ShareLinkTools
 	 * @param string|null $initialView the view the link opens in, one of `views` (default: the first of them)
 	 * @param array<string, mixed>|null $camera where the 3D view starts (default: the overview framing of the whole floor)
 	 * @param bool $ceilings show ceilings at the start
+	 * @param bool $roofs show the roofs at the start
 	 * @param bool $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700); null = no cut
 	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
@@ -100,6 +101,7 @@ final readonly class ShareLinkTools
 		#[Schema(definition: self::CameraSchema)]
 		?array $camera = null,
 		bool $ceilings = false,
+		bool $roofs = true,
 		bool $labels = true,
 		?int $sectionHeight = null,
 		bool $dimensions = false,
@@ -118,6 +120,7 @@ final readonly class ShareLinkTools
 			'initialView' => $initialView ?? $views[0] ?? 'overview',
 			'camera' => $camera,
 			'ceilings' => $ceilings,
+			'roofs' => $roofs,
 			'labels' => $labels,
 			'sectionHeight' => $sectionHeight,
 			'dimensions' => $dimensions,
@@ -142,6 +145,7 @@ final readonly class ShareLinkTools
 	 * @param string|null $initialView the view the link opens in, one of `views`
 	 * @param array<string, mixed>|null $camera where the 3D view starts
 	 * @param bool|null $ceilings show ceilings at the start
+	 * @param bool|null $roofs show the roofs at the start
 	 * @param bool|null $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700)
 	 * @param bool|null $dimensions show the dimension lines in the top view at the start
@@ -171,6 +175,7 @@ final readonly class ShareLinkTools
 		#[Schema(definition: self::CameraSchema)]
 		?array $camera = null,
 		?bool $ceilings = null,
+		?bool $roofs = null,
 		?bool $labels = null,
 		?int $sectionHeight = null,
 		?bool $dimensions = null,
@@ -193,6 +198,7 @@ final readonly class ShareLinkTools
 				'initialView' => $initialView,
 				'camera' => $camera,
 				'ceilings' => $ceilings,
+				'roofs' => $roofs,
 				'labels' => $labels,
 				'sectionHeight' => $sectionHeight,
 				'dimensions' => $dimensions,
