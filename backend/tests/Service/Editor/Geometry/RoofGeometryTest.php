@@ -6,6 +6,7 @@ namespace FlatDesigner\Tests\Service\Editor\Geometry;
 
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
+use FlatDesigner\Service\Editor\Geometry\RoofWindowGeometry;
 use FlatDesigner\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -16,9 +17,11 @@ use PHPUnit\Framework\TestCase;
  *
  * @phpstan-type Probe array{x: int, y: int, underside: float|int|null, top: float|int|null, plane: int|null}
  * @phpstan-type Plane array{polygon: list<array{x: float|int, y: float|int}>, gradient: array{x: float|int, y: float|int}, height: float|int}
- * @phpstan-type Expected array{ridgeHeight: float|int, planes: list<Plane>, probes: list<Probe>}
+ * @phpstan-type Window array{along: int, across: int, width: int, length: int, plane: int|null, corners?: list<array{x: float|int, y: float|int}>, fits: bool}
+ * @phpstan-type Expected array{ridgeHeight: float|int, planes: list<Plane>, probes: list<Probe>, windows?: list<Window>}
  */
 #[CoversClass(RoofGeometry::class)]
+#[CoversClass(RoofWindowGeometry::class)]
 final class RoofGeometryTest extends TestCase
 {
 	private const string Fixture = __DIR__ . '/../../../fixtures/roof-geometry.json';
@@ -85,6 +88,20 @@ final class RoofGeometryTest extends TestCase
 			self::assertEqualsWithDelta($probe['underside'], $roof->undersideAt($probe['x'], $probe['y']), self::Tolerance, $at);
 			self::assertEqualsWithDelta($probe['top'], $roof->topAt($probe['x'], $probe['y']), self::Tolerance, $at);
 			self::assertSame($probe['plane'], $roof->planeAt($probe['x'], $probe['y']), $at);
+		}
+
+		foreach ($expected['windows'] ?? [] as $window) {
+			$at = sprintf('window at (%d, %d)', $window['along'], $window['across']);
+			$placed = RoofWindowGeometry::corners($roof, $window['along'], $window['across'], $window['width'], $window['length']);
+			self::assertSame($window['plane'], $placed['plane'] ?? null, $at);
+			foreach ($window['corners'] ?? [] as $i => $corner) {
+				self::assertEqualsWithDelta([$corner['x'], $corner['y']], $placed['corners'][$i] ?? null, self::Tolerance, $at);
+			}
+			self::assertSame(
+				$window['fits'],
+				RoofWindowGeometry::fits($roof, $window['along'], $window['across'], $window['width'], $window['length']),
+				$at,
+			);
 		}
 	}
 

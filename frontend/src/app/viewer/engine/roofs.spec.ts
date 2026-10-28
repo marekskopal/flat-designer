@@ -1,9 +1,10 @@
-import {Roof} from '@app/models/scene';
+import {Roof, RoofWindow} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {MaterialLibrary} from './materials';
 import {MM} from './plan-geometry';
+import {roofWindowLayout} from './roof-geometry';
 import {buildRoof, buildRoofOutline, resizeRoofByCorner, roofCorners} from './roofs';
 import {selectionOf} from './selection';
 
@@ -113,5 +114,76 @@ describe('resizeRoofByCorner', () => {
         expect([squashed.width, squashed.depth]).toEqual([1000, 1000]);
         expect(roofCorners({...turned, ...squashed})[2].x).toBeCloseTo(roofCorners(turned)[2].x, 0);
         expect(roofCorners({...turned, ...squashed})[2].y).toBeCloseTo(roofCorners(turned)[2].y, 0);
+    });
+});
+
+const skylight: RoofWindow = {
+    id: 7,
+    name: 'Skylight',
+    type: 'CentrePivot',
+    along: 1000,
+    across: -2000,
+    width: 780,
+    length: 1180,
+    frameMaterialId: null,
+};
+
+describe('roofWindowLayout', () => {
+    it('lies on the plane under its centre, counter-clockwise, its length foreshortened in plan', () => {
+        const layout = roofWindowLayout(gable, skylight)!;
+        expect(layout.plane).toBe(0);
+        expect(layout.up).toEqual({x: 0, y: 1});
+        // 1180 mm up a 45° slope is 834 in plan.
+        const ys = layout.corners.map((c) => c.y);
+        expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(1180 * Math.SQRT1_2, 6);
+        const area = layout.corners.reduce((sum, c, i) => {
+            const d = layout.corners[(i + 1) % 4];
+            return sum + c.x * d.y - d.x * c.y;
+        }, 0);
+        expect(area).toBeGreaterThan(0);
+        // The hole is square to the slope: at the soffit it lies thickness · sin(pitch) further up it.
+        expect(layout.soffit[0].x).toBe(layout.corners[0].x);
+        expect(layout.soffit[0].y - layout.corners[0].y).toBeCloseTo(250 * Math.SQRT1_2, 6);
+    });
+
+    it('is none on a flat roof, or for a window the roof has left behind', () => {
+        expect(roofWindowLayout({...gable, shape: 'Flat'}, skylight)).toBeNull();
+        expect(roofWindowLayout(gable, {...skylight, along: 4900})).toBeNull();
+        expect(roofWindowLayout(gable, {...skylight, across: -200})).toBeNull();
+    });
+});
+
+describe('roof windows', () => {
+    const roof = {...gable, windows: [skylight]};
+    const down = (object: THREE.Object3D, x: number, y: number): THREE.Intersection[] => {
+        const scene = new THREE.Scene();
+        scene.add(object);
+        scene.updateMatrixWorld(true);
+        return new THREE.Raycaster(new THREE.Vector3(x * MM, 20, -y * MM), new THREE.Vector3(0, -1, 0))
+            .intersectObject(scene, true)
+            .filter((hit) => hit.object instanceof THREE.Mesh && hit.object.material !== section);
+    };
+
+    it('stands in a hole of the slab, tagged to be picked', () => {
+        // At the window's centre (plan 6000, 2000) the first thing hit is the window, and no covering is under it.
+        const built = buildRoof(roof, materials, section);
+        const hits = down(built, 6000, 2000);
+        expect(selectionOf(hits[0].object)).toEqual({kind: 'roofWindow', id: 7});
+        expect(hits.every((hit) => selectionOf(hit.object)?.kind === 'roofWindow')).toBe(true);
+        // Beside it the covering is whole.
+        expect(selectionOf(down(buildRoof(roof, materials, section), 7000, 2000)[0].object)).toEqual({kind: 'roof', id: 4});
+    });
+
+    it('leaves out a window the roof left behind', () => {
+        const built = buildRoof({...roof, windows: [{...skylight, along: 4900}]}, materials, section);
+        let tagged = false;
+        built.traverse((o) => (tagged ||= o.userData['roofWindowId'] !== undefined));
+        expect(tagged).toBe(false);
+    });
+
+    it('is picked in the top view inside its outline', () => {
+        const hits = down(buildRoofOutline(roof), 6000, 2000);
+        expect(hits.length).toBeGreaterThan(0);
+        expect(selectionOf(hits[0].object)).toEqual({kind: 'roofWindow', id: 7});
     });
 });

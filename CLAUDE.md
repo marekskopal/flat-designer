@@ -365,8 +365,11 @@ format is the text in `FurnitureTools::Format`.
 - Roof windows (`RoofWindow`, `roof_windows`, element type `RoofWindow`, REST `…/roof-windows`, MCP `add_roof_window` /
   `update_roof_window` / `delete_roof_window`) are listed in their roof's `windows`, as openings are in their wall's. A
   window lies `along` / `across` the ridge from the roof's centre, in the roof's frame, so it moves with the roof; it is
-  `width` across the slope and `length` up it, on a pitched plane, `RoofWindowPlacement::Margin` inside the plane in
-  plan and clear of the plane's other windows; a new one sits low on the front plane. The placement is checked only
+  `width` across the slope and `length` up it, on a pitched plane, `RoofWindowGeometry::Margin` inside the plane in
+  plan (`RoofWindowGeometry::corners()` / `fits()`, twinned as `roofWindowCorners()` / `roofWindowFits()` in the fixture) and
+  clear of the plane's other windows (`RoofWindowPlacement`); a new one sits low on the front plane, 400 mm in plan
+  above the eaves line (not the overhang's edge), or on the right side of a hip deeper than wide, whose front is a
+  triangle. The placement is checked only
   when it is set anew (a changed roof does not check its windows, so one it left behind is still renamed and undone).
   A deleted roof hides its windows until undo brings it back; the scene patch reloads when a roof comes in, as its
   windows are not in the result. A copy of a roof window lands past it along the ridge, a copy of a roof 100 mm east.
@@ -384,6 +387,19 @@ format is the text in `FurnitureTools::Format`.
   (`resizeRoofByCorner()`, the opposite corner fixed), nudged and turned with R like items. `floorPoints()` includes the
   roofs' outlines, so the framing and the sun's shadow cover the overhangs. The Add menu's Building → Roof over the floor
   takes the backend's default rectangle.
+- Roof windows in the viewer (FD-82): `roofWindowLayout()` (`roof-geometry.ts`, TS only over the twin) is a window
+  with every corner on its plane, plus its corners at the soffit: the hole is square to the slope, as the frame is, so
+  it lies thickness · sin(pitch) further up the slope there. A window the roof left behind has none and is not drawn.
+  `roofWindowLayouts()` caches a roof's per roof object (a changed roof or window is a new one). `buildRoof()` cuts the
+  holes out of the plane's slab (triangulated with holes, the sides lined) and adds `buildRoofWindow()`: frame from the
+  soffit to above the covering, sash (a centre-pivot handle bar at the top, a top-hung handle at the bottom), glass
+  without a shadow, flashing; tagged `roofWindowId` (`RoofParts.windows`). The roof's outline draws each window's
+  footprint with an undrawn face that picks it in the top view, where it is dragged along and across the roof, stopping
+  where it would no longer fit its plane (`roofWindowFits()`; the plane's other windows are the backend's to refuse) and
+  jumping the ridge; `previewRoof()` rebuilds the outline, and the body only while the wall cut leaves something of it
+  seen. The arrows nudge it by the plan step turned into the roof's frame. A sloped ceiling is opened under its windows
+  at the soffit (`ceilingParts()`). The Add menu's "Roof window in selected roof" (a pitched roof selected) and the
+  inspector's `roofWindow` fields edit them.
 - Walls: every wall of the floor is cut at the underside of the roofs over it; one with `upToRoof` (the inspector's
   "Up to the roof") rises to it (a gable). `StructureSize` stops a column or beam at the roof where it is lower than
   the ceiling. Snapshots keep `roofs` (`SnapshotRoofRestorer`) and the walls' `upToRoof`. Seeded coverings:

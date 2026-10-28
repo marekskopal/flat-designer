@@ -4,7 +4,18 @@ import {resolve} from 'node:path';
 import {describe, expect, it} from 'vitest';
 
 import {Vec2} from './plan-geometry';
-import {roofPlaneAt, roofPlanes, roofRidgeHeight, RoofShapeFields, roofsUndersideAt, roofTopAt, roofUndersideAt} from './roof-geometry';
+import {
+    roofPlaneAt,
+    roofPlanes,
+    roofRidgeHeight,
+    RoofShapeFields,
+    roofsUndersideAt,
+    roofTopAt,
+    roofUndersideAt,
+    roofWindowCorners,
+    roofWindowFits,
+    RoofWindowPlace,
+} from './roof-geometry';
 
 interface Probe {
     x: number;
@@ -14,12 +25,18 @@ interface Probe {
     plane: number | null;
 }
 
+interface Window extends RoofWindowPlace {
+    plane: number | null;
+    corners?: Vec2[];
+    fits: boolean;
+}
+
 /** Shared with the backend twin (`RoofGeometryTest`). */
 const fixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests/fixtures/roof-geometry.json'), 'utf8')) as {
     cases: {
         name: string;
         roof: RoofShapeFields;
-        expected: {ridgeHeight: number; planes: {polygon: Vec2[]; gradient: Vec2; height: number}[]; probes: Probe[]};
+        expected: {ridgeHeight: number; planes: {polygon: Vec2[]; gradient: Vec2; height: number}[]; probes: Probe[]; windows?: Window[]};
     }[];
 };
 
@@ -55,6 +72,16 @@ describe('roof geometry (shared fixture)', () => {
             expectClose(roofUndersideAt(roof, probe.x, probe.y), probe.underside);
             expectClose(roofTopAt(roof, probe.x, probe.y), probe.top);
             expect(roofPlaneAt(roof, probe.x, probe.y)).toBe(probe.plane);
+        }
+
+        for (const window of expected.windows ?? []) {
+            const placed = roofWindowCorners(roof, window);
+            expect(placed?.plane ?? null).toBe(window.plane);
+            (window.corners ?? []).forEach((corner, i) => {
+                expectClose(placed?.corners[i].x ?? null, corner.x);
+                expectClose(placed?.corners[i].y ?? null, corner.y);
+            });
+            expect(roofWindowFits(roof, window)).toBe(window.fits);
         }
     });
 });

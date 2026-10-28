@@ -1,5 +1,5 @@
 {
- "description": "Cases for the roof geometry twins: RoofGeometry (PHP, Service/Editor/Geometry) and roof-geometry.ts (TS, viewer/engine). roof is a roof's fields; expected lists its planes (outline in plan, counter-clockwise from the eaves; the underside over it is height + gradient · (p − centre)), its ridge height and, per probe point, the underside, the top and the index of the plane over it (all null where the roof does not reach). Lengths in mm above the floor's level, compared within 0.01.",
+ "description": "Cases for the roof geometry twins: RoofGeometry (PHP, Service/Editor/Geometry) and roof-geometry.ts (TS, viewer/engine). roof is a roof's fields; expected lists its planes (outline in plan, counter-clockwise from the eaves; the underside over it is height + gradient · (p − centre)), its ridge height and, per probe point, the underside, the top and the index of the plane over it (all null where the roof does not reach). Per window (along, across, width, length in the roof's frame): the index of its plane and its corners counter-clockwise from the low left (null plane: off the roof or a flat roof), and whether it fits 300 mm inside its plane. Lengths in mm above the floor's level, compared within 0.01.",
  "cases": [
   {
    "name": "a gable along plan x, at 45°",
@@ -126,6 +126,120 @@
       "underside": 2200.0,
       "top": 2553.553,
       "plane": 1
+     }
+    ],
+    "windows": [
+     {
+      "along": 1000,
+      "across": -2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 610.0,
+        "y": -2417.193
+       },
+       {
+        "x": 1390.0,
+        "y": -2417.193
+       },
+       {
+        "x": 1390.0,
+        "y": -1582.807
+       },
+       {
+        "x": 610.0,
+        "y": -1582.807
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 4800,
+      "across": -2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 4410.0,
+        "y": -2417.193
+       },
+       {
+        "x": 5190.0,
+        "y": -2417.193
+       },
+       {
+        "x": 5190.0,
+        "y": -1582.807
+       },
+       {
+        "x": 4410.0,
+        "y": -1582.807
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": 1000,
+      "across": -200,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 610.0,
+        "y": -617.193
+       },
+       {
+        "x": 1390.0,
+        "y": -617.193
+       },
+       {
+        "x": 1390.0,
+        "y": 217.193
+       },
+       {
+        "x": 610.0,
+        "y": 217.193
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": 0,
+      "across": 6000,
+      "width": 780,
+      "length": 1180,
+      "plane": null,
+      "fits": false
+     },
+     {
+      "along": -2000,
+      "across": 2000,
+      "width": 1140,
+      "length": 1400,
+      "plane": 1,
+      "corners": [
+       {
+        "x": -1430.0,
+        "y": 2494.975
+       },
+       {
+        "x": -2570.0,
+        "y": 2494.975
+       },
+       {
+        "x": -2570.0,
+        "y": 1505.025
+       },
+       {
+        "x": -1430.0,
+        "y": 1505.025
+       }
+      ],
+      "fits": true
      }
     ]
    }
@@ -684,6 +798,112 @@
       "top": 2782.583,
       "plane": 2
      }
+    ],
+    "windows": [
+     {
+      "along": 0,
+      "across": -4000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": -390.0,
+        "y": -4534.722
+       },
+       {
+        "x": 390.0,
+        "y": -4534.722
+       },
+       {
+        "x": 390.0,
+        "y": -3465.278
+       },
+       {
+        "x": -390.0,
+        "y": -3465.278
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 2000,
+      "across": 0,
+      "width": 780,
+      "length": 1180,
+      "plane": 1,
+      "corners": [
+       {
+        "x": 2534.722,
+        "y": -390.0
+       },
+       {
+        "x": 2534.722,
+        "y": 390.0
+       },
+       {
+        "x": 1465.278,
+        "y": 390.0
+       },
+       {
+        "x": 1465.278,
+        "y": -390.0
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": -2600,
+      "across": 1000,
+      "width": 780,
+      "length": 1180,
+      "plane": 3,
+      "corners": [
+       {
+        "x": -3134.722,
+        "y": 1390.0
+       },
+       {
+        "x": -3134.722,
+        "y": 610.0
+       },
+       {
+        "x": -2065.278,
+        "y": 610.0
+       },
+       {
+        "x": -2065.278,
+        "y": 1390.0
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": 0,
+      "across": 0,
+      "width": 780,
+      "length": 1180,
+      "plane": 3,
+      "corners": [
+       {
+        "x": -534.722,
+        "y": 390.0
+       },
+       {
+        "x": -534.722,
+        "y": -390.0
+       },
+       {
+        "x": 534.722,
+        "y": -390.0
+       },
+       {
+        "x": 534.722,
+        "y": 390.0
+       }
+      ],
+      "fits": false
+     }
     ]
    }
   },
@@ -760,6 +980,60 @@
       "top": 3878.852,
       "plane": 0
      }
+    ],
+    "windows": [
+     {
+      "along": 1500,
+      "across": -1000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 1110.0,
+        "y": -1569.896
+       },
+       {
+        "x": 1890.0,
+        "y": -1569.896
+       },
+       {
+        "x": 1890.0,
+        "y": -430.104
+       },
+       {
+        "x": 1110.0,
+        "y": -430.104
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 0,
+      "across": 2000,
+      "width": 780,
+      "length": 1600,
+      "plane": 0,
+      "corners": [
+       {
+        "x": -390.0,
+        "y": 1227.259
+       },
+       {
+        "x": 390.0,
+        "y": 1227.259
+       },
+       {
+        "x": 390.0,
+        "y": 2772.741
+       },
+       {
+        "x": -390.0,
+        "y": 2772.741
+       }
+      ],
+      "fits": true
+     }
     ]
    }
   },
@@ -828,6 +1102,16 @@
       "underside": null,
       "top": null,
       "plane": null
+     }
+    ],
+    "windows": [
+     {
+      "along": 0,
+      "across": 0,
+      "width": 780,
+      "length": 1180,
+      "plane": null,
+      "fits": false
      }
     ]
    }

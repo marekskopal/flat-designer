@@ -95,6 +95,11 @@ const RoofShapeLabels: Readonly<Record<string, string>> = {
 };
 const isPitched = (roof: Record<string, unknown>): boolean => roof['shape'] !== 'Flat';
 
+const RoofWindowTypeLabels: Readonly<Record<string, string>> = {
+    CentrePivot: 'Centre pivot',
+    TopHung: 'Top hung',
+};
+
 /** The height the roof's underside reaches at its ridge (a shed's top edge), above the floor's level. */
 export function roofRidgeHint(roof: Record<string, unknown>): string | null {
     const fields = ['width', 'depth', 'eaveHeight', 'pitch'] as const;
@@ -360,6 +365,15 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'parapet', label: 'Parapet (empty: none)', type: 'int', unit: 'mm', nullable: true, half: true, when: (roof) => !isPitched(roof)},
         {key: 'coveringMaterialId', label: 'Covering', type: 'material', nullable: true, half: true},
         {key: 'soffitMaterialId', label: 'Soffit', type: 'material', nullable: true, half: true},
+    ],
+    roofWindow: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'type', label: 'Sash', type: 'select', options: Object.keys(RoofWindowTypeLabels), optionLabels: RoofWindowTypeLabels},
+        {key: 'along', label: 'Along the ridge (from the roof centre)', type: 'int', unit: 'mm', half: true},
+        {key: 'across', label: 'Across it (+ to the back)', type: 'int', unit: 'mm', half: true},
+        {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
+        {key: 'length', label: 'Length up the slope', type: 'int', unit: 'mm', half: true},
+        {key: 'frameMaterialId', label: 'Frame', type: 'material', nullable: true},
     ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},

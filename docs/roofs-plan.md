@@ -145,6 +145,14 @@ widest.
   the plane's polygon) and in the sloped ceiling under it, with a lining square to the slope. Tagged `roofWindowId`,
   selectable and draggable along the roof in the top view.
 - Inspector, Add menu (enabled with a roof selected), MCP tools from phase 1.
+- As built: the hole is square to the slope, as the frame lining it from the soffit is (its ring at the soffit lies
+  thickness · sin(pitch) further up the slope than at the covering); the sloped ceiling is opened under the window at
+  the soffit, not a flat one (a window over a collar ceiling opens into the attic). The window's corners and whether it
+  fits its plane are twinned (`RoofWindowGeometry::corners()` / `fits()`, `roofWindowCorners()` /
+  `roofWindowFits()`, in `roof-geometry.json`); only the drawn layout (`roofWindowLayout()`) is TS. A drag stops where
+  the window would no longer fit its plane; the backend stays the authority for the plane's other windows (a refused
+  drop snaps back). A new window's offset counts from the eaves line, not the overhang's edge, so it no longer sits
+  over the wall, and on a hip deeper than wide it goes on a side plane, the front being a triangle.
 
 ## Phase 5: roof junctions, exports and measurements
 

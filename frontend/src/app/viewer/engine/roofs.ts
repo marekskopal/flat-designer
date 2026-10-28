@@ -1,10 +1,21 @@
-import {Roof} from '@app/models/scene';
+import {Roof, RoofWindow} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {MM, Vec2} from './plan-geometry';
-import {LocalRoofPlane, RoofFrame, roofHalfExtent, roofLocal, roofLocalPlanes, roofSlope, roofToPlan, roofVerticalThickness} from './roof-geometry';
+import {
+    LocalRoofPlane,
+    RoofFrame,
+    roofHalfExtent,
+    roofLocal,
+    roofLocalPlanes,
+    roofSlope,
+    roofToPlan,
+    roofVerticalThickness,
+    RoofWindowLayout,
+    roofWindowLayouts,
+} from './roof-geometry';
 
 /** A soffit without a material: white-painted timber. */
 const SoffitColor = '#f1eee8';
@@ -22,6 +33,14 @@ const CapHeight = 70;
 /** mm, a flat roof's parapet wall. */
 const ParapetThickness = 200;
 
+/** mm: a roof window's frame (from the soffit to above the covering), its sash and the flashing round it. */
+const WindowFrameBar = 70;
+const WindowFrameRise = 90;
+const WindowSashBar = 55;
+const WindowFlashing = 60;
+/** A roof window without a material: anthracite, like the walls' windows. */
+const WindowFrameCode = 'window-frame-anthracite';
+
 const OutlineColor = '#8a5a2b';
 const SelectedOutlineColor = '#e07b00';
 /** mm either side of the dashed outline that a click picks the roof by in the top view. */
@@ -30,8 +49,10 @@ const PickBand = 150;
 /**
  * A roof (FD-38) in its own frame: a group at its centre, turned by its rotation, so a drag or turn moves the group. Each
  * plane is a slab `thickness` thick square to the slope: the covering on top, the soffit under it and along its edges
- * (fascia and verges); pitched roofs get caps along the ridge and hips, a flat one its parapet. Tagged `roofId`, merged,
- * with a section-fill twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`.
+ * (fascia and verges); pitched roofs get caps along the ridge and hips, a flat one its parapet. Its windows go through
+ * the slab (`buildRoofWindow()`, holes square to the slope cut in the plane), each tagged `roofWindowId`; a window the
+ * roof has left behind (`roofWindowLayouts()` leaves it out) is not drawn. Tagged `roofId`, merged, with a section-fill
+ * twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`.
  */
 export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMaterial: THREE.Material): THREE.Group {
     const group = new THREE.Group();
@@ -43,9 +64,12 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
     const covering = roof.coveringMaterialId !== null ? materials.get(roof.coveringMaterialId) : materials.byCode(defaultCovering);
     const soffit = roof.soffitMaterialId !== null ? materials.get(roof.soffitMaterialId) : materials.plain(SoffitColor, 0.7, 0);
     const thick = roofVerticalThickness(roof);
+    const windows = roofWindowLayouts(roof);
+    const planes = roofLocalPlanes(roof);
 
-    for (const plane of roofLocalPlanes(roof)) {
-        const slab = planeSlab(plane, thick, roofSlope(roof));
+    planes.forEach((plane, index) => {
+        const holes = windows.filter(({layout}) => layout.plane === index).map(({layout}): SlabHole => ({top: layout.corners, under: layout.soffit}));
+        const slab = planeSlab(plane, thick, roofSlope(roof), holes);
         const top = new THREE.Mesh(slab.top, covering);
         const under = new THREE.Mesh(slab.under, soffit);
         for (const mesh of [top, under]) {
@@ -54,6 +78,9 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
             group.add(mesh);
         }
         group.add(new THREE.Mesh(slab.solid, sectionMaterial));
+    });
+    for (const {window, layout} of windows) {
+        group.add(buildRoofWindow(roof, window, layout, planes[layout.plane], thick, materials));
     }
     if (roof.shape !== 'Flat') {
         const cap = materials.darkened(covering, 0.8);
@@ -72,6 +99,86 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
     return group;
 }
 
+/** A box (mm) centred at (x, y, z) of its parent. */
+function part(material: THREE.Material, x: number, y: number, z: number, width: number, height: number, depth: number, shadow = true): THREE.Mesh {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(width * MM, height * MM, depth * MM), material);
+    mesh.position.set(x * MM, y * MM, z * MM);
+    mesh.castShadow = shadow;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+/**
+ * A roof window in the roof's group: a group on the covering at the window's centre, its x across the slope, z up it
+ * and y square to it. The frame lines the hole (square to the slope, as the frame is) from the soffit to `WindowFrameRise`
+ * over the covering; the sash sits in it with its glass (casting no shadow), a centre-pivot sash with its handle bar
+ * along the top, a top-hung one with a handle at the bottom; metal flashing runs round it on the covering. `plane` is
+ * the window's and `thick` the roof's vertical thickness. Tagged `roofWindowId`.
+ */
+export function buildRoofWindow(
+    roof: Roof,
+    window: RoofWindow,
+    layout: RoofWindowLayout,
+    plane: LocalRoofPlane,
+    thick: number,
+    materials: MaterialLibrary,
+): THREE.Group {
+    const group = new THREE.Group();
+    group.name = `roof-window:${window.name}`;
+    group.userData = {roofWindowId: window.id};
+
+    const {x: s, y: t} = layout.centre;
+    group.position.copy(at(s, t, plane.base + plane.gs * s + plane.gt * t + thick));
+    const across = new THREE.Vector3(layout.side.x, 0, -layout.side.y).normalize();
+    const up = new THREE.Vector3(layout.up.x, roofSlope(roof), -layout.up.y).normalize();
+    const out = new THREE.Vector3().crossVectors(up, across);
+    group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(across, out, up));
+
+    const frame = window.frameMaterialId !== null ? materials.get(window.frameMaterialId) : materials.byCode(WindowFrameCode);
+    const glass = materials.byCode('glass');
+    const flashing = materials.plain('#55585a', 0.45, 0.6);
+    const w = window.width;
+    const l = window.length;
+    const bottom = -roof.thickness;
+    const height = roof.thickness + WindowFrameRise;
+    const middle = bottom + height / 2;
+    const bar = WindowFrameBar;
+    group.add(
+        part(frame, -(w - bar) / 2, middle, 0, bar, height, l),
+        part(frame, (w - bar) / 2, middle, 0, bar, height, l),
+        part(frame, 0, middle, -(l - bar) / 2, w - 2 * bar, height, bar),
+        part(frame, 0, middle, (l - bar) / 2, w - 2 * bar, height, bar),
+    );
+    // The sash in the frame's opening, flush with its top.
+    const sw = w - 2 * bar;
+    const sl = l - 2 * bar;
+    const sash = WindowSashBar;
+    const sy = WindowFrameRise - 40;
+    group.add(
+        part(frame, -(sw - sash) / 2, sy, 0, sash, 80, sl),
+        part(frame, (sw - sash) / 2, sy, 0, sash, 80, sl),
+        part(frame, 0, sy, -(sl - sash) / 2, sw - 2 * sash, 80, sash),
+        part(frame, 0, sy, (sl - sash) / 2, sw - 2 * sash, 80, sash),
+        part(glass, 0, sy, 0, sw - 2 * sash, 8, sl - 2 * sash, false),
+    );
+    const rail = (sl - sash) / 2;
+    group.add(
+        window.type === 'CentrePivot'
+            ? part(frame, 0, sy + 50, rail, sw * 0.6, 20, 30)
+            : part(frame, 0, sy + 50, -rail, 150, 25, 30),
+    );
+    // The flashing round the frame, on the covering.
+    const fw = w + 2 * WindowFlashing;
+    const flash = WindowFlashing;
+    group.add(
+        part(flashing, -(w + flash) / 2, 6, 0, flash, 12, l + 2 * flash),
+        part(flashing, (w + flash) / 2, 6, 0, flash, 12, l + 2 * flash),
+        part(flashing, 0, 6, -(l + flash) / 2, fw - 2 * flash, 12, flash),
+        part(flashing, 0, 6, (l + flash) / 2, fw - 2 * flash, 12, flash),
+    );
+    return group;
+}
+
 /** Puts a roof's group (or its outline) at the roof's centre, turned by its rotation. */
 export function placeRoof(object: THREE.Object3D, roof: Pick<Roof, 'x' | 'y' | 'rotation'>): void {
     object.position.set(roof.x * MM, object.position.y, -roof.y * MM);
@@ -80,6 +187,12 @@ export function placeRoof(object: THREE.Object3D, roof: Pick<Roof, 'x' | 'y' | '
 
 /** A point of the roof's frame at a height (mm) in the group's coordinates. */
 const at = (s: number, t: number, h: number): THREE.Vector3 => new THREE.Vector3(s * MM, h * MM, -t * MM);
+
+/** A window's hole through a slab: its outline at the covering and at the soffit (further up the slope, the hole being square to it). */
+interface SlabHole {
+    top: Vec2[];
+    under: Vec2[];
+}
 
 interface PlaneSlab {
     /** The covering, with UVs in metres across and up the slope. */
@@ -91,10 +204,11 @@ interface PlaneSlab {
 }
 
 /**
- * One plane's slab: the outline lifted onto the underside and, `thick` higher, onto the top. UVs run across the slope
- * and up it in metres (along the plane, so tiles keep their size on a steep roof); the edges' along the edge and up.
+ * One plane's slab: the outline lifted onto the underside and, `thick` higher, onto the top, with `holes` (its windows,
+ * counter-clockwise in the roof's frame) cut through and lined. UVs run across the slope and up it in metres (along the
+ * plane, so tiles keep their size on a steep roof); the edges' along the edge and up.
  */
-function planeSlab(plane: LocalRoofPlane, thick: number, slope: number): PlaneSlab {
+function planeSlab(plane: LocalRoofPlane, thick: number, slope: number, holes: readonly SlabHole[] = []): PlaneSlab {
     const underside = (p: Vec2): number => plane.base + plane.gs * p.x + plane.gt * p.y;
     // Up the slope and across it; a flat roof lays its covering along the frame.
     const length = Math.hypot(plane.gs, plane.gt);
@@ -103,20 +217,38 @@ function planeSlab(plane: LocalRoofPlane, thick: number, slope: number): PlaneSl
     const uv = (p: Vec2): [number, number] => [(p.x * up.y - p.y * up.x) * MM, (p.x * up.x + p.y * up.y) * stretch * MM];
 
     const polygon = plane.polygon;
-    const lower = polygon.map((p) => at(p.x, p.y, underside(p)));
-    const upper = polygon.map((p) => at(p.x, p.y, underside(p) + thick));
-    const uvs = polygon.map(uv);
+    // A hole's ring at the soffit lies further up the slope than at the top; the slab's own edges are upright.
+    const tops = [...polygon, ...holes.flatMap((hole) => hole.top)];
+    const unders = [...polygon, ...holes.flatMap((hole) => hole.under)];
+    const lower = unders.map((p) => at(p.x, p.y, underside(p)));
+    const upper = tops.map((p) => at(p.x, p.y, underside(p) + thick));
+    const uvs = tops.map(uv);
 
     const top = new FaceBuilder();
     const under = new FaceBuilder();
-    for (let i = 1; i + 1 < polygon.length; i++) {
-        top.triangle([upper[0], upper[i], upper[i + 1]], [uvs[0], uvs[i], uvs[i + 1]], 1);
-        under.triangle([lower[0], lower[i + 1], lower[i]], [uvs[0], uvs[i + 1], uvs[i]], -1);
+    const toVector = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x, p.y);
+    const triangles =
+        holes.length === 0
+            ? polygon.slice(1, -1).map((_, i): number[] => [0, i + 1, i + 2])
+            : THREE.ShapeUtils.triangulateShape(polygon.map(toVector), holes.map((hole) => hole.top.map(toVector)));
+    for (const [i, j, k] of triangles) {
+        top.triangle([upper[i], upper[j], upper[k]], [uvs[i], uvs[j], uvs[k]], 1);
+        under.triangle([lower[i], lower[j], lower[k]], [uvs[i], uvs[j], uvs[k]], -1);
     }
-    for (let i = 0; i < polygon.length; i++) {
-        const j = (i + 1) % polygon.length;
-        const edge = lower[i].distanceTo(lower[j]);
-        under.quad([lower[i], lower[j], upper[j], upper[i]], [[0, 0], [edge, 0], [edge, thick * MM], [0, thick * MM]], outwards(polygon, i));
+    const edges = (start: number, count: number, facing: (i: number) => THREE.Vector3): void => {
+        for (let n = 0; n < count; n++) {
+            const i = start + n;
+            const j = start + ((n + 1) % count);
+            const edge = lower[i].distanceTo(lower[j]);
+            under.quad([lower[i], lower[j], upper[j], upper[i]], [[0, 0], [edge, 0], [edge, thick * MM], [0, thick * MM]], facing(n));
+        }
+    };
+    edges(0, polygon.length, (n) => outwards(polygon, n));
+    let start = polygon.length;
+    for (const hole of holes) {
+        // A hole's sides face into it: the inward side of its counter-clockwise outline.
+        edges(start, hole.top.length, (n) => outwards(hole.top, n).negate());
+        start += hole.top.length;
     }
     const solid = top.geometry(true);
     const rest = under.geometry(true);
@@ -290,14 +422,32 @@ export function buildRoofOutline(roof: Roof): THREE.Group {
     );
     const pick = new THREE.Mesh(new THREE.ShapeGeometry(band).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({visible: false}));
     group.add(pick);
+
+    // Its windows: their outline, and an undrawn face over it that picks the window.
+    for (const {window, layout} of roofWindowLayouts(roof)) {
+        const corners = layout.corners.map((c) => flat(c.x, c.y));
+        const frame = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(corners), material(false));
+        frame.renderOrder = 5;
+        frame.userData = {roofWindowLine: window.id};
+        frame.raycast = (): void => undefined;
+        const face = new THREE.Shape(layout.corners.map((c) => new THREE.Vector2(c.x * MM, c.y * MM)));
+        const windowPick = new THREE.Mesh(new THREE.ShapeGeometry(face).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({visible: false}));
+        windowPick.userData = {roofWindowId: window.id};
+        group.add(frame, windowPick);
+    }
     return group;
 }
 
-/** Colours a roof's outline as selected or not. */
-export function highlightRoofOutline(group: THREE.Object3D, selected: boolean): void {
+/** Colours a roof's outline as selected or not, and the outline of its selected window (`windowId`). */
+export function highlightRoofOutline(group: THREE.Object3D, selected: boolean, windowId: number | null = null): void {
     group.traverse((object) => {
-        if (object.userData['roofLine'] === true && object instanceof THREE.Line) {
-            (object.material as THREE.LineBasicMaterial).color.set(selected ? SelectedOutlineColor : OutlineColor);
+        if (!(object instanceof THREE.Line)) {
+            return;
+        }
+        const line = object.userData['roofWindowLine'];
+        if (object.userData['roofLine'] === true || typeof line === 'number') {
+            const on = typeof line === 'number' ? line === windowId : selected;
+            (object.material as THREE.LineBasicMaterial).color.set(on ? SelectedOutlineColor : OutlineColor);
         }
     });
 }

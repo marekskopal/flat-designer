@@ -89,6 +89,8 @@ export interface BuildingParts {
 export interface RoofParts {
     roof: THREE.Group;
     outline: THREE.Group;
+    /** Its windows' groups in `roof`, keyed by roof window id. */
+    windows: Map<number, THREE.Object3D>;
 }
 
 export interface RoomParts {
@@ -165,7 +167,13 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
 
 /** Builds a roof and its outline into the building: the roof with the other roofs, the outline with the others. */
 export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLibrary): RoofParts {
-    const built = {roof: buildRoof(roof, materials, parts.sectionMaterial), outline: buildRoofOutline(roof)};
+    const built: RoofParts = {roof: buildRoof(roof, materials, parts.sectionMaterial), outline: buildRoofOutline(roof), windows: new Map()};
+    built.roof.traverse((o) => {
+        const id = o.userData['roofWindowId'];
+        if (typeof id === 'number') {
+            built.windows.set(id, o);
+        }
+    });
     parts.roofs.set(roof.id, built);
     parts.roofBodies.add(built.roof);
     parts.roofOutlines.add(built.outline);

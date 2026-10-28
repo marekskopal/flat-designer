@@ -58,9 +58,10 @@ final class RoofTest extends EditorTestCase
 	{
 		$roof = $this->create('roofs', ['x' => 5000, 'y' => 4000, 'width' => 10000, 'depth' => 8000, 'pitch' => 45]);
 		$window = $this->create('roof-windows', ['roofId' => self::id($roof)]);
-		// Low on the front plane: 400 mm in plan above the eaves (at −4400 with the overhang); 1180 mm up a 45° slope is 834 in plan.
+		// Low on the front plane: 400 mm in plan above the eaves line (at −4000, inside the overhang); 1180 mm up a 45° slope is
+		// 834 in plan.
 		self::assertSame(
-			[self::id($roof), 'Roof window', 'CentrePivot', 0, -3583, 780, 1180],
+			[self::id($roof), 'Roof window', 'CentrePivot', 0, -3183, 780, 1180],
 			[$window['roofId'], $window['name'], $window['type'], $window['along'], $window['across'], $window['width'], $window['length']],
 		);
 		$roofs = $this->sceneList('roofs');
@@ -150,11 +151,13 @@ final class RoofTest extends EditorTestCase
 	{
 		$roof = $this->create(
 			'roofs',
-			['shape' => 'Hip', 'x' => 0, 'y' => 0, 'width' => 6000, 'depth' => 10000, 'overhang' => 0, 'pitch' => 40],
+			['shape' => 'Hip', 'x' => 0, 'y' => 0, 'width' => 3600, 'depth' => 10000, 'overhang' => 0, 'pitch' => 40],
 		);
-		// The front plane is a triangle up to t = −2000; the window sits where it is widest, 400 mm above the eaves at −5000.
+		// The front plane is a triangle up to t = −3200, too narrow for the window and its margin where its top would be:
+		// the window goes on the right side instead, 400 mm in plan above its eaves at s = 1800 (1180 mm up the 40° slope
+		// is 904 in plan), 496 mm short of the ridge.
 		$window = $this->create('roof-windows', ['roofId' => self::id($roof)]);
-		self::assertSame([0, -4148], [$window['along'], $window['across']]);
+		self::assertSame([948, 0], [$window['along'], $window['across']]);
 	}
 
 	public function testCopiesAreShiftedBesideTheOriginal(): void

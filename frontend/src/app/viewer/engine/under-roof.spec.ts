@@ -199,6 +199,16 @@ describe('ceilings under a roof', () => {
         expect(bounds(built.ceiling!).min.y).toBeCloseTo(2500, 0);
     });
 
+    it('opens the sloped ceiling under a roof window', () => {
+        // A window low on the front plane, its hole at the soffit (177 mm up the slope from the covering's) wholly over
+        // the sloped strip (y < 510 under the low roof).
+        const window = {id: 7, name: 'W', type: 'CentrePivot' as const, along: 0, across: -3850, width: 600, length: 400, frameMaterialId: null};
+        const parts = ceilingParts(attic, outlineWithout(attic.polygon, []), [{...low, windows: [window]}])!;
+        const holed = parts.filter((part) => part.holes.length > 0 || part.outer.length > 4);
+        expect(holed).toHaveLength(1);
+        expect(ceilingParts(attic, outlineWithout(attic.polygon, []), [{...low, windows: []}])!.every((part) => part.holes.length === 0)).toBe(true);
+    });
+
     it('draws the sloped ceiling down to the eaves', () => {
         const built = buildRoom(attic, [], materials, [], undefined, [low]);
         const box = bounds(built.ceiling!);

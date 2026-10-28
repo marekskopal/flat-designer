@@ -1,4 +1,4 @@
-import {Roof} from '@app/models/scene';
+import {Roof, RoofWindow} from '@app/models/scene';
 
 import {Vec2} from './plan-geometry';
 
@@ -226,4 +226,116 @@ function plane(points: [number, number][], gs: number, gt: number, base: number)
         }
     }
     return {polygon, gs, gt, base};
+}
+
+/** mm in plan between a roof window's frame and its plane's edges (`RoofWindowGeometry::Margin`). */
+export const RoofWindowMargin = 300;
+
+/** The fields of a roof window that place it. */
+export type RoofWindowPlace = Pick<RoofWindow, 'along' | 'across' | 'width' | 'length'>;
+
+/**
+ * Where a roof window lies (FD-38), in the roof's frame: on the plane under its centre, `width` across the slope and
+ * `length` up it, so `length` · cos(pitch) deep in plan. `up` is up the slope and `side` across it to the left of up,
+ * both unit vectors; `corners` go counter-clockwise from the low left (a corner may lie off the plane). Null on a flat
+ * roof, or with the centre off the roof. Twin of `RoofWindowGeometry::corners()`.
+ */
+export interface RoofWindowCorners {
+    plane: number;
+    up: Vec2;
+    side: Vec2;
+    corners: Vec2[];
+}
+
+export function roofWindowCorners(roof: RoofShapeFields, window: RoofWindowPlace): RoofWindowCorners | null {
+    if (!isPitched(roof)) {
+        return null;
+    }
+    const index = roofLocalPlaneAt(roof, window.along, window.across);
+    if (index === null) {
+        return null;
+    }
+    const under = roofLocalPlanes(roof)[index];
+    const length = Math.hypot(under.gs, under.gt);
+    const up = {x: under.gs / length, y: under.gt / length};
+    const side = {x: -up.y, y: up.x};
+    const halfWidth = window.width / 2;
+    const halfDepth = (window.length * Math.cos((roof.pitch * Math.PI) / 180)) / 2;
+    const corner = (i: number, j: number): Vec2 => ({
+        x: window.along - side.x * halfWidth * i + up.x * halfDepth * j,
+        y: window.across - side.y * halfWidth * i + up.y * halfDepth * j,
+    });
+    // Low left, low right, high right, high left (`side` is left of `up`): counter-clockwise.
+    return {plane: index, up, side, corners: [corner(-1, -1), corner(1, -1), corner(1, 1), corner(-1, 1)]};
+}
+
+/**
+ * Whether a window may lie there: on a pitched plane, every corner `RoofWindowMargin` inside its outline in plan (clear
+ * of the eaves, verges, ridge and hips). The plane's other windows are not looked at. Twin of `RoofWindowGeometry::fits()`.
+ */
+export function roofWindowFits(roof: RoofShapeFields, window: RoofWindowPlace): boolean {
+    const placed = roofWindowCorners(roof, window);
+    if (placed === null) {
+        return false;
+    }
+    const polygon = roofLocalPlanes(roof)[placed.plane].polygon;
+    return placed.corners.every((corner) => insideBy(polygon, corner, RoofWindowMargin));
+}
+
+/** At least `margin` inside a counter-clockwise convex outline (every roof plane is one). */
+function insideBy(polygon: readonly Vec2[], point: Vec2, margin: number): boolean {
+    for (let i = 0; i < polygon.length; i++) {
+        const a = polygon[i];
+        const b = polygon[(i + 1) % polygon.length];
+        const edge = Math.hypot(b.x - a.x, b.y - a.y);
+        if (((b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x)) / edge < margin - Epsilon) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * What the viewer draws of a roof window (TS only): `roofWindowCorners()` with every corner on the window's plane, its
+ * `centre`, and `soffit`, the corners at the slab's underside: the hole is square to the slope, so it lies
+ * `thickness` · sin(pitch) further up the slope there than at the covering. Null for a window the roof has left behind
+ * (a corner off its plane, as after the roof was narrowed), which is then not drawn.
+ */
+export interface RoofWindowLayout extends RoofWindowCorners {
+    centre: Vec2;
+    soffit: Vec2[];
+}
+
+export function roofWindowLayout(roof: RoofShapeFields, window: RoofWindowPlace): RoofWindowLayout | null {
+    const placed = roofWindowCorners(roof, window);
+    if (placed === null || placed.corners.some((c) => roofLocalPlaneAt(roof, c.x, c.y) !== placed.plane)) {
+        return null;
+    }
+    const shift = roof.thickness * Math.sin((roof.pitch * Math.PI) / 180);
+    const soffit = placed.corners.map((c) => ({x: c.x + placed.up.x * shift, y: c.y + placed.up.y * shift}));
+    return {...placed, centre: {x: window.along, y: window.across}, soffit};
+}
+
+/** A roof with its windows, as the scene lists them. */
+export type RoofWithWindows = RoofShapeFields & {windows?: readonly RoofWindow[]};
+
+export interface PlacedRoofWindow {
+    window: RoofWindow;
+    layout: RoofWindowLayout;
+}
+
+/** Per roof object (a changed roof or window is a new one), for the body, the outline and the ceilings under it. */
+const layoutCache = new WeakMap<RoofWithWindows, PlacedRoofWindow[]>();
+
+/** The windows a roof still holds, with where they lie. */
+export function roofWindowLayouts(roof: RoofWithWindows): PlacedRoofWindow[] {
+    let placed = layoutCache.get(roof);
+    if (placed === undefined) {
+        placed = (roof.windows ?? []).flatMap((window) => {
+            const layout = roofWindowLayout(roof, window);
+            return layout === null ? [] : [{window, layout}];
+        });
+        layoutCache.set(roof, placed);
+    }
+    return placed;
 }

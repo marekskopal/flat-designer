@@ -1,8 +1,8 @@
-import {PlanPoint, Room, Wall} from '@app/models/scene';
+import {PlanPoint, RoofWindow, Room, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Pair, Polygon, Ring} from 'polygon-clipping';
 
 import {Bounds, polygonBounds, Vec2} from './plan-geometry';
-import {roofHalfExtent, roofLocal, roofPlanes, RoofShapeFields, roofsUndersideAt} from './roof-geometry';
+import {roofHalfExtent, roofLocal, roofPlanes, RoofShapeFields, roofsUndersideAt, roofToPlan, roofWindowLayouts} from './roof-geometry';
 
 /**
  * What stands under the roofs of a floor (FD-38): the walls' tops, cut by the roofs' underside or rising to it, and the
@@ -24,8 +24,8 @@ export const CeilingUnderRoof = 10;
 /** A height at a plan point. */
 export type HeightAt = (p: Vec2) => number;
 
-/** The roofs whose underside a floor's walls and ceilings meet; missing on scenes from before roofs. */
-export type FloorRoofs = readonly RoofShapeFields[];
+/** The roofs whose underside a floor's walls and ceilings meet (with their windows, cut out of sloped ceilings). */
+export type FloorRoofs = readonly (RoofShapeFields & {windows?: readonly RoofWindow[]})[];
 
 /**
  * The top of a wall at a plan point: its height, cut by the roofs' underside where that is lower, or with `upToRoof`
@@ -261,7 +261,11 @@ export function ceilingParts(room: Room, outline: MultiPolygon, roofs: FloorRoof
     const flatHeight = (room.ceilingHeight ?? 0) + (room.floorElevation ?? 0);
     const bounds = polygonBounds(outline.flat(2) as PlanPoint[]);
     const planes = roofs
-        .map((roof, r) => planeFunctions(roof).map((plane) => ({...plane, roof: r})))
+        .map((roof, r) => {
+            const footprints = windowFootprints(roof);
+            const onPlane = (k: number): Vec2[][] => footprints.filter((f) => f.plane === k).map((f) => f.polygon);
+            return planeFunctions(roof).map((plane, k) => ({...plane, roof: r, windows: onPlane(k)}));
+        })
         .flat()
         .filter((plane) => overlap(plane.bounds, bounds));
     const sloped: {area: MultiPolygon; f: Linear}[] = [];
@@ -281,6 +285,10 @@ export function ceilingParts(room: Room, outline: MultiPolygon, roofs: FloorRoof
             const higher = polygonClipping.intersection([[ringOf(other.polygon)]], belowLine(g, other.f.k - plane.f.k));
             area = higher.length === 0 ? area : polygonClipping.difference(area, higher);
         }
+        // The plane's windows open the sloped ceiling under them.
+        if (area.length > 0 && plane.windows.length > 0) {
+            area = polygonClipping.difference(area, ...plane.windows.map((w): Polygon => [ringOf(w)]));
+        }
         if (area.length > 0) {
             sloped.push({area, f: plane.f});
         }
@@ -299,6 +307,14 @@ export function ceilingParts(room: Room, outline: MultiPolygon, roofs: FloorRoof
         ...parts(flat, () => flatHeight),
         ...sloped.flatMap(({area, f}) => parts(area, (p) => valueOf(f, p) - CeilingUnderRoof)),
     ];
+}
+
+/**
+ * The footprints in plan of a roof's windows (those it left behind are none), each with its plane: the hole at the
+ * soffit, which the ceiling lies just under.
+ */
+function windowFootprints(roof: FloorRoofs[number]): {plane: number; polygon: Vec2[]}[] {
+    return roofWindowLayouts(roof).map(({layout}) => ({plane: layout.plane, polygon: layout.soffit.map((c) => roofToPlan(roof, c.x, c.y))}));
 }
 
 /** A room's outline as a polygon-clipping shape, its `voids` (stair openings) cut out. */

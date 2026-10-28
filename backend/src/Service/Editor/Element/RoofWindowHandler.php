@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\RoofWindowDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Roof;
@@ -36,7 +37,7 @@ final readonly class RoofWindowHandler implements ElementHandler
 
 	private const int DefaultLength = 1180;
 
-	/** mm in plan from the plane's eaves edge to a new window's lower edge (`RoofWindowPlacement::Margin` and a little). */
+	/** mm in plan from the eaves line (the wall plate, not the overhang's edge) to a new window's lower edge. */
 	private const int EavesOffset = 400;
 
 	public function __construct(
@@ -64,8 +65,9 @@ final readonly class RoofWindowHandler implements ElementHandler
 	}
 
 	/**
-	 * A centre-pivot window 780 × 1180 mm (a common size) low on the roof's front plane, at the middle of its eaves
-	 * and `EavesOffset` up from them in plan: where a hip's triangle is widest, and at eye height in an attic.
+	 * A centre-pivot window 780 × 1180 mm (a common size) low on the roof's widest plane, at the middle of its eaves and
+	 * `EavesOffset` up from them in plan (at eye height in an attic): the front plane, or the right side of a hip deeper
+	 * than wide, whose front is a triangle too narrow on a small roof.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -73,17 +75,21 @@ final readonly class RoofWindowHandler implements ElementHandler
 	{
 		$roofId = $fields['roofId'] ?? null;
 		$roof = is_int($roofId) ? $this->roofRepository->findOnFloor($floor->id, $roofId) : null;
+		$along = 0;
 		$across = 0;
 		if ($roof !== null && $roof->shape->isPitched()) {
-			$geometry = RoofGeometry::fromRoof($roof);
-			$depthInPlan = self::DefaultLength * cos($roof->pitch * M_PI / 180);
-			$across = (int) round(-$geometry->halfExtent()[1] + self::EavesOffset + $depthInPlan / 2);
+			$offset = self::EavesOffset + self::DefaultLength * cos($roof->pitch * M_PI / 180) / 2;
+			if ($roof->shape === RoofShapeEnum::Hip && $roof->depth > $roof->width) {
+				$along = (int) round($roof->width / 2 - $offset);
+			} else {
+				$across = (int) round($offset - $roof->depth / 2);
+			}
 		}
 
 		return [
 			'name' => 'Roof window',
 			'type' => RoofWindowTypeEnum::CentrePivot->value,
-			'along' => 0,
+			'along' => $along,
 			'across' => $across,
 			'width' => self::DefaultWidth,
 			'length' => self::DefaultLength,
