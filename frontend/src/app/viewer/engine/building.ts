@@ -157,7 +157,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     }
 
     for (const roof of scene.roofs ?? []) {
-        addRoof(parts, roof, materials);
+        addRoof(parts, roof, materials, scene.roofs);
     }
 
     ceilings.add(parts.ceilingSteps);
@@ -165,9 +165,16 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     return parts;
 }
 
-/** Builds a roof and its outline into the building: the roof with the other roofs, the outline with the others. */
-export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLibrary): RoofParts {
-    const built: RoofParts = {roof: buildRoof(roof, materials, parts.sectionMaterial), outline: buildRoofOutline(roof), windows: new Map()};
+/**
+ * Builds a roof and its outline into the building: the roof with the other roofs, the outline with the others. `floorRoofs`
+ * are all of the floor's, where it meets them (`buildRoof()`).
+ */
+export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLibrary, floorRoofs: readonly Roof[] = []): RoofParts {
+    const built: RoofParts = {
+        roof: buildRoof(roof, materials, parts.sectionMaterial, floorRoofs),
+        outline: buildRoofOutline(roof),
+        windows: new Map(),
+    };
     built.roof.traverse((o) => {
         const id = o.userData['roofWindowId'];
         if (typeof id === 'number') {

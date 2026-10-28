@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Editor\Geometry;
 
+use FlatDesigner\Dto\RoofDto;
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Entity\Roof;
 use const M_PI;
@@ -39,6 +40,23 @@ final readonly class RoofGeometry
 		public int $vergeOverhang,
 		public int $thickness,
 	) {
+	}
+
+	public static function fromDto(RoofDto $roof): self
+	{
+		return new self(
+			RoofShapeEnum::from($roof->shape),
+			$roof->x,
+			$roof->y,
+			$roof->rotation,
+			$roof->width,
+			$roof->depth,
+			$roof->eaveHeight,
+			$roof->pitch,
+			$roof->overhang,
+			$roof->vergeOverhang,
+			$roof->thickness,
+		);
 	}
 
 	public static function fromRoof(Roof $roof): self

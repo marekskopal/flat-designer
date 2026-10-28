@@ -166,6 +166,17 @@ widest.
 - Room schedule: a room's clear height becomes a range (min–max) under a roof, its volume follows the slope, and the
   area with a clear height of at least 1.2 m is listed beside the net area (the share usually counted in attics).
 
+- As built: the junctions are twinned, `roofPlaneParts()` (drawing, `polygon-clipping`) and `RoofCover` (measures,
+  convex pieces cut by half-planes in PHP, which has no clipping library), with area cases in `roof-geometry.json`. They
+  cut exactly where planes cross; a 0.5 mm tolerance there left slivers that put a clear height 0.5 mm off, so only
+  parallel planes are tied. The caps stop where another roof is higher. The room measures under roofs became a twin as
+  well (`RoomUnderRoof` / `roomUnderRoofs()`, room cases in the fixture), because the PDF's room schedule is drawn in
+  the browser for share guests too. Measures use the roofs' underside, not the viewer's sloped ceiling 10 mm under it.
+  The roofs' quantities are their own section (`QuantitiesDto::$roofs`) with the window count; the covering and soffit
+  leave the windows out. The plan PDF shows a slab the cut passes through as a section (an attic's eaves) and one wholly
+  under the cut seen from above; `RoofBreaks` twins `roofBreaks()` so the wall faces under the roofs are summed exactly. Gable openings show in the elevations once the face's top follows the roof (a room whose
+  ceiling height reaches into the roof).
+
 ## Not included
 
 Dormers, mansard and gambrel roofs, hips on non-rectangular outlines, flat roofs on a polygon, a roof's fall drawn,

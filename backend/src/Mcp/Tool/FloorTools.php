@@ -66,7 +66,9 @@ final readonly class FloorTools
 		name: 'get_room_schedule',
 		description: 'Room schedule of a project, or of one floor with floorId: per room the net floor area (m², inside the '
 			. 'wall faces), perimeter (m), clear height (mm, null for open-air rooms) and volume (m³), with indoor and outdoor '
-			. '(terrace, garden) totals per floor and for the whole project.',
+			. '(terrace, garden) totals per floor and for the whole project. A room under a roof has minClearHeight (mm, at '
+			. 'the eaves; clearHeight is then the highest), a volume under the slope and headroomArea (m² with at least '
+			. '1.2 m of clear height); both are null for other rooms.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function getRoomSchedule(int $projectId, ?int $floorId = null): RoomScheduleDto

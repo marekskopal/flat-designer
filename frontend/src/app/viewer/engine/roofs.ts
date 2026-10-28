@@ -1,9 +1,10 @@
-import {Roof, RoofWindow} from '@app/models/scene';
+import {PlanPoint, Roof, RoofWindow} from '@app/models/scene';
+import {MultiPolygon, Pair} from 'polygon-clipping';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
-import {MM, Vec2} from './plan-geometry';
+import {MM, pointInPolygon, polygonSignedArea, Vec2} from './plan-geometry';
 import {
     LocalRoofPlane,
     RoofFrame,
@@ -16,6 +17,7 @@ import {
     RoofWindowLayout,
     roofWindowLayouts,
 } from './roof-geometry';
+import {FloorRoofs, roofPlaneParts, topStretches} from './under-roof';
 
 /** A soffit without a material: white-painted timber. */
 const SoffitColor = '#f1eee8';
@@ -52,9 +54,11 @@ const PickBand = 150;
  * (fascia and verges); pitched roofs get caps along the ridge and hips, a flat one its parapet. Its windows go through
  * the slab (`buildRoofWindow()`, holes square to the slope cut in the plane), each tagged `roofWindowId`; a window the
  * roof has left behind (`roofWindowLayouts()` leaves it out) is not drawn. Tagged `roofId`, merged, with a section-fill
- * twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`.
+ * twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`, each without where one of
+ * `others` (the floor's other roofs) is higher (`roofPlaneParts()`): roofs that meet form valleys, and the caps stop
+ * there too.
  */
-export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMaterial: THREE.Material): THREE.Group {
+export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMaterial: THREE.Material, others: FloorRoofs = []): THREE.Group {
     const group = new THREE.Group();
     group.name = `roof:${roof.name}`;
     group.userData = {roofId: roof.id};
@@ -67,25 +71,38 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
     const windows = roofWindowLayouts(roof);
     const planes = roofLocalPlanes(roof);
 
+    // The whole list, in its order: a roof alike an earlier one lies under it (`roofPlaneParts()`).
+    const met = others.filter((other) => other !== roof);
+    const clipped = met.length === 0 ? null : roofPlaneParts(roof, others);
+    const holes = new Map(windows.map(({window, layout}): [RoofWindow, SlabHole] => [window, {top: layout.corners, under: layout.soffit}]));
+    const placed = new Set<SlabHole>();
     planes.forEach((plane, index) => {
-        const holes = windows.filter(({layout}) => layout.plane === index).map(({layout}): SlabHole => ({top: layout.corners, under: layout.soffit}));
-        const slab = planeSlab(plane, thick, roofSlope(roof), holes);
-        const top = new THREE.Mesh(slab.top, covering);
-        const under = new THREE.Mesh(slab.under, soffit);
-        for (const mesh of [top, under]) {
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            group.add(mesh);
+        const onPlane = windows.filter(({layout}) => layout.plane === index).map(({window}) => holes.get(window)!);
+        for (const outline of slabParts(roof, plane, clipped?.[index] ?? null, onPlane)) {
+            outline.holes.forEach((hole) => placed.add(hole));
+            const slab = planeSlab(plane, thick, roofSlope(roof), outline);
+            const top = new THREE.Mesh(slab.top, covering);
+            const under = new THREE.Mesh(slab.under, soffit);
+            for (const mesh of [top, under]) {
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            }
+            group.add(new THREE.Mesh(slab.solid, sectionMaterial));
         }
-        group.add(new THREE.Mesh(slab.solid, sectionMaterial));
     });
+    // A window where another roof is higher has no slab to sit in and is left out, as its covering is.
     for (const {window, layout} of windows) {
-        group.add(buildRoofWindow(roof, window, layout, planes[layout.plane], thick, materials));
+        if (placed.has(holes.get(window)!)) {
+            group.add(buildRoofWindow(roof, window, layout, planes[layout.plane], thick, materials));
+        }
     }
     if (roof.shape !== 'Flat') {
         const cap = materials.darkened(covering, 0.8);
         for (const [from, to] of capLines(roof)) {
-            group.add(capAlong(from, to, cap));
+            for (const [a, b] of capStretches(roof, from, to, others)) {
+                group.add(capAlong(a, b, cap));
+            }
         }
     }
     if (roof.shape === 'Flat' && roof.parapet !== null) {
@@ -97,6 +114,46 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
     }
     mergeStatic(group);
     return group;
+}
+
+/** A plane's outline to build a slab of: counter-clockwise in the roof's frame, with the holes through it. */
+interface SlabOutline {
+    outer: Vec2[];
+    holes: SlabHole[];
+}
+
+/**
+ * The outlines of a plane's slab: the plane's own, or the parts `clipped` (in plan) leaves of it where other roofs meet
+ * it; the windows go into the part holding their centre (a junction's hole is upright, as the slab's edges are).
+ */
+function slabParts(roof: Roof, plane: LocalRoofPlane, clipped: MultiPolygon | null, windows: SlabHole[]): SlabOutline[] {
+    if (clipped === null) {
+        return [{outer: plane.polygon, holes: windows}];
+    }
+    const local = (ring: Pair[]): Vec2[] => {
+        const points = ring.slice(0, -1).map(([x, y]) => roofLocal(roof, x, y));
+        const signed = polygonSignedArea(points.map((p): PlanPoint => [p.x, p.y]));
+        return signed < 0 ? points.reverse() : points;
+    };
+    return clipped.map(([outer, ...junctions]) => {
+        const ring = local(outer);
+        const inside = windows.filter((hole) => pointInPolygon(centreOf(hole.top), ring.map((p): PlanPoint => [p.x, p.y])));
+        return {outer: ring, holes: [...junctions.map((j): SlabHole => ({top: local(j), under: local(j)})), ...inside]};
+    });
+}
+
+const centreOf = (points: readonly Vec2[]): Vec2 => ({
+    x: points.reduce((sum, p) => sum + p.x, 0) / points.length,
+    y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
+});
+
+/** The stretches of a cap (a ridge, a hip; points in the group's coordinates) where no other roof is higher. */
+function capStretches(roof: Roof, from: THREE.Vector3, to: THREE.Vector3, others: FloorRoofs): [THREE.Vector3, THREE.Vector3][] {
+    if (others.every((other) => other === roof)) {
+        return [[from, to]];
+    }
+    const plan = (v: THREE.Vector3): Vec2 => roofToPlan(roof, v.x / MM, -v.z / MM);
+    return topStretches(plan(from), plan(to), roof, others).map(([a, b]) => [from.clone().lerp(to, a), from.clone().lerp(to, b)]);
 }
 
 /** A box (mm) centred at (x, y, z) of its parent. */
@@ -204,11 +261,13 @@ interface PlaneSlab {
 }
 
 /**
- * One plane's slab: the outline lifted onto the underside and, `thick` higher, onto the top, with `holes` (its windows,
- * counter-clockwise in the roof's frame) cut through and lined. UVs run across the slope and up it in metres (along the
- * plane, so tiles keep their size on a steep roof); the edges' along the edge and up.
+ * One plane's slab over `outline` (the plane's, or a part of it): lifted onto the underside and, `thick` higher, onto the
+ * top, with its holes (windows and junctions, counter-clockwise in the roof's frame) cut through and lined. UVs run
+ * across the slope and up it in metres (along the plane, so tiles keep their size on a steep roof); the edges' along
+ * the edge and up.
  */
-function planeSlab(plane: LocalRoofPlane, thick: number, slope: number, holes: readonly SlabHole[] = []): PlaneSlab {
+function planeSlab(plane: LocalRoofPlane, thick: number, slope: number, outline: SlabOutline): PlaneSlab {
+    const {outer: polygon, holes} = outline;
     const underside = (p: Vec2): number => plane.base + plane.gs * p.x + plane.gt * p.y;
     // Up the slope and across it; a flat roof lays its covering along the frame.
     const length = Math.hypot(plane.gs, plane.gt);
@@ -216,7 +275,6 @@ function planeSlab(plane: LocalRoofPlane, thick: number, slope: number, holes: r
     const stretch = Math.sqrt(1 + slope * slope);
     const uv = (p: Vec2): [number, number] => [(p.x * up.y - p.y * up.x) * MM, (p.x * up.x + p.y * up.y) * stretch * MM];
 
-    const polygon = plane.polygon;
     // A hole's ring at the soffit lies further up the slope than at the top; the slab's own edges are upright.
     const tops = [...polygon, ...holes.flatMap((hole) => hole.top)];
     const unders = [...polygon, ...holes.flatMap((hole) => hole.under)];
@@ -227,10 +285,8 @@ function planeSlab(plane: LocalRoofPlane, thick: number, slope: number, holes: r
     const top = new FaceBuilder();
     const under = new FaceBuilder();
     const toVector = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x, p.y);
-    const triangles =
-        holes.length === 0
-            ? polygon.slice(1, -1).map((_, i): number[] => [0, i + 1, i + 2])
-            : THREE.ShapeUtils.triangulateShape(polygon.map(toVector), holes.map((hole) => hole.top.map(toVector)));
+    // A part a junction leaves of a plane need not be convex.
+    const triangles = THREE.ShapeUtils.triangulateShape(polygon.map(toVector), holes.map((hole) => hole.top.map(toVector)));
     for (const [i, j, k] of triangles) {
         top.triangle([upper[i], upper[j], upper[k]], [uvs[i], uvs[j], uvs[k]], 1);
         under.triangle([lower[i], lower[j], lower[k]], [uvs[i], uvs[j], uvs[k]], -1);

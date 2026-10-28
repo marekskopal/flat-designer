@@ -223,6 +223,40 @@ describe('planSheet', () => {
         expect(dashes(above.svg)).toBe(0);
     });
 
+    it('draws the roofs dashed above the cut: outline, ridge once, and the roof windows', () => {
+        const gable = {
+            id: 1,
+            name: 'Roof',
+            shape: 'Gable' as const,
+            x: 2000,
+            y: 1500,
+            rotation: 0,
+            width: 4600,
+            depth: 3600,
+            eaveHeight: 2600,
+            pitch: 45,
+            overhang: 400,
+            vergeOverhang: 200,
+            thickness: 250,
+            parapet: null,
+            coveringMaterialId: null,
+            soffitMaterialId: null,
+            windows: [{id: 3, name: 'W', type: 'CentrePivot' as const, along: 0, across: -1000, width: 780, length: 1180, frameMaterialId: null}],
+        };
+        const roofDashes = (svg: string): number => (svg.match(/stroke-dasharray="2 0.8"/g) ?? []).length;
+        // Two planes of four edges sharing the ridge, and the window.
+        const sheet = planSheet(scene({roofs: [gable]}), info);
+        expect(roofDashes(sheet.svg)).toBe(8);
+        expect(roofDashes(planSheet(scene({}), info).svg)).toBe(0);
+
+        // From 1 m at the eaves, the cut passes through each slab 946–1300 mm up: a section band (outlined, unlike a
+        // wall's fill) along each eaves, the overhang under it seen from above with solid edges, the rest dashed.
+        const low = planSheet(scene({roofs: [{...gable, eaveHeight: 1000, windows: []}]}), info).svg;
+        expect((low.match(/fill="#2f2c28" stroke="#2f2c28" stroke-width="0.1"/g) ?? []).length).toBe(2);
+        expect((low.match(/fill="none" stroke="#2f2c28" stroke-width="0.25"/g) ?? []).length).toBeGreaterThan(0);
+        expect(roofDashes(low)).toBeGreaterThan(0);
+    });
+
     it('cuts the wall at a window the cut passes through, but draws one above it dashed in a solid wall', () => {
         const window = opening(9, {type: 'Window', hinge: null, sillHeight: 900, height: 1200});
         const high = opening(9, {type: 'Window', hinge: null, sillHeight: 1600, height: 600});
@@ -377,6 +411,34 @@ describe('roomScheduleSheets', () => {
         expect(labels.filter((t) => /^1\.\d+$/.test(t))).toEqual(['1.2', '1.3', '1.10']);
         // The perimeter missing in an older version comes from the outline; volume is area × clear height.
         expect(labels).toEqual(expect.arrayContaining(['14.00', '52.0', '26.0', 'Indoor', '30.00', '78.0', 'Outdoor', '6.00']));
+    });
+
+    it('gives an attic its clear height range, its volume under the slope and its area with headroom', () => {
+        // A 45° gable from 1 m at the eaves over a 10 × 8 m room with a 2.5 m ceiling (the roof fixture's attic).
+        const polygon: PlanPoint[] = [[0, 0], [10000, 0], [10000, 8000], [0, 8000]];
+        const attic = room({id: 1, code: 'A1', name: 'Attic', area: 80, polygon, ceilingHeight: 2500});
+        const gable = {
+            id: 1,
+            name: 'Roof',
+            shape: 'Gable' as const,
+            x: 5000,
+            y: 4000,
+            rotation: 0,
+            width: 10000,
+            depth: 8000,
+            eaveHeight: 1000,
+            pitch: 45,
+            overhang: 0,
+            vergeOverhang: 0,
+            thickness: 250,
+            parapet: null,
+            coveringMaterialId: null,
+            soffitMaterialId: null,
+            windows: [],
+        };
+        const labels = texts(roomScheduleSheets(scene({rooms: [attic], roofs: [gable]}), info)[0].svg);
+        expect(labels).toEqual(expect.arrayContaining(['1.00–2.50', '177.5', '76.00', '≥ 1.2 m, m²']));
+        expect(texts(roomScheduleSheets(scene({rooms: [attic]}), info)[0].svg)).not.toContain('≥ 1.2 m, m²');
     });
 
     it('runs on to more pages and has none for a floor without rooms', () => {

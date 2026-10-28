@@ -420,6 +420,28 @@ format is the text in `FurnitureTools::Format`.
   sampled along the wall; `OpeningHead`), so a gable takes windows above the wall's height. Like a roof window's
   placement, it is checked only when the opening is placed anew or the wall reshaped, so a roof lowered since does
   not block renaming or undoing them.
+- Junctions (FD-83): a plane of a roof is the top only where no other roof of the floor is higher (its underside), so
+  roofs meeting form valleys. The parts are twinned: `roofPlaneParts()` (`under-roof.ts`, `polygon-clipping`; the other
+  plane is clipped by the half-plane first, `clipBelow()`, as huge half-plane polygons break the library) draws them,
+  `RoofCover` (`Service/Editor/Geometry`, convex pieces by `ConvexClip`, Sutherland–Hodgman) measures them; the
+  junction cases of `roof-geometry.json` keep their areas alike. They cut exactly where planes cross; only parallel
+  planes within 0.5 mm are tied, the earlier roof's winning. `buildRoof(…, others)` builds each part (earcut, as a part
+  may be concave) and stops the caps there (`topStretches()`); a roof window lying where another roof is higher has no
+  slab to sit in and is left out, in the quantities too; a roof change rebuilds the roofs it met before or meets now
+  (`roofsMeet()`). The plan PDF draws each part's edges once: dashed above the cut (outline with the overhangs, ridges,
+  hips, valleys), solid where a slab lies wholly under `PlanCutHeight` (seen from above) and the slab's section filled
+  and outlined where the cut passes through it (an attic's eaves); and the roof windows. Elevation faces follow the
+  ceiling under the roofs (`faceTop()` at the `roofBreaks()` of the ceiling height plus `CeilingUnderRoof`).
+- Rooms under roofs: `RoomUnderRoof` (PHP) and `roomUnderRoofs()` (TS), kept identical by the room cases of
+  `roof-geometry.json`, give a room's clear height range, its volume under the slope, its area with at least 1.2 m
+  of headroom and its ceiling's area along the slope, on the roofs' underside itself (not the viewer's 10 mm gap); null
+  for open-air, vaulted and roofless rooms. The room schedule (`minClearHeight`, `headroomArea`, the volume) and the
+  PDF room schedule use them. Quantities: `RoomSurfaces` counts that ceiling area and takes the bands and paint up to
+  the wall's top under the roofs (cut by them, or with `upToRoof` rising to them) and the ceiling (`RoomFaceUnderRoof`:
+  exact, summed between the openings' edges and `RoofBreaks`, the twin of `roofBreaks()`); `RoofSurfaces` gives each
+  roof's covering (its material, else
+  the viewer's default tiles or membrane) and soffit along the slope without its windows, in `QuantitiesDto::$roofs`
+  with the number of windows (surfaces `RoofCovering` and `Soffit`, priced like the others).
 
 ## Lighting
 
@@ -565,7 +587,7 @@ format is the text in `FurnitureTools::Format`.
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
   gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) are totalled separately. Only
-  PHP computes it, so there is no TS twin.
+  PHP computes it, except under roofs (`RoomUnderRoof`, twinned for the PDF's schedule; see Roofs).
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
   definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside

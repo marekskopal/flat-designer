@@ -1,7 +1,7 @@
 import {PlanPoint, RoofWindow, Room, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Pair, Polygon, Ring} from 'polygon-clipping';
 
-import {Bounds, polygonBounds, Vec2} from './plan-geometry';
+import {Bounds, polygonBounds, polygonSignedArea, Vec2} from './plan-geometry';
 import {roofHalfExtent, roofLocal, roofPlanes, RoofShapeFields, roofsUndersideAt, roofToPlan, roofWindowLayouts} from './roof-geometry';
 
 /**
@@ -228,7 +228,7 @@ export interface CeilingPart {
 const Far = 1e7;
 
 /** The half-plane `g · p < c`, as a large polygon (all of the plan or nothing when g is 0). */
-function belowLine(g: Vec2, c: number): MultiPolygon {
+export function belowLine(g: Vec2, c: number): MultiPolygon {
     const length = Math.hypot(g.x, g.y);
     if (length < 1e-12) {
         return c > 0 ? [[[[-Far, -Far], [Far, -Far], [Far, Far], [-Far, Far], [-Far, -Far]]]] : [];
@@ -277,14 +277,7 @@ export function ceilingParts(room: Room, outline: MultiPolygon, roofs: FloorRoof
             belowLine(plane.f.g, flatHeight + CeilingUnderRoof - plane.f.k),
         );
         // Where another roof's plane is higher, the space reaches that one.
-        for (const other of planes.filter((o) => o.roof !== plane.roof)) {
-            if (area.length === 0) {
-                break;
-            }
-            const g = {x: plane.f.g.x - other.f.g.x, y: plane.f.g.y - other.f.g.y};
-            const higher = polygonClipping.intersection([[ringOf(other.polygon)]], belowLine(g, other.f.k - plane.f.k));
-            area = higher.length === 0 ? area : polygonClipping.difference(area, higher);
-        }
+        area = withoutHigher(area, plane.f, planes.filter((o) => o.roof !== plane.roof));
         // The plane's windows open the sloped ceiling under them.
         if (area.length > 0 && plane.windows.length > 0) {
             area = polygonClipping.difference(area, ...plane.windows.map((w): Polygon => [ringOf(w)]));
@@ -315,6 +308,210 @@ export function ceilingParts(room: Room, outline: MultiPolygon, roofs: FloorRoof
  */
 function windowFootprints(roof: FloorRoofs[number]): {plane: number; polygon: Vec2[]}[] {
     return roofWindowLayouts(roof).map(({layout}) => ({plane: layout.plane, polygon: layout.soffit.map((c) => roofToPlan(roof, c.x, c.y))}));
+}
+
+/**
+ * `area` without where one of `others` (planes of other roofs) is higher than `f`: exactly where the planes cross, so
+ * the parts meet; parallel planes within `Same` are one, the `earlier` ones' (another roof before this one) the top.
+ */
+function withoutHigher(
+    area: MultiPolygon,
+    f: Linear,
+    others: readonly PlaneFunction[],
+    earlier: (other: PlaneFunction) => boolean = () => false,
+): MultiPolygon {
+    for (const other of others) {
+        if (area.length === 0) {
+            break;
+        }
+        // other − f > 0: (g_f − g_o) · p < k_o − k_f. The plane is convex, so is the part of it.
+        const g = {x: f.g.x - other.f.g.x, y: f.g.y - other.f.g.y};
+        const tie = Math.abs(g.x) + Math.abs(g.y) < 1e-9 ? (earlier(other) ? Same : -Same) : 0;
+        const higher = clipBelow(other.polygon, g, other.f.k - f.k + tie);
+        area = higher.length < 3 ? area : polygonClipping.difference(area, [[ringOf(higher)]]);
+    }
+    return area;
+}
+
+/** The part of a convex polygon where g · p < c, rounded to a micrometre for `polygon-clipping`. */
+function clipBelow(polygon: readonly Vec2[], g: Vec2, c: number): Vec2[] {
+    return clipRing(polygon, g, c).map(micro);
+}
+
+const micro = (p: Vec2): Vec2 => ({x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000});
+
+/**
+ * Roof junctions: the parts (in plan) of each of a roof's planes where it is the top, its underside the highest of
+ * `others` (the floor's roofs, in their order; a roof alike an earlier one is under it), so roofs meeting form valleys
+ * and a wing's ridge runs into the main roof. In the order of `roofPlanes()`; a plane another roof covers wholly has
+ * none. Twin of `RoofCover` (PHP), which measures them, kept alike by the junction cases of `roof-geometry.json`.
+ */
+export function roofPlaneParts(roof: RoofShapeFields, others: FloorRoofs): MultiPolygon[] {
+    const own = planeFunctions(roof);
+    const index = others.indexOf(roof);
+    const near = others.flatMap((other) => (other === roof ? [] : planeFunctions(other)));
+    const before = new Set(others.slice(0, Math.max(index, 0)).flatMap((other) => planeFunctions(other)));
+    return own.map((plane) =>
+        withoutHigher(
+            [[ringOf(plane.polygon.map(micro))]],
+            plane.f,
+            near.filter((o) => overlap(o.bounds, plane.bounds)),
+            (o) => before.has(o),
+        ),
+    );
+}
+
+/** Whether two roofs' outlines (with the overhangs) overlap, so a change of one may move the other's junctions. */
+export function roofsMeet(a: RoofShapeFields, b: RoofShapeFields): boolean {
+    return planeFunctions(a).some((p) => planeFunctions(b).some((q) => overlap(p.bounds, q.bounds)));
+}
+
+/**
+ * The stretches (0–1 along p → q) of a line on `roof` (a ridge, a hip) where it is the top, no other of `others` higher:
+ * between `roofBreaks()` the answer is the same, so its middle decides.
+ */
+export function topStretches(p: Vec2, q: Vec2, roof: RoofShapeFields, others: FloorRoofs): [number, number][] {
+    const rest = others.filter((other) => other !== roof);
+    if (rest.length === 0) {
+        return [[0, 1]];
+    }
+    const ts = roofBreaks(p, q, [roof, ...rest], []);
+    const stretches: [number, number][] = [];
+    for (let i = 1; i < ts.length; i++) {
+        const middle = lerp(p, q, (ts[i - 1] + ts[i]) / 2);
+        const own = roofsUndersideAt([roof], middle.x, middle.y);
+        const higher = roofsUndersideAt(rest, middle.x, middle.y);
+        if (own !== null && (higher === null || higher <= own + Same)) {
+            const last = stretches[stretches.length - 1];
+            if (last !== undefined && last[1] === ts[i - 1]) {
+                last[1] = ts[i];
+            } else {
+                stretches.push([ts[i - 1], ts[i]]);
+            }
+        }
+    }
+    return stretches;
+}
+
+/** mm: the clear height from which a room's floor area counts as usable under a roof (`RoomUnderRoof::Headroom`). */
+export const HeadroomHeight = 1200;
+
+/**
+ * A room under the roofs (FD-38): its clear height's range (mm, from its floor to the ceiling, which is its height or
+ * the roof's underside where that is lower, not less than 0), its volume (mm³, under that ceiling) and the area (mm²)
+ * where the clear height is at least `HeadroomHeight`, and the ceiling's area (mm², its sloped parts along the slope).
+ * Null for an open-air or vaulted room, or one no roof reaches. Measured on the roofs' underside itself, without
+ * `CeilingUnderRoof`. Twin of `RoomUnderRoof` (PHP), kept identical by the room cases of `roof-geometry.json`.
+ */
+export interface RoomUnderRoof {
+    minHeight: number;
+    maxHeight: number;
+    volume: number;
+    headroomArea: number;
+    ceilingArea: number;
+}
+
+type MeasuredRoom = Pick<Room, 'polygon' | 'ceilingHeight' | 'floorElevation' | 'vaultSpacing'>;
+
+export function roomUnderRoofs(room: MeasuredRoom, roofs: FloorRoofs): RoomUnderRoof | null {
+    const height = room.ceilingHeight;
+    if (height === null || room.vaultSpacing != null || !roofsReach(polygonBounds(room.polygon), roofs)) {
+        return null;
+    }
+    const floor = room.floorElevation ?? 0;
+    const outline: MultiPolygon = [[ringOf(room.polygon.map(([x, y]) => ({x, y})))]];
+    let covered = 0;
+    let volume = 0;
+    let headroom = 0;
+    let ceiling = 0;
+    let lowest = Infinity;
+    let highest = -Infinity;
+    for (const {f, parts} of coverParts(roofs)) {
+        // The clear height over the part is f − floor, between 0 and the room's height.
+        for (const ring of polygonClipping.intersection(outline, parts).flat(1)) {
+            const points = ring.slice(0, -1).map(([x, y]): Vec2 => ({x, y}));
+            const [area] = moments(points);
+            covered += area;
+            const below = clipRing(clipRing(points, f.g, height + floor - f.k), {x: -f.g.x, y: -f.g.y}, f.k - floor);
+            const [la, lx, ly] = moments(below);
+            const [ha] = moments(clipRing(points, {x: -f.g.x, y: -f.g.y}, f.k - floor - height));
+            volume += (f.k - floor) * la + f.g.x * lx + f.g.y * ly + height * ha;
+            // The ceiling: flat over `ha`, along the slope over `la`; none where the roof comes down to the floor.
+            ceiling += ha + la * Math.hypot(1, f.g.x, f.g.y);
+            if (height >= HeadroomHeight) {
+                headroom += moments(clipRing(points, {x: -f.g.x, y: -f.g.y}, f.k - floor - HeadroomHeight))[0];
+            }
+            for (const p of points) {
+                const clear = Math.min(Math.max(valueOf(f, p) - floor, 0), height);
+                lowest = Math.min(lowest, clear);
+                highest = Math.max(highest, clear);
+            }
+        }
+    }
+    if (covered < NoArea) {
+        return null;
+    }
+    const open = Math.abs(polygonSignedArea(room.polygon)) - covered;
+    if (open > NoArea) {
+        volume += height * open;
+        ceiling += open;
+        headroom += height >= HeadroomHeight ? open : 0;
+        lowest = Math.min(lowest, height);
+        highest = height;
+    }
+    return {minHeight: lowest, maxHeight: highest, volume, headroomArea: headroom, ceilingArea: ceiling};
+}
+
+/** mm²: an area this small is none. */
+const NoArea = 1;
+
+/** The parts of a floor's roofs where each plane is the top (`roofPlaneParts()`), with its underside; once per roofs array. */
+const coverCache = new WeakMap<FloorRoofs, {f: Linear; parts: MultiPolygon}[]>();
+
+function coverParts(roofs: FloorRoofs): {f: Linear; parts: MultiPolygon}[] {
+    let parts = coverCache.get(roofs);
+    if (parts === undefined) {
+        parts = roofs.flatMap((roof) => {
+            const planes = planeFunctions(roof);
+            return roofPlaneParts(roof, roofs).map((part, k) => ({f: planes[k].f, parts: part}));
+        });
+        coverCache.set(roofs, parts);
+    }
+    return parts;
+}
+
+/** The part of a ring (any shape; its signed measures stay right) where g · p < c (Sutherland–Hodgman). */
+export function clipRing(ring: readonly Vec2[], g: Vec2, c: number): Vec2[] {
+    const out: Vec2[] = [];
+    const side = (p: Vec2): number => c - g.x * p.x - g.y * p.y;
+    for (let i = 0; i < ring.length; i++) {
+        const a = ring[i];
+        const b = ring[(i + 1) % ring.length];
+        const sa = side(a);
+        const sb = side(b);
+        if (sa > 0) {
+            out.push(a);
+        }
+        if ((sa > 0) !== (sb > 0)) {
+            out.push(lerp(a, b, sa / (sa - sb)));
+        }
+    }
+    return out;
+}
+
+/** Signed area (mm², + counter-clockwise) and first moments (∫x, ∫y) of a ring. */
+function moments(ring: readonly Vec2[]): [number, number, number] {
+    let area = 0;
+    let mx = 0;
+    let my = 0;
+    ring.forEach((p, i) => {
+        const q = ring[(i + 1) % ring.length];
+        const cross = p.x * q.y - q.x * p.y;
+        area += cross;
+        mx += (p.x + q.x) * cross;
+        my += (p.y + q.y) * cross;
+    });
+    return [area / 2, mx / 6, my / 6];
 }
 
 /** A room's outline as a polygon-clipping shape, its `voids` (stair openings) cut out. */

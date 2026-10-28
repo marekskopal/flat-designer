@@ -56,4 +56,28 @@ final class Spans
 
 		return $pieces;
 	}
+
+	/**
+	 * Ranges from 0 up to `top` that none of `bands` covers (the heights of a wall face no finish band covers).
+	 *
+	 * @param list<array{float, float}> $bands
+	 * @return list<array{float, float}>
+	 */
+	public static function uncovered(float $top, array $bands): array
+	{
+		usort($bands, static fn (array $x, array $y): int => $x[0] <=> $y[0]);
+		$ranges = [];
+		$from = 0.0;
+		foreach ($bands as [$bottom, $bandTop]) {
+			if ($bottom > $from) {
+				$ranges[] = [$from, $bottom];
+			}
+			$from = max($from, $bandTop);
+		}
+		if ($top > $from) {
+			$ranges[] = [$from, $top];
+		}
+
+		return $ranges;
+	}
 }

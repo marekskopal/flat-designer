@@ -4,7 +4,7 @@ import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {Project} from '@app/models/project';
-import {MaterialPrice, MaterialPrices, Quantities, QuantityLine, QuantityMaterial, SurfaceLabels} from '@app/models/quantities';
+import {MaterialPrice, MaterialPrices, Quantities, QuantityLine, QuantityMaterial, QuantityRoof, SurfaceLabels} from '@app/models/quantities';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
@@ -113,6 +113,13 @@ export class QuantitiesComponent {
 
     protected surfaces(row: QuantityMaterial): string {
         return row.surfaces.map((surface) => this.labels[surface]).join(', ');
+    }
+
+    /** After a roof's name: its floor (with all floors of several shown) and its roof windows. */
+    protected roofNote(roof: QuantityRoof): string {
+        const floor = this.floorId() === null && (this.project()?.floors?.length ?? 0) > 1 ? ` · ${roof.floorName}` : '';
+        const windows = roof.windows > 0 ? ` · ${roof.windows} ${roof.windows === 1 ? 'roof window' : 'roof windows'}` : '';
+        return floor + windows;
     }
 
     protected lineQuantity(line: QuantityLine): string {

@@ -98,6 +98,33 @@ describe('roomFaces', () => {
         expect(roomFaces(room, box().filter((w) => w.id !== 2)).map((f) => f.letter)).toEqual(['A', 'B', 'C']);
     });
 
+    it('follows the ceiling where a roof brings it lower', () => {
+        // A shed rising north at 45° from 1500 mm over the south wall's inner face: the ceiling (2600) slopes there.
+        const shed = {
+            id: 1,
+            shape: 'Shed' as const,
+            x: 2000,
+            y: 1500,
+            rotation: 0,
+            width: 4600,
+            depth: 3000,
+            eaveHeight: 1500,
+            pitch: 45,
+            overhang: 0,
+            vergeOverhang: 0,
+            thickness: 250,
+        };
+        const [south, east] = roomFaces(room, box(), [shed]);
+        // Along the south face the roof is level: 1500 less the 10 mm the ceiling keeps under it.
+        expect(south.top.every((p) => Math.abs(p.y - 1490) < 1e-6)).toBe(true);
+        // The east face runs north (seen from inside, x from its end at the north): the ceiling rises to 2600 by y 1110.
+        expect(east.height).toBe(2600);
+        expect(east.top[east.top.length - 1].y).toBeCloseTo(1490, 6);
+        const knee = east.top.find((p) => Math.abs(p.x - (3000 - 1110)) < 1e-6);
+        expect(knee?.y).toBeCloseTo(2600, 6);
+        expect(roomFaces(room, box(), [{...shed, x: 50000}])[1].top).toHaveLength(2);
+    });
+
     it('letters on past Z', () => {
         expect([0, 25, 26, 27, 52].map(faceLetter)).toEqual(['A', 'Z', 'AA', 'AB', 'BA']);
     });

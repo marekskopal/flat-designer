@@ -3,7 +3,7 @@ import {resolve} from 'node:path';
 
 import {describe, expect, it} from 'vitest';
 
-import {Vec2} from './plan-geometry';
+import {polygonSignedArea, Vec2} from './plan-geometry';
 import {
     roofPlaneAt,
     roofPlanes,
@@ -16,6 +16,7 @@ import {
     roofWindowFits,
     RoofWindowPlace,
 } from './roof-geometry';
+import {roofPlaneParts, roomUnderRoofs} from './under-roof';
 
 interface Probe {
     x: number;
@@ -37,6 +38,13 @@ const fixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests
         name: string;
         roof: RoofShapeFields;
         expected: {ridgeHeight: number; planes: {polygon: Vec2[]; gradient: Vec2; height: number}[]; probes: Probe[]; windows?: Window[]};
+    }[];
+    junctions: {name: string; roofs: RoofShapeFields[]; areas: number[][]}[];
+    rooms: {
+        name: string;
+        roofs: RoofShapeFields[];
+        room: {polygon: [number, number][]; ceilingHeight: number; floorElevation: number};
+        expected: {minHeight: number; maxHeight: number; volume: number; headroomArea: number; ceilingArea: number};
     }[];
 };
 
@@ -83,6 +91,35 @@ describe('roof geometry (shared fixture)', () => {
             });
             expect(roofWindowFits(roof, window)).toBe(window.fits);
         }
+    });
+});
+
+describe('roof junctions (shared fixture)', () => {
+    it.each(fixture.junctions)('$name', ({roofs, areas}) => {
+        roofs.forEach((roof, r) => {
+            const parts = roofPlaneParts(roof, roofs);
+            areas[r].forEach((area, k) => {
+                const mm2 = parts[k].reduce(
+                    (sum, polygon) => sum + polygon.reduce((ring, points) => ring + polygonSignedArea(points.slice(0, -1) as [number, number][]), 0),
+                    0,
+                );
+                expectClose(mm2 / 1e6, area, 1e-3);
+            });
+        });
+    });
+});
+
+describe('rooms under roofs (shared fixture)', () => {
+    it.each(fixture.rooms)('$name', ({roofs, room, expected}) => {
+        const measured = roomUnderRoofs({...room, vaultSpacing: null}, roofs)!;
+        expectClose(measured.minHeight, expected.minHeight);
+        expectClose(measured.maxHeight, expected.maxHeight);
+        expectClose(measured.volume / 1e9, expected.volume, 1e-3);
+        expectClose(measured.headroomArea / 1e6, expected.headroomArea, 1e-3);
+        expectClose(measured.ceilingArea / 1e6, expected.ceilingArea, 1e-3);
+        expect(roomUnderRoofs({...room, vaultSpacing: 1000}, roofs)).toBeNull();
+        expect(roomUnderRoofs({...room, ceilingHeight: null, vaultSpacing: null}, roofs)).toBeNull();
+        expect(roomUnderRoofs({...room, vaultSpacing: null}, [])).toBeNull();
     });
 });
 

@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Service\Editor\Geometry;
 
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
+use FlatDesigner\Service\Editor\Geometry\ConvexClip;
+use FlatDesigner\Service\Editor\Geometry\RoofCover;
 use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 use FlatDesigner\Service\Editor\Geometry\RoofWindowGeometry;
+use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
+use FlatDesigner\Service\Editor\Geometry\RoomUnderRoofSum;
 use FlatDesigner\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -18,9 +22,16 @@ use PHPUnit\Framework\TestCase;
  * @phpstan-type Probe array{x: int, y: int, underside: float|int|null, top: float|int|null, plane: int|null}
  * @phpstan-type Plane array{polygon: list<array{x: float|int, y: float|int}>, gradient: array{x: float|int, y: float|int}, height: float|int}
  * @phpstan-type Window array{along: int, across: int, width: int, length: int, plane: int|null, corners?: list<array{x: float|int, y: float|int}>, fits: bool}
+ * @phpstan-type RoofFields array{shape: string, x: int, y: int, rotation: int, width: int, depth: int, eaveHeight: int, pitch: int, overhang: int, vergeOverhang: int, thickness: int}
+ * @phpstan-type RoomFields array{polygon: list<array{int, int}>, ceilingHeight: int, floorElevation: int}
+ * @phpstan-type RoomExpected array{minHeight: float|int, maxHeight: float|int, volume: float|int, headroomArea: float|int, ceilingArea: float|int}
  * @phpstan-type Expected array{ridgeHeight: float|int, planes: list<Plane>, probes: list<Probe>, windows?: list<Window>}
  */
 #[CoversClass(RoofGeometry::class)]
+#[CoversClass(RoofCover::class)]
+#[CoversClass(ConvexClip::class)]
+#[CoversClass(RoomUnderRoof::class)]
+#[CoversClass(RoomUnderRoofSum::class)]
 #[CoversClass(RoofWindowGeometry::class)]
 final class RoofGeometryTest extends TestCase
 {
@@ -32,27 +43,87 @@ final class RoofGeometryTest extends TestCase
 	public static function cases(): iterable
 	{
 		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
-		/** @var list<array{name: string, roof: array{shape: string, x: int, y: int, rotation: int, width: int, depth: int, eaveHeight: int, pitch: int, overhang: int, vergeOverhang: int, thickness: int}, expected: Expected}> $cases */
+		/** @var list<array{name: string, roof: RoofFields, expected: Expected}> $cases */
 		$cases = $fixture['cases'];
 		foreach ($cases as $case) {
-			$roof = $case['roof'];
+			yield $case['name'] => [self::roof($case['roof']), $case['expected']];
+		}
+	}
 
-			yield $case['name'] => [
-				new RoofGeometry(
-					RoofShapeEnum::from($roof['shape']),
-					$roof['x'],
-					$roof['y'],
-					$roof['rotation'],
-					$roof['width'],
-					$roof['depth'],
-					$roof['eaveHeight'],
-					$roof['pitch'],
-					$roof['overhang'],
-					$roof['vergeOverhang'],
-					$roof['thickness'],
-				),
-				$case['expected'],
-			];
+	/** @return iterable<string, array{list<RoofGeometry>, list<list<float|int>>}> */
+	public static function junctions(): iterable
+	{
+		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
+		/** @var list<array{name: string, roofs: list<RoofFields>, areas: list<list<float|int>>}> $cases */
+		$cases = $fixture['junctions'];
+		foreach ($cases as $case) {
+			yield $case['name'] => [array_map(self::roof(...), $case['roofs']), $case['areas']];
+		}
+	}
+
+	/** @return iterable<string, array{list<RoofGeometry>, RoomFields, RoomExpected}> */
+	public static function rooms(): iterable
+	{
+		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
+		/** @var list<array{name: string, roofs: list<RoofFields>, room: RoomFields, expected: RoomExpected}> $cases */
+		$cases = $fixture['rooms'];
+		foreach ($cases as $case) {
+			yield $case['name'] => [array_map(self::roof(...), $case['roofs']), $case['room'], $case['expected']];
+		}
+	}
+
+	/**
+	 * @param list<RoofGeometry> $roofs
+	 * @param RoomFields $room
+	 * @param RoomExpected $expected
+	 */
+	#[DataProvider('rooms')]
+	public function testRoomsUnderRoofs(array $roofs, array $room, array $expected): void
+	{
+		$polygon = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room['polygon']);
+		$measured = RoomUnderRoof::measure($polygon, $room['ceilingHeight'], $room['floorElevation'], false, new RoofCover($roofs));
+		self::assertNotNull($measured);
+		self::assertEqualsWithDelta($expected['minHeight'], $measured->minHeight, 0.01);
+		self::assertEqualsWithDelta($expected['maxHeight'], $measured->maxHeight, 0.01);
+		self::assertEqualsWithDelta($expected['volume'], $measured->volume / 1e9, 1e-3);
+		self::assertEqualsWithDelta($expected['headroomArea'], $measured->headroomArea / 1e6, 1e-3);
+		self::assertEqualsWithDelta($expected['ceilingArea'], $measured->ceilingArea / 1e6, 1e-3);
+		// Vaulted, open-air and roofless rooms are not measured so.
+		self::assertNull(RoomUnderRoof::measure($polygon, $room['ceilingHeight'], $room['floorElevation'], true, new RoofCover($roofs)));
+		self::assertNull(RoomUnderRoof::measure($polygon, null, 0, false, new RoofCover($roofs)));
+		self::assertNull(RoomUnderRoof::measure($polygon, $room['ceilingHeight'], 0, false, new RoofCover([])));
+	}
+
+	/** @param RoofFields $roof */
+	private static function roof(array $roof): RoofGeometry
+	{
+		return new RoofGeometry(
+			RoofShapeEnum::from($roof['shape']),
+			$roof['x'],
+			$roof['y'],
+			$roof['rotation'],
+			$roof['width'],
+			$roof['depth'],
+			$roof['eaveHeight'],
+			$roof['pitch'],
+			$roof['overhang'],
+			$roof['vergeOverhang'],
+			$roof['thickness'],
+		);
+	}
+
+	/**
+	 * @param list<RoofGeometry> $roofs
+	 * @param list<list<float|int>> $areas
+	 */
+	#[DataProvider('junctions')]
+	public function testJunctions(array $roofs, array $areas): void
+	{
+		$cover = new RoofCover($roofs);
+		foreach ($areas as $r => $planes) {
+			foreach ($planes as $k => $area) {
+				self::assertEqualsWithDelta($area, $cover->planeArea($r, $k) / 1e6, 1e-3, sprintf('roof %d, plane %d', $r, $k));
+			}
 		}
 	}
 

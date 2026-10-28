@@ -7,18 +7,23 @@ namespace FlatDesigner\Service\Quantities;
 use FlatDesigner\Dto\QuantitiesDto;
 use FlatDesigner\Dto\QuantityLineDto;
 use FlatDesigner\Dto\QuantityMaterialDto;
+use FlatDesigner\Dto\QuantityRoofDto;
 use FlatDesigner\Dto\QuantityRoomDto;
+use FlatDesigner\Dto\RoofDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Service\Editor\Geometry\RoofCover;
+use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 use FlatDesigner\Service\Furniture\CutList\CutListService;
 use FlatDesigner\Service\Provider\SceneProvider;
 
 /**
- * Quantities and cost estimate of a project or a floor (working copy): the rooms' surfaces (`RoomSurfaces`), the boards
+ * Quantities and cost estimate of a project or a floor (working copy): the rooms' surfaces (`RoomSurfaces`, under the
+ * floor's roofs), the roofs' covering and soffit (`RoofSurfaces`), the boards
  * of the Custom furniture (`CutListService`), and their cost from the project's prices (`MaterialPriceService`,
  * `Costing`). Room costs count whole pieces per room, the material totals whole pieces for all rooms together.
  */
@@ -55,16 +60,21 @@ final readonly class QuantitiesService
 		$cutList = $this->cutListService->forScenes($scenes);
 
 		$rooms = [];
+		$roofs = [];
 		foreach ($scenes as [$floor, $scene]) {
+			$cover = new RoofCover(array_map(static fn (RoofDto $roof): RoofGeometry => RoofGeometry::fromDto($roof), $scene->roofs));
 			$floorRooms = array_map(
-				fn (RoomDto $room): QuantityRoomDto => $this->room($costing, $floor, $room, $scene->walls),
+				fn (RoomDto $room): QuantityRoomDto => $this->room($costing, $floor, $room, $scene->walls, $cover),
 				$scene->rooms,
 			);
 			usort($floorRooms, static fn (QuantityRoomDto $x, QuantityRoomDto $y): int => strnatcmp($x->code, $y->code));
 			array_push($rooms, ...$floorRooms);
+			foreach (RoofSurfaces::of($scene->roofs, $materials, $cover) as $roof) {
+				$roofs[] = self::roof($costing, $floor, $roof);
+			}
 		}
 
-		$materialTotals = self::totals($costing, $rooms);
+		$materialTotals = self::totals($costing, [...$rooms, ...$roofs]);
 		$furniture = array_map($costing->boards(...), $cutList->materials);
 		$all = [...$materialTotals, ...$furniture];
 
@@ -76,18 +86,14 @@ final readonly class QuantitiesService
 			furniture: $furniture,
 			total: round(array_sum(array_map(static fn (QuantityMaterialDto $m): float => $m->cost ?? 0.0, $all)), 2),
 			complete: array_all($all, static fn (QuantityMaterialDto $m): bool => $m->cost !== null),
+			roofs: $roofs,
 		);
 	}
 
 	/** @param list<WallDto> $walls */
-	private function room(Costing $costing, Floor $floor, RoomDto $room, array $walls): QuantityRoomDto
+	private function room(Costing $costing, Floor $floor, RoomDto $room, array $walls, RoofCover $roofs): QuantityRoomDto
 	{
-		$lines = array_map($costing->line(...), RoomSurfaces::of($room, $walls));
-		usort($lines, static function (QuantityLineDto $x, QuantityLineDto $y): int {
-			$bySurface = self::surfaceOrder($x->surface) <=> self::surfaceOrder($y->surface);
-
-			return $bySurface !== 0 ? $bySurface : strcmp($x->material, $y->material);
-		});
+		$lines = self::sorted(array_map($costing->line(...), RoomSurfaces::of($room, $walls, $roofs)));
 
 		return new QuantityRoomDto(
 			id: $room->id,
@@ -101,10 +107,48 @@ final readonly class QuantitiesService
 		);
 	}
 
+	/** @param array{roof: RoofDto, windows: int, surfaces: list<array{surface: QuantitySurfaceEnum, materialId: int|null, amount: float}>} $roof */
+	private static function roof(Costing $costing, Floor $floor, array $roof): QuantityRoofDto
+	{
+		$lines = self::sorted(array_map($costing->line(...), array_values(array_filter(
+			$roof['surfaces'],
+			static fn (array $surface): bool => $surface['amount'] > 0,
+		))));
+
+		return new QuantityRoofDto(
+			id: $roof['roof']->id,
+			name: $roof['roof']->name,
+			floorId: $floor->id,
+			floorName: $floor->name,
+			lines: $lines,
+			windows: $roof['windows'],
+			cost: round(array_sum(array_map(static fn (QuantityLineDto $line): float => $line->cost ?? 0.0, $lines)), 2),
+			complete: array_all($lines, static fn (QuantityLineDto $line): bool => $line->cost !== null),
+		);
+	}
+
 	/**
-	 * One total per material over all rooms; without a material, one per surface (each has its own default look).
+	 * By surface, then material.
 	 *
-	 * @param list<QuantityRoomDto> $rooms
+	 * @param list<QuantityLineDto> $lines
+	 * @return list<QuantityLineDto>
+	 */
+	private static function sorted(array $lines): array
+	{
+		usort($lines, static function (QuantityLineDto $x, QuantityLineDto $y): int {
+			$bySurface = self::surfaceOrder($x->surface) <=> self::surfaceOrder($y->surface);
+
+			return $bySurface !== 0 ? $bySurface : strcmp($x->material, $y->material);
+		});
+
+		return $lines;
+	}
+
+	/**
+	 * One total per material over all rooms and roofs; without a material, one per surface (each has its own default
+	 * look).
+	 *
+	 * @param list<QuantityRoomDto|QuantityRoofDto> $rooms
 	 * @return list<QuantityMaterialDto> by name
 	 */
 	private static function totals(Costing $costing, array $rooms): array

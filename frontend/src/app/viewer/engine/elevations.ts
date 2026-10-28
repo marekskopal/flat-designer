@@ -20,6 +20,7 @@ import {
     itemFootprint,
     pointInPolygon,
     pointOnWall,
+    polygonBounds,
     tangentAt,
     tileOrigin,
     Vec2,
@@ -52,6 +53,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
+import {CeilingUnderRoof, FloorRoofs, roofBreaks, roofsReach} from './under-roof';
 import {hiddenItemIds} from './variants';
 
 // Wall elevations for tiling and joinery: per room, every wall face along its outline seen from inside the room, on
@@ -126,12 +128,17 @@ export function faceLetter(index: number): string {
 
 /**
  * The faces of a room to draw: its outline's edges (counter-clockwise) with a wall along them, lettered A, B, … The
- * edges along one curved wall face are one face, unrolled.
+ * edges along one curved wall face are one face, unrolled. Under the floor's `roofs` a face's top follows the ceiling
+ * where it slopes with them.
  */
-export function roomFaces(room: Room, walls: readonly Wall[]): ElevationFace[] {
+export function roomFaces(room: Room, walls: readonly Wall[], roofs: FloorRoofs = []): ElevationFace[] {
     const faces: ElevationFace[] = [];
+    const reaching = roofsReach(polygonBounds(room.polygon), roofs) ? roofs : [];
     for (const run of edgeRuns(room.polygon, walls)) {
-        const face = run.curve !== null && run.edges.length > 1 ? curvedFace(room, walls, run, run.curve) : straightFace(room, walls, run.edges[0]);
+        const face =
+            run.curve !== null && run.edges.length > 1
+                ? curvedFace(room, walls, run, run.curve, reaching)
+                : straightFace(room, walls, run.edges[0], reaching);
         if (face !== null) {
             faces.push({...face, letter: faceLetter(faces.length)});
         }
@@ -139,14 +146,14 @@ export function roomFaces(room: Room, walls: readonly Wall[]): ElevationFace[] {
     return faces;
 }
 
-function straightFace(room: Room, walls: readonly Wall[], {a, b, length}: RoomEdge): ElevationFace | null {
+function straightFace(room: Room, walls: readonly Wall[], {a, b, length}: RoomEdge, roofs: FloorRoofs): ElevationFace | null {
     const spans = length < MinFace ? [] : wallSpansAlongEdge(a, b, walls);
     if (spans.length === 0) {
         return null;
     }
     const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
     const edgeFaces = wallFacesAlongEdge(a, b, walls);
-    const top = faceTop(room, (t) => ({x: a.x + dir.x * t, y: a.y + dir.y * t}), length, edgeFaces.map((f) => f.wall));
+    const top = faceTop(room, (t) => ({x: a.x + dir.x * t, y: a.y + dir.y * t}), length, edgeFaces.map((f) => f.wall), roofs, true);
     return {
         letter: '',
         a,
@@ -172,6 +179,7 @@ function curvedFace(
     walls: readonly Wall[],
     {edges: run, offsets, length}: EdgeRun,
     curve: NonNullable<EdgeRun['curve']>,
+    roofs: FloorRoofs,
 ): ElevationFace | null {
     const frame = wallFrame(curve.wall);
     const shifted = <T extends {from: number; to: number}>(lists: T[][]): T[] =>
@@ -213,7 +221,7 @@ function curvedFace(
 
     const chord = Math.hypot(b.x - a.x, b.y - a.y);
     const dir = {x: (b.x - a.x) / chord, y: (b.y - a.y) / chord};
-    const top = faceTop(room, (t) => pointOnWall(frame, from + ((to - from) * t) / length, across), length, [curve.wall]);
+    const top = faceTop(room, (t) => pointOnWall(frame, from + ((to - from) * t) / length, across), length, [curve.wall], roofs, false);
     return {
         letter: '',
         a,
@@ -233,27 +241,35 @@ function curvedFace(
 
 /**
  * The ceiling along a face: flat at the room's height, the vaults and beams sampled along it, or for an open-air room
- * the tallest of the walls on the edge.
+ * the tallest of the walls on the edge. Under `roofs` a flat ceiling slopes where they come lower (`ceilingHeightAt()`):
+ * a `straight` face takes its points where the roofs' heights bend (`roofBreaks()`), a curved one samples them.
  */
-function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along: readonly Wall[]): Vec2[] {
+function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along: readonly Wall[], roofs: FloorRoofs, straight: boolean): Vec2[] {
     if (room.ceilingHeight === null) {
         const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
         return [{x: 0, y: height}, {x: length, y: height}];
     }
-    if (vaultProfile(room) === null) {
+    const vaulted = vaultProfile(room) !== null;
+    if (!vaulted && roofs.length === 0) {
         return [{x: 0, y: room.ceilingHeight}, {x: length, y: room.ceilingHeight}];
     }
-    const steps = Math.max(2, Math.ceil(length / 20));
-    return Array.from({length: steps + 1}, (_, i) => {
-        const x = (length * i) / steps;
+    // x runs from the face's end (b, t = length) to its start.
+    const at = (x: number): Vec2 => {
         const point = pointAt(length - x);
-        return {x, y: ceilingHeightAt(room, point.x, point.y) ?? room.ceilingHeight ?? 0};
-    });
+        return {x, y: ceilingHeightAt(room, point.x, point.y, roofs) ?? room.ceilingHeight ?? 0};
+    };
+    if (!vaulted && straight) {
+        // The ceiling bends where the roof's underside is `CeilingUnderRoof` over its height.
+        const level = room.ceilingHeight + (room.floorElevation ?? 0) + CeilingUnderRoof;
+        return roofBreaks(pointAt(length), pointAt(0), roofs, [level]).map((u) => at(u * length));
+    }
+    const steps = Math.max(2, Math.ceil(length / 20));
+    return Array.from({length: steps + 1}, (_, i) => at((length * i) / steps));
 }
 
 /** The room's wall elevations on A4 landscape pages (none for a room without walls). */
 export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo): Sheet[] {
-    const faces = roomFaces(room, scene.walls);
+    const faces = roomFaces(room, scene.walls, scene.roofs ?? []);
     if (faces.length === 0) {
         return [];
     }

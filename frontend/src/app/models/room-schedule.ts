@@ -10,12 +10,16 @@ export interface RoomScheduleRow {
     area: number;
     /** m */
     perimeter: number;
-    /** mm; null for an open-air room. */
+    /** mm; null for an open-air room. Under a roof the highest. */
     clearHeight: number | null;
-    /** m³; null without a ceiling. */
+    /** m³; null without a ceiling. Under a roof it follows the slope. */
     volume: number | null;
     /** Terrace or garden: summed apart from the indoor area. */
     outdoor: boolean;
+    /** mm, the lowest clear height under a roof (at the eaves); null for a room no roof reaches. */
+    minClearHeight: number | null;
+    /** m², the floor area with at least 1.2 m of clear height under a roof; null for a room no roof reaches. */
+    headroomArea: number | null;
 }
 
 export interface ScheduleTotal {

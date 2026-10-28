@@ -1,12 +1,14 @@
-import {Roof, RoofWindow} from '@app/models/scene';
+import {PlanPoint, Roof, RoofWindow} from '@app/models/scene';
+import {MultiPolygon} from 'polygon-clipping';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {MaterialLibrary} from './materials';
-import {MM} from './plan-geometry';
+import {MM, pointInPolygon} from './plan-geometry';
 import {roofWindowLayout} from './roof-geometry';
 import {buildRoof, buildRoofOutline, resizeRoofByCorner, roofCorners} from './roofs';
 import {selectionOf} from './selection';
+import {roofPlaneParts, topStretches} from './under-roof';
 
 const gable: Roof = {
     id: 4,
@@ -153,17 +155,18 @@ describe('roofWindowLayout', () => {
     });
 });
 
+/** What a ray straight down at a plan point (mm) hits of an object, without the section-fill twins. */
+function down(object: THREE.Object3D, x: number, y: number): THREE.Intersection[] {
+    const scene = new THREE.Scene();
+    scene.add(object);
+    scene.updateMatrixWorld(true);
+    return new THREE.Raycaster(new THREE.Vector3(x * MM, 20, -y * MM), new THREE.Vector3(0, -1, 0))
+        .intersectObject(scene, true)
+        .filter((hit) => hit.object instanceof THREE.Mesh && hit.object.material !== section);
+}
+
 describe('roof windows', () => {
     const roof = {...gable, windows: [skylight]};
-    const down = (object: THREE.Object3D, x: number, y: number): THREE.Intersection[] => {
-        const scene = new THREE.Scene();
-        scene.add(object);
-        scene.updateMatrixWorld(true);
-        return new THREE.Raycaster(new THREE.Vector3(x * MM, 20, -y * MM), new THREE.Vector3(0, -1, 0))
-            .intersectObject(scene, true)
-            .filter((hit) => hit.object instanceof THREE.Mesh && hit.object.material !== section);
-    };
-
     it('stands in a hole of the slab, tagged to be picked', () => {
         // At the window's centre (plan 6000, 2000) the first thing hit is the window, and no covering is under it.
         const built = buildRoof(roof, materials, section);
@@ -185,5 +188,43 @@ describe('roof windows', () => {
         const hits = down(buildRoofOutline(roof), 6000, 2000);
         expect(hits.length).toBeGreaterThan(0);
         expect(selectionOf(hits[0].object)).toEqual({kind: 'roofWindow', id: 7});
+    });
+});
+
+describe('roof junctions', () => {
+    // A main gable along x over y −4000…4000, and a wing along y over x −2000…2000 running from y −9000 into it up to
+    // its ridge: the wing's ridge (4600) meets the main roof's front plane at y −2000, the valleys run y = ±x − 2000.
+    const main: Roof = {...gable, id: 1, x: 0, y: 0, overhang: 0, vergeOverhang: 0};
+    const wing: Roof = {...gable, id: 2, x: 0, y: -4500, rotation: 90, width: 9000, depth: 4000, overhang: 0, vergeOverhang: 0};
+    const inside = (parts: MultiPolygon, x: number, y: number): boolean =>
+        parts.some(([outer]) => pointInPolygon({x, y}, outer.slice(0, -1) as PlanPoint[]));
+
+    it('leaves out of each plane where the other roof is higher', () => {
+        const [front, back] = roofPlaneParts(main, [wing]);
+        expect(inside(front, 0, -3000)).toBe(false);
+        expect(inside(front, 1500, -3000)).toBe(true);
+        expect(inside(front, -1500, -3000)).toBe(true);
+        expect(inside(front, 0, -1000)).toBe(true);
+        expect(back).toEqual(roofPlaneParts(main, [])[1]);
+        // Turned 90°, the wing's front plane faces east.
+        const [east, west] = roofPlaneParts(wing, [main]);
+        expect(inside(west, -1000, -1000)).toBe(false);
+        expect(inside(west, -1000, -3500)).toBe(true);
+        expect(inside(east, 1000, -3500)).toBe(true);
+    });
+
+    it('stops a ridge where it runs under the other roof', () => {
+        const stretches = topStretches({x: 0, y: -9000}, {x: 0, y: 0}, wing, [main, wing]);
+        expect(stretches).toHaveLength(1);
+        expect(stretches[0][0]).toBe(0);
+        expect(stretches[0][1]).toBeCloseTo(7 / 9, 6);
+    });
+
+    it('draws the valley: no covering of the main roof under the wing', () => {
+        const alone = buildRoof(main, materials, section);
+        const met = buildRoof(main, materials, section, [main, wing]);
+        expect(down(alone, 0, -3000).length).toBeGreaterThan(0);
+        expect(down(met, 0, -3000)).toHaveLength(0);
+        expect(down(met, 3000, -3000).length).toBeGreaterThan(0);
     });
 });

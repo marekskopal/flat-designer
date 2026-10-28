@@ -107,7 +107,7 @@ import {
     stairSpot,
 } from './stairs';
 import {daylightAt, DefaultSun, SunAngles, sunAt, sunDirection} from './sun';
-import {roofsReach} from './under-roof';
+import {roofsMeet, roofsReach} from './under-roof';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
 import {floorLevels, Walkthrough, WalkthroughFov} from './walkthrough';
@@ -782,8 +782,10 @@ export class ViewerEngine {
             roomsCutBy(scene.rooms, [...sceneVoids(previous).below, ...voids.below]).forEach((id) => voidRooms.add(id));
         }
 
-        // The roofs: a changed one is drawn anew, with its outline.
-        for (const id of [...roofs.removed, ...roofs.changed.map((r) => r.id)]) {
+        // The roofs: a changed one is drawn anew, with its outline, and so are those it met before or meets now (their
+        // junctions with it).
+        const met = floorRoofs.filter((roof) => !roofIds.has(roof.id) && touchedRoofs.some((touched) => roofsMeet(roof, touched)));
+        for (const id of [...roofs.removed, ...roofs.changed.map((r) => r.id), ...met.map((r) => r.id)]) {
             const built = parts.roofs.get(id);
             if (built !== undefined) {
                 this.disposeObject(built.roof);
@@ -791,7 +793,10 @@ export class ViewerEngine {
                 parts.roofs.delete(id);
             }
         }
-        roofs.changed.forEach((roof) => addRoof(parts, roof, materials));
+        [...roofs.changed, ...met].forEach((roof) => addRoof(parts, roof, materials, floorRoofs));
+        if (roofsChanged) {
+            this.highlightRoofs();
+        }
 
         // The slab lies under the rooms and the walls.
         if (
@@ -3278,7 +3283,8 @@ export class ViewerEngine {
         const outline = buildRoofOutline(resized);
         const windowId = this.selection?.kind === 'roofWindow' ? this.selection.id : null;
         highlightRoofOutline(outline, windowId === null, windowId);
-        const body = this.roofBodySeen(resized) ? buildRoof(resized, materials, this.parts.sectionMaterial) : null;
+        const others = (this.sceneData?.roofs ?? []).filter((r) => r.id !== roof.id);
+        const body = this.roofBodySeen(resized) ? buildRoof(resized, materials, this.parts.sectionMaterial, others) : null;
         this.setPreview([built.roof, built.outline], body === null ? [outline] : [body, outline]);
         // With the other roofs (hidden with them) and outlines (at their height over the plan).
         if (body !== null) {

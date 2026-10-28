@@ -9,6 +9,8 @@ use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
 use FlatDesigner\Service\Editor\Geometry\PlanMath;
+use FlatDesigner\Service\Editor\Geometry\RoofCover;
+use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
 use FlatDesigner\Service\Editor\Geometry\Spans;
 use FlatDesigner\Service\Editor\Geometry\WallFaceSpans;
 use const M_PI;
@@ -24,7 +26,9 @@ use const M_PI;
  * - the ceiling, on a vault its arched surface, and the beams' underside and sides;
  * - skirting along the walls, except doorways.
  *
- * Wall faces outside every room (the façade) are not counted. A wall between two rooms counts once for each.
+ * Wall faces outside every room (the façade) are not counted. A wall between two rooms counts once for each. Under the
+ * floor's roofs (FD-38) a flat ceiling slopes where they come lower, so it counts along the slope (`RoomUnderRoof`), and
+ * the bands and paint stop at it (`RoomFaceUnderRoof`).
  */
 final class RoomSurfaces
 {
@@ -38,14 +42,20 @@ final class RoomSurfaces
 	 * @param list<WallDto> $walls
 	 * @return list<array{surface: QuantitySurfaceEnum, materialId: int|null, amount: float}> amount in mm², or mm for skirting
 	 */
-	public static function of(RoomDto $room, array $walls): array
+	public static function of(RoomDto $room, array $walls, ?RoofCover $roofs = null): array
 	{
 		$surfaces = new self();
-		$area = abs(PlanMath::signedArea(array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room->polygon)));
+		$points = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room->polygon);
+		$area = abs(PlanMath::signedArea($points));
 		if ($room->floorMaterialId !== null) {
 			$surfaces->add(QuantitySurfaceEnum::Floor, $room->floorMaterialId, $area);
 		}
-		$surfaces->addCeiling($room, $area);
+		// Under the roofs: the ceiling along the slope, and the cover to follow it along the walls.
+		$under = $roofs === null
+			? null
+			: RoomUnderRoof::measure($points, $room->ceilingHeight, $room->floorElevation, $room->vaultSpacing !== null, $roofs);
+		$surfaces->addCeiling($room, $under->ceilingArea ?? $area);
+		$cover = $under === null ? null : $roofs;
 
 		$wallTop = self::wallTop($room);
 		$polygon = $room->polygon;
@@ -55,7 +65,7 @@ final class RoomSurfaces
 			$b = [(float) $next[0], (float) $next[1]];
 			$faces = WallFaceSpans::faces($a, $b, $walls);
 			foreach ($faces as $face) {
-				$surfaces->addWallFace($room, $face, $wallTop);
+				$surfaces->addFace($room, $face, $wallTop, $cover, $a, $b);
 			}
 			if ($room->skirtingHeight !== null) {
 				$surfaces->addSkirting($room, $faces);
@@ -92,6 +102,7 @@ final class RoomSurfaces
 		return $room->ceilingHeight - $room->vaultRise + $room->vaultRise * 2 / M_PI * $span / $room->vaultSpacing;
 	}
 
+	/** The ceiling, `area` mm² of it (under a roof its own area along the slope). */
 	private function addCeiling(RoomDto $room, float $area): void
 	{
 		if ($room->ceilingHeight === null) {
@@ -130,6 +141,24 @@ final class RoomSurfaces
 		}
 	}
 
+	/**
+	 * A wall face on the room edge a → b, under the roofs (`cover` given) by `RoomFaceUnderRoof`.
+	 *
+	 * @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face
+	 * @param array{float, float} $a
+	 * @param array{float, float} $b
+	 */
+	private function addFace(RoomDto $room, array $face, ?float $wallTop, ?RoofCover $cover, array $a, array $b): void
+	{
+		if ($cover === null) {
+			$this->addWallFace($room, $face, $wallTop);
+			return;
+		}
+		foreach (RoomFaceUnderRoof::amounts($room, $face, $wallTop, $cover, $a, $b) as [$surface, $materialId, $amount]) {
+			$this->add($surface, $materialId, $amount);
+		}
+	}
+
 	/** @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face */
 	private function addWallFace(RoomDto $room, array $face, ?float $wallTop): void
 	{
@@ -149,7 +178,7 @@ final class RoomSurfaces
 			return;
 		}
 
-		foreach (self::uncovered($top, $bands) as [$bottom, $paintTop]) {
+		foreach (Spans::uncovered($top, $bands) as [$bottom, $paintTop]) {
 			$this->add(QuantitySurfaceEnum::Wall, $face['wall']->materialId, self::faceArea($face, $bottom, $paintTop));
 		}
 	}
@@ -170,30 +199,6 @@ final class RoomSurfaces
 		}
 
 		return max($area, 0.0);
-	}
-
-	/**
-	 * Height ranges from the floor up to `top` that no band covers.
-	 *
-	 * @param list<array{float, float}> $bands
-	 * @return list<array{float, float}>
-	 */
-	private static function uncovered(float $top, array $bands): array
-	{
-		usort($bands, static fn (array $x, array $y): int => $x[0] <=> $y[0]);
-		$ranges = [];
-		$from = 0.0;
-		foreach ($bands as [$bottom, $bandTop]) {
-			if ($bottom > $from) {
-				$ranges[] = [$from, $bottom];
-			}
-			$from = max($from, $bandTop);
-		}
-		if ($top > $from) {
-			$ranges[] = [$from, $top];
-		}
-
-		return $ranges;
 	}
 
 	private function add(QuantitySurfaceEnum $surface, ?int $materialId, float $amount): void

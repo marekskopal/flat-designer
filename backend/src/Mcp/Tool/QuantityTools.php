@@ -29,6 +29,8 @@ final readonly class QuantityTools
 		QuantitySurfaceEnum::Beams->value,
 		QuantitySurfaceEnum::Skirting->value,
 		QuantitySurfaceEnum::Furniture->value,
+		QuantitySurfaceEnum::RoofCovering->value,
+		QuantitySurfaceEnum::Soffit->value,
 	];
 
 	public const array PricesSchema = [
@@ -62,7 +64,9 @@ final readonly class QuantityTools
 		description: 'Quantities and cost estimate of a project or floor: per room the floor (m²), wall finish bands (m²), '
 			. 'wall paint around and above them up to the ceiling without openings (m²), ceiling and vault beams (m²) and '
 			. 'skirting (running m), each with its material, tile or plank count (waste included) and cost; the totals to buy '
-			. 'per material; the furniture boards per material (from the cut list); the total in the project\'s currency. '
+			. 'per material; the furniture boards per material (from the cut list); per roof its covering and soffit (m², '
+			. 'along the slope, without its windows) and its number of roof windows; the total in the project\'s currency. '
+			. 'Under a roof the ceiling counts along the slope and the walls are painted up to it. '
 			. 'cost null means the material has no price yet (set_material_prices); complete is false then.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
