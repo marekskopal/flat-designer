@@ -7,6 +7,7 @@ import {leafObjects, LeafStates} from './doors';
 import {buildItem, ItemAssets} from './items';
 import {MaterialLibrary} from './materials';
 import {lowestGround} from './plots';
+import {roofPlanes} from './roof-geometry';
 import {hiddenItemIds} from './variants';
 
 /** A floor drawn under the shown one: its group and its items by id, so an item can be drawn anew when its asset loads. */
@@ -81,13 +82,15 @@ export function floorOffset(floor: Scene, shown: Scene): number {
 }
 
 /** The plan points a floor covers (its walls' ends and rooms' corners), for the framing and the sun's shadow. */
-export function floorPoints(scene: Pick<Scene, 'walls' | 'rooms'>): PlanPoint[] {
+export function floorPoints(scene: Pick<Scene, 'walls' | 'rooms'> & Partial<Pick<Scene, 'roofs'>>): PlanPoint[] {
     return [
         ...scene.walls.flatMap((w): PlanPoint[] => [
             [w.startX, w.startY],
             [w.endX, w.endY],
         ]),
         ...scene.rooms.flatMap((r) => r.polygon),
+        // The roofs with their overhangs.
+        ...(scene.roofs ?? []).flatMap((roof) => roofPlanes(roof).flatMap((plane) => plane.polygon.map((p): PlanPoint => [p.x, p.y]))),
     ];
 }
 

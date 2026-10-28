@@ -1,4 +1,4 @@
-import {isOutdoorRoom, Item, PlanPoint, Plot, Room, Scene, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
+import {isOutdoorRoom, Item, PlanPoint, Plot, Roof, Room, Scene, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -7,6 +7,7 @@ import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightU
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import {
+    addRoof,
     addRoom,
     buildBuilding,
     buildCeilingSteps,
@@ -87,6 +88,7 @@ import {
     SunShadowRadius,
     viewChanged,
 } from './presentation';
+import {buildRoof, buildRoofOutline, highlightRoofOutline, resizeRoofByCorner, roofCorners, RoofMinSide} from './roofs';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {buildContextFloor, ContextFloor, floorOffset, floorPoints, floorsBelow, rebuildContextItems, stackGround} from './stack';
@@ -146,6 +148,8 @@ const MinWallLength = 100;
 const InputEvents = ['pointerdown', 'pointerup', 'pointerleave', 'dblclick', 'wheel'] as const;
 /** The floor level, where the drawing tools place points. */
 const FloorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+/** mm the roofs' top-view outlines lie under the wall cut. */
+const RoofOutlineBelowCut = 10;
 /** Snap grid for dragged elements, mm (Shift: whole mm, no snapping). */
 const DragSnap = 10;
 /** Dragging works only while the camera looks down steeply (Plan view), where plan moves are unambiguous. */
@@ -174,6 +178,7 @@ type HandleRole =
     | {role: 'wallStart' | 'wallEnd' | 'wallCurve'}
     | {role: 'vertex'; index: number}
     | {role: 'midpoint'; index: number}
+    | {role: 'roofCorner'; index: number}
     | {role: 'draw'};
 
 /** Wall fields of a run being drawn, for its preview. */
@@ -209,11 +214,16 @@ type Drag = DragBase &
     (
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
         | {kind: 'stair'; stair: Stair; object: THREE.Object3D; x: number; y: number}
+        | {kind: 'roof'; roof: Roof; objects: THREE.Object3D[]; x: number; y: number}
+        | {kind: 'roofCorner'; roof: Roof; index: number; current: RoofRectangle}
         | {kind: 'group'; groupId: number; members: {item: Item; object: THREE.Object3D}[]; dx: number; dy: number}
         | {kind: 'wall'; wall: Wall; mode: 'start' | 'end' | 'curve' | 'move'; current: Wall; fits: boolean; snap: SnapResult['kind'] | null}
         | {kind: 'opening'; wall: Wall; openingId: number; grabAlong: number; offset: number; fits: boolean}
         | {kind: 'vertex'; outline: Outlined; index: number; inserted: boolean; polygon: PlanPoint[]; valid: boolean; snap: SnapResult['kind'] | null}
     );
+
+/** Where a roof's eaves rectangle lies (plan mm), as a corner drag changes it. */
+type RoofRectangle = Pick<Roof, 'x' | 'y' | 'width' | 'depth'>;
 
 /** The door (or walkable French window) the walker looks at, and whether it is open or opening. */
 export interface DoorAim {
@@ -581,6 +591,7 @@ export class ViewerEngine {
             this.walkthrough?.moveTo(walkTo.position, walkTo.yaw);
         }
         this.loadedFloorId = scene.floor.id;
+        this.placeRoofOutlines();
         this.setSelection(this.selection);
         this.setPicked(this.picked);
         if (this.pendingRun !== null && this.hasWallsAlong(scene, this.pendingRun)) {
@@ -753,6 +764,18 @@ export class ViewerEngine {
             parts.root.add(parts.stairsBelow);
             roomsCutBy(scene.rooms, [...sceneVoids(previous).below, ...voids.below]).forEach((id) => voidRooms.add(id));
         }
+
+        // The roofs: a changed one is drawn anew, with its outline.
+        const roofs = diffById(previous.roofs ?? [], scene.roofs ?? []);
+        for (const id of [...roofs.removed, ...roofs.changed.map((r) => r.id)]) {
+            const built = parts.roofs.get(id);
+            if (built !== undefined) {
+                this.disposeObject(built.roof);
+                this.disposeObject(built.outline);
+                parts.roofs.delete(id);
+            }
+        }
+        roofs.changed.forEach((roof) => addRoof(parts, roof, materials));
 
         // The slab lies under the rooms and the walls.
         if (
@@ -953,6 +976,7 @@ export class ViewerEngine {
         this.selection = selection;
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
         this.highlightPlots();
+        this.highlightRoofs();
 
         this.removeOutline();
         const objects = this.objectsOf(selection);
@@ -1373,6 +1397,7 @@ export class ViewerEngine {
     /** Cuts everything above `height` (mm) away; `null` shows the full height. */
     public setSectionHeight(height: number | null): void {
         this.sectionHeight = height;
+        this.placeRoofOutlines();
         this.updateHandles();
         this.commentPins.setSectionHeight(height);
         this.refreshShadows();
@@ -1731,6 +1756,28 @@ export class ViewerEngine {
         this.parts?.plots.forEach((group, id) => highlightPlot(group, selection?.kind === 'plot' && selection.id === id));
     }
 
+    /**
+     * Where the roofs' outlines lie in the top view (mm): just under the wall cut, or the walls' tops without one. The
+     * plan camera looks down in perspective, so they line up with the walls as drawn and stay above them for picking.
+     */
+    private roofOutlineHeight(): number {
+        const walls = this.sceneData?.walls ?? [];
+        const top = this.sectionHeight ?? Math.max(0, ...walls.map((w) => w.height));
+        return Math.max(top - RoofOutlineBelowCut, 0);
+    }
+
+    /** Lifts the roofs' outlines to `roofOutlineHeight()`; called when the scene or the wall cut changes. */
+    private placeRoofOutlines(): void {
+        if (this.parts !== null) {
+            this.parts.roofOutlines.position.y = this.roofOutlineHeight() * MM;
+        }
+    }
+
+    private highlightRoofs(): void {
+        const selection = this.selection;
+        this.parts?.roofs.forEach(({outline}, id) => highlightRoofOutline(outline, selection?.kind === 'roof' && selection.id === id));
+    }
+
     /** Tints the room's floor; `floor` overrides the room's own mesh (the preview while a corner is dragged). */
     private setSelectedRoom(roomId: number | null, floor?: THREE.Mesh): void {
         this.labels.forEach((label, id) => label.element.classList.toggle('selected', id === roomId));
@@ -2061,6 +2108,13 @@ export class ViewerEngine {
         if (this.ghost !== null) {
             this.ghost.visible = topDown;
         }
+        if (this.parts !== null) {
+            this.parts.roofOutlines.visible = topDown;
+        }
+        if (this.outline !== null && this.selection?.kind === 'roof') {
+            // The roof is cut away over the plan, where its outline shows the selection.
+            this.outline.visible = !topDown;
+        }
         this.measureLabel.visible = this.measuring && topDown && this.measureLabel.element.textContent !== '';
         this.renderMain();
         this.renderOverlay();
@@ -2185,6 +2239,11 @@ export class ViewerEngine {
             const mode = role.role === 'wallStart' ? 'start' : role.role === 'wallEnd' ? 'end' : 'curve';
             return wall === undefined ? null : {kind: 'wall', plane, grab, moved: false, wall, mode, current: wall, fits: true, snap: null};
         }
+        if (this.selection.kind === 'roof' && role.role === 'roofCorner') {
+            const roof = (scene.roofs ?? []).find((r) => r.id === this.selection?.id);
+            const current = roof === undefined ? null : {x: roof.x, y: roof.y, width: roof.width, depth: roof.depth};
+            return roof === undefined || current === null ? null : {kind: 'roofCorner', plane, grab, moved: false, roof, index: role.index, current};
+        }
         const outline = this.selectedOutline();
         if (outline === null) {
             return null;
@@ -2232,6 +2291,12 @@ export class ViewerEngine {
             const object = this.parts?.stairs.get(selection.id);
             if (stair !== undefined && object !== undefined) {
                 drag = {kind: 'stair', plane, grab, moved: false, stair, object, x: stair.x, y: stair.y};
+            }
+        } else if (selection.kind === 'roof') {
+            const roof = (scene.roofs ?? []).find((r) => r.id === selection.id);
+            const built = this.parts?.roofs.get(selection.id);
+            if (roof !== undefined && built !== undefined) {
+                drag = {kind: 'roof', plane, grab, moved: false, roof, objects: [built.roof, built.outline], x: roof.x, y: roof.y};
             }
         } else if (selection.kind === 'group') {
             const members = scene.items
@@ -2299,6 +2364,25 @@ export class ViewerEngine {
                 drag.y = snapToGrid(element.y + delta.y, step);
                 drag.object.position.x = drag.x * MM;
                 drag.object.position.z = -drag.y * MM;
+                break;
+            }
+            case 'roof': {
+                const step = free ? 1 : DragSnap;
+                drag.x = snapToGrid(drag.roof.x + delta.x, step);
+                drag.y = snapToGrid(drag.roof.y + delta.y, step);
+                for (const object of drag.objects) {
+                    object.position.x = drag.x * MM;
+                    object.position.z = -drag.y * MM;
+                }
+                break;
+            }
+            case 'roofCorner': {
+                const step = free ? 1 : DragSnap;
+                const corner = roofCorners(drag.roof)[drag.index];
+                const to = {x: snapToGrid(corner.x + delta.x, step), y: snapToGrid(corner.y + delta.y, step)};
+                drag.current = resizeRoofByCorner(drag.roof, drag.index, to, RoofMinSide);
+                this.previewRoof(drag.roof, drag.current);
+                this.updateHandles();
                 break;
             }
             case 'group': {
@@ -2509,6 +2593,18 @@ export class ViewerEngine {
                     edit = {selection: {kind: 'stair', id: drag.stair.id}, fields: {x: drag.x, y: drag.y}};
                 }
                 break;
+            case 'roof':
+                if (drag.x !== drag.roof.x || drag.y !== drag.roof.y) {
+                    edit = {selection: {kind: 'roof', id: drag.roof.id}, fields: {x: drag.x, y: drag.y}};
+                }
+                break;
+            case 'roofCorner': {
+                const {x, y, width, depth} = drag.current;
+                if (x !== drag.roof.x || y !== drag.roof.y || width !== drag.roof.width || depth !== drag.roof.depth) {
+                    edit = {selection: {kind: 'roof', id: drag.roof.id}, fields: {x, y, width, depth}};
+                }
+                break;
+            }
             case 'group':
                 if (drag.dx !== 0 || drag.dy !== 0) {
                     edit = {selection: {kind: 'group', id: drag.groupId}, fields: {dx: drag.dx, dy: drag.dy}};
@@ -2569,6 +2665,12 @@ export class ViewerEngine {
         for (const {item, object} of members) {
             object.position.x = item.x * MM;
             object.position.z = -item.y * MM;
+        }
+        if (drag.kind === 'roof') {
+            for (const object of drag.objects) {
+                object.position.x = drag.roof.x * MM;
+                object.position.z = -drag.roof.y * MM;
+            }
         }
         this.clearPreview();
         this.setSelection(this.selection);
@@ -3081,6 +3183,23 @@ export class ViewerEngine {
         this.updateHandles();
     }
 
+    /** A roof resized by a corner drag, shown in place of the roof and its outline. */
+    private previewRoof(roof: Roof, rectangle: RoofRectangle): void {
+        const built = this.parts?.roofs.get(roof.id);
+        const materials = this.materials;
+        if (built === undefined || materials === null || this.parts === null) {
+            return;
+        }
+        const resized = {...roof, ...rectangle};
+        const outline = buildRoofOutline(resized);
+        highlightRoofOutline(outline, true);
+        const body = buildRoof(resized, materials, this.parts.sectionMaterial);
+        this.setPreview([built.roof, built.outline], [body, outline]);
+        // With the other roofs (hidden with the ceilings) and outlines (at their height over the plan).
+        this.parts.ceilings.add(body);
+        this.parts.roofOutlines.add(outline);
+    }
+
     private setPreview(hidden: THREE.Object3D[], added: THREE.Object3D[]): void {
         const previous = this.preview;
         if (previous !== null) {
@@ -3130,6 +3249,16 @@ export class ViewerEngine {
             // The middle of the centre line bends the wall.
             const frame = wallFrame(wall);
             this.addHandle(pointOnWall(frame, frame.length / 2), y, {role: 'wallCurve'}, active === 'curve' ? state : 'normal');
+        } else if (this.selection.kind === 'roof') {
+            const id = this.selection.id;
+            const roof = (scene.roofs ?? []).find((r) => r.id === id);
+            if (roof === undefined) {
+                return;
+            }
+            const current = drag?.kind === 'roofCorner' && drag.roof.id === id ? {...roof, ...drag.current} : roof;
+            // On the eaves line as the top view draws it.
+            const y = this.roofOutlineHeight() * MM;
+            roofCorners(current).forEach((corner, index) => this.addHandle(corner, y, {role: 'roofCorner', index}, 'normal'));
         } else {
             const outline = this.selectedOutline();
             if (outline === null) {
@@ -3266,6 +3395,11 @@ export class ViewerEngine {
                 return objects([selection.id], this.openings);
             case 'stair':
                 return objects([selection.id], this.parts?.stairs ?? new Map<number, THREE.Object3D>());
+            case 'roof': {
+                // Over the plan the roof's outline shows the selection instead; `tick()` hides the box there.
+                const roof = this.parts?.roofs.get(selection.id)?.roof;
+                return roof === undefined ? [] : [roof];
+            }
             default:
                 return [];
         }

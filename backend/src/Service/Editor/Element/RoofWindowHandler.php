@@ -217,8 +217,11 @@ final readonly class RoofWindowHandler implements ElementHandler
 	private function roof(Floor $floor, int $roofId): Roof
 	{
 		$roof = $this->roofRepository->findOnFloor($floor->id, $roofId);
-		if ($roof === null || $roof->deletedAt !== null) {
+		if ($roof === null) {
 			throw EditException::invalid(sprintf('Roof %d is not on this floor.', $roofId));
+		}
+		if ($roof->deletedAt !== null) {
+			throw EditException::invalid(sprintf('Roof %d is deleted; undo that first.', $roofId));
 		}
 
 		return $roof;

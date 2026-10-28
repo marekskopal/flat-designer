@@ -142,7 +142,11 @@ final readonly class RoofHandler implements ElementHandler
 		$shape = $fields->enum('shape', RoofShapeEnum::class);
 		$parapet = $fields->nullableInt('parapet', self::MinParapet, self::MaxParapet);
 		if ($parapet !== null && $shape !== RoofShapeEnum::Flat) {
-			throw EditException::invalid('Only a flat roof has a parapet.');
+			// A flat roof given another shape leaves its parapet behind; a parapet given anew is refused.
+			if ($current === null || self::cast($current)->parapet !== $parapet) {
+				throw EditException::invalid('Only a flat roof has a parapet.');
+			}
+			$parapet = null;
 		}
 		$coveringMaterialId = $fields->nullableId('coveringMaterialId');
 		$soffitMaterialId = $fields->nullableId('soffitMaterialId');

@@ -13,6 +13,7 @@ const Segments: Record<ElementKind, string> = {
     room: 'rooms',
     plot: 'plots',
     stair: 'stairs',
+    roof: 'roofs',
     group: 'groups',
     variantSet: 'variant-sets',
 };

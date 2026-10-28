@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** What can be selected in the viewer: an element of the floor, or a group of items (picked through one of them). */
-export type ElementKind = 'item' | 'wall' | 'opening' | 'room' | 'plot' | 'stair' | 'group' | 'variantSet';
+export type ElementKind = 'item' | 'wall' | 'opening' | 'room' | 'plot' | 'stair' | 'roof' | 'group' | 'variantSet';
 
 export interface Selection {
     kind: ElementKind;
@@ -10,7 +10,7 @@ export interface Selection {
 
 /**
  * The element a scene object belongs to: the nearest ancestor (or the object itself) tagged by the
- * builders with `itemId`, `openingId`, `wallId`, `roomId`, `plotId` or `stairId` in its `userData`. A door hit therefore
+ * builders with `itemId`, `openingId`, `wallId`, `roomId`, `plotId`, `stairId` or `roofId` in its `userData`. A door hit therefore
  * selects the opening, not the wall around it.
  */
 export function selectionOf(object: THREE.Object3D | null): Selection | null {
@@ -37,4 +37,5 @@ const TagKinds: readonly (readonly [string, ElementKind])[] = [
     ['roomId', 'room'],
     ['plotId', 'plot'],
     ['stairId', 'stair'],
+    ['roofId', 'roof'],
 ];

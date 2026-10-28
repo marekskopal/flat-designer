@@ -370,7 +370,18 @@ format is the text in `FurnitureTools::Format`.
   when it is set anew (a changed roof does not check its windows, so one it left behind is still renamed and undone).
   A deleted roof hides its windows until undo brings it back; the scene patch reloads when a roof comes in, as its
   windows are not in the result. A copy of a roof window lands past it along the ridge, a copy of a roof 100 mm east.
-  Only a flat roof has a `parapet`.
+  Only a flat roof has a `parapet`; given another shape, it leaves the parapet behind.
+- Viewer (`viewer/engine/roofs.ts`): `buildRoof()` draws a roof in its own frame, a group at its centre turned by its
+  rotation: each plane a slab (covering on top with UVs in metres along the slope, soffit under it and along its edges),
+  caps on the ridge and hips, a flat roof's parapet; tagged `roofId`, merged, with section-fill twins. Roofs go into
+  `parts.ceilings`, so they hide with the ceilings (and the wall cut removes them in the plan). `buildRoofOutline()`
+  draws the top view's stand-in (the outline with the overhangs dashed, the eaves line, ridge and hips) in
+  `parts.roofOutlines`, shown only while `isTopDown()` and lifted to just under the wall cut (`roofOutlineHeight()`: the
+  plan camera is a perspective one), with an undrawn band along the outline that picks the roof; it is `planOnly`, left
+  out of the glTF export. A selected roof is dragged by its outline and resized by its eaves corners
+  (`resizeRoofByCorner()`, the opposite corner fixed), nudged and turned with R like items. `floorPoints()` includes the
+  roofs' outlines, so the framing and the sun's shadow cover the overhangs. The Add menu's Building → Roof over the floor
+  takes the backend's default rectangle.
 - Walls: every wall of the floor is cut at the underside of the roofs over it; one with `upToRoof` rises to it (a
   gable). `StructureSize` stops a column or beam at the roof where it is lower than the ceiling. Snapshots keep
   `roofs` (`SnapshotRoofRestorer`) and the walls' `upToRoof`. Seeded coverings: `roof-tiles-clay`, `roof-slate`,

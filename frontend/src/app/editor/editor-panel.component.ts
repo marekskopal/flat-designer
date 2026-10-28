@@ -18,6 +18,7 @@ const KindLabels: Record<ElementKind, string> = {
     room: 'Room',
     plot: 'Plot',
     stair: 'Stairs',
+    roof: 'Roof',
     group: 'Group',
     variantSet: 'Variant set',
 };
@@ -219,6 +220,9 @@ export class EditorPanelComponent {
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
                 void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
+        } else if (choice === 'roof') {
+            // Its rectangle comes from the backend: round the floor's walls, the ridge along the longer side.
+            void this.editor.create('roof', {});
         } else if (choice === 'stair') {
             // The first riser at the view's centre (or the selected room's), walking up north.
             void this.editor.create('stair', {x: at.x, y: at.y});
@@ -314,10 +318,10 @@ export class EditorPanelComponent {
         }
     }
 
-    /** Arrow keys nudge the selected item or stairs, R turns it by 90°. */
+    /** Arrow keys nudge the selected item, stairs or roof, R turns it by 90°. */
     private moveItem(event: KeyboardEvent): void {
         const selected = this.selected();
-        if (selected?.kind !== 'item' && selected?.kind !== 'stair') {
+        if (selected?.kind !== 'item' && selected?.kind !== 'stair' && selected?.kind !== 'roof') {
             return;
         }
         const item = selected.element as unknown as Pick<Item, 'id' | 'x' | 'y' | 'rotation'>;
@@ -360,6 +364,8 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             const stair = find(scene.stairs ?? []);
             return stair === null ? null : {...stair, stairRise: scene.stairRise ?? 0};
         }
+        case 'roof':
+            return find(scene.roofs ?? []);
         case 'opening':
             return find(scene.walls.flatMap((w): Opening[] => w.openings));
         case 'group':

@@ -1,4 +1,4 @@
-import {Opening, PlanPoint, Plot, Room, Scene, Wall, WallFinish} from '@app/models/scene';
+import {Opening, PlanPoint, Plot, Roof, Room, Scene, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -50,6 +50,7 @@ import {
     WindowFrameBar,
 } from './plan-geometry';
 import {buildPlot, groundUnder} from './plots';
+import {buildRoof, buildRoofOutline} from './roofs';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
 import {alignTiles, turnLevelUvs} from './tiling';
 
@@ -73,8 +74,17 @@ export interface BuildingParts {
     stairsBelow: THREE.Group;
     /** Wall groups (with their doors and windows) keyed by wall id. */
     walls: Map<number, THREE.Group>;
+    /** Roofs (in `ceilings`, so they hide with them) and their top-view outlines (in `roofOutlines`), keyed by roof id. */
+    roofs: Map<number, RoofParts>;
+    /** The roofs' outlines, shown in the top view only. */
+    roofOutlines: THREE.Group;
     /** Fill of wall cores revealed by the section plane, shared by all walls. */
     sectionMaterial: THREE.Material;
+}
+
+export interface RoofParts {
+    roof: THREE.Group;
+    outline: THREE.Group;
 }
 
 export interface RoomParts {
@@ -107,9 +117,13 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         stairs: new Map(),
         stairsBelow: buildStairsBelow(scene.stairsBelow, materials, sectionMaterial),
         walls: new Map(),
+        roofs: new Map(),
+        roofOutlines: new THREE.Group(),
         sectionMaterial,
     };
-    root.add(parts.slab, parts.stairsBelow);
+    parts.roofOutlines.name = 'roof-outlines';
+    parts.roofOutlines.visible = false;
+    root.add(parts.slab, parts.stairsBelow, parts.roofOutlines);
 
     for (const room of scene.rooms) {
         addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids), room.id);
@@ -133,9 +147,22 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root.add(group);
     }
 
+    for (const roof of scene.roofs ?? []) {
+        addRoof(parts, roof, materials);
+    }
+
     ceilings.add(parts.ceilingSteps);
     root.add(ceilings);
     return parts;
+}
+
+/** Builds a roof and its outline into the building: the roof with the ceilings, the outline with the others. */
+export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLibrary): RoofParts {
+    const built = {roof: buildRoof(roof, materials, parts.sectionMaterial), outline: buildRoofOutline(roof)};
+    parts.roofs.set(roof.id, built);
+    parts.ceilings.add(built.roof);
+    parts.roofOutlines.add(built.outline);
+    return built;
 }
 
 /**

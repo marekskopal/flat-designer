@@ -1,4 +1,5 @@
 import {OpeningType} from '@app/models/scene';
+import {roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {stairRisers} from '@app/viewer/engine/stairs';
 
@@ -84,6 +85,24 @@ export function stairStepHint(stair: Record<string, unknown>): string | null {
     const rule = 2 * riser + going;
     const comfort = rule < StepRuleMin || rule > StepRuleMax ? ` — outside the comfortable ${StepRuleMin}–${StepRuleMax}` : '';
     return `${count} risers of ${riser.toFixed(0)} mm over ${rise} mm; 2R + G = ${rule.toFixed(0)} mm${comfort}`;
+}
+
+const RoofShapeLabels: Readonly<Record<string, string>> = {
+    Gable: 'Gable',
+    Hip: 'Hip (pyramid over a square)',
+    Shed: 'Shed (one slope)',
+    Flat: 'Flat',
+};
+const isPitched = (roof: Record<string, unknown>): boolean => roof['shape'] !== 'Flat';
+
+/** The height the roof's underside reaches at its ridge (a shed's top edge), above the floor's level. */
+export function roofRidgeHint(roof: Record<string, unknown>): string | null {
+    const fields = ['width', 'depth', 'eaveHeight', 'pitch'] as const;
+    if (!isPitched(roof) || fields.some((key) => typeof roof[key] !== 'number')) {
+        return null;
+    }
+    const ridge = roofRidgeHeight(roof as unknown as RoofShapeFields);
+    return `Underside ${(ridge / 1000).toFixed(2)} m above the floor at the ${roof['shape'] === 'Shed' ? 'top edge' : 'ridge'}`;
 }
 
 const ItemKinds = [
@@ -316,6 +335,30 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'railing', label: 'Handrail (walking up)', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
         {key: 'treadMaterialId', label: 'Tread material', type: 'material', nullable: true, half: true},
         {key: 'structureMaterialId', label: 'Structure material', type: 'material', nullable: true, half: true},
+    ],
+    roof: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'shape', label: 'Shape', type: 'select', options: Object.keys(RoofShapeLabels), optionLabels: RoofShapeLabels},
+        {key: 'x', label: 'Centre X', type: 'int', unit: 'mm', half: true},
+        {key: 'y', label: 'Centre Y', type: 'int', unit: 'mm', half: true},
+        {key: 'rotation', label: 'Ridge direction (0 east, counter-clockwise)', type: 'int', unit: '°'},
+        {key: 'width', label: 'Width along the ridge', type: 'int', unit: 'mm', half: true},
+        {key: 'depth', label: 'Depth across it', type: 'int', unit: 'mm', half: true},
+        {key: 'eaveHeight', label: 'Eaves height (underside)', type: 'int', unit: 'mm', half: true},
+        {key: 'pitch', label: 'Pitch', type: 'int', unit: '°', half: true, when: isPitched, hint: roofRidgeHint},
+        {key: 'overhang', label: 'Eaves overhang', type: 'int', unit: 'mm', half: true},
+        {
+            key: 'vergeOverhang',
+            label: 'Verge overhang',
+            type: 'int',
+            unit: 'mm',
+            half: true,
+            when: (roof) => roof['shape'] === 'Gable' || roof['shape'] === 'Shed',
+        },
+        {key: 'thickness', label: 'Thickness (square to the slope)', type: 'int', unit: 'mm', half: true},
+        {key: 'parapet', label: 'Parapet (empty: none)', type: 'int', unit: 'mm', nullable: true, half: true, when: (roof) => !isPitched(roof)},
+        {key: 'coveringMaterialId', label: 'Covering', type: 'material', nullable: true, half: true},
+        {key: 'soffitMaterialId', label: 'Soffit', type: 'material', nullable: true, half: true},
     ],
     room: [
         {key: 'name', label: 'Name', type: 'text'},

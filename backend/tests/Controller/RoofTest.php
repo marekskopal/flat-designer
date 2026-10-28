@@ -78,6 +78,9 @@ final class RoofTest extends EditorTestCase
 		self::assertSame(200, $this->edit('DELETE', 'roofs', self::id($roof))->getStatusCode());
 		self::assertSame([], $this->sceneList('roofs'));
 		self::assertSame(404, $this->edit('PATCH', 'roof-windows', self::id($window), ['name' => 'Gone'])->getStatusCode());
+		$refused = $this->edit('POST', 'roof-windows', body: ['roofId' => self::id($roof)]);
+		self::assertSame(422, $refused->getStatusCode());
+		self::assertStringContainsString('is deleted; undo that first', (string) $refused->getBody());
 		self::assertSame(200, $this->undo()->getStatusCode());
 		$restored = $this->sceneList('roofs');
 		self::assertSame(['Hip'], array_column($restored, 'shape'));
@@ -172,10 +175,12 @@ final class RoofTest extends EditorTestCase
 	{
 		self::assertSame(422, $this->edit('POST', 'roofs', body: ['shape' => 'Gable', 'parapet' => 900])->getStatusCode());
 		$flat = $this->create('roofs', ['shape' => 'Flat', 'parapet' => 900]);
-		self::assertSame(422, $this->edit('PATCH', 'roofs', self::id($flat), ['shape' => 'Hip'])->getStatusCode());
-		$hip = $this->jsonBody($this->edit('PATCH', 'roofs', self::id($flat), ['shape' => 'Hip', 'parapet' => null]))['element'];
+		// Pitched, the roof leaves its parapet behind (the inspector sends the shape alone); one given anew is refused.
+		$hip = $this->jsonBody($this->edit('PATCH', 'roofs', self::id($flat), ['shape' => 'Hip']))['element'];
 		self::assertIsArray($hip);
 		self::assertSame(['Hip', null], [$hip['shape'], $hip['parapet']]);
+		self::assertSame(422, $this->edit('PATCH', 'roofs', self::id($flat), ['parapet' => 900])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'roofs', self::id($flat), ['shape' => 'Flat', 'parapet' => 50])->getStatusCode());
 	}
 
 	public function testAWallRisesToTheRoof(): void

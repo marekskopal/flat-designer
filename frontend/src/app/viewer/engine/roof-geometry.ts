@@ -50,13 +50,16 @@ export function roofHalfExtent(roof: RoofShapeFields): Vec2 {
     return {x: roof.width / 2 + along, y: roof.depth / 2 + roof.overhang};
 }
 
-function axes(roof: RoofShapeFields): {cos: number; sin: number} {
+/** The roof's frame in plan: its centre and the ridge's direction. */
+export type RoofFrame = Pick<Roof, 'x' | 'y' | 'rotation'>;
+
+function axes(roof: RoofFrame): {cos: number; sin: number} {
     const angle = (roof.rotation * Math.PI) / 180;
     return {cos: Math.cos(angle), sin: Math.sin(angle)};
 }
 
 /** A plan point in the roof's frame: x is s, y is t. */
-export function roofLocal(roof: RoofShapeFields, x: number, y: number): Vec2 {
+export function roofLocal(roof: RoofFrame, x: number, y: number): Vec2 {
     const {cos, sin} = axes(roof);
     const dx = x - roof.x;
     const dy = y - roof.y;
@@ -64,7 +67,7 @@ export function roofLocal(roof: RoofShapeFields, x: number, y: number): Vec2 {
 }
 
 /** A point of the roof's frame (s, t) in plan. */
-export function roofToPlan(roof: RoofShapeFields, s: number, t: number): Vec2 {
+export function roofToPlan(roof: RoofFrame, s: number, t: number): Vec2 {
     const {cos, sin} = axes(roof);
     return {x: roof.x + s * cos - t * sin, y: roof.y + s * sin + t * cos};
 }

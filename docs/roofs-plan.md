@@ -66,7 +66,7 @@ and knee walls for attics, and roof windows.
 | `overhang` | Eaves overhang beyond the footprint (default 400) |
 | `vergeOverhang` | Gable / shed verge overhang (default 200) |
 | `thickness` | Rafters and covering, measured square to the slope (default 250) |
-| `parapet` | Flat only: a parapet's height above the roof (null none); refused on the other shapes |
+| `parapet` | Flat only: a parapet's height above the roof (null none); refused on the other shapes, and left behind when a flat roof is given one |
 | `coveringMaterialId`, `soffitMaterialId` | Materials (seed tiles, slate, standing seam metal, membrane, a timber soffit) |
 
 `RoofWindow` (`roof_windows`, soft-deleted): `roofId`, `along`, `across` (its centre in the roof's frame: mm along the
@@ -110,6 +110,9 @@ widest.
 - Editor: Add menu "Building → Roof", the inspector's `roof` fields (shape, pitch, overhangs, heights, materials, with
   the ridge height shown), drag / nudge / R in the top view via the dashed outline, resize handles on its corners.
 - glTF export includes it.
+- As built: the outline is drawn just under the wall cut (or the walls' tops without one), not on the floor: the plan
+  camera looks down in perspective, so an outline on the floor showed inside the walls and could not be clicked past
+  them. Roof windows are not drawn yet (phase 4); the gables stay open until the walls rise to the roof (phase 3).
 
 ## Phase 3: walls and ceilings under the roof
 
