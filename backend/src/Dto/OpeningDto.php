@@ -40,6 +40,7 @@ final readonly class OpeningDto
 		public ?int $shutterMaterialId,
 		public bool $shuttersClosed,
 		public ?int $depth,
+		public bool $revealLining = false,
 	) {
 	}
 
@@ -70,6 +71,7 @@ final readonly class OpeningDto
 			shutterMaterialId: $opening->shutterMaterial?->id,
 			shuttersClosed: $opening->shuttersClosed,
 			depth: $opening->depth,
+			revealLining: $opening->revealLining,
 		);
 	}
 }

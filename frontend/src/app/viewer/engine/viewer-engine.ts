@@ -24,6 +24,7 @@ import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, sagittaToward, snapDrawPoint, ToolStatus} from './drawing';
+import {buildFacades} from './facades';
 import {
     BenchmarkOptions,
     BenchmarkResult,
@@ -731,7 +732,9 @@ export class ViewerEngine {
 
         const walls = diffById(previous.walls, scene.walls);
         const wallsChanged = walls.removed.length > 0 || walls.changed.length > 0;
-        if (wallsChanged || roofsChanged || (plotsChanged && scene.walls.some((w) => w.onGround === true))) {
+        // A lined reveal takes the façade's material.
+        const exteriorChanged = (previous.exteriorMaterialId ?? null) !== (scene.exteriorMaterialId ?? null);
+        if (wallsChanged || roofsChanged || exteriorChanged || (plotsChanged && scene.walls.some((w) => w.onGround === true))) {
             const joints = wallJoints(scene.walls);
             const corners = cornerWindows(scene.walls);
             const changedIds = new Set(walls.changed.map((w) => w.id));
@@ -745,11 +748,21 @@ export class ViewerEngine {
                     changedIds.has(wall.id) ||
                     !sameJson(this.joints.get(wall.id), joints.get(wall.id)) ||
                     !sameJson(this.corners.get(wall.id), corners.get(wall.id)) ||
-                    (plotsChanged && wall.onGround === true)
+                    (plotsChanged && wall.onGround === true) ||
+                    (exteriorChanged && wall.openings.some((o) => o.revealLining === true))
                 ) {
                     this.removeWall(wall.id);
                     const ground = scene.plots ?? [];
-                    const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), floorRoofs, ground);
+                    const group = buildWall(
+                        wall,
+                        materials,
+                        parts.sectionMaterial,
+                        joints.get(wall.id),
+                        corners.get(wall.id),
+                        floorRoofs,
+                        ground,
+                        scene.exteriorMaterialId ?? null,
+                    );
                     parts.walls.set(wall.id, group);
                     parts.root.add(group);
                 }
@@ -814,10 +827,11 @@ export class ViewerEngine {
             belowChanged ||
             rooms.removed.length > 0 ||
             rooms.changed.length > 0 ||
-            previous.floor.slabThickness !== scene.floor.slabThickness
+            previous.floor.slabThickness !== scene.floor.slabThickness ||
+            exteriorChanged
         ) {
             this.disposeObject(parts.slab);
-            parts.slab = buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below);
+            parts.slab = buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below, scene.exteriorMaterialId ?? null);
             parts.root.add(parts.slab);
         }
 
@@ -846,6 +860,19 @@ export class ViewerEngine {
             const label = this.createLabel(room);
             this.labels.set(room.id, label);
             content.add(label);
+        }
+        // The façades: the wall faces outside the rooms, cut by the roofs, standing on the ground (FD-88).
+        if (
+            wallsChanged ||
+            roofsChanged ||
+            (plotsChanged && scene.walls.some((w) => w.onGround === true)) ||
+            rooms.changed.length > 0 ||
+            rooms.removed.length > 0 ||
+            exteriorChanged
+        ) {
+            this.disposeObject(parts.facades);
+            parts.facades = buildFacades(scene, materials);
+            parts.root.add(parts.facades);
         }
         if (wallsChanged || roofsChanged || rooms.changed.length > 0 || rooms.removed.length > 0) {
             // Steps between ceilings depend on the neighbouring rooms, on which edges have walls and on the roofs.
@@ -3218,7 +3245,10 @@ export class ViewerEngine {
         const joints = wallJoints([...(this.sceneData?.walls ?? []), ...drawn]);
         const roofs = this.sceneData?.roofs ?? [];
         const plots = this.sceneData?.plots ?? [];
-        drawn.forEach((wall) => this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs, plots)));
+        const exterior = this.sceneData?.exteriorMaterialId ?? null;
+        drawn.forEach((wall) =>
+            this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs, plots, exterior)),
+        );
     }
 
     /** Markers of a run in the overlay: its points, and the pointer (green when snapped). */
@@ -3252,6 +3282,7 @@ export class ViewerEngine {
             cornerWindows(walls).get(wall.id),
             scene.roofs ?? [],
             scene.plots ?? [],
+            scene.exteriorMaterialId ?? null,
         );
         const original = parts.walls.get(wall.id);
         this.setPreview(original === undefined ? [] : [original], [group]);

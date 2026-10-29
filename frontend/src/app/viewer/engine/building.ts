@@ -16,6 +16,7 @@ import {
     vaultProfile,
     wallFacesAlongEdge,
 } from './ceilings';
+import {buildFacades, facadeBands,FacadeLining} from './facades';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {boxAt, curvedPrismAt, prismAt, worldUvBox} from './meshes';
@@ -78,7 +79,8 @@ export interface BuildingParts {
     ceilings: THREE.Group;
     /** The faces between rooms' ceilings of different heights where they meet without a wall (in `ceilings`). */
     ceilingSteps: THREE.Group;
-    slab: THREE.Mesh;
+    /** The slab under the floor, its pieces merged per material (`buildSlab()`). */
+    slab: THREE.Group;
     /** Per room: its floor mesh (for picking and highlighting), ceiling and wall finishes, keyed by room id. */
     rooms: Map<number, RoomParts>;
     /** Plots (their ground and boundary) keyed by plot id. */
@@ -97,6 +99,8 @@ export interface BuildingParts {
     roofOutlines: THREE.Group;
     /** Fill of wall cores revealed by the section plane, shared by all walls. */
     sectionMaterial: THREE.Material;
+    /** The façade bands on the wall faces outside every room (`buildFacades()`). */
+    facades: THREE.Group;
 }
 
 export interface RoofParts {
@@ -131,7 +135,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root,
         ceilings,
         ceilingSteps: buildCeilingSteps(scene.rooms, scene.walls, materials, roofs),
-        slab: buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below),
+        slab: buildSlab(scene.walls, scene.rooms, scene.floor.slabThickness, materials, voids.below, scene.exteriorMaterialId ?? null),
         rooms: new Map(),
         plots: new Map(),
         stairs: new Map(),
@@ -141,11 +145,12 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         roofBodies: new THREE.Group(),
         roofOutlines: new THREE.Group(),
         sectionMaterial,
+        facades: buildFacades(scene, materials),
     };
     parts.roofOutlines.name = 'roof-outlines';
     parts.roofOutlines.visible = false;
     parts.roofBodies.name = 'roofs';
-    root.add(parts.slab, parts.stairsBelow, parts.roofBodies, parts.roofOutlines);
+    root.add(parts.slab, parts.stairsBelow, parts.roofBodies, parts.roofOutlines, parts.facades);
 
     for (const room of scene.rooms) {
         addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, roofs), room.id);
@@ -164,7 +169,16 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     const joints = wallJoints(scene.walls);
     const corners = cornerWindows(scene.walls);
     for (const wall of scene.walls) {
-        const group = buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), corners.get(wall.id), roofs, scene.plots ?? []);
+        const group = buildWall(
+            wall,
+            materials,
+            parts.sectionMaterial,
+            joints.get(wall.id),
+            corners.get(wall.id),
+            roofs,
+            scene.plots ?? [],
+            scene.exteriorMaterialId ?? null,
+        );
         parts.walls.set(wall.id, group);
         root.add(group);
     }
@@ -255,6 +269,8 @@ const UnslabbedRooms: readonly Room['type'][] = ['Garden', 'Path', 'Driveway'];
  * ground; a room's piece hangs under its own floor elevation) and its walls' footprints, so an upper floor's slab
  * roofs only what it covers. The outlines are extruded and merged into one mesh; where they overlap, their faces lie
  * inside the solid or coincide. The `voids` (the stairs coming up from the floor below) are cut out of every piece.
+ * A room's piece is in its `soffitMaterialId`, else the project's façade material (`exterior`): its underside and edge
+ * show where the floor overhangs the one below (an oriel, a balcony, FD-88); the rest is the plain slab.
  */
 export function buildSlab(
     walls: readonly Wall[],
@@ -262,39 +278,43 @@ export function buildSlab(
     thickness: number,
     materials: MaterialLibrary,
     voids: readonly PlanPoint[][] = [],
-): THREE.Mesh {
+    exterior: number | null = null,
+): THREE.Group {
     const joints = wallJoints(walls);
-    const outlines: {outline: Vec2[]; top: number}[] = [
+    const plain = materials.plain('#d6d1c8', 0.95);
+    const soffit = (room: Room): THREE.Material => {
+        const id = room.soffitMaterialId ?? exterior;
+        return id === null ? plain : materials.get(id);
+    };
+    const outlines: {outline: Vec2[]; top: number; material: THREE.Material}[] = [
         ...rooms
             .filter((r) => !UnslabbedRooms.includes(r.type))
-            .map((r) => ({outline: r.polygon.map(([x, y]): Vec2 => ({x, y})), top: r.floorElevation ?? 0})),
+            .map((r) => ({outline: r.polygon.map(([x, y]): Vec2 => ({x, y})), top: r.floorElevation ?? 0, material: soffit(r)})),
         // A site wall (on a base or the ground, FD-87) has a footing of its own, not the floor's slab.
         ...walls.filter((wall) => !isSiteWall(wall)).map((wall) => {
             const {left, right} = wallFaces(wall, joints.get(wall.id));
-            return {outline: [...left, ...[...right].reverse()], top: 0};
+            return {outline: [...left, ...[...right].reverse()], top: 0, material: plain};
         }),
     ].filter(({outline}) => outline.length >= 3);
-    const cut = outlines.flatMap(({outline, top}) =>
+    const cut = outlines.flatMap(({outline, top, material}) =>
         cutVoids(
             outline.map((p): PlanPoint => [p.x, p.y]),
             voids,
-        ).map((piece) => ({piece, top})),
+        ).map((piece) => ({piece, top, material})),
     );
-    const pieces = cut.map(({piece, top}) => {
+    // A mesh per piece, merged per material (`mergeStatic()`); UVs in metres, as a cladding's planks are sized.
+    const slab = new THREE.Group();
+    slab.name = 'slab';
+    for (const {piece, top, material} of cut) {
         const geometry = new THREE.ExtrudeGeometry(cutShape(piece), {depth: thickness * MM, bevelEnabled: false});
         geometry.rotateX(-Math.PI / 2);
         geometry.translate(0, (top - thickness) * MM, 0);
-        // Merged pieces need the same attributes; the slab has no texture.
-        geometry.deleteAttribute('uv');
-        return geometry;
-    });
-    const geometry = pieces.length === 0 ? new THREE.BufferGeometry() : mergeGeometries(pieces);
-    pieces.forEach((piece) => piece !== geometry && piece.dispose());
-
-    const slab = new THREE.Mesh(geometry, materials.plain('#d6d1c8', 0.95));
-    slab.castShadow = false;
-    slab.receiveShadow = true;
-    slab.name = 'slab';
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        slab.add(mesh);
+    }
+    mergeStatic(slab);
     return slab;
 }
 
@@ -587,6 +607,7 @@ export function buildWall(
     corners: WallCorners = NoCorners,
     roofs: FloorRoofs = [],
     plots: readonly Plot[] = [],
+    exterior: number | null = null,
 ): THREE.Group {
     const frame = wallFrame(wall);
     const group = new THREE.Group();
@@ -627,6 +648,10 @@ export function buildWall(
 
     for (const opening of openings.filter((o) => o.type !== 'Niche')) {
         const part = isDoor(opening) ? buildDoor(opening, wall, materials) : buildWindow(opening, wall, materials, corners);
+        const lining = opening.revealLining === true ? revealLining(opening, wall, materials, exterior) : null;
+        if (lining !== null) {
+            part.add(lining);
+        }
         if (frame.arc !== undefined) {
             placeOnFrame(part, frame, openingFrame(frame, opening));
         }
@@ -634,6 +659,42 @@ export function buildWall(
     }
 
     mergeStatic(group);
+    return group;
+}
+
+/** How thick a lined reveal's boards are, mm. */
+const RevealBoard = 20;
+
+/**
+ * The boards lining an opening's reveal (FD-88, `revealLining`): its jambs, its head and a window's sill across the
+ * whole wall, in the band of the outer face (opposite `side`) at the opening's middle height, else that face's façade
+ * (`facadeBands()`). Null when the face has none. In the wall's coordinates, as the opening's parts are.
+ */
+function revealLining(opening: Opening, wall: Wall, materials: MaterialLibrary, exterior: number | null): THREE.Group | null {
+    const outer = (opening.side ?? 'Left') === 'Left' ? 'Right' : 'Left';
+    const bands = facadeBands(wall, outer, exterior);
+    const middle = opening.sillHeight + opening.height / 2;
+    const band = bands.find((b) => b.bottom <= middle && middle <= b.top) ?? bands.at(-1);
+    if (band === undefined) {
+        return null;
+    }
+    const material = materials.get(band.materialId);
+    const [x0, x1] = [opening.offset * MM, (opening.offset + opening.width) * MM];
+    const [y0, y1] = [opening.sillHeight * MM, (opening.sillHeight + opening.height) * MM];
+    const board = RevealBoard * MM;
+    // Across the wall from the inner face (on `side`; the left face is −z) to the façade band on the outer one.
+    const z = (-wall.thickness / 2 - (outer === 'Left' ? FacadeLining : 0)) * MM;
+    const depth = (wall.thickness + FacadeLining) * MM;
+    const group = new THREE.Group();
+    group.name = 'reveal-lining';
+    group.add(
+        boxAt(material, x0, y0, z, board, y1 - y0, depth),
+        boxAt(material, x1 - board, y0, z, board, y1 - y0, depth),
+        boxAt(material, x0, y1 - board, z, x1 - x0, board, depth),
+    );
+    if (opening.sillHeight > 0) {
+        group.add(boxAt(material, x0, y0, z, x1 - x0, board, depth));
+    }
     return group;
 }
 
@@ -970,7 +1031,9 @@ export interface FinishSegment {
 export function finishSegments(room: Room, a: Vec2, b: Vec2, length: number, walls: readonly Wall[]): FinishSegment[] {
     const own = wallFacesAlongEdge(a, b, walls).flatMap((face): FinishSegment[] => {
         const bands = face.side === 'Left' ? face.wall.leftFinishes : face.wall.rightFinishes;
-        return bands == null ? [] : [{from: face.from, to: face.to, bands}];
+        // Inside a room a face's bands start on its floor (a façade's plinth may reach below it, FD-88).
+        const onFloor = bands?.filter((band) => band.top > 0).map((band) => ({...band, bottom: Math.max(band.bottom, 0)}));
+        return onFloor == null ? [] : [{from: face.from, to: face.to, bands: onFloor}];
     });
     const rest = subtractSpans([[0, length]], own.map((segment): [number, number] => [segment.from, segment.to]));
     return [...own, ...rest.map(([from, to]): FinishSegment => ({from, to, bands: room.wallFinishes}))].sort((x, y) => x.from - y.from);

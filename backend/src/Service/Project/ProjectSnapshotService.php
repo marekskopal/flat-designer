@@ -117,6 +117,7 @@ final readonly class ProjectSnapshotService
 				'project' => ['name' => $project->name, 'address' => $project->address, 'description' => $project->description],
 				'materials' => $this->sceneProvider->getMaterials(),
 				'location' => LocationDto::fromEntity($project),
+				'exteriorMaterialId' => $project->exteriorMaterial?->id,
 				'floors' => $floors,
 				'views' => $this->viewRestorer->snapshot($project),
 			],
@@ -256,6 +257,8 @@ final readonly class ProjectSnapshotService
 			$room->floorElevation = $data->nullableInt('floorElevation') ?? 0;
 			// Nor ceilings and skirting before they had their own fields.
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
+			// Snapshots taken before façades (FD-88) have none: the façade material.
+			$room->soffitMaterial = $materials[$data->nullableInt('soffitMaterialId') ?? 0] ?? null;
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
 			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
 			$room->vaultRise = $data->nullableInt('vaultRise') ?? 130;
@@ -338,6 +341,8 @@ final readonly class ProjectSnapshotService
 				$restored->shutters = ShutterStyleEnum::tryFrom($opening->nullableString('shutters') ?? '');
 				$restored->shutterMaterial = $materials[$opening->nullableInt('shutterMaterialId') ?? 0] ?? null;
 				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
+				// Snapshots taken before façades (FD-88): a bare reveal.
+				$restored->revealLining = $opening->raw('revealLining') === true;
 				// And before niches.
 				$restored->depth = $opening->nullableInt('depth');
 				$this->openingRepository->persist($restored);

@@ -46,6 +46,8 @@ final readonly class SceneDto
 		public ?StairsBelowDto $stairsBelow = null,
 		/** The roofs over this floor; their heights count from its level. */
 		public array $roofs = [],
+		/** The project's default façade material (FD-88). */
+		public ?int $exteriorMaterialId = null,
 	)
 	{
 	}

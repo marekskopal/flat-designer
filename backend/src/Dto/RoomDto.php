@@ -39,6 +39,7 @@ final readonly class RoomDto
 		public ?int $beamMaterialId,
 		public ?int $skirtingHeight,
 		public ?int $skirtingMaterialId,
+		public ?int $soffitMaterialId = null,
 	) {
 	}
 
@@ -74,6 +75,7 @@ final readonly class RoomDto
 			beamMaterialId: $room->beamMaterial?->id,
 			skirtingHeight: $room->skirtingHeight,
 			skirtingMaterialId: $room->skirtingMaterial?->id,
+			soffitMaterialId: $room->soffitMaterial?->id,
 		);
 	}
 }

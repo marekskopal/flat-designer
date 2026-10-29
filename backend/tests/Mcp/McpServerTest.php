@@ -431,10 +431,15 @@ final class McpServerTest extends IntegrationTestCase
 			$electrical['totals'],
 		);
 
-		// Walls without a material are the default paint: 14 m around, 2.6 m high; the ceiling white plaster.
+		// Walls without a material are the default paint: 14 m around, 2.6 m high; the ceiling white plaster; the outer
+		// faces the default façade, 2 × (4.6 + 3.6) m round the mitred corners.
 		$prices = $this->client->call('set_material_prices', [
 			'projectId' => $this->project->id,
-			'prices' => [['surface' => 'Wall', 'pricePerArea' => 5], ['surface' => 'Ceiling', 'pricePerArea' => 10]],
+			'prices' => [
+				['surface' => 'Wall', 'pricePerArea' => 5],
+				['surface' => 'Ceiling', 'pricePerArea' => 10],
+				['surface' => 'Facade', 'pricePerArea' => 2],
+			],
 			'currency' => 'czk',
 		]);
 		self::assertIsArray($prices);
@@ -442,7 +447,7 @@ final class McpServerTest extends IntegrationTestCase
 		$quantities = $this->client->call('get_quantities', ['projectId' => $this->project->id]);
 		self::assertIsArray($quantities);
 		self::assertTrue($quantities['complete']);
-		self::assertEqualsWithDelta(14 * 2.6 * 5 + 12 * 10, $quantities['total'], 0.01);
+		self::assertEqualsWithDelta(14 * 2.6 * 5 + 12 * 10 + 2 * (4.6 + 3.6) * 2.6 * 2, $quantities['total'], 0.01);
 
 		$this->client->call('undo', ['projectId' => $this->project->id]);
 		$this->client->call('undo', ['projectId' => $this->project->id]);

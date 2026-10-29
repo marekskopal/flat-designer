@@ -274,7 +274,7 @@ final readonly class WallHandler implements ElementHandler
 	 */
 	private function faceFinishes(mixed $bands, string $field): ?array
 	{
-		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field);
+		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field, WallBase::Limit);
 	}
 
 	/** @param array{startX: int, startY: int, endX: int, endY: int, ...} $next */

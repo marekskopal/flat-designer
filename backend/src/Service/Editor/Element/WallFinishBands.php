@@ -28,11 +28,12 @@ final readonly class WallFinishBands
 	}
 
 	/**
-	 * Checked bands of a field; an empty list stays empty.
+	 * Checked bands of a field; an empty list stays empty. A wall face's may start below the floor's level, down to
+	 * `-$below` (a façade's plinth over the slab's edge, FD-88); a room's start on its floor.
 	 *
 	 * @return list<array{materialId: int, bottom: int, top: int}>
 	 */
-	public function parse(mixed $bands, string $field): array
+	public function parse(mixed $bands, string $field, int $below = 0): array
 	{
 		if (!is_array($bands) || !array_is_list($bands) || count($bands) > self::MaxBands) {
 			throw EditException::invalid(sprintf('Field "%s" must be a list of at most %d bands.', $field, self::MaxBands));
@@ -43,8 +44,8 @@ final readonly class WallFinishBands
 			$fields = new FieldReader(is_array($band) ? self::object($band) : []);
 			$materialId = $fields->nullableId('materialId') ?? throw EditException::invalid('Every wall finish needs a materialId.');
 			$this->materialResolver->resolve($materialId);
-			$bottom = $fields->int('bottom', 0, State::MaxSize);
-			$top = $fields->int('top', 1, State::MaxSize);
+			$bottom = $fields->int('bottom', -$below, State::MaxSize);
+			$top = $fields->int('top', 1 - $below, State::MaxSize);
 			if ($top <= $bottom) {
 				throw EditException::invalid('A wall finish must end above where it starts (top > bottom).');
 			}

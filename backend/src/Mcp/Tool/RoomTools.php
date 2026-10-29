@@ -26,6 +26,7 @@ final readonly class RoomTools
 		'beamMaterialId',
 		'skirtingHeight',
 		'skirtingMaterialId',
+		'soffitMaterialId',
 	];
 
 	private const array WallFinishesSchema = [
@@ -111,6 +112,8 @@ final readonly class RoomTools
 	 * @param int|null $beamMaterialId vaulted ceiling: material of the beams (default white paint)
 	 * @param int|null $skirtingHeight skirting boards along the room's walls (doors left free), mm high (20–400); default none
 	 * @param int|null $skirtingMaterialId material of the skirting (default white)
+	 * @param int|null $soffitMaterialId the underside and edge of the room's slab where it overhangs the floor below (an oriel, a
+	 *   balcony), from list_materials (default the project's façade material)
 	 */
 	#[McpTool(name: 'add_room', description: 'Add a room (floor area) to a floor.')]
 	public function addRoom(
@@ -137,6 +140,7 @@ final readonly class RoomTools
 		?int $beamMaterialId = null,
 		?int $skirtingHeight = null,
 		?int $skirtingMaterialId = null,
+		?int $soffitMaterialId = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -163,6 +167,7 @@ final readonly class RoomTools
 				'beamMaterialId' => $beamMaterialId,
 				'skirtingHeight' => $skirtingHeight,
 				'skirtingMaterialId' => $skirtingMaterialId,
+				'soffitMaterialId' => $soffitMaterialId,
 			]),
 		);
 	}
@@ -184,7 +189,9 @@ final readonly class RoomTools
 	 * @param int|null $beamMaterialId vaulted ceiling: material of the beams (default white paint)
 	 * @param int|null $skirtingHeight skirting boards along the room's walls (doors left free), mm high (20–400); default none
 	 * @param int|null $skirtingMaterialId material of the skirting (default white)
-	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId", "tileOriginX", "tileOriginY", "ceilingMaterialId", "vaultSpacing" (a flat ceiling again), "beamMaterialId", "skirtingHeight", "skirtingMaterialId"
+	 * @param int|null $soffitMaterialId the underside and edge of the room's slab where it overhangs the floor below (an oriel, a
+	 *   balcony), from list_materials (default the project's façade material)
+	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId", "tileOriginX", "tileOriginY", "ceilingMaterialId", "vaultSpacing" (a flat ceiling again), "beamMaterialId", "skirtingHeight", "skirtingMaterialId", "soffitMaterialId"
 	 */
 	#[McpTool(name: 'update_room', description: 'Change a room. Only the given fields change.')]
 	public function updateRoom(
@@ -212,6 +219,7 @@ final readonly class RoomTools
 		?int $beamMaterialId = null,
 		?int $skirtingHeight = null,
 		?int $skirtingMaterialId = null,
+		?int $soffitMaterialId = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -240,6 +248,7 @@ final readonly class RoomTools
 				'beamMaterialId' => $beamMaterialId,
 				'skirtingHeight' => $skirtingHeight,
 				'skirtingMaterialId' => $skirtingMaterialId,
+				'soffitMaterialId' => $soffitMaterialId,
 			], $clear, self::Clearable),
 		);
 	}

@@ -68,6 +68,10 @@ final readonly class FlatDesignerServer
 		the ground, rooms below it are cut out of it, and items with onGround stand on it. Garden and retaining
 		walls slope (heightEnd) and stand on a base or the ground (baseStart / baseEnd, onGround); garden steps are
 		stairs with a rise of their own (rise, baseZ); fences follow the slope (params follow).
+		A wall face outside every room is a façade: its own leftFinishes / rightFinishes run along it (render,
+		cladding, a plinth starting below the floor); exterior walls nobody set take the project's exteriorMaterialId
+		(update_project). A room's soffitMaterialId clads its slab where it overhangs the floor below; an opening's
+		revealLining lines its reveal with the façade.
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);

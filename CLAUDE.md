@@ -272,6 +272,21 @@ format is the text in `FurnitureTools::Format`.
   room's, `[]` leaves the face bare; validated by `WallFinishBands`; turning a wall round swaps them, so the bands stay
   on the same side of the plan). `faces()` / `wallFacesAlongEdge()` say which wall
   and side covers which stretch of a room edge; `buildWallFinishes()` and `RoomSurfaces` use them.
+- Façades (FD-88): a wall face outside every indoor room is a façade (`FacadeSpans::of()` / `facadeSpans()` in
+  `ceilings.ts`, twins kept identical by the `facades` cases of `wall-spans.json`: each face's mitred extent less the
+  stretches indoor room edges run along; open-air rooms, a garden by the house, cover none). It draws its own
+  `leftFinishes` / `rightFinishes` along it (`buildFacades()` in `facades.ts`: a group per wall face tagged `wallId`,
+  `FacadeLining` off the face, cut by its openings, every piece between the wall's top and its bottom on a base or the
+  ground); a face's bands may start below the floor (a plinth, to −`WallBase::Limit`; inside a room they start on its
+  floor), and where they overlap the first keeps the stretch. An exterior wall without a material and with bands null
+  (not `[]`, which keeps it bare) takes the project's `exteriorMaterialId` (`facadeBands()`; project details, which a
+  REST update replaces like the site fields, carried as the scene's `exteriorMaterialId` and at the snapshot's top
+  level, a restore leaving the project's own). A
+  room's slab piece is in its `soffitMaterialId`, else the façade material (`buildSlab()`, a group merged per
+  material): the underside of an oriel or a balcony. An opening with `revealLining` lines its jambs, head and a
+  window's sill with the outer face's band (`revealLining()` in `building.ts`). Quantities: `FacadeSurfaces` (surface
+  `Facade`, per floor in `QuantitiesDto::$facades`) sums the faces in 50 mm strips per band material, the rest in the
+  wall's own or the façade material.
 - Ceilings and skirting are room fields (rules in `RoomCeiling`). A room has a `ceilingMaterialId`. With
   `vaultSpacing`, its ceiling is vaulted: sine arches `vaultRise` high spring between beams spaced at whole
   multiples of `vaultSpacing` from the plan origin, so neighbouring rooms line up. The beams run at `vaultAngle`,
@@ -640,7 +655,7 @@ format is the text in `FurnitureTools::Format`.
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without
   openings, along the wall faces on the room's edges; the ceiling (a vault's arc length and its beams) and skirting.
-  Façades (wall faces outside every room) are not counted, and open-air rooms get no paint. Materials with a tile size
+  Façades (wall faces outside every room) are counted apart (`FacadeSurfaces`), and open-air rooms get no paint. Materials with a tile size
   and a pattern laid in pieces are counted in whole pieces plus `projects.waste_percent` (`Costing`).
 - Prices are per project (`ProjectMaterialPrice`, `MaterialPriceService`, REST `…/material-prices` replaces the list, MCP
   `set_material_prices` merges): per m² and per running metre (skirting, edge banding), in `projects.currency`. A price

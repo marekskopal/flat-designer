@@ -21,12 +21,16 @@ final readonly class Ground
 	/** @param list<Plot> $plots */
 	public static function of(array $plots): self
 	{
-		return new self(array_map(static function (Plot $plot): array {
-			$dto = PlotDto::fromEntity($plot);
+		return self::fromDtos(array_map(static fn (Plot $plot): PlotDto => PlotDto::fromEntity($plot), $plots));
+	}
 
-			$polygon = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $dto->polygon);
+	/** @param list<PlotDto> $plots as a scene serves them */
+	public static function fromDtos(array $plots): self
+	{
+		return new self(array_map(static function (PlotDto $plot): array {
+			$polygon = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $plot->polygon);
 
-			return ['polygon' => $polygon, 'terrain' => Terrain::of($dto->terrain, $dto->polygon, $dto->groundLevel)];
+			return ['polygon' => $polygon, 'terrain' => Terrain::of($plot->terrain, $plot->polygon, $plot->groundLevel)];
 		}, $plots));
 	}
 

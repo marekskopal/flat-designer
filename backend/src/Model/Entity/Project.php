@@ -45,6 +45,10 @@ class Project extends AEntity
 	#[Column(type: Type::String, size: 64, nullable: true)]
 	public ?string $timeZone = null;
 
+	/** The façade of the exterior walls' outer faces nobody set a material or bands for (FD-88); null: the walls' own. */
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $exteriorMaterial = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: User::class, nullable: true)]
 		public ?User $owner,

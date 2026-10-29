@@ -89,6 +89,10 @@ class Opening extends AEntity
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $depth = null;
 
+	/** The reveal (jambs and head across the wall) is lined with the outer face's band (FD-88: a clad façade). */
+	#[Column(type: Type::Boolean)]
+	public bool $revealLining = false;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Wall::class)]
 		public readonly Wall $wall,

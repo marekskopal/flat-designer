@@ -18,6 +18,7 @@ final readonly class QuantitiesDto
 	 * @param list<QuantityMaterialDto> $materials
 	 * @param list<QuantityMaterialDto> $furniture
 	 * @param list<QuantityRoofDto> $roofs
+	 * @param list<QuantityFacadeDto> $facades one per floor with façades
 	 */
 	public function __construct(
 		public string $currency,
@@ -28,6 +29,7 @@ final readonly class QuantitiesDto
 		public float $total,
 		public bool $complete,
 		public array $roofs = [],
+		public array $facades = [],
 	) {
 	}
 }

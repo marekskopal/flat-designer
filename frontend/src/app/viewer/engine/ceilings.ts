@@ -1,6 +1,17 @@
 import {PlanPoint, Room, Wall} from '@app/models/scene';
 
-import {counterClockwise, edgeStretch, edgeWall, pointInPolygon, Vec2, wallGapsAlongEdge} from './plan-geometry';
+import {
+    alongWall,
+    counterClockwise,
+    edgeStretch,
+    edgeWall,
+    pointInPolygon,
+    SquareEnds,
+    Vec2,
+    wallFrame,
+    wallGapsAlongEdge,
+    wallJoints,
+} from './plan-geometry';
 import {CeilingUnderRoof, FloorRoofs, roofBreaks, roomCeilingAt} from './under-roof';
 
 /** Directions of a vaulted ceiling in plan: `u` along the beams, `v` across them (u turned 90° counter-clockwise). */
@@ -185,6 +196,68 @@ export function wallFacesAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tol
         covered = mergeSpans([...covered, [face.from, face.to]]);
     }
     return faces;
+}
+
+/** A wall face's stretches outside every room (`facadeSpans()`), mm along the wall's centre line. */
+export interface FacadeFace {
+    wall: Wall;
+    side: 'Left' | 'Right';
+    spans: [number, number][];
+}
+
+/** A room's outline as `facadeSpans()` takes it: an open-air room (a garden, a terrace) covers no façade. */
+export interface FacadeRoom {
+    polygon: readonly PlanPoint[];
+    outdoor: boolean;
+}
+
+/**
+ * The façades (FD-88): the stretches of each wall face that border no room, mm along the wall's centre line, within
+ * the face's own extent (mitred at the wall's joints: `wallJoints()`). A face bordering an indoor room is covered where
+ * one of the room's edges runs along it (`wallFacesAlongEdge()`); the rest of it, and the faces along open-air rooms
+ * (the house's outer walls by the garden), is outside. Twin of `FacadeSpans::of()`.
+ */
+export function facadeSpans(walls: readonly Wall[], rooms: readonly FacadeRoom[]): FacadeFace[] {
+    const covered = new Map<string, [number, number][]>();
+    for (const {polygon} of rooms.filter((r) => !r.outdoor)) {
+        polygon.forEach(([ax, ay], i) => {
+            const [bx, by] = polygon[(i + 1) % polygon.length];
+            const length = Math.hypot(bx - ax, by - ay);
+            if (length <= 0) {
+                return;
+            }
+            const dir = {x: (bx - ax) / length, y: (by - ay) / length};
+            for (const face of wallFacesAlongEdge({x: ax, y: ay}, {x: bx, y: by}, walls)) {
+                const frame = wallFrame(face.wall);
+                const s0 = alongWall(frame, {x: ax + dir.x * face.from, y: ay + dir.y * face.from});
+                const s1 = alongWall(frame, {x: ax + dir.x * face.to, y: ay + dir.y * face.to});
+                const key = `${face.wall.id}:${face.side}`;
+                if (s0 !== s1) {
+                    covered.set(key, [...(covered.get(key) ?? []), [Math.min(s0, s1), Math.max(s0, s1)]]);
+                }
+            }
+        });
+    }
+    const joints = wallJoints(walls);
+    const facades: FacadeFace[] = [];
+    for (const wall of walls) {
+        const frame = wallFrame(wall);
+        if (!(Math.hypot(wall.endX - wall.startX, wall.endY - wall.startY) > 0)) {
+            continue;
+        }
+        const ends = joints.get(wall.id) ?? SquareEnds;
+        const extents: ['Left' | 'Right', number, number][] = [
+            ['Left', -ends.startLeft, frame.length + ends.endLeft],
+            ['Right', -ends.startRight, frame.length + ends.endRight],
+        ];
+        for (const [side, from, to] of extents) {
+            const spans = subtractSpans([[from, to]], mergeSpans(covered.get(`${wall.id}:${side}`) ?? []));
+            if (spans.length > 0) {
+                facades.push({wall, side, spans});
+            }
+        }
+    }
+    return facades;
 }
 
 /**

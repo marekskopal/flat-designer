@@ -235,6 +235,8 @@ export interface Room {
     /** Skirting boards along the room's walls (doors left free), mm high; null: none. */
     skirtingHeight?: number | null;
     skirtingMaterialId?: number | null;
+    /** The underside and edge of the room's slab where it overhangs the floor below (FD-88); null: the façade material. */
+    soffitMaterialId?: number | null;
 }
 
 /**
@@ -285,6 +287,8 @@ export interface Opening {
     shutters?: ShutterStyle | null;
     shutterMaterialId?: number | null;
     shuttersClosed?: boolean;
+    /** The reveal (jambs and head across the wall) is lined with the outer face's band (FD-88); missing: bare. */
+    revealLining?: boolean;
     /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
     depth?: number | null;
 }
@@ -387,6 +391,8 @@ export interface Scene {
     stairs?: Stair[];
     /** mm the floor's stairs climb (`StairRise`): to the next floor up, or over the tallest wall on the top floor; absent in older versions. */
     stairRise?: number;
+    /** The project's default façade material (FD-88): the outer faces of exterior walls nobody set; missing: none. */
+    exteriorMaterialId?: number | null;
     /** The stairs of the floor below coming up through this one; null without a floor below, absent in older versions. */
     stairsBelow?: StairsBelow | null;
     /** The roofs over this floor; absent in older versions. */

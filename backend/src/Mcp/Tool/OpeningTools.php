@@ -42,6 +42,8 @@ final readonly class OpeningTools
 	 * @param string|null $shutters window: exterior shutters, two leaves on the outer face (opposite `side`): "Louvred" | "Solid"; default none
 	 * @param int|null $shutterMaterialId window with shutters: material of the shutters (list_materials; default painted timber)
 	 * @param bool|null $shuttersClosed window with shutters: closed across the window (default false: folded back against the wall)
+	 * @param bool|null $revealLining true: the reveal (jambs and head across the wall) is lined with the outer face's band, as a
+	 *   clad façade's window box (default false)
 	 * @param int|null $depth niche: mm into the wall from its `side` face, leaving at least 30 mm of wall behind it (default half the wall thickness)
 	 */
 	#[McpTool(
@@ -75,6 +77,7 @@ final readonly class OpeningTools
 		?int $shutterMaterialId = null,
 		?bool $shuttersClosed = null,
 		?int $depth = null,
+		?bool $revealLining = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -105,6 +108,7 @@ final readonly class OpeningTools
 				'shutterMaterialId' => $shutterMaterialId,
 				'shuttersClosed' => $shuttersClosed,
 				'depth' => $depth,
+				'revealLining' => $revealLining,
 			]),
 		);
 	}
@@ -128,6 +132,8 @@ final readonly class OpeningTools
 	 * @param string|null $shutters window: "Louvred" | "Solid" exterior shutters
 	 * @param int|null $shutterMaterialId window with shutters: their material
 	 * @param bool|null $shuttersClosed window with shutters: closed (true) or folded back (false)
+	 * @param bool|null $revealLining true: the reveal (jambs and head across the wall) is lined with the outer face's band, as a
+	 *   clad façade's window box (default false)
 	 * @param int|null $depth niche: mm into the wall from its `side` face (leaving at least 30 mm behind it)
 	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard", "panelHeight", "shutters", "shutterMaterialId"
 	 */
@@ -162,6 +168,7 @@ final readonly class OpeningTools
 		?int $shutterMaterialId = null,
 		?bool $shuttersClosed = null,
 		?int $depth = null,
+		?bool $revealLining = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -193,6 +200,7 @@ final readonly class OpeningTools
 				'shutterMaterialId' => $shutterMaterialId,
 				'shuttersClosed' => $shuttersClosed,
 				'depth' => $depth,
+				'revealLining' => $revealLining,
 			], $clear, self::Clearable),
 		);
 	}

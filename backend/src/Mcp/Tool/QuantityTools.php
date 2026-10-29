@@ -31,6 +31,7 @@ final readonly class QuantityTools
 		QuantitySurfaceEnum::Furniture->value,
 		QuantitySurfaceEnum::RoofCovering->value,
 		QuantitySurfaceEnum::Soffit->value,
+		QuantitySurfaceEnum::Facade->value,
 	];
 
 	public const array PricesSchema = [

@@ -309,6 +309,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'depth', label: 'Depth (into the wall)', type: 'int', unit: 'mm', when: (element) => element['type'] === 'Niche'},
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool', when: (element) => element['type'] !== 'Niche'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
+        {key: 'revealLining', label: 'Line the reveal with the façade', type: 'bool', when: (element) => element['type'] !== 'Niche'},
     ],
     plot: [
         {key: 'name', label: 'Name', type: 'text'},
@@ -421,6 +422,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
             when: (room) => room['skirtingHeight'] != null,
         },
+        {key: 'soffitMaterialId', label: 'Slab soffit where it overhangs (empty: façade)', type: 'material', nullable: true},
         {key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
         {key: 'wallFinishes', label: 'Wall finishes [{materialId, bottom, top}] (JSON)', type: 'json'},
         {key: 'tileOriginX', label: 'Tile joints cross at x', type: 'int', unit: 'mm', nullable: true, half: true},

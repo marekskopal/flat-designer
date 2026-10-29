@@ -40,6 +40,15 @@
                         </datalist>
                     </label>
                 </fieldset>
+                <label class="field">
+                    <span class="field__label">Façade (exterior walls without a material of their own)</span>
+                    <select class="input" formControlName="exteriorMaterialId">
+                        <option [ngValue]="null">— the walls' own —</option>
+                        @for (material of materials(); track material.id) {
+                            <option [ngValue]="material.id">{{ material.name }}</option>
+                        }
+                    </select>
+                </label>
                 <div class="form__actions">
                     <button type="button" class="btn btn--ghost" (click)="editingDetails.set(false)">Cancel</button>
                     <button type="submit" class="btn btn--primary" [disabled]="detailsForm.invalid || busy()">Save</button>

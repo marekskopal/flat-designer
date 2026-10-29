@@ -58,6 +58,8 @@ final class SnapshotScenes
 			$scene->floor = $sceneFloors[$id];
 			$scene->materials = $data->materials ?? [];
 			$scene->location = $data->location ?? null;
+			// Missing in snapshots taken before façades (FD-88).
+			$scene->exteriorMaterialId = $data->exteriorMaterialId ?? null;
 			$stairs->addTo($scene, $f);
 			if ($id === $floorId) {
 				$result['scene'] = $scene;

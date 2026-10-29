@@ -128,6 +128,7 @@ final readonly class SceneProvider
 			stairRise: $this->stairRise->of($floor, $floors, $walls),
 			stairsBelow: $this->stairsBelow($floor, $floors),
 			roofs: $this->roofs($floor),
+			exteriorMaterialId: $floor->project->exteriorMaterial?->id,
 		);
 	}
 

@@ -33,6 +33,7 @@ final class OpeningDefaults
 		'shutterMaterialId' => null,
 		'shuttersClosed' => false,
 		'depth' => null,
+		'revealLining' => false,
 	];
 
 	/** @return array<string, mixed> */

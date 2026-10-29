@@ -132,6 +132,7 @@ final class Fixture
 			wallFinishes: $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":1200}]',
 		));
 		$room->floorElevation = 20;
+		$room->soffitMaterial = $material;
 		self::service(RoomRepository::class)->persist($room);
 		$plot = new Plot(
 			floor: $floor,
@@ -232,6 +233,7 @@ final class Fixture
 			side: null,
 		));
 		$frenchWindow->walkable = true;
+		$frenchWindow->revealLining = true;
 		self::service(OpeningRepository::class)->persist($frenchWindow);
 
 		$items = self::service(ItemRepository::class);

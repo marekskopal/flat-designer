@@ -61,7 +61,7 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard', 'leafStyle', 'leafPanels', 'panelHeight', 'shutters', 'shutterMaterialId', 'shuttersClosed', 'depth'];
+		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard', 'leafStyle', 'leafPanels', 'panelHeight', 'shutters', 'shutterMaterialId', 'shuttersClosed', 'depth', 'revealLining'];
 	}
 
 	/** @return list<string> */
@@ -171,6 +171,8 @@ final readonly class OpeningHandler implements ElementHandler
 				? DoorFrameStyleEnum::None->value
 				: ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
 			'depth' => $depth,
+			// Missing in older change states: a bare reveal. A niche has none.
+			'revealLining' => $type !== OpeningTypeEnum::Niche && $fields->bool('revealLining'),
 		] + self::leafFields($type, $hinge, $width, $fields) + $window + $this->look->fields($type, $height, $fields);
 	}
 
@@ -286,6 +288,7 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->shutterMaterial = $this->materialResolver->resolve($fields->nullableId('shutterMaterialId'));
 		$opening->shuttersClosed = $fields->bool('shuttersClosed');
 		$opening->depth = $fields->nullableInt('depth', 1, State::MaxSize);
+		$opening->revealLining = $fields->bool('revealLining');
 		$this->openingRepository->persist($opening);
 	}
 

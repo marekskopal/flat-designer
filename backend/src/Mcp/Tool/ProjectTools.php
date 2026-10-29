@@ -24,7 +24,7 @@ final readonly class ProjectTools
 {
 	private const int MaxChanges = 100;
 
-	private const array Clearable = ['address', 'description', 'location', 'timeZone'];
+	private const array Clearable = ['address', 'description', 'location', 'timeZone', 'exteriorMaterialId'];
 
 	public function __construct(
 		private ToolContext $context,
@@ -83,13 +83,15 @@ final readonly class ProjectTools
 	 * @param float|null $latitude where the building stands, degrees north (south negative); with `longitude`
 	 * @param float|null $longitude degrees east (west negative); with `latitude`
 	 * @param string|null $timeZone IANA time zone of the site, e.g. "Europe/Prague" (the sun's clock time is read in it)
+	 * @param int|null $exteriorMaterialId the façade (render, cladding) of the exterior walls' outer faces that have no
+	 *   material or bands of their own, from list_materials
 	 * @param list<string>|null $clear fields to set to none: "address", "description", "location" (latitude and longitude),
-	 *   "timeZone"
+	 *   "timeZone", "exteriorMaterialId"
 	 */
 	#[McpTool(
 		name: 'update_project',
-		description: 'Change a project\'s name, address, description or site: the north angle and the location (latitude, '
-			. 'longitude, time zone) the viewer\'s sun is placed from. Only the given fields change.',
+		description: 'Change a project\'s name, address, description, site (the north angle and the location: latitude, '
+			. 'longitude, time zone, which the viewer\'s sun is placed from) or default façade material. Only the given fields change.',
 	)]
 	public function updateProject(
 		int $projectId,
@@ -100,6 +102,7 @@ final readonly class ProjectTools
 		?float $latitude = null,
 		?float $longitude = null,
 		?string $timeZone = null,
+		?int $exteriorMaterialId = null,
 		?array $clear = null,
 	): ProjectDto {
 		$project = $this->context->project($projectId);
@@ -113,6 +116,11 @@ final readonly class ProjectTools
 			latitude: $noLocation ? null : ($latitude ?? $project->latitude),
 			longitude: $noLocation ? null : ($longitude ?? $project->longitude),
 			timeZone: in_array('timeZone', $cleared, true) ? null : ($timeZone ?? $project->timeZone),
+			exteriorMaterialId: in_array(
+				'exteriorMaterialId',
+				$cleared,
+				true,
+			) ? null : ($exteriorMaterialId ?? $project->exteriorMaterial?->id),
 		);
 
 		return $this->projectProvider->toDto($this->projectProvider->update($project, $input));

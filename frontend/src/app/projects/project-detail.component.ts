@@ -6,12 +6,13 @@ import {Router, RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {levelText} from '@app/core/level-text';
 import {Project, ProjectVersion} from '@app/models/project';
-import {Floor} from '@app/models/scene';
+import {Floor, Material} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {ElectricalScheduleComponent} from '@app/projects/electrical-schedule/electrical-schedule.component';
 import {ProjectFilesComponent} from '@app/projects/files/project-files.component';
 import {RoomScheduleComponent} from '@app/projects/room-schedule/room-schedule.component';
 import {AlertService} from '@app/services/alert.service';
+import {FurnitureService} from '@app/services/furniture.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareService} from '@app/services/share.service';
@@ -40,6 +41,7 @@ export class ProjectDetailComponent {
     public readonly projectId = input.required({transform: numberAttribute});
 
     private readonly projectService = inject(ProjectService);
+    private readonly furnitureService = inject(FurnitureService);
     private readonly shareService = inject(ShareService);
     private readonly alerts = inject(AlertService);
     private readonly router = inject(Router);
@@ -66,7 +68,10 @@ export class ProjectDetailComponent {
         latitude: [null as number | null, [Validators.min(-90), Validators.max(90)]],
         longitude: [null as number | null, [Validators.min(-180), Validators.max(180)]],
         timeZone: [''],
+        exteriorMaterialId: [null as number | null],
     });
+    /** The materials a project's façade may be in (loaded with the details form). */
+    protected readonly materials = signal<Material[]>([]);
     /** The time zones the browser knows, offered for the site's time zone. */
     protected readonly timeZones = Intl.supportedValuesOf('timeZone');
     protected readonly floorForm = this.fb.group({
@@ -108,12 +113,16 @@ export class ProjectDetailComponent {
             latitude: project.latitude,
             longitude: project.longitude,
             timeZone: project.timeZone ?? '',
+            exteriorMaterialId: project.exteriorMaterialId ?? null,
         });
         this.editingDetails.set(true);
+        if (this.materials().length === 0) {
+            void this.furnitureService.materials().then((materials) => this.materials.set(materials));
+        }
     }
 
     protected async saveDetails(project: Project): Promise<void> {
-        const {name, address, description, northAngle, latitude, longitude, timeZone} = this.detailsForm.getRawValue();
+        const {name, address, description, northAngle, latitude, longitude, timeZone, exteriorMaterialId} = this.detailsForm.getRawValue();
         await this.run(async () => {
             this.project.set(
                 await this.projectService.update(project.id, {
@@ -124,6 +133,7 @@ export class ProjectDetailComponent {
                     latitude,
                     longitude,
                     timeZone: timeZone || null,
+                    exteriorMaterialId,
                 }),
             );
             this.editingDetails.set(false);

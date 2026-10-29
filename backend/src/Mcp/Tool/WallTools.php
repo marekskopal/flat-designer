@@ -20,7 +20,8 @@ final readonly class WallTools
 	private const array FaceFinishesSchema = [
 		'type' => ['array', 'null'],
 		'description' => 'wall finish bands on this face, mm above the floor, replacing the bands of the room the face borders; '
-			. '[] leaves the face bare (paint only)',
+			. '[] leaves the face bare (paint only). On a façade (a face outside every room: render, cladding) they run along '
+			. 'the whole face, and may start below the floor (a plinth over the slab\'s edge)',
 		'items' => WallFinishBands::BandSchema,
 		'default' => null,
 	];

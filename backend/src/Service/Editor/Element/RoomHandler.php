@@ -54,6 +54,7 @@ final readonly class RoomHandler implements ElementHandler
 			'floorAngle',
 			'floorElevation',
 			...array_keys(RoomCeiling::Defaults),
+			'soffitMaterialId',
 		];
 	}
 
@@ -78,7 +79,7 @@ final readonly class RoomHandler implements ElementHandler
 			'tileOriginY' => null,
 			'floorAngle' => 0,
 			'floorElevation' => 0,
-		] + RoomCeiling::Defaults;
+		] + RoomCeiling::Defaults + ['soffitMaterialId' => null];
 	}
 
 	public function find(Floor $floor, int $id): ?Room
@@ -105,6 +106,8 @@ final readonly class RoomHandler implements ElementHandler
 		$fields = new FieldReader($state);
 		$floorMaterialId = $fields->nullableId('floorMaterialId');
 		$this->materialResolver->resolve($floorMaterialId);
+		$soffitMaterialId = $fields->nullableId('soffitMaterialId');
+		$this->materialResolver->resolve($soffitMaterialId);
 		$ceilingHeight = $fields->nullableInt('ceilingHeight', 1000, State::MaxSize);
 
 		return [
@@ -121,7 +124,7 @@ final readonly class RoomHandler implements ElementHandler
 			'floorAngle' => ((self::floorAngle($fields) % 180) + 180) % 180,
 			// Missing in older change states: the floor's level.
 			'floorElevation' => $fields->raw('floorElevation') === null ? 0 : self::floorElevation($fields),
-		] + $this->ceiling->fields($ceilingHeight, $fields);
+		] + $this->ceiling->fields($ceilingHeight, $fields) + ['soffitMaterialId' => $soffitMaterialId];
 	}
 
 	public function create(Floor $floor, array $state): Room
@@ -178,6 +181,7 @@ final readonly class RoomHandler implements ElementHandler
 		$room->floorAngle = $fields->int('floorAngle', 0, 179, 'degrees');
 		$room->floorElevation = self::floorElevation($fields);
 		$this->ceiling->apply($room, $fields);
+		$room->soffitMaterial = $this->materialResolver->resolve($fields->nullableId('soffitMaterialId'));
 		$this->roomRepository->persist($room);
 	}
 

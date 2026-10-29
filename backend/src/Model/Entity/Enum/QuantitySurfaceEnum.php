@@ -21,6 +21,8 @@ enum QuantitySurfaceEnum: string
 	case RoofCovering = 'RoofCovering';
 	/** The underside of a roof's planes, along the slope. */
 	case Soffit = 'Soffit';
+	/** The wall faces outside every room, per material: bands, else the wall's own or the project's façade (FD-88). */
+	case Facade = 'Facade';
 
 	/** Name of what the viewer draws when the surface has no material. */
 	public function defaultMaterialName(): string
@@ -34,6 +36,7 @@ enum QuantitySurfaceEnum: string
 			self::Skirting => 'White skirting',
 			self::RoofCovering => 'Roof covering (default)',
 			self::Soffit => 'White-painted soffit',
+			self::Facade => 'Wall finish (default)',
 		};
 	}
 

@@ -1,5 +1,15 @@
 /** What a quantity line covers. Mirrors `QuantitySurfaceEnum`. */
-export type QuantitySurface = 'Floor' | 'WallFinish' | 'Wall' | 'Ceiling' | 'Beams' | 'Skirting' | 'Furniture' | 'RoofCovering' | 'Soffit';
+export type QuantitySurface =
+    | 'Floor'
+    | 'WallFinish'
+    | 'Wall'
+    | 'Ceiling'
+    | 'Beams'
+    | 'Skirting'
+    | 'Furniture'
+    | 'RoofCovering'
+    | 'Soffit'
+    | 'Facade';
 
 /** One material on one surface of a room (`QuantityLineDto`); `materialId` null is the surface's default look. */
 export interface QuantityLine {
@@ -41,6 +51,16 @@ export interface QuantityRoof {
     complete: boolean;
 }
 
+/** A floor's façades: the wall faces outside every room per material, without the openings (`QuantityFacadeDto`, FD-88). */
+export interface QuantityFacade {
+    floorId: number;
+    floorName: string;
+    lines: QuantityLine[];
+    /** The priced lines only. */
+    cost: number;
+    complete: boolean;
+}
+
 /** What to buy of one material (`QuantityMaterialDto`); without a material, `surface` says whose default look it is. */
 export interface QuantityMaterial {
     materialId: number | null;
@@ -67,6 +87,8 @@ export interface Quantities {
     materials: QuantityMaterial[];
     furniture: QuantityMaterial[];
     roofs: QuantityRoof[];
+    /** One per floor with façades; missing from older servers. */
+    facades?: QuantityFacade[];
     total: number;
     /** False when something has no price. */
     complete: boolean;
@@ -97,4 +119,5 @@ export const SurfaceLabels: Record<QuantitySurface, string> = {
     Furniture: 'Furniture boards',
     RoofCovering: 'Roof covering',
     Soffit: 'Soffit',
+    Facade: 'Façade',
 };

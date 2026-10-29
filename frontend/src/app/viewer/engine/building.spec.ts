@@ -420,6 +420,6 @@ describe('buildSlab', () => {
     });
 
     it('is empty on an empty floor', () => {
-        expect(buildSlab([], [], 300, materials).geometry.getAttribute('position')).toBeUndefined();
+        expect(buildSlab([], [], 300, materials).children).toHaveLength(0);
     });
 });
