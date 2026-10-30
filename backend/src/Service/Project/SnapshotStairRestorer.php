@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Project;
 
 use DateTimeImmutable;
+use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
 use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
 use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
@@ -52,6 +53,11 @@ final readonly class SnapshotStairRestorer
 			// Snapshots taken before outdoor stairs (FD-87): to the next floor, from the floor's level.
 			$stair->rise = $data->nullableInt('rise');
 			$stair->baseZ = $data->nullableInt('baseZ') ?? 0;
+			// Before railing styles and wall handrails (FD-90): posts and a handrail, no wall rail, an unlined void.
+			$stair->railingStyle = RailingStyleEnum::tryFrom($data->nullableString('railingStyle') ?? '');
+			$stair->railingMaterial = $materials[$data->nullableInt('railingMaterialId') ?? 0] ?? null;
+			$stair->wallHandrail = StairRailingEnum::tryFrom($data->nullableString('wallHandrail') ?? '') ?? StairRailingEnum::None;
+			$stair->voidLiningMaterial = $materials[$data->nullableInt('voidLiningMaterialId') ?? 0] ?? null;
 			$stair->createdAt = new DateTimeImmutable();
 			$stair->updatedAt = $stair->createdAt;
 			$this->stairRepository->persist($stair);

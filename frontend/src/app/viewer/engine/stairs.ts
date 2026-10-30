@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {MM, polygonBounds, Vec2, WallCollider, wallFrame} from './plan-geometry';
+import {buildRailRun, buildWallHandrail, railingSpacing, RailLook, RailPoint} from './railings';
 
 /** mm, the highest riser an automatic count gives (`StairRise::MaxAutoRiser`). */
 export const MaxAutoRiser = 180;
@@ -384,8 +385,9 @@ function pointInOutline(point: Vec2, outline: readonly Vec2[]): boolean {
 }
 
 /**
- * The voids the floor's stairs cut (`own`: through the flat ceilings of its rooms) and the floor below's stairs cut
- * through it (`below`: its slab and room floors).
+ * The voids over the floor (`own`: cut through the flat ceilings of its rooms: its stairs' footprints and the floor
+ * above's voids) and through it (`below`: cut through its slab and room floors: the floor below's stairs coming up and
+ * its own voids, FD-90).
  */
 export interface SceneVoids {
     own: PlanPoint[][];
@@ -399,15 +401,18 @@ export function stairFootprints(stairs: readonly Stair[], rise: number): PlanPoi
     return stairs.map((stair) => stairGeometry(stair, rise).footprint.map((p): PlanPoint => [p.x, p.y]));
 }
 
-export function sceneVoids(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBelow'>): SceneVoids {
+export function sceneVoids(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBelow' | 'voids' | 'voidsAbove'>): SceneVoids {
     const below = scene.stairsBelow ?? null;
     return {
         // Garden and deck steps (a rise of their own) stay on their floor: no void.
-        own: stairFootprints(
-            (scene.stairs ?? []).filter((s) => s.rise == null),
-            scene.stairRise ?? 0,
-        ),
-        below: below === null ? [] : stairFootprints(below.stairs, below.rise),
+        own: [
+            ...stairFootprints(
+                (scene.stairs ?? []).filter((s) => s.rise == null),
+                scene.stairRise ?? 0,
+            ),
+            ...(scene.voidsAbove?.voids ?? []).map((v) => v.polygon),
+        ],
+        below: [...(below === null ? [] : stairFootprints(below.stairs, below.rise)), ...(scene.voids ?? []).map((v) => v.polygon)],
     };
 }
 
@@ -467,9 +472,10 @@ const SteelColor = '#4a4845';
 
 /**
  * The stair in 3D, in its own group at the stair's (x, y) so a drag moves it: the flights (a solid run with a sloping
- * soffit, stringers with treads and risers, or floating treads), the landings, the handrails with their posts, and a
- * spiral's pole and wedge treads. Tagged `stairId` for picking; the solid parts have a section-fill twin for the wall
- * cut. The group is merged (`mergeStatic()`).
+ * soffit, stringers with treads and risers, or floating treads), the landings, the handrails with their posts (and the
+ * `railingStyle` infill, FD-90, in `railingMaterialId`), the wall handrails, and a spiral's pole and wedge treads.
+ * Tagged `stairId` for picking; the solid parts have a section-fill twin for the wall cut. The group is merged
+ * (`mergeStatic()`).
  */
 export function buildStair(stair: Stair, rise: number, materials: MaterialLibrary, sectionMaterial: THREE.Material): THREE.Group {
     const geometry = stairGeometry({...stair, x: 0, y: 0}, rise);
@@ -504,11 +510,24 @@ export function buildStair(stair: Stair, rise: number, materials: MaterialLibrar
     if (geometry.spiral !== null) {
         group.add(buildSpiral(geometry, geometry.spiral, structure, tread));
     }
-    if (stair.railing !== 'None') {
-        for (const r of geometry.rails) {
-            if (stair.railing === 'Both' || stair.railing === r.side || geometry.spiral !== null) {
-                group.add(buildRail(r, structure));
-            }
+    const railing = stair.railingMaterialId == null ? structure : materials.get(stair.railingMaterialId);
+    const style = stair.railingStyle ?? null;
+    const glass = materials.byCode('glass');
+    // A spiral has one rail, on its outer side, whichever side is asked for.
+    const hasSide = (sides: Stair['railing'], r: StairRail): boolean =>
+        sides === 'Both' || sides === r.side || (sides !== 'None' && geometry.spiral !== null);
+    for (const r of geometry.rails) {
+        const path = r.path.map((p): RailPoint => ({point: p.point, top: p.height}));
+        if (hasSide(stair.railing, r) && style === null) {
+            group.add(buildRail(r, railing));
+        } else if (hasSide(stair.railing, r) && style !== null) {
+            const spacing = railingSpacing(style, null);
+            const look: RailLook = {style, height: RailHeight, spacing, postSpacing: PostSpacing, postSize: PostSize, handrail: 'Round'};
+            group.add(buildRailRun(path, look, railing, style === 'Glass' ? glass : railing));
+        }
+        if (hasSide(stair.wallHandrail ?? 'None', r)) {
+            // The wall is on the rail's side: the left rail's wall handrail stands off it to the right, into the stair.
+            group.add(buildWallHandrail(path, r.side === 'Left' ? 1 : -1, railing));
         }
     }
     mergeStatic(group);

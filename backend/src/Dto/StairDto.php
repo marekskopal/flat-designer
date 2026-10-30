@@ -31,6 +31,10 @@ final readonly class StairDto
 		public ?int $structureMaterialId,
 		public ?int $rise = null,
 		public int $baseZ = 0,
+		public ?string $railingStyle = null,
+		public ?int $railingMaterialId = null,
+		public string $wallHandrail = 'None',
+		public ?int $voidLiningMaterialId = null,
 	) {
 	}
 
@@ -55,6 +59,10 @@ final readonly class StairDto
 			structureMaterialId: $stair->structureMaterial?->id,
 			rise: $stair->rise,
 			baseZ: $stair->baseZ,
+			railingStyle: $stair->railingStyle?->value,
+			railingMaterialId: $stair->railingMaterial?->id,
+			wallHandrail: $stair->wallHandrail->value,
+			voidLiningMaterialId: $stair->voidLiningMaterial?->id,
 		);
 	}
 }

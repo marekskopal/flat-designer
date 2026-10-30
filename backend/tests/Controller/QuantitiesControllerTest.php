@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\QuantitiesController;
+use FlatDesigner\Dto\FloorInputDto;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\Material;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Editor\Element\State;
+use FlatDesigner\Service\Project\FloorProvider;
 use FlatDesigner\Service\Quantities\FacadeSurfaces;
 use FlatDesigner\Service\Quantities\MaterialPriceService;
 use FlatDesigner\Service\Quantities\PriceList;
@@ -163,6 +168,22 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertGreaterThan(920, $arch);
 		self::assertEqualsWithDelta(12 * $arch / 1000, $lines['Ceiling']['area'], 0.01);
 		self::assertEqualsWithDelta(12 * 0.14, $lines['Beams']['area'], 0.01);
+	}
+
+	/** A void through the floor (FD-90) takes its area off the flooring, one through the floor above off the ceiling. */
+	public function testFloorVoidsAreLeftOutOfTheFloorAndTheCeiling(): void
+	{
+		$this->buildRoom(null);
+		$this->create('voids', ['polygon' => [[1000, 1000], [2000, 1000], [2000, 2000], [1000, 2000]]]);
+		$upper = Fixture::service(FloorProvider::class)->create($this->project, new FloorInputDto('First floor', 1, 3000));
+		Fixture::service(FloorVoidRepository::class)->persist(State::stamp(
+			new FloorVoid(floor: $upper, name: 'Well', polygon: '[[3000,0],[5000,0],[5000,2000],[3000,2000]]'),
+		));
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(11.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
+		// Half the well lies over the room.
+		self::assertEqualsWithDelta(10.0, $lines['Ceiling:-']['area'], 0.01);
 	}
 
 	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */

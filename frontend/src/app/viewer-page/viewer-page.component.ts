@@ -47,6 +47,7 @@ import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {Selection} from '@app/viewer/engine/selection';
 import {isSunDown} from '@app/viewer/engine/sun';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
+import {netRoomArea} from '@app/viewer/engine/voids';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {SunTimeComponent} from '@app/viewer/sun-time.component';
@@ -353,7 +354,11 @@ export class ViewerPageComponent {
     protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
 
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
-    protected readonly rooms = computed(() => this.scene()?.rooms ?? []);
+    /** The floor's rooms, their areas less the floor's voids (FD-90). */
+    protected readonly rooms = computed(() => {
+        const scene = this.scene();
+        return (scene?.rooms ?? []).map((room) => ({...room, area: netRoomArea(room, scene?.voids ?? [])}));
+    });
     protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
     protected readonly indoorArea = computed(() => this.areaOf((type) => !isOutdoorRoom({type})));
     protected readonly terraceArea = computed(() => this.areaOf((type) => type === 'Terrace'));
@@ -606,6 +611,8 @@ export class ViewerPageComponent {
 
     protected readonly drawWalls = (points: PlanPoint[], closed: boolean, sagittas: number[] | null): Promise<boolean> =>
         this.editor.drawWalls(points, closed, sagittas);
+
+    protected readonly drawRailing = (points: PlanPoint[]): Promise<boolean> => this.editor.drawRailing(points);
 
     /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
     protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>

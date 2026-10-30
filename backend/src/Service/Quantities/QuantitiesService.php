@@ -12,7 +12,7 @@ use FlatDesigner\Dto\QuantityRoofDto;
 use FlatDesigner\Dto\QuantityRoomDto;
 use FlatDesigner\Dto\RoofDto;
 use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\WallDto;
+use FlatDesigner\Dto\SceneDto;
 use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Project;
@@ -67,7 +67,7 @@ final readonly class QuantitiesService
 		foreach ($scenes as [$floor, $scene]) {
 			$cover = new RoofCover(array_map(static fn (RoofDto $roof): RoofGeometry => RoofGeometry::fromDto($roof), $scene->roofs));
 			$floorRooms = array_map(
-				fn (RoomDto $room): QuantityRoomDto => $this->room($costing, $floor, $room, $scene->walls, $cover),
+				fn (RoomDto $room): QuantityRoomDto => $this->room($costing, $floor, $room, $scene, $cover),
 				$scene->rooms,
 			);
 			usort($floorRooms, static fn (QuantityRoomDto $x, QuantityRoomDto $y): int => strnatcmp($x->code, $y->code));
@@ -125,10 +125,10 @@ final readonly class QuantitiesService
 		);
 	}
 
-	/** @param list<WallDto> $walls */
-	private function room(Costing $costing, Floor $floor, RoomDto $room, array $walls, RoofCover $roofs): QuantityRoomDto
+	private function room(Costing $costing, Floor $floor, RoomDto $room, SceneDto $scene, RoofCover $roofs): QuantityRoomDto
 	{
-		$lines = self::sorted(array_map($costing->line(...), RoomSurfaces::of($room, $walls, $roofs)));
+		$surfaces = RoomSurfaces::of($room, $scene->walls, $roofs, $scene->voids, $scene->voidsAbove->voids ?? []);
+		$lines = self::sorted(array_map($costing->line(...), $surfaces));
 
 		return new QuantityRoomDto(
 			id: $room->id,

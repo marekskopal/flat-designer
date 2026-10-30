@@ -18,6 +18,8 @@ final readonly class SceneDto
 	 * @param list<SceneDefinitionDto> $definitions the furniture definitions of the Custom items
 	 * @param list<SceneModelDto> $models the 3D models of the Model items
 	 * @param list<StairDto> $stairs
+	 * @param list<FloorVoidDto> $voids holes through the floor (FD-90)
+	 * @param list<RailingDto> $railings
 	 * @param list<RoofDto> $roofs with their windows
 	 * @param list<int> $pictures the project files the Custom items show as pictures (their `image` parameters)
 	 */
@@ -48,6 +50,10 @@ final readonly class SceneDto
 		public array $roofs = [],
 		/** The project's default façade material (FD-88). */
 		public ?int $exteriorMaterialId = null,
+		public array $voids = [],
+		public array $railings = [],
+		/** The floor above with its voids, which cut this floor's ceilings; null without a floor above. */
+		public ?VoidsAboveDto $voidsAbove = null,
 	)
 	{
 	}

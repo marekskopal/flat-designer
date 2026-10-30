@@ -19,6 +19,8 @@ const KindLabels: Record<ElementKind, string> = {
     room: 'Room',
     plot: 'Plot',
     stair: 'Stairs',
+    void: 'Void',
+    railing: 'Railing',
     roof: 'Roof',
     roofWindow: 'Roof window',
     group: 'Group',
@@ -30,6 +32,7 @@ const Tools: {tool: EditorTool; label: string; title: string}[] = [
     {tool: 'select', label: 'Select', title: 'Select and drag elements (Esc)'},
     {tool: 'drawWalls', label: 'Draw walls', title: 'Click the centre-line points of a run of walls; type a length for an exact one (W)'},
     {tool: 'detectRoom', label: 'Room from walls', title: 'Click inside walls to add the room they enclose (M)'},
+    {tool: 'drawRailing', label: 'Draw railing', title: 'Click the points of a railing; double-click ends it, a click on its start closes it (B)'},
 ];
 
 const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
@@ -37,6 +40,9 @@ const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
 const NewRoomSize = 3000;
+/** Size of a new void, and length of a new railing, mm. */
+const NewVoidSize = 1200;
+const NewRailingLength = 2000;
 /** Width of an opening added from the Add menu (the server's default, used to centre it on the wall). */
 const NewOpeningWidths: Record<OpeningType, number> = {
     Door: 900,
@@ -240,6 +246,23 @@ export class EditorPanelComponent {
         } else if (choice === 'stair') {
             // The first riser at the view's centre (or the selected room's), walking up north.
             void this.editor.create('stair', {x: at.x, y: at.y});
+        } else if (choice === 'void') {
+            const half = NewVoidSize / 2;
+            void this.editor.create('void', {
+                polygon: [
+                    [at.x - half, at.y - half],
+                    [at.x + half, at.y - half],
+                    [at.x + half, at.y + half],
+                    [at.x - half, at.y + half],
+                ],
+            });
+        } else if (choice === 'railing') {
+            void this.editor.create('railing', {
+                points: [
+                    [at.x - NewRailingLength / 2, at.y],
+                    [at.x + NewRailingLength / 2, at.y],
+                ],
+            });
         } else if (choice === 'plot') {
             // Its boundary comes from the backend: a rectangle round the floor's walls and rooms.
             void this.editor.create('plot', {});
@@ -301,8 +324,8 @@ export class EditorPanelComponent {
             } else {
                 this.editor.setTool('select');
             }
-        } else if (!mod && !event.altKey && (key === 'w' || key === 'm')) {
-            const tool = key === 'w' ? 'drawWalls' : 'detectRoom';
+        } else if (!mod && !event.altKey && (key === 'w' || key === 'm' || key === 'b')) {
+            const tool = key === 'w' ? 'drawWalls' : key === 'm' ? 'detectRoom' : 'drawRailing';
             this.editor.setTool(this.editor.tool() === tool ? 'select' : tool);
         } else if (!mod) {
             this.moveItem(event);
@@ -401,6 +424,10 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             const stair = find(scene.stairs ?? []);
             return stair === null ? null : {...stair, stairRise: scene.stairRise ?? 0};
         }
+        case 'void':
+            return find(scene.voids ?? []);
+        case 'railing':
+            return find(scene.railings ?? []);
         case 'roof':
             return find(scene.roofs ?? []);
         case 'roofWindow':

@@ -428,6 +428,40 @@ format is the text in `FurnitureTools::Format`.
   dragged (x, y), nudged and turned with R like items; the inspector's `stair` fields get `stairRise` beside them for
   the step hint (`stairStepHint()`, 2R + G).
 
+## Voids and railings (FD-90)
+
+- Floor voids (`FloorVoid`, `floor_voids`, element type `FloorVoid`, `FloorVoidHandler` through `SceneEditor`: undo, change
+  log; REST `…/voids`, MCP `add_void` / `update_void` / `delete_void`, the scene's `voids`, snapshots' `voids` restored by
+  `SnapshotVoidRestorer`): a hole through a floor, a `polygon` like a room's. `sceneVoids()` puts a floor's voids in
+  `below` (cut out of its slab and room floors, as the stairs coming up) and the floor above's in `own` (out of the flat
+  ceilings): the scene's `voidsAbove` (`VoidsAboveDto`: the floor the stairs climb to, `StairRise::above()`, with its
+  `rise`, `slabThickness` and voids; `SnapshotStairs` derives it for a version's scenes). Linings (`buildVoidLinings()` in
+  `voids.ts`, a ring `LiningThickness` inside the outline): a void's `liningMaterialId` lines it through its floor's slab,
+  `liningDepth` down (null: the whole well), and the floor below lines the rest from its ceilings (`ceilingUnder()`) up to
+  the slab above; a stair's `voidLiningMaterialId` lines its footprint alike (in the stack each floor draws its part). In
+  the top view a void's dashed outline with the plan's diagonals (`buildVoidOutline()`, `parts.voidOutlines`, `planOnly`)
+  picks it, and its corners get handles (`Outlined` kind `void`). The walkthrough stops at its edges except over a stair
+  arriving from below (`voidColliders()`). Areas: `VoidArea` / `PolygonOverlap` (ear clipping, `ConvexClip`) take the
+  floor's voids off the room schedule's areas (`voidArea`, voids listed in `FloorScheduleDto::$voids`, in no total) and
+  the flooring, and the floor above's off a flat ceiling in the quantities (under a roof the volume, headroom and sloped
+  ceiling are scaled by the share of the floor left); the viewer's labels, the sidebar and the PDF schedule do the same
+  with `netRoomArea()` (`polygon-clipping`), the twins kept identical by `backend/tests/fixtures/void-area.json`.
+  **Always change both twins and add a fixture case in the same change.** Voids are taken not to overlap; the stairs'
+  own footprints (TS only) are not taken off. The plan PDF crosses a void (`voidDiagonals()`).
+- Railings (`Railing`, `railings`, element type `Railing`, `RailingHandler`; REST `…/railings`, MCP `add_railing` /
+  `update_railing` / `delete_railing`, the scene's and snapshots' `railings`): a polyline (`points`, 2–200, 10 mm apart; a
+  closed one repeats its first point) `height` from its base at `baseZ` to the top of the handrail, `style` (`Balusters`,
+  `Rods`, `Glass`, `Panel`, `Cable`) with `spacing` (null: `railingSpacing()`), `postSpacing`, `handrail` (`Round`,
+  `Square`, `Flat`, `None`), `materialId` (null: steel) and `infillMaterialId` (a pane's or panel's). `buildRailRun()`
+  (`railings.ts`) draws posts, handrail and infill along a top line and is shared with the stairs; `buildRailing()` tags
+  the group `railingId` at the plan origin, so a drag moves it (`points` shifted). The walkthrough collides with each
+  stretch (`railingColliders()`), the plan PDF draws a thin line. The editor's Draw railing tool (key B, `drawRailing`)
+  reuses the wall run (typed lengths, snapping; no arcs) and creates it with `EditorStore.drawRailing()`. The balcony
+  railing definition stays a definition (one straight run).
+- Stairs: `railingStyle` (null: posts and a handrail, as before) fills the `railing` sides with `buildRailRun()` in
+  `railingMaterialId` (null: the structure's); `wallHandrail` (None, Left, Right, Both) adds a rail on brackets
+  `WallRailOffset` in from that side (`buildWallHandrail()`, `offsetLine()`), `RailHeight` over the nosings.
+
 ## Roofs (FD-38)
 
 - The plan is `docs/roofs-plan.md`. A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,

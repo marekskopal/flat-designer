@@ -107,7 +107,7 @@ export class ViewerComponent {
     public readonly editHandler = input<EditHandler>(() => Promise.resolve(false));
     /** Width (px) of UI overlapping the canvas on the left. */
     public readonly insetLeft = input(0);
-    /** What a click does in edit mode: select and drag, draw walls, or add the room around the point. */
+    /** What a click does in edit mode: select and drag, draw walls or a railing, or add the room around the point. */
     public readonly tool = input<EditorTool>('select');
     /** Thickness and height of the walls drawn next (for their preview). */
     public readonly wallDraft = input<WallDraftShape>({thickness: 100, height: 2600});
@@ -115,6 +115,8 @@ export class ViewerComponent {
     public readonly drawWallsHandler = input<(points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean>>(() =>
         Promise.resolve(false),
     );
+    /** Adds a drawn railing (its points; a closed one repeats the first); resolves true when it was added. */
+    public readonly drawRailingHandler = input<(points: PlanPoint[]) => Promise<boolean>>(() => Promise.resolve(false));
     /**
      * Takes the walker to the floor above (+1) or below (−1): the id of the floor the page goes to (the walk carries on
      * on it), null when there is none. Without a handler, PageUp / PageDown do nothing.
@@ -168,6 +170,7 @@ export class ViewerComponent {
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
             engine.onWalkthroughFloor = (step): number | null => this.walkFloorHandler()(step);
             engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
+            engine.onDrawRailing = (points): Promise<boolean> => this.drawRailingHandler()(points);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
             engine.onToolStatus = (status): void => this.toolStatus.emit(status);
             engine.onMeasureStatus = (status): void => this.measureStatus.emit(status);

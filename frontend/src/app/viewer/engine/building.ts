@@ -1,4 +1,4 @@
-import {isOutdoorRoom, Opening, PlanPoint, Plot, Roof, Room, Scene, Wall, WallFinish} from '@app/models/scene';
+import {FloorVoid, isOutdoorRoom, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -57,6 +57,7 @@ import {
     WindowFrameBar,
 } from './plan-geometry';
 import {buildPlot, drapedGeometry, drapedOn, groundBeside} from './plots';
+import {buildRailing} from './railings';
 import {buildRoof, buildRoofOutline} from './roofs';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
 import {Terrain} from './terrain';
@@ -74,6 +75,7 @@ import {
     wallHeightAt,
     wallTopAt,
 } from './under-roof';
+import {buildVoidLinings, buildVoidOutline} from './voids';
 
 /** Bars of a French window sash, mm. */
 const SashBar = 55;
@@ -106,6 +108,13 @@ export interface BuildingParts {
     sectionMaterial: THREE.Material;
     /** The façade bands on the wall faces outside every room (`buildFacades()`). */
     facades: THREE.Group;
+    /** Railings keyed by railing id (FD-90). */
+    railings: Map<number, THREE.Group>;
+    /** The voids' top-view outlines keyed by void id, in `voidOutlines`, shown in the top view only. */
+    voids: Map<number, THREE.Group>;
+    voidOutlines: THREE.Group;
+    /** The linings of the voids through and over the floor (`buildVoidLinings()`). */
+    voidLinings: THREE.Group;
 }
 
 export interface RoofParts {
@@ -124,9 +133,10 @@ export interface RoomParts {
 }
 
 /**
- * Builds the static architecture: slab, floors, ceilings, walls with their doors and windows, stairs. The parts are
- * kept apart so a changed room or wall can be rebuilt on its own (`buildRoom`, `buildWall`). The stairs' voids
- * (`sceneVoids()`) are cut through the slab and room floors (the floor below's stairs) and the flat ceilings (its own).
+ * Builds the static architecture: slab, floors, ceilings, walls with their doors and windows, stairs, railings. The parts
+ * are kept apart so a changed room or wall can be rebuilt on its own (`buildRoom`, `buildWall`). The voids
+ * (`sceneVoids()`) are cut through the slab and room floors (the floor below's stairs, the floor's own voids) and the
+ * flat ceilings (its stairs, the floor above's voids), and lined (`buildVoidLinings()`).
  */
 export function buildBuilding(scene: Scene, materials: MaterialLibrary): BuildingParts {
     const root = new THREE.Group();
@@ -151,11 +161,23 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         roofOutlines: new THREE.Group(),
         sectionMaterial,
         facades: buildFacades(scene, materials),
+        railings: new Map(),
+        voids: new Map(),
+        voidOutlines: new THREE.Group(),
+        voidLinings: buildVoidLinings(scene, materials),
     };
     parts.roofOutlines.name = 'roof-outlines';
     parts.roofOutlines.visible = false;
     parts.roofBodies.name = 'roofs';
-    root.add(parts.slab, parts.stairsBelow, parts.roofBodies, parts.roofOutlines, parts.facades);
+    parts.voidOutlines.name = 'void-outlines';
+    parts.voidOutlines.visible = false;
+    root.add(parts.slab, parts.stairsBelow, parts.roofBodies, parts.roofOutlines, parts.facades, parts.voidOutlines, parts.voidLinings);
+    for (const railing of scene.railings ?? []) {
+        addRailing(parts, railing, materials);
+    }
+    for (const floorVoid of scene.voids ?? []) {
+        addVoid(parts, floorVoid);
+    }
 
     for (const room of scene.rooms) {
         addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, roofs), room.id);
@@ -195,6 +217,22 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     ceilings.add(parts.ceilingSteps);
     root.add(ceilings);
     return parts;
+}
+
+/** Builds a railing into the building. */
+export function addRailing(parts: BuildingParts, railing: Railing, materials: MaterialLibrary): THREE.Group {
+    const group = buildRailing(railing, materials);
+    parts.railings.set(railing.id, group);
+    parts.root.add(group);
+    return group;
+}
+
+/** Adds a void's top-view outline to the building. */
+export function addVoid(parts: BuildingParts, floorVoid: FloorVoid): THREE.Group {
+    const group = buildVoidOutline(floorVoid);
+    parts.voids.set(floorVoid.id, group);
+    parts.voidOutlines.add(group);
+    return group;
 }
 
 /**

@@ -60,7 +60,9 @@ final readonly class FlatDesignerServer
 		its `sagitta` is how far (mm) the middle of its centre line lies off the straight line from start to end, + to
 		the left (an arc, a semicircle at most); offsets of openings run along the arc, and doors and windows on it
 		stand straight, so they have to be narrow enough for the curve. Stairs (add_stair) go on the floor they start
-		from and climb to the next one up, cutting their void through it. A roof (add_roof) goes on the floor it
+		from and climb to the next one up, cutting their void through it. A larger opening in a floor (a gallery over
+		a double-height hall) is a void (add_void) on the upper floor, its edges lined if you like; railings (add_railing)
+		run along polylines (a void's open edge, a terrace, a retaining wall's top). A roof (add_roof) goes on the floor it
 		covers; without a size it covers the floor's walls. Every wall is cut at the roof's underside, and the walls
 		under its gables are set to rise to it (upToRoof on add_wall, add_walls or update_wall). Roof windows are added with add_roof_window.
 		A plot (add_plot) is the land round the building; on a slope give it spot heights (terrain on add_plot, or

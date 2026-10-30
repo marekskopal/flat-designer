@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\StairDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
 use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
 use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
@@ -89,6 +90,10 @@ final readonly class StairHandler implements ElementHandler
 			'structureMaterialId',
 			'rise',
 			'baseZ',
+			'railingStyle',
+			'railingMaterialId',
+			'wallHandrail',
+			'voidLiningMaterialId',
 		];
 	}
 
@@ -99,7 +104,7 @@ final readonly class StairHandler implements ElementHandler
 	}
 
 	/**
-	 * A straight concrete flight 900 mm wide with a railing on the right; a spiral is 1600 mm across.
+	 * A straight concrete flight 900 mm wide with a railing (posts and a handrail) on the right; a spiral is 1600 mm across.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -125,6 +130,10 @@ final readonly class StairHandler implements ElementHandler
 			'structureMaterialId' => null,
 			'rise' => null,
 			'baseZ' => 0,
+			'railingStyle' => null,
+			'railingMaterialId' => null,
+			'wallHandrail' => StairRailingEnum::None->value,
+			'voidLiningMaterialId' => null,
 		];
 	}
 
@@ -188,8 +197,11 @@ final readonly class StairHandler implements ElementHandler
 		}
 		$treadMaterialId = $fields->nullableId('treadMaterialId');
 		$structureMaterialId = $fields->nullableId('structureMaterialId');
-		$this->materialResolver->resolve($treadMaterialId);
-		$this->materialResolver->resolve($structureMaterialId);
+		$railingMaterialId = $fields->nullableId('railingMaterialId');
+		$voidLiningMaterialId = $fields->nullableId('voidLiningMaterialId');
+		foreach ([$treadMaterialId, $structureMaterialId, $railingMaterialId, $voidLiningMaterialId] as $materialId) {
+			$this->materialResolver->resolve($materialId);
+		}
 
 		return [
 			'name' => $fields->string('name', 255),
@@ -209,6 +221,10 @@ final readonly class StairHandler implements ElementHandler
 			'structureMaterialId' => $structureMaterialId,
 			'rise' => $ownRise,
 			'baseZ' => $fields->raw('baseZ') === null ? 0 : $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ),
+			'railingStyle' => $fields->nullableEnum('railingStyle', RailingStyleEnum::class)?->value,
+			'railingMaterialId' => $railingMaterialId,
+			'wallHandrail' => self::wallHandrail($fields)->value,
+			'voidLiningMaterialId' => $voidLiningMaterialId,
 		];
 	}
 
@@ -255,6 +271,12 @@ final readonly class StairHandler implements ElementHandler
 		return sprintf('stairs "%s"', is_string($state['name'] ?? null) ? $state['name'] : '?');
 	}
 
+	/** Missing in changes logged before wall handrails (FD-90): none. */
+	private static function wallHandrail(FieldReader $fields): StairRailingEnum
+	{
+		return $fields->raw('wallHandrail') === null ? StairRailingEnum::None : $fields->enum('wallHandrail', StairRailingEnum::class);
+	}
+
 	/** The width in the shape's range; the stored width of another shape, left as it was, gives way to the default. */
 	private function width(FieldReader $fields, StairShapeEnum $shape, ?Stair $current): int
 	{
@@ -294,6 +316,10 @@ final readonly class StairHandler implements ElementHandler
 		$stair->structureMaterial = $this->materialResolver->resolve($fields->nullableId('structureMaterialId'));
 		$stair->rise = $fields->nullableInt('rise', self::MinOwnRise, self::MaxOwnRise);
 		$stair->baseZ = $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ);
+		$stair->railingStyle = $fields->nullableEnum('railingStyle', RailingStyleEnum::class);
+		$stair->railingMaterial = $this->materialResolver->resolve($fields->nullableId('railingMaterialId'));
+		$stair->wallHandrail = $fields->enum('wallHandrail', StairRailingEnum::class);
+		$stair->voidLiningMaterial = $this->materialResolver->resolve($fields->nullableId('voidLiningMaterialId'));
 		$this->stairRepository->persist($stair);
 	}
 

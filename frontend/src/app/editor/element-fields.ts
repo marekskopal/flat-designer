@@ -1,4 +1,4 @@
-import {OpeningType} from '@app/models/scene';
+import {OpeningType, RailingStyle} from '@app/models/scene';
 import {roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {stairRisers} from '@app/viewer/engine/stairs';
@@ -66,6 +66,9 @@ export interface FieldDef {
     /** A note under the field about the element at hand (a derived value, a warning); null for none. */
     hint?: (element: Record<string, unknown>) => string | null;
 }
+
+/** A railing's infill (FD-90), a stair's too. */
+const RailingStyles: readonly RailingStyle[] = ['Balusters', 'Rods', 'Glass', 'Panel', 'Cable'];
 
 const StairShapeLabels: Readonly<Record<string, string>> = {
     Straight: 'Straight',
@@ -419,9 +422,68 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
             when: (stair) => stair['shape'] !== 'Spiral',
         },
-        {key: 'railing', label: 'Handrail (walking up)', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {key: 'railing', label: 'Railing (walking up)', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {
+            key: 'railingStyle',
+            label: 'Railing infill (empty: posts only)',
+            type: 'select',
+            options: RailingStyles,
+            nullable: true,
+            half: true,
+            when: (stair) => stair['railing'] !== 'None',
+        },
+        {key: 'wallHandrail', label: 'Wall handrail', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {key: 'railingMaterialId', label: 'Railing material', type: 'material', nullable: true, half: true},
         {key: 'treadMaterialId', label: 'Tread material', type: 'material', nullable: true, half: true},
         {key: 'structureMaterialId', label: 'Structure material', type: 'material', nullable: true, half: true},
+        {
+            key: 'voidLiningMaterialId',
+            label: 'Lining of the void upstairs',
+            type: 'material',
+            nullable: true,
+            when: (stair) => stair['rise'] == null,
+        },
+    ],
+    void: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'liningMaterialId', label: 'Edge lining (empty: none)', type: 'material', nullable: true, half: true},
+        {key: 'liningDepth', label: 'Lining depth (empty: to the ceilings below)', type: 'int', unit: 'mm', nullable: true, half: true},
+        {key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
+    ],
+    railing: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'style', label: 'Infill', type: 'select', options: RailingStyles, half: true},
+        {
+            key: 'handrail',
+            label: 'Handrail',
+            type: 'select',
+            options: ['Round', 'Square', 'Flat', 'None'],
+            optionLabels: {Flat: 'Flat cap'},
+            half: true,
+        },
+        {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
+        {key: 'baseZ', label: 'Base (+ above, − below the floor)', type: 'int', unit: 'mm', half: true},
+        {
+            key: 'spacing',
+            label: 'Spacing (empty: the style\'s)',
+            labelOf: (railing) => (railing['style'] === 'Balusters' ? 'Gap between balusters (empty: 100)' : 'Pitch (empty: the style\'s)'),
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            half: true,
+            when: (railing) => railing['style'] !== 'Glass' && railing['style'] !== 'Panel',
+        },
+        {key: 'postSpacing', label: 'Posts at most', type: 'int', unit: 'mm', half: true},
+        {key: 'materialId', label: 'Material (empty: steel)', type: 'material', nullable: true, half: true},
+        {
+            key: 'infillMaterialId',
+            label: 'Infill material',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: (railing) => railing['style'] === 'Glass' || railing['style'] === 'Panel',
+        },
+        {key: 'points', label: 'Points [[x, y], …] (JSON)', type: 'json'},
     ],
     roof: [
         {key: 'name', label: 'Name', type: 'text'},

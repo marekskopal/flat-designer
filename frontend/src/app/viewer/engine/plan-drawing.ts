@@ -1,6 +1,6 @@
 import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
-import {isAncillaryRoom, isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
+import {FloorVoid, isAncillaryRoom, isOutdoorRoom, Item, Opening, PlanPoint, Plot, Railing, Room, Scene, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
@@ -58,6 +58,7 @@ import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
 import {hasTerrain, plotTerrain, terrainContours} from './terrain';
 import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallHeightAt, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
+import {netRoomArea, voidDiagonals} from './voids';
 
 // The floor plan as a drawing on paper (A4, in paper mm): walls cut at `PlanCutHeight`, doors with their swings,
 // windows, room names and areas, the rooms' dimension lines and the items' footprints, at a standard scale. Plain
@@ -158,15 +159,17 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const openings = scene.walls.flatMap((wall) => openingShapes(wall, scene.roofs ?? []));
     const stairs = stairPlanShapes(scene);
     const roofs = roofPlanShapes(scene.roofs ?? []);
+    const voids = (scene.voids ?? []).flatMap(voidShapes);
+    const railings = (scene.railings ?? []).map(railingShape);
 
-    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs]);
+    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs, ...voids, ...railings]);
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
     const crosses = (scene.plots ?? []).flatMap((plot) => spotHeightCrosses(plot, s));
 
     // Room names first, then the dimensions and the item names where they do not run into the text placed before them.
-    const roomLabels = scene.rooms.map((room) => roomLabel(room, s));
+    const roomLabels = scene.rooms.map((room) => roomLabel({...room, area: netRoomArea(room, scene.voids ?? [])}, s));
     const taken = roomLabels.map((label) => labelBox(label, toPaper));
     const free = (label: Label): boolean => {
         const box = labelBox(label, toPaper);
@@ -183,7 +186,7 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
 
     const body = [
         ...[
-            ...[...plots, ...contours, ...crosses, ...rooms, ...stairs.shapes, ...roofs, ...walls, ...openings, ...itemShapes],
+            ...[...plots, ...contours, ...crosses, ...rooms, ...voids, ...stairs.shapes, ...railings, ...roofs, ...walls, ...openings, ...itemShapes],
             ...labels.flatMap((l) => l.shapes ?? []),
         ].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
@@ -196,15 +199,21 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
 /**
  * The room schedule of the floor on A4 portrait pages: area, perimeter, clear height and volume per room, with totals.
  * A room under the roofs (`roomUnderRoofs()`, as the backend's schedule) gets its clear height's range and its volume
- * under the slope, and a column its area with at least 1.2 m of headroom.
+ * under the slope, and a column its area with at least 1.2 m of headroom. The floor's voids (FD-90) are taken off the
+ * rooms' areas (`netRoomArea()`) and listed after them, in no total.
  */
 export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
     if (scene.rooms.length === 0) {
         return [];
     }
     const roofs = scene.roofs ?? [];
-    const measured = scene.rooms.map((room) => {
-        const under = roomUnderRoofs(room, roofs);
+    const measured = scene.rooms.map((gross) => {
+        const room = {...gross, area: netRoomArea(gross, scene.voids ?? [])};
+        // Under a roof the volume and the headroom scale with the share of the floor the voids leave (as the backend's schedule).
+        const left = gross.area > 0 ? room.area / gross.area : 1;
+        const measuredUnder = roomUnderRoofs(room, roofs);
+        const under =
+            measuredUnder === null ? null : {...measuredUnder, volume: left * measuredUnder.volume, headroomArea: left * measuredUnder.headroomArea};
         const volume = under !== null ? under.volume / 1e9 : room.ceilingHeight === null ? null : (room.area * room.ceilingHeight) / 1000;
         return {room, under, volume};
     });
@@ -225,6 +234,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
                 ...(underRoofs ? [under === null ? '' : (under.headroomArea / 1e6).toFixed(2)] : []),
             ];
         });
+    const voidRows = (scene.voids ?? []).map((v): string[] => ['', `${v.name} (void)`, v.area.toFixed(2), '', '', '', ...(underRoofs ? [''] : [])]);
     // The living area, garages (indoor, unheated; FD-89) and open-air rooms, each totalled apart.
     const kind = (room: Pick<Room, 'type'>): string => (isOutdoor(room) ? 'Outdoor' : isAncillaryRoom(room) ? 'Garage' : 'Indoor');
     const total = (label: string): string[] | null => {
@@ -257,7 +267,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
     const tableTop = Margin + Padding + 20;
     const tableBottom = height - Margin - Padding - 8;
     const perPage = Math.floor((tableBottom - tableTop) / RowHeight) - 1;
-    const allRows = [...rows.map((cells) => ({cells, bold: false})), ...totals.map((cells) => ({cells, bold: true}))];
+    const allRows = [...[...rows, ...voidRows].map((cells) => ({cells, bold: false})), ...totals.map((cells) => ({cells, bold: true}))];
     const pages = Math.max(1, Math.ceil(allRows.length / perPage));
 
     return Array.from({length: pages}, (_, page) => {
@@ -397,6 +407,20 @@ const SpotArm = 0.7;
 /** A plot's boundary: the dash-dot line of a property line. */
 function plotShape(plot: Plot): Shape {
     return {points: plot.polygon.map(([x, y]) => ({x, y})), closed: true, style: {stroke: Ink, width: 0.35, dash: PlotDash}};
+}
+
+/** A void (FD-90): its outline crossed by its diagonals, as voids are drawn on plans. */
+function voidShapes(floorVoid: FloorVoid): Shape[] {
+    const points = floorVoid.polygon.map(([x, y]) => ({x, y}));
+    return [
+        {points, closed: true, style: {...VoidStyle, fill: '#ffffff'}},
+        ...voidDiagonals(floorVoid.polygon).map((diagonal): Shape => ({points: diagonal.map(([x, y]) => ({x, y})), closed: false, style: VoidStyle})),
+    ];
+}
+
+/** A railing (FD-90): a thin line along it. */
+function railingShape(railing: Railing): Shape {
+    return {points: railing.points.map(([x, y]) => ({x, y})), closed: false, style: {stroke: Ink, width: 0.25}};
 }
 
 function roomShape(room: Room): Shape {

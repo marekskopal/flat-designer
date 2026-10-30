@@ -11,10 +11,12 @@ use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
@@ -25,10 +27,12 @@ use FlatDesigner\Model\Entity\Enum\StairTurnEnum;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Project;
+use FlatDesigner\Model\Entity\Railing;
 use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Entity\Room;
@@ -36,10 +40,12 @@ use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
+use FlatDesigner\Model\Repository\RailingRepository;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
@@ -116,7 +122,7 @@ final class Fixture
 	}
 
 	/**
-	 * One room with tiling, a plot, an L stair, a hip roof with a window, a wall rising to the roof with a door and
+	 * One room with tiling, a plot, an L stair (balusters, a wall handrail, a lined void), a floor void and a railing, a hip roof with a window, a wall rising to the roof with a door and
 	 * finishes of its own and two items (one with empty params) on the floor.
 	 */
 	public static function furnishFloor(Floor $floor): void
@@ -145,7 +151,7 @@ final class Fixture
 		$plot->groundLevel = -300;
 		$plot->terrain = '[[-3000,-3000,-300],[9000,8000,450]]';
 		self::service(PlotRepository::class)->persist(self::stamp($plot));
-		self::service(StairRepository::class)->persist(self::stamp(new Stair(
+		$stair = self::stamp(new Stair(
 			floor: $floor,
 			name: 'Main stairs',
 			shape: StairShapeEnum::LShaped,
@@ -161,7 +167,34 @@ final class Fixture
 			construction: StairConstructionEnum::Stringers,
 			railing: StairRailingEnum::Both,
 			treadMaterial: $material,
-		)));
+		));
+		$stair->railingStyle = RailingStyleEnum::Balusters;
+		$stair->railingMaterial = $material;
+		$stair->wallHandrail = StairRailingEnum::Left;
+		$stair->voidLiningMaterial = $material;
+		self::service(StairRepository::class)->persist($stair);
+		$void = new FloorVoid(
+			floor: $floor,
+			name: 'Gallery void',
+			polygon: '[[500,500],[1500,500],[1500,1500],[500,1500]]',
+			liningMaterial: $material,
+		);
+		$void->liningDepth = 400;
+		self::service(FloorVoidRepository::class)->persist(self::stamp($void));
+		$railing = new Railing(
+			floor: $floor,
+			name: 'Gallery balustrade',
+			points: '[[500,500],[1500,500],[1500,1500]]',
+			height: 1100,
+			style: RailingStyleEnum::Glass,
+			postSpacing: 900,
+			handrail: HandrailProfileEnum::Flat,
+			material: $material,
+			infillMaterial: $material,
+		);
+		$railing->baseZ = 150;
+		$railing->spacing = 80;
+		self::service(RailingRepository::class)->persist(self::stamp($railing));
 		$roof = self::stamp(new Roof(
 			floor: $floor,
 			name: 'Main roof',

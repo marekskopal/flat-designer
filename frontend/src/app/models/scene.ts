@@ -105,6 +105,54 @@ export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral';
 export type StairTurn = 'Left' | 'Right';
 export type StairConstruction = 'Solid' | 'Stringers' | 'Open';
 export type StairRailing = 'None' | 'Left' | 'Right' | 'Both';
+/** A railing's infill between its posts (FD-90). */
+export type RailingStyle = 'Balusters' | 'Rods' | 'Glass' | 'Panel' | 'Cable';
+export type HandrailProfile = 'Round' | 'Square' | 'Flat' | 'None';
+
+/**
+ * A hole through the floor (`FloorVoidDto`, FD-90): cut out of its slab and room floors and out of the ceilings of the
+ * floor below, its edges lined with `liningMaterialId` (null: unlined) `liningDepth` mm down from the floor's level
+ * (null: down to the ceilings below).
+ */
+export interface FloorVoid {
+    id: number;
+    name: string;
+    polygon: PlanPoint[];
+    /** m². */
+    area: number;
+    liningMaterialId: number | null;
+    liningDepth: number | null;
+}
+
+/**
+ * A balustrade along a polyline (`RailingDto`, FD-90): `height` mm from its base at `baseZ` (against the floor's level)
+ * to the top of its handrail, posts at its corners and at most `postSpacing` apart, `style` between them.
+ */
+export interface Railing {
+    id: number;
+    name: string;
+    /** Plan mm; a closed one repeats its first point last. */
+    points: PlanPoint[];
+    height: number;
+    baseZ: number;
+    style: RailingStyle;
+    /** mm, the balusters' clear gap or the rods' and cables' pitch; null: the style's (`railingSpacing()`). */
+    spacing: number | null;
+    postSpacing: number;
+    handrail: HandrailProfile;
+    /** Posts, handrail and bars; null: brushed steel. */
+    materialId: number | null;
+    /** A glass pane's or panel's; null: clear glass, or the railing's material. */
+    infillMaterialId: number | null;
+}
+
+/** The floor above (`VoidsAboveDto`): its level `rise` mm up, its slab and its voids, which cut this floor's ceilings. */
+export interface VoidsAbove {
+    floorId: number;
+    rise: number;
+    slabThickness: number;
+    voids: FloorVoid[];
+}
 
 /**
  * Stairs from their floor up to the next one (`StairDto`, FD-37). The rise is not a field but the scene's `stairRise`.
@@ -142,6 +190,14 @@ export interface Stair {
     rise?: number | null;
     /** Where its first riser stands, mm against the floor's level; missing: 0. */
     baseZ?: number;
+    /** The railing's infill (FD-90); null or missing: posts and a handrail only. */
+    railingStyle?: RailingStyle | null;
+    /** Null or missing: the structure's. */
+    railingMaterialId?: number | null;
+    /** The sides with a handrail on brackets on the wall beside the flight; missing: none. */
+    wallHandrail?: StairRailing;
+    /** Boards lining the void it cuts through the floor above; null or missing: none. */
+    voidLiningMaterialId?: number | null;
 }
 
 export type RoofShape = 'Gable' | 'Hip' | 'Shed' | 'Flat';
@@ -420,6 +476,12 @@ export interface Scene {
     stairsBelow?: StairsBelow | null;
     /** The roofs over this floor; absent in older versions. */
     roofs?: Roof[];
+    /** Holes through this floor (FD-90); absent in older versions. */
+    voids?: FloorVoid[];
+    /** Balustrades along polylines (FD-90); absent in older versions. */
+    railings?: Railing[];
+    /** The floor above with its voids; null without a floor above, absent in older versions. */
+    voidsAbove?: VoidsAbove | null;
     /** Where the building stands, for the sun; absent in older versions. */
     location?: SiteLocation | null;
 }

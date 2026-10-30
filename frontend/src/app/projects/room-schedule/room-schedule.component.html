@@ -56,6 +56,13 @@
                                 }
                             </tr>
                         }
+                        @for (hole of floor.voids ?? []; track hole.id) {
+                            <tr class="outdoor" title="A void through the floor: its area is left out of the rooms round it">
+                                <td>{{ hole.name }} (void)</td>
+                                <td class="num">{{ hole.area | number: '1.2-2' }}</td>
+                                <td [attr.colspan]="columns() - 2"></td>
+                            </tr>
+                        }
                         @if (s.floors.length > 1) {
                             <tr class="subtotal">
                                 <td>Indoor, {{ floor.name }}</td>

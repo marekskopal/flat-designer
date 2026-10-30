@@ -494,3 +494,42 @@ describe('roomScheduleSheets', () => {
         expect(roomScheduleSheets(scene({rooms: []}), info)).toEqual([]);
     });
 });
+
+describe('planSheet voids and railings (FD-90)', () => {
+    const polygon: PlanPoint[] = [
+        [3000, 1000],
+        [5000, 1000],
+        [5000, 3000],
+        [3000, 3000],
+    ];
+    const hole = {id: 5, name: 'Gallery', polygon, area: 4, liningMaterialId: null, liningDepth: null};
+    const railing = {
+        id: 6,
+        name: 'Balustrade',
+        points: [[3000, 1000], [3000, 3000]] as PlanPoint[],
+        height: 1000,
+        baseZ: 0,
+        style: 'Balusters' as const,
+        spacing: null,
+        postSpacing: 1200,
+        handrail: 'Round' as const,
+        materialId: null,
+        infillMaterialId: null,
+    };
+
+    it('crosses a void, draws a railing as a thin line and takes the void off the room it cuts', () => {
+        const svg = planSheet(scene({voids: [hole], railings: [railing]}), info).svg;
+        // Half the void lies in the 12 m² room.
+        expect(texts(svg)).toContain('10.00 m²');
+        const thin = svg.match(/<path d="M[^"]*"[^>]*stroke="#2f2c28" stroke-width="0.25"[^>]*\/>/g) ?? [];
+        // The void's outline and two diagonals, and the railing.
+        expect(thin.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('lists the voids in the room schedule, outside the totals', () => {
+        const labels = texts(roomScheduleSheets(scene({voids: [hole]}), info)[0].svg);
+        expect(labels).toContain('Gallery (void)');
+        expect(labels).toContain('4.00');
+        expect(labels.filter((t) => t === '10.00')).toHaveLength(2);
+    });
+});

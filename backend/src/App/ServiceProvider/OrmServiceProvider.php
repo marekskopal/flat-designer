@@ -7,6 +7,7 @@ namespace FlatDesigner\App\ServiceProvider;
 use FlatDesigner\Model\Entity\Comment;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\FloorUnderlay;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
@@ -21,6 +22,7 @@ use FlatDesigner\Model\Entity\ProjectChange;
 use FlatDesigner\Model\Entity\ProjectFile;
 use FlatDesigner\Model\Entity\ProjectMaterialPrice;
 use FlatDesigner\Model\Entity\ProjectVersion;
+use FlatDesigner\Model\Entity\Railing;
 use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Entity\Room;
@@ -34,6 +36,7 @@ use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\CommentRepository;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\FloorUnderlayRepository;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
@@ -48,6 +51,7 @@ use FlatDesigner\Model\Repository\ProjectFileRepository;
 use FlatDesigner\Model\Repository\ProjectMaterialPriceRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
+use FlatDesigner\Model\Repository\RailingRepository;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
@@ -95,6 +99,8 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			RoomRepository::class,
 			PlotRepository::class,
 			StairRepository::class,
+			FloorVoidRepository::class,
+			RailingRepository::class,
 			RoofRepository::class,
 			RoofWindowRepository::class,
 			WallRepository::class,
@@ -135,6 +141,8 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, RoomRepository::class, Room::class);
 		$this->addRepository($container, $orm, PlotRepository::class, Plot::class);
 		$this->addRepository($container, $orm, StairRepository::class, Stair::class);
+		$this->addRepository($container, $orm, FloorVoidRepository::class, FloorVoid::class);
+		$this->addRepository($container, $orm, RailingRepository::class, Railing::class);
 		$this->addRepository($container, $orm, RoofRepository::class, Roof::class);
 		$this->addRepository($container, $orm, RoofWindowRepository::class, RoofWindow::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);

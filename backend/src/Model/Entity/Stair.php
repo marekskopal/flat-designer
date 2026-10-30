@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Model\Entity;
 
 use DateTimeImmutable;
+use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
 use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
 use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
@@ -36,6 +37,22 @@ class Stair extends AEntity
 	/** Where its first riser stands, mm against the floor's level. */
 	#[Column(type: Type::Int)]
 	public int $baseZ = 0;
+
+	/** The railing's infill (FD-90); null: posts and a handrail only. */
+	#[ColumnEnum(enum: RailingStyleEnum::class, nullable: true)]
+	public ?RailingStyleEnum $railingStyle = null;
+
+	/** The railing's; null: the structure's. */
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $railingMaterial = null;
+
+	/** The sides with a handrail on brackets on the wall beside the flight, `RailHeight` over the nosings. */
+	#[ColumnEnum(enum: StairRailingEnum::class)]
+	public StairRailingEnum $wallHandrail = StairRailingEnum::None;
+
+	/** The boards lining the void it cuts through the floor above; null: none. */
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $voidLiningMaterial = null;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

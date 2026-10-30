@@ -6,10 +6,12 @@ namespace FlatDesigner\Service\Editor;
 
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Service\Editor\Element\ElementHandler;
+use FlatDesigner\Service\Editor\Element\FloorVoidHandler;
 use FlatDesigner\Service\Editor\Element\GroupHandler;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\PlotHandler;
+use FlatDesigner\Service\Editor\Element\RailingHandler;
 use FlatDesigner\Service\Editor\Element\RoofHandler;
 use FlatDesigner\Service\Editor\Element\RoofWindowHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
@@ -28,6 +30,8 @@ final readonly class ElementHandlers
 		private VariantSetHandler $variantSetHandler,
 		private PlotHandler $plotHandler,
 		private StairHandler $stairHandler,
+		private FloorVoidHandler $voidHandler,
+		private RailingHandler $railingHandler,
 		private RoofHandler $roofHandler,
 		private RoofWindowHandler $roofWindowHandler,
 	) {
@@ -44,6 +48,8 @@ final readonly class ElementHandlers
 			ElementTypeEnum::VariantSet => $this->variantSetHandler,
 			ElementTypeEnum::Plot => $this->plotHandler,
 			ElementTypeEnum::Stair => $this->stairHandler,
+			ElementTypeEnum::FloorVoid => $this->voidHandler,
+			ElementTypeEnum::Railing => $this->railingHandler,
 			ElementTypeEnum::Roof => $this->roofHandler,
 			ElementTypeEnum::RoofWindow => $this->roofWindowHandler,
 		};

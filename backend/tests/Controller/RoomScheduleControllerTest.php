@@ -63,6 +63,35 @@ final class RoomScheduleControllerTest extends EditorTestCase
 		self::assertSame([true, false], [$floors[0]['rooms'][0]['ancillary'], $floors[0]['rooms'][0]['outdoor']]);
 	}
 
+	public function testAVoidIsListedAndTakenOffTheRoomsItCuts(): void
+	{
+		$this->create(
+			'rooms',
+			['code' => 'R1', 'name' => 'Landing', 'polygon' => [[0, 0], [4000, 0], [4000, 3000], [0, 3000]], 'ceilingHeight' => 2500],
+		);
+		// An L-shaped void, half over the landing.
+		$this->create(
+			'voids',
+			['name' => 'Stairwell', 'polygon' => [[3000, 1000], [5000, 1000], [5000, 3000], [4000, 3000], [4000, 2000], [3000, 2000]]],
+		);
+
+		$floor = $this->schedule(false)['floors'];
+		self::assertIsList($floor);
+		self::assertIsArray($floor[0]);
+		self::assertIsList($floor[0]['rooms']);
+		self::assertIsArray($floor[0]['rooms'][0]);
+		self::assertEquals(
+			[11.0, 1.0, 27.5],
+			[$floor[0]['rooms'][0]['area'], $floor[0]['rooms'][0]['voidArea'], $floor[0]['rooms'][0]['volume']],
+		);
+		self::assertEquals(['rooms' => 1, 'area' => 11.0, 'perimeter' => 14.0], $floor[0]['indoor']);
+		self::assertIsList($floor[0]['voids']);
+		self::assertEquals([['name' => 'Stairwell', 'area' => 3.0]], array_map(
+			static fn (mixed $v): array => is_array($v) ? ['name' => $v['name'], 'area' => $v['area']] : [],
+			$floor[0]['voids'],
+		));
+	}
+
 	public function testListsTheRoomsWithIndoorAndOutdoorTotals(): void
 	{
 		$this->create('rooms', [

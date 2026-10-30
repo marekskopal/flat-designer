@@ -12,7 +12,9 @@ use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
  * height (mm, null for an open-air room) and the volume (m³, null without a ceiling). Under a roof (FD-38) the clear
  * height is the highest, `minClearHeight` the lowest (at the eaves), the volume follows the slope and `headroomArea`
  * (m²) is the floor area with at least `RoomUnderRoof::Headroom` of clear height; both are null for other rooms. An
- * `ancillary` room (a garage, FD-89) is indoor but summed apart from the living area.
+ * `ancillary` room (a garage, FD-89) is indoor but summed apart from the living area. The floor voids through a room
+ * (FD-90, `voidArea` m²) are taken off its area and its volume; under a roof the volume and the headroom area are scaled
+ * by the share of the floor left, as the voids' place under the slope is not measured.
  */
 final readonly class RoomScheduleRowDto
 {
@@ -29,28 +31,34 @@ final readonly class RoomScheduleRowDto
 		public ?int $minClearHeight = null,
 		public ?float $headroomArea = null,
 		public bool $ancillary = false,
+		public float $voidArea = 0.0,
 	) {
 	}
 
-	public static function fromRoom(RoomDto $room, ?RoomUnderRoof $underRoof = null): self
+	/** @param float $voidArea m² of the room's floor the floor's voids take */
+	public static function fromRoom(RoomDto $room, ?RoomUnderRoof $underRoof = null, float $voidArea = 0.0): self
 	{
+		$area = round(max(0.0, $room->area - $voidArea), 2);
+		$left = $room->area > 0 ? $area / $room->area : 1.0;
+
 		return new self(
 			id: $room->id,
 			code: $room->code,
 			name: $room->name,
 			type: $room->type,
-			area: $room->area,
+			area: $area,
 			perimeter: $room->perimeter,
 			clearHeight: $underRoof === null ? $room->ceilingHeight : (int) round($underRoof->maxHeight),
 			volume: match (true) {
-				$underRoof !== null => round($underRoof->volume / 1e9, 2),
+				$underRoof !== null => round($left * $underRoof->volume / 1e9, 2),
 				$room->ceilingHeight === null => null,
-				default => round($room->area * $room->ceilingHeight / 1000, 2),
+				default => round($area * $room->ceilingHeight / 1000, 2),
 			},
 			outdoor: $room->type->isOutdoor(),
 			minClearHeight: $underRoof === null ? null : (int) round($underRoof->minHeight),
-			headroomArea: $underRoof === null ? null : round($underRoof->headroomArea / 1e6, 2),
+			headroomArea: $underRoof === null ? null : round($left * $underRoof->headroomArea / 1e6, 2),
 			ancillary: $room->type->isAncillary(),
+			voidArea: round($voidArea, 2),
 		);
 	}
 }

@@ -1,4 +1,20 @@
-import {isOutdoorRoom, Item, PlanPoint, Plot, Roof, RoofWindow, Room, Scene, SpotHeight, Stair, SunTime, Underlay, Wall} from '@app/models/scene';
+import {
+    FloorVoid,
+    isOutdoorRoom,
+    Item,
+    PlanPoint,
+    Plot,
+    Railing,
+    Roof,
+    RoofWindow,
+    Room,
+    Scene,
+    SpotHeight,
+    Stair,
+    SunTime,
+    Underlay,
+    Wall,
+} from '@app/models/scene';
 import {CameraPoint, CameraPose} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -7,8 +23,10 @@ import {RectAreaLightUniformsLib} from 'three/examples/jsm/lights/RectAreaLightU
 import {CSS2DObject, CSS2DRenderer} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 import {
+    addRailing,
     addRoof,
     addRoom,
+    addVoid,
     buildBuilding,
     buildCeilingSteps,
     buildFloor,
@@ -90,6 +108,7 @@ import {
     SunShadowRadius,
     viewChanged,
 } from './presentation';
+import {buildRailing, railingColliders} from './railings';
 import {roofLocal, roofSlope, roofWindowFits} from './roof-geometry';
 import {buildRoof, buildRoofOutline, highlightRoofOutline, resizeRoofByCorner, roofCorners, RoofMinSide} from './roofs';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
@@ -112,6 +131,7 @@ import {hasTerrain, plotTerrain, terrainAt} from './terrain';
 import {roofsMeet, roofsReach} from './under-roof';
 import {buildUnderlay, disposeUnderlay, updateUnderlay} from './underlay';
 import {hiddenItemIds} from './variants';
+import {buildVoidLinings, buildVoidOutline, highlightVoidOutline, netRoomArea, voidColliders} from './voids';
 import {floorLevels, Walkthrough, WalkthroughFov} from './walkthrough';
 
 export type ViewPreset = 'overview' | 'top';
@@ -149,6 +169,11 @@ const DoorReach = 2.2;
 
 /** Shortest wall the backend accepts, mm. */
 const MinWallLength = 100;
+/** The shortest stretch of a railing between two points, mm (`RailingHandler::MinStretch`). */
+const MinRailingStretch = 10;
+/** A drawn railing's preview, as the backend makes it (`RailingHandler`), mm. */
+const NewRailingHeight = 1000;
+const NewRailingPostSpacing = 1200;
 /** Input on the canvas that may change the view; pointer moves invalidate only where they draw something. */
 const InputEvents = ['pointerdown', 'pointerup', 'pointerleave', 'dblclick', 'wheel'] as const;
 /** The floor level, where the drawing tools place points. */
@@ -206,8 +231,8 @@ interface WallRun {
     bend: {closing: boolean; sagitta: number} | null;
 }
 
-/** An element whose outline gets corner handles: a room or a plot. */
-type Outlined = {kind: 'room'; element: Room} | {kind: 'plot'; element: Plot};
+/** An element whose outline gets corner handles: a room, a plot or a void. */
+type Outlined = {kind: 'room'; element: Room} | {kind: 'plot'; element: Plot} | {kind: 'void'; element: FloorVoid};
 
 interface DragBase {
     plane: THREE.Plane;
@@ -221,6 +246,7 @@ type Drag = DragBase &
     (
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
         | {kind: 'stair'; stair: Stair; object: THREE.Object3D; x: number; y: number}
+        | {kind: 'railing'; railing: Railing; object: THREE.Object3D; dx: number; dy: number}
         | {kind: 'roof'; roof: Roof; objects: THREE.Object3D[]; x: number; y: number}
         | {kind: 'roofCorner'; roof: Roof; index: number; current: RoofRectangle}
         | {kind: 'roofWindow'; roof: Roof; window: RoofWindow; along: number; across: number}
@@ -275,6 +301,8 @@ export class ViewerEngine {
     public onWalkthroughFloor: (step: 1 | -1) => number | null = () => null;
     /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
     public onDrawWalls: (points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean> = () => Promise.resolve(false);
+    /** A railing was drawn (its points; a closed one repeats the first); resolves true when added. Until then it stays on screen. */
+    public onDrawRailing: (points: PlanPoint[]) => Promise<boolean> = () => Promise.resolve(false);
     /** A click with the room tool inside walls that close around the point. */
     public onDetectRoom: (point: PlanPoint) => void = () => undefined;
     /** The readout of the drawing tool changed; null when no tool is active or the pointer left the view. */
@@ -604,8 +632,8 @@ export class ViewerEngine {
         this.placeRoofOutlines();
         this.setSelection(this.selection);
         this.setPicked(this.picked);
-        if (this.pendingRun !== null && this.hasWallsAlong(scene, this.pendingRun)) {
-            // The drawn walls arrived; a refused run is restored by `commitRun` instead.
+        if (this.pendingRun !== null && (this.hasWallsAlong(scene, this.pendingRun) || this.hasRailingAlong(scene, this.pendingRun))) {
+            // The drawn walls (or railing) arrived; a refused run is restored by `commitRun` instead.
             this.pendingRun = null;
         }
         this.detection = null;
@@ -664,7 +692,7 @@ export class ViewerEngine {
             content.add(object);
         }
         for (const room of scene.rooms) {
-            const label = this.createLabel(room);
+            const label = this.createLabel(room, scene.voids ?? []);
             this.labels.set(room.id, label);
             content.add(label);
         }
@@ -804,6 +832,37 @@ export class ViewerEngine {
             parts.root.add(parts.stairsBelow);
             roomsCutBy(scene.rooms, [...sceneVoids(previous).below, ...voids.below]).forEach((id) => voidRooms.add(id));
         }
+        // The voids (FD-90): a changed one cuts the slab and the room floors anew, a changed void above the ceilings.
+        const floorVoids = diffById(previous.voids ?? [], scene.voids ?? []);
+        const voidsChanged = floorVoids.removed.length > 0 || floorVoids.changed.length > 0;
+        if (voidsChanged) {
+            const changedIds = new Set([...floorVoids.removed, ...floorVoids.changed.map((v) => v.id)]);
+            for (const id of changedIds) {
+                const group = parts.voids.get(id);
+                if (group !== undefined) {
+                    this.disposeObject(group);
+                    parts.voids.delete(id);
+                }
+            }
+            floorVoids.changed.forEach((v) => addVoid(parts, v));
+            const was = (previous.voids ?? []).filter((v) => changedIds.has(v.id)).map((v) => v.polygon);
+            roomsCutBy(scene.rooms, [...was, ...floorVoids.changed.map((v) => v.polygon)]).forEach((id) => voidRooms.add(id));
+            this.highlightVoids();
+        }
+        const aboveChanged = !sameJson(previous.voidsAbove ?? null, scene.voidsAbove ?? null);
+        if (aboveChanged) {
+            const polygons = [...(previous.voidsAbove?.voids ?? []), ...(scene.voidsAbove?.voids ?? [])].map((v) => v.polygon);
+            roomsCutBy(scene.rooms, polygons).forEach((id) => voidRooms.add(id));
+        }
+        const railings = diffById(previous.railings ?? [], scene.railings ?? []);
+        for (const id of [...railings.removed, ...railings.changed.map((r) => r.id)]) {
+            const group = parts.railings.get(id);
+            if (group !== undefined) {
+                this.disposeObject(group);
+                parts.railings.delete(id);
+            }
+        }
+        railings.changed.forEach((railing) => addRailing(parts, railing, materials));
 
         // The roofs: a changed one is drawn anew, with its outline, and so are those it met before or meets now (their
         // junctions with it).
@@ -825,6 +884,7 @@ export class ViewerEngine {
         if (
             wallsChanged ||
             belowChanged ||
+            voidsChanged ||
             rooms.removed.length > 0 ||
             rooms.changed.length > 0 ||
             previous.floor.slabThickness !== scene.floor.slabThickness ||
@@ -848,6 +908,23 @@ export class ViewerEngine {
             }
             this.highlightPlots();
         }
+        // The voids' linings: through the slab, and from the ceilings up to the slab above.
+        if (
+            voidsChanged ||
+            aboveChanged ||
+            belowChanged ||
+            riseChanged ||
+            stairs.removed.length > 0 ||
+            stairs.changed.length > 0 ||
+            rooms.removed.length > 0 ||
+            rooms.changed.length > 0 ||
+            roofsChanged ||
+            previous.floor.slabThickness !== scene.floor.slabThickness
+        ) {
+            this.disposeObject(parts.voidLinings);
+            parts.voidLinings = buildVoidLinings(scene, materials);
+            parts.root.add(parts.voidLinings);
+        }
         const rebuiltRooms = scene.rooms.filter(
             (r) => roofTouchedRooms.has(r.id) || changedRooms.has(r.id) || plotsChanged || voidRooms.has(r.id),
         );
@@ -857,7 +934,7 @@ export class ViewerEngine {
         }
         for (const room of rebuiltRooms) {
             addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, floorRoofs), room.id);
-            const label = this.createLabel(room);
+            const label = this.createLabel(room, scene.voids ?? []);
             this.labels.set(room.id, label);
             content.add(label);
         }
@@ -1039,6 +1116,7 @@ export class ViewerEngine {
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
         this.highlightPlots();
         this.highlightRoofs();
+        this.highlightVoids();
 
         this.removeOutline();
         const objects = this.objectsOf(selection);
@@ -1810,7 +1888,7 @@ export class ViewerEngine {
         this.moveCamera(target.clone().add(offset), target, true);
     }
 
-    /** The selected room or plot, whose corners get handles. */
+    /** The selected room, plot or void, whose corners get handles. */
     private selectedOutline(): Outlined | null {
         const selection = this.selection;
         const scene = this.sceneData;
@@ -1825,7 +1903,17 @@ export class ViewerEngine {
             const plot = scene.plots?.find((p) => p.id === selection.id);
             return plot === undefined ? null : {kind: 'plot', element: plot};
         }
+        if (selection.kind === 'void') {
+            const floorVoid = scene.voids?.find((v) => v.id === selection.id);
+            return floorVoid === undefined ? null : {kind: 'void', element: floorVoid};
+        }
         return null;
+    }
+
+    /** The selected void's outline in the highlight colour. */
+    private highlightVoids(): void {
+        const selection = this.selection;
+        this.parts?.voids.forEach((group, id) => highlightVoidOutline(group, selection?.kind === 'void' && selection.id === id));
     }
 
     /** The selected plot's boundary in the highlight colour. */
@@ -2067,7 +2155,8 @@ export class ViewerEngine {
         this.applyDaylight();
     }
 
-    private createLabel(room: Room): CSS2DObject {
+    /** A room's label: its name, code, area less the floor's `voids` and clear height. */
+    private createLabel(room: Room, voids: readonly FloorVoid[]): CSS2DObject {
         const element = document.createElement('div');
         element.className = 'room-label';
         const name = document.createElement('span');
@@ -2076,7 +2165,9 @@ export class ViewerEngine {
         const meta = document.createElement('span');
         meta.className = 'room-label__meta';
         const height = room.ceilingHeight === null ? '' : ` · h ${(room.ceilingHeight / 1000).toFixed(2)} m`;
-        meta.textContent = `${room.code.replace('H1/', '')} · ${room.area.toFixed(1)} m²${height}`;
+        // The floor's voids (FD-90) are taken off the area, as the room schedule does.
+        const area = netRoomArea(room, voids);
+        meta.textContent = `${room.code.replace('H1/', '')} · ${area.toFixed(1)} m²${height}`;
         element.append(name, meta);
 
         const label = new CSS2DObject(element);
@@ -2195,6 +2286,7 @@ export class ViewerEngine {
         }
         if (this.parts !== null) {
             this.parts.roofOutlines.visible = topDown;
+            this.parts.voidOutlines.visible = topDown;
         }
         if (this.outline !== null && (this.selection?.kind === 'roof' || this.selection?.kind === 'roofWindow')) {
             // The roof is cut away over the plan, where its outline shows the selection.
@@ -2360,7 +2452,9 @@ export class ViewerEngine {
         const hit = this.pick(event);
         const selection = this.groupOf(selectionOf(hit?.object ?? null), event);
         const scene = this.sceneData;
-        if (hit === undefined || selection === null || scene === null || selection.kind === 'room' || selection.kind === 'plot') {
+        // Rooms, plots and voids are changed by their corners only.
+        const outlined = selection?.kind === 'room' || selection?.kind === 'plot' || selection?.kind === 'void';
+        if (hit === undefined || selection === null || scene === null || outlined) {
             return null;
         }
         // Drag in the horizontal plane through the grabbed point; the element keeps its elevation.
@@ -2379,6 +2473,12 @@ export class ViewerEngine {
             const object = this.parts?.stairs.get(selection.id);
             if (stair !== undefined && object !== undefined) {
                 drag = {kind: 'stair', plane, grab, moved: false, stair, object, x: stair.x, y: stair.y};
+            }
+        } else if (selection.kind === 'railing') {
+            const railing = (scene.railings ?? []).find((r) => r.id === selection.id);
+            const object = this.parts?.railings.get(selection.id);
+            if (railing !== undefined && object !== undefined) {
+                drag = {kind: 'railing', plane, grab, moved: false, railing, object, dx: 0, dy: 0};
             }
         } else if (selection.kind === 'roofWindow') {
             const roof = this.roofOfWindow(selection.id);
@@ -2458,6 +2558,14 @@ export class ViewerEngine {
                 drag.y = snapToGrid(element.y + delta.y, step);
                 drag.object.position.x = drag.x * MM;
                 drag.object.position.z = -drag.y * MM;
+                break;
+            }
+            case 'railing': {
+                const step = free ? 1 : DragSnap;
+                drag.dx = snapToGrid(delta.x, step);
+                drag.dy = snapToGrid(delta.y, step);
+                drag.object.position.x = drag.dx * MM;
+                drag.object.position.z = -drag.dy * MM;
                 break;
             }
             case 'roof': {
@@ -2712,6 +2820,12 @@ export class ViewerEngine {
                     edit = {selection: {kind: 'stair', id: drag.stair.id}, fields: {x: drag.x, y: drag.y}};
                 }
                 break;
+            case 'railing':
+                if (drag.dx !== 0 || drag.dy !== 0) {
+                    const points = drag.railing.points.map(([x, y]): PlanPoint => [x + drag.dx, y + drag.dy]);
+                    edit = {selection: {kind: 'railing', id: drag.railing.id}, fields: {points}};
+                }
+                break;
             case 'roof':
                 if (drag.x !== drag.roof.x || drag.y !== drag.roof.y) {
                     edit = {selection: {kind: 'roof', id: drag.roof.id}, fields: {x: drag.x, y: drag.y}};
@@ -2801,6 +2915,10 @@ export class ViewerEngine {
                 object.position.z = -drag.roof.y * MM;
             }
         }
+        if (drag.kind === 'railing') {
+            drag.object.position.x = 0;
+            drag.object.position.z = 0;
+        }
         this.clearPreview();
         this.setSelection(this.selection);
     }
@@ -2821,7 +2939,7 @@ export class ViewerEngine {
         if (this.measuring) {
             return;
         }
-        if (this.editMode && this.tool === 'drawWalls') {
+        if (this.editMode && this.drawsRun()) {
             this.commitRun(false);
             return;
         }
@@ -3000,7 +3118,7 @@ export class ViewerEngine {
             this.updateDrawing();
             return;
         }
-        if (this.tool === 'drawWalls') {
+        if (this.drawsRun()) {
             const snapped = this.snapRunPoint(point, event.shiftKey);
             if (this.run !== null) {
                 this.run.cursor = snapped.point;
@@ -3020,6 +3138,17 @@ export class ViewerEngine {
     private roomAt(point: Vec2): RoomDetection {
         this.roomFaces ??= prepareRoomFaces(this.sceneData?.walls ?? []);
         return pickRoom(this.roomFaces, point);
+    }
+
+    /** Whether the active tool draws a run of points: walls or a railing. */
+    private drawsRun(): boolean {
+        return this.tool === 'drawWalls' || this.tool === 'drawRailing';
+    }
+
+    /** Whether the scene has a railing through the run's points (the drawn railing arrived). */
+    private hasRailingAlong(scene: Scene, run: {points: Vec2[]; closed: boolean}): boolean {
+        const points = [...run.points, ...(run.closed ? [run.points[0]] : [])].map((p): PlanPoint => [p.x, p.y]);
+        return (scene.railings ?? []).some((r) => sameJson(r.points, points));
     }
 
     /** Whether the scene has a wall along every segment of the run (the run arrived). */
@@ -3042,7 +3171,7 @@ export class ViewerEngine {
             this.fixBend();
             return;
         }
-        if (this.tool === 'drawWalls') {
+        if (this.drawsRun()) {
             this.addRunPoint(this.snapRunPoint(point, event.shiftKey).point);
             return;
         }
@@ -3106,8 +3235,9 @@ export class ViewerEngine {
             this.updateDrawing();
             return;
         }
+        const arcs = this.drawArc && this.tool === 'drawWalls';
         if (closesRun(run.points, point)) {
-            if (sagitta === null && this.drawArc) {
+            if (sagitta === null && arcs) {
                 run.bend = {closing: true, sagitta: 0};
                 this.updateDrawing();
                 return;
@@ -3120,14 +3250,14 @@ export class ViewerEngine {
             // Back at the start with nothing to close: a wall there and back would lie on itself.
             return;
         }
-        // Too short for a wall (the backend's minimum): a second click of a double-click, or a slip.
+        // Too short for a wall or a railing stretch (the backend's minimums): a second click of a double-click, or a slip.
         const last = run.points[run.points.length - 1];
-        if (Math.hypot(point.x - last.x, point.y - last.y) < MinWallLength) {
+        if (Math.hypot(point.x - last.x, point.y - last.y) < (this.tool === 'drawRailing' ? MinRailingStretch : MinWallLength)) {
             return;
         }
         run.points.push(point);
         run.sagittas[run.points.length - 2] = sagitta ?? 0;
-        if (sagitta === null && this.drawArc) {
+        if (sagitta === null && arcs) {
             run.bend = {closing: false, sagitta: 0};
         }
         this.updateDrawing();
@@ -3149,11 +3279,12 @@ export class ViewerEngine {
         const pending = {points: run.points, closed, sagittas};
         this.pendingRun = pending;
         this.updateDrawing();
-        void this.onDrawWalls(
-            run.points.map((p): PlanPoint => [p.x, p.y]),
-            closed,
-            sagittas.some((s) => s !== 0) ? sagittas : null,
-        ).then((added) => {
+        const points = run.points.map((p): PlanPoint => [p.x, p.y]);
+        const sent =
+            this.tool === 'drawRailing'
+                ? this.onDrawRailing(closed ? [...points, points[0]] : points)
+                : this.onDrawWalls(points, closed, sagittas.some((s) => s !== 0) ? sagittas : null);
+        void sent.then((added) => {
             if (this.pendingRun !== pending) {
                 return;
             }
@@ -3205,9 +3336,23 @@ export class ViewerEngine {
         if (pending === null && bend === null && last !== undefined && cursor !== null && Math.hypot(cursor.x - last.x, cursor.y - last.y) >= 1) {
             segments.push([last, cursor, 0]);
         }
-        this.addRunWalls(segments);
+        if (this.tool === 'drawRailing') {
+            this.addRunRailing(segments);
+        } else {
+            this.addRunWalls(segments);
+        }
         this.markRun(points, pending === null ? cursor : null, snap);
         const length = last !== undefined && cursor !== null ? Math.round(Math.hypot(cursor.x - last.x, cursor.y - last.y)) : null;
+        if (this.tool === 'drawRailing') {
+            this.onToolStatus({
+                tool: 'drawRailing',
+                points: points.length,
+                length,
+                angle: last !== undefined && cursor !== null && length !== 0 ? Math.round(directionOf(last, cursor) * 10) / 10 : null,
+                snap: cursor === null ? null : snap,
+            });
+            return;
+        }
         this.onToolStatus({
             tool: 'drawWalls',
             points: points.length,
@@ -3249,6 +3394,29 @@ export class ViewerEngine {
         drawn.forEach((wall) =>
             this.drawLayer.add(buildWall(wall, materials, parts.sectionMaterial, joints.get(wall.id), undefined, roofs, plots, exterior)),
         );
+    }
+
+    /** The railing a run draws, in the default look. */
+    private addRunRailing(segments: readonly [Vec2, Vec2, number][]): void {
+        const materials = this.materials;
+        if (materials === null || segments.length === 0) {
+            return;
+        }
+        const points = [segments[0][0], ...segments.map(([, b]) => b)].map((p): PlanPoint => [p.x, p.y]);
+        const railing: Railing = {
+            id: -1,
+            name: 'New railing',
+            points,
+            height: NewRailingHeight,
+            baseZ: 0,
+            style: 'Balusters',
+            spacing: null,
+            postSpacing: NewRailingPostSpacing,
+            handrail: 'Round',
+            materialId: null,
+            infillMaterialId: null,
+        };
+        this.drawLayer.add(buildRailing(railing, materials));
     }
 
     /** Markers of a run in the overlay: its points, and the pointer (green when snapped). */
@@ -3344,6 +3512,15 @@ export class ViewerEngine {
         }
         if (drag.outline.kind === 'plot') {
             this.previewPlot({...drag.outline.element, polygon: drag.polygon});
+            return;
+        }
+        if (drag.outline.kind === 'void') {
+            const outline = buildVoidOutline({...drag.outline.element, polygon: drag.polygon});
+            highlightVoidOutline(outline, true);
+            outline.visible = true;
+            const original = parts.voids.get(drag.outline.element.id);
+            this.setPreview(original === undefined ? [] : [original], [outline]);
+            this.updateHandles();
             return;
         }
         const room = {...drag.outline.element, polygon: drag.polygon};
@@ -3593,6 +3770,8 @@ export class ViewerEngine {
                 return objects([selection.id], this.openings);
             case 'stair':
                 return objects([selection.id], this.parts?.stairs ?? new Map<number, THREE.Object3D>());
+            case 'railing':
+                return objects([selection.id], this.parts?.railings ?? new Map<number, THREE.Object3D>());
             case 'roof': {
                 // Over the plan the roof's outline shows the selection instead; `tick()` hides the box there.
                 const roof = this.parts?.roofs.get(selection.id)?.roof;
@@ -3676,12 +3855,18 @@ export class ViewerEngine {
 }
 
 /**
- * What the walker collides with: the walls, the shown columns and the stairs' sides and voids (`stairColliders()`);
- * door leaves come on top, as they move.
+ * What the walker collides with: the walls, the shown columns, the stairs' sides and voids (`stairColliders()`), the
+ * railings and the edges of the floor's voids; door leaves come on top, as they move.
  */
 function sceneColliders(scene: Scene, stairs: readonly StairPath[]): WallCollider[] {
     const hidden = hiddenItemIds(scene);
-    return [...wallColliders(scene.walls), ...columnColliders(scene.items.filter((item) => !hidden.has(item.id))), ...stairColliders(stairs)];
+    return [
+        ...wallColliders(scene.walls),
+        ...columnColliders(scene.items.filter((item) => !hidden.has(item.id))),
+        ...stairColliders(stairs),
+        ...railingColliders(scene.railings ?? []),
+        ...voidColliders(scene.voids ?? [], stairs),
+    ];
 }
 
 /** Scales an outline box to the joint bounds of the objects, a few mm larger so it does not z-fight with their faces. */

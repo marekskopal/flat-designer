@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Schedule;
 
 use FlatDesigner\Dto\FloorScheduleDto;
+use FlatDesigner\Dto\FloorVoidDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\RoomScheduleDto;
 use FlatDesigner\Dto\RoomScheduleRowDto;
 use FlatDesigner\Dto\ScheduleTotalDto;
+use FlatDesigner\Dto\VoidScheduleRowDto;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\Geometry\RoofCover;
@@ -25,7 +29,7 @@ use FlatDesigner\Service\Json\JsonDecoder;
  * Room schedule of a project or a floor: area, perimeter, clear height and volume per room, the indoor (living), ancillary
  * (garages: indoor, unheated) and outdoor totals.
  * A room under the floor's roofs gets its clear height's range, its volume under the slope and its area with headroom
- * (`RoomUnderRoof`).
+ * (`RoomUnderRoof`). The floor's voids (FD-90) are listed apart and taken off the areas of the rooms they cut.
  */
 final readonly class RoomScheduleService
 {
@@ -33,6 +37,7 @@ final readonly class RoomScheduleService
 		private RoomRepository $roomRepository,
 		private FloorRepository $floorRepository,
 		private RoofRepository $roofRepository,
+		private FloorVoidRepository $voidRepository,
 	) {
 	}
 
@@ -52,11 +57,16 @@ final readonly class RoomScheduleService
 			static fn (Roof $roof): RoofGeometry => RoofGeometry::fromRoof($roof),
 			$this->roofRepository->findByFloor($floor->id),
 		));
+		$voids = array_map(
+			static fn (FloorVoid $void): FloorVoidDto => FloorVoidDto::fromEntity($void),
+			$this->voidRepository->findByFloor($floor->id),
+		);
 		$rows = array_map(
-			static fn (Room $room): RoomScheduleRowDto => RoomScheduleRowDto::fromRoom(
-				RoomDto::fromEntity($room),
-				self::underRoof($room, $cover),
-			),
+			static function (Room $room) use ($cover, $voids): RoomScheduleRowDto {
+				$dto = RoomDto::fromEntity($room);
+
+				return RoomScheduleRowDto::fromRoom($dto, self::underRoof($room, $cover), VoidArea::of($dto->polygon, $voids) / 1e6);
+			},
 			$this->roomRepository->findByFloor($floor->id),
 		);
 		usort($rows, static fn (RoomScheduleRowDto $a, RoomScheduleRowDto $b): int => strnatcmp($a->code, $b->code));
@@ -70,6 +80,7 @@ final readonly class RoomScheduleService
 			indoor: ScheduleTotalDto::of(self::rows($rows, 'indoor')),
 			outdoor: ScheduleTotalDto::of(self::rows($rows, 'outdoor')),
 			ancillary: ScheduleTotalDto::of(self::rows($rows, 'ancillary')),
+			voids: array_map(VoidScheduleRowDto::fromVoid(...), $voids),
 		);
 	}
 
