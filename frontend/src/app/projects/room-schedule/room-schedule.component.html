@@ -5,6 +5,9 @@
             @if (schedule(); as s) {
                 <span class="totals">
                     {{ s.indoor.area | number: '1.2-2' }} m² indoor
+                    @if (s.ancillary.rooms > 0) {
+                        · {{ s.ancillary.area | number: '1.2-2' }} m² garage
+                    }
                     @if (s.outdoor.rooms > 0) {
                         · {{ s.outdoor.area | number: '1.2-2' }} m² outdoor
                     }
@@ -15,7 +18,7 @@
     </div>
 
     @if (schedule(); as s) {
-        @if (s.indoor.rooms + s.outdoor.rooms === 0) {
+        @if (s.indoor.rooms + s.ancillary.rooms + s.outdoor.rooms === 0) {
             <p class="empty">No rooms yet. Add them in a floor's editor (Room from walls).</p>
         } @else {
             <table class="table">
@@ -39,7 +42,7 @@
                             </tr>
                         }
                         @for (room of floor.rooms; track room.id) {
-                            <tr [class.outdoor]="room.outdoor">
+                            <tr [class.outdoor]="room.outdoor || room.ancillary">
                                 <td>
                                     <span class="code">{{ room.code.replace('H1/', '') }}</span>
                                     {{ room.name }}
@@ -59,6 +62,13 @@
                                 <td class="num">{{ floor.indoor.area | number: '1.2-2' }}</td>
                                 <td [attr.colspan]="columns() - 2"></td>
                             </tr>
+                            @if (floor.ancillary.rooms > 0) {
+                                <tr class="subtotal">
+                                    <td>Garage, {{ floor.name }}</td>
+                                    <td class="num">{{ floor.ancillary.area | number: '1.2-2' }}</td>
+                                    <td [attr.colspan]="columns() - 2"></td>
+                                </tr>
+                            }
                             @if (floor.outdoor.rooms > 0) {
                                 <tr class="subtotal">
                                     <td>Outdoor, {{ floor.name }}</td>
@@ -75,6 +85,13 @@
                         <td class="num">{{ s.indoor.area | number: '1.2-2' }}</td>
                         <td [attr.colspan]="columns() - 2"></td>
                     </tr>
+                    @if (s.ancillary.rooms > 0) {
+                        <tr class="total">
+                            <td>Garage total (indoor, unheated)</td>
+                            <td class="num">{{ s.ancillary.area | number: '1.2-2' }}</td>
+                            <td [attr.colspan]="columns() - 2"></td>
+                        </tr>
+                    }
                     @if (s.outdoor.rooms > 0) {
                         <tr class="total">
                             <td>Outdoor total (terraces, gardens)</td>

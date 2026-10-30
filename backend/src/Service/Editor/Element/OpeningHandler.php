@@ -7,10 +7,12 @@ namespace FlatDesigner\Service\Editor\Element;
 use DateTimeImmutable;
 use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
@@ -33,7 +35,8 @@ use FlatDesigner\Service\Editor\Geometry\WallTop;
  * fit within the wall's length and height and must not overlap another opening of that wall. A sliding or
  * pocket door also needs the wall beside it, towards `hinge`, free for its open leaf (a pocket door a wall
  * thick enough for the pocket, a niche one thicker than its `depth`). Only a window down to the floor can be `walkable`, with one or two sashes. Leaf
- * styles are for doors with a leaf; a solid lower panel and shutters for windows.
+ * styles are for doors with a leaf; a solid lower panel and shutters for windows; materials, garage doors, fixed panes
+ * and the frame's inset (FD-89) in `OpeningLook` and `OpeningPlacement`.
  */
 final readonly class OpeningHandler implements ElementHandler
 {
@@ -61,7 +64,40 @@ final readonly class OpeningHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['wallId', 'name', 'type', 'offset', 'width', 'height', 'sillHeight', 'leafWidth', 'hinge', 'side', 'entrance', 'walkable', 'frameStyle', 'handle', 'mullions', 'transoms', 'sillBoard', 'leafStyle', 'leafPanels', 'panelHeight', 'shutters', 'shutterMaterialId', 'shuttersClosed', 'depth', 'revealLining'];
+		return [
+			'wallId',
+			'name',
+			'type',
+			'offset',
+			'width',
+			'height',
+			'sillHeight',
+			'leafWidth',
+			'hinge',
+			'side',
+			'entrance',
+			'walkable',
+			'frameStyle',
+			'handle',
+			'mullions',
+			'transoms',
+			'sillBoard',
+			'leafStyle',
+			'leafPanels',
+			'panelHeight',
+			'shutters',
+			'shutterMaterialId',
+			'shuttersClosed',
+			'depth',
+			'revealLining',
+			'frameMaterialId',
+			'outsideFrameMaterialId',
+			'leafMaterialId',
+			'boardDirection',
+			'garageDoorStyle',
+			'fixedPanes',
+			'inset',
+		];
 	}
 
 	/** @return list<string> */
@@ -122,14 +158,12 @@ final readonly class OpeningHandler implements ElementHandler
 				sprintf('The opening ends %d mm past the end of the wall (%d mm long).', $offset + $width - $length, $length),
 			);
 		}
-		// Checked when it is set anew only: a roof lowered since does not block renaming or undoing the opening.
-		if (OpeningHead::placedAnew($currentOpening, $offset, $width, $sillHeight, $height)) {
-			OpeningHead::check($top, $wall->height, $offset, $width, $sillHeight + $height);
-			$this->wallBase->checkSill($wall, $line, $offset, $width, $sillHeight);
-		}
-
 		$type = $fields->enum('type', OpeningTypeEnum::class);
-		$hinge = $fields->nullableEnum('hinge', OpeningHingeEnum::class) ?? ($type->isSliding() ? OpeningHingeEnum::Start : null);
+		$look = $this->look->fields($type, $height, $fields, $currentOpening);
+		$garageDoorStyle = GarageDoorStyleEnum::tryFrom(is_string($look['garageDoorStyle']) ? $look['garageDoorStyle'] : '');
+		$this->checkHead($currentOpening, $wall, $line, $top, $type, $garageDoorStyle, $offset, $width, $sillHeight, $height);
+
+		$hinge = $fields->nullableEnum('hinge', OpeningHingeEnum::class) ?? $type->defaultHinge();
 		$depth = OpeningPlacement::nicheDepth($type, $fields->nullableInt('depth', 1, State::MaxSize), $wall->thickness);
 		OpeningPlacement::check(
 			$type,
@@ -141,8 +175,9 @@ final readonly class OpeningHandler implements ElementHandler
 			array_filter($this->openingRepository->findByWalls([$wall->id]), fn (Opening $o): bool => $o->id !== $currentOpening?->id),
 			$fields->nullableEnum('side', OpeningSideEnum::class) ?? OpeningSideEnum::Left,
 			$depth,
+			$look['fixedPanes'],
 		);
-		self::checkCurve($wall, $type, $hinge, $width);
+		OpeningPlacement::checkCurve($wall, $type, $hinge, $width, $look['fixedPanes']);
 
 		$entrance = $fields->bool('entrance');
 		if ($entrance && $type === OpeningTypeEnum::Niche) {
@@ -167,13 +202,51 @@ final readonly class OpeningHandler implements ElementHandler
 			'sillHeight' => $sillHeight,
 			'entrance' => $entrance,
 			'walkable' => $walkable,
-			'frameStyle' => $type === OpeningTypeEnum::Niche
+			// A niche has no frame; a garage door's leaf hangs behind the opening, so it has none either.
+			'frameStyle' => $type === OpeningTypeEnum::Niche || $type === OpeningTypeEnum::GarageDoor
 				? DoorFrameStyleEnum::None->value
 				: ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
 			'depth' => $depth,
 			// Missing in older change states: a bare reveal. A niche has none.
 			'revealLining' => $type !== OpeningTypeEnum::Niche && $fields->bool('revealLining'),
-		] + self::leafFields($type, $hinge, $width, $fields) + $window + $this->look->fields($type, $height, $fields);
+			'inset' => OpeningClearances::inset(
+				$type,
+				$look['fixedPanes'],
+				$fields->nullableInt('inset', 0, State::MaxSize),
+				$wall->thickness,
+			),
+		] + self::leafFields($type, $hinge, $width, $fields) + $window + $look;
+	}
+
+	/**
+	 * The head under the wall's top (with a lifting garage door's headroom) and the sill on the wall's base, checked when
+	 * the opening is placed anew or the garage door restyled only: a roof lowered since does not block renaming or undoing
+	 * the opening.
+	 */
+	private function checkHead(
+		?Opening $current,
+		Wall $wall,
+		WallLine $line,
+		WallTop $top,
+		OpeningTypeEnum $type,
+		?GarageDoorStyleEnum $garageDoorStyle,
+		int $offset,
+		int $width,
+		int $sillHeight,
+		int $height,
+	): void {
+		if (!OpeningHead::placedAnew($current, $offset, $width, $sillHeight, $height) && $current?->garageDoorStyle === $garageDoorStyle) {
+			return;
+		}
+		OpeningHead::check(
+			$top,
+			$wall->height,
+			$offset,
+			$width,
+			$sillHeight + $height,
+			OpeningClearances::headroom($type, $garageDoorStyle),
+		);
+		$this->wallBase->checkSill($wall, $line, $offset, $width, $sillHeight);
 	}
 
 	/**
@@ -282,13 +355,20 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->transoms = $fields->int('transoms', 0, self::MaxTransoms);
 		$opening->sillBoard = $fields->nullableInt('sillBoard', 0, self::MaxSillBoard);
 		$opening->leafStyle = $fields->enum('leafStyle', DoorLeafStyleEnum::class);
-		$opening->leafPanels = $fields->int('leafPanels', 1, OpeningLook::MaxLeafPanels);
+		$opening->leafPanels = $fields->int('leafPanels', 1, OpeningLook::MaxBoards);
 		$opening->panelHeight = $fields->nullableInt('panelHeight', 0, State::MaxSize);
 		$opening->shutters = $fields->nullableEnum('shutters', ShutterStyleEnum::class);
 		$opening->shutterMaterial = $this->materialResolver->resolve($fields->nullableId('shutterMaterialId'));
 		$opening->shuttersClosed = $fields->bool('shuttersClosed');
 		$opening->depth = $fields->nullableInt('depth', 1, State::MaxSize);
 		$opening->revealLining = $fields->bool('revealLining');
+		$opening->frameMaterial = $this->materialResolver->resolve($fields->nullableId('frameMaterialId'));
+		$opening->outsideFrameMaterial = $this->materialResolver->resolve($fields->nullableId('outsideFrameMaterialId'));
+		$opening->leafMaterial = $this->materialResolver->resolve($fields->nullableId('leafMaterialId'));
+		$opening->boardDirection = $fields->enum('boardDirection', BoardDirectionEnum::class);
+		$opening->garageDoorStyle = $fields->nullableEnum('garageDoorStyle', GarageDoorStyleEnum::class);
+		$opening->fixedPanes = $fields->int('fixedPanes', 0, OpeningLook::MaxFixedPanes);
+		$opening->inset = $fields->nullableInt('inset', 0, State::MaxSize);
 		$this->openingRepository->persist($opening);
 	}
 
@@ -300,19 +380,6 @@ final readonly class OpeningHandler implements ElementHandler
 		}
 
 		return $wall;
-	}
-
-	/** On a curved wall a door or window is built straight, so it has to be shallow (`OpeningPlacement::fitsCurve()`). */
-	private static function checkCurve(Wall $wall, OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $width): void
-	{
-		$radius = WallLine::fromWall($wall)->arc()['radius'] ?? null;
-		if ($radius !== null && !OpeningPlacement::fitsCurve($type, $hinge, $width, $radius, $wall->thickness)) {
-			throw EditException::invalid(sprintf(
-				'On this curved wall a door or window is built straight, so it may take %d mm of the wall at most%s.',
-				OpeningPlacement::maxCurvedWidth($radius, $wall->thickness),
-				$type->isSliding() ? ' with the wall its open leaf slides along' : '',
-			));
-		}
 	}
 
 	private static function cast(AEntity $element): Opening

@@ -32,11 +32,19 @@ export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
     Passage: 'Passage',
     Window: 'Window',
     Niche: 'Niche',
+    GarageDoor: 'Garage door',
 };
 
 /** Doors with a leaf (or two): not windows, passages or niches. */
 const hasLeaf = (element: Record<string, unknown>): boolean =>
     element['type'] !== 'Window' && element['type'] !== 'Passage' && element['type'] !== 'Niche';
+
+/** Openings with a frame of their own (FD-89): not passages or niches. */
+const framed = (element: Record<string, unknown>): boolean => element['type'] !== 'Passage' && element['type'] !== 'Niche';
+
+/** A window, or a lift-and-slide door (with fixed panes): glazing in a frame. */
+const glazedFrame = (element: Record<string, unknown>): boolean =>
+    element['type'] === 'Window' || (element['type'] === 'SlidingDoor' && Number(element['fixedPanes'] ?? 0) > 0);
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -116,7 +124,7 @@ const ItemKinds = [
     'Fixture', 'Fence', 'Column', 'Beam', 'Custom', 'Model',
 ] as const;
 
-const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway'] as const;
+const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway', 'Garage'] as const;
 
 /**
  * A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east (at its
@@ -213,7 +221,26 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             unit: 'mm',
             nullable: true,
             half: true,
-            when: (element) => element['type'] === 'Door' || element['type'] === 'DoubleDoor',
+            when: (element) =>
+                element['type'] === 'Door' ||
+                element['type'] === 'DoubleDoor' ||
+                (element['type'] === 'GarageDoor' && element['garageDoorStyle'] === 'SideHinged'),
+        },
+        {
+            key: 'garageDoorStyle',
+            label: 'Garage door',
+            type: 'select',
+            options: ['Sectional', 'UpAndOver', 'SideHinged', 'Roller'],
+            optionLabels: {Sectional: 'Sectional', UpAndOver: 'Up and over', SideHinged: 'Side-hinged', Roller: 'Roller'},
+            half: true,
+            when: (element) => element['type'] === 'GarageDoor',
+        },
+        {
+            key: 'fixedPanes',
+            label: 'Fixed panes (lift-and-slide)',
+            type: 'int',
+            half: true,
+            when: (element) => element['type'] === 'SlidingDoor',
         },
         {
             key: 'hinge',
@@ -226,7 +253,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         },
         {
             key: 'side',
-            label: 'Side (swing; sliding: hangs on; window: interior; niche: cut into)',
+            label: 'Side (swing; sliding: hangs on; window: interior; niche: cut into; garage: inside)',
             type: 'select',
             options: ['Left', 'Right'],
             nullable: true,
@@ -239,7 +266,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'select',
             options: ['Lining', 'Architrave', 'Flush', 'None'],
             half: true,
-            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche',
+            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche' && element['type'] !== 'GarageDoor',
         },
         {
             key: 'handle',
@@ -264,16 +291,53 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             key: 'leafStyle',
             label: 'Leaf',
             type: 'select',
-            options: ['Flush', 'Panelled', 'Glazed'],
+            options: ['Flush', 'Panelled', 'Glazed', 'Boarded'],
             half: true,
-            when: hasLeaf,
+            when: (element) => hasLeaf(element) && !glazedFrame(element),
         },
         {
             key: 'leafPanels',
-            label: 'Panels / panes',
+            label: 'Panels / panes / boards',
             type: 'int',
             half: true,
-            when: (element) => element['leafStyle'] === 'Panelled' || element['leafStyle'] === 'Glazed',
+            when: (element) => hasLeaf(element) && element['leafStyle'] !== 'Flush' && element['leafStyle'] != null && !glazedFrame(element),
+        },
+        {
+            key: 'boardDirection',
+            label: 'Boards',
+            type: 'select',
+            options: ['Vertical', 'Horizontal'],
+            half: true,
+            when: (element) => hasLeaf(element) && element['leafStyle'] === 'Boarded' && !glazedFrame(element),
+        },
+        {key: 'frameMaterialId', label: 'Frame material', type: 'material', nullable: true, half: true, when: framed},
+        {
+            key: 'outsideFrameMaterialId',
+            label: 'Frame outside (empty: as inside)',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: glazedFrame,
+        },
+        {
+            key: 'leafMaterialId',
+            label: 'Leaf material (empty: the frame\'s)',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: (element) => hasLeaf(element) && !glazedFrame(element),
+        },
+        {
+            key: 'inset',
+            label: 'Frame in from the outer face (empty: centred)',
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            when: (element) =>
+                framed(element) &&
+                element['type'] !== 'PocketDoor' &&
+                element['type'] !== 'GarageDoor' &&
+                (element['type'] !== 'SlidingDoor' || glazedFrame(element)),
         },
         {
             key: 'panelHeight',

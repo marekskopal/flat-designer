@@ -7,6 +7,7 @@ namespace FlatDesigner\Tests\Controller;
 use FlatDesigner\Controller\RoomScheduleController;
 use FlatDesigner\Dto\RoomScheduleRowDto;
 use FlatDesigner\Dto\ScheduleTotalDto;
+use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Schedule\RoomScheduleService;
 use FlatDesigner\Tests\Support\EditorTestCase;
@@ -37,6 +38,29 @@ final class RoomScheduleControllerTest extends EditorTestCase
 		self::assertIsArray($floor[0]);
 		self::assertEquals(['rooms' => 2, 'area' => 22.0, 'perimeter' => 28.0], $floor[0]['outdoor']);
 		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $floor[0]['indoor']);
+	}
+
+	public function testCountsGaragesApartFromTheLivingArea(): void
+	{
+		$this->create('rooms', ['code' => 'R1', 'name' => 'Hall', 'polygon' => [[0, 0], [2000, 0], [2000, 2000], [0, 2000]]]);
+		$garage = $this->create(
+			'rooms',
+			['code' => 'G1', 'name' => 'Garage', 'type' => 'Garage', 'polygon' => [[2000, 0], [5000, 0], [5000, 6000], [2000, 6000]]],
+		);
+		// A new garage stands on a concrete floor.
+		self::assertSame(Fixture::service(MaterialRepository::class)->findByCode('concrete-floor')?->id, $garage['floorMaterialId']);
+
+		$schedule = $this->schedule(false);
+		self::assertEquals(['rooms' => 1, 'area' => 4.0, 'perimeter' => 8.0], $schedule['indoor']);
+		self::assertEquals(['rooms' => 1, 'area' => 18.0, 'perimeter' => 18.0], $schedule['ancillary']);
+		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $schedule['outdoor']);
+		$floors = $schedule['floors'];
+		self::assertIsList($floors);
+		self::assertIsArray($floors[0]);
+		self::assertEquals($schedule['ancillary'], $floors[0]['ancillary']);
+		self::assertIsList($floors[0]['rooms']);
+		self::assertIsArray($floors[0]['rooms'][0]);
+		self::assertSame([true, false], [$floors[0]['rooms'][0]['ancillary'], $floors[0]['rooms'][0]['outdoor']]);
 	}
 
 	public function testListsTheRoomsWithIndoorAndOutdoorTotals(): void

@@ -423,7 +423,27 @@ describe('planSheet stairs', () => {
     });
 });
 
+describe('garage doors on the plan (FD-89)', () => {
+    const dashed = (o: Opening): number => (planSheet(scene({walls: box([o])}), info).svg.match(/stroke-dasharray/g) ?? []).length;
+
+    it('dashes where a lifting door goes overhead, and draws a side-hinged one swinging', () => {
+        const garage = opening(9, {type: 'GarageDoor', offset: 700, width: 2500, height: 2125, garageDoorStyle: 'Sectional'});
+        const plain = dashed(opening(9, {type: 'Passage', offset: 700, width: 2500}));
+        expect(dashed(garage)).toBe(plain + 1);
+        expect(dashed({...garage, garageDoorStyle: 'Roller'})).toBe(plain + 1);
+        expect(planSheet(scene({walls: box([{...garage, garageDoorStyle: 'SideHinged'}])}), info).svg).not.toContain('NaN');
+    });
+});
+
 describe('roomScheduleSheets', () => {
+    it('totals a garage apart from the living area (FD-89)', () => {
+        const rooms = [room({id: 1, code: '1.1', area: 20}), room({id: 2, code: '1.2', name: 'Double garage', type: 'Garage', area: 18})];
+        const labels = texts(roomScheduleSheets(scene({rooms}), info)[0].svg);
+        // The rows, then the totals: the living area and the garage apart.
+        expect(labels.slice(labels.indexOf('Indoor'))).toEqual(expect.arrayContaining(['Indoor', '20.00', 'Garage', '18.00']));
+        expect(labels.filter((t) => t === 'Garage')).toHaveLength(1);
+    });
+
     it('lists the rooms by code with the indoor and outdoor totals', () => {
         const rooms = [
             room({id: 2, code: '1.10', name: 'Bedroom', area: 10}),

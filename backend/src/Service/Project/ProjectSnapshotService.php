@@ -8,9 +8,11 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
@@ -345,6 +347,16 @@ final readonly class ProjectSnapshotService
 				$restored->revealLining = $opening->raw('revealLining') === true;
 				// And before niches.
 				$restored->depth = $opening->nullableInt('depth');
+				// And before opening materials, garage doors, fixed panes and insets (FD-89).
+				$restored->frameMaterial = $materials[$opening->nullableInt('frameMaterialId') ?? 0] ?? null;
+				$restored->outsideFrameMaterial = $materials[$opening->nullableInt('outsideFrameMaterialId') ?? 0] ?? null;
+				$restored->leafMaterial = $materials[$opening->nullableInt('leafMaterialId') ?? 0] ?? null;
+				$restored->boardDirection = BoardDirectionEnum::tryFrom(
+					$opening->nullableString('boardDirection') ?? '',
+				) ?? BoardDirectionEnum::Vertical;
+				$restored->garageDoorStyle = GarageDoorStyleEnum::tryFrom($opening->nullableString('garageDoorStyle') ?? '');
+				$restored->fixedPanes = $opening->nullableInt('fixedPanes') ?? 0;
+				$restored->inset = $opening->nullableInt('inset');
 				$this->openingRepository->persist($restored);
 			}
 		}

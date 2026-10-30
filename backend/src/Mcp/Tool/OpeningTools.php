@@ -13,7 +13,20 @@ use Mcp\Schema\ToolAnnotations;
 /** Doors, passages and windows in walls. */
 final readonly class OpeningTools
 {
-	private const array Clearable = ['leafWidth', 'hinge', 'side', 'handle', 'sillBoard', 'panelHeight', 'shutters', 'shutterMaterialId'];
+	private const array Clearable = [
+		'leafWidth',
+		'hinge',
+		'side',
+		'handle',
+		'sillBoard',
+		'panelHeight',
+		'shutters',
+		'shutterMaterialId',
+		'frameMaterialId',
+		'outsideFrameMaterialId',
+		'leafMaterialId',
+		'inset',
+	];
 
 	public function __construct(private ToolContext $context, private SceneEditor $editor)
 	{
@@ -21,10 +34,10 @@ final readonly class OpeningTools
 
 	/**
 	 * @param int $wallId wall to cut the opening into (from get_floor)
-	 * @param string $type "Door" (one swinging leaf) | "DoubleDoor" (two leaves hinged on the jambs) | "SlidingDoor" (leaf hung on a wall face, sliding along it) | "PocketDoor" (leaf sliding into the wall) | "Passage" (doorway without a leaf) | "Window" | "Niche" (a recess into one face of the wall, `depth` deep; for a wall that steps back for its full height, a niche from the floor to the wall top)
+	 * @param string $type "Door" (one swinging leaf) | "DoubleDoor" (two leaves hinged on the jambs) | "SlidingDoor" (leaf hung on a wall face, sliding along it; with fixedPanes a lift-and-slide door inside the opening) | "PocketDoor" (leaf sliding into the wall) | "Passage" (doorway without a leaf) | "Window" | "Niche" (a recess into one face of the wall, `depth` deep; for a wall that steps back for its full height, a niche from the floor to the wall top) | "GarageDoor" (opening by garageDoorStyle, on the `side` face, the garage's)
 	 * @param int $offset mm from the wall's start point (along the centre line) to the near edge of the opening
-	 * @param int|null $width mm (door default 900, double door 1400, window 1200, niche 600)
-	 * @param int|null $height mm (door default 1970, passage 2100, window 1200, niche 600)
+	 * @param int|null $width mm (door default 900, double door 1400, window 1200, niche 600, garage door 2500)
+	 * @param int|null $height mm (door default 1970, passage 2100, window 1200, niche 600, garage door 2125)
 	 * @param int|null $sillHeight mm above the floor (door 0, window and niche default 900)
 	 * @param int|null $leafWidth Door: leaf width, mm; DoubleDoor: width of the leaf on `hinge` (none: equal halves)
 	 * @param string|null $hinge "Start" (the opening's edge nearer the wall start) | "End". Door: edge carrying the leaf; DoubleDoor: the wider leaf's edge; SlidingDoor/PocketDoor: the way the leaf slides open (the wall on that side must be free for it)
@@ -36,8 +49,15 @@ final readonly class OpeningTools
 	 * @param int|null $mullions window: vertical glazing bars, 0–8 (default 1 = two panes; a walkable window 0 = one sash, 1 = two)
 	 * @param int|null $transoms window: horizontal glazing bars, 0–4 (default 0)
 	 * @param int|null $sillBoard window: how far the inner sill board reaches past the wall face on `side` (the interior, default Left), mm; exterior walls also get an outer sill. Default none. Two windows meeting at a wall corner, both reaching that wall end, form a corner window by themselves.
-	 * @param string|null $leafStyle doors with a leaf: "Flush" (default, a plain slab) | "Panelled" (raised panels in stiles and rails) | "Glazed" (glass panes in a frame)
-	 * @param int|null $leafPanels Panelled / Glazed leaves: panels or panes stacked up the leaf, 1–6 (default 2)
+	 * @param string|null $leafStyle doors with a leaf: "Flush" (default, a plain slab) | "Panelled" (raised panels in stiles and rails) | "Glazed" (glass panes in a frame) | "Boarded" (boards side by side, a timber-clad front or garage door)
+	 * @param int|null $leafPanels Panelled / Glazed leaves: panels or panes stacked up the leaf, 1–6 (default 2); Boarded: boards across the leaf, 1–24 (default 8)
+	 * @param string|null $boardDirection Boarded leaves: "Vertical" (default) | "Horizontal"
+	 * @param string|null $garageDoorStyle GarageDoor: "Sectional" (default; panels running up under the ceiling) | "UpAndOver" (one leaf tilting up) | "SideHinged" (two leaves; leafWidth as a double door's) | "Roller" (slats rolling up into a drum). All but SideHinged need 200 mm above the head under the wall's top.
+	 * @param int|null $fixedPanes SlidingDoor: fixed panes beside the sliding one, 0–3 (default 0: a leaf hung on the face). With them the door is a lift-and-slide door: the opening divided into equal panes, the one at the end away from `hinge` sliding over its neighbour towards `hinge`, so no wall beside it is needed.
+	 * @param int|null $frameMaterialId material of the frame and sashes (list_materials; default white doors, anthracite windows)
+	 * @param int|null $outsideFrameMaterialId window / SlidingDoor: material of the frame's outer face (a timber-aluminium window; default the frame's)
+	 * @param int|null $leafMaterialId doors with a leaf: material of the leaves (default the frame's, white)
+	 * @param int|null $inset windows and doors: the frame set this far (mm) in from the outer face, opposite `side` (a window in the outer face with a deep inner reveal: 0); default none, centred in the wall (a door's lining across it). At most the wall's thickness less 80 mm.
 	 * @param int|null $panelHeight window: solid lower panel of the glazing, mm from the sill (a French window's panelled bottom); default none
 	 * @param string|null $shutters window: exterior shutters, two leaves on the outer face (opposite `side`): "Louvred" | "Solid"; default none
 	 * @param int|null $shutterMaterialId window with shutters: material of the shutters (list_materials; default painted timber)
@@ -48,7 +68,7 @@ final readonly class OpeningTools
 	 */
 	#[McpTool(
 		name: 'add_opening',
-		description: 'Add a door, passage, window or niche to a wall. It must fit within the wall and not overlap another opening.',
+		description: 'Add a door, passage, window, niche or garage door to a wall. It must fit within the wall and not overlap another opening.',
 	)]
 	public function addOpening(
 		int $projectId,
@@ -78,6 +98,13 @@ final readonly class OpeningTools
 		?bool $shuttersClosed = null,
 		?int $depth = null,
 		?bool $revealLining = null,
+		?string $boardDirection = null,
+		?string $garageDoorStyle = null,
+		?int $fixedPanes = null,
+		?int $frameMaterialId = null,
+		?int $outsideFrameMaterialId = null,
+		?int $leafMaterialId = null,
+		?int $inset = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -109,12 +136,19 @@ final readonly class OpeningTools
 				'shuttersClosed' => $shuttersClosed,
 				'depth' => $depth,
 				'revealLining' => $revealLining,
+				'boardDirection' => $boardDirection,
+				'garageDoorStyle' => $garageDoorStyle,
+				'fixedPanes' => $fixedPanes,
+				'frameMaterialId' => $frameMaterialId,
+				'outsideFrameMaterialId' => $outsideFrameMaterialId,
+				'leafMaterialId' => $leafMaterialId,
+				'inset' => $inset,
 			]),
 		);
 	}
 
 	/**
-	 * @param string|null $type "Door" | "DoubleDoor" | "SlidingDoor" | "PocketDoor" | "Passage" | "Window" | "Niche" (see add_opening)
+	 * @param string|null $type "Door" | "DoubleDoor" | "SlidingDoor" | "PocketDoor" | "Passage" | "Window" | "Niche" | "GarageDoor" (see add_opening)
 	 * @param int|null $offset mm from the wall's start point
 	 * @param int|null $leafWidth Door: leaf width, mm; DoubleDoor: width of the leaf on `hinge`
 	 * @param string|null $hinge "Start" | "End" (see add_opening: hinge edge, or the way a sliding leaf opens)
@@ -126,8 +160,15 @@ final readonly class OpeningTools
 	 * @param int|null $mullions window: vertical glazing bars, 0–8
 	 * @param int|null $transoms window: horizontal glazing bars, 0–4
 	 * @param int|null $sillBoard window: inner sill board's reach past the wall face, mm
-	 * @param string|null $leafStyle doors with a leaf: "Flush" | "Panelled" | "Glazed"
-	 * @param int|null $leafPanels Panelled / Glazed leaves: panels or panes, 1–6
+	 * @param string|null $leafStyle doors with a leaf: "Flush" | "Panelled" | "Glazed" | "Boarded"
+	 * @param int|null $leafPanels Panelled / Glazed leaves: panels or panes, 1–6; Boarded: boards, 1–24
+	 * @param string|null $boardDirection Boarded leaves: "Vertical" | "Horizontal"
+	 * @param string|null $garageDoorStyle GarageDoor: "Sectional" | "UpAndOver" | "SideHinged" | "Roller" (see add_opening)
+	 * @param int|null $fixedPanes SlidingDoor: fixed panes beside the sliding one, 0–3 (see add_opening)
+	 * @param int|null $frameMaterialId material of the frame and sashes
+	 * @param int|null $outsideFrameMaterialId window / SlidingDoor: material of the frame's outer face
+	 * @param int|null $leafMaterialId doors with a leaf: material of the leaves
+	 * @param int|null $inset windows and doors: the frame set this far (mm) in from the outer face (see add_opening)
 	 * @param int|null $panelHeight window: solid lower panel, mm from the sill
 	 * @param string|null $shutters window: "Louvred" | "Solid" exterior shutters
 	 * @param int|null $shutterMaterialId window with shutters: their material
@@ -135,7 +176,7 @@ final readonly class OpeningTools
 	 * @param bool|null $revealLining true: the reveal (jambs and head across the wall) is lined with the outer face's band, as a
 	 *   clad façade's window box (default false)
 	 * @param int|null $depth niche: mm into the wall from its `side` face (leaving at least 30 mm behind it)
-	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard", "panelHeight", "shutters", "shutterMaterialId"
+	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard", "panelHeight", "shutters", "shutterMaterialId", "frameMaterialId", "outsideFrameMaterialId", "leafMaterialId", "inset"
 	 */
 	#[McpTool(
 		name: 'update_opening',
@@ -169,6 +210,13 @@ final readonly class OpeningTools
 		?bool $shuttersClosed = null,
 		?int $depth = null,
 		?bool $revealLining = null,
+		?string $boardDirection = null,
+		?string $garageDoorStyle = null,
+		?int $fixedPanes = null,
+		?int $frameMaterialId = null,
+		?int $outsideFrameMaterialId = null,
+		?int $leafMaterialId = null,
+		?int $inset = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -201,6 +249,13 @@ final readonly class OpeningTools
 				'shuttersClosed' => $shuttersClosed,
 				'depth' => $depth,
 				'revealLining' => $revealLining,
+				'boardDirection' => $boardDirection,
+				'garageDoorStyle' => $garageDoorStyle,
+				'fixedPanes' => $fixedPanes,
+				'frameMaterialId' => $frameMaterialId,
+				'outsideFrameMaterialId' => $outsideFrameMaterialId,
+				'leafMaterialId' => $leafMaterialId,
+				'inset' => $inset,
 			], $clear, self::Clearable),
 		);
 	}

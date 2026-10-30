@@ -376,6 +376,101 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 90])->getStatusCode());
 	}
 
+	public function testGarageDoorsLiftAndSlideDoorsInsetsAndOpeningMaterials(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 9000, 'endY' => 0, 'thickness' => 300, 'height' => 2600]);
+		$wallId = self::id($wall);
+		$oak = Fixture::service(MaterialRepository::class)->findByCode('kitchen-oak');
+		self::assertNotNull($oak);
+
+		// A garage door starts as a single garage's sectional door; a lifting one needs 200 mm above its head.
+		$garage = $this->create('openings', ['wallId' => $wallId, 'type' => 'GarageDoor', 'offset' => 100]);
+		self::assertSame(
+			['Garage door', 2500, 2125, 'Sectional', 'Start', 'Left', 'None'],
+			[$garage['name'], $garage['width'], $garage['height'], $garage['garageDoorStyle'], $garage['hinge'], $garage['side'], $garage['frameStyle']],
+		);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($garage), ['height' => 2500])->getStatusCode());
+		$hinged = $this->jsonBody($this->edit('PATCH', 'openings', self::id($garage), [
+			'height' => 2500,
+			'garageDoorStyle' => 'SideHinged',
+			'leafStyle' => 'Boarded',
+			'leafPanels' => 12,
+			'boardDirection' => 'Horizontal',
+			'leafMaterialId' => $oak->id,
+		]));
+		self::assertIsArray($hinged['element']);
+		self::assertSame(
+			['SideHinged', 'Boarded', 12, 'Horizontal', $oak->id],
+			[
+				$hinged['element']['garageDoorStyle'],
+				$hinged['element']['leafStyle'],
+				$hinged['element']['leafPanels'],
+				$hinged['element']['boardDirection'],
+				$hinged['element']['leafMaterialId'],
+			],
+		);
+		// Turning it back into a lifting door checks the headroom again; the wall cannot lose it either.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($garage), ['garageDoorStyle' => 'Roller'])->getStatusCode());
+		self::assertSame(
+			200,
+			$this->edit('PATCH', 'openings', self::id($garage), ['height' => 2300, 'garageDoorStyle' => 'Roller'])->getStatusCode(),
+		);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['height' => 2400])->getStatusCode());
+		// Restyled without a new count, the leaf takes the new style's default (12 boards are no panel count).
+		$panelled = $this->jsonBody($this->edit('PATCH', 'openings', self::id($garage), ['leafStyle' => 'Panelled']));
+		self::assertIsArray($panelled['element']);
+		self::assertSame(['Panelled', 2], [$panelled['element']['leafStyle'], $panelled['element']['leafPanels']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($garage), ['leafPanels' => 7])->getStatusCode());
+		// A garage door has no frame, nor an inset (its leaf hangs behind the opening).
+		$bare = $this->jsonBody($this->edit('PATCH', 'openings', self::id($garage), ['frameStyle' => 'Lining', 'inset' => 0]));
+		self::assertIsArray($bare['element']);
+		self::assertSame(['None', null], [$bare['element']['frameStyle'], $bare['element']['inset']]);
+
+		// A lift-and-slide door slides within its opening, so it needs no wall beside it; others keep the defaults.
+		$slide = $this->create('openings', [
+			'wallId' => $wallId,
+			'type' => 'SlidingDoor',
+			'offset' => 2700,
+			'width' => 3600,
+			'height' => 2200,
+			'fixedPanes' => 2,
+			'frameMaterialId' => $oak->id,
+			'outsideFrameMaterialId' => $oak->id,
+			'inset' => 0,
+		]);
+		self::assertSame(
+			[2, $oak->id, $oak->id, 0],
+			[$slide['fixedPanes'], $slide['frameMaterialId'], $slide['outsideFrameMaterialId'], $slide['inset']],
+		);
+		// Its frame is 130 mm deep: set in at most 170 mm in this wall. Without fixed panes the leaf hangs on the face: no
+		// wall beside it here, and no inset on a pocket door either.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($slide), ['inset' => 171])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'openings', self::id($slide), ['inset' => 170])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($slide), ['fixedPanes' => 0])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($slide), ['fixedPanes' => 4])->getStatusCode());
+		$pocket = $this->create('openings', ['wallId' => $wallId, 'type' => 'PocketDoor', 'offset' => 7700, 'width' => 600, 'inset' => 0]);
+		self::assertNull($pocket['inset']);
+		$this->edit('DELETE', 'openings', self::id($pocket));
+		$door = $this->create(
+			'openings',
+			['wallId' => $wallId, 'type' => 'Door', 'offset' => 6500, 'fixedPanes' => 2, 'outsideFrameMaterialId' => $oak->id],
+		);
+		self::assertSame([0, null], [$door['fixedPanes'], $door['outsideFrameMaterialId']]);
+
+		// The frame stays within the wall: at most its thickness less 80 mm in from the outer face; a passage has none.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['inset' => 221])->getStatusCode());
+		$inset = $this->jsonBody($this->edit('PATCH', 'openings', self::id($door), ['inset' => 220]));
+		self::assertIsArray($inset['element']);
+		self::assertSame(220, $inset['element']['inset']);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 290])->getStatusCode());
+		$passage = $this->create(
+			'openings',
+			['wallId' => $wallId, 'type' => 'Passage', 'offset' => 7600, 'inset' => 50, 'frameMaterialId' => $oak->id],
+		);
+		self::assertSame([null, $oak->id], [$passage['inset'], $passage['frameMaterialId']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['frameMaterialId' => 999999])->getStatusCode());
+	}
+
 	public function testNichesAreRecessesIntoOneFace(): void
 	{
 		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0, 'thickness' => 200]);

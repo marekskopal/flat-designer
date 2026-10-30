@@ -7,7 +7,8 @@ namespace FlatDesigner\Model\Entity\Enum;
 /**
  * `Door`: one swinging leaf. `DoubleDoor`: two leaves hinged on the jambs. `SlidingDoor`: a leaf hung on a wall
  * face that slides along it. `PocketDoor`: a leaf sliding into a pocket inside the wall. `Passage`: a doorway
- * without a leaf. `Niche`: a recess `depth` deep into the `side` face, not through the wall.
+ * without a leaf. `Niche`: a recess `depth` deep into the `side` face, not through the wall. `GarageDoor`: a door of
+ * a `garageDoorStyle` (FD-89) on the `side` face, the garage's.
  */
 enum OpeningTypeEnum: string
 {
@@ -18,6 +19,7 @@ enum OpeningTypeEnum: string
 	case Passage = 'Passage';
 	case Window = 'Window';
 	case Niche = 'Niche';
+	case GarageDoor = 'GarageDoor';
 
 	/** Every doorway, a passage included. */
 	public function isDoor(): bool
@@ -36,6 +38,12 @@ enum OpeningTypeEnum: string
 		return $this === self::SlidingDoor || $this === self::PocketDoor;
 	}
 
+	/** The hinge an opening gets when none is given: sliding doors slide and garage doors hang from the start. */
+	public function defaultHinge(): ?OpeningHingeEnum
+	{
+		return $this->isSliding() || $this === self::GarageDoor ? OpeningHingeEnum::Start : null;
+	}
+
 	public function label(): string
 	{
 		return match ($this) {
@@ -46,6 +54,7 @@ enum OpeningTypeEnum: string
 			self::Passage => 'passage',
 			self::Window => 'window',
 			self::Niche => 'niche',
+			self::GarageDoor => 'garage door',
 		};
 	}
 }

@@ -558,6 +558,52 @@ export const WindowFrameBar = 70;
 export const SashThickness = 60;
 /** How far a door leaf or sash opens, radians. */
 export const LeafOpenAngle = (80 * Math.PI) / 180;
+/** A window's frame depth, also that of a door's frame set in from the outer face (`inset`), mm: the PHP `OpeningClearances::InsetFrameDepth`. */
+export const InsetFrameDepth = 80;
+/** A garage door: how far it overlaps the opening on each side, its gap off the inner wall face and its thickness, mm. */
+export const GarageOverlap = 60;
+export const GarageGap = 20;
+export const GarageLeafThickness = 45;
+/** A lifting garage door's sections are about this tall, a roller door's slats this high and its drum this big (mm). */
+export const GarageSection = 550;
+export const RollerSlat = 80;
+export const RollerDrum = 180;
+/**
+ * A lift-and-slide door's panes: their thickness and their tracks' distance from the frame's centre, mm, and the frame's
+ * depth (the PHP `OpeningClearances::LiftSlideFrameDepth`).
+ */
+export const LiftSlidePaneThickness = 50;
+export const LiftSlideTrack = 30;
+export const LiftSlideFrameDepth = 2 * LiftSlideTrack + LiftSlidePaneThickness + 20;
+
+/** How many sections a sectional garage door `height` mm tall has (at least three), and how many slats a roller door. */
+export function garageSections(height: number): number {
+    return Math.max(3, Math.round(height / GarageSection));
+}
+
+export function rollerSlats(height: number): number {
+    return Math.max(1, Math.round(height / RollerSlat));
+}
+
+/**
+ * Where an opening's frame lies across its wall (mm, + towards `normal`): its centre and depth. A window's frame is
+ * `InsetFrameDepth` deep and a lift-and-slide door's `LiftSlideFrameDepth`, centred, or set in from the outer face
+ * (opposite `side`) by `inset` (FD-89); a door's lining spans the wall.
+ */
+export function frameBand(opening: Pick<Opening, 'type' | 'side' | 'inset' | 'fixedPanes'>, wallThickness: number): {centre: number; depth: number} {
+    const depth = isLiftSlide(opening) ? LiftSlideFrameDepth : opening.type === 'Window' || opening.inset != null ? InsetFrameDepth : wallThickness;
+    if (opening.inset != null) {
+        // The outer face is opposite `side`: the right of the wall (−) for an opening on the left.
+        const outer = opening.side === 'Right' ? 1 : -1;
+        return {centre: outer * (wallThickness / 2 - opening.inset - depth / 2), depth};
+    }
+    return {centre: 0, depth};
+}
+
+/** A sliding door with fixed panes beside its sliding one: a lift-and-slide door inside its opening (FD-89). */
+export function isLiftSlide(opening: Pick<Opening, 'type' | 'fixedPanes'>): boolean {
+    return opening.type === 'SlidingDoor' && (opening.fixedPanes ?? 0) > 0;
+}
 
 /**
  * A door leaf or French window sash, on its wall's centre-line frame (mm). A swinging one, at angle `a` (0
@@ -568,7 +614,12 @@ export interface Leaf {
     openingId: number;
     /** Index of the leaf (0, 1) of a double door or French window; 0 otherwise. */
     index: number;
-    motion: 'swing' | 'slide';
+    /** A lifting garage door's leaf goes up into the room (`lift` says how; FD-89). */
+    motion: 'swing' | 'slide' | 'lift';
+    /** How a lifting leaf goes up: its garage door's style. */
+    lift?: 'Sectional' | 'UpAndOver' | 'Roller';
+    /** A lifting leaf's height, mm. */
+    height?: number;
     /** The hinge axis (a sliding leaf's start edge, closed): mm along the wall from its start, mm across it (+ towards `normal`). */
     along: number;
     across: number;
@@ -576,7 +627,7 @@ export interface Leaf {
     closed: 1 | -1;
     /** Side it swings into, or a sliding door hangs on: +1 the left of the wall direction (`normal`), −1 the right. */
     swing: 1 | -1;
-    /** How far a sliding leaf moves when open, mm along the wall (signed); 0 for a swinging one. */
+    /** How far a sliding leaf moves when open, mm along the wall (signed); 0 for a swinging one or a lift-and-slide door's fixed pane. */
     travel: number;
     width: number;
     thickness: number;
@@ -608,6 +659,9 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
     const swing: Leaf['swing'] = opening.side === 'Right' ? -1 : 1;
     const towardsEnd = opening.hinge === 'End';
     const base = {openingId: opening.id, index: 0, swing, travel: 0};
+    // Closed, a swinging leaf lies flush with its frame's face on `side` (the wall face for a lining).
+    const band = frameBand(opening, wallThickness);
+    const flush = band.centre + swing * (band.depth / 2 - DoorLeafThickness / 2);
     switch (opening.type) {
         case 'Door': {
             const width = opening.leafWidth ?? opening.width - 2 * DoorFrameWidth;
@@ -616,24 +670,20 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
                 ...base,
                 motion: 'swing',
                 along: towardsEnd ? opening.offset + opening.width - clearance : opening.offset + clearance,
-                across: swing * (wallThickness / 2 - DoorLeafThickness / 2),
+                across: flush,
                 closed: towardsEnd ? -1 : 1,
                 width,
                 thickness: DoorLeafThickness,
             }];
         }
-        case 'DoubleDoor': {
-            const space = opening.width - 2 * DoorFrameWidth;
-            const active = Math.min(opening.leafWidth ?? space / 2, space);
-            const widths = towardsEnd ? [space - active, active] : [active, space - active];
-            const across = swing * (wallThickness / 2 - DoorLeafThickness / 2);
-            const leaf = {...base, motion: 'swing' as const, across, thickness: DoorLeafThickness};
-            return [
-                {...leaf, along: opening.offset + DoorFrameWidth, closed: 1 as const, width: widths[0]},
-                {...leaf, index: 1, along: opening.offset + opening.width - DoorFrameWidth, closed: -1 as const, width: widths[1]},
-            ].filter((l) => l.width > 0);
-        }
+        case 'DoubleDoor':
+            return doubleLeaves(opening, base, flush, DoorFrameWidth, DoorLeafThickness);
+        case 'GarageDoor':
+            return garageLeaves(opening, wallThickness, base);
         case 'SlidingDoor':
+            if (isLiftSlide(opening)) {
+                return liftSlidePanes(opening, wallThickness, base);
+            }
             return [{
                 ...base,
                 motion: 'slide',
@@ -662,7 +712,7 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
             if (opening.walkable !== true) {
                 return [];
             }
-            const across = swing * (WindowFrameBar / 2 - SashThickness / 2);
+            const across = band.centre + swing * (WindowFrameBar / 2 - SashThickness / 2);
             const start = opening.offset + WindowFrameBar;
             const end = opening.offset + opening.width - WindowFrameBar;
             if (opening.mullions === 0) {
@@ -677,6 +727,68 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
             ];
         }
     }
+}
+
+type LeafBase = Pick<Leaf, 'openingId' | 'index' | 'swing' | 'travel'>;
+
+/** Two leaves hinged on the jambs `frame` in from the opening's edges, the one on `hinge` `leafWidth` wide (half by default). */
+function doubleLeaves(opening: Opening, base: LeafBase, across: number, frame: number, thickness: number): Leaf[] {
+    const space = opening.width - 2 * frame;
+    const active = Math.min(opening.leafWidth ?? space / 2, space);
+    const widths = opening.hinge === 'End' ? [space - active, active] : [active, space - active];
+    const leaf = {...base, motion: 'swing' as const, across, thickness};
+    return [
+        {...leaf, along: opening.offset + frame, closed: 1 as const, width: widths[0]},
+        {...leaf, index: 1, along: opening.offset + opening.width - frame, closed: -1 as const, width: widths[1]},
+    ].filter((l) => l.width > 0);
+}
+
+/**
+ * A garage door's leaves (FD-89), behind the opening on its `side` face (the garage's): a side-hinged door's two leaves
+ * swinging into the garage, else one leaf overlapping the opening by `GarageOverlap` each side that lifts by its style.
+ */
+function garageLeaves(opening: Opening, wallThickness: number, base: LeafBase): Leaf[] {
+    const across = base.swing * (wallThickness / 2 + GarageGap + GarageLeafThickness / 2);
+    const style = opening.garageDoorStyle ?? 'Sectional';
+    if (style === 'SideHinged') {
+        // Hung in the opening, flush with the inner face.
+        return doubleLeaves(opening, base, base.swing * (wallThickness / 2 - GarageLeafThickness / 2), 0, GarageLeafThickness);
+    }
+    return [{
+        ...base,
+        motion: 'lift',
+        lift: style,
+        along: opening.offset - GarageOverlap,
+        across,
+        closed: 1,
+        width: opening.width + 2 * GarageOverlap,
+        height: opening.height + GarageOverlap,
+        thickness: GarageLeafThickness,
+    }];
+}
+
+/**
+ * A lift-and-slide door's panes (FD-89): the opening inside the frame divided evenly, the fixed panes on the track away
+ * from `side` and the one at the end away from `hinge` on the track towards it, sliding a pane's width towards `hinge`.
+ */
+function liftSlidePanes(opening: Opening, wallThickness: number, base: LeafBase): Leaf[] {
+    const band = frameBand(opening, wallThickness);
+    const panes = (opening.fixedPanes ?? 0) + 1;
+    const start = opening.offset + WindowFrameBar;
+    const pane = (opening.width - 2 * WindowFrameBar) / panes;
+    const towardsEnd = opening.hinge === 'End';
+    const moving = towardsEnd ? 0 : panes - 1;
+    return Array.from({length: panes}, (_, i) => ({
+        ...base,
+        index: i,
+        motion: 'slide' as const,
+        along: start + i * pane,
+        across: band.centre + (i === moving ? 1 : -1) * base.swing * LiftSlideTrack,
+        closed: 1 as const,
+        travel: i === moving ? (towardsEnd ? 1 : -1) * pane : 0,
+        width: pane,
+        thickness: LiftSlidePaneThickness,
+    }));
 }
 
 /**
@@ -703,7 +815,13 @@ export function leafCollider(frame: WallFrame, leaf: Leaf, open: number): WallCo
     };
 }
 
-/** Footprints of all door leaves and sashes; `openness` (0 closed … 1 open) of an opening sets their angle or way. */
+/** How far (0 … 1) a lifting garage door is open before a walker passes under it. */
+export const LiftClear = 0.8;
+
+/**
+ * Footprints of all door leaves and sashes; `openness` (0 closed … 1 open) of an opening sets their angle or way. A
+ * lifting garage door blocks its opening until it is `LiftClear` open.
+ */
 export function leafColliders(walls: readonly Wall[], openness: (openingId: number) => number): WallCollider[] {
     return walls.flatMap((wall) => {
         const frame = wallFrame(wall);
@@ -711,7 +829,9 @@ export function leafColliders(walls: readonly Wall[], openness: (openingId: numb
             return [];
         }
         return wall.openings.flatMap((opening) =>
-            openingLeaves(opening, wall.thickness).map((leaf) => leafCollider(openingFrame(frame, opening), leaf, openness(opening.id))),
+            openingLeaves(opening, wall.thickness)
+                .filter((leaf) => leaf.motion !== 'lift' || openness(opening.id) < LiftClear)
+                .map((leaf) => leafCollider(openingFrame(frame, opening), leaf, leaf.motion === 'lift' ? 0 : openness(opening.id))),
         );
     });
 }
@@ -967,9 +1087,9 @@ export function curveFits(wall: WallPath & Pick<Wall, 'thickness'>): boolean {
  * The stretch of wall (mm along it) an opening takes: a sliding or pocket door with the wall its open leaf slides into
  * (towards `hinge`). Twin of `OpeningPlacement::occupied()`.
  */
-export function occupiedSpan(opening: Pick<Opening, 'type' | 'hinge' | 'offset' | 'width'>): [number, number] {
+export function occupiedSpan(opening: Pick<Opening, 'type' | 'hinge' | 'offset' | 'width' | 'fixedPanes'>): [number, number] {
     const {offset, width} = opening;
-    if (opening.type !== 'SlidingDoor' && opening.type !== 'PocketDoor') {
+    if ((opening.type !== 'SlidingDoor' && opening.type !== 'PocketDoor') || isLiftSlide(opening)) {
         return [offset, offset + width];
     }
     const travel = width + (opening.type === 'SlidingDoor' ? 2 * SlidingDoorOverlap : 0);
@@ -981,7 +1101,11 @@ export function occupiedSpan(opening: Pick<Opening, 'type' | 'hinge' | 'offset' 
  * takes, `occupiedSpan()`), it may stand off the arc by a quarter of the thickness at most. Niches follow the curve.
  * Twin of `OpeningPlacement::fitsCurve()`.
  */
-export function openingFitsCurve(frame: WallFrame, thickness: number, opening: Pick<Opening, 'type' | 'hinge' | 'offset' | 'width'>): boolean {
+export function openingFitsCurve(
+    frame: WallFrame,
+    thickness: number,
+    opening: Pick<Opening, 'type' | 'hinge' | 'offset' | 'width' | 'fixedPanes'>,
+): boolean {
     const arc = frame.arc;
     if (arc === undefined || opening.type === 'Niche') {
         return true;

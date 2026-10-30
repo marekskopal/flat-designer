@@ -7,8 +7,10 @@ namespace FlatDesigner\Tests\Support;
 use DateTimeImmutable;
 use FlatDesigner\Dto\ProjectInputDto;
 use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
@@ -219,6 +221,12 @@ final class Fixture
 		$door->entrance = true;
 		$door->frameStyle = DoorFrameStyleEnum::Architrave;
 		$door->handle = DoorHandleEnum::Knob;
+		$door->frameMaterial = $material;
+		$door->leafMaterial = $material;
+		$door->leafStyle = DoorLeafStyleEnum::Boarded;
+		$door->leafPanels = 9;
+		$door->boardDirection = BoardDirectionEnum::Horizontal;
+		$door->inset = 60;
 		self::service(OpeningRepository::class)->persist($door);
 		$frenchWindow = self::stamp(new Opening(
 			wall: $wall,
@@ -234,6 +242,7 @@ final class Fixture
 		));
 		$frenchWindow->walkable = true;
 		$frenchWindow->revealLining = true;
+		$frenchWindow->outsideFrameMaterial = $material;
 		self::service(OpeningRepository::class)->persist($frenchWindow);
 
 		$items = self::service(ItemRepository::class);

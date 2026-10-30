@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Editor\Element;
 
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
+use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
@@ -34,6 +35,13 @@ final class OpeningDefaults
 		'shuttersClosed' => false,
 		'depth' => null,
 		'revealLining' => false,
+		'frameMaterialId' => null,
+		'outsideFrameMaterialId' => null,
+		'leafMaterialId' => null,
+		'boardDirection' => 'Vertical',
+		'garageDoorStyle' => null,
+		'fixedPanes' => 0,
+		'inset' => null,
 	];
 
 	/** @return array<string, mixed> */
@@ -53,6 +61,21 @@ final class OpeningDefaults
 				'sillHeight' => 900,
 				'side' => OpeningSideEnum::Left->value,
 				'frameStyle' => DoorFrameStyleEnum::None->value,
+			] + self::Plain;
+		}
+
+		if ($type === OpeningTypeEnum::GarageDoor) {
+			// A single garage's sectional door, behind the opening on the garage's face (Left).
+			return [
+				'name' => 'Garage door',
+				'type' => $type->value,
+				'width' => 2500,
+				'height' => 2125,
+				'sillHeight' => 0,
+				'hinge' => OpeningHingeEnum::Start->value,
+				'side' => OpeningSideEnum::Left->value,
+				'frameStyle' => DoorFrameStyleEnum::None->value,
+				'garageDoorStyle' => GarageDoorStyleEnum::Sectional->value,
 			] + self::Plain;
 		}
 

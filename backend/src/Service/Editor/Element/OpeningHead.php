@@ -68,20 +68,27 @@ final readonly class OpeningHead
 			|| [$offset, $width, $sillHeight, $height] !== [$current->offset, $current->width, $current->sillHeight, $current->height];
 	}
 
-	/** The opening's head stays under the wall's top over it: its height, or under a roof `WallTop`'s. */
-	public static function check(WallTop $top, int $wallHeight, int $offset, int $width, int $head): void
+	/**
+	 * The opening's head, plus the `$headroom` it needs above it (a lifting garage door's tracks or drum,
+	 * `OpeningClearances::headroom()`), stays under the wall's top over it: its height, or under a roof `WallTop`'s.
+	 */
+	public static function check(WallTop $top, int $wallHeight, int $offset, int $width, int $head, int $headroom = 0): void
 	{
 		$limit = $top->lowestOver($offset, $offset + $width);
-		if ($head <= $limit) {
+		if ($head + $headroom <= $limit) {
 			return;
 		}
+		$what = $headroom > 0
+			? sprintf('Sill plus height plus the %d mm a lifting garage door needs above it', $headroom)
+			: 'Sill plus height';
 		if (!$top->underRoof($offset, $offset + $width)) {
 			throw EditException::invalid(sprintf(
-				$limit === $wallHeight ? 'Sill plus height exceeds the wall height (%d mm).' : 'Sill plus height exceeds the wall\'s sloping top over the opening (%d mm).',
+				$limit === $wallHeight ? '%s exceeds the wall height (%d mm).' : '%s exceeds the wall\'s sloping top over the opening (%d mm).',
+				$what,
 				$limit,
 			));
 		}
 
-		throw EditException::invalid(sprintf('Sill plus height exceeds the wall\'s top over the opening (%d mm, under the roof).', $limit));
+		throw EditException::invalid(sprintf('%s exceeds the wall\'s top over the opening (%d mm, under the roof).', $what, $limit));
 	}
 }

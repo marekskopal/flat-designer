@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Dto;
 
+use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
@@ -41,6 +43,13 @@ final readonly class OpeningDto
 		public bool $shuttersClosed,
 		public ?int $depth,
 		public bool $revealLining = false,
+		public ?int $frameMaterialId = null,
+		public ?int $outsideFrameMaterialId = null,
+		public ?int $leafMaterialId = null,
+		public BoardDirectionEnum $boardDirection = BoardDirectionEnum::Vertical,
+		public ?GarageDoorStyleEnum $garageDoorStyle = null,
+		public int $fixedPanes = 0,
+		public ?int $inset = null,
 	) {
 	}
 
@@ -72,6 +81,13 @@ final readonly class OpeningDto
 			shuttersClosed: $opening->shuttersClosed,
 			depth: $opening->depth,
 			revealLining: $opening->revealLining,
+			frameMaterialId: $opening->frameMaterial?->id,
+			outsideFrameMaterialId: $opening->outsideFrameMaterial?->id,
+			leafMaterialId: $opening->leafMaterial?->id,
+			boardDirection: $opening->boardDirection,
+			garageDoorStyle: $opening->garageDoorStyle,
+			fixedPanes: $opening->fixedPanes,
+			inset: $opening->inset,
 		);
 	}
 }

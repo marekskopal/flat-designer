@@ -16,6 +16,8 @@ export interface RoomScheduleRow {
     volume: number | null;
     /** Terrace or garden: summed apart from the indoor area. */
     outdoor: boolean;
+    /** A garage (indoor, unheated; FD-89): summed apart from the living area. Missing from older servers. */
+    ancillary?: boolean;
     /** mm, the lowest clear height under a roof (at the eaves); null for a room no roof reaches. */
     minClearHeight: number | null;
     /** m², the floor area with at least 1.2 m of clear height under a roof; null for a room no roof reaches. */
@@ -37,6 +39,7 @@ export interface FloorSchedule {
     rooms: RoomScheduleRow[];
     indoor: ScheduleTotal;
     outdoor: ScheduleTotal;
+    ancillary: ScheduleTotal;
 }
 
 /** The room schedule of a project or floor (working copy). Mirrors `RoomScheduleDto`. */
@@ -44,4 +47,5 @@ export interface RoomSchedule {
     floors: FloorSchedule[];
     indoor: ScheduleTotal;
     outdoor: ScheduleTotal;
+    ancillary: ScheduleTotal;
 }

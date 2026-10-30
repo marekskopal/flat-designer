@@ -261,6 +261,22 @@ describe('roomElevationSheets', () => {
         expect(sheet.svg).toContain(`M ${stile} `);
     });
 
+    it('draws the sections of a garage door and the joints of a boarded leaf (FD-89)', () => {
+        const garage: Opening = {...door, type: 'GarageDoor', offset: 300, width: 2500, height: 2125, garageDoorStyle: 'Sectional'};
+        const thin = (o: Opening): number => {
+            const [sheet] = roomElevationSheets(scene({walls: box({leftFinishes: [], openings: [o]})}), room, info);
+            return (sheet.svg.match(/stroke="#2f2c28" stroke-width="0.13"/g) ?? []).length;
+        };
+        // 2125 mm in about 550 mm sections: four, three joints more than one tilting panel.
+        expect(thin(garage) - thin({...garage, garageDoorStyle: 'UpAndOver'})).toBe(3);
+        const [boarded] = roomElevationSheets(
+            scene({walls: box({leftFinishes: [], openings: [{...door, leafStyle: 'Boarded', leafPanels: 6}]})}),
+            room,
+            info,
+        );
+        expect(boarded.svg.match(/stroke-width="0.1"/g)).toHaveLength(5);
+    });
+
     it('draws a herringbone clipped to its band', () => {
         const herringbone = {...tiles, pattern: 'Herringbone' as const, tileWidth: 240, tileHeight: 60};
         const [sheet] = roomElevationSheets(scene({materials: [herringbone]}), room, info);

@@ -4,17 +4,23 @@ import {FurnitureDefinitionBody} from './furniture';
 // origin at the inner south-west corner of the floor, x east, y north.
 
 export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
-export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway';
+export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
 export const OutdoorRoomTypes: readonly RoomType[] = ['Terrace', 'Garden', 'Path', 'Driveway'];
 
 export const isOutdoorRoom = (room: {type: RoomType}): boolean => OutdoorRoomTypes.includes(room.type);
+
+/** Indoor but unheated room types (`RoomTypeEnum::isAncillary()`, FD-89): totalled apart from the living area. */
+export const isAncillaryRoom = (room: {type: RoomType}): boolean => room.type === 'Garage';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
-export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche';
+export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche' | 'GarageDoor';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
-export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
+export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed' | 'Boarded';
+export type BoardDirection = 'Vertical' | 'Horizontal';
+/** How a garage door opens (FD-89); all but `SideHinged` lift into the room. */
+export type GarageDoorStyle = 'Sectional' | 'UpAndOver' | 'SideHinged' | 'Roller';
 export type ShutterStyle = 'Louvred' | 'Solid';
 export type ItemKind =
     | 'Sink'
@@ -275,9 +281,13 @@ export interface Opening {
     mullions?: number;
     transoms?: number;
     sillBoard?: number | null;
-    /** Door leaves: a plain slab, raised panels or glass panes (`leafPanels` of them, stacked). Missing in older snapshots: Flush. */
+    /**
+     * Door leaves: a plain slab, raised panels or glass panes (`leafPanels` of them, stacked) or boards (`leafPanels` of
+     * them, running `boardDirection`). Missing in older snapshots: Flush.
+     */
     leafStyle?: DoorLeafStyle;
     leafPanels?: number;
+    boardDirection?: BoardDirection;
     /** Window: solid lower panel of the glazing, mm from the sill; null: glass down to the bottom rail. */
     panelHeight?: number | null;
     /**
@@ -291,6 +301,19 @@ export interface Opening {
     revealLining?: boolean;
     /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
     depth?: number | null;
+    /**
+     * FD-89 (missing in older snapshots: the defaults): the frame's and sashes' material (null: white doors, anthracite
+     * windows), a window's outer face's (timber-aluminium; null: the frame's) and the leaves' (null: the frame's).
+     */
+    frameMaterialId?: number | null;
+    outsideFrameMaterialId?: number | null;
+    leafMaterialId?: number | null;
+    /** GarageDoor: how it opens (null for other types). */
+    garageDoorStyle?: GarageDoorStyle | null;
+    /** SlidingDoor: fixed panes beside the sliding one, a lift-and-slide door inside its opening (0: a leaf hung on the face). */
+    fixedPanes?: number;
+    /** The frame set this far (mm) in from the outer face, opposite `side`; null: centred (a door's lining across the wall). */
+    inset?: number | null;
 }
 
 export interface Wall {

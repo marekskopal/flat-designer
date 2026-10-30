@@ -11,7 +11,8 @@ use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
  * One room of the schedule: net floor area (m²) and perimeter (m) of its outline on the inner wall faces, the clear
  * height (mm, null for an open-air room) and the volume (m³, null without a ceiling). Under a roof (FD-38) the clear
  * height is the highest, `minClearHeight` the lowest (at the eaves), the volume follows the slope and `headroomArea`
- * (m²) is the floor area with at least `RoomUnderRoof::Headroom` of clear height; both are null for other rooms.
+ * (m²) is the floor area with at least `RoomUnderRoof::Headroom` of clear height; both are null for other rooms. An
+ * `ancillary` room (a garage, FD-89) is indoor but summed apart from the living area.
  */
 final readonly class RoomScheduleRowDto
 {
@@ -27,6 +28,7 @@ final readonly class RoomScheduleRowDto
 		public bool $outdoor,
 		public ?int $minClearHeight = null,
 		public ?float $headroomArea = null,
+		public bool $ancillary = false,
 	) {
 	}
 
@@ -48,6 +50,7 @@ final readonly class RoomScheduleRowDto
 			outdoor: $room->type->isOutdoor(),
 			minClearHeight: $underRoof === null ? null : (int) round($underRoof->minHeight),
 			headroomArea: $underRoof === null ? null : round($underRoof->headroomArea / 1e6, 2),
+			ancillary: $room->type->isAncillary(),
 		);
 	}
 }

@@ -7,7 +7,7 @@ import {ProjectService} from '@app/services/project.service';
 
 /**
  * The project's room schedule: per floor the rooms' net area, perimeter, clear height and volume, with the
- * indoor and outdoor (terrace, garden) totals. Rooms under a roof show their clear height's range, and a column their
+ * indoor, garage and outdoor (terrace, garden) totals. Rooms under a roof show their clear height's range, and a column their
  * area with headroom. Reloads when the project's `revision` changes.
  */
 @Component({

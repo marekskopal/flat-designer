@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Dto;
 
-/** The rooms of one floor with the indoor and outdoor (terrace, garden) totals. */
+/** The rooms of one floor with the indoor (living), ancillary (garage) and outdoor (terrace, garden) totals. */
 final readonly class FloorScheduleDto
 {
 	/** @param list<RoomScheduleRowDto> $rooms */
@@ -16,6 +16,7 @@ final readonly class FloorScheduleDto
 		public array $rooms,
 		public ScheduleTotalDto $indoor,
 		public ScheduleTotalDto $outdoor,
+		public ScheduleTotalDto $ancillary,
 	) {
 	}
 }

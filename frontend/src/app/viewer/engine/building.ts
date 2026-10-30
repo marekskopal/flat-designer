@@ -26,7 +26,10 @@ import {
     cornerWindows,
     counterClockwise,
     DoorFrameWidth,
+    frameBand,
+    garageSections,
     isDoor,
+    isLiftSlide,
     Leaf,
     LeafOpenAngle,
     MM,
@@ -34,6 +37,8 @@ import {
     openingFrame,
     openingLeaves,
     pointOnWall,
+    RollerDrum,
+    rollerSlats,
     SlidingDoorOverlap,
     SquareEnds,
     tileGrid,
@@ -1072,13 +1077,33 @@ export function clipGap(gap: WallGap, bandBottom: number, bandTop: number, segme
 const ArchitraveWidth = 70;
 const ArchitraveThickness = 15;
 
+/** The material of an opening's frame and sashes (FD-89): its own, else white for doors and anthracite for windows. */
+function frameMaterialOf(opening: Opening, materials: MaterialLibrary): THREE.Material {
+    if (opening.frameMaterialId != null) {
+        return materials.get(opening.frameMaterialId);
+    }
+    return materials.byCode(opening.type === 'Window' || isLiftSlide(opening) ? 'window-frame-anthracite' : 'door-white');
+}
+
+/** The material of a door's leaves (FD-89): its own, else the frame's. */
+function leafMaterialOf(opening: Opening, materials: MaterialLibrary): THREE.Material {
+    return opening.leafMaterialId == null ? frameMaterialOf(opening, materials) : materials.get(opening.leafMaterialId);
+}
+
 function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
+    if (isLiftSlide(opening)) {
+        return buildLiftSlide(opening, wall, materials);
+    }
     const group = new THREE.Group();
     group.name = `door:${opening.name}`;
     group.userData = {openingId: opening.id};
-    const frameMaterial = materials.byCode('door-white');
+    const frameMaterial = frameMaterialOf(opening, materials);
+    const leafMaterial = leafMaterialOf(opening, materials);
     for (const part of doorFrame(opening, wall.thickness, frameMaterial)) {
         group.add(part);
+    }
+    if (opening.type === 'GarageDoor' && (opening.garageDoorStyle ?? 'Sectional') !== 'SideHinged') {
+        return buildLiftingDoor(group, opening, wall, materials);
     }
 
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
@@ -1089,7 +1114,7 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
                 ? (opening.height + SlidingDoorOverlap) * MM
                 : (opening.height - LeafGap) * MM - doorHeadDepth(opening);
         const pivot = leafPivot(leaf, 1);
-        for (const part of doorLeaf(opening, leaf, leafHeight, frameMaterial, materials.byCode('glass'))) {
+        for (const part of doorLeaf(opening, leaf, leafHeight, leafMaterial, materials.byCode('glass'))) {
             pivot.add(part);
         }
         for (const handle of doorHandles(opening, leaf, handleMaterial)) {
@@ -1143,14 +1168,52 @@ function panelRelief(rects: readonly PanelRect[], thickness: number, faces: read
     return parts;
 }
 
+/** A boarded leaf: the joint between its boards, and how far the boards stand proud of the core on each face (m). */
+const BoardJoint = 0.006;
+const BoardRelief = 0.004;
+
+/**
+ * The boards of a `Boarded` leaf `width` × `height` m (FD-89), `count` side by side running `direction`, with a narrow
+ * joint between them, proud of a core `thickness` thick on both faces.
+ */
+function boardedLeaf(
+    width: number,
+    height: number,
+    thickness: number,
+    count: number,
+    direction: Opening['boardDirection'],
+    material: THREE.Material,
+): THREE.Mesh[] {
+    const parts = [boxAt(material, 0, 0, -thickness / 2, width, height, thickness)];
+    const boards = Math.max(1, Math.round(count));
+    const across = direction === 'Horizontal' ? height : width;
+    const pitch = across / boards;
+    for (let i = 0; i < boards; i++) {
+        const from = i * pitch + (i === 0 ? 0 : BoardJoint / 2);
+        const size = pitch - (i === 0 || i === boards - 1 ? BoardJoint / 2 : BoardJoint) + (boards === 1 ? BoardJoint / 2 : 0);
+        for (const face of [-1, 1]) {
+            const z = face > 0 ? thickness / 2 : -thickness / 2 - BoardRelief;
+            parts.push(
+                direction === 'Horizontal'
+                    ? boxAt(material, 0, from, z, width, size, BoardRelief)
+                    : boxAt(material, from, 0, z, size, height, BoardRelief),
+            );
+        }
+    }
+    return parts;
+}
+
 /**
  * A door leaf by its `leafStyle`, in its pivot's frame (x from the hinge, centred on z = 0): a flush slab, a slab
- * with raised panels on both faces, or stiles and rails round glass panes.
+ * with raised panels on both faces, stiles and rails round glass panes, or boards.
  */
 function doorLeaf(opening: Opening, leaf: Leaf, height: number, material: THREE.Material, glass: THREE.Material): THREE.Mesh[] {
     const width = leaf.width * MM;
     const t = leaf.thickness * MM;
     const style = opening.leafStyle ?? 'Flush';
+    if (style === 'Boarded') {
+        return boardedLeaf(width, height, t - 2 * BoardRelief, opening.leafPanels ?? 8, opening.boardDirection, material);
+    }
     const rects = style === 'Flush' ? [] : leafPanels(leaf.width, height / MM, opening.leafPanels ?? 2);
     const slab = (): THREE.Mesh => boxAt(material, 0, 0, -t / 2, width, height, t);
     if (rects.length === 0) {
@@ -1190,15 +1253,19 @@ function doorFrame(opening: Opening, wallThickness: number, material: THREE.Mate
     const from = opening.offset * MM;
     const width = opening.width * MM;
     const height = opening.height * MM;
-    // A lining is slightly proud of both wall faces; a flush frame is thinner and level with them.
+    // A lining is slightly proud of both wall faces; a flush frame is thinner and level with them. A frame set in from
+    // the outer face (`inset`) is a frame of its own depth there, without casings.
     const lining = doorHeadDepth(opening);
-    const depth = wallThickness * MM + (style === 'Flush' ? 0 : 0.02);
+    const band = frameBand(opening, wallThickness);
+    const depth = band.depth * MM + (style === 'Flush' || opening.inset != null ? 0 : 0.02);
+    // Plan across is local −z.
+    const back = -band.centre * MM - depth / 2;
     const parts = [
-        boxAt(material, from, 0, -depth / 2, lining, height, depth),
-        boxAt(material, from + width - lining, 0, -depth / 2, lining, height, depth),
-        boxAt(material, from, height - lining, -depth / 2, width, lining, depth),
+        boxAt(material, from, 0, back, lining, height, depth),
+        boxAt(material, from + width - lining, 0, back, lining, height, depth),
+        boxAt(material, from, height - lining, back, width, lining, depth),
     ];
-    if (style === 'Architrave') {
+    if (style === 'Architrave' && opening.inset == null) {
         const reach = ArchitraveWidth * MM - lining;
         const thickness = ArchitraveThickness * MM;
         for (const z of [depth / 2, -depth / 2 - thickness]) {
@@ -1251,15 +1318,51 @@ function doorHandles(opening: Opening, leaf: Leaf, material: THREE.Material): TH
     });
 }
 
-/** Depth of a window frame, centred on the wall's centre line, m. */
-const WindowFrameDepth = 0.08;
 /** Sill boards: thickness, overhang past the opening on each side, and the outer sill's reach past the wall face (mm). */
 const SillBoardThickness = 20;
 const SillBoardOverhang = 30;
 const OuterSillReach = 40;
+/** The aluminium cladding of a timber-aluminium frame's outer face, m. */
+const OutsideCladding = 0.015;
 
 /**
- * A window: frame, glazing divided by `mullions` and `transoms` (or a walkable window's sashes) and sill boards.
+ * A frame bar's box across `depth` m centred on z = 0 (in a frame's own group): in `material`, with an outer face of
+ * `outside` (a timber-aluminium frame, FD-89) `OutsideCladding` thick towards `exterior` (local z sign) when given.
+ */
+function frameBar(
+    material: THREE.Material,
+    outside: THREE.Material | null,
+    exterior: 1 | -1,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    depth: number,
+): THREE.Mesh[] {
+    if (outside === null) {
+        return [boxAt(material, x, y, -depth / 2, width, height, depth)];
+    }
+    const inner = depth - OutsideCladding;
+    const [back, front] = [-depth / 2, depth / 2 - OutsideCladding];
+    return exterior > 0
+        ? [boxAt(material, x, y, back, width, height, inner), boxAt(outside, x, y, front, width, height, OutsideCladding)]
+        : [boxAt(outside, x, y, back, width, height, OutsideCladding), boxAt(material, x, y, back + OutsideCladding, width, height, inner)];
+}
+
+/**
+ * How far past the wall's end a corner window's frame reaches (m): half its depth, and with the frame set in by
+ * `inset` as far as its centre lies towards the exterior, where the other window's frame is (both set in alike, the
+ * exterior outside the corner).
+ */
+function cornerReach(opening: Opening, wall: Wall): number {
+    const band = frameBand(opening, wall.thickness);
+    const outward = opening.inset == null ? 0 : wall.thickness / 2 - opening.inset - band.depth / 2;
+    return (band.depth / 2 + outward) * MM;
+}
+
+/**
+ * A window: frame, glazing divided by `mullions` and `transoms` (or a walkable window's sashes) and sill boards, in the
+ * frame's material with an outside material on its outer face (FD-89), centred in the wall or set in by `inset`.
  * At a corner (`corners`), the frame runs on to the wall's end without a jamb and the glass meets the other
  * window's at the corner.
  */
@@ -1267,29 +1370,38 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
     const group = new THREE.Group();
     group.name = `window:${opening.name}`;
     group.userData = {openingId: opening.id};
-    const frameMaterial = materials.byCode('window-frame-anthracite');
+    const frameMaterial = frameMaterialOf(opening, materials);
+    const outside = opening.outsideFrameMaterialId == null ? null : materials.get(opening.outsideFrameMaterialId);
     const glassMaterial = materials.byCode('glass');
+    // The frame, glass and bars in a group of their own across the frame's band (plan across is local −z).
+    const glazing = new THREE.Group();
+    glazing.position.z = -frameBand(opening, wall.thickness).centre * MM;
+    group.add(glazing);
     const from = opening.offset * MM;
     const to = (opening.offset + opening.width) * MM;
     const bottom = opening.sillHeight * MM;
     const height = opening.height * MM;
     const bar = WindowFrameBar * MM;
-    const depth = WindowFrameDepth;
-    const z = -depth / 2;
+    const depth = frameBand(opening, wall.thickness).depth * MM;
+    const exterior = exteriorSign(opening);
+    const frameBox = (x: number, y: number, w: number, h: number): void => {
+        glazing.add(...frameBar(frameMaterial, outside, exterior, x, y, w, h, depth));
+    };
     const cornerStart = corners.start === opening.id;
     const cornerEnd = corners.end === opening.id;
-    // The head and bottom of a corner window reach past the corner by half the frame depth to meet the other's.
-    const frameFrom = cornerStart ? from - depth / 2 : from;
-    const frameTo = cornerEnd ? to + depth / 2 : to;
+    // The head and bottom of a corner window reach past the corner to meet the other's.
+    const reach = cornerReach(opening, wall);
+    const frameFrom = cornerStart ? from - reach : from;
+    const frameTo = cornerEnd ? to + reach : to;
 
     if (!cornerStart) {
-        group.add(boxAt(frameMaterial, from, bottom, z, bar, height, depth));
+        frameBox(from, bottom, bar, height);
     }
     if (!cornerEnd) {
-        group.add(boxAt(frameMaterial, to - bar, bottom, z, bar, height, depth));
+        frameBox(to - bar, bottom, bar, height);
     }
-    group.add(boxAt(frameMaterial, frameFrom, bottom + height - bar, z, frameTo - frameFrom, bar, depth));
-    group.add(boxAt(frameMaterial, frameFrom, bottom, z, frameTo - frameFrom, 0.04, depth));
+    frameBox(frameFrom, bottom + height - bar, frameTo - frameFrom, bar);
+    frameBox(frameFrom, bottom, frameTo - frameFrom, 0.04);
     for (const board of sillBoards(opening, wall, cornerStart, cornerEnd, materials)) {
         group.add(board);
     }
@@ -1297,7 +1409,7 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
     const transoms = opening.transoms ?? 0;
     const leaves = openingLeaves(opening, wall.thickness);
     if (leaves.length > 0) {
-        // Walkable: sashes hinged on the jambs, closed by default.
+        // Walkable: sashes hinged on the jambs, closed by default (their place across the wall includes the inset).
         const panel = opening.panelHeight == null ? null : opening.panelHeight * MM - 0.04;
         for (const leaf of leaves) {
             group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, panel, frameMaterial, glassMaterial));
@@ -1310,30 +1422,130 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
 
     // Fixed glazing: one pane behind a grid of bars, evenly spaced between the jambs (or the corner), above a
     // solid lower panel when there is one.
-    const glassFrom = cornerStart ? from : from + bar;
-    const glassTo = cornerEnd ? to : to - bar;
+    const glassFrom = cornerStart ? from - reach + depth / 2 : from + bar;
+    const glassTo = cornerEnd ? to + reach - depth / 2 : to - bar;
     let glassBottom = bottom + 0.04;
     const glassTop = bottom + height - bar;
     if (opening.panelHeight != null && opening.panelHeight * MM > 0.04 + bar) {
         const panelTop = bottom + opening.panelHeight * MM;
-        group.add(boxAt(frameMaterial, glassFrom, glassBottom, -depth * 0.3, glassTo - glassFrom, panelTop - glassBottom, depth * 0.6));
-        group.add(boxAt(frameMaterial, glassFrom, panelTop, z, glassTo - glassFrom, bar, depth));
+        glazing.add(boxAt(frameMaterial, glassFrom, glassBottom, -depth * 0.3, glassTo - glassFrom, panelTop - glassBottom, depth * 0.6));
+        frameBox(glassFrom, panelTop, glassTo - glassFrom, bar);
         glassBottom = panelTop + bar;
     }
-    group.add(boxAt(glassMaterial, glassFrom, glassBottom, -0.004, glassTo - glassFrom, glassTop - glassBottom, 0.008, false));
+    glazing.add(boxAt(glassMaterial, glassFrom, glassBottom, -0.004, glassTo - glassFrom, glassTop - glassBottom, 0.008, false));
     const columns = (opening.mullions ?? 1) + 1;
     for (let i = 1; i < columns; i++) {
         const x = glassFrom + ((glassTo - glassFrom) * i) / columns;
-        group.add(boxAt(frameMaterial, x - bar / 2, glassBottom, z, bar, glassTop - glassBottom, depth));
+        frameBox(x - bar / 2, glassBottom, bar, glassTop - glassBottom);
     }
     for (let i = 1; i <= transoms; i++) {
         const y = glassBottom + ((glassTop - glassBottom) * i) / (transoms + 1);
-        group.add(boxAt(frameMaterial, glassFrom, y - bar / 2, z, glassTo - glassFrom, bar, depth));
+        frameBox(glassFrom, y - bar / 2, glassTo - glassFrom, bar);
     }
     for (const part of shutters(opening, wall, materials)) {
         group.add(part);
     }
 
+    return group;
+}
+
+/**
+ * A lift-and-slide door (FD-89, a `SlidingDoor` with `fixedPanes`): a frame round the opening across its band like a
+ * window's, a threshold, and its panes as sashes on two tracks, the sliding one tagged as a leaf with a handle.
+ */
+function buildLiftSlide(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
+    const group = new THREE.Group();
+    group.name = `door:${opening.name}`;
+    group.userData = {openingId: opening.id};
+    const frameMaterial = frameMaterialOf(opening, materials);
+    const outside = opening.outsideFrameMaterialId == null ? null : materials.get(opening.outsideFrameMaterialId);
+    const band = frameBand(opening, wall.thickness);
+    const glazing = new THREE.Group();
+    glazing.position.z = -band.centre * MM;
+    group.add(glazing);
+    const from = opening.offset * MM;
+    const width = opening.width * MM;
+    const height = opening.height * MM;
+    const bar = WindowFrameBar * MM;
+    // As deep as both tracks with their panes (`LiftSlideFrameDepth`).
+    const depth = band.depth * MM;
+    const frameBox = (x: number, y: number, w: number, h: number): void => {
+        glazing.add(...frameBar(frameMaterial, outside, exteriorSign(opening), x, y, w, h, depth));
+    };
+    frameBox(from, 0, bar, height);
+    frameBox(from + width - bar, 0, bar, height);
+    frameBox(from, height - bar, width, bar);
+    frameBox(from, 0, width, 0.02);
+    const glass = materials.byCode('glass');
+    for (const leaf of openingLeaves(opening, wall.thickness)) {
+        group.add(buildSash(leaf, 0.02, height - bar - 0.02, 0, null, frameMaterial, glass, leaf.travel !== 0));
+    }
+    return group;
+}
+
+/** The radius a sectional garage door's track turns through under the ceiling (m). */
+const GarageTrackRadius = 0.12;
+
+/**
+ * A garage door that lifts (FD-89): its leaf behind the opening on the garage's face, tagged as a leaf so
+ * `setLeafPose()` lifts it. A sectional door's leaf is horizontal sections (tagged `section`) running on tracks up the
+ * jambs and under the ceiling, an up-and-over door's one panel (tagged `tilt`) that tilts up, a roller door's slats
+ * (tagged `roll`) rolling up into a drum above the opening. The faces follow `leafStyle` and `leafMaterialId`.
+ */
+function buildLiftingDoor(group: THREE.Group, opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
+    const material = leafMaterialOf(opening, materials);
+    const steel = materials.plain('#5b5c5e', 0.5, 0.6);
+    for (const leaf of openingLeaves(opening, wall.thickness)) {
+        const pivot = leafPivot(leaf, 0);
+        const width = leaf.width * MM;
+        const height = (leaf.height ?? opening.height) * MM;
+        const t = leaf.thickness * MM;
+        const face = (w: number, h: number, boards: number): THREE.Mesh[] =>
+            opening.leafStyle === 'Boarded'
+                ? boardedLeaf(w, h, t - 2 * BoardRelief, boards, opening.boardDirection, material)
+                : [boxAt(material, 0, 0, -t / 2, w, h, t)];
+        const totalBoards = opening.leafStyle === 'Boarded' ? (opening.leafPanels ?? 8) : 1;
+        if (leaf.lift === 'Sectional') {
+            const count = garageSections(height / MM);
+            const section = height / count;
+            for (let i = 0; i < count; i++) {
+                const part = new THREE.Group();
+                part.userData = {section: i, sectionHeight: section};
+                // Each section a few mm short of the next: the joint.
+                const boards = opening.boardDirection === 'Horizontal' ? Math.max(1, Math.round(totalBoards / count)) : totalBoards;
+                part.add(...face(width, section - 0.004, boards));
+                pivot.add(part);
+            }
+            // The tracks: up the jambs, then turning under the ceiling as far into the garage as the door is high.
+            const inward = -leaf.swing;
+            for (const x of [-0.03, width]) {
+                pivot.add(boxAt(steel, x, 0, -0.02, 0.03, height + GarageTrackRadius, 0.04));
+                pivot.add(boxAt(steel, x, height + GarageTrackRadius - 0.02, inward > 0 ? 0 : -height, 0.03, 0.04, height));
+            }
+        } else if (leaf.lift === 'UpAndOver') {
+            const part = new THREE.Group();
+            part.userData = {tilt: true, tiltHeight: height};
+            const panel = new THREE.Group();
+            panel.position.y = -height / 3;
+            panel.add(...face(width, height, totalBoards));
+            part.add(panel);
+            pivot.add(part);
+        } else {
+            const part = new THREE.Group();
+            part.userData = {roll: true, rollHeight: height};
+            const slats = rollerSlats(height / MM);
+            const pitch = height / slats;
+            for (let i = 0; i < slats; i++) {
+                part.add(boxAt(material, 0, -height + i * pitch, -t / 4, width, pitch - 0.006, t / 2));
+            }
+            pivot.add(part);
+            // The drum's box above the opening, centred on the leaf (the plan draws the same box, `liftShapes()`).
+            const drum = RollerDrum * MM;
+            group.add(boxAt(steel, leaf.along * MM, opening.height * MM, -leaf.across * MM - drum / 2, width, drum, drum));
+        }
+        setLeafPose(pivot, 0);
+        group.add(pivot);
+    }
     return group;
 }
 
@@ -1402,7 +1614,9 @@ function sillBoards(opening: Opening, wall: Wall, cornerStart: boolean, cornerEn
     const to = (opening.offset + opening.width) * MM;
     const top = opening.sillHeight * MM;
     const face = (wall.thickness / 2) * MM;
-    const frameFace = WindowFrameDepth / 2;
+    // The frame's centre in local z (plan across is local −z): the boards reach from its faces to the wall's.
+    const band = frameBand(opening, wall.thickness);
+    const centre = -band.centre * MM;
     const overhang = SillBoardOverhang * MM;
     const thickness = SillBoardThickness * MM;
     // Plan across is local −z: the interior on the left of the wall is −z.
@@ -1412,8 +1626,9 @@ function sillBoards(opening: Opening, wall: Wall, cornerStart: boolean, cornerEn
         const corner = outer ? edge : 0;
         const start = cornerStart ? from - corner : from - overhang;
         const end = cornerEnd ? to + corner : to + overhang;
-        const z = sign > 0 ? frameFace : -edge;
-        return boxAt(material, start, top - thickness - drop, z, end - start, thickness, edge - frameFace);
+        const frameFace = centre + (sign * band.depth * MM) / 2;
+        const [z0, z1] = sign > 0 ? [frameFace, edge] : [-edge, frameFace];
+        return boxAt(material, start, top - thickness - drop, z0, end - start, thickness, z1 - z0);
     };
     const boards = [board(inside, opening.sillBoard * MM, false, materials.plain('#eeebe5', 0.6, 0), 0)];
     if (wall.type === 'Exterior') {
@@ -1423,8 +1638,8 @@ function sillBoards(opening: Opening, wall: Wall, cornerStart: boolean, cornerEn
 }
 
 /**
- * A glazed sash of a walkable French window: frame bars around a pane, divided by `transoms`, pivoting like a door
- * leaf.
+ * A glazed sash of a walkable French window or a lift-and-slide door: frame bars around a pane, divided by `transoms`,
+ * pivoting or sliding like a door leaf; `handle` on its free edge.
  */
 function buildSash(
     leaf: Leaf,
@@ -1434,6 +1649,7 @@ function buildSash(
     panel: number | null,
     frameMaterial: THREE.Material,
     glassMaterial: THREE.Material,
+    handle = true,
 ): THREE.Group {
     const sash = leafPivot(leaf, 0);
     sash.position.y = bottom;
@@ -1461,10 +1677,12 @@ function buildSash(
         const y = glassBottom + ((height - bar - glassBottom) * i) / (transoms + 1);
         sash.add(boxAt(frameMaterial, bar, y - bar / 2, z, width - 2 * bar, bar, thickness));
     }
-    // Handle on the inner face of the free edge.
-    const handle = boxAt(frameMaterial, width - bar / 2 - 0.01, 1.05 - bottom, 0, 0.02, 0.14, 0.02);
-    handle.position.z = -leaf.swing * (thickness / 2 + 0.015);
-    sash.add(handle);
+    if (handle) {
+        // Handle on the inner face of the free edge.
+        const grip = boxAt(frameMaterial, width - bar / 2 - 0.01, 1.05 - bottom, 0, 0.02, 0.14, 0.02);
+        grip.position.z = -leaf.swing * (thickness / 2 + 0.015);
+        sash.add(grip);
+    }
     return sash;
 }
 
@@ -1481,6 +1699,53 @@ function leafPivot(leaf: Leaf, open: number): THREE.Group {
     return pivot;
 }
 
+/**
+ * Lifts a garage door's leaf (FD-89) to `open` (0 … 1): a sectional door's sections run up the track and turn under the
+ * ceiling into the garage, until the bottom one has rounded the bend; an up-and-over door's panel tilts about an axis a
+ * third of the way up, which rises to the head, its top going into the garage; a roller door's slats roll up.
+ */
+function liftLeaf(pivot: THREE.Object3D, leaf: Leaf, open: number): void {
+    // Plan across is local −z: the garage, on `swing`, is −swing in local z.
+    const inward = -leaf.swing;
+    const height = (leaf.height ?? 0) * MM;
+    for (const part of pivot.children) {
+        const data = part.userData as {section?: number; sectionHeight?: number; tilt?: boolean; roll?: boolean};
+        if (data.section !== undefined) {
+            const size = data.sectionHeight ?? 0;
+            const at = (s: number): {y: number; z: number} => trackPoint(s, height, inward);
+            // Fully open, the bottom section has rounded the bend too: all of them lie under the ceiling.
+            const s = data.section * size + open * (height + (Math.PI / 2) * GarageTrackRadius);
+            const [a, b] = [at(s), at(s + size)];
+            part.position.set(0, a.y, a.z);
+            part.rotation.x = Math.atan2(b.z - a.z, b.y - a.y);
+        } else if (data.tilt === true) {
+            const angle = (open * Math.PI) / 2;
+            part.position.y = height / 3 + ((2 * height) / 3) * open;
+            part.rotation.x = Math.atan2(inward * Math.sin(angle), Math.cos(angle));
+        } else if (data.roll === true) {
+            part.position.y = height;
+            part.scale.y = Math.max(0.03, 1 - open);
+        }
+    }
+}
+
+/**
+ * A point `s` m along a sectional garage door's track (pivot-local y, z): up the jamb to the door's `height`, round a
+ * quarter circle of `GarageTrackRadius` and on under the ceiling into the garage (`inward`, local z sign).
+ */
+function trackPoint(s: number, height: number, inward: number): {y: number; z: number} {
+    const r = GarageTrackRadius;
+    if (s <= height) {
+        return {y: s, z: 0};
+    }
+    const turn = (Math.PI / 2) * r;
+    if (s <= height + turn) {
+        const angle = (s - height) / r;
+        return {y: height + r * Math.sin(angle), z: inward * r * (1 - Math.cos(angle))};
+    }
+    return {y: height + r, z: inward * (r + s - height - turn)};
+}
+
 /** The leaf of an object tagged by `buildWall`. */
 export function leafOf(pivot: THREE.Object3D): Leaf {
     return (pivot.userData as {leaf: Leaf}).leaf;
@@ -1494,6 +1759,10 @@ export function setLeafPose(pivot: THREE.Object3D, open: number): void {
     const leaf = leafOf(pivot);
     if (leaf.motion === 'slide') {
         pivot.position.x = (leaf.along + open * leaf.travel) * MM;
+        return;
+    }
+    if (leaf.motion === 'lift') {
+        liftLeaf(pivot, leaf, open);
         return;
     }
     const angle = open * LeafOpenAngle;

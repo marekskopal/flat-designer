@@ -17,7 +17,8 @@ interface LeafState {
 
 /**
  * How far each door with a leaf and walkable French window is open (session only, never stored), animated
- * towards its target. The display state, shown outside the walkthrough, is doors open and French windows closed.
+ * towards its target. The display state, shown outside the walkthrough, is doors open and French windows and garage
+ * doors closed.
  */
 export class LeafStates {
     private readonly states = new Map<number, LeafState>();
@@ -39,7 +40,7 @@ export class LeafStates {
         for (const opening of walls.flatMap((w) => w.openings).filter(hasLeaves)) {
             present.add(opening.id);
             if (!this.states.has(opening.id)) {
-                const display = isDoor(opening) ? 1 : 0;
+                const display = isDoor(opening) && opening.type !== 'GarageDoor' ? 1 : 0;
                 this.states.set(opening.id, {current: display, target: display, display});
             }
         }

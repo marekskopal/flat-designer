@@ -1,6 +1,6 @@
 import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
-import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
+import {isAncillaryRoom, isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
@@ -8,6 +8,7 @@ import {itemsOverFloor} from './items';
 import {
     Bounds,
     cornerWindows,
+    frameBand,
     itemFootprint,
     Leaf,
     NoCorners,
@@ -16,6 +17,7 @@ import {
     pointInPolygon,
     pointOnWall,
     polygonCentroid,
+    RollerDrum,
     SquareEnds,
     Vec2,
     WallEnds,
@@ -223,16 +225,18 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
                 ...(underRoofs ? [under === null ? '' : (under.headroomArea / 1e6).toFixed(2)] : []),
             ];
         });
-    const total = (outdoor: boolean): string[] | null => {
-        const matching = measured.filter((m) => isOutdoor(m.room) === outdoor);
+    // The living area, garages (indoor, unheated; FD-89) and open-air rooms, each totalled apart.
+    const kind = (room: Pick<Room, 'type'>): string => (isOutdoor(room) ? 'Outdoor' : isAncillaryRoom(room) ? 'Garage' : 'Indoor');
+    const total = (label: string): string[] | null => {
+        const matching = measured.filter((m) => kind(m.room) === label);
         if (matching.length === 0) {
             return null;
         }
         const area = matching.reduce((sum, m) => sum + m.room.area, 0);
         const volume = matching.reduce((sum, m) => sum + (m.volume ?? 0), 0);
-        return ['', outdoor ? 'Outdoor' : 'Indoor', area.toFixed(2), '', '', volume > 0 ? volume.toFixed(1) : '', ...(underRoofs ? [''] : [])];
+        return ['', label, area.toFixed(2), '', '', volume > 0 ? volume.toFixed(1) : '', ...(underRoofs ? [''] : [])];
     };
-    const totals = [total(false), total(true)].filter((t) => t !== null);
+    const totals = [total('Indoor'), total('Garage'), total('Outdoor')].filter((t) => t !== null);
 
     const width = PaperShort;
     const height = PaperLong;
@@ -573,11 +577,22 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
             }
             shapes.push(wallRect(frame, from, to, h, -h, OutlineStyle));
             if (opening.walkable !== true) {
-                shapes.push(wallLine(frame, from, to, GlassGap, ThinStyle), wallLine(frame, from, to, -GlassGap, ThinStyle));
+                // The glass where the frame stands across the wall (set in by `inset`, FD-89).
+                const centre = frameBand(opening, wall.thickness).centre;
+                shapes.push(
+                    wallLine(frame, from, to, centre + GlassGap, ThinStyle),
+                    wallLine(frame, from, to, centre - GlassGap, ThinStyle),
+                );
             }
         }
         for (const leaf of openingLeaves(opening, wall.thickness)) {
-            shapes.push(...(leaf.motion === 'swing' ? swingShapes(frame, leaf) : slideShapes(frame, leaf, opening)));
+            shapes.push(
+                ...(leaf.motion === 'swing'
+                    ? swingShapes(frame, leaf)
+                    : leaf.motion === 'lift'
+                        ? liftShapes(frame, leaf)
+                        : slideShapes(frame, leaf, opening)),
+            );
         }
         return shapes;
     });
@@ -613,7 +628,29 @@ function slideShapes(frame: WallFrame, leaf: Leaf, opening: Opening): Shape[] {
             wallRect(frame, leaf.along + leaf.travel, leaf.along + leaf.travel + leaf.width, t + 10, -t - 10, {...OutlineStyle, width: 0.13}),
             leafRect(0, OutlineStyle),
         ]
-        : [leafRect(leaf.travel, HiddenStyle), leafRect(0, OutlineStyle)];
+        : leaf.travel === 0
+            ? [leafRect(0, OutlineStyle)]
+            : [leafRect(leaf.travel, HiddenStyle), leafRect(0, OutlineStyle)];
+}
+
+/**
+ * A lifting garage door (FD-89): the leaf closed behind the opening, and dashed where it goes overhead in the garage: a
+ * sectional door's as deep as it is high, an up-and-over door's two thirds in (and a third out over the drive), a
+ * roller door's drum over the opening.
+ */
+function liftShapes(frame: WallFrame, leaf: Leaf): Shape[] {
+    const t = leaf.thickness / 2;
+    const [from, to] = [leaf.along, leaf.along + leaf.width];
+    const height = leaf.height ?? 0;
+    // Into the garage is `swing` across the wall.
+    const inside = (reach: number): number => leaf.across + leaf.swing * reach;
+    const overhead =
+        leaf.lift === 'Roller'
+            ? wallRect(frame, from, to, inside(-RollerDrum / 2), inside(RollerDrum / 2), HiddenStyle)
+            : leaf.lift === 'UpAndOver'
+                ? wallRect(frame, from, to, inside(-height / 3), inside((2 * height) / 3), HiddenStyle)
+                : wallRect(frame, from, to, inside(t), inside(height), HiddenStyle);
+    return [overhead, wallRect(frame, from, to, leaf.across + t, leaf.across - t, OutlineStyle)];
 }
 
 /** The arrowhead of a walking line, plan mm. */

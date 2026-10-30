@@ -46,6 +46,7 @@ const NewOpeningWidths: Record<OpeningType, number> = {
     Passage: 900,
     Window: 1200,
     Niche: 600,
+    GarageDoor: 2500,
 };
 
 /** Nudge steps for arrow keys, mm (Shift: coarse). */

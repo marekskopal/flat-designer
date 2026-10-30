@@ -73,7 +73,7 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   travel included); niches follow the curve. Turning a wall round negates its sagitta (as the face finishes swap).
   Corner windows need straight walls.
 - Opening types (`OpeningTypeEnum`): `Door`, `DoubleDoor`, `SlidingDoor`, `PocketDoor`, `Passage` (no leaf),
-  `Window` and `Niche`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
+  `Window`, `Niche` and `GarageDoor`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
   `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
   `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
   and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
@@ -95,6 +95,27 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
 - A window may have a solid lower `panelHeight` (mm from the sill) and exterior `shutters` (Louvred or Solid, in
   `shutterMaterialId`, null for painted timber). They are two leaves on the face opposite `side`. They lie folded back
   against the wall beside the window unless `shuttersClosed`. Shutters do not take part in the walkthrough.
+- Opening looks (FD-89, `OpeningLook`; inset and headroom in `OpeningClearances`): `frameMaterialId` (frame and sashes;
+  null: `door-white` doors, `window-frame-anthracite` windows), `leafMaterialId` (null: the frame's) and a window's or
+  lift-and-slide door's `outsideFrameMaterialId` (a 15 mm outer face, `frameBar()`). Leaf style `Boarded` is
+  `leafPanels` boards (up to 24) running `boardDirection` (`boardedLeaf()`); a leaf restyled without a new count takes
+  the new style's default. `inset` sets the frame of a door, window or lift-and-slide door (`OpeningClearances::framed()`)
+  that far in from the outer face (opposite `side`), `InsetFrameDepth` (80, a lift-and-slide door's `LiftSlideFrameDepth`,
+  130) deep: `frameBand()` in `plan-geometry.ts` gives the frame's centre and depth across the wall, which the frame
+  bars, leaves, sashes, sill boards, corner windows (`cornerReach()`, assuming both frames set in alike) and the plan's
+  glazing follow. A `SlidingDoor` with `fixedPanes` (1–3) is a lift-and-slide door inside its opening (`isLiftSlide()`,
+  `liftSlidePanes()`): equal panes on two tracks, the one away from `hinge` sliding a pane's width towards it, the fixed
+  ones leaves with no travel (they block the walk), so `occupied()` / `occupiedSpan()` take no wall beside it. A
+  `GarageDoor` (`garageDoorStyle`: Sectional, the default, UpAndOver, SideHinged, Roller) hangs behind its opening on
+  the `side` face, the garage's, with `frameStyle` None; all but the side-hinged one (a double door's leaves) need
+  `GarageHeadroom` (200 mm) above their head under the wall's top (`OpeningHead::check()` takes it, when the door is
+  placed or restyled, and `WallHandler` when the wall changes). Their leaf has `motion: 'lift'`
+  (`garageLeaves()`): `buildLiftingDoor()` tags its sections (`section`), panel (`tilt`) or slats (`roll`), and
+  `setLeafPose()` runs them along the track (`trackPoint()`), tilts or rolls them. Garage doors show closed outside a
+  walk, block their opening until `LiftClear` open, draw a dashed overhead outline on the plan and their sections or
+  slats in the elevations (`garageSections()` / `rollerSlats()` and `RollerDrum` in `plan-geometry.ts`, shared by the
+  builder and the sheets). New room type `Garage` (`isAncillary()` / `isAncillaryRoom()`): indoor, summed apart from
+  the living area in the room schedules (`ancillary` totals), a new one on `concrete-floor`.
 - Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
   allows the owner or an admin and answers 404 otherwise.
 - Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.
@@ -644,7 +665,8 @@ format is the text in `FurnitureTools::Format`.
 - Room schedule: `Service/Schedule/RoomScheduleService` (REST `…/room-schedule`, MCP `get_room_schedule`, the project
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
-  gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) are totalled separately. Only
+  gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) and garages (`isAncillary()`)
+  are totalled separately. Only
   PHP computes it, except under roofs (`RoomUnderRoof`, twinned for the PDF's schedule; see Roofs).
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose

@@ -22,7 +22,8 @@ use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
 use FlatDesigner\Service\Json\JsonDecoder;
 
 /**
- * Room schedule of a project or a floor: area, perimeter, clear height and volume per room, indoor and outdoor totals.
+ * Room schedule of a project or a floor: area, perimeter, clear height and volume per room, the indoor (living), ancillary
+ * (garages: indoor, unheated) and outdoor totals.
  * A room under the floor's roofs gets its clear height's range, its volume under the slope and its area with headroom
  * (`RoomUnderRoof`).
  */
@@ -66,8 +67,9 @@ final readonly class RoomScheduleService
 			level: $floor->level,
 			elevation: $floor->elevation,
 			rooms: $rows,
-			indoor: ScheduleTotalDto::of(self::rows($rows, outdoor: false)),
-			outdoor: ScheduleTotalDto::of(self::rows($rows, outdoor: true)),
+			indoor: ScheduleTotalDto::of(self::rows($rows, 'indoor')),
+			outdoor: ScheduleTotalDto::of(self::rows($rows, 'outdoor')),
+			ancillary: ScheduleTotalDto::of(self::rows($rows, 'ancillary')),
 		);
 	}
 
@@ -89,8 +91,9 @@ final readonly class RoomScheduleService
 
 		return new RoomScheduleDto(
 			floors: $floors,
-			indoor: ScheduleTotalDto::of(self::rows($rows, outdoor: false)),
-			outdoor: ScheduleTotalDto::of(self::rows($rows, outdoor: true)),
+			indoor: ScheduleTotalDto::of(self::rows($rows, 'indoor')),
+			outdoor: ScheduleTotalDto::of(self::rows($rows, 'outdoor')),
+			ancillary: ScheduleTotalDto::of(self::rows($rows, 'ancillary')),
 		);
 	}
 
@@ -98,8 +101,12 @@ final readonly class RoomScheduleService
 	 * @param list<RoomScheduleRowDto> $rows
 	 * @return list<RoomScheduleRowDto>
 	 */
-	private static function rows(array $rows, bool $outdoor): array
+	private static function rows(array $rows, string $total): array
 	{
-		return array_values(array_filter($rows, static fn (RoomScheduleRowDto $r): bool => $r->outdoor === $outdoor));
+		return array_values(array_filter($rows, static fn (RoomScheduleRowDto $r): bool => match ($total) {
+			'outdoor' => $r->outdoor,
+			'ancillary' => $r->ancillary,
+			default => !$r->outdoor && !$r->ancillary,
+		}));
 	}
 }

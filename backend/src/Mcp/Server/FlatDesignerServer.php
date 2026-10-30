@@ -71,7 +71,10 @@ final readonly class FlatDesignerServer
 		A wall face outside every room is a façade: its own leftFinishes / rightFinishes run along it (render,
 		cladding, a plinth starting below the floor); exterior walls nobody set take the project's exteriorMaterialId
 		(update_project). A room's soffitMaterialId clads its slab where it overhangs the floor below; an opening's
-		revealLining lines its reveal with the façade.
+		revealLining lines its reveal with the façade. Doors and windows take frameMaterialId, leafMaterialId and
+		outsideFrameMaterialId (timber-aluminium), a frame set in from the outer face (inset) and boarded leaves
+		(leafStyle Boarded); a garage (room type Garage) gets a GarageDoor (garageDoorStyle), and lift-and-slide
+		glazing is a SlidingDoor with fixedPanes.
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);
