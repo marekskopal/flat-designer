@@ -67,7 +67,7 @@ export function buildVoidLinings(
     group.name = 'void-linings';
     for (const band of liningBands(scene)) {
         if (band.top - band.bottom >= 1) {
-            group.add(liningRing(band, materials.get(band.materialId)));
+            group.add(liningRing(band, materials.upright(band.materialId)));
         }
     }
     mergeStatic(group);

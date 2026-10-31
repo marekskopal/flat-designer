@@ -457,7 +457,9 @@ function faceSvg(face: ElevationFace, at: Vec2, context: FaceContext): string {
             if (material === undefined) {
                 continue;
             }
-            const phase = material.pattern === 'Brick' && face.curve === undefined ? -face.length : gridPhase;
+            // Bricks and formwork keep the wall's own UVs (from its start), tiles lie on the room's grid.
+            const ownUvs = material.pattern === 'Brick' || material.pattern === 'Formwork';
+            const phase = ownUvs && face.curve === undefined ? -face.length : gridPhase;
             const bandGaps = face.gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top, segment));
             for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
                 const x0 = xOf(segment.from + piece.to);
@@ -545,7 +547,7 @@ function bandPieceSvg(
     }
     const joint: Style = {stroke: JointColor, width: 0.08};
     const joints: string[] = [];
-    if (material.pattern === 'Tiles' || material.pattern === 'Terrazzo') {
+    if (material.pattern === 'Tiles' || material.pattern === 'Terrazzo' || material.pattern === 'Formwork') {
         if (w / s >= MinJointPitch && h / s >= MinJointPitch) {
             for (const x of gridLines(x0, x1, w, phase)) {
                 joints.push(line(toPaper(x, z0), toPaper(x, z1), joint));
@@ -567,6 +569,13 @@ function bandPieceSvg(
                 for (const x of gridLines(x0, x1, w, phase - shift)) {
                     joints.push(line(toPaper(x, bottom), toPaper(x, top), joint));
                 }
+            }
+        }
+    } else if (material.pattern === 'Planks') {
+        // Boards on a wall run along it (`MaterialLibrary.upright()`), `tileWidth` high, from the floor.
+        if (w / s >= MinJointPitch) {
+            for (const z of gridLines(z0, z1, w, 0)) {
+                joints.push(line(toPaper(x0, z), toPaper(x1, z), joint));
             }
         }
     } else if (material.pattern === 'Herringbone') {

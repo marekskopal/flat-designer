@@ -15,6 +15,9 @@ const SectionColor = '#3d3a36';
 
 export type GrainDirection = 'vertical' | 'horizontal';
 
+/** How a material's pattern lies: a grain direction, or planks along an upright face (`MaterialLibrary.upright()`). */
+type Lay = GrainDirection | 'upright';
+
 /**
  * Builds three.js materials from the backend material catalogue. Planks and tiles with a `texture`
  * are composed from the photo of one real plank/tile; other wood, plank and tile surfaces get
@@ -41,17 +44,17 @@ export class MaterialLibrary {
 
     public get(id: number | null, grain: GrainDirection = 'vertical'): THREE.Material {
         const dto = id === null ? undefined : this.byId.get(id);
-        if (dto === undefined) {
-            return this.fallback();
-        }
+        return dto === undefined ? this.fallback() : this.material(dto, grain);
+    }
 
-        const key = `${dto.id}:${grain}`;
-        let material = this.cache.get(key);
-        if (material === undefined) {
-            material = this.create(dto, grain);
-            this.cache.set(key, material);
-        }
-        return material;
+    /**
+     * The material of an upright face (a wall, its finish bands, a façade, a reveal, a void's lining): planks run along
+     * it, as cladding and board-marked concrete do; other patterns as `get()` lays them. Planks ignore the grain
+     * direction otherwise (they run along v), so a stair tread or a cabinet keeps its planks as before.
+     */
+    public upright(id: number | null): THREE.Material {
+        const dto = id === null ? undefined : this.byId.get(id);
+        return dto === undefined ? this.fallback() : this.material(dto, dto.pattern === 'Planks' ? 'upright' : 'vertical');
     }
 
     public byCode(code: string, grain: GrainDirection = 'vertical'): THREE.Material {
@@ -121,7 +124,17 @@ export class MaterialLibrary {
         this.textures.clear();
     }
 
-    private create(dto: MaterialDto, grain: GrainDirection): THREE.Material {
+    private material(dto: MaterialDto, lay: Lay): THREE.Material {
+        const key = `${dto.id}:${lay}`;
+        let material = this.cache.get(key);
+        if (material === undefined) {
+            material = this.create(dto, lay);
+            this.cache.set(key, material);
+        }
+        return material;
+    }
+
+    private create(dto: MaterialDto, lay: Lay): THREE.Material {
         if (dto.pattern === 'Glass') {
             return this.glass(dto);
         }
@@ -133,7 +146,7 @@ export class MaterialLibrary {
         });
 
         if (dto.pattern !== 'Plain') {
-            material.map = this.texture(dto, grain);
+            material.map = this.texture(dto, lay);
         }
         // Laid tiles and slabs go on the room's tile grid (`alignTiles`); bricks keep the UVs of their surface.
         if ((dto.pattern === 'Tiles' || dto.pattern === 'Terrazzo' || dto.pattern === 'Herringbone') && tileLayout(dto) !== null) {
@@ -164,8 +177,8 @@ export class MaterialLibrary {
         });
     }
 
-    private texture(dto: MaterialDto, grain: GrainDirection): THREE.Texture {
-        const key = `${dto.id}:${grain}`;
+    private texture(dto: MaterialDto, lay: Lay): THREE.Texture {
+        const key = `${dto.id}:${lay}`;
         let texture = this.textures.get(key);
         if (texture !== undefined) {
             return texture;
@@ -174,7 +187,7 @@ export class MaterialLibrary {
         const layout = tileLayout(dto);
         const woodPhoto = dto.pattern === 'Wood' && dto.texture !== null && dto.tileWidth !== null && dto.tileHeight !== null;
         if (woodPhoto) {
-            texture = this.woodTexture(dto, grain);
+            texture = this.woodTexture(dto, lay === 'horizontal' ? 'horizontal' : 'vertical');
         } else if (layout !== null && dto.texture !== null) {
             texture = this.imageTexture(dto, layout);
         } else if (layout !== null) {
@@ -187,10 +200,15 @@ export class MaterialLibrary {
             texture = new THREE.CanvasTexture(drawPattern(dto));
             const repeat = 1 / (PatternTileSize[dto.pattern] ?? 1);
             texture.repeat.set(repeat, repeat);
-            // Procedural planks are drawn along the canvas width; turn them to run along v like the photo-based ones.
-            if (grain === 'horizontal' || dto.pattern === 'Planks') {
+            // Procedural planks are drawn along the canvas width; turn them to run along v like the photo-based ones, unless
+            // they run along a wall.
+            if (dto.pattern === 'Planks' ? lay !== 'upright' : lay === 'horizontal') {
                 texture.rotation = Math.PI / 2;
             }
+        }
+        if (layout !== null && dto.pattern === 'Planks' && lay === 'upright') {
+            // Planks of a size run along v; boards on a wall run along it (`upright()`).
+            texture.rotation = Math.PI / 2;
         }
 
         texture.colorSpace = THREE.SRGBColorSpace;
@@ -284,6 +302,33 @@ function tileLayout(dto: MaterialDto): ImageLayout | null {
                     drawPlankLayout(ctx, image, rng, columns, rows, tileWidth, tileHeight);
                 }
             },
+        };
+    }
+    if (dto.pattern === 'Planks') {
+        // Without a photo the planks are drawn at their size (FD-92): columns at least 2.4 m across, at least 3.6 m long.
+        const columns = Math.max(8, Math.ceil(2400 / tileWidth));
+        const rows = Math.max(1, Math.ceil(3600 / tileHeight));
+        return {
+            width: columns * tileWidth,
+            height: rows * tileHeight,
+            draw: (ctx, _image, rng): void => drawSizedPlanks(ctx, rng, columns, rows, tileWidth, tileHeight, dto.color),
+        };
+    }
+    if (dto.pattern === 'Stone') {
+        // Random coursed walling, 6 stones across and 8 courses up.
+        return {
+            width: 6 * tileWidth,
+            height: 8 * tileHeight,
+            draw: (ctx, _image, rng): void => drawStones(ctx, rng, tileWidth, tileHeight, dto.color),
+        };
+    }
+    if (dto.pattern === 'Formwork') {
+        // 2 pieces along the wall, at least 1.2 m of rows up it.
+        const rows = Math.max(2, Math.ceil(1200 / tileHeight));
+        return {
+            width: 2 * tileWidth,
+            height: rows * tileHeight,
+            draw: (ctx, _image, rng): void => drawFormwork(ctx, rng, tileWidth, tileHeight, dto.color),
         };
     }
     if (dto.pattern === 'Terrazzo') {
@@ -431,6 +476,125 @@ function proceduralLayoutTexture(dto: MaterialDto, layout: ImageLayout): THREE.C
 }
 
 /**
+ * Planks of a known size without a photo (FD-92): `columns` columns along the canvas height (texture v), each a random
+ * staggered run of planks `rows` long, each plank its own shade of the wood, with dark joints along and across. The
+ * plank cut by the bottom edge reappears at the top, so the patch tiles seamlessly.
+ */
+function drawSizedPlanks(
+    ctx: CanvasRenderingContext2D,
+    rng: () => number,
+    columns: number,
+    rows: number,
+    plankWidth: number,
+    plankLength: number,
+    color: string,
+): void {
+    const w = plankWidth / LayoutMmPerPixel;
+    const l = plankLength / LayoutMmPerPixel;
+    const base = new THREE.Color(color);
+    const joint = `#${shade(base, -0.5).getHexString()}`;
+    for (let column = 0; column < columns; column++) {
+        const offset = rng() * l;
+        // Each plank drawn from its own seed, so the one crossing the patch's edge is drawn alike at both ends.
+        const planks = Array.from({length: rows}, () => ({seed: Math.floor(rng() * 2 ** 31), tone: shade(base, (rng() - 0.5) * 0.16)}));
+        for (let k = -1; k < rows; k++) {
+            const y = offset + k * l;
+            const plank = planks[(k + rows) % rows];
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(column * w, y, w, l);
+            ctx.clip();
+            ctx.translate(column * w, y);
+            drawWood(ctx, w, l, `#${plank.tone.getHexString()}`, seededRandom(plank.seed), w / 512);
+            ctx.restore();
+            ctx.fillStyle = joint;
+            ctx.globalAlpha = 0.6;
+            ctx.fillRect(column * w, y, w, 1);
+            ctx.globalAlpha = 1;
+        }
+        ctx.fillStyle = joint;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(column * w, 0, 1, ctx.canvas.height);
+        ctx.globalAlpha = 1;
+    }
+}
+
+/**
+ * Dry-stone walling, random coursed (FD-92): courses of 0.6–1.4 × `courseHeight`, filling the patch's height, of flat
+ * stones 0.5–1.6 × `stoneLength` long, filling its width, with deep dark joints. Each stone is an irregular polygon in
+ * its own shade with a lit top edge and a shaded bottom one; stones crossing the patch's side reappear at the other.
+ */
+function drawStones(ctx: CanvasRenderingContext2D, rng: () => number, stoneLength: number, courseHeight: number, color: string): void {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const base = new THREE.Color(color);
+    ctx.fillStyle = `#${shade(base, -0.62).getHexString()}`;
+    ctx.fillRect(0, 0, width, height);
+    const fit = (sizes: number[], total: number): number[] => {
+        const sum = sizes.reduce((a, b) => a + b, 0);
+        return sizes.map((size) => (size * total) / sum);
+    };
+    const courses: number[] = [];
+    while (courses.reduce((a, b) => a + b, 0) < height) {
+        courses.push(((0.6 + rng() * 0.8) * courseHeight) / LayoutMmPerPixel);
+    }
+    const joint = 18 / LayoutMmPerPixel;
+    let y = 0;
+    for (const course of fit(courses, height)) {
+        const lengths: number[] = [];
+        while (lengths.reduce((a, b) => a + b, 0) < width) {
+            lengths.push(((0.5 + rng() * 1.1) * stoneLength) / LayoutMmPerPixel);
+        }
+        let x = rng() * (stoneLength / LayoutMmPerPixel);
+        for (const length of fit(lengths, width)) {
+            // Mostly darker than the base: lightening mixes in linear colour, so a little goes a long way.
+            const tone = shade(base, (rng() - 0.75) * 0.32);
+            const specks = [-0.15, -0.05, 0.05, 0.12].map((amount) => `#${vary(tone, amount).getHexString()}`);
+            const jitter = (): number => (rng() - 0.5) * joint;
+            const [left, right, top, bottom] = [x + joint / 2, x + length - joint / 2, y + joint / 2, y + course - joint / 2];
+            const corners: [number, number][] = [
+                [left + jitter(), top + jitter()],
+                [left + (right - left) * (0.3 + rng() * 0.4), top + jitter() * 0.5],
+                [right + jitter(), top + jitter()],
+                [right + jitter() * 0.5, top + (bottom - top) * (0.4 + rng() * 0.2)],
+                [right + jitter(), bottom + jitter()],
+                [left + (right - left) * (0.3 + rng() * 0.4), bottom + jitter() * 0.5],
+                [left + jitter(), bottom + jitter()],
+                [left + jitter() * 0.5, top + (bottom - top) * (0.4 + rng() * 0.2)],
+            ];
+            for (const shift of x + length > width ? [0, -width] : [0]) {
+                const outline = (): void => {
+                    ctx.beginPath();
+                    corners.forEach(([cx, cy], i) => (i === 0 ? ctx.moveTo(cx + shift, cy) : ctx.lineTo(cx + shift, cy)));
+                    ctx.closePath();
+                };
+                outline();
+                ctx.fillStyle = `#${tone.getHexString()}`;
+                ctx.fill();
+                ctx.save();
+                ctx.clip();
+                // The bed's lit top and shaded underside, and a little grain.
+                ctx.fillStyle = `#${shade(tone, 0.18).getHexString()}`;
+                ctx.globalAlpha = 0.5;
+                ctx.fillRect(left + shift - joint, top - joint, right - left + 2 * joint, 3);
+                ctx.fillStyle = `#${shade(tone, -0.35).getHexString()}`;
+                ctx.fillRect(left + shift - joint, bottom - 4, right - left + 2 * joint, 4 + joint);
+                for (const speck of specks) {
+                    ctx.fillStyle = speck;
+                    for (let k = 0; k < ((right - left) * (bottom - top)) / 200; k++) {
+                        ctx.fillRect(left + shift + rng() * (right - left), top + rng() * (bottom - top), 2, 1);
+                    }
+                }
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+            x += length;
+        }
+        y += course;
+    }
+}
+
+/**
  * Polished terrazzo: a light base with stone chips of 1–14 mm in greys, black, white and a little ochre, and faint
  * joints between 2 × 2 slabs. Drawn at 1 mm per pixel; chips crossing the patch edge wrap round, so it tiles.
  */
@@ -477,13 +641,16 @@ function drawTerrazzo(ctx: CanvasRenderingContext2D, rng: () => number, slabWidt
     }
 }
 
-/** Handmade bricks in stretcher bond with recessed mortar joints, each brick its own shade and a little speckle. */
+/**
+ * Bricks in stretcher bond with recessed joints, each brick its own shade (`vary()`, so a red stays red when lightened)
+ * and a little speckle. The joint is 7 % of the course, 5–10 mm: mortar for bricks, sand for pavers.
+ */
 function drawBricks(ctx: CanvasRenderingContext2D, rng: () => number, brickLength: number, brickHeight: number, color: string): void {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     const length = brickLength / LayoutMmPerPixel;
     const course = brickHeight / LayoutMmPerPixel;
-    const joint = Math.max(1, Math.round(10 / LayoutMmPerPixel));
+    const joint = Math.max(1, Math.round(Math.min(10, Math.max(5, brickHeight * 0.07)) / LayoutMmPerPixel));
     const base = new THREE.Color(color);
     ctx.fillStyle = '#c9bba5';
     ctx.fillRect(0, 0, width, height);
@@ -493,15 +660,53 @@ function drawBricks(ctx: CanvasRenderingContext2D, rng: () => number, brickLengt
         const offset = row % 2 === 0 ? 0 : length / 2;
         for (let i = -1; i < bricks; i++) {
             const x = i * length + offset;
-            const tone = shade(base, (rng() - 0.5) * 0.3);
-            // Some bricks fired darker, some paler.
-            ctx.fillStyle = `#${(rng() < 0.15 ? shade(tone, -0.25) : tone).getHexString()}`;
+            // Some bricks fired darker.
+            const tone = vary(base, (rng() - 0.5) * 0.1 - (rng() < 0.15 ? 0.04 : 0));
+            ctx.fillStyle = `#${tone.getHexString()}`;
             ctx.fillRect(x + joint / 2, row * course + joint / 2, length - joint, course - joint);
+            ctx.globalAlpha = 0.5;
             for (let k = 0; k < 40; k++) {
-                ctx.fillStyle = `#${shade(tone, (rng() - 0.5) * 0.35).getHexString()}`;
-                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = `#${vary(tone, (rng() - 0.5) * 0.12).getHexString()}`;
                 ctx.fillRect(x + joint / 2 + rng() * (length - joint), row * course + joint / 2 + rng() * (course - joint), 2, 2);
             }
+            ctx.globalAlpha = 1;
+        }
+    }
+}
+
+/**
+ * Cast concrete showing its formwork (FD-92): panels or boards `pieceLength` along the wall (canvas x, texture u) by
+ * `pieceHeight` up it, in rows from the bottom; each piece a slightly different grey with a fine speckle, a thin joint
+ * round it, tie holes on a panel (taller than 300 mm) and a faint grain imprint along a board.
+ */
+function drawFormwork(ctx: CanvasRenderingContext2D, rng: () => number, pieceLength: number, pieceHeight: number, color: string): void {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const length = pieceLength / LayoutMmPerPixel;
+    const rise = pieceHeight / LayoutMmPerPixel;
+    const base = new THREE.Color(color);
+    const dark = `#${vary(base, -0.25).getHexString()}`;
+    for (let row = 0; row * rise < height - 0.5; row++) {
+        for (let column = 0; column * length < width - 0.5; column++) {
+            const [x, y] = [column * length, row * rise];
+            drawSpeckled(ctx, x, y, length, rise, vary(base, (rng() - 0.5) * 0.06), rng, 0.05);
+            ctx.fillStyle = dark;
+            if (pieceHeight > 300) {
+                // Tie holes, three along and two up.
+                for (const [i, j] of [[1, 1], [3, 1], [5, 1], [1, 3], [3, 3], [5, 3]]) {
+                    ctx.beginPath();
+                    ctx.arc(x + (length * i) / 6, y + (rise * j) / 4, 12 / LayoutMmPerPixel, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                ctx.globalAlpha = 0.12;
+                for (let k = 0; k < 5; k++) {
+                    ctx.fillRect(x, y + rng() * rise, length, 1);
+                }
+            }
+            ctx.globalAlpha = 0.5;
+            ctx.fillRect(x, y, length, 1);
+            ctx.fillRect(x, y, 1, rise);
             ctx.globalAlpha = 1;
         }
     }
@@ -700,16 +905,19 @@ function drawPattern(dto: MaterialDto): HTMLCanvasElement {
     return canvas;
 }
 
-/** Oak grain running along the canvas height (texture v). */
-function drawWood(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, rng: () => number): void {
+/**
+ * Oak grain running along the canvas height (texture v). `density` scales the bands and grain lines to the canvas's width
+ * against the 512 px of a whole board's texture (a narrow plank gets fewer and narrower ones).
+ */
+function drawWood(ctx: CanvasRenderingContext2D, w: number, h: number, color: string, rng: () => number, density = 1): void {
     const base = new THREE.Color(color);
     ctx.fillStyle = `#${base.getHexString()}`;
     ctx.fillRect(0, 0, w, h);
 
     // Broad tonal bands.
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < Math.max(3, Math.round(14 * density)); i++) {
         const x = rng() * w;
-        const width = 10 + rng() * 60;
+        const width = (10 + rng() * 60) * Math.max(density, 0.25);
         ctx.fillStyle = `#${shade(base, (rng() - 0.5) * 0.18).getHexString()}`;
         ctx.globalAlpha = 0.35;
         ctx.fillRect(x, 0, width, h);
@@ -717,7 +925,7 @@ function drawWood(ctx: CanvasRenderingContext2D, w: number, h: number, color: st
 
     // Fine wavy grain lines.
     ctx.globalAlpha = 0.22;
-    for (let i = 0; i < 160; i++) {
+    for (let i = 0; i < Math.max(12, Math.round(160 * density)); i++) {
         const x = rng() * w;
         const amplitude = 2 + rng() * 6;
         const phase = rng() * Math.PI * 2;
@@ -801,6 +1009,12 @@ function drawTiles(ctx: CanvasRenderingContext2D, size: number, color: string, r
             ctx.globalAlpha = 1;
         }
     }
+}
+
+/** The colour `amount` lighter (or darker) in its sRGB lightness: unlike `shade()`, a lightened red does not turn pink. */
+function vary(color: THREE.Color, amount: number): THREE.Color {
+    const hsl = color.getHSL({h: 0, s: 0, l: 0}, THREE.SRGBColorSpace);
+    return new THREE.Color().setHSL(hsl.h, hsl.s, Math.min(1, Math.max(0, hsl.l + amount)), THREE.SRGBColorSpace);
 }
 
 function shade(color: THREE.Color, amount: number): THREE.Color {

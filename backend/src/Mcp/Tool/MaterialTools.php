@@ -16,7 +16,21 @@ use Mcp\Schema\ToolAnnotations;
 /** The global material catalogue: everyone reads it, admins add and change materials. */
 final readonly class MaterialTools
 {
-	private const array Patterns = ['Plain', 'Wood', 'Planks', 'Tiles', 'Glass', 'Grass', 'Gravel', 'Terrazzo', 'Brick', 'Herringbone'];
+	private const array Patterns = [
+		'Plain',
+		'Wood',
+		'Planks',
+		'Tiles',
+		'Glass',
+		'Grass',
+		'Gravel',
+		'Terrazzo',
+		'Brick',
+		'Herringbone',
+		'BeaverTail',
+		'Stone',
+		'Formwork',
+	];
 
 	private const array Clearable = ['tileWidth', 'tileHeight'];
 
@@ -43,7 +57,7 @@ final readonly class MaterialTools
 	/**
 	 * @param string $code unique kebab-case code, permanent (furniture definitions refer to it), e.g. "oak-veneer"
 	 * @param string $name e.g. "Oak veneer, natural"
-	 * @param string $pattern how the surface is drawn: Plain, Wood (grain), Planks, Tiles, Glass, Grass, Gravel, Terrazzo (stone chips; slab joints with a tile size), Brick (stretcher bond, tileWidth × tileHeight per brick), Herringbone (tileWidth × tileHeight tiles at 45°, length a whole multiple of the width)
+	 * @param string $pattern how the surface is drawn: Plain, Wood (grain), Planks, Tiles, Glass, Grass, Gravel, Terrazzo (stone chips; slab joints with a tile size), Brick (stretcher bond, tileWidth × tileHeight per brick), Herringbone (tileWidth × tileHeight tiles at 45°, length a whole multiple of the width), BeaverTail (round-ended roof tiles tileWidth × tileHeight in half-bond rows), Stone (random coursed dry-stone walling, stones about tileWidth long in courses about tileHeight high), Formwork (cast concrete showing its formwork panels or boards, tileWidth along the wall by tileHeight up it); Planks with a tile size are tileWidth wide and tileHeight long, running along floors and lying horizontally on walls
 	 * @param string $color base colour #rrggbb
 	 * @param float $roughness 0 (mirror) to 1 (matt)
 	 * @param float $metalness 0 (dielectric) to 1 (metal)
@@ -81,7 +95,7 @@ final readonly class MaterialTools
 
 	/**
 	 * @param string|null $name new name
-	 * @param string|null $pattern Plain, Wood, Planks, Tiles, Glass, Grass, Gravel, Terrazzo, Brick or Herringbone
+	 * @param string|null $pattern Plain, Wood, Planks, Tiles, Glass, Grass, Gravel, Terrazzo, Brick, Herringbone, BeaverTail, Stone or Formwork
 	 * @param string|null $color #rrggbb
 	 * @param float|null $roughness 0–1
 	 * @param float|null $metalness 0–1

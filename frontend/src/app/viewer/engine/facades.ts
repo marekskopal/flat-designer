@@ -50,7 +50,7 @@ export function buildFacades(
         facade.userData = {wallId: face.wall.id};
         for (const [from, to] of face.spans) {
             for (const band of bands) {
-                const material = materials.get(band.materialId);
+                const material = materials.upright(band.materialId);
                 const gaps = openings.flatMap((o) => gapIn(o, from, to, band));
                 for (const piece of wallPieces(to - from, band.top - band.bottom, gaps)) {
                     const [low, high] = [band.bottom + piece.bottom, band.bottom + piece.top];

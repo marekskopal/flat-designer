@@ -691,7 +691,7 @@ export function buildWall(
     group.position.set(frame.start.x * MM, 0, -frame.start.y * MM);
     group.rotation.y = frame.angle;
 
-    const material = materials.get(wall.materialId);
+    const material = materials.upright(wall.materialId);
     const top = wallTopAt(wall, roofs, frame);
     const bottom = wallBottomAt(wall, frame, plots);
     // The wall's own sloping top and base are linear along it: the solids bend where they cross a level.
@@ -753,7 +753,7 @@ function revealLining(opening: Opening, wall: Wall, materials: MaterialLibrary, 
     if (band === undefined) {
         return null;
     }
-    const material = materials.get(band.materialId);
+    const material = materials.upright(band.materialId);
     const [x0, x1] = [opening.offset * MM, (opening.offset + opening.width) * MM];
     const [y0, y1] = [opening.sillHeight * MM, (opening.sillHeight + opening.height) * MM];
     const board = RevealBoard * MM;
@@ -978,7 +978,7 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
             }
             for (const band of segment.bands) {
                 const bandGaps = gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top, segment));
-                const material = materials.get(band.materialId);
+                const material = materials.upright(band.materialId);
                 for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
                     const from = segment.from + piece.from;
                     const bottom = band.bottom + piece.bottom;

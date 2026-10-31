@@ -312,6 +312,34 @@ Legend: **have** = an existing kind, definition, material or option. **FD-nn** =
 | Car in the garage, trees | | **FD-93** (CC0 models) |
 | Elevations and sections to check the model against the drawings | | **FD-94** |
 
+## Materials
+
+Seeded by `SeedDemoHouseMaterials` (FD-92), all drawn procedurally: the photos have no licence, so no texture is cut
+from them. Colours and sizes were judged against the photos in the scratch project.
+
+| Where | Code | Pattern, size (mm) |
+| --- | --- | --- |
+| Façades | `render-silicate-white` | Plain (`exteriorMaterialId`) |
+| Plinth band | `render-plinth-grey` | Plain |
+| Oriel cladding, inside the deck's fence | `larch-cladding` | Planks 120 × 4000, horizontal on walls |
+| Retaining walls, light well, street wall | `concrete-formwork` | Formwork 2500 × 1250 panels (the photos show smooth panel formwork) |
+| Bin store, if board-marked | `concrete-board-marked` | Formwork 3000 × 150 boards |
+| Bin store doors, gates | `steel-painted-grey` | Plain, metallic |
+| Roof covering | `roof-tiles-beaver-clay` | BeaverTail 180 × 380 (FD-91) |
+| Gutters, flashings | `zinc-titanium` | Plain (FD-91) |
+| Garage and oriel flat roofs | `gravel` | Gravel (have) |
+| Living rooms' floors | `oak-planks-wide` | Planks 220 × 2200 (wider and longer than `oak-planks-natural`) |
+| Stairs, balusters, void linings, fireplace box | `oak-solid` | Wood |
+| Kitchen worktop, bathroom counters | `solid-surface-white` | Plain |
+| Bathrooms and WC, floors and walls | `quartzite-tiles` | Tiles 600 × 300 |
+| Fireplace plinth | `granite-black-honed` | Plain |
+| Window and door frames | `oak-stained-frame` | Wood |
+| Deck | `larch-decking` | Planks 140 × 4000 |
+| Garden path | `concrete-stepping-slabs` | Tiles 900 × 300 |
+| Entrance court, driveway | `clay-pavers` | Brick 200 × 100 |
+| Curved garden wall | `drystone-grey` | Stone 400 × 130 (random coursed) |
+| Lavender beds | `lavender-bed` | Grass |
+
 ## Gaps → tasks
 
 - **FD-86** Sloping terrain: spot heights, the ground under the house, contours.

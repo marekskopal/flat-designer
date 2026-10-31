@@ -15,7 +15,11 @@ export type MaterialPattern =
     | 'Brick'
     | 'Herringbone'
     /** Round-ended roof tiles in half-bond rows, a row showing `BeaverTailGauge` of a tile's length (FD-91). */
-    | 'BeaverTail';
+    | 'BeaverTail'
+    /** Random coursed dry-stone walling (FD-92): stones about `tileWidth` long in courses about `tileHeight` high. */
+    | 'Stone'
+    /** Cast concrete showing its formwork panels or boards, `tileWidth` along the wall by `tileHeight` up it (FD-92). */
+    | 'Formwork';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */

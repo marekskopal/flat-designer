@@ -281,6 +281,13 @@ format is the text in `FurnitureTools::Format`.
   brick) and `Herringbone`. A herringbone tile's length is rounded to a whole multiple of its width, and the texture
   is drawn axis-aligned and turned 45°. Tiles, terrazzo and herringbone go on the room's tile grid; bricks keep
   their surface's UVs, which on a vaulted ceiling run along and across the beams.
+- Planks with a tile size and no photo are drawn at that size (`drawSizedPlanks()`, FD-92), along v (plan y on floors).
+  On upright faces (walls, their finish bands, façades, reveals, void linings: `MaterialLibrary.upright()`) planks run
+  along the wall, as cladding does; elsewhere planks ignore the grain direction. `Stone` is random coursed dry-stone
+  walling (`drawStones()`: stones about `tile_width` long in courses about `tile_height` high) and `Formwork` cast
+  concrete showing its panels (with tie holes) or boards (`drawFormwork()`: `tile_width` along the wall, `tile_height` up
+  it); both keep their surface's UVs and are not counted in pieces. Bricks vary in sRGB lightness (`vary()`) with joints
+  7 % of the course (5–10 mm), so pavers and facing bricks alike look right. The demo house's materials are listed in `docs/demo-house.md`.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
