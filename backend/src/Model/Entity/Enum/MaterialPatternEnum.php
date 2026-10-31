@@ -16,4 +16,6 @@ enum MaterialPatternEnum: string
 	case Terrazzo = 'Terrazzo';
 	case Brick = 'Brick';
 	case Herringbone = 'Herringbone';
+	/** Round-ended clay tiles in half-bond rows (FD-91): `tileWidth` wide and `tileHeight` long, a row showing 0.4 of the length. */
+	case BeaverTail = 'BeaverTail';
 }

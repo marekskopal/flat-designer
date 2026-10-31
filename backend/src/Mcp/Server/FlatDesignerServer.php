@@ -65,6 +65,9 @@ final readonly class FlatDesignerServer
 		run along polylines (a void's open edge, a terrace, a retaining wall's top). A roof (add_roof) goes on the floor it
 		covers; without a size it covers the floor's walls. Every wall is cut at the roof's underside, and the walls
 		under its gables are set to rise to it (upToRoof on add_wall, add_walls or update_wall). Roof windows are added with add_roof_window.
+		A roof may have gutters with downpipes, snow guards and a ridge style (add_roof / update_roof); a chimney is an
+		item of kind Chimney on the floor it starts from, rising through the floors and roofs above to aboveRoof over
+		them; vent tiles, roof steps and solar panels are items with onRoof, lying on the roof's slope.
 		A plot (add_plot) is the land round the building; on a slope give it spot heights (terrain on add_plot, or
 		set_terrain with points or contour lines, z against the floor's level): gardens, paths and driveways follow
 		the ground, rooms below it are cut out of it, and items with onGround stand on it. Garden and retaining

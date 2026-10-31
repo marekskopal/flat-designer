@@ -448,6 +448,7 @@ final readonly class ProjectSnapshotService
 			$item->model = $this->modelLink->forProject($floor->project, $data->nullableInt('modelId'));
 			// Snapshots taken before terrain (FD-86): on the floor's level.
 			$item->onGround = $data->raw('onGround') === true;
+			$item->onRoof = $data->raw('onRoof') === true;
 			$this->itemRepository->persist($item);
 		}
 	}

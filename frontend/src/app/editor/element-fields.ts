@@ -107,6 +107,20 @@ const RoofShapeLabels: Readonly<Record<string, string>> = {
 };
 const isPitched = (roof: Record<string, unknown>): boolean => roof['shape'] !== 'Flat';
 
+const RidgeStyleLabels: Readonly<Record<string, string>> = {
+    Box: 'Square cap',
+    Round: 'Half-round ridge tiles',
+    Angled: 'Angled metal ridge',
+};
+
+const GutterLabels: Readonly<Record<string, string>> = {
+    None: 'None',
+    HalfRound: 'Half-round',
+    Box: 'Box',
+};
+
+const hasGutters = (roof: Record<string, unknown>): boolean => isPitched(roof) && (roof['gutters'] ?? 'None') !== 'None';
+
 const RoofWindowTypeLabels: Readonly<Record<string, string>> = {
     CentrePivot: 'Centre pivot',
     TopHung: 'Top hung',
@@ -124,7 +138,7 @@ export function roofRidgeHint(roof: Record<string, unknown>): string | null {
 
 const ItemKinds = [
     'Sink', 'Hob', 'LedStrip', 'Box', 'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate',
-    'Fixture', 'Fence', 'Column', 'Beam', 'Custom', 'Model',
+    'Fixture', 'Fence', 'Column', 'Beam', 'Chimney', 'Custom', 'Model',
 ] as const;
 
 const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway', 'Garage'] as const;
@@ -166,13 +180,19 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {
             key: 'z',
             label: 'Elevation',
-            labelOf: (item) => (item['onGround'] === true ? 'Above the ground' : 'Elevation'),
+            labelOf: (item) => (item['onGround'] === true ? 'Above the ground' : item['onRoof'] === true ? 'Above the roof' : 'Elevation'),
             type: 'int',
             unit: 'mm',
             half: true,
         },
         {key: 'rotation', label: 'Rotation', type: 'int', unit: '°'},
-        {key: 'onGround', label: 'Stands on the ground (a sloping plot)', type: 'bool'},
+        {key: 'onGround', label: 'Stands on the ground (a sloping plot)', type: 'bool', when: (item) => item['onRoof'] !== true},
+        {
+            key: 'onRoof',
+            label: 'Lies on the roof (a solar panel, a vent tile)',
+            type: 'bool',
+            when: (item) => item['onGround'] !== true && item['kind'] !== 'Chimney',
+        },
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
         {key: 'groupId', label: 'Group', type: 'group', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
@@ -508,6 +528,25 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'parapet', label: 'Parapet (empty: none)', type: 'int', unit: 'mm', nullable: true, half: true, when: (roof) => !isPitched(roof)},
         {key: 'coveringMaterialId', label: 'Covering', type: 'material', nullable: true, half: true},
         {key: 'soffitMaterialId', label: 'Soffit', type: 'material', nullable: true, half: true},
+        {key: 'ridgeStyle', label: 'Ridge', type: 'select', options: Object.keys(RidgeStyleLabels), optionLabels: RidgeStyleLabels, when: isPitched},
+        {key: 'snowGuards', label: 'Rows of snow guards', type: 'int', half: true, when: isPitched},
+        {
+            key: 'gutters',
+            label: 'Gutters',
+            type: 'select',
+            options: Object.keys(GutterLabels),
+            optionLabels: GutterLabels,
+            half: true,
+            when: isPitched,
+        },
+        {key: 'gutterMaterialId', label: 'Gutters and downpipes', type: 'material', nullable: true, when: hasGutters},
+        {
+            key: 'downpipes',
+            label: 'Downpipes [{edge: Front | Back | Left | Right, along}] (JSON, empty: at the corners)',
+            type: 'json',
+            nullable: true,
+            when: hasGutters,
+        },
     ],
     roofWindow: [
         {key: 'name', label: 'Name', type: 'text'},

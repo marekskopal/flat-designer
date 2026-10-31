@@ -22,6 +22,7 @@ final readonly class SceneDto
 	 * @param list<RailingDto> $railings
 	 * @param list<RoofDto> $roofs with their windows
 	 * @param list<int> $pictures the project files the Custom items show as pictures (their `image` parameters)
+	 * @param list<ChimneyFloorDto> $chimneyFloors
 	 */
 	public function __construct(
 		public FloorDto $floor,
@@ -54,6 +55,11 @@ final readonly class SceneDto
 		public array $railings = [],
 		/** The floor above with its voids, which cut this floor's ceilings; null without a floor above. */
 		public ?VoidsAboveDto $voidsAbove = null,
+		/**
+		 * The project's other floors with roofs or chimneys, when it has a chimney (FD-91): the chimneys' tops follow the
+		 * highest roof over them, and those of the floors below rise through this one. Empty without a chimney.
+		 */
+		public array $chimneyFloors = [],
 	)
 	{
 	}

@@ -32,6 +32,8 @@ final readonly class QuantityTools
 		QuantitySurfaceEnum::RoofCovering->value,
 		QuantitySurfaceEnum::Soffit->value,
 		QuantitySurfaceEnum::Facade->value,
+		QuantitySurfaceEnum::Gutter->value,
+		QuantitySurfaceEnum::Downpipe->value,
 	];
 
 	public const array PricesSchema = [
@@ -39,7 +41,7 @@ final readonly class QuantityTools
 		'description' => 'prices to set: {materialId, pricePerArea?, pricePerLength?} for a material (list_materials), or '
 			. '{surface, pricePerArea?, pricePerLength?} for the default look of a surface without a material (e.g. a ceiling '
 			. 'without a material is white plaster). '
-			. 'pricePerArea is per m², pricePerLength per running metre (skirting, edge banding of furniture boards). Both null '
+			. 'pricePerArea is per m², pricePerLength per running metre (skirting, gutters, downpipes, edge banding of furniture boards). Both null '
 			. 'removes the price.',
 		'items' => [
 			'type' => 'object',

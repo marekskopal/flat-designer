@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Model\Repository;
 
+use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Item;
 
 /** @extends ARepository<Item> */
@@ -34,6 +35,25 @@ final class ItemRepository extends ARepository
 			->where(['floor_id', 'IN', $floorIds])
 			->where(['deleted_at' => null])
 			->where(['definition_id', '!=', null])
+			->orderBy('id', 'ASC')
+			->fetchAll();
+	}
+
+	/**
+	 * The chimneys (not deleted) of the floors, in one query (FD-91).
+	 *
+	 * @param list<int> $floorIds
+	 * @return list<Item>
+	 */
+	public function findChimneysOnFloors(array $floorIds): array
+	{
+		if ($floorIds === []) {
+			return [];
+		}
+
+		return $this->select()
+			->where(['floor_id', 'IN', $floorIds])
+			->where(['deleted_at' => null, 'kind' => ItemKindEnum::Chimney->value])
 			->orderBy('id', 'ASC')
 			->fetchAll();
 	}

@@ -3,7 +3,19 @@ import {FurnitureDefinitionBody} from './furniture';
 // Mirrors the backend DTOs (FlatDesigner\Dto). All lengths are millimetres in plan coordinates:
 // origin at the inner south-west corner of the floor, x east, y north.
 
-export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
+export type MaterialPattern =
+    | 'Plain'
+    | 'Wood'
+    | 'Planks'
+    | 'Tiles'
+    | 'Glass'
+    | 'Grass'
+    | 'Gravel'
+    | 'Terrazzo'
+    | 'Brick'
+    | 'Herringbone'
+    /** Round-ended roof tiles in half-bond rows, a row showing `BeaverTailGauge` of a tile's length (FD-91). */
+    | 'BeaverTail';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
@@ -40,6 +52,8 @@ export type ItemKind =
     | 'Column'
     /** A structural downstand beam along its width; z is its soffit. */
     | 'Beam'
+    /** A structural chimney rising through the floors and roofs above (FD-91, `params.shape`, `aboveRoof`, `cap`). */
+    | 'Chimney'
     /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
     | 'Custom'
     /** A bought product drawn from a 3D model (`modelId`, in the scene's `models`), scaled to fit the item's box. */
@@ -231,6 +245,26 @@ export interface Roof {
     coveringMaterialId: number | null;
     soffitMaterialId: number | null;
     windows: RoofWindow[];
+    /** Gutters along a pitched roof's eaves (FD-91); missing in older versions: none. */
+    gutters?: GutterProfile;
+    /** The gutters' and downpipes' material; null titanium zinc. */
+    gutterMaterialId?: number | null;
+    /** null: at the corners of the front and back eaves. */
+    downpipes?: Downpipe[] | null;
+    /** Rows of snow guards on each plane. */
+    snowGuards?: number;
+    ridgeStyle?: RidgeStyle;
+}
+
+export type GutterProfile = 'None' | 'HalfRound' | 'Box';
+export type RidgeStyle = 'Box' | 'Round' | 'Angled';
+/** An eaves edge in the roof's frame: the front (−across, where a shed is low), the back, a hip roof's left (−along) and right. */
+export type RoofEdge = 'Front' | 'Back' | 'Left' | 'Right';
+
+/** A downpipe on an eaves edge, `along` mm from the edge's middle (+ along the ridge, or + across it on the left and right). */
+export interface Downpipe {
+    edge: RoofEdge;
+    along: number;
 }
 
 /** A window in a roof's plane: its centre `along` the ridge and `across` it (+ to the back) from the roof's centre. */
@@ -420,6 +454,8 @@ export interface Item {
     z: number;
     /** z counts from the ground under the item's centre (its plot's terrain), not the floor's level; missing in older versions. */
     onGround?: boolean;
+    /** z counts from the roof's covering under the item's centre and it takes the plane's slope (FD-91); missing in older versions. */
+    onRoof?: boolean;
     width: number;
     depth: number;
     height: number;
@@ -482,6 +518,8 @@ export interface Scene {
     railings?: Railing[];
     /** The floor above with its voids; null without a floor above, absent in older versions. */
     voidsAbove?: VoidsAbove | null;
+    /** The project's other floors with roofs or chimneys, when it has a chimney (FD-91); missing in older versions. */
+    chimneyFloors?: ChimneyFloor[];
     /** Where the building stands, for the sun; absent in older versions. */
     location?: SiteLocation | null;
 }
@@ -545,4 +583,15 @@ export interface SceneDefinition {
     name: string;
     definition: FurnitureDefinitionBody;
     updatedAt: string;
+}
+
+/**
+ * Another floor of a project with chimneys (`ChimneyFloorDto`, FD-91): `offset` mm from this floor's level up to its own
+ * (negative below), its roofs (without windows), which the chimneys' tops reach over, and its chimneys.
+ */
+export interface ChimneyFloor {
+    floorId: number;
+    offset: number;
+    roofs: Roof[];
+    chimneys: Item[];
 }

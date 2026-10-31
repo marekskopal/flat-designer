@@ -348,7 +348,7 @@ export function wallGapsAlongEdge(a: Vec2, b: Vec2, walls: readonly Wall[], tole
 /** Signed area by the shoelace formula, mm²; positive for counter-clockwise polygons. */
 /**
  * The corners of an item's footprint in plan mm, counter-clockwise from its front left (as seen from the front); a
- * round column's is an ellipse of 32 points.
+ * round column's or chimney's is an ellipse of 32 points.
  */
 export function itemFootprint(item: Pick<Item, 'kind' | 'x' | 'y' | 'width' | 'depth' | 'rotation' | 'params'>): Vec2[] {
     const r = (item.rotation * Math.PI) / 180;
@@ -357,7 +357,7 @@ export function itemFootprint(item: Pick<Item, 'kind' | 'x' | 'y' | 'width' | 'd
     const w = item.width / 2;
     const d = item.depth / 2;
     const local: [number, number][] =
-        item.kind === 'Column' && item.params['shape'] === 'round'
+        (item.kind === 'Column' || item.kind === 'Chimney') && item.params['shape'] === 'round'
             ? Array.from({length: 32}, (_, i) => [w * Math.cos((i / 16) * Math.PI), d * Math.sin((i / 16) * Math.PI)])
             : [
                 [-w, -d],
@@ -526,12 +526,12 @@ export function wallColliders(walls: readonly Wall[]): WallCollider[] {
 }
 
 /**
- * Floor-level footprints of the columns among `items`, as wall pieces along their width (a round column by its
+ * Floor-level footprints of the columns and chimneys among `items`, as wall pieces along their width (a round one by its
  * bounding box). Other items do not block walking; beams are above head height.
  */
 export function columnColliders(items: readonly Item[]): WallCollider[] {
     return items
-        .filter((item) => item.kind === 'Column' && item.z < WalkableStep)
+        .filter((item) => (item.kind === 'Column' || item.kind === 'Chimney') && item.z < WalkableStep)
         .map((item) => {
             const angle = (item.rotation * Math.PI) / 180;
             const dir = {x: Math.cos(angle), y: Math.sin(angle)};

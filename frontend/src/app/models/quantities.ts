@@ -9,7 +9,10 @@ export type QuantitySurface =
     | 'Furniture'
     | 'RoofCovering'
     | 'Soffit'
-    | 'Facade';
+    | 'Facade'
+    /** A roof's gutters and its downpipes, by the running metre (FD-91). */
+    | 'Gutter'
+    | 'Downpipe';
 
 /** One material on one surface of a room (`QuantityLineDto`); `materialId` null is the surface's default look. */
 export interface QuantityLine {
@@ -120,4 +123,6 @@ export const SurfaceLabels: Record<QuantitySurface, string> = {
     RoofCovering: 'Roof covering',
     Soffit: 'Soffit',
     Facade: 'Façade',
+    Gutter: 'Gutters',
+    Downpipe: 'Downpipes',
 };

@@ -93,6 +93,25 @@ final class JsonDecoder
 		return $bands;
 	}
 
+	/** @return list<array{edge: string, along: int}> */
+	public static function decodeDownpipes(string $json): array
+	{
+		$data = self::decode($json);
+		if (!is_array($data) || !array_is_list($data)) {
+			throw new RuntimeException('Expected a JSON list of downpipes.');
+		}
+
+		$downpipes = [];
+		foreach ($data as $downpipe) {
+			if (!is_array($downpipe) || !is_string($downpipe['edge'] ?? null) || !is_int($downpipe['along'] ?? null)) {
+				throw new RuntimeException('Downpipe needs an edge and an integer along.');
+			}
+			$downpipes[] = ['edge' => $downpipe['edge'], 'along' => $downpipe['along']];
+		}
+
+		return $downpipes;
+	}
+
 	private static function decode(string $json): mixed
 	{
 		try {

@@ -13,6 +13,7 @@ use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Editor\Element\State;
+use FlatDesigner\Service\Editor\Geometry\RoofGutters;
 use FlatDesigner\Service\Project\FloorProvider;
 use FlatDesigner\Service\Quantities\FacadeSurfaces;
 use FlatDesigner\Service\Quantities\MaterialPriceService;
@@ -33,6 +34,7 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(RoomSurfaces::class)]
 #[CoversClass(RoomFaceUnderRoof::class)]
 #[CoversClass(RoofSurfaces::class)]
+#[CoversClass(RoofGutters::class)]
 #[CoversClass(FacadeSurfaces::class)]
 #[CoversClass(PriceList::class)]
 #[CoversClass(MaterialPriceService::class)]
@@ -237,6 +239,33 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta($slope, $roofLines['Soffit']['area'], 0.01);
 		self::assertNull($roofLines['Soffit']['materialId']);
 		self::assertContains('Roof tiles, red clay (300 × 420)', array_column(self::rows($quantities['materials']), 'material'));
+	}
+
+	/** A gable's gutters run along both eaves with the overhangs, the downpipes at its corners down to the datum (FD-91). */
+	public function testGuttersAndDownpipesCountByTheRunningMetre(): void
+	{
+		$this->create('roofs', [
+			'shape' => 'Gable',
+			'x' => 5000,
+			'y' => 4000,
+			'width' => 10000,
+			'depth' => 8000,
+			'eaveHeight' => 2600,
+			'pitch' => 45,
+			'overhang' => 500,
+			'vergeOverhang' => 300,
+			'gutters' => 'HalfRound',
+		]);
+
+		$roofLines = [];
+		foreach (self::rows(self::rows($this->quantities()['roofs'])[0]['lines']) as $line) {
+			$roofLines[self::stringField($line['surface'])] = $line;
+		}
+		// Two eaves of 10 m with the verges' 0.3 m each; four downpipes from 2.6 − 0.5 m at the overhang's edge to ±0.
+		self::assertEqualsWithDelta(2 * 10.6, $roofLines['Gutter']['length'], 0.01);
+		self::assertEqualsWithDelta(4 * 2.1, $roofLines['Downpipe']['length'], 0.01);
+		self::assertSame(self::material('zinc-titanium')->id, $roofLines['Gutter']['materialId']);
+		self::assertNull($roofLines['Gutter']['area']);
 	}
 
 	public function testAWallFaceTakesItsOwnFinish(): void

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace FlatDesigner\Model\Entity;
 
 use DateTimeImmutable;
+use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
+use FlatDesigner\Model\Entity\Enum\RidgeStyleEnum;
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Repository\RoofRepository;
 use MarekSkopal\ORM\Attribute\Column;
@@ -26,6 +28,25 @@ class Roof extends AEntity
 	/** Set when deleted in the editor; the row stays so undo can bring it back with the same id. */
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
+
+	/** Gutters along the eaves of a pitched roof (FD-91). */
+	#[ColumnEnum(enum: GutterProfileEnum::class)]
+	public GutterProfileEnum $gutters = GutterProfileEnum::None;
+
+	/** The gutters' and downpipes' material; null titanium zinc. */
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $gutterMaterial = null;
+
+	/** JSON `[{edge, along}]`: downpipes on eaves edges (`RoofEdgeEnum`), mm from the edge's middle; null at the eaves' corners. */
+	#[Column(type: Type::Text, nullable: true)]
+	public ?string $downpipes = null;
+
+	/** Rows of snow guards on each pitched plane, from the eaves up. */
+	#[Column(type: Type::Int)]
+	public int $snowGuards = 0;
+
+	#[ColumnEnum(enum: RidgeStyleEnum::class)]
+	public RidgeStyleEnum $ridgeStyle = RidgeStyleEnum::Box;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

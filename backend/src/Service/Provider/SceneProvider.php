@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Provider;
 
+use FlatDesigner\Dto\ChimneyFloorDto;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Dto\FloorVoidDto;
 use FlatDesigner\Dto\GroupDto;
@@ -144,7 +145,43 @@ final readonly class SceneProvider
 				$this->railingRepository->findByFloor($floor->id),
 			),
 			voidsAbove: $this->voidsAbove($floor, $floors, $walls),
+			chimneyFloors: $this->chimneyFloors($floor, $floors),
 		);
+	}
+
+	/**
+	 * The other floors with roofs or chimneys, their levels against this one's; none in a project without chimneys.
+	 *
+	 * @param list<Floor> $floors the project's floors
+	 * @return list<ChimneyFloorDto>
+	 */
+	private function chimneyFloors(Floor $floor, array $floors): array
+	{
+		$ids = array_map(fn (Floor $f): int => $f->id, $floors);
+		$chimneys = [];
+		foreach ($this->itemRepository->findChimneysOnFloors($ids) as $chimney) {
+			$chimneys[$chimney->floor->id][] = ItemDto::fromEntity($chimney);
+		}
+		if ($chimneys === []) {
+			return [];
+		}
+		$roofs = [];
+		foreach ($this->roofRepository->findByFloors($ids) as $roof) {
+			$roofs[$roof->floor->id][] = RoofDto::fromEntity($roof, []);
+		}
+		$result = [];
+		foreach ($floors as $other) {
+			if ($other->id !== $floor->id && (isset($roofs[$other->id]) || isset($chimneys[$other->id]))) {
+				$result[] = new ChimneyFloorDto(
+					$other->id,
+					$other->elevation - $floor->elevation,
+					$roofs[$other->id] ?? [],
+					$chimneys[$other->id] ?? [],
+				);
+			}
+		}
+
+		return $result;
 	}
 
 	/** @return list<FloorVoidDto> */

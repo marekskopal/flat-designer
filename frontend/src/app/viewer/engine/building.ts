@@ -16,6 +16,7 @@ import {
     vaultProfile,
     wallFacesAlongEdge,
 } from './ceilings';
+import {buildChimneysBelow, chimneyOutline, sceneChimneys} from './chimneys';
 import {buildFacades, facadeBands,FacadeLining} from './facades';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
@@ -58,9 +59,9 @@ import {
 } from './plan-geometry';
 import {buildPlot, drapedGeometry, drapedOn, groundBeside} from './plots';
 import {buildRailing} from './railings';
-import {buildRoof, buildRoofOutline} from './roofs';
+import {buildRoof, buildRoofOutline, RoofSurroundings} from './roofs';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
-import {Terrain} from './terrain';
+import {groundAt, Terrain} from './terrain';
 import {alignTiles, turnLevelUvs} from './tiling';
 import {
     ceilingParts,
@@ -115,6 +116,8 @@ export interface BuildingParts {
     voidOutlines: THREE.Group;
     /** The linings of the voids through and over the floor (`buildVoidLinings()`). */
     voidLinings: THREE.Group;
+    /** The chimneys of the floors below rising through this floor (`buildChimneysBelow()`, FD-91). */
+    chimneysBelow: THREE.Group;
 }
 
 export interface RoofParts {
@@ -165,13 +168,23 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         voids: new Map(),
         voidOutlines: new THREE.Group(),
         voidLinings: buildVoidLinings(scene, materials),
+        chimneysBelow: buildChimneysBelow(scene, materials),
     };
     parts.roofOutlines.name = 'roof-outlines';
     parts.roofOutlines.visible = false;
     parts.roofBodies.name = 'roofs';
     parts.voidOutlines.name = 'void-outlines';
     parts.voidOutlines.visible = false;
-    root.add(parts.slab, parts.stairsBelow, parts.roofBodies, parts.roofOutlines, parts.facades, parts.voidOutlines, parts.voidLinings);
+    root.add(
+        parts.slab,
+        parts.stairsBelow,
+        parts.roofBodies,
+        parts.roofOutlines,
+        parts.facades,
+        parts.voidOutlines,
+        parts.voidLinings,
+        parts.chimneysBelow,
+    );
     for (const railing of scene.railings ?? []) {
         addRailing(parts, railing, materials);
     }
@@ -210,8 +223,9 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         root.add(group);
     }
 
+    const surroundings = roofSurroundings(scene);
     for (const roof of scene.roofs ?? []) {
-        addRoof(parts, roof, materials, scene.roofs);
+        addRoof(parts, roof, materials, scene.roofs, surroundings);
     }
 
     ceilings.add(parts.ceilingSteps);
@@ -236,12 +250,30 @@ export function addVoid(parts: BuildingParts, floorVoid: FloorVoid): THREE.Group
 }
 
 /**
+ * What the floor's roofs take of it (FD-91): the chimneys passing through them and the ground their downpipes end on,
+ * the floor's plots or, without any, the project's datum (±0.000).
+ */
+export function roofSurroundings(scene: Scene): RoofSurroundings {
+    const plots = scene.plots ?? [];
+    return {
+        chimneys: sceneChimneys(scene).map(({item}) => chimneyOutline(item)),
+        ground: plots.length > 0 ? (x, y): number => groundAt(plots, x, y) : (): number => -scene.floor.elevation,
+    };
+}
+
+/**
  * Builds a roof and its outline into the building: the roof with the other roofs, the outline with the others. `floorRoofs`
  * are all of the floor's, where it meets them (`buildRoof()`).
  */
-export function addRoof(parts: BuildingParts, roof: Roof, materials: MaterialLibrary, floorRoofs: readonly Roof[] = []): RoofParts {
+export function addRoof(
+    parts: BuildingParts,
+    roof: Roof,
+    materials: MaterialLibrary,
+    floorRoofs: readonly Roof[] = [],
+    surroundings: RoofSurroundings = {},
+): RoofParts {
     const built: RoofParts = {
-        roof: buildRoof(roof, materials, parts.sectionMaterial, floorRoofs),
+        roof: buildRoof(roof, materials, parts.sectionMaterial, floorRoofs, surroundings),
         outline: buildRoofOutline(roof),
         windows: new Map(),
     };

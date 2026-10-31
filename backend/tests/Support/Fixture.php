@@ -11,12 +11,14 @@ use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
 use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
+use FlatDesigner\Model\Entity\Enum\RidgeStyleEnum;
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
@@ -122,8 +124,9 @@ final class Fixture
 	}
 
 	/**
-	 * One room with tiling, a plot, an L stair (balusters, a wall handrail, a lined void), a floor void and a railing, a hip roof with a window, a wall rising to the roof with a door and
-	 * finishes of its own and two items (one with empty params) on the floor.
+	 * One room with tiling, a plot, an L stair (balusters, a wall handrail, a lined void), a floor void and a railing, a hip roof with a window,
+	 * gutters, downpipes, snow guards and round ridge tiles, a wall rising to the roof with a door and finishes of its own, two items (one
+	 * with empty params) on the floor, a chimney and a panel lying on the roof.
 	 */
 	public static function furnishFloor(Floor $floor): void
 	{
@@ -211,6 +214,11 @@ final class Fixture
 			thickness: 280,
 			coveringMaterial: $material,
 		));
+		$roof->gutters = GutterProfileEnum::HalfRound;
+		$roof->gutterMaterial = $material;
+		$roof->downpipes = '[{"edge":"Front","along":-1500},{"edge":"Left","along":0}]';
+		$roof->snowGuards = 2;
+		$roof->ridgeStyle = RidgeStyleEnum::Round;
 		self::service(RoofRepository::class)->persist($roof);
 		self::service(RoofWindowRepository::class)->persist(self::stamp(new RoofWindow(
 			roof: $roof,
@@ -326,6 +334,38 @@ final class Fixture
 		));
 		$planter->onGround = true;
 		$items->persist($planter);
+		$items->persist(self::stamp(new Item(
+			floor: $floor,
+			room: $room,
+			kind: ItemKindEnum::Chimney,
+			name: 'Chimney',
+			x: 3500,
+			y: 2500,
+			z: 20,
+			width: 450,
+			depth: 450,
+			height: 3000,
+			rotation: 0,
+			material: $material,
+			params: '{"shape":"rect","aboveRoof":600,"cap":true}',
+		)));
+		$panel = self::stamp(new Item(
+			floor: $floor,
+			room: null,
+			kind: ItemKindEnum::Box,
+			name: 'Solar panel',
+			x: 1500,
+			y: 600,
+			z: 80,
+			width: 1000,
+			depth: 1700,
+			height: 40,
+			rotation: 0,
+			material: null,
+			params: null,
+		));
+		$panel->onRoof = true;
+		$items->persist($panel);
 	}
 
 	/**

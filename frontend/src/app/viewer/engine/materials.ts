@@ -303,6 +303,15 @@ function tileLayout(dto: MaterialDto): ImageLayout | null {
             draw: (ctx, _image, rng): void => drawBricks(ctx, rng, tileWidth, tileHeight, dto.color),
         };
     }
+    if (dto.pattern === 'BeaverTail') {
+        // Half-bond rows a gauge apart, 4 tiles across and 6 rows up (an even count keeps the bond seamless).
+        const gauge = tileHeight * BeaverTailGauge;
+        return {
+            width: 4 * tileWidth,
+            height: 6 * gauge,
+            draw: (ctx, _image, rng): void => drawBeaverTails(ctx, rng, tileWidth, gauge, dto.color),
+        };
+    }
     if (dto.pattern === 'Herringbone') {
         const length = herringboneLength(tileWidth, tileHeight);
         return {
@@ -494,6 +503,52 @@ function drawBricks(ctx: CanvasRenderingContext2D, rng: () => number, brickLengt
                 ctx.fillRect(x + joint / 2 + rng() * (length - joint), row * course + joint / 2 + rng() * (course - joint), 2, 2);
             }
             ctx.globalAlpha = 1;
+        }
+    }
+}
+
+/** The share of a beaver-tail tile's length a row shows (double-lap tiling, `Costing::BeaverTailGauge`). */
+export const BeaverTailGauge = 0.4;
+
+/**
+ * Beaver-tail clay tiles (FD-91): round-ended tiles `tileWidth` wide in half-bond rows `gauge` apart, the canvas's top
+ * up the slope (the roof's UVs run v up it). A row's tails lie over the row below them, so the rows are drawn from the
+ * eaves up, one beyond each edge so the patch tiles seamlessly; each tile its own shade with a darker rim.
+ */
+function drawBeaverTails(ctx: CanvasRenderingContext2D, rng: () => number, tileWidth: number, gauge: number, color: string): void {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const w = tileWidth / LayoutMmPerPixel;
+    const g = gauge / LayoutMmPerPixel;
+    const gap = Math.max(1, Math.round(4 / LayoutMmPerPixel));
+    const base = new THREE.Color(color);
+    const rows = Math.round(height / g);
+    const across = Math.round(width / w);
+    ctx.fillStyle = `#${shade(base, -0.45).getHexString()}`;
+    ctx.fillRect(0, 0, width, height);
+    // Each row's colours repeat with it across the patch's edge.
+    const tones = Array.from({length: rows}, () => Array.from({length: across}, () => shade(base, (rng() - 0.5) * 0.28)));
+    for (let row = rows; row >= -1; row--) {
+        const bottom = (row + 1) * g;
+        const offset = ((row % 2) + 2) % 2 === 0 ? 0 : w / 2;
+        const tone = tones[((row % rows) + rows) % rows];
+        for (let i = -1; i <= across; i++) {
+            const left = i * w + offset + gap / 2;
+            const right = left + w - gap;
+            const radius = (right - left) / 2;
+            const shoulder = bottom - radius * 0.7;
+            const fill = tone[((i % across) + across) % across];
+            ctx.beginPath();
+            ctx.moveTo(left, bottom - 2.5 * g);
+            ctx.lineTo(left, shoulder);
+            ctx.ellipse(left + radius, shoulder, radius, radius * 0.7, 0, Math.PI, 0, true);
+            ctx.lineTo(right, bottom - 2.5 * g);
+            ctx.closePath();
+            ctx.fillStyle = `#${fill.getHexString()}`;
+            ctx.fill();
+            ctx.strokeStyle = `#${shade(fill, -0.3).getHexString()}`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
     }
 }

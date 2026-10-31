@@ -1,0 +1,58 @@
+{
+ "name": "Solar collector",
+ "description": "Flat-plate solar collector: an aluminium frame round a dark absorber under glass. Place it with onRoof, on a roof or a chimney.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1150,
+   "depth": 2050,
+   "height": 95
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "aluminium-brushed"
+   },
+   {
+    "key": "absorber",
+    "label": "Absorber",
+    "default": "solar-absorber"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Frame",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H - 6",
+    "d": "D",
+    "material": "frame"
+   },
+   {
+    "type": "board",
+    "name": "Absorber",
+    "x": 30,
+    "y": "H - 6",
+    "z": 30,
+    "w": "W - 60",
+    "h": 4,
+    "d": "D - 60",
+    "material": "absorber"
+   },
+   {
+    "type": "glass",
+    "name": "Glazing",
+    "x": 25,
+    "y": "H - 2",
+    "z": 25,
+    "w": "W - 50",
+    "h": 2,
+    "d": "D - 50"
+   }
+  ]
+ }
+}

@@ -23,6 +23,10 @@ enum QuantitySurfaceEnum: string
 	case Soffit = 'Soffit';
 	/** The wall faces outside every room, per material: bands, else the wall's own or the project's façade (FD-88). */
 	case Facade = 'Facade';
+	/** A roof's gutters along its eaves, by the running metre (FD-91). */
+	case Gutter = 'Gutter';
+	/** The downpipes from a roof's gutters to the ground, by the running metre. */
+	case Downpipe = 'Downpipe';
 
 	/** Name of what the viewer draws when the surface has no material. */
 	public function defaultMaterialName(): string
@@ -37,12 +41,14 @@ enum QuantitySurfaceEnum: string
 			self::RoofCovering => 'Roof covering (default)',
 			self::Soffit => 'White-painted soffit',
 			self::Facade => 'Wall finish (default)',
+			self::Gutter => 'Gutter, titanium zinc (default)',
+			self::Downpipe => 'Downpipe, titanium zinc (default)',
 		};
 	}
 
-	/** Skirting is bought by the running metre, the rest by the square metre. */
+	/** Skirting, gutters and downpipes are bought by the running metre, the rest by the square metre. */
 	public function byLength(): bool
 	{
-		return $this === self::Skirting;
+		return $this === self::Skirting || $this === self::Gutter || $this === self::Downpipe;
 	}
 }

@@ -2,6 +2,7 @@ import {Item, PlanPoint, Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {buildBuilding} from './building';
+import {chimneyStretches} from './chimneys';
 import {definitionLibrary} from './custom/custom';
 import {leafObjects, LeafStates} from './doors';
 import {buildItem, ItemAssets} from './items';
@@ -66,8 +67,8 @@ export function rebuildContextItems(
         if (previous !== undefined) {
             dispose(previous);
         }
-        // Its pendants hang from its own roofs, its items on its own ground, not the shown floor's.
-        const floorAssets = {...assets, roofs: scene.roofs ?? [], plots: scene.plots ?? []};
+        // Its pendants hang from its own roofs, its items on its own ground, its chimneys up its own storey, not the shown floor's.
+        const floorAssets = {...assets, roofs: scene.roofs ?? [], plots: scene.plots ?? [], chimneys: chimneyStretches(scene)};
         const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, floorAssets);
         object.visible = !hidden.has(item.id);
         layer.items.set(item.id, object);

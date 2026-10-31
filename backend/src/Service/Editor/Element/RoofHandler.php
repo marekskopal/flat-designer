@@ -82,6 +82,11 @@ final readonly class RoofHandler implements ElementHandler
 			'parapet',
 			'coveringMaterialId',
 			'soffitMaterialId',
+			'gutters',
+			'gutterMaterialId',
+			'downpipes',
+			'snowGuards',
+			'ridgeStyle',
 		];
 	}
 
@@ -113,6 +118,7 @@ final readonly class RoofHandler implements ElementHandler
 			'parapet' => null,
 			'coveringMaterialId' => null,
 			'soffitMaterialId' => null,
+			...RoofDetails::Defaults,
 		];
 	}
 
@@ -138,7 +144,7 @@ final readonly class RoofHandler implements ElementHandler
 	/** @return array<string, mixed> */
 	public function normalize(Floor $floor, array $state, ?AEntity $current): array
 	{
-		$fields = new FieldReader($state);
+		$fields = new FieldReader($state + RoofDetails::Defaults);
 		$shape = $fields->enum('shape', RoofShapeEnum::class);
 		$parapet = $fields->nullableInt('parapet', self::MinParapet, self::MaxParapet);
 		if ($parapet !== null && $shape !== RoofShapeEnum::Flat) {
@@ -152,6 +158,10 @@ final readonly class RoofHandler implements ElementHandler
 		$soffitMaterialId = $fields->nullableId('soffitMaterialId');
 		$this->materialResolver->resolve($coveringMaterialId);
 		$this->materialResolver->resolve($soffitMaterialId);
+		$gutterMaterialId = $fields->nullableId('gutterMaterialId');
+		$this->materialResolver->resolve($gutterMaterialId);
+		$width = $fields->int('width', self::MinSide, self::MaxSide);
+		$depth = $fields->int('depth', self::MinSide, self::MaxSide);
 
 		return [
 			'name' => $fields->string('name', 255),
@@ -159,8 +169,8 @@ final readonly class RoofHandler implements ElementHandler
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
 			'y' => $fields->int('y', -State::CoordinateLimit, State::CoordinateLimit),
 			'rotation' => (($fields->int('rotation', -3600, 3600, 'degrees') % 360) + 360) % 360,
-			'width' => $fields->int('width', self::MinSide, self::MaxSide),
-			'depth' => $fields->int('depth', self::MinSide, self::MaxSide),
+			'width' => $width,
+			'depth' => $depth,
 			'eaveHeight' => $fields->int('eaveHeight', 0, State::MaxSize),
 			'pitch' => $fields->int('pitch', self::MinPitch, self::MaxPitch, 'degrees'),
 			'overhang' => $fields->int('overhang', 0, self::MaxOverhang),
@@ -169,6 +179,8 @@ final readonly class RoofHandler implements ElementHandler
 			'parapet' => $parapet,
 			'coveringMaterialId' => $coveringMaterialId,
 			'soffitMaterialId' => $soffitMaterialId,
+			'gutterMaterialId' => $gutterMaterialId,
+			...RoofDetails::normalize($fields, $shape, $width, $depth, $current === null ? null : self::cast($current)),
 		];
 	}
 
@@ -284,6 +296,8 @@ final readonly class RoofHandler implements ElementHandler
 		$roof->parapet = $fields->nullableInt('parapet', self::MinParapet, self::MaxParapet);
 		$roof->coveringMaterial = $this->materialResolver->resolve($fields->nullableId('coveringMaterialId'));
 		$roof->soffitMaterial = $this->materialResolver->resolve($fields->nullableId('soffitMaterialId'));
+		$roof->gutterMaterial = $this->materialResolver->resolve($fields->nullableId('gutterMaterialId'));
+		RoofDetails::apply($roof, $fields);
 		$this->roofRepository->persist($roof);
 	}
 

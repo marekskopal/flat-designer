@@ -43,6 +43,13 @@ class Item extends AEntity
 	#[Column(type: Type::Boolean)]
 	public bool $onGround = false;
 
+	/**
+	 * The item lies on the roof (FD-91): `z` counts from the top of the floor's roof covering under its centre, and the
+	 * item takes the slope of the plane there (a solar panel, a vent tile, a roof step).
+	 */
+	#[Column(type: Type::Boolean)]
+	public bool $onRoof = false;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

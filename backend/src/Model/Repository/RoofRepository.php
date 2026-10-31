@@ -18,6 +18,25 @@ final class RoofRepository extends ARepository
 			->fetchAll();
 	}
 
+	/**
+	 * The roofs (not deleted) of the floors, in one query.
+	 *
+	 * @param list<int> $floorIds
+	 * @return list<Roof>
+	 */
+	public function findByFloors(array $floorIds): array
+	{
+		if ($floorIds === []) {
+			return [];
+		}
+
+		return $this->select()
+			->where(['floor_id', 'IN', $floorIds])
+			->where(['deleted_at' => null])
+			->orderBy('id', 'ASC')
+			->fetchAll();
+	}
+
 	/** Including a deleted one, for undo and redo. */
 	public function findOnFloor(int $floorId, int $roofId): ?Roof
 	{

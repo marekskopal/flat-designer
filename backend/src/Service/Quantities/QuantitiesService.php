@@ -72,14 +72,17 @@ final readonly class QuantitiesService
 			);
 			usort($floorRooms, static fn (QuantityRoomDto $x, QuantityRoomDto $y): int => strnatcmp($x->code, $y->code));
 			array_push($rooms, ...$floorRooms);
-			foreach (RoofSurfaces::of($scene->roofs, $materials, $cover) as $roof) {
+			// Downpipes end on the floor's plots, else at the project's datum (±0.000).
+			$plots = Ground::fromDtos($scene->plots);
+			$ground = $scene->plots === [] ? static fn (): float => (float) -$floor->elevation : $plots->at(...);
+			foreach (RoofSurfaces::of($scene->roofs, $materials, $cover, $ground) as $roof) {
 				$roofs[] = self::roof($costing, $floor, $roof);
 			}
 			$facade = self::facade($costing, $floor, FacadeSurfaces::of(
 				$scene->walls,
 				$scene->rooms,
 				$cover->roofs,
-				Ground::fromDtos($scene->plots),
+				$plots,
 				$scene->exteriorMaterialId,
 			));
 			if ($facade !== null) {

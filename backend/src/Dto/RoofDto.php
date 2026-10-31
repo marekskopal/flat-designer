@@ -5,11 +5,18 @@ declare(strict_types=1);
 namespace FlatDesigner\Dto;
 
 use FlatDesigner\Model\Entity\Roof;
+use FlatDesigner\Service\Json\JsonDecoder;
 
-/** A roof as the scene serves it, with its windows (elements of their own, as a wall's openings are). */
+/**
+ * A roof as the scene serves it, with its windows (elements of their own, as a wall's openings are), and its rainwater
+ * goods, snow guards and ridge (FD-91).
+ */
 final readonly class RoofDto
 {
-	/** @param list<RoofWindowDto> $windows */
+	/**
+	 * @param list<RoofWindowDto> $windows
+	 * @param list<array{edge: string, along: int}>|null $downpipes null: at the eaves' corners
+	 */
 	public function __construct(
 		public int $id,
 		public string $name,
@@ -28,6 +35,11 @@ final readonly class RoofDto
 		public ?int $coveringMaterialId,
 		public ?int $soffitMaterialId,
 		public array $windows,
+		public string $gutters = 'None',
+		public ?int $gutterMaterialId = null,
+		public ?array $downpipes = null,
+		public int $snowGuards = 0,
+		public string $ridgeStyle = 'Box',
 	) {
 	}
 
@@ -52,6 +64,11 @@ final readonly class RoofDto
 			coveringMaterialId: $roof->coveringMaterial?->id,
 			soffitMaterialId: $roof->soffitMaterial?->id,
 			windows: $windows,
+			gutters: $roof->gutters->value,
+			gutterMaterialId: $roof->gutterMaterial?->id,
+			downpipes: $roof->downpipes === null ? null : JsonDecoder::decodeDownpipes($roof->downpipes),
+			snowGuards: $roof->snowGuards,
+			ridgeStyle: $roof->ridgeStyle->value,
 		);
 	}
 }

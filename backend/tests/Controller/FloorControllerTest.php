@@ -111,7 +111,8 @@ final class FloorControllerTest extends IntegrationTestCase
 		self::assertIsList($scene['walls']);
 		self::assertCount(1, $scene['walls']);
 		self::assertIsList($scene['items']);
-		self::assertCount(3, $scene['items']);
+		// `Fixture::furnishFloor()`'s base, worktop, planter, chimney and roof panel.
+		self::assertCount(5, $scene['items']);
 	}
 
 	public function testFloorsOfOtherProjectsAreNotFound(): void

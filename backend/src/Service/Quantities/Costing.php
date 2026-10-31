@@ -26,7 +26,11 @@ final readonly class Costing
 		MaterialPatternEnum::Herringbone,
 		MaterialPatternEnum::Terrazzo,
 		MaterialPatternEnum::Brick,
+		MaterialPatternEnum::BeaverTail,
 	];
+
+	/** The share of a beaver-tail tile's length a row shows (double-lap tiling; `materials.ts` draws the rows so). */
+	public const float BeaverTailGauge = 0.4;
 
 	/** @param array<int, MaterialDto> $materials by id */
 	public function __construct(private PriceList $prices, private array $materials, private float $waste)
@@ -148,7 +152,11 @@ final readonly class Costing
 			return null;
 		}
 
-		return $material->tileWidth * $material->tileHeight / 1000000;
+		$length = $material->pattern === MaterialPatternEnum::BeaverTail
+			? $material->tileHeight * self::BeaverTailGauge
+			: $material->tileHeight;
+
+		return $material->tileWidth * $length / 1000000;
 	}
 
 	private static function times(?float $amount, ?float $price): ?float

@@ -377,6 +377,44 @@ describe('planSheet fixes from review', () => {
         expect(svg).toContain('stroke-dasharray');
     });
 
+    it('fills a chimney like the walls, its own and one coming up from below, and dashes the gutters with the downpipes round (FD-91)', () => {
+        const chimney = item(5, {kind: 'Chimney', name: 'Chimney', x: 1000, y: 1000, width: 450, depth: 450, height: 3000});
+        const below = item(6, {...chimney, id: 6, x: 3000, y: 2000, params: {shape: 'round'}});
+        const filled = (svg: string): number => wallPaths(svg).length;
+        const plain = filled(planSheet(scene({}), info).svg);
+        const svg = planSheet(scene({items: [chimney], chimneyFloors: [{floorId: 2, offset: -2900, roofs: [], chimneys: [below]}]}), info).svg;
+        expect(filled(svg)).toBe(plain + 2);
+        // Its name is not written in it.
+        expect(svg).not.toContain('>Chimney<');
+
+        const gable = {
+            id: 1,
+            name: 'Roof',
+            shape: 'Gable' as const,
+            x: 2000,
+            y: 1500,
+            rotation: 0,
+            width: 4600,
+            depth: 3600,
+            eaveHeight: 2600,
+            pitch: 45,
+            overhang: 400,
+            vergeOverhang: 200,
+            thickness: 250,
+            parapet: null,
+            coveringMaterialId: null,
+            soffitMaterialId: null,
+            windows: [],
+        };
+        const roofDashes = (sheet: string): number => (sheet.match(/stroke-dasharray="2 0.8"/g) ?? []).length;
+        const pipes = (sheet: string): number => (sheet.match(/fill="#ffffff" stroke="#2f2c28" stroke-width="0.18"/g) ?? []).length;
+        const bare = planSheet(scene({roofs: [gable]}), info).svg;
+        const guttered = planSheet(scene({roofs: [{...gable, gutters: 'HalfRound'}]}), info).svg;
+        // Two eaves' gutters; the four downpipes at the corners.
+        expect(roofDashes(guttered)).toBe(roofDashes(bare) + 2);
+        expect(pipes(guttered)).toBe(pipes(bare) + 4);
+    });
+
     it('draws a round column as a circle', () => {
         const svg = planSheet(scene({items: [item(1, {kind: 'Column', name: 'C1', width: 300, depth: 300, params: {shape: 'round'}})]}), info).svg;
         const column = svg.match(/<path d="M[^"]*" fill="#2f2c28"\/>/g)?.find((p) => (p.match(/ L /g) ?? []).length === 31);

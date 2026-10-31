@@ -1,8 +1,9 @@
 import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
-import {FloorVoid, isAncillaryRoom, isOutdoorRoom, Item, Opening, PlanPoint, Plot, Railing, Room, Scene, Wall} from '@app/models/scene';
+import {FloorVoid, isAncillaryRoom, isOutdoorRoom, Item, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
+import {isChimney, sceneChimneys} from './chimneys';
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
 import {itemsOverFloor} from './items';
 import {
@@ -29,6 +30,7 @@ import {
     wallPieces,
     wallSamples,
 } from './plan-geometry';
+import {DownpipeRadius, gutterOffset, roofDownpipes, roofGutters} from './rainwater';
 import {roofPlanes, roofToPlan, roofVerticalThickness, roofWindowLayouts} from './roof-geometry';
 import {
     frameSvg,
@@ -158,11 +160,13 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const walls = wallShapes(scene.walls, scene.roofs ?? []);
     const openings = scene.walls.flatMap((wall) => openingShapes(wall, scene.roofs ?? []));
     const stairs = stairPlanShapes(scene);
-    const roofs = roofPlanShapes(scene.roofs ?? []);
+    const roofs = [...roofPlanShapes(scene.roofs ?? []), ...rainwaterShapes(scene.roofs ?? [])];
+    const chimneysBelow = sceneChimneys(scene).flatMap(({item, offset}) => (offset === 0 ? [] : [itemShape(item)]));
     const voids = (scene.voids ?? []).flatMap(voidShapes);
     const railings = (scene.railings ?? []).map(railingShape);
 
-    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs, ...voids, ...railings]);
+    const drawn = [...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs, ...voids, ...railings, ...chimneysBelow];
+    const bounds = shapeBounds(drawn);
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
@@ -186,7 +190,20 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
 
     const body = [
         ...[
-            ...[...plots, ...contours, ...crosses, ...rooms, ...voids, ...stairs.shapes, ...railings, ...roofs, ...walls, ...openings, ...itemShapes],
+            ...[
+                ...plots,
+                ...contours,
+                ...crosses,
+                ...rooms,
+                ...voids,
+                ...stairs.shapes,
+                ...railings,
+                ...roofs,
+                ...walls,
+                ...openings,
+                ...itemShapes,
+                ...chimneysBelow,
+            ],
             ...labels.flatMap((l) => l.shapes ?? []),
         ].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
@@ -361,6 +378,41 @@ function roofPlanShapes(roofs: FloorRoofs): Shape[] {
         }
     }
     return [...dashed, ...seen, ...sections];
+}
+
+/**
+ * The roofs' rainwater goods (FD-91): the gutters' outer edge dashed above the cut, and the downpipes, which the cut
+ * passes, as small circles.
+ */
+function rainwaterShapes(roofs: readonly Roof[]): Shape[] {
+    return roofs.flatMap((roof, index): Shape[] => {
+        const profile = roof.gutters ?? 'None';
+        if (profile === 'None' || roof.shape === 'Flat') {
+            return [];
+        }
+        const runs = roofGutters(roofs, index);
+        const reach = 2 * gutterOffset(profile) - 10;
+        const gutters = runs.map((run): Shape => {
+            const length = Math.hypot(run.to.x - run.from.x, run.to.y - run.from.y) || 1;
+            const out = {x: (run.to.y - run.from.y) / length, y: -(run.to.x - run.from.x) / length};
+            return {
+                points: [run.from, run.to].map((p) => ({x: p.x + out.x * reach, y: p.y + out.y * reach})),
+                closed: false,
+                style: RoofStyle,
+            };
+        });
+        const pipes = roofDownpipes(roof, roof.downpipes, runs).map(
+            ({at}): Shape => ({
+                points: Array.from({length: 12}, (_, i) => ({
+                    x: at.x + DownpipeRadius * Math.cos((i * Math.PI) / 6),
+                    y: at.y + DownpipeRadius * Math.sin((i * Math.PI) / 6),
+                })),
+                closed: true,
+                style: {fill: '#ffffff', stroke: Ink, width: 0.18},
+            }),
+        );
+        return [...gutters, ...pipes];
+    });
 }
 
 /** Contour lines of a sloping plot, mm apart; every `ContourMajor` mm drawn heavier. */
@@ -763,10 +815,13 @@ function stairAngle(geometry: StairGeometry): number {
     return b === undefined ? 0 : Math.atan2(b.point.y - a.point.y, b.point.x - a.point.x);
 }
 
-/** An item's footprint: a column filled like the walls, an item above the cut (a wall cabinet, a beam, a lamp) dashed. */
+/**
+ * An item's footprint: a column or chimney filled like the walls (a round chimney round), an item above the cut (a wall
+ * cabinet, a beam, a lamp, a panel on the roof) dashed.
+ */
 function itemShape(item: Item): Shape {
     const style: Style =
-        item.kind === 'Column'
+        item.kind === 'Column' || isChimney(item)
             ? {fill: WallFill}
             : item.z >= PlanCutHeight
               ? {stroke: Muted, width: 0.15, dash: '1 0.7'}
@@ -774,9 +829,9 @@ function itemShape(item: Item): Shape {
     return {points: itemFootprint(item), closed: true, style};
 }
 
-/** The item's name in its footprint, along its width or else its depth, if it fits; none for columns and items above the cut. */
+/** The item's name in its footprint, along its width or else its depth, if it fits; none for columns, chimneys and items above the cut. */
 function itemLabel(item: Item, scale: number): Label[] {
-    if (item.kind === 'Column' || item.z >= PlanCutHeight || item.name.trim() === '') {
+    if (item.kind === 'Column' || isChimney(item) || item.z >= PlanCutHeight || item.name.trim() === '') {
         return [];
     }
     const r = (item.rotation * Math.PI) / 180;

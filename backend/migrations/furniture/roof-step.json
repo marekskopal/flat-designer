@@ -1,0 +1,60 @@
+{
+ "name": "Roof step",
+ "description": "Walkway step for a pitched roof: a grating tread on two side brackets, levelled for the roof's pitch. Place it with onRoof, its front down the slope.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 420,
+   "depth": 250,
+   "height": 240
+  },
+  "parameters": [
+   {
+    "key": "pitch",
+    "label": "Roof pitch",
+    "type": "int",
+    "default": 40,
+    "min": 0,
+    "max": 60,
+    "unit": "°"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "metal",
+    "label": "Metal",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Bracket",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 30)",
+    "y": 0,
+    "z": 0,
+    "w": 30,
+    "h": "H",
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "board",
+    "name": "Tread",
+    "x": 30,
+    "y": 30,
+    "z": 0,
+    "w": "W - 60",
+    "h": 30,
+    "d": "D",
+    "material": "metal",
+    "tilt": {
+     "expr": "pitch"
+    }
+   }
+  ]
+ }
+}

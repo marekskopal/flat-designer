@@ -1,6 +1,7 @@
 import {Item} from '@app/models/scene';
 import * as THREE from 'three';
 
+import {buildChimneyBody, ChimneyStretch} from './chimneys';
 import {MaterialLibrary} from './materials';
 import {boxAt} from './meshes';
 import {MM} from './plan-geometry';
@@ -11,10 +12,15 @@ const RoundSegments = 32;
 
 /**
  * Structural items in the item-local frame (bottom centre origin, x along the width, +z out of the front): a
- * `Column`, square or round (`params.shape`), and a `Beam` along the width. Like wall pieces, every mesh has an
+ * `Column`, square or round (`params.shape`), a `Beam` along the width and a `Chimney` (FD-91), the stretch of it the
+ * floor draws (`chimney`: undefined its own height with its cap, null nothing). Like wall pieces, every mesh has an
  * inside-out twin in the section fill, so the section plane shows a solid cut. Returns null for other kinds.
  */
-export function buildStructureItemBody(item: Item, materials: MaterialLibrary): THREE.Group | null {
+export function buildStructureItemBody(item: Item, materials: MaterialLibrary, chimney?: ChimneyStretch | null): THREE.Group | null {
+    if (item.kind === 'Chimney') {
+        const stretch = chimney === undefined ? {bottom: item.z, top: item.z + item.height, cap: true} : chimney;
+        return stretch === null ? new THREE.Group() : buildChimneyBody(item, stretch, materials);
+    }
     if (item.kind !== 'Column' && item.kind !== 'Beam') {
         return null;
     }

@@ -462,6 +462,41 @@ format is the text in `FurnitureTools::Format`.
   `railingMaterialId` (null: the structure's); `wallHandrail` (None, Left, Right, Both) adds a rail on brackets
   `WallRailOffset` in from that side (`buildWallHandrail()`, `offsetLine()`), `RailHeight` over the nosings.
 
+## Chimneys and roof details (FD-91)
+
+- Chimneys: the structural item kind `Chimney` (`params.shape` rect or round, `aboveRoof` mm, default 600, `cap` false
+  leaves out the metal cap; `StructureParamsValidator`), on the floor it starts from (`StructureSize` stands it on its room's
+  floor). Its top is `aboveRoof` over the highest roof covering its outline (`itemFootprint()`) on its floor or higher,
+  else its own `height` (`chimneyTop()` in `viewer/engine/chimneys.ts`, TS only). The scene's `chimneyFloors`
+  (`ChimneyFloorDto`, empty in a project without chimneys; `SnapshotScenes` derives them for a version) are the other
+  floors with roofs or chimneys and their level `offset`. Each floor draws the stretch passing through it
+  (`chimneyStretch()`, `sceneChimneys()`): its own from their foot (the item builder, `ItemAssets.chimneys`, the stack's
+  context floors with their own), those of the floors at or below its level from its level (`buildChimneysBelow()`,
+  `parts.chimneysBelow`, untagged), each up to the next floor's level (`voidsAbove.rise`) or the top with its cap, so the
+  stack's floors meet. `buildRoof()` cuts every chimney passing through out of the planes and the ridge and hip caps
+  (`RoofSurroundings.chimneys`, upright holes). The plan PDF fills them like columns, the walkthrough collides with them;
+  `ItemPlacement` keeps them (and every structural kind) off `onRoof`. Quantities do not count them.
+- Roof details (`RoofDetails`, missing in older states and snapshots: none): `gutters` (None, HalfRound, Box) along the
+  eaves of a pitched roof (a gable's front and back, a shed's front, a hip's four sides; `RoofEdgeEnum`) and
+  `gutterMaterialId` (null `zinc-titanium`); `downpipes` `[{edge, along}]` (mm from the edge's middle on the eaves line;
+  null at the ends of the front and back eaves, `CornerInset` in), checked only when given anew; `snowGuards` rows per
+  plane; `ridgeStyle` (Box, Round half-round ridge tiles, Angled metal). A flat roof given anew gutters or snow guards is
+  refused, one made flat leaves them behind. The twins are `RoofGutters` (`Service/Editor/Geometry`) and
+  `roofGutters()` / `roofDownpipes()` (`viewer/engine/rainwater.ts`): gutters on the overhang's edge where the roof is
+  the top (`topStretches()`, stopping under a higher roof, as the caps do), downpipes `DownpipeOffset` off the eaves line, one whose outlet
+  misses a gutter left out; kept identical by `backend/tests/fixtures/roof-gutters.json`. **Always change both twins and
+  add a fixture case in the same change.** `buildRoof()` draws them in the roof's group, the downpipes down to the
+  ground (`RoofSurroundings.ground`: the floor's plots, else the datum ±0.000; a plot change rebuilds the roofs with
+  gutters); the plan PDF dashes the gutters and draws the downpipes as circles. Quantities: surfaces `Gutter` and `Downpipe`, by the running metre (`RoofSurfaces`).
+- Items on the roof: `items.on_roof` (`onRoof`, not with `onGround`): `z` counts from the top of the floor's highest
+  roof covering under the item's centre and the item is turned onto that plane's slope (`layOnRoof()` / `roofUnder()` in
+  `items.ts`; `itemsOverFloor()` adds the roof's top for the sheets). A roof change rebuilds them. The seeded definitions
+  `roof-vent-tile`, `roof-step` (its tread levelled by a `pitch` parameter), `solar-collector` and `satellite-dish`
+  (`SeedRoofAccessoriesMigration`) go there or on a chimney.
+- The material pattern `BeaverTail` (`roof-tiles-beaver-clay`, 180 × 380): round-ended tiles in half-bond rows
+  `BeaverTailGauge` (0.4) of a tile's length apart (`drawBeaverTails()`), counted in pieces of that visible gauge.
+- `ConvertBuiltInFurnitureTest` puts back the current `items.kind` enum after running an older migration's down/up.
+
 ## Roofs (FD-38)
 
 - The plan is `docs/roofs-plan.md`. A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,

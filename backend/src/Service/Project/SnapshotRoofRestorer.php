@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Project;
 
+use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
+use FlatDesigner\Model\Entity\Enum\RidgeStyleEnum;
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
@@ -13,6 +15,7 @@ use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Service\Editor\Element\State;
+use const JSON_THROW_ON_ERROR;
 
 /** Restores a floor's roofs and their windows from a snapshot. An enum value it does not know (a case renamed since) takes the default, as the openings' do. */
 final readonly class SnapshotRoofRestorer
@@ -49,6 +52,13 @@ final readonly class SnapshotRoofRestorer
 				coveringMaterial: $materials[$data->nullableInt('coveringMaterialId') ?? 0] ?? null,
 				soffitMaterial: $materials[$data->nullableInt('soffitMaterialId') ?? 0] ?? null,
 			));
+			// Snapshots taken before FD-91 have no rainwater goods, snow guards or ridge style.
+			$roof->gutters = GutterProfileEnum::tryFrom((string) $data->nullableString('gutters')) ?? GutterProfileEnum::None;
+			$roof->gutterMaterial = $materials[$data->nullableInt('gutterMaterialId') ?? 0] ?? null;
+			$downpipes = $data->raw('downpipes');
+			$roof->downpipes = is_array($downpipes) ? json_encode($downpipes, JSON_THROW_ON_ERROR) : null;
+			$roof->snowGuards = $data->nullableInt('snowGuards') ?? 0;
+			$roof->ridgeStyle = RidgeStyleEnum::tryFrom((string) $data->nullableString('ridgeStyle')) ?? RidgeStyleEnum::Box;
 			$this->roofRepository->persist($roof);
 
 			foreach ($data->objects('windows') as $window) {

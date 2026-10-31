@@ -6,7 +6,6 @@ namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
 use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\OpeningLook;
@@ -18,6 +17,7 @@ use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\Geometry\WallLine;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
+use FlatDesigner\Service\Editor\StructureParamsValidator;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -33,7 +33,7 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(RoomCeiling::class)]
 #[CoversClass(StructureSize::class)]
 #[CoversClass(PolygonValidator::class)]
-#[CoversClass(ColumnParamsValidator::class)]
+#[CoversClass(StructureParamsValidator::class)]
 #[CoversClass(WallCurve::class)]
 #[CoversClass(WallLine::class)]
 final class ElementControllerTest extends EditorTestCase

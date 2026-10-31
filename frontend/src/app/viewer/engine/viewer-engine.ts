@@ -36,7 +36,9 @@ import {
     buildSlab,
     buildWall,
     hasFaceFinishes,
+    roofSurroundings,
 } from './building';
+import {buildChimneysBelow, chimneyStretches, isChimney, sceneChimneys} from './chimneys';
 import {CommentPin, CommentPins, CommentPoint, commentPointOf} from './comments';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
@@ -728,6 +730,12 @@ export class ViewerEngine {
         // The ground: items standing on it and rooms, whose floor or edge follows it, go with a changed plot.
         const plots = diffById(previous.plots ?? [], scene.plots ?? []);
         const plotsChanged = plots.removed.length > 0 || plots.changed.length > 0;
+        // The chimneys (FD-91) reach over the roofs, of this floor and the others, up to the next floor's level; the roofs
+        // are cut round them and their downpipes end on the ground.
+        const stackChanged =
+            !sameJson(previous.chimneyFloors ?? [], scene.chimneyFloors ?? []) ||
+            (previous.voidsAbove?.rise ?? null) !== (scene.voidsAbove?.rise ?? null);
+        const chimneysMoved = !sameJson(roofSurroundings(previous).chimneys, roofSurroundings(scene).chimneys);
         // Tiled items follow their room's tile grid; Custom items their definition.
         const changedRooms = new Set(rooms.changed.map((r) => r.id));
         const changedItems = new Set(items.changed.map((i) => i.id));
@@ -741,7 +749,9 @@ export class ViewerEngine {
                 this.showsPicture(i, changedPictures) ||
                 (i.kind === 'Model' && i.modelId != null && changedModels.has(i.modelId)) ||
                 (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)) ||
-                (plotsChanged && standsOnGround(i)),
+                (plotsChanged && standsOnGround(i)) ||
+                (isChimney(i) && (roofsChanged || stackChanged)) ||
+                (i.onRoof === true && roofsChanged),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -866,7 +876,15 @@ export class ViewerEngine {
 
         // The roofs: a changed one is drawn anew, with its outline, and so are those it met before or meets now (their
         // junctions with it).
-        const met = floorRoofs.filter((roof) => !roofIds.has(roof.id) && touchedRoofs.some((touched) => roofsMeet(roof, touched)));
+        // Every roof when the chimneys through them changed; those with gutters when the ground under their downpipes did.
+        const groundChanged = plotsChanged || previous.floor.elevation !== scene.floor.elevation;
+        const met = floorRoofs.filter(
+            (roof) =>
+                !roofIds.has(roof.id) &&
+                (chimneysMoved ||
+                    (groundChanged && (roof.gutters ?? 'None') !== 'None') ||
+                    touchedRoofs.some((touched) => roofsMeet(roof, touched))),
+        );
         for (const id of [...roofs.removed, ...roofs.changed.map((r) => r.id), ...met.map((r) => r.id)]) {
             const built = parts.roofs.get(id);
             if (built !== undefined) {
@@ -875,9 +893,15 @@ export class ViewerEngine {
                 parts.roofs.delete(id);
             }
         }
-        [...roofs.changed, ...met].forEach((roof) => addRoof(parts, roof, materials, floorRoofs));
-        if (roofsChanged) {
+        const surroundings = roofSurroundings(scene);
+        [...roofs.changed, ...met].forEach((roof) => addRoof(parts, roof, materials, floorRoofs, surroundings));
+        if (roofsChanged || met.length > 0) {
             this.highlightRoofs();
+        }
+        if (roofsChanged || stackChanged) {
+            this.disposeObject(parts.chimneysBelow);
+            parts.chimneysBelow = buildChimneysBelow(scene, materials);
+            parts.root.add(parts.chimneysBelow);
         }
 
         // The slab lies under the rooms and the walls.
@@ -1033,6 +1057,7 @@ export class ViewerEngine {
             pictures: this.pictureLibrary,
             roofs: scene.roofs ?? [],
             plots: scene.plots ?? [],
+            chimneys: chimneyStretches(scene),
         };
     }
 
@@ -3554,7 +3579,8 @@ export class ViewerEngine {
         const windowId = this.selection?.kind === 'roofWindow' ? this.selection.id : null;
         highlightRoofOutline(outline, windowId === null, windowId);
         const others = (this.sceneData?.roofs ?? []).filter((r) => r.id !== roof.id);
-        const body = this.roofBodySeen(resized) ? buildRoof(resized, materials, this.parts.sectionMaterial, others) : null;
+        const surroundings = this.sceneData === null ? {} : roofSurroundings(this.sceneData);
+        const body = this.roofBodySeen(resized) ? buildRoof(resized, materials, this.parts.sectionMaterial, others, surroundings) : null;
         this.setPreview([built.roof, built.outline], body === null ? [outline] : [body, outline]);
         // With the other roofs (hidden with them) and outlines (at their height over the plan).
         if (body !== null) {
@@ -3855,14 +3881,16 @@ export class ViewerEngine {
 }
 
 /**
- * What the walker collides with: the walls, the shown columns, the stairs' sides and voids (`stairColliders()`), the
- * railings and the edges of the floor's voids; door leaves come on top, as they move.
+ * What the walker collides with: the walls, the shown columns and chimneys, the stairs' sides and voids
+ * (`stairColliders()`), the railings and the edges of the floor's voids; door leaves come on top, as they move.
  */
 function sceneColliders(scene: Scene, stairs: readonly StairPath[]): WallCollider[] {
     const hidden = hiddenItemIds(scene);
     return [
         ...wallColliders(scene.walls),
         ...columnColliders(scene.items.filter((item) => !hidden.has(item.id))),
+        // The chimneys of the floors below rising through this one.
+        ...columnColliders(sceneChimneys(scene).flatMap(({item, own, stretch}) => (own ? [] : [{...item, z: stretch.bottom}]))),
         ...stairColliders(stairs),
         ...railingColliders(scene.railings ?? []),
         ...voidColliders(scene.voids ?? [], stairs),
