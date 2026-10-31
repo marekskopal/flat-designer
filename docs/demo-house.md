@@ -340,6 +340,37 @@ from them. Colours and sizes were judged against the photos in the scratch proje
 | Curved garden wall | `drystone-grey` | Stone 400 × 130 (random coursed) |
 | Lavender beds | `lavender-bed` | Grass |
 
+## Furniture and models
+
+Global definitions seeded by `SeedDemoHouseFurniture` (FD-93), and CC0 Poly Haven models kept in
+`source_files/demo-house/models/` (never committed; the originals in `src/`, optimised as the flat's, the tree with
+`--simplify-error 0.003` and its leaves masked instead of blended) and imported with
+`make import-models DIR=source_files/demo-house/models`.
+
+| What | Definition or model | Notes |
+| --- | --- | --- |
+| Fireplace (photos 09b, 10) | Corner fireplace | Glass on the front and the open end, logs on the plinth, slatted grille in the hood. The fire is a steady light: flickering would keep the on-demand renderer drawing every frame, so it is left out. |
+| Dining bench (12, 13) | Built-in bench with an upholstered back | |
+| Poufs | Pouf | 450 × 420 and 380 × 380 (item sizes); a cylinder with rounded edges (`radius`, new for cylinders). |
+| Pendant over the table | Linear pendant, oak | Two cables to the ceiling, two spots down. |
+| Ceiling lights | Square ceiling light, oak frame | |
+| Bathroom wall light (20) | Linear wall light, oak | |
+| Double vanity (19, 20) | Wall-hung vanity with vessel basins | Basins and spouts drawn by the definition (no model needed). |
+| Walk-in shower | Walk-in shower with a rain head | Glass, rod, rain head, mixer, linear drain. |
+| Freestanding bath | Freestanding bath | Rounded walls, not oval (the parts are boxes and cylinders). |
+| Kitchen (13) | Kitchen base / tall cabinets (have) | L corner with `blindLeft` / `blindRight`; the new `plinthVent` puts a grille under the oven tower. |
+| Bin store (02) | Bin store | Formwork concrete, steel doors (`bins`). |
+| Garden shed | Garden shed | Gable roof at 20–45°, the gables in stepped boards. |
+| Stepping slabs | Stepping slabs | `count`, `slab`, `spacing` along the item's depth. |
+| Blind boxes over the glazing | Roller blind with a cassette | Inside or outside the glazing. |
+| Satellite dish | Satellite dish (FD-91) | |
+| Car in the garage | Model "Car under a cover" (`covered_car`) | Stand-in: no CC0 hatchback found. |
+| Fruit trees, birch | Model "Tree, small deciduous" (`tree_small_02`) | Stand-in for the apple trees and the birch alike. |
+| Shrubs, lavender | Models "Shrubs, a group" (`shrub_02`), "Shrub, small" (`shrub_04`), "Flowering ground cover, a strip" (`shrub_01`) | No CC0 lavender: the beds are the `lavender-bed` material with the ground cover strip. |
+| Firewood | the fireplace's logs | |
+| Dining chairs (oak plywood) | Dining chair definition (have) in `oak-veneer` | Stand-in: no CC0 plywood chair. |
+| Wall-hung WC | `Toilet` kind (have) | |
+
 ## Gaps → tasks
 
 - **FD-86** Sloping terrain: spot heights, the ground under the house, contours.

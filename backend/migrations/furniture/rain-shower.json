@@ -1,0 +1,164 @@
+{
+ "name": "Walk-in shower with a rain head",
+ "description": "A walk-in shower: a fixed glass panel along the front from a wall profile, a rain head on a rod from the ceiling, a mixer on the back wall and a linear drain along it. Set the height to the ceiling.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1200,
+   "depth": 900,
+   "height": 2600
+  },
+  "parameters": [
+   {
+    "key": "screen",
+    "label": "Glass panel length",
+    "type": "int",
+    "default": 900,
+    "min": 300,
+    "max": 2000,
+    "unit": "mm"
+   },
+   {
+    "key": "screenSide",
+    "label": "Glass from the",
+    "type": "select",
+    "default": "left",
+    "options": [
+     "left",
+     "right"
+    ]
+   },
+   {
+    "key": "rod",
+    "label": "Rod length",
+    "type": "int",
+    "default": 300,
+    "min": 50,
+    "max": 1000,
+    "unit": "mm"
+   },
+   {
+    "key": "head",
+    "label": "Rain head diameter",
+    "type": "int",
+    "default": 300,
+    "min": 150,
+    "max": 500,
+    "unit": "mm"
+   },
+   {
+    "key": "glassHeight",
+    "label": "Glass height",
+    "type": "int",
+    "default": 2000,
+    "min": 1500,
+    "max": 2400,
+    "unit": "mm"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "profile",
+    "label": "Profile",
+    "default": "matt-black"
+   },
+   {
+    "key": "metal",
+    "label": "Fittings",
+    "default": "chrome"
+   }
+  ],
+  "parts": [
+   {
+    "type": "glass",
+    "name": "Glass",
+    "x": "screenSide == 'left' ? 0 : W - min(screen, W)",
+    "y": 0,
+    "z": "D - 8",
+    "w": "min(screen, W)",
+    "h": "glassHeight",
+    "d": 8
+   },
+   {
+    "type": "cylinder",
+    "name": "Wall profile",
+    "x": "screenSide == 'left' ? 0 : W - 20",
+    "y": 0,
+    "z": "D - 14",
+    "w": 20,
+    "h": "glassHeight",
+    "d": 20,
+    "material": "profile"
+   },
+   {
+    "type": "cylinder",
+    "name": "Stay",
+    "axis": "z",
+    "x": "screenSide == 'left' ? min(screen, W) - 30 : W - min(screen, W) + 20",
+    "y": "glassHeight - 30",
+    "z": 0,
+    "w": 12,
+    "h": 12,
+    "d": "D - 8",
+    "material": "profile"
+   },
+   {
+    "type": "block",
+    "name": "Drain",
+    "x": 100,
+    "y": 0,
+    "z": 60,
+    "w": "W - 200",
+    "h": 3,
+    "d": 60,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Rod",
+    "x": "W / 2 - 10",
+    "y": "H - rod",
+    "z": "D / 2 - 10",
+    "w": 20,
+    "h": "rod",
+    "d": 20,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Rain head",
+    "x": "round((W - head) / 2)",
+    "y": "H - rod - 12",
+    "z": "round((D - head) / 2)",
+    "w": "head",
+    "h": 12,
+    "d": "head",
+    "radius": 4,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Mixer",
+    "axis": "z",
+    "x": "W / 2 - 35",
+    "y": 1050,
+    "z": 0,
+    "w": 70,
+    "h": 70,
+    "d": 60,
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Mixer lever",
+    "x": "W / 2 - 8",
+    "y": 1080,
+    "z": 60,
+    "w": 16,
+    "h": 70,
+    "d": 16,
+    "material": "metal"
+   }
+  ]
+ }
+}

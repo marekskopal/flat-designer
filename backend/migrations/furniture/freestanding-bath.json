@@ -1,0 +1,137 @@
+{
+ "name": "Freestanding bath",
+ "description": "A freestanding bath with rounded walls; with mixer, a floor-standing mixer stands at one end inside the item (the bath 250 shorter), its spout reaching over the rim and rising above the item's height.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1950,
+   "depth": 780,
+   "height": 600
+  },
+  "parameters": [
+   {
+    "key": "wall",
+    "label": "Wall thickness",
+    "type": "int",
+    "default": 70,
+    "min": 40,
+    "max": 150,
+    "unit": "mm"
+   },
+   {
+    "key": "mixer",
+    "label": "Floor-standing mixer",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "mixerEnd",
+    "label": "Mixer at the",
+    "type": "select",
+    "default": "right",
+    "options": [
+     "right",
+     "left"
+    ]
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "shell",
+    "label": "Bath",
+    "default": "acrylic-white"
+   },
+   {
+    "key": "metal",
+    "label": "Mixer",
+    "default": "chrome"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cushion",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "x0",
+    "y": 0,
+    "z": "i * (D - wall)",
+    "w": "tubW",
+    "h": "H",
+    "d": "wall",
+    "radius": 30,
+    "material": "shell"
+   },
+   {
+    "type": "cushion",
+    "name": "End",
+    "repeat": {
+     "count": 2
+    },
+    "x": "x0 + i * (tubW - 2 * wall)",
+    "y": 0,
+    "z": 0,
+    "w": "2 * wall",
+    "h": "H",
+    "d": "D",
+    "radius": 60,
+    "material": "shell"
+   },
+   {
+    "type": "cushion",
+    "name": "Bottom",
+    "x": "x0 + wall",
+    "y": 0,
+    "z": "wall",
+    "w": "tubW - 2 * wall",
+    "h": 120,
+    "d": "D - 2 * wall",
+    "radius": 30,
+    "material": "shell"
+   },
+   {
+    "type": "cylinder",
+    "name": "Waste",
+    "x": "mixerEnd == 'right' ? x0 + tubW - 2 * wall - 80 : x0 + 2 * wall + 40",
+    "y": 120,
+    "z": "D / 2 - 20",
+    "w": 40,
+    "h": 2,
+    "d": 40,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Mixer post",
+    "when": "mixer",
+    "x": "post",
+    "y": 0,
+    "z": "D / 2 - 20",
+    "w": 40,
+    "h": "H + 260",
+    "d": 40,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Spout",
+    "when": "mixer",
+    "axis": "x",
+    "x": "mixerEnd == 'right' ? post - 200 : post + 20",
+    "y": "H + 220",
+    "z": "D / 2 - 15",
+    "w": 240,
+    "h": 30,
+    "d": 30,
+    "material": "metal"
+   }
+  ],
+  "derived": {
+   "reserve": "mixer ? 250 : 0",
+   "tubW": "W - reserve",
+   "x0": "mixerEnd == 'left' ? reserve : 0",
+   "post": "mixerEnd == 'right' ? W - 145 : 105"
+  }
+ }
+}

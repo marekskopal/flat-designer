@@ -52,6 +52,25 @@ final readonly class FurnitureSeeds
 		}
 	}
 
+	/**
+	 * Writes the files' current definitions and descriptions over the seeded rows of their names (global, created by no
+	 * one), for a migration that changed seeds an earlier one inserted (a fresh database gets the new file from that one
+	 * already). Admins' rows of the same name are left alone, and a seed whose row an admin deleted stays deleted.
+	 *
+	 * @param list<string> $files
+	 */
+	public static function update(PDO $pdo, array $files): void
+	{
+		$statement = self::prepare(
+			$pdo,
+			'UPDATE furniture_definitions SET description = ?, definition = ?, updated_at = ?
+			WHERE user_id IS NULL AND project_id IS NULL AND created_by_id IS NULL AND name = ? AND deleted_at IS NULL',
+		);
+		foreach (self::read($files) as $seed) {
+			$statement->execute([$seed['description'], $seed['definition'], date('Y-m-d H:i:s'), $seed['name']]);
+		}
+	}
+
 	/** @param list<string> $files */
 	public static function delete(PDO $pdo, array $files): void
 	{

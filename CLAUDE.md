@@ -211,6 +211,13 @@ format is the text in `FurnitureTools::Format`.
   cushion. Curtains and blinds are furniture placed at a window, not fields of the opening. Upholstery uses the `cushion` part, a
   box with rounded edges (`radius`), which the cut list counts among the other parts. Round tops and mirrors are
   `cylinder` parts.
+- The demo house's catalogue (`SeedDemoHouseFurnitureMigration`, FD-93): a corner fireplace, a bench with an upholstered
+  back, a pouf, linear pendant, square ceiling and linear wall lights, a vanity with vessel basins, a walk-in rain shower,
+  a freestanding bath, a bin store, a garden shed, stepping slabs and a roller blind in a cassette; a `cylinder` part's
+  `radius` rounds the edges of its ends, and a `block` part is a solid box not cut from sheet (stone, concrete, metal,
+  a solid bar, fabric), which the cut list counts among the other parts. The kitchen cabinets' `plinthVent` adds a plinth grille; a migration that
+  changes an earlier seed file rewrites its rows with `FurnitureSeeds::update()`. Their models and stand-ins are listed in
+  `docs/demo-house.md`.
 - Removed built-in furniture kinds (`BaseCabinet`, `WallCabinet`, `TallCabinet`, `Worktop`, `Backsplash`, `Wardrobe`,
   `Chair`, `Table`): `ConvertFlat50FurnitureToDefinitions` turned the sample project's into Custom items in place
   (same ids), then `ConvertBuiltInFurniture` the rest in every project, the saved versions and the change log, and

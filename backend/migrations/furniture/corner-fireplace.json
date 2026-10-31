@@ -1,0 +1,302 @@
+{
+ "name": "Corner fireplace",
+ "description": "A corner fireplace: a glass-fronted firebox at one end of a black stone plinth (glass on the front and on its open end), logs stacked on the plinth beside it, and an oak-veneered hood box up to the ceiling with a slatted grille at the top. The fire is a warm light (lit with the lights on) over glowing embers on the firebox floor. Set the height to the ceiling.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1400,
+   "depth": 650,
+   "height": 2600
+  },
+  "parameters": [
+   {
+    "key": "plinth",
+    "label": "Plinth height",
+    "type": "int",
+    "default": 350,
+    "min": 100,
+    "max": 800,
+    "unit": "mm"
+   },
+   {
+    "key": "insert",
+    "label": "Firebox width",
+    "type": "int",
+    "default": 800,
+    "min": 400,
+    "max": 1600,
+    "unit": "mm"
+   },
+   {
+    "key": "fireHeight",
+    "label": "Firebox height",
+    "type": "int",
+    "default": 500,
+    "min": 300,
+    "max": 1000,
+    "unit": "mm"
+   },
+   {
+    "key": "glassSide",
+    "label": "Firebox at the",
+    "type": "select",
+    "default": "right",
+    "options": [
+     "right",
+     "left"
+    ]
+   },
+   {
+    "key": "logs",
+    "label": "Log store",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "grille",
+    "label": "Grille in the hood",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "lumens",
+    "label": "Fire light",
+    "type": "int",
+    "default": 1500,
+    "min": 0,
+    "max": 5000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Fire colour temperature",
+    "type": "int",
+    "default": 1800,
+    "min": 1800,
+    "max": 3000,
+    "unit": "K"
+   }
+  ],
+  "derived": {
+   "ix": "glassSide == 'right' ? W - insert : 0",
+   "top": "plinth + fireHeight",
+   "logX": "glassSide == 'right' ? 0 : insert",
+   "cols": "clamp(floor((W - insert - 40) / 130), 0, 10)",
+   "rows": "clamp(floor((fireHeight - 40) / 115), 0, 10)",
+   "slats": "clamp(floor(W / 40), 1, 100)"
+  },
+  "materialSlots": [
+   {
+    "key": "stone",
+    "label": "Plinth",
+    "default": "granite-black-honed"
+   },
+   {
+    "key": "hood",
+    "label": "Hood",
+    "default": "oak-veneer"
+   },
+   {
+    "key": "firebox",
+    "label": "Firebox",
+    "default": "matt-black"
+   },
+   {
+    "key": "logs",
+    "label": "Logs",
+    "default": "kitchen-oak"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Plinth",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "plinth",
+    "d": "D",
+    "material": "stone",
+    "grain": "horizontal"
+   },
+   {
+    "type": "block",
+    "name": "Firebox back",
+    "x": "ix",
+    "y": "plinth",
+    "z": 0,
+    "w": "insert",
+    "h": "fireHeight",
+    "d": 40,
+    "material": "firebox"
+   },
+   {
+    "type": "block",
+    "name": "Firebox side",
+    "x": "glassSide == 'right' ? ix : insert - 40",
+    "y": "plinth",
+    "z": 40,
+    "w": 40,
+    "h": "fireHeight",
+    "d": "D - 80",
+    "material": "firebox"
+   },
+   {
+    "type": "block",
+    "name": "Firebox floor",
+    "x": "ix",
+    "y": "plinth",
+    "z": 40,
+    "w": "insert",
+    "h": 30,
+    "d": "D - 80",
+    "material": "firebox"
+   },
+   {
+    "type": "block",
+    "name": "Firebox top",
+    "x": "ix",
+    "y": "top - 30",
+    "z": 40,
+    "w": "insert",
+    "h": 30,
+    "d": "D - 80",
+    "material": "firebox"
+   },
+   {
+    "type": "glass",
+    "name": "Front glass",
+    "x": "ix",
+    "y": "plinth",
+    "z": "D - 40",
+    "w": "insert",
+    "h": "fireHeight",
+    "d": 8
+   },
+   {
+    "type": "glass",
+    "name": "End glass",
+    "x": "glassSide == 'right' ? W - 8 : 0",
+    "y": "plinth",
+    "z": 40,
+    "w": 8,
+    "h": "fireHeight",
+    "d": "D - 80"
+   },
+   {
+    "type": "led",
+    "name": "Embers",
+    "x": "ix + 100",
+    "y": "plinth + 30",
+    "z": "D / 2 - 100",
+    "w": "insert - 200",
+    "h": 30,
+    "d": 200,
+    "color": "#ff5a14",
+    "intensity": 2
+   },
+   {
+    "type": "light",
+    "name": "Fire",
+    "x": "ix + insert / 2 - 50",
+    "y": "plinth + 120",
+    "z": "D / 2 - 50",
+    "w": 100,
+    "h": 100,
+    "d": 100,
+    "kind": "point",
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "bulb": "none"
+   },
+   {
+    "type": "cylinder",
+    "name": "Log",
+    "when": "logs && cols > 0 && rows > 0",
+    "repeat": {
+     "count": "cols * rows"
+    },
+    "axis": "z",
+    "x": "logX + 20 + (i % cols) * 130 + round(hash(i) * 10)",
+    "y": "plinth + floor(i / cols) * 115",
+    "z": 40,
+    "w": "110 + round(hash(i, 1) * 15)",
+    "h": "110 + round(hash(i, 1) * 15)",
+    "d": "D - 80",
+    "material": "logs"
+   },
+   {
+    "type": "board",
+    "name": "Hood",
+    "when": "top < H && (!grille || top >= H - 260)",
+    "x": 0,
+    "y": "top",
+    "z": 0,
+    "w": "W",
+    "h": "H - top",
+    "d": "D",
+    "material": "hood",
+    "grain": "vertical"
+   },
+   {
+    "type": "board",
+    "name": "Hood",
+    "when": "grille && top < H - 260",
+    "x": 0,
+    "y": "top",
+    "z": 0,
+    "w": "W",
+    "h": "H - 260 - top",
+    "d": "D",
+    "material": "hood",
+    "grain": "vertical"
+   },
+   {
+    "type": "block",
+    "name": "Grille back",
+    "when": "grille && top < H - 260",
+    "x": 0,
+    "y": "H - 260",
+    "z": 0,
+    "w": "W",
+    "h": 200,
+    "d": "D - 14",
+    "material": "firebox"
+   },
+   {
+    "type": "board",
+    "name": "Grille slat",
+    "when": "grille && top < H - 260",
+    "repeat": {
+     "count": "slats"
+    },
+    "x": "round(i * W / slats) + round(W / slats / 4)",
+    "y": "H - 260",
+    "z": "D - 14",
+    "w": "max(round(W / slats / 2), 1)",
+    "h": 200,
+    "d": 14,
+    "material": "hood",
+    "grain": "vertical"
+   },
+   {
+    "type": "board",
+    "name": "Hood top",
+    "when": "grille && top < H - 260",
+    "x": 0,
+    "y": "H - 60",
+    "z": 0,
+    "w": "W",
+    "h": 60,
+    "d": "D",
+    "material": "hood",
+    "grain": "horizontal"
+   }
+  ]
+ }
+}

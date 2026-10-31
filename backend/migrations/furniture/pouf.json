@@ -1,0 +1,33 @@
+{
+ "name": "Pouf",
+ "description": "A round upholstered pouf with softly rounded edges; as a footstool 450 across and 420 high, a smaller one 380 × 380 (set the item's size).",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 450,
+   "depth": 450,
+   "height": 420
+  },
+  "materialSlots": [
+   {
+    "key": "fabric",
+    "label": "Cover",
+    "default": "fabric-felt-grey"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Pouf",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "radius": 60,
+    "material": "fabric"
+   }
+  ]
+ }
+}

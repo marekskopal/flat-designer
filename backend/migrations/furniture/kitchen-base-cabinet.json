@@ -1,6 +1,6 @@
 {
  "name": "Kitchen base cabinet",
- "description": "Base cabinet on a recessed plinth: carcass boards, fronts stacked from the bottom (doors, drawers, appliances), blind corners.",
+ "description": "Base cabinet on a recessed plinth: carcass boards, fronts stacked from the bottom (doors, drawers, appliances), blind corners. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge).",
  "definition": {
   "format": 1,
   "size": {
@@ -70,6 +70,12 @@
     "min": 0,
     "max": 300,
     "unit": "mm"
+   },
+   {
+    "key": "plinthVent",
+    "label": "Ventilation grille in the plinth",
+    "type": "bool",
+    "default": false
    },
    {
     "key": "handle",
@@ -148,7 +154,8 @@
   "derived": {
    "heights": "share(field(fronts, 'height'), H - plinth)",
    "starts": "offsets(heights)",
-   "carcassD": "D - ft"
+   "carcassD": "D - ft",
+   "slats": "clamp(floor((W - 80) / 10), 1, 100)"
   },
   "materialSlots": [
    {
@@ -158,6 +165,11 @@
    {
     "key": "fronts",
     "label": "Fronts"
+   },
+   {
+    "key": "grille",
+    "label": "Plinth grille",
+    "default": "aluminium-brushed"
    }
   ],
   "parts": [
@@ -232,6 +244,36 @@
     "material": "carcass",
     "grain": "horizontal",
     "shade": 0.3
+   },
+   {
+    "type": "block",
+    "name": "Plinth grille",
+    "when": "plinth > 40 && plinthVent",
+    "x": 40,
+    "y": 15,
+    "z": "carcassD - recess",
+    "w": "W - 80",
+    "h": "plinth - 30",
+    "d": 2,
+    "material": "carcass",
+    "grain": "horizontal",
+    "shade": 0.85
+   },
+   {
+    "type": "block",
+    "name": "Plinth grille slat",
+    "when": "plinth > 40 && plinthVent",
+    "repeat": {
+     "count": "slats"
+    },
+    "x": "42 + round(i * (W - 88) / slats)",
+    "y": 15,
+    "z": "carcassD - recess + 2",
+    "w": 4,
+    "h": "plinth - 30",
+    "d": 3,
+    "material": "grille",
+    "grain": "vertical"
    },
    {
     "type": "assembly",

@@ -1,0 +1,84 @@
+{
+ "name": "Roller blind with a cassette",
+ "description": "An interior roller blind in a box above large glazing: the cassette at the item's top, the blind let down by a percentage of the height below it. Set the item over the glazing, its top at the head.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2400,
+   "depth": 120,
+   "height": 2500
+  },
+  "parameters": [
+   {
+    "key": "down",
+    "label": "Let down",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 100,
+    "unit": "%"
+   },
+   {
+    "key": "box",
+    "label": "Cassette height",
+    "type": "int",
+    "default": 120,
+    "min": 60,
+    "max": 250,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "drop": "round((H - box - 20) * down / 100)"
+  },
+  "materialSlots": [
+   {
+    "key": "cassette",
+    "label": "Cassette",
+    "default": "metal-white"
+   },
+   {
+    "key": "fabric",
+    "label": "Blind",
+    "default": "fabric-linen-white"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Cassette",
+    "x": 0,
+    "y": "H - box",
+    "z": 0,
+    "w": "W",
+    "h": "box",
+    "d": "D",
+    "material": "cassette"
+   },
+   {
+    "type": "block",
+    "name": "Blind",
+    "when": "drop > 0",
+    "x": 20,
+    "y": "H - box - drop",
+    "z": "round(D / 2)",
+    "w": "W - 40",
+    "h": "drop",
+    "d": 2,
+    "material": "fabric"
+   },
+   {
+    "type": "block",
+    "name": "Bottom bar",
+    "when": "drop > 0",
+    "x": 20,
+    "y": "H - box - drop - 20",
+    "z": "round(D / 2) - 8",
+    "w": "W - 40",
+    "h": 20,
+    "d": 18,
+    "material": "cassette"
+   }
+  ]
+ }
+}

@@ -1,0 +1,119 @@
+{
+ "name": "Linear pendant, oak",
+ "description": "A long oak bar hanging on two cables, shining down through an opal strip in its underside. The item's elevation is the bar's bottom and its height reaches the ceiling, where the cables end; set the item's room.",
+ "definition": {
+  "format": 1,
+  "category": "light",
+  "size": {
+   "width": 1500,
+   "depth": 60,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "bar",
+    "label": "Bar height",
+    "type": "int",
+    "default": 50,
+    "min": 20,
+    "max": 150,
+    "unit": "mm"
+   },
+   {
+    "key": "lumens",
+    "label": "Light output",
+    "type": "int",
+    "default": 2400,
+    "min": 0,
+    "max": 8000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 3000,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Bar",
+    "default": "oak-solid"
+   },
+   {
+    "key": "cable",
+    "label": "Cables",
+    "default": "cable-fabric-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "led",
+    "name": "Diffuser",
+    "x": 20,
+    "y": 0,
+    "z": 10,
+    "w": "W - 40",
+    "h": 6,
+    "d": "D - 20",
+    "color": "#fff1dc",
+    "intensity": 1
+   },
+   {
+    "type": "block",
+    "name": "Bar",
+    "x": 0,
+    "y": 6,
+    "z": 0,
+    "w": "W",
+    "h": "bar",
+    "d": "D",
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "light",
+    "name": "Light",
+    "repeat": {
+     "count": 2
+    },
+    "x": "round(W * (2 * i + 1) / 4) - 50",
+    "y": 0,
+    "z": "D / 2 - 20",
+    "w": 100,
+    "h": 6,
+    "d": 40,
+    "kind": "spot",
+    "angle": 120,
+    "lumens": {
+     "expr": "round(lumens / 2)"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "bulb": "none"
+   },
+   {
+    "type": "cable",
+    "name": "Cable",
+    "when": "H > bar + 6",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i == 0 ? 98 : W - 102",
+    "y": "bar + 6",
+    "z": "D / 2 - 2",
+    "w": 4,
+    "h": "H - bar - 6",
+    "d": 4,
+    "rose": 60,
+    "sag": 0,
+    "material": "cable"
+   }
+  ]
+ }
+}

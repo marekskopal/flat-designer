@@ -1,0 +1,85 @@
+{
+ "name": "Linear wall light, oak",
+ "description": "A slim oak bar on the wall shining down through an opal strip in its underside, e.g. over a bathroom mirror. Its elevation is the bottom edge.",
+ "definition": {
+  "format": 1,
+  "category": "light",
+  "size": {
+   "width": 800,
+   "depth": 70,
+   "height": 60
+  },
+  "parameters": [
+   {
+    "key": "lumens",
+    "label": "Light output",
+    "type": "int",
+    "default": 900,
+    "min": 0,
+    "max": 4000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 3000,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Bar",
+    "default": "oak-solid"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Bar",
+    "x": 0,
+    "y": 4,
+    "z": 0,
+    "w": "W",
+    "h": "H - 4",
+    "d": "D",
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "led",
+    "name": "Diffuser",
+    "x": 15,
+    "y": 0,
+    "z": 15,
+    "w": "W - 30",
+    "h": 4,
+    "d": "D - 30",
+    "color": "#fff1dc",
+    "intensity": 1
+   },
+   {
+    "type": "light",
+    "name": "Light",
+    "x": "W / 2 - 50",
+    "y": 0,
+    "z": "D / 2 - 10",
+    "w": 100,
+    "h": 4,
+    "d": 20,
+    "kind": "spot",
+    "angle": 120,
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "bulb": "none"
+   }
+  ]
+ }
+}

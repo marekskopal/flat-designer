@@ -20,7 +20,12 @@ enum PartTypeEnum: string
 	case Board = 'board';
 	/** Door or drawer leaf with a handle, as on the kitchen cabinets. */
 	case Front = 'front';
-	/** Rod or round leg along `axis` (default y), its diameter the box's smaller side across. */
+	/**
+	 * A solid box not cut from sheet material (FD-93): stone, concrete, cast or solid metal, a solid timber bar, fabric;
+	 * the cut list counts it among the other parts.
+	 */
+	case Block = 'block';
+	/** Rod or round leg along `axis` (default y), its diameter the box's smaller side across; `radius` rounds its ends' edges. */
 	case Cylinder = 'cylinder';
 	/** Leg narrowing from the box's width / depth at the top to `bottomSize` mm at the floor. */
 	case TaperedLeg = 'taperedLeg';
@@ -185,8 +190,9 @@ enum PartTypeEnum: string
 				'grain' => self::Grain,
 				'edges' => 'sides',
 			] + self::Tilt,
-			self::Cylinder => ['axis' => ['x', 'y', 'z']] + self::Tilt,
+			self::Cylinder => ['axis' => ['x', 'y', 'z'], 'radius' => 'number'] + self::Tilt,
 			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Tilt,
+			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Tilt,
 			self::Glass => self::Tilt,
 			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Tilt,
 			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Tilt,

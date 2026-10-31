@@ -1,0 +1,64 @@
+{
+ "name": "Stepping slabs",
+ "description": "A row of concrete stepping slabs across a lawn, laid from the item's back towards its front: count slabs slab deep, spacing apart (centre to centre). Make the item (count − 1) × spacing + slab deep.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 900,
+   "depth": 3550,
+   "height": 50
+  },
+  "parameters": [
+   {
+    "key": "count",
+    "label": "Slabs",
+    "type": "int",
+    "default": 6,
+    "min": 1,
+    "max": 40
+   },
+   {
+    "key": "slab",
+    "label": "Slab depth",
+    "type": "int",
+    "default": 300,
+    "min": 100,
+    "max": 1000,
+    "unit": "mm"
+   },
+   {
+    "key": "spacing",
+    "label": "Spacing",
+    "type": "int",
+    "default": 650,
+    "min": 150,
+    "max": 2000,
+    "unit": "mm"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "slabs",
+    "label": "Slabs",
+    "default": "concrete-floor"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Slab",
+    "repeat": {
+     "count": "count"
+    },
+    "x": 0,
+    "y": 0,
+    "z": "i * spacing",
+    "w": "W",
+    "h": "H",
+    "d": "slab",
+    "material": "slabs",
+    "grain": "horizontal"
+   }
+  ]
+ }
+}
