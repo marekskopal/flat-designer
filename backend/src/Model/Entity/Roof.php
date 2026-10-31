@@ -19,7 +19,7 @@ use MarekSkopal\ORM\Enum\Type;
  * A roof over a floor (FD-38): a rectangle `width` × `depth` centred on (x, y), plan mm, turned by `rotation` (degrees
  * counter-clockwise; the ridge runs along the width, east–west at 0). The rectangle is the eaves line, where the roof's
  * underside is `eaveHeight` above the floor's level; the planes rise from it at `pitch` and reach `overhang` past it at
- * the eaves and `vergeOverhang` past the gables. `thickness` is the rafters and covering, square to the slope. The
+ * the eaves and `vergeOverhang` past the gables, whose verges `startSkew` / `endSkew` may turn. `thickness` is the rafters and covering, square to the slope. The
  * geometry is `RoofGeometry` (twin of `viewer/engine/roof-geometry.ts`).
  */
 #[Entity(repositoryClass: RoofRepository::class)]
@@ -37,7 +37,7 @@ class Roof extends AEntity
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $gutterMaterial = null;
 
-	/** JSON `[{edge, along}]`: downpipes on eaves edges (`RoofEdgeEnum`), mm from the edge's middle; null at the eaves' corners. */
+	/** JSON `[{edge, along}]`: downpipes on eaves edges (`RoofEdgeEnum`), mm from the roof's centre line; null at the eaves' corners. */
 	#[Column(type: Type::Text, nullable: true)]
 	public ?string $downpipes = null;
 
@@ -47,6 +47,16 @@ class Roof extends AEntity
 
 	#[ColumnEnum(enum: RidgeStyleEnum::class)]
 	public RidgeStyleEnum $ridgeStyle = RidgeStyleEnum::Box;
+
+	/**
+	 * A gable's or shed's verge at the ridge's start (−s) and end, degrees counter-clockwise, 0 square to the ridge (FD-97,
+	 * `RoofSkew`).
+	 */
+	#[Column(type: Type::Int)]
+	public int $startSkew = 0;
+
+	#[Column(type: Type::Int)]
+	public int $endSkew = 0;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

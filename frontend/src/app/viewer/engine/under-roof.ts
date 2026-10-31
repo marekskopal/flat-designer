@@ -2,7 +2,7 @@ import {PlanPoint, Plot, RoofWindow, Room, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Pair, Polygon, Ring} from 'polygon-clipping';
 
 import {alongWall, Bounds, polygonBounds, polygonSignedArea, Vec2, WallFrame} from './plan-geometry';
-import {roofHalfExtent, roofLocal, roofPlanes, RoofShapeFields, roofsUndersideAt, roofToPlan, roofWindowLayouts} from './roof-geometry';
+import {roofLocal, roofLocalOutline, roofPlanes, RoofShapeFields, roofsUndersideAt, roofToPlan, roofWindowLayouts} from './roof-geometry';
 import {groundAt} from './terrain';
 
 /**
@@ -162,16 +162,17 @@ export function roofBreaks(p: Vec2, q: Vec2, roofs: FloorRoofs, levels: readonly
     for (const roof of roofs) {
         const a = roofLocal(roof, p.x, p.y);
         const b = roofLocal(roof, q.x, q.y);
-        const half = roofHalfExtent(roof);
-        for (const [from, to, edge] of [
-            [a.x, b.x, half.x],
-            [a.y, b.y, half.y],
-        ]) {
-            if (to !== from) {
-                push((edge - from) / (to - from));
-                push((-edge - from) / (to - from));
+        const outline = roofLocalOutline(roof);
+        outline.forEach((from, i) => {
+            const to = outline[(i + 1) % outline.length];
+            // Which side of the edge's line a point lies, linear along the line p → q.
+            const side = (point: Vec2): number => (to.x - from.x) * (point.y - from.y) - (to.y - from.y) * (point.x - from.x);
+            const atP = side(a);
+            const atQ = side(b);
+            if (atQ !== atP) {
+                push(atP / (atP - atQ));
             }
-        }
+        });
         for (const {f} of planeFunctions(roof)) {
             const at = valueOf(f, p);
             lines.push([at, valueOf(f, q) - at]);

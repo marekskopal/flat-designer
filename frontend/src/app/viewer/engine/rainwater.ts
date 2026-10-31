@@ -1,7 +1,7 @@
 import {Downpipe, GutterProfile, Roof, RoofEdge} from '@app/models/scene';
 
 import {Vec2} from './plan-geometry';
-import {roofHalfExtent, roofLocal, RoofShapeFields, roofSlope, roofToPlan} from './roof-geometry';
+import {roofDownpipeSpan, roofHalfExtent, roofLocal, roofLocalOutline, RoofShapeFields, roofSlope, roofToPlan} from './roof-geometry';
 import {FloorRoofs, topStretches} from './under-roof';
 
 /**
@@ -91,7 +91,7 @@ export function roofDownpipes(
     const overhang = roofHalfExtent(roof);
     const result: PlacedDownpipe[] = [];
     for (const {edge, along} of downpipes ?? corners(roof)) {
-        if (!isEavesOf(edge, roof.shape) || Math.abs(along) > (alongWidth(edge) ? halfW : halfD)) {
+        if (!isEavesOf(edge, roof.shape) || !onEaves(roof, edge, along)) {
             continue;
         }
         const [wall, outlet]: [[number, number], [number, number]] = {
@@ -111,12 +111,12 @@ export function roofDownpipes(
 
 /** The eaves edges of a roof's shape on the overhang's edge, in its frame: front, right, back, left. */
 function eaves(roof: RoofShapeFields): [RoofEdge, [Vec2, Vec2]][] {
-    const {x: a, y: b} = roofHalfExtent(roof);
+    const [frontLeft, frontRight, backRight, backLeft] = roofLocalOutline(roof);
     const edges: [RoofEdge, [Vec2, Vec2]][] = [
-        ['Front', [{x: -a, y: -b}, {x: a, y: -b}]],
-        ['Right', [{x: a, y: -b}, {x: a, y: b}]],
-        ['Back', [{x: a, y: b}, {x: -a, y: b}]],
-        ['Left', [{x: -a, y: b}, {x: -a, y: -b}]],
+        ['Front', [frontLeft, frontRight]],
+        ['Right', [frontRight, backRight]],
+        ['Back', [backRight, backLeft]],
+        ['Left', [backLeft, frontLeft]],
     ];
     return edges.filter(([edge]) => isEavesOf(edge, roof.shape));
 }
@@ -125,12 +125,31 @@ function corners(roof: RoofShapeFields): Downpipe[] {
     if (roof.shape === 'Flat') {
         return [];
     }
-    const along = Math.max(0, Math.trunc(roof.width / 2) - CornerInset);
     const edges: RoofEdge[] = roof.shape === 'Shed' ? ['Front'] : ['Front', 'Back'];
-    return edges.flatMap((edge) => [
-        {edge, along: -along},
-        {edge, along},
-    ]);
+    return edges.flatMap((edge) => {
+        const [from, to] = roofDownpipeSpan(roof, edge === 'Back');
+        let start = Math.ceil(from) + CornerInset;
+        let end = Math.floor(to) - CornerInset;
+        if (start > end) {
+            start = end = Math.trunc((start + end) / 2);
+        }
+        return [
+            {edge, along: start},
+            {edge, along: end},
+        ];
+    });
+}
+
+/**
+ * Whether a downpipe `along` an edge lies on it: within `roofDownpipeSpan()` on the front and back (a skewed verge moves the
+ * ends), within the depth on a hip's sides.
+ */
+function onEaves(roof: RoofShapeFields, edge: RoofEdge, along: number): boolean {
+    if (!alongWidth(edge)) {
+        return Math.abs(along) <= roof.depth / 2;
+    }
+    const [from, to] = roofDownpipeSpan(roof, edge === 'Back');
+    return along >= from - 1e-6 && along <= to + 1e-6;
 }
 
 /** The run of an edge an outlet lies on, within a tenth of a mm. */

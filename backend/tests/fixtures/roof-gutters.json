@@ -498,6 +498,277 @@
             "downpipes": null,
             "runs": [],
             "pipes": []
+        },
+        {
+            "name": "a gable with skewed verges: the gutters run between them, the default downpipes 150 mm in from the skewed eaves corners",
+            "roofs": [
+                {
+                    "shape": "Gable",
+                    "x": 5000,
+                    "y": 4000,
+                    "rotation": 30,
+                    "width": 10000,
+                    "depth": 8000,
+                    "eaveHeight": 2600,
+                    "pitch": 40,
+                    "overhang": 400,
+                    "vergeOverhang": 200,
+                    "thickness": 250,
+                    "startSkew": -8,
+                    "endSkew": 12
+                }
+            ],
+            "index": 0,
+            "downpipes": null,
+            "runs": [
+                {
+                    "edge": "Front",
+                    "from": [
+                        2159.4332,
+                        -2720.6844
+                    ],
+                    "to": [
+                        12517.1509,
+                        3259.3467
+                    ],
+                    "height": 2264.3601
+                },
+                {
+                    "edge": "Back",
+                    "from": [
+                        6497.2523,
+                        9945.1214
+                    ],
+                    "to": [
+                        -1169.5018,
+                        5518.7189
+                    ],
+                    "height": 2264.3601
+                }
+            ],
+            "pipes": [
+                {
+                    "edge": "Front",
+                    "at": [
+                        2363.0705,
+                        -2256.7042
+                    ],
+                    "outlet": [
+                        2513.0705,
+                        -2516.5118
+                    ],
+                    "top": 2264.3601
+                },
+                {
+                    "edge": "Front",
+                    "at": [
+                        11986.3448,
+                        3299.2958
+                    ],
+                    "outlet": [
+                        12136.3448,
+                        3039.4882
+                    ],
+                    "top": 2264.3601
+                },
+                {
+                    "edge": "Back",
+                    "at": [
+                        -762.6509,
+                        5407.2042
+                    ],
+                    "outlet": [
+                        -912.6509,
+                        5667.0118
+                    ],
+                    "top": 2264.3601
+                },
+                {
+                    "edge": "Back",
+                    "at": [
+                        6413.2356,
+                        9550.2042
+                    ],
+                    "outlet": [
+                        6263.2356,
+                        9810.0118
+                    ],
+                    "top": 2264.3601
+                }
+            ]
+        },
+        {
+            "name": "a gable with skewed verges: a downpipe beyond the square end lies on the longer front eaves, but not on the shorter back",
+            "roofs": [
+                {
+                    "shape": "Gable",
+                    "x": 5000,
+                    "y": 4000,
+                    "rotation": 30,
+                    "width": 10000,
+                    "depth": 8000,
+                    "eaveHeight": 2600,
+                    "pitch": 40,
+                    "overhang": 400,
+                    "vergeOverhang": 200,
+                    "thickness": 250,
+                    "startSkew": -8,
+                    "endSkew": 12
+                }
+            ],
+            "index": 0,
+            "downpipes": [
+                {
+                    "edge": "Front",
+                    "along": 5800
+                },
+                {
+                    "edge": "Back",
+                    "along": 5800
+                },
+                {
+                    "edge": "Back",
+                    "along": -5500
+                }
+            ],
+            "runs": [
+                {
+                    "edge": "Front",
+                    "from": [
+                        2159.4332,
+                        -2720.6844
+                    ],
+                    "to": [
+                        12517.1509,
+                        3259.3467
+                    ],
+                    "height": 2264.3601
+                },
+                {
+                    "edge": "Back",
+                    "from": [
+                        6497.2523,
+                        9945.1214
+                    ],
+                    "to": [
+                        -1169.5018,
+                        5518.7189
+                    ],
+                    "height": 2264.3601
+                }
+            ],
+            "pipes": [
+                {
+                    "edge": "Front",
+                    "at": [
+                        12072.9473,
+                        3349.2958
+                    ],
+                    "outlet": [
+                        12222.9473,
+                        3089.4882
+                    ],
+                    "top": 2264.3601
+                }
+            ]
+        },
+        {
+            "name": "a verge skewed 30° with a deep overhang: the front gutter starts further in than the eaves line, so the default downpipe stands 150 mm in from the end of the gutter",
+            "roofs": [
+                {
+                    "shape": "Gable",
+                    "x": 0,
+                    "y": 0,
+                    "rotation": 0,
+                    "width": 8000,
+                    "depth": 6000,
+                    "eaveHeight": 2600,
+                    "pitch": 35,
+                    "overhang": 600,
+                    "vergeOverhang": 100,
+                    "thickness": 250,
+                    "startSkew": 30,
+                    "endSkew": 0
+                }
+            ],
+            "index": 0,
+            "downpipes": null,
+            "runs": [
+                {
+                    "edge": "Front",
+                    "from": [
+                        -2037.0091,
+                        -3600
+                    ],
+                    "to": [
+                        4100,
+                        -3600
+                    ],
+                    "height": 2179.8755
+                },
+                {
+                    "edge": "Back",
+                    "from": [
+                        4100,
+                        3600
+                    ],
+                    "to": [
+                        -6193.931,
+                        3600
+                    ],
+                    "height": 2179.8755
+                }
+            ],
+            "pipes": [
+                {
+                    "edge": "Front",
+                    "at": [
+                        -1887,
+                        -3100
+                    ],
+                    "outlet": [
+                        -1887,
+                        -3600
+                    ],
+                    "top": 2179.8755
+                },
+                {
+                    "edge": "Front",
+                    "at": [
+                        3850,
+                        -3100
+                    ],
+                    "outlet": [
+                        3850,
+                        -3600
+                    ],
+                    "top": 2179.8755
+                },
+                {
+                    "edge": "Back",
+                    "at": [
+                        -5582,
+                        3100
+                    ],
+                    "outlet": [
+                        -5582,
+                        3600
+                    ],
+                    "top": 2179.8755
+                },
+                {
+                    "edge": "Back",
+                    "at": [
+                        3850,
+                        3100
+                    ],
+                    "outlet": [
+                        3850,
+                        3600
+                    ],
+                    "top": 2179.8755
+                }
+            ]
         }
     ]
 }

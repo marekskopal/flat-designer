@@ -60,11 +60,16 @@ final readonly class RoofBreaks
 	{
 		$a = $roof->toLocal($p[0], $p[1]);
 		$b = $roof->toLocal($q[0], $q[1]);
-		$half = $roof->halfExtent();
+		$outline = $roof->localOutline();
 		$ts = [];
-		foreach ([[$a[0], $b[0], $half[0]], [$a[1], $b[1], $half[1]]] as [$from, $to, $edge]) {
-			if ($to !== $from) {
-				array_push($ts, ($edge - $from) / ($to - $from), (-$edge - $from) / ($to - $from));
+		foreach ($outline as $i => $from) {
+			$to = $outline[($i + 1) % count($outline)];
+			// Which side of the edge's line a point lies, linear along the line p → q.
+			$side = static fn (array $point): float => ($to[0] - $from[0]) * ($point[1] - $from[1]) - ($to[1] - $from[1]) * ($point[0] - $from[0]);
+			$atP = $side($a);
+			$atQ = $side($b);
+			if ($atQ !== $atP) {
+				$ts[] = $atP / ($atP - $atQ);
 			}
 		}
 

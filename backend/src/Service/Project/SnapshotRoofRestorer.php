@@ -59,6 +59,9 @@ final readonly class SnapshotRoofRestorer
 			$roof->downpipes = is_array($downpipes) ? json_encode($downpipes, JSON_THROW_ON_ERROR) : null;
 			$roof->snowGuards = $data->nullableInt('snowGuards') ?? 0;
 			$roof->ridgeStyle = RidgeStyleEnum::tryFrom((string) $data->nullableString('ridgeStyle')) ?? RidgeStyleEnum::Box;
+			// And before FD-97 square verges.
+			$roof->startSkew = $data->nullableInt('startSkew') ?? 0;
+			$roof->endSkew = $data->nullableInt('endSkew') ?? 0;
 			$this->roofRepository->persist($roof);
 
 			foreach ($data->objects('windows') as $window) {

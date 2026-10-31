@@ -17,10 +17,13 @@ use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
+use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 use FlatDesigner\Service\Editor\Geometry\WallLine;
 use FlatDesigner\Service\Project\FloorStack;
 use const INF;
 use const M_PI;
+use const PHP_INT_MAX;
+use const PHP_INT_MIN;
 
 /**
  * Roofs over a floor (FD-38). Only the fields are checked here; the planes are `RoofGeometry`, drawn by the viewer
@@ -78,6 +81,8 @@ final readonly class RoofHandler implements ElementHandler
 			'pitch',
 			'overhang',
 			'vergeOverhang',
+			'startSkew',
+			'endSkew',
 			'thickness',
 			'parapet',
 			'coveringMaterialId',
@@ -114,6 +119,7 @@ final readonly class RoofHandler implements ElementHandler
 			'pitch' => 35,
 			'overhang' => 400,
 			'vergeOverhang' => 200,
+			...RoofSkew::Defaults,
 			'thickness' => 250,
 			'parapet' => null,
 			'coveringMaterialId' => null,
@@ -144,7 +150,7 @@ final readonly class RoofHandler implements ElementHandler
 	/** @return array<string, mixed> */
 	public function normalize(Floor $floor, array $state, ?AEntity $current): array
 	{
-		$fields = new FieldReader($state + RoofDetails::Defaults);
+		$fields = new FieldReader($state + RoofDetails::Defaults + RoofSkew::Defaults);
 		$shape = $fields->enum('shape', RoofShapeEnum::class);
 		$parapet = $fields->nullableInt('parapet', self::MinParapet, self::MaxParapet);
 		if ($parapet !== null && $shape !== RoofShapeEnum::Flat) {
@@ -163,7 +169,7 @@ final readonly class RoofHandler implements ElementHandler
 		$width = $fields->int('width', self::MinSide, self::MaxSide);
 		$depth = $fields->int('depth', self::MinSide, self::MaxSide);
 
-		return [
+		$normalized = [
 			'name' => $fields->string('name', 255),
 			'shape' => $shape->value,
 			'x' => $fields->int('x', -State::CoordinateLimit, State::CoordinateLimit),
@@ -180,8 +186,13 @@ final readonly class RoofHandler implements ElementHandler
 			'coveringMaterialId' => $coveringMaterialId,
 			'soffitMaterialId' => $soffitMaterialId,
 			'gutterMaterialId' => $gutterMaterialId,
-			...RoofDetails::normalize($fields, $shape, $width, $depth, $current === null ? null : self::cast($current)),
 		];
+		$roof = $current === null ? null : self::cast($current);
+		$normalized += RoofSkew::normalize($fields, $shape, $roof);
+		$geometry = self::geometry($normalized);
+		RoofSkew::check($geometry);
+
+		return $normalized + RoofDetails::normalize($fields, $geometry, $roof);
 	}
 
 	public function create(Floor $floor, array $state): Roof
@@ -297,8 +308,32 @@ final readonly class RoofHandler implements ElementHandler
 		$roof->coveringMaterial = $this->materialResolver->resolve($fields->nullableId('coveringMaterialId'));
 		$roof->soffitMaterial = $this->materialResolver->resolve($fields->nullableId('soffitMaterialId'));
 		$roof->gutterMaterial = $this->materialResolver->resolve($fields->nullableId('gutterMaterialId'));
+		RoofSkew::apply($roof, $fields);
 		RoofDetails::apply($roof, $fields);
 		$this->roofRepository->persist($roof);
+	}
+
+	/** @param array<string, mixed> $state a roof's normalised state */
+	private static function geometry(array $state): RoofGeometry
+	{
+		$fields = new FieldReader($state);
+		$int = static fn (string $key): int => $fields->int($key, PHP_INT_MIN, PHP_INT_MAX);
+
+		return new RoofGeometry(
+			$fields->enum('shape', RoofShapeEnum::class),
+			$int('x'),
+			$int('y'),
+			$int('rotation'),
+			$int('width'),
+			$int('depth'),
+			$int('eaveHeight'),
+			$int('pitch'),
+			$int('overhang'),
+			$int('vergeOverhang'),
+			$int('thickness'),
+			$int('startSkew'),
+			$int('endSkew'),
+		);
 	}
 
 	private static function cast(AEntity $element): Roof

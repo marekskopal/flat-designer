@@ -1,5 +1,5 @@
 import {OpeningType, RailingStyle} from '@app/models/scene';
-import {roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
+import {hasVerges, roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {stairRisers} from '@app/viewer/engine/stairs';
 
@@ -522,7 +522,23 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'int',
             unit: 'mm',
             half: true,
-            when: (roof) => roof['shape'] === 'Gable' || roof['shape'] === 'Shed',
+            when: (roof) => hasVerges(roof as Pick<RoofShapeFields, 'shape'>),
+        },
+        {
+            key: 'startSkew',
+            label: 'Start verge skew',
+            type: 'int',
+            unit: '°',
+            half: true,
+            when: (roof) => hasVerges(roof as Pick<RoofShapeFields, 'shape'>),
+        },
+        {
+            key: 'endSkew',
+            label: 'End verge skew',
+            type: 'int',
+            unit: '°',
+            half: true,
+            when: (roof) => hasVerges(roof as Pick<RoofShapeFields, 'shape'>),
         },
         {key: 'thickness', label: 'Thickness (square to the slope)', type: 'int', unit: 'mm', half: true},
         {key: 'parapet', label: 'Parapet (empty: none)', type: 'int', unit: 'mm', nullable: true, half: true, when: (roof) => !isPitched(roof)},

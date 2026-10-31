@@ -27,7 +27,7 @@ final readonly class RoofTools
 					'enum' => ['Front', 'Back', 'Left', 'Right'],
 					'description' => 'the eaves edge: Front (−across, where a shed is low), Back, or a hip roof\'s Left (−along) or Right',
 				],
-				'along' => ['type' => 'integer', 'description' => 'mm along the edge from its middle (+ along, or + across on Left / Right)'],
+				'along' => ['type' => 'integer', 'description' => 'mm along the edge from the roof\'s centre line, its middle unless a verge is skewed (+ along, or + across on Left / Right)'],
 			],
 			'required' => ['edge', 'along'],
 		],
@@ -41,7 +41,9 @@ final readonly class RoofTools
 
 	private const string Shape = 'A roof covers a rectangle, its eaves line: width × depth centred on (x, y), the ridge along the width, '
 		. 'turned by rotation. The underside is eaveHeight above the floor\'s level along the eaves line and rises at pitch inwards; '
-		. 'it reaches overhang past the eaves and vergeOverhang past the gables. Every wall of the floor is cut at the underside of '
+		. 'it reaches overhang past the eaves and vergeOverhang past the gables. A gable\'s or shed\'s verge may be skewed to follow a '
+		. 'gable wall that is not square to the ridge: startSkew (at the ridge\'s start, −along) and endSkew turn it by degrees '
+		. 'counter-clockwise about the ridge\'s end on the eaves line, so the eaves line is a trapezoid. Every wall of the floor is cut at the underside of '
 		. 'the roofs over it; a wall with upToRoof (add_wall, add_walls, update_wall) rises to it, as a gable does. An L- or T-shaped house takes two '
 		. 'or three roofs.';
 
@@ -68,6 +70,9 @@ final readonly class RoofTools
 	 * @param int|null $pitch degrees, 5–75 (default 35); unused by a flat roof
 	 * @param int|null $overhang mm past the eaves, 0–2000 (default 400)
 	 * @param int|null $vergeOverhang mm past the gables (and a shed's sides), 0–2000 (default 200)
+	 * @param int|null $startSkew degrees counter-clockwise the verge at the ridge's start (−along) is turned, −45–45 (default 0,
+	 *   square to the ridge); a gable or shed only
+	 * @param int|null $endSkew the same at the ridge's end (+along)
 	 * @param int|null $thickness mm of rafters and covering, square to the slope, 50–1000 (default 250)
 	 * @param int|null $parapet a flat roof's parapet, mm above it, 100–2000 (default none)
 	 * @param int|null $coveringMaterialId from list_materials, e.g. roof-tiles-clay, roof-slate, roof-metal-seam, roof-membrane
@@ -97,6 +102,8 @@ final readonly class RoofTools
 		?int $pitch = null,
 		?int $overhang = null,
 		?int $vergeOverhang = null,
+		?int $startSkew = null,
+		?int $endSkew = null,
 		?int $thickness = null,
 		?int $parapet = null,
 		?int $coveringMaterialId = null,
@@ -124,6 +131,8 @@ final readonly class RoofTools
 				'pitch' => $pitch,
 				'overhang' => $overhang,
 				'vergeOverhang' => $vergeOverhang,
+				'startSkew' => $startSkew,
+				'endSkew' => $endSkew,
 				'thickness' => $thickness,
 				'parapet' => $parapet,
 				'coveringMaterialId' => $coveringMaterialId,
@@ -140,6 +149,8 @@ final readonly class RoofTools
 	/**
 	 * @param string|null $shape "Gable" | "Hip" | "Shed" | "Flat"
 	 * @param int|null $rotation degrees counter-clockwise of the ridge from plan east (+x)
+	 * @param int|null $startSkew degrees counter-clockwise the verge at the ridge's start is turned, −45–45 (0 square)
+	 * @param int|null $endSkew the same at the ridge's end
 	 * @param string|null $gutters "None" | "HalfRound" | "Box"
 	 * @param int|null $snowGuards rows of snow guards on each plane, 0–5
 	 * @param string|null $ridgeStyle "Box" | "Round" | "Angled"
@@ -166,6 +177,8 @@ final readonly class RoofTools
 		?int $pitch = null,
 		?int $overhang = null,
 		?int $vergeOverhang = null,
+		?int $startSkew = null,
+		?int $endSkew = null,
 		?int $thickness = null,
 		?int $parapet = null,
 		?int $coveringMaterialId = null,
@@ -196,6 +209,8 @@ final readonly class RoofTools
 					'pitch' => $pitch,
 					'overhang' => $overhang,
 					'vergeOverhang' => $vergeOverhang,
+					'startSkew' => $startSkew,
+					'endSkew' => $endSkew,
 					'thickness' => $thickness,
 					'parapet' => $parapet,
 					'coveringMaterialId' => $coveringMaterialId,

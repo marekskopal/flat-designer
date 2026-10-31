@@ -22,7 +22,7 @@ use PHPUnit\Framework\TestCase;
  * @phpstan-type Probe array{x: int, y: int, underside: float|int|null, top: float|int|null, plane: int|null}
  * @phpstan-type Plane array{polygon: list<array{x: float|int, y: float|int}>, gradient: array{x: float|int, y: float|int}, height: float|int}
  * @phpstan-type Window array{along: int, across: int, width: int, length: int, plane: int|null, corners?: list<array{x: float|int, y: float|int}>, fits: bool}
- * @phpstan-type RoofFields array{shape: string, x: int, y: int, rotation: int, width: int, depth: int, eaveHeight: int, pitch: int, overhang: int, vergeOverhang: int, thickness: int}
+ * @phpstan-type RoofFields array{shape: string, x: int, y: int, rotation: int, width: int, depth: int, eaveHeight: int, pitch: int, overhang: int, vergeOverhang: int, thickness: int, startSkew?: int, endSkew?: int}
  * @phpstan-type RoomFields array{polygon: list<array{int, int}>, ceilingHeight: int, floorElevation: int}
  * @phpstan-type RoomExpected array{minHeight: float|int, maxHeight: float|int, volume: float|int, headroomArea: float|int, ceilingArea: float|int}
  * @phpstan-type Expected array{ridgeHeight: float|int, planes: list<Plane>, probes: list<Probe>, windows?: list<Window>}
@@ -109,6 +109,8 @@ final class RoofGeometryTest extends TestCase
 			$roof['overhang'],
 			$roof['vergeOverhang'],
 			$roof['thickness'],
+			$roof['startSkew'] ?? 0,
+			$roof['endSkew'] ?? 0,
 		);
 	}
 

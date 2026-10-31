@@ -20,4 +20,10 @@ enum RoofShapeEnum: string
 	{
 		return $this !== self::Flat;
 	}
+
+	/** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed (FD-97). */
+	public function hasVerges(): bool
+	{
+		return $this === self::Gable || $this === self::Shed;
+	}
 }

@@ -12,10 +12,14 @@ import {
     RoofFrame,
     roofHalfExtent,
     roofLocal,
+    roofLocalOutline,
     roofLocalPlanes,
     roofPlanes,
+    RoofShapeFields,
     roofSlope,
     roofToPlan,
+    roofVergeAt,
+    roofVergeSlope,
     roofVerticalThickness,
     RoofWindowLayout,
     roofWindowLayouts,
@@ -499,7 +503,7 @@ function capLines(roof: Roof): [THREE.Vector3, THREE.Vector3][] {
         at(s, t, Math.min(...planes.map((p) => p.base + p.gs * s + p.gt * t)) + thick);
     switch (roof.shape) {
         case 'Gable':
-            return [[topAt(-a, 0), topAt(a, 0)]];
+            return [[topAt(roofVergeAt(roof, false, 0, true), 0), topAt(roofVergeAt(roof, true, 0, true), 0)]];
         case 'Hip': {
             const ks = Math.max(a - b, 0);
             const kt = Math.max(b - a, 0);
@@ -774,17 +778,16 @@ export function buildRoofOutline(roof: Roof): THREE.Group {
     group.userData = {roofId: roof.id, planOnly: true};
     placeRoof(group, roof);
 
-    const {x: a, y: b} = roofHalfExtent(roof);
     const flat = (s: number, t: number): THREE.Vector3 => new THREE.Vector3(s * MM, 0, -t * MM);
-    const loop = (half: Vec2): THREE.Vector3[] => [flat(-half.x, -half.y), flat(half.x, -half.y), flat(half.x, half.y), flat(-half.x, half.y)];
+    const loop = (points: readonly Vec2[]): THREE.Vector3[] => points.map((p) => flat(p.x, p.y));
 
     const material = (dashed: boolean): THREE.LineBasicMaterial =>
         dashed
             ? new THREE.LineDashedMaterial({color: OutlineColor, dashSize: 0.3, gapSize: 0.15, depthTest: false, transparent: true})
             : new THREE.LineBasicMaterial({color: OutlineColor, depthTest: false, transparent: true, opacity: 0.6});
-    const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop({x: a, y: b})), material(true));
+    const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop(roofLocalOutline(roof))), material(true));
     outline.computeLineDistances();
-    const eaves = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop({x: roof.width / 2, y: roof.depth / 2})), material(false));
+    const eaves = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop(roofLocalOutline(roof, false))), material(false));
     const lines = capLines({...roof, eaveHeight: 0, thickness: 0}).flatMap(([from, to]) => [from.setY(0), to.setY(0)]);
     const ridges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(lines), material(false));
     for (const line of [outline, eaves, ridges]) {
@@ -794,21 +797,15 @@ export function buildRoofOutline(roof: Roof): THREE.Group {
         group.add(line);
     }
 
-    const band = new THREE.Shape([
-        new THREE.Vector2(-(a + PickBand) * MM, -(b + PickBand) * MM),
-        new THREE.Vector2((a + PickBand) * MM, -(b + PickBand) * MM),
-        new THREE.Vector2((a + PickBand) * MM, (b + PickBand) * MM),
-        new THREE.Vector2(-(a + PickBand) * MM, (b + PickBand) * MM),
-    ]);
-    const inner = {x: Math.max(a - PickBand, 0), y: Math.max(b - PickBand, 0)};
-    band.holes.push(
-        new THREE.Path([
-            new THREE.Vector2(-inner.x * MM, -inner.y * MM),
-            new THREE.Vector2(-inner.x * MM, inner.y * MM),
-            new THREE.Vector2(inner.x * MM, inner.y * MM),
-            new THREE.Vector2(inner.x * MM, -inner.y * MM),
-        ]),
-    );
+    // The band: the outline grown by `PickBand`, less the outline shrunk by it (as far as it goes).
+    const {x: a, y: b} = roofHalfExtent(roof);
+    const vec = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x * MM, p.y * MM);
+    const band = new THREE.Shape(roofLocalOutline(roof, true, PickBand).map(vec));
+    // `RoofSkew` keeps the outline's front and back at least `RoofMinSide` long, so it shrinks by the band without crossing.
+    const shrink = Math.min(PickBand, a - 1, b - 1);
+    if (shrink > 0) {
+        band.holes.push(new THREE.Path(roofLocalOutline(roof, true, -shrink).map(vec).reverse()));
+    }
     const pick = new THREE.Mesh(new THREE.ShapeGeometry(band).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({visible: false}));
     group.add(pick);
 
@@ -841,9 +838,12 @@ export function highlightRoofOutline(group: THREE.Object3D, selected: boolean, w
     });
 }
 
-type RoofRectangle = RoofFrame & Pick<Roof, 'width' | 'depth'>;
+/** The fields the corners and the corner drag read: the frame, the eaves line and the verges' skews. */
+type RoofRectangle = RoofFrame &
+    Pick<Roof, 'shape' | 'width' | 'depth' | 'overhang' | 'vergeOverhang'> &
+    Partial<Pick<Roof, 'startSkew' | 'endSkew'>>;
 
-/** The corners of the eaves rectangle in the roof's frame, as signs of the half sides, counter-clockwise from the front left. */
+/** The corners of the eaves line in the roof's frame, as signs of the half sides, counter-clockwise from the front left. */
 const CornerSigns: [number, number][] = [
     [-1, -1],
     [1, -1],
@@ -851,23 +851,30 @@ const CornerSigns: [number, number][] = [
     [-1, 1],
 ];
 
-/** The corners of a roof's eaves rectangle in plan (mm), counter-clockwise from its front left. */
+/** A roof's fields for the geometry, its heights left out (the corners do not read them). */
+const shapeOf = (roof: RoofRectangle): RoofShapeFields => ({...roof, eaveHeight: 0, pitch: 0, thickness: 0});
+
+/** The corners of a roof's eaves line in plan (mm), counter-clockwise from its front left; its verges turned by the skews (FD-97). */
 export function roofCorners(roof: RoofRectangle): Vec2[] {
-    return CornerSigns.map(([i, j]) => roofToPlan(roof, (i * roof.width) / 2, (j * roof.depth) / 2));
+    return roofLocalOutline(shapeOf(roof), false).map((corner) => roofToPlan(roof, corner.x, corner.y));
 }
 
 /**
- * The roof resized by dragging one corner of its eaves rectangle to a plan point: the opposite corner stays, the
- * rotation too; each side at least `minSide` mm.
+ * The roof resized by dragging one corner of its eaves line to a plan point: the opposite corner stays, the rotation and
+ * the verges' skews too; each side at least `minSide` mm.
  */
 export function resizeRoofByCorner(roof: RoofRectangle, index: number, to: Vec2, minSide: number): Pick<Roof, 'x' | 'y' | 'width' | 'depth'> {
     const [i, j] = CornerSigns[index];
-    // The fixed corner in the roof's frame, and the pointer there.
-    const fixed = {s: (-i * roof.width) / 2, t: (-j * roof.depth) / 2};
+    const shape = shapeOf(roof);
+    // The fixed corner in the roof's frame, the pointer there, and how far each verge runs along per mm across.
+    const fixed = roofLocalOutline(shape, false)[(index + 2) % 4];
     const pointer = roofLocal(roof, to.x, to.y);
-    // The dragged corner stays on its side of the fixed one.
-    const width = Math.max(minSide, Math.round(i * (pointer.x - fixed.s)));
-    const depth = Math.max(minSide, Math.round(j * (pointer.y - fixed.t)));
-    const centre = roofToPlan(roof, fixed.s + (i * width) / 2, fixed.t + (j * depth) / 2);
+    const dragged = roofVergeSlope(shape, i > 0);
+    const kept = roofVergeSlope(shape, i < 0);
+    // The dragged corner stays on its side of the fixed one; its verge runs back to the fixed corner's depth.
+    const depth = Math.max(minSide, Math.round(j * (pointer.y - fixed.y)));
+    const width = Math.max(minSide, Math.round(i * (pointer.x - fixed.x) - (i * j * depth * (dragged + kept)) / 2));
+    // The centre: the fixed corner's verge back to the ridge, then half the width along it.
+    const centre = roofToPlan(roof, fixed.x + (i * width) / 2 + ((j * depth) / 2) * kept, fixed.y + (j * depth) / 2);
     return {x: Math.round(centre.x), y: Math.round(centre.y), width, depth};
 }

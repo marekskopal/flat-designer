@@ -18,6 +18,11 @@ use const M_PI;
  * `pitch` inwards; past the eaves the planes go on down over the overhang. Every pitched roof's underside is the lowest
  * of its planes, so a point's height needs no lookup of the plane under it.
  *
+ * A gable's or shed's verges may be skewed (FD-97): `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
+ * ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on the eaves line, so the eaves line
+ * and the outline are trapezoids (`localOutline()`), the overhang `vergeOverhang` square to the turned verge. The planes
+ * and so the heights stay as they were; only where the roof reaches changes.
+ *
  * @phpstan-import-type Point from PlanMath
  * @phpstan-type RoofPlane array{polygon: list<Point>, gradient: Point, height: float}
  * @phpstan-type LocalPlane array{polygon: list<Point>, gs: float, gt: float, base: float}
@@ -39,6 +44,8 @@ final readonly class RoofGeometry
 		public int $overhang,
 		public int $vergeOverhang,
 		public int $thickness,
+		public int $startSkew = 0,
+		public int $endSkew = 0,
 	) {
 	}
 
@@ -56,6 +63,8 @@ final readonly class RoofGeometry
 			$roof->overhang,
 			$roof->vergeOverhang,
 			$roof->thickness,
+			$roof->startSkew,
+			$roof->endSkew,
 		);
 	}
 
@@ -73,6 +82,8 @@ final readonly class RoofGeometry
 			$roof->overhang,
 			$roof->vergeOverhang,
 			$roof->thickness,
+			$roof->startSkew,
+			$roof->endSkew,
 		);
 	}
 
@@ -102,13 +113,14 @@ final readonly class RoofGeometry
 	}
 
 	/**
-	 * Half the roof's size in its own frame, overhangs included: along the ridge and across it.
+	 * Half the roof's size in its own frame, overhangs included: along the ridge (the square verges'; skewed ones are
+	 * `vergeAt()`) and across it.
 	 *
 	 * @return Point
 	 */
 	public function halfExtent(): array
 	{
-		$along = $this->shape === RoofShapeEnum::Gable || $this->shape === RoofShapeEnum::Shed ? $this->vergeOverhang : $this->overhang;
+		$along = $this->shape->hasVerges() ? $this->vergeOverhang : $this->overhang;
 
 		return [$this->width / 2 + $along, $this->depth / 2 + $this->overhang];
 	}
@@ -142,9 +154,78 @@ final readonly class RoofGeometry
 	public function covers(float $x, float $y): bool
 	{
 		[$s, $t] = $this->toLocal($x, $y);
-		[$halfS, $halfT] = $this->halfExtent();
 
-		return abs($s) <= $halfS + self::Epsilon && abs($t) <= $halfT + self::Epsilon;
+		return $this->localCovers($s, $t);
+	}
+
+	/** `covers()` of a point in the roof's frame. */
+	public function localCovers(float $s, float $t): bool
+	{
+		[, $halfT] = $this->halfExtent();
+
+		return abs($t) <= $halfT + self::Epsilon
+			&& $s >= $this->vergeAt(false, $t, true) - self::Epsilon
+			&& $s <= $this->vergeAt(true, $t, true) + self::Epsilon;
+	}
+
+	/**
+	 * The s of the verge at the ridge's end (+s) or start (−s) at t, on the outline with the overhang or on the eaves line;
+	 * a hip's or flat roof's sides (never skewed) alike.
+	 */
+	public function vergeAt(bool $end, float $t, bool $outline): float
+	{
+		$skew = $this->skew($end) * M_PI / 180;
+		$reach = $this->width / 2;
+		if ($outline) {
+			$reach += ($this->shape->hasVerges() ? $this->vergeOverhang : $this->overhang) / cos($skew);
+		}
+
+		return ($end ? $reach : -$reach) - $t * tan($skew);
+	}
+
+	/**
+	 * The outline in the roof's frame, counter-clockwise from the front left: with the overhangs, or the eaves line.
+	 *
+	 * @return list<Point>
+	 */
+	public function localOutline(bool $outline = true): array
+	{
+		$b = $outline ? $this->halfExtent()[1] : $this->depth / 2;
+
+		return [
+			[$this->vergeAt(false, -$b, $outline), -$b],
+			[$this->vergeAt(true, -$b, $outline), -$b],
+			[$this->vergeAt(true, $b, $outline), $b],
+			[$this->vergeAt(false, $b, $outline), $b],
+		];
+	}
+
+	/**
+	 * Where along the ridge a downpipe may stand on the front or back eaves: the s (from the roof's centre line) where both
+	 * its foot by the wall (on the eaves line) and its outlet (on the overhang's edge) lie between the verges.
+	 *
+	 * @return array{float, float}
+	 */
+	public function downpipeSpan(bool $back): array
+	{
+		$side = $back ? 1 : -1;
+		$eaves = $side * $this->depth / 2;
+		$edge = $side * $this->halfExtent()[1];
+
+		return [
+			max($this->vergeAt(false, $eaves, false), $this->vergeAt(false, $edge, true)),
+			min($this->vergeAt(true, $eaves, false), $this->vergeAt(true, $edge, true)),
+		];
+	}
+
+	/** Degrees a verge is turned; 0 on a roof without verges. */
+	private function skew(bool $end): int
+	{
+		if (!$this->shape->hasVerges()) {
+			return 0;
+		}
+
+		return $end ? $this->endSkew : $this->startSkew;
 	}
 
 	/** Height of the underside at a plan point; null where the roof does not reach. */
@@ -199,8 +280,7 @@ final readonly class RoofGeometry
 	/** `planeAt()` of a point in the roof's frame. */
 	public function localPlaneAt(float $s, float $t): ?int
 	{
-		[$halfS, $halfT] = $this->halfExtent();
-		if (abs($s) > $halfS + self::Epsilon || abs($t) > $halfT + self::Epsilon) {
+		if (!$this->localCovers($s, $t)) {
 			return null;
 		}
 
@@ -241,18 +321,17 @@ final readonly class RoofGeometry
 		$e = (float) $this->eaveHeight;
 		$halfD = $this->depth / 2;
 
+		$outline = $this->localOutline();
+		$ridge = [[$this->vergeAt(false, 0.0, true), 0.0], [$this->vergeAt(true, 0.0, true), 0.0]];
+
 		return match ($this->shape) {
 			RoofShapeEnum::Gable => [
-				self::plane([[-$a, -$b], [$a, -$b], [$a, 0.0], [-$a, 0.0]], 0.0, $k, $e + $halfD * $k),
-				self::plane([[$a, $b], [-$a, $b], [-$a, 0.0], [$a, 0.0]], 0.0, -$k, $e + $halfD * $k),
+				self::plane([$outline[0], $outline[1], $ridge[1], $ridge[0]], 0.0, $k, $e + $halfD * $k),
+				self::plane([$outline[2], $outline[3], $ridge[0], $ridge[1]], 0.0, -$k, $e + $halfD * $k),
 			],
 			RoofShapeEnum::Hip => $this->hipPlanes($a, $b, $k, $e),
-			RoofShapeEnum::Shed => [
-				self::plane([[-$a, -$b], [$a, -$b], [$a, $b], [-$a, $b]], 0.0, $k, $e + $halfD * $k),
-			],
-			RoofShapeEnum::Flat => [
-				self::plane([[-$a, -$b], [$a, -$b], [$a, $b], [-$a, $b]], 0.0, 0.0, $e),
-			],
+			RoofShapeEnum::Shed => [self::plane($outline, 0.0, $k, $e + $halfD * $k)],
+			RoofShapeEnum::Flat => [self::plane($outline, 0.0, 0.0, $e)],
 		};
 	}
 

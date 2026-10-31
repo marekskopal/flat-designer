@@ -66,7 +66,7 @@ final readonly class RoofGutters
 		$result = [];
 		foreach ($downpipes ?? self::corners($roof) as ['edge' => $edge, 'along' => $along]) {
 			$side = RoofEdgeEnum::tryFrom($edge);
-			if ($side === null || !$side->isEavesOf($roof->shape) || abs($along) > ($side->alongWidth() ? $halfW : $halfD)) {
+			if ($side === null || !$side->isEavesOf($roof->shape) || !self::onEaves($roof, $side, $along)) {
 				continue;
 			}
 			[$wall, $outlet] = match ($side) {
@@ -92,12 +92,12 @@ final readonly class RoofGutters
 	 */
 	private static function eaves(RoofGeometry $roof): array
 	{
-		[$a, $b] = $roof->halfExtent();
+		[$frontLeft, $frontRight, $backRight, $backLeft] = $roof->localOutline();
 		$edges = [
-			RoofEdgeEnum::Front->value => [[-$a, -$b], [$a, -$b]],
-			RoofEdgeEnum::Right->value => [[$a, -$b], [$a, $b]],
-			RoofEdgeEnum::Back->value => [[$a, $b], [-$a, $b]],
-			RoofEdgeEnum::Left->value => [[-$a, $b], [-$a, -$b]],
+			RoofEdgeEnum::Front->value => [$frontLeft, $frontRight],
+			RoofEdgeEnum::Right->value => [$frontRight, $backRight],
+			RoofEdgeEnum::Back->value => [$backRight, $backLeft],
+			RoofEdgeEnum::Left->value => [$backLeft, $frontLeft],
 		];
 
 		return array_filter(
@@ -113,15 +113,34 @@ final readonly class RoofGutters
 		if ($roof->shape === RoofShapeEnum::Flat) {
 			return [];
 		}
-		$along = max(0, intdiv($roof->width, 2) - self::CornerInset);
 		$edges = $roof->shape === RoofShapeEnum::Shed ? [RoofEdgeEnum::Front] : [RoofEdgeEnum::Front, RoofEdgeEnum::Back];
 		$corners = [];
 		foreach ($edges as $edge) {
-			$corners[] = ['edge' => $edge->value, 'along' => -$along];
-			$corners[] = ['edge' => $edge->value, 'along' => $along];
+			[$from, $to] = $roof->downpipeSpan($edge === RoofEdgeEnum::Back);
+			$start = (int) ceil($from) + self::CornerInset;
+			$end = (int) floor($to) - self::CornerInset;
+			if ($start > $end) {
+				$start = $end = intdiv($start + $end, 2);
+			}
+			$corners[] = ['edge' => $edge->value, 'along' => $start];
+			$corners[] = ['edge' => $edge->value, 'along' => $end];
 		}
 
 		return $corners;
+	}
+
+	/**
+	 * Whether a downpipe `along` an edge lies on it: within `RoofGeometry::downpipeSpan()` on the front and back (a skewed
+	 * verge moves the ends), within the depth on a hip's sides.
+	 */
+	private static function onEaves(RoofGeometry $roof, RoofEdgeEnum $edge, int $along): bool
+	{
+		if (!$edge->alongWidth()) {
+			return abs($along) <= $roof->depth / 2;
+		}
+		[$from, $to] = $roof->downpipeSpan($edge === RoofEdgeEnum::Back);
+
+		return $along >= $from - 1e-6 && $along <= $to + 1e-6;
 	}
 
 	/**

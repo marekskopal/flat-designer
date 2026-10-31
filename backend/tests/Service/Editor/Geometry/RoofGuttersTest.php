@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Runs the shared fixture tests/fixtures/roof-gutters.json (also run by the frontend twin, `roof-details.spec.ts`).
  *
- * @phpstan-type RoofFields array{shape: string, x: int, y: int, rotation: int, width: int, depth: int, eaveHeight: int, pitch: int, overhang: int, vergeOverhang: int, thickness: int}
+ * @phpstan-type RoofFields array{shape: string, x: int, y: int, rotation: int, width: int, depth: int, eaveHeight: int, pitch: int, overhang: int, vergeOverhang: int, thickness: int, startSkew?: int, endSkew?: int}
  * @phpstan-type Run array{edge: string, from: array{float, float}, to: array{float, float}, height: float}
  * @phpstan-type Pipe array{edge: string, at: array{float, float}, outlet: array{float, float}, top: float}
  */
@@ -58,6 +58,8 @@ final class RoofGuttersTest extends TestCase
 			$r['overhang'],
 			$r['vergeOverhang'],
 			$r['thickness'],
+			$r['startSkew'] ?? 0,
+			$r['endSkew'] ?? 0,
 		), $roofs);
 		$actualRuns = RoofGutters::runs($geometries, $index);
 		self::assertCount(count($runs), $actualRuns);

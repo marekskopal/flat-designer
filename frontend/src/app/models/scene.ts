@@ -238,6 +238,12 @@ export interface Roof {
     overhang: number;
     /** mm past a gable or a shed's sides. */
     vergeOverhang: number;
+    /**
+     * A gable's or shed's verge at the ridge's start (−along) and end, degrees counter-clockwise (±45, 0 square to the
+     * ridge), turned about the ridge's end on the eaves line (FD-97); missing in older versions: square.
+     */
+    startSkew?: number;
+    endSkew?: number;
     /** mm, rafters and covering, square to the slope. */
     thickness: number;
     /** A flat roof's parapet, mm above it; null none. */
@@ -261,7 +267,10 @@ export type RidgeStyle = 'Box' | 'Round' | 'Angled';
 /** An eaves edge in the roof's frame: the front (−across, where a shed is low), the back, a hip roof's left (−along) and right. */
 export type RoofEdge = 'Front' | 'Back' | 'Left' | 'Right';
 
-/** A downpipe on an eaves edge, `along` mm from the edge's middle (+ along the ridge, or + across it on the left and right). */
+/**
+ * A downpipe on an eaves edge, `along` mm from the roof's centre line (the edge's middle unless a verge is skewed; + along
+ * the ridge, or + across it on the left and right).
+ */
 export interface Downpipe {
     edge: RoofEdge;
     along: number;

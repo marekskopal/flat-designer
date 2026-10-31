@@ -478,7 +478,7 @@ format is the text in `FurnitureTools::Format`.
   `ItemPlacement` keeps them (and every structural kind) off `onRoof`. Quantities do not count them.
 - Roof details (`RoofDetails`, missing in older states and snapshots: none): `gutters` (None, HalfRound, Box) along the
   eaves of a pitched roof (a gable's front and back, a shed's front, a hip's four sides; `RoofEdgeEnum`) and
-  `gutterMaterialId` (null `zinc-titanium`); `downpipes` `[{edge, along}]` (mm from the edge's middle on the eaves line;
+  `gutterMaterialId` (null `zinc-titanium`); `downpipes` `[{edge, along}]` (mm from the roof's centre line on the eaves line, its middle unless a verge is skewed;
   null at the ends of the front and back eaves, `CornerInset` in), checked only when given anew; `snowGuards` rows per
   plane; `ridgeStyle` (Box, Round half-round ridge tiles, Angled metal). A flat roof given anew gutters or snow guards is
   refused, one made flat leaves them behind. The twins are `RoofGutters` (`Service/Editor/Geometry`) and
@@ -504,7 +504,14 @@ format is the text in `FurnitureTools::Format`.
   counting from that floor's level. It is a rectangle, the eaves line: `width` × `depth` centred on (x, y), the ridge
   along the width, turned by `rotation`. `shape` is Gable, Hip (a pyramid over a square), Shed (rising from the front,
   −y at 0°) or Flat (`parapet`); the underside is `eaveHeight` along the eaves line and rises at `pitch`, reaching
-  `overhang` past the eaves and `vergeOverhang` past the gables; `thickness` is square to the slope. A new roof without
+  `overhang` past the eaves and `vergeOverhang` past the gables; `thickness` is square to the slope. A gable's or shed's
+  verges may be skewed (FD-97, `RoofSkew`): `startSkew` / `endSkew` (degrees counter-clockwise, ±45, 0 square) turn the
+  verge at the ridge's start (−along) or end about the ridge's end on the eaves line, the overhang square to it, so the
+  eaves line and the planes are trapezoids (`localOutline()` / `vergeAt()`, `roofLocalOutline()` / `roofVergeAt()`; the
+  heights do not change, only where the roof reaches, so `covers()`, `RoofBreaks`, the gutters, the roof windows' margin
+  and the corner drag follow it; a downpipe stands where both its foot on the eaves line and its outlet on the overhang's
+  edge lie between the verges, `downpipeSpan()` / `roofDownpipeSpan()`). A hip or flat roof given a skew anew is refused,
+  one made so leaves it behind; the front and back, of the eaves line and of the outline, stay at least `MinSide` long. A new roof does not take a skew from the walls yet. A new roof without
   a size takes the rectangle round the walls' outer faces, turned along the longest exterior wall, the ridge along the
   longer side, the eaves at the tallest wall. An L- or T-shaped house takes several roofs.
 - The geometry exists twice: `RoofGeometry` (`Service/Editor/Geometry`) and `viewer/engine/roof-geometry.ts` (planes in

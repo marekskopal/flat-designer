@@ -40,6 +40,8 @@ final readonly class RoofDto
 		public ?array $downpipes = null,
 		public int $snowGuards = 0,
 		public string $ridgeStyle = 'Box',
+		public int $startSkew = 0,
+		public int $endSkew = 0,
 	) {
 	}
 
@@ -69,6 +71,8 @@ final readonly class RoofDto
 			downpipes: $roof->downpipes === null ? null : JsonDecoder::decodeDownpipes($roof->downpipes),
 			snowGuards: $roof->snowGuards,
 			ridgeStyle: $roof->ridgeStyle->value,
+			startSkew: $roof->startSkew,
+			endSkew: $roof->endSkew,
 		);
 	}
 }

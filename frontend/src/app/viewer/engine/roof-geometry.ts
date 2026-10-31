@@ -10,13 +10,19 @@ import {Vec2} from './plan-geometry';
  * from the centre (x, y). The underside is `eaveHeight` along the eaves line (the rectangle's edges) and rises at `pitch`
  * inwards; past the eaves the planes go on down over the overhang. Every pitched roof's underside is the lowest of its
  * planes, so a point's height needs no lookup of the plane under it.
+ *
+ * A gable's or shed's verges may be skewed (FD-97): `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
+ * ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on the eaves line, so the eaves line and
+ * the outline are trapezoids (`roofLocalOutline()`), the overhang `vergeOverhang` square to the turned verge. The planes and
+ * so the heights stay as they were; only where the roof reaches changes.
  */
 
 /** The fields the geometry reads. */
 export type RoofShapeFields = Pick<
     Roof,
     'shape' | 'x' | 'y' | 'rotation' | 'width' | 'depth' | 'eaveHeight' | 'pitch' | 'overhang' | 'vergeOverhang' | 'thickness'
->;
+> &
+    Partial<Pick<Roof, 'startSkew' | 'endSkew'>>;
 
 /** A plane in plan: its outline and the underside over it, `height` at the roof's centre plus `gradient` · (p − centre). */
 export interface RoofPlane {
@@ -44,10 +50,90 @@ export function roofSlope(roof: RoofShapeFields): number {
     return isPitched(roof) ? Math.tan((roof.pitch * Math.PI) / 180) : 0;
 }
 
-/** Half the roof's size in its own frame, overhangs included: along the ridge (x) and across it (y). */
+/** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed (FD-97). */
+export const hasVerges = (roof: Pick<Roof, 'shape'>): boolean => roof.shape === 'Gable' || roof.shape === 'Shed';
+
+/**
+ * Half the roof's size in its own frame, overhangs included: along the ridge (x; the square verges', skewed ones are
+ * `roofVergeAt()`) and across it (y).
+ */
 export function roofHalfExtent(roof: RoofShapeFields): Vec2 {
-    const along = roof.shape === 'Gable' || roof.shape === 'Shed' ? roof.vergeOverhang : roof.overhang;
+    const along = hasVerges(roof) ? roof.vergeOverhang : roof.overhang;
     return {x: roof.width / 2 + along, y: roof.depth / 2 + roof.overhang};
+}
+
+/** A roof's verges, start and end: s on the eaves line and on the outline at t = 0, and the s per mm of t. */
+interface Verges {
+    eaves: [number, number];
+    outline: [number, number];
+    slope: [number, number];
+    /** 1 / cos of the skews, for an outline grown further. */
+    secant: [number, number];
+}
+
+/** Per roof object (a changed roof is a new one): `roofVergeAt()` runs for every point sampled under the roofs. */
+const vergeCache = new WeakMap<RoofShapeFields, Verges>();
+
+function vergesOf(roof: RoofShapeFields): Verges {
+    let verges = vergeCache.get(roof);
+    if (verges === undefined) {
+        const skew = (end: boolean): number => (hasVerges(roof) ? ((end ? roof.endSkew : roof.startSkew) ?? 0) : 0) * (Math.PI / 180);
+        const [start, end] = [skew(false), skew(true)];
+        const overhang = hasVerges(roof) ? roof.vergeOverhang : roof.overhang;
+        const half = roof.width / 2;
+        verges = {
+            eaves: [-half, half],
+            outline: [-half - overhang / Math.cos(start), half + overhang / Math.cos(end)],
+            slope: [-Math.tan(start), -Math.tan(end)],
+            secant: [1 / Math.cos(start), 1 / Math.cos(end)],
+        };
+        vergeCache.set(roof, verges);
+    }
+    return verges;
+}
+
+/**
+ * The s of the verge at the ridge's end (+s) or start (−s) at t, on the outline with the overhang or on the eaves line; a
+ * hip's or flat roof's sides (never skewed) alike.
+ */
+export function roofVergeAt(roof: RoofShapeFields, end: boolean, t: number, outline: boolean): number {
+    const verges = vergesOf(roof);
+    const i = end ? 1 : 0;
+    return (outline ? verges.outline : verges.eaves)[i] + t * verges.slope[i];
+}
+
+/** How far a verge's s moves per mm of t: −tan of its skew. */
+export const roofVergeSlope = (roof: RoofShapeFields, end: boolean): number => vergesOf(roof).slope[end ? 1 : 0];
+
+/**
+ * Where along the ridge a downpipe may stand on the front or back eaves: the s (from the roof's centre line) where both its
+ * foot by the wall (on the eaves line) and its outlet (on the overhang's edge) lie between the verges. Twin of
+ * `RoofGeometry::downpipeSpan()`.
+ */
+export function roofDownpipeSpan(roof: RoofShapeFields, back: boolean): [number, number] {
+    const side = back ? 1 : -1;
+    const eaves = (side * roof.depth) / 2;
+    const edge = side * roofHalfExtent(roof).y;
+    return [
+        Math.max(roofVergeAt(roof, false, eaves, false), roofVergeAt(roof, false, edge, true)),
+        Math.min(roofVergeAt(roof, true, eaves, false), roofVergeAt(roof, true, edge, true)),
+    ];
+}
+
+/**
+ * The outline in the roof's frame, counter-clockwise from the front left: with the overhangs, or the eaves line; `grow`
+ * mm further out all round (TS only, the top view's pick band).
+ */
+export function roofLocalOutline(roof: RoofShapeFields, outline = true, grow = 0): Vec2[] {
+    const b = (outline ? roofHalfExtent(roof).y : roof.depth / 2) + grow;
+    const secant = vergesOf(roof).secant;
+    const verge = (end: boolean, t: number): number => roofVergeAt(roof, end, t, outline) + (end ? grow * secant[1] : -grow * secant[0]);
+    return [
+        {x: verge(false, -b), y: -b},
+        {x: verge(true, -b), y: -b},
+        {x: verge(true, b), y: b},
+        {x: verge(false, b), y: b},
+    ];
 }
 
 /** The roof's frame in plan: its centre and the ridge's direction. */
@@ -74,8 +160,16 @@ export function roofToPlan(roof: RoofFrame, s: number, t: number): Vec2 {
 
 export function roofCovers(roof: RoofShapeFields, x: number, y: number): boolean {
     const local = roofLocal(roof, x, y);
-    const half = roofHalfExtent(roof);
-    return Math.abs(local.x) <= half.x + Epsilon && Math.abs(local.y) <= half.y + Epsilon;
+    return roofLocalCovers(roof, local.x, local.y);
+}
+
+/** `roofCovers()` of a point in the roof's frame. */
+export function roofLocalCovers(roof: RoofShapeFields, s: number, t: number): boolean {
+    return (
+        Math.abs(t) <= roofHalfExtent(roof).y + Epsilon &&
+        s >= roofVergeAt(roof, false, t, true) - Epsilon &&
+        s <= roofVergeAt(roof, true, t, true) + Epsilon
+    );
 }
 
 /** How far a point of the roof's frame lies inside the eaves, along the slope of the plane over it (negative over the overhang). */
@@ -146,8 +240,7 @@ export function roofPlaneAt(roof: RoofShapeFields, x: number, y: number): number
 
 /** `roofPlaneAt()` of a point in the roof's frame. */
 export function roofLocalPlaneAt(roof: RoofShapeFields, s: number, t: number): number | null {
-    const half = roofHalfExtent(roof);
-    if (Math.abs(s) > half.x + Epsilon || Math.abs(t) > half.y + Epsilon) {
+    if (!roofLocalCovers(roof, s, t)) {
         return null;
     }
     switch (roof.shape) {
@@ -183,18 +276,23 @@ export function roofLocalPlanes(roof: RoofShapeFields): LocalRoofPlane[] {
     const k = roofSlope(roof);
     const e = roof.eaveHeight;
     const halfD = roof.depth / 2;
+    const outline = roofLocalOutline(roof).map((p): [number, number] => [p.x, p.y]);
+    const ridge: [number, number][] = [
+        [roofVergeAt(roof, false, 0, true), 0],
+        [roofVergeAt(roof, true, 0, true), 0],
+    ];
     switch (roof.shape) {
         case 'Gable':
             return [
-                plane([[-a, -b], [a, -b], [a, 0], [-a, 0]], 0, k, e + halfD * k),
-                plane([[a, b], [-a, b], [-a, 0], [a, 0]], 0, -k, e + halfD * k),
+                plane([outline[0], outline[1], ridge[1], ridge[0]], 0, k, e + halfD * k),
+                plane([outline[2], outline[3], ridge[0], ridge[1]], 0, -k, e + halfD * k),
             ];
         case 'Hip':
             return hipPlanes(roof, a, b, k, e);
         case 'Shed':
-            return [plane([[-a, -b], [a, -b], [a, b], [-a, b]], 0, k, e + halfD * k)];
+            return [plane(outline, 0, k, e + halfD * k)];
         case 'Flat':
-            return [plane([[-a, -b], [a, -b], [a, b], [-a, b]], 0, 0, e)];
+            return [plane(outline, 0, 0, e)];
     }
 }
 
