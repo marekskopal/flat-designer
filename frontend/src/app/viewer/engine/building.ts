@@ -196,7 +196,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         addRoom(parts, buildRoom(room, scene.walls, materials, scene.plots ?? [], voids, roofs), room.id);
     }
     for (const plot of scene.plots ?? []) {
-        const group = buildPlot(plot, materials, scene.rooms);
+        const group = buildPlot(plot, materials, scene.rooms, scene.walls);
         parts.plots.set(plot.id, group);
         root.add(group);
     }

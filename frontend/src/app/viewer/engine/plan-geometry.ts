@@ -490,6 +490,11 @@ export interface WallCollider {
     from: number;
     to: number;
     halfThickness: number;
+    /**
+     * The walker's standing levels (mm against the floor's level, inclusive) it stops; none: every level. A stair's side
+     * stops only the walker on it, or under its low part; the stairwell of one from below only the walker on the floor.
+     */
+    levels?: readonly [number, number];
 }
 
 /**
@@ -840,11 +845,12 @@ export function leafColliders(walls: readonly Wall[], openness: (openingId: numb
  * Pushes a circle (centre `point`, plan mm) out of every collider it overlaps. Applied after each step of a
  * move, the push along the wall normal makes a walker slide along walls instead of stopping at them.
  */
-export function collideCircle(point: Vec2, radius: number, colliders: readonly WallCollider[]): Vec2 {
+export function collideCircle(point: Vec2, radius: number, colliders: readonly WallCollider[], level?: number): Vec2 {
     let {x, y} = point;
+    const stops = (c: WallCollider): boolean => level === undefined || c.levels === undefined || (level >= c.levels[0] && level <= c.levels[1]);
     for (let pass = 0; pass < 4; pass++) {
         let pushed = false;
-        for (const {frame, from, to, halfThickness} of colliders) {
+        for (const {frame, from, to, halfThickness} of colliders.filter(stops)) {
             const dx = x - frame.start.x;
             const dy = y - frame.start.y;
             let along = dx * frame.dir.x + dy * frame.dir.y;

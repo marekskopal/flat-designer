@@ -1,9 +1,9 @@
-import {PlanPoint, Plot, Room} from '@app/models/scene';
+import {PlanPoint, Plot, Room, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Pair, Polygon, Ring} from 'polygon-clipping';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
-import {MM, pointInPolygon, polygonCentroid} from './plan-geometry';
+import {MM, pointInPolygon, polygonCentroid, wallFrame, wallOutline} from './plan-geometry';
 import {hasTerrain, plotAt, plotTerrain, Terrain, terrainAt, terrainRange} from './terrain';
 
 /** The ground of a plot without a material of its own. */
@@ -88,11 +88,31 @@ function belowGround(plot: Plot, room: Room): boolean {
 /**
  * The rooms cut out of a plot's ground: those within its boundary whose floor lies below the ground (a sunken terrace,
  * the house's rooms on a raised plot or set into a slope), so the ground does not cover them. A room inside another
- * such room is left to it.
+ * such room is left to it. With the floor's `walls`, the walls standing on the floor (not on the ground) join the rooms
+ * they touch, so the ground does not show through their doorways and above their tops between the rooms (a house set
+ * into a slope); the holes are then the outlines of the joined pieces that hold a sunken room.
  */
-export function groundHoles(plot: Plot, rooms: readonly Room[]): PlanPoint[][] {
+export function groundHoles(plot: Plot, rooms: readonly Room[], walls: readonly Wall[] = []): PlanPoint[][] {
     const sunken = rooms.filter((r) => belowGround(plot, r) && inside(r.polygon, plot.polygon));
-    return sunken.filter((r) => !sunken.some((other) => other !== r && inside(r.polygon, other.polygon))).map((r) => r.polygon);
+    const holes = sunken.filter((r) => !sunken.some((other) => other !== r && inside(r.polygon, other.polygon))).map((r) => r.polygon);
+    const standing = walls.filter((w) => w.onGround !== true);
+    if (holes.length === 0 || standing.length === 0) {
+        return holes;
+    }
+    const squared = (wall: Wall): Polygon => {
+        const h = wall.thickness / 2;
+        const frame = wallFrame(wall);
+        // Squared off half the thickness past the ends, which covers the corners where walls meet.
+        const outline = wallOutline(frame, wall.thickness, 0, frame.length, {startLeft: h, startRight: h, endLeft: h, endRight: h});
+        return [outline.map((p): Pair => [p.x, p.y])];
+    };
+    const [first, ...rest] = [...holes.map((h): Polygon => [ring(h)]), ...standing.map(squared)];
+    // Within the boundary (a wall may stand on it).
+    const joined = polygonClipping.intersection(polygonClipping.union(first, ...rest), [ring(plot.polygon)]);
+    const centres = holes.map((h) => polygonCentroid(h));
+    return joined
+        .map((polygon) => openRing(polygon[0]).map(([x, y]): PlanPoint => [x, y]))
+        .filter((outline) => centres.some((c) => pointInPolygon(c, outline)));
 }
 const BoundaryColor = '#5b5145';
 const SelectedBoundaryColor = '#d9822b';
@@ -190,11 +210,11 @@ function boundaryPoints(plot: Plot): THREE.Vector3[] {
  * (`groundHoles()`), and the boundary as a dashed line, which is not pickable (a line's ray threshold would reach far
  * beyond it). A flat ground lies at the plot's level (the group's height); a sloping one follows the terrain.
  */
-export function buildPlot(plot: Plot, materials: MaterialLibrary, rooms: readonly Room[] = []): THREE.Group {
+export function buildPlot(plot: Plot, materials: MaterialLibrary, rooms: readonly Room[] = [], walls: readonly Wall[] = []): THREE.Group {
     const group = new THREE.Group();
     group.name = `plot:${plot.name}`;
     group.userData = {plotId: plot.id};
-    const holes = groundHoles(plot, rooms);
+    const holes = groundHoles(plot, rooms, walls);
     let geometry: THREE.BufferGeometry;
     if (hasTerrain(plot)) {
         geometry = drapedGeometry(plot.polygon, holes, plotTerrain(plot));

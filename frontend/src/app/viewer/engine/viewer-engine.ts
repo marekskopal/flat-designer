@@ -919,14 +919,15 @@ export class ViewerEngine {
             parts.root.add(parts.slab);
         }
 
-        // The plots' ground is cut out under the rooms below it, and a room's floor edge steps to its plot's ground
-        // (a garden on a slope follows it): changed rooms rebuild every plot, changed plots every room.
+        // The plots' ground is cut out under the rooms below it and the walls between them, and a room's floor edge
+        // steps to its plot's ground (a garden on a slope follows it): changed rooms or walls rebuild every plot, changed
+        // plots every room.
         const roomsChanged = rooms.removed.length > 0 || rooms.changed.length > 0;
-        if (plotsChanged || roomsChanged) {
+        if (plotsChanged || roomsChanged || wallsChanged) {
             parts.plots.forEach((group) => this.disposeObject(group));
             parts.plots.clear();
             for (const plot of scene.plots ?? []) {
-                const group = buildPlot(plot, materials, scene.rooms);
+                const group = buildPlot(plot, materials, scene.rooms, scene.walls);
                 parts.plots.set(plot.id, group);
                 parts.root.add(group);
             }
@@ -3522,7 +3523,7 @@ export class ViewerEngine {
         if (parts === null || materials === null) {
             return;
         }
-        const preview = buildPlot(plot, materials, this.sceneData?.rooms ?? []);
+        const preview = buildPlot(plot, materials, this.sceneData?.rooms ?? [], this.sceneData?.walls ?? []);
         highlightPlot(preview, true);
         const original = parts.plots.get(plot.id);
         this.setPreview(original === undefined ? [] : [original], [preview]);

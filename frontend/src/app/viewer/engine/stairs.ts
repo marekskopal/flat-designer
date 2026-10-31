@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
-import {MM, polygonBounds, Vec2, WallCollider, wallFrame} from './plan-geometry';
+import {MM, pointInPolygon, pointOnWall, polygonBounds, Vec2, WallCollider, WallFrame, wallFrame} from './plan-geometry';
 import {buildRailRun, buildWallHandrail, railingSpacing, RailLook, RailPoint} from './railings';
 
 /** mm, the highest riser an automatic count gives (`StairRise::MaxAutoRiser`). */
@@ -834,11 +834,13 @@ export function stairSpot(paths: readonly StairPath[], point: Vec2, near?: numbe
             s0 += length;
         }
     }
-    if (candidates.length === 0) {
+    // A flight more than a step above the walker's feet is overhead: the walker is under it, not on it.
+    const reachable = near === undefined ? candidates : candidates.filter((c) => c.path.offset + c.height <= near + StairStepUp);
+    if (reachable.length === 0) {
         return null;
     }
-    const best = Math.min(...candidates.map((c) => c.distance));
-    const close = candidates.filter((c) => c.distance <= best + c.path.width / 2);
+    const best = Math.min(...reachable.map((c) => c.distance));
+    const close = reachable.filter((c) => c.distance <= best + c.path.width / 2);
     const level = (c: {path: StairPath; height: number}): number => c.path.offset + c.height;
     const pick =
         near === undefined
@@ -847,26 +849,134 @@ export function stairSpot(paths: readonly StairPath[], point: Vec2, near?: numbe
     return {path: pick.path, s: pick.s, height: pick.height};
 }
 
+/** mm of clear height the walker needs: under a flight higher than this it walks beneath. */
+export const StairHeadroom = 2000;
+/** mm a walker climbs onto a stair at once; a flight higher above the walker's feet than this is overhead. */
+const StairStepUp = 600;
+/** mm over the floor's level up to which the stairwell of a stair from below stops the walker (its railing). */
+const StairwellTop = 100;
+
 /**
  * What the walker bumps into at the stairs: the sides of the floor's own stairs (open where they start, so the walker
  * steps on, closed at the top, where the walk goes on upstairs), and the edges of the voids of the stairs coming up
  * from below (open where they arrive, closed elsewhere: the stairwell's railing). `StairPath.open` tells the edges.
+ *
+ * Each stops the walker only at some levels (`WallCollider.levels`): a flight's sides the walker on it and, where the
+ * flight is lower than `StairHeadroom`, the walker beside it; where it is higher, the walker walks under it, as far as
+ * a crosswise collider where the flight comes down to the headroom. The stairwell of a stair from below stops only the
+ * walker on the floor (not one climbing the floor's own flight over it).
  */
 export function stairColliders(paths: readonly StairPath[]): WallCollider[] {
     const colliders: WallCollider[] = [];
+    const own = paths.filter((path) => !path.below).map((path) => path.footprint.map((p): PlanPoint => [p.x, p.y]));
     for (const path of paths) {
+        const level = (point: Vec2): number => path.offset + walkHeightAt(path, point);
         path.footprint.forEach((a, i) => {
             const b = path.footprint[(i + 1) % path.footprint.length];
             if (path.open({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2})) {
                 return;
             }
             const frame = wallFrame({startX: a.x, startY: a.y, endX: b.x, endY: b.y});
-            if (frame.length > 0) {
-                colliders.push({frame, from: 0, to: frame.length, halfThickness: StairSideHalf});
+            if (frame.length <= 0) {
+                return;
+            }
+            if (path.below) {
+                // Where one of the floor's own stairs flies over the stairwell, the walker is on that stair, its sides bounding it.
+                for (const [from, to, covered] of stretches(frame, (p) => own.some((footprint) => pointInPolygon(p, footprint)))) {
+                    if (!covered) {
+                        colliders.push({frame, from, to, halfThickness: StairSideHalf, levels: [-Infinity, StairwellTop]});
+                    }
+                }
+                return;
+            }
+            for (const [from, to, overhead] of stretches(frame, (p) => level(p) - path.offset >= StairHeadroom)) {
+                const high = Math.max(level(pointOnWall(frame, from, 0)), level(pointOnWall(frame, to, 0)));
+                // Beside a stretch over the headroom, the walker at the floor passes under it; one in a stairwell below passes any.
+                const low = overhead ? path.offset + 1 : path.offset - StairStepUp;
+                colliders.push({frame, from, to, halfThickness: StairSideHalf, levels: [low, high + StairStepUp]});
             }
         });
+        const crossing = path.below ? null : headroomCrossing(path);
+        if (crossing !== null) {
+            colliders.push(crossing);
+        }
     }
     return colliders;
+}
+
+/**
+ * A footprint edge cut where a test of its points changes (sampled every 50 mm), e.g. where the flight beside it rises
+ * past `StairHeadroom`: [from, to] mm along it, and the test's result there.
+ */
+function stretches(frame: WallFrame, test: (point: Vec2) => boolean): [number, number, boolean][] {
+    const samples = Math.max(2, Math.ceil(frame.length / 50));
+    const passes = (t: number): boolean => test(pointOnWall(frame, t, 0));
+    const result: [number, number, boolean][] = [];
+    let start = 0;
+    let state = passes(0);
+    for (let k = 1; k <= samples; k++) {
+        const t = (k / samples) * frame.length;
+        if (passes(t) !== state) {
+            result.push([start, t, state]);
+            start = t;
+            state = !state;
+        }
+    }
+    result.push([start, frame.length, state]);
+    return result.filter(([from, to]) => to - from > 1);
+}
+
+/**
+ * Under a flight that rises past `StairHeadroom`, a collider across it where it comes down to the headroom: the walker
+ * beneath stops there (not one on the flight, nor one in a stairwell well below it). Null for a flight that never gets so high.
+ */
+function headroomCrossing(path: StairPath): WallCollider | null {
+    for (let i = 1; i < path.walk.length; i++) {
+        const a = path.walk[i - 1];
+        const b = path.walk[i];
+        const [la, lb] = [a.height, b.height];
+        if ((la < StairHeadroom) === (lb < StairHeadroom) || lb === la) {
+            continue;
+        }
+        const t = (StairHeadroom - la) / (lb - la);
+        const at = {x: a.point.x + (b.point.x - a.point.x) * t, y: a.point.y + (b.point.y - a.point.y) * t};
+        const length = Math.hypot(b.point.x - a.point.x, b.point.y - a.point.y);
+        if (length < 1e-6) {
+            continue;
+        }
+        // Square to the walking line, the flight's width across.
+        const across = {x: -(b.point.y - a.point.y) / length, y: (b.point.x - a.point.x) / length};
+        const half = path.width / 2;
+        const frame = wallFrame({
+            startX: at.x - across.x * half,
+            startY: at.y - across.y * half,
+            endX: at.x + across.x * half,
+            endY: at.y + across.y * half,
+        });
+        const levels: [number, number] = [path.offset - StairStepUp, path.offset + StairHeadroom - StairStepUp - 1];
+        return {frame, from: 0, to: frame.length, halfThickness: StairSideHalf, levels};
+    }
+    return null;
+}
+
+/** The height of a stair's walking line (above its floor) nearest a plan point. */
+function walkHeightAt(path: StairPath, point: Vec2): number {
+    let best = Infinity;
+    let height = 0;
+    for (let i = 1; i < path.walk.length; i++) {
+        const a = path.walk[i - 1];
+        const b = path.walk[i];
+        const dx = b.point.x - a.point.x;
+        const dy = b.point.y - a.point.y;
+        const length2 = dx * dx + dy * dy;
+        const t = length2 < 1e-9 ? 0 : Math.min(1, Math.max(0, ((point.x - a.point.x) * dx + (point.y - a.point.y) * dy) / length2));
+        const distance = Math.hypot(point.x - (a.point.x + dx * t), point.y - (a.point.y + dy * t));
+        if (distance < best) {
+            best = distance;
+            height = a.height + (b.height - a.height) * t;
+        }
+    }
+    return height;
 }
 
 /**

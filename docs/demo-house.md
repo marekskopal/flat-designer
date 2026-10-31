@@ -371,6 +371,69 @@ Global definitions seeded by `SeedDemoHouseFurniture` (FD-93), and CC0 Poly Have
 | Dining chairs (oak plywood) | Dining chair definition (have) in `oak-veneer` | Stand-in: no CC0 plywood chair. |
 | Wall-hung WC | `Toilet` kind (have) | |
 
+## Result (FD-95)
+
+The house was modelled by Claude Code over the flat-designer MCP server only (project "Family house Žebětín" on the
+local stack). The human part was creating the empty project and importing the drawings and photos with
+`make import-files DIR=source_files/demo-house/raw PROJECT=13`, and the CC0 models (FD-93) with `make import-models`.
+Positions came from the calibration above (wall faces, levels, openings, cameras); the furniture definitions' ids were
+looked up once in the database instead of with `list_furniture_definitions`, to keep its long listing out of the
+context.
+
+| | |
+| --- | --- |
+| Wall-clock time, first tool call to the last change | 17 minutes (2026-10-31, 21:08 to 21:25 UTC), the comparison with the photos and drawings after it |
+| MCP tool calls | about 270 (counted by hand; reads included) |
+| Logged changes (`list_changes`) | 276, all by the agent's client |
+| Walls, openings, rooms | 41, 30, 22 (of them 5 open-air: light well, deck, forecourt, two lavender beds) |
+| Stairs, voids, railings | 4 (two flights, the north garden steps, the deck step), 1, 2 |
+| Roofs, roof windows | 4 (the gable with a 5° skewed verge, the garage, the entrance canopy, the oriel's top), 5 |
+| Items | 100: 72 from furniture definitions, 14 models, 14 built-in kinds (chimney, fences and the gate, sink, hob, basins, WCs, washing machine) |
+| Groups | 6 (kitchen, dining set, two bathrooms, two beds) |
+| Saved views, share links | 25 (21 photos, all floors, the night living room, the walkthrough start), 1 |
+| Versions | 8 phase versions and 1 saved by the share link |
+
+### Phases
+
+1. Site (north angle 340, Brno, `Europe/Prague`), façade render, the first and second floors at +2960 and +5920 with
+   their slabs, and the three plans laid under their floors from the calibration (12.346 mm per px). Version 1.
+2. The shell: 450 outer walls (the south wall skewed 5°), the 305 glazing wall, the 215 spine, partitions, the garage
+   and entrance wing, the oriel's walls from +2400 to +6160, the second floor's walls up to the roof; 16 rooms. Areas
+   within 0.1 m² of the table above. Version 2.
+3. 30 openings: the lift-and-slide glazing (3 panes), the light-well window set in the outer face, the strip window,
+   the boarded front door (the walkthrough's entrance), the boarded sectional garage door, the oriel's frameless corner
+   glazing, oak doors with frames to the ceiling. Version 3.
+4. Two stacked straight flights on oak stringers with balusters (the upper with a wall handrail), the oak-lined hall
+   void and the gallery balustrade. Version 4.
+5. The beaver-tail gable with a skewed south verge (FD-97), round ridge tiles, snow guards, half-round zinc gutters and
+   downpipes, five roof windows; the garage and entrance flat roofs in gravel; the oriel's top; the chimney from the
+   ground floor with its cap; three vent tiles on the roof and the dish on the chimney. Version 5.
+6. The plot with 22 spot heights (the street at +3240 down to −2000 at the garden's end), the light well, the larch
+   deck and its step, the concrete garden steps down the north side, the clay-paver forecourt, the street retaining
+   wall with a sloping top, the bin store, the sliding gate, larch fences raking with the ground, three runs of
+   stepping slabs, the curved dry-stone wall, two lavender beds, ten trees, shrubs and the shed. Version 6.
+7. Wide oak floors with oak skirting, quartzite in the bathrooms and WC (walls too), the grey render plinth, larch under
+   the oriel. Version 7.
+8. The kitchen (five base units on the skewed wall, five tall units with the oven tower and its plinth grille,
+   worktop, sink, hob), the fireplace at the chimney, poufs, the dining set with the bench and the linear pendant, the
+   blind cassette over the glazing, both bathrooms, wardrobes, beds, desks, shelves and books, ceiling lights,
+   pendants, switches and sockets. Version 8.
+9. 25 saved views and a share link of the second floor with all floors below it.
+
+### Compared with the photos and drawings
+
+The exterior views (01, 02, 04, 06, 06b) and the interiors (07, 08, 10, 12, 15, 17a, 21) match the photos closely: the
+east façade with the oriel, the north gable with the fence on the slope, the kitchen's tall units and window, the
+fireplace with its logs, the stacked stairs and the oriel's corner glazing. The exported first-floor plan lines up
+with the architect's plan. These remain, each logged as a task where it is a gap:
+
+- **FD-98** A wall's top cannot lie below its floor's level, so the dry-stone wall down the garden is about 1 m tall.
+- **FD-99** No fan-shaped steps: the steps round the dry-stone wall are left out.
+- **FD-100** Fences are straight items: each boundary is four 10 m items.
+- **FD-101** Flat roofs are rectangles: the garage roof leaves slivers along the skewed south wall.
+- **FD-54** Saved views have no lens, so photo 19 shows only the shower wall instead of the whole bathroom.
+- The fire does not flicker (FD-93), and the bath is rounded rather than oval.
+
 ## Gaps → tasks
 
 - **FD-86** Sloping terrain: spot heights, the ground under the house, contours.

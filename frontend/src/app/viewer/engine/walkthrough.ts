@@ -217,7 +217,7 @@ export class Walkthrough {
      * the pitch and the pointer lock stay.
      */
     public moveTo(position: Vec2, yaw?: number): void {
-        this.position = collideCircle(position, BodyRadius, this.colliders());
+        this.position = collideCircle(position, BodyRadius, this.colliders(), this.lastLevel);
         if (yaw !== undefined) {
             this.yaw = yaw;
         }
@@ -251,7 +251,7 @@ export class Walkthrough {
         const colliders = this.colliders();
         const steps = Math.ceil(distance / MaxStep);
         for (let i = 0; i < steps; i++) {
-            const next = collideCircle({x: this.position.x + dx / steps, y: this.position.y + dy / steps}, BodyRadius, colliders);
+            const next = collideCircle({x: this.position.x + dx / steps, y: this.position.y + dy / steps}, BodyRadius, colliders, this.lastLevel);
             if (this.levels.tooSteep?.(this.position, next) === true) {
                 break;
             }
@@ -290,7 +290,7 @@ export class Walkthrough {
     }
 
     private collide(): void {
-        this.position = collideCircle(this.position, BodyRadius, this.colliders());
+        this.position = collideCircle(this.position, BodyRadius, this.colliders(), this.lastLevel);
         this.applyCamera();
     }
 

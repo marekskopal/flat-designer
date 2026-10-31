@@ -1,4 +1,4 @@
-import {Item, Plot, Room} from '@app/models/scene';
+import {Item, Plot, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
@@ -139,6 +139,32 @@ describe('a sloping plot', () => {
         // A garden a step down into the slope is cut out, so the ground does not cover it.
         expect(groundHoles(slope, [house(-150, 'Garden')])).toEqual([house(-150, 'Garden').polygon]);
         expect(groundAt(buildPlot(slope, materials, [house(0)]), 11000, 5000)).toBeNull();
+    });
+
+    it('cuts out the walls between the rooms set into the slope too, so the ground does not show through a doorway', () => {
+        // Two rooms with a 200 mm wall between them (x 10900–11100); the ground there is about 1300 mm up.
+        const west = room([[8000, 2000], [10900, 2000], [10900, 8000], [8000, 8000]], 0);
+        const east = room([[11100, 2000], [14000, 2000], [14000, 8000], [11100, 8000]], 0);
+        const wall = {
+            id: 1,
+            name: 'Partition',
+            type: 'Interior',
+            startX: 11000,
+            startY: 2000,
+            endX: 11000,
+            endY: 8000,
+            sagitta: 0,
+            thickness: 200,
+            height: 2600,
+            materialId: null,
+            openings: [],
+        } as unknown as Wall;
+        expect(groundAt(buildPlot(slope, materials, [west, east]), 11000, 5000)).not.toBeNull();
+        const holes = groundHoles(slope, [west, east], [wall]);
+        expect(holes).toHaveLength(1);
+        expect(groundAt(buildPlot(slope, materials, [west, east], [wall]), 11000, 5000)).toBeNull();
+        // A garden wall standing on the ground cuts nothing.
+        expect(groundHoles(slope, [west, east], [{...wall, onGround: true}])).toHaveLength(2);
     });
 
     it('drapes gardens, paths and driveways on it, and knows the ground beside a room', () => {

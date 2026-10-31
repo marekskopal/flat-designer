@@ -367,7 +367,8 @@ format is the text in `FurnitureTools::Format`.
   rooms draped on it along the triangles (`drapedGeometry()` in `plots.ts`). Gardens, paths and driveways on a sloping
   plot follow it (`drapedOn()`, `floorElevation` lifting them); other rooms keep their flat floor, and its edge steps
   down to the ground along the outline (`groundBeside()`; an indoor room's never up, as its walls stand there). A room
-  is cut out of the ground where its floor lies below it anywhere (`groundHoles()`; a draped one where its elevation
+  is cut out of the ground where its floor lies below it anywhere (`groundHoles()`, together with the footprints of the
+  walls round it that are not `onGround`, so no ground shows in their window reveals; a draped one where its elevation
   is negative). An item with `onGround` (`items.on_ground`) counts its z from the ground under its centre
   (`ItemAssets.plots`); a plot change rebuilds those items and every room. The
   walkthrough follows the ground and stops at slopes over 35° between two points on sloping ground
@@ -736,7 +737,11 @@ format is the text in `FurnitureTools::Format`.
   last height wins: `Walkthrough` passes it, and `setFloorLevels(levels, level)` carries it over to a floor walked
   onto). `stairColliders()` block a stair's sides, open where the floor's own stairs start and where those from below
   arrive (`StairPath.open`: half the flight's width, or a tread's turn round a spiral; the stairwell's other edges are
-  its railing, and an upper floor's walls over a stairwell block too). Within `StairLanding` of the top, or of the
+  its railing, and an upper floor's walls over a stairwell block too). Colliders may have `levels`, the walker's levels
+  they stop (`collideCircle(…, level)`): a stairwell's edges only the walker on its floor (and not where the floor's own
+  stair flies over it), a flight's sides only up to a step (`StairStepUp`) over the flight, and where it is over
+  `StairHeadroom` not the walker underneath, who is stopped across the flight where it comes down to the headroom
+  (`headroomCrossing()`), unless deep in a stairwell below; `stairSpot()` takes no stair over a step above the walker. Within `StairLanding` of the top, or of the
   bottom of a stair from below, `ViewerEngine.followStairs()` walks to the next floor as PageUp / PageDown do; the
   walker keeps the spot they have reached when it loads, and no further floor until they leave the landing zone
   (`stairArrival`). While climbing, the floor above is not drawn until it loads.

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {MaterialLibrary} from './materials';
-import {polygonSignedArea, Vec2} from './plan-geometry';
+import {collideCircle, polygonSignedArea, Vec2} from './plan-geometry';
 import {
     buildStair,
     buildStairsBelow,
@@ -349,6 +349,45 @@ describe('walking the stairs', () => {
             !colliders.some((c) => Math.abs(c.frame.start.y - 2000) < 1 && Math.abs(c.frame.start.y + c.frame.dir.y * c.frame.length - 2000) < 1);
         expect(openStart(stairColliders(own))).toBe(true);
         expect(openStart(stairColliders(below))).toBe(false);
+    });
+
+    it('lets the walker under a storey-high flight where it clears the headroom, and stops it where the flight comes down', () => {
+        // 16 risers of 180 over 2880 mm, 15 treads of 270: the walking line runs north from (1000, 2000) to (1000, 6050).
+        const tall = stairPaths({stairs: [{...stair, risers: 16}], stairRise: 2880, stairsBelow: null});
+        const colliders = stairColliders(tall);
+        // Under the high part, at the floor: not on the stair, and not stopped beside it.
+        expect(stairSpot(tall, {x: 1000, y: 5500}, 0)).toBeNull();
+        expect(collideCircle({x: 1000 + 450 + 150, y: 5500}, 200, colliders, 0).x).toBeCloseTo(1000 + 450 + 150);
+        // Beside the low part the side stops it, at any level up to the flight's.
+        expect(collideCircle({x: 1000 + 450 + 150, y: 2500}, 200, colliders, 0).x).toBeGreaterThan(1000 + 450 + 150);
+        // Walking under it from the high end, it stops where the flight comes down to the headroom (2000 mm: 11.1 risers up).
+        const under = collideCircle({x: 1000, y: 2000 + 270 * 10.6}, 200, colliders, 0);
+        expect(under.y).toBeGreaterThan(2000 + 270 * 10.6);
+        // On the flight there, the walker passes.
+        expect(collideCircle({x: 1000, y: 2000 + 270 * 10.6}, 200, colliders, 1900).y).toBeCloseTo(2000 + 270 * 10.6);
+    });
+
+    it('stops at the stairwell of a stair from below only the walker on the floor, not one on a flight over it', () => {
+        const colliders = stairColliders(below);
+        const side = {x: 1000 + 450 + 50, y: 2400};
+        expect(collideCircle(side, 200, colliders, 0).x).not.toBeCloseTo(side.x);
+        expect(collideCircle(side, 200, colliders, 300).x).toBeCloseTo(side.x);
+    });
+
+    it('leaves the stairwell from below open where the floor\'s own stair flies over it', () => {
+        // The floor's stair starts 300 mm before the closed end of the stairwell (y 2000) and climbs north over it.
+        const stacked = stairPaths({stairs: [{...short, y: 1700}], stairRise: 720, stairsBelow: {floorId: 3, rise: 720, stairs: [short]}});
+        const onStair = {x: 1000, y: 1850};
+        expect(collideCircle(onStair, 200, stairColliders(below), 50).y).not.toBeCloseTo(onStair.y);
+        expect(collideCircle(onStair, 200, stairColliders(stacked), 50).y).toBeCloseTo(onStair.y);
+    });
+
+    it('lets the walker on a stair from below pass under the floor\'s own flight above it', () => {
+        // A storey-high flight north from (1000, 2000) over the stairwell of one coming up beside it, 1000 mm below its crossing.
+        const tall = stairPaths({stairs: [{...stair, risers: 16}], stairRise: 2880, stairsBelow: null});
+        const under = {x: 1000, y: 2000 + 270 * 10.6};
+        expect(collideCircle(under, 200, stairColliders(tall), 0).y).not.toBeCloseTo(under.y);
+        expect(collideCircle(under, 200, stairColliders(tall), -1000).y).toBeCloseTo(under.y);
     });
 
     it('goes on upstairs near the top of the floor\'s stairs, downstairs near the bottom of those from below', () => {
