@@ -90,6 +90,9 @@ Camera position → the point it looks at, in plan mm.
 | 11 | Bathroom door: vanity, round mirror, WC, herringbone tiles | 6410, 2900 | 6410, 5200 |
 | 12 | Bathroom: shower screen, rain shower, vessel basin | 5510, 3610 | 6930, 5060 |
 
+The photo views have a 14 mm lens (FD-54): the photos are portrait wide-angle shots, and 14 mm in the 16:10 views
+covers their height (floor to vaults), compared side by side for photos 02 and 12.
+
 The photos are staged sparsely. Furniture they do not show (sofa, side tables, dining table and chairs, beds, desks)
 comes from the plan.
 
@@ -228,7 +231,6 @@ in the comparison and fixed. These mismatches remain, each logged as a task:
 - **FD-52** Wall finishes are per room, so the shower walls are herringbone instead of terrazzo.
 - **FD-53** Missing product models: vessel basin, black taps, close-coupled WC, rain shower, extractor, Cesca and
   butterfly chairs, TMM lamp. Stand-ins are named "… stand-in".
-- **FD-54** Saved views have no lens setting, so they show less than the wide-angle photos.
 - **FD-56** The dropped ceiling's curved edge is a polyline shared with the floor edge.
 - **FD-57** Bedroom 3's trapezoid wardrobe is a rectangle.
 - **FD-55** Under `make dev`, live updates do not arrive (the dev proxy has no Mercure route).
