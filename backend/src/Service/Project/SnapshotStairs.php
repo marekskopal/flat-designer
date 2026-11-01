@@ -9,8 +9,8 @@ use stdClass;
 
 /**
  * The stairs' part of a version's scene, derived from the snapshot's floors as `SceneProvider` derives it from the rows:
- * `stairRise` (`StairRise`) and `stairsBelow` (the floor below's stairs with their rise). Snapshots taken before stairs
- * have none.
+ * `stairRise` (`StairRise`), `stairsBelow` (the floor below's stairs with their rise) and `voidsAbove` (the floor above's
+ * slab and voids, FD-90). Snapshots taken before stairs and voids have none.
  */
 final readonly class SnapshotStairs
 {
@@ -42,7 +42,20 @@ final readonly class SnapshotStairs
 		$scene->stairsBelow = $below === null ? null : [
 			'floorId' => $below['id'],
 			'rise' => $this->rise($this->floors[$below['id']]),
-			'stairs' => self::stairs($this->floors[$below['id']])];
+			// A stair with a rise of its own (garden steps) stays on its floor.
+			'stairs' => array_values(array_filter(
+				self::stairs($this->floors[$below['id']]),
+				static fn (mixed $stair): bool => !($stair instanceof stdClass) || ($stair->rise ?? null) === null,
+			))];
+		$above = StairRise::above($floor['level'], $this->levels);
+		$slab = $above === null ? null : ($this->sceneFloors[$above['id']]->slabThickness ?? null);
+		$voids = $above === null ? null : ($this->floors[$above['id']]['entry']->voids ?? null);
+		$scene->voidsAbove = $above === null ? null : [
+			'floorId' => $above['id'],
+			'rise' => $scene->stairRise,
+			'slabThickness' => is_int($slab) ? $slab : 0,
+			'voids' => is_array($voids) ? array_values($voids) : [],
+		];
 	}
 
 	/** @param array{entry: stdClass, floor: stdClass, id: int, level: int} $floor */

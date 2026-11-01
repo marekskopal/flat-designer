@@ -98,11 +98,14 @@ final class McpServerTest extends IntegrationTestCase
 			'add_material',
 			'add_opening',
 			'add_plot',
+			'add_railing',
 			'add_roof',
 			'add_roof_window',
 			'add_room',
+			'add_section_line',
 			'add_stair',
 			'add_variant',
+			'add_void',
 			'add_wall',
 			'add_walls',
 			'copy_furniture_definition',
@@ -121,13 +124,16 @@ final class McpServerTest extends IntegrationTestCase
 			'delete_plot',
 			'delete_project',
 			'delete_project_file',
+			'delete_railing',
 			'delete_roof',
 			'delete_roof_window',
 			'delete_room',
+			'delete_section_line',
 			'delete_share_link',
 			'delete_stair',
 			'delete_variant_set',
 			'delete_view',
+			'delete_void',
 			'delete_wall',
 			'detect_room',
 			'duplicate_group',
@@ -165,6 +171,7 @@ final class McpServerTest extends IntegrationTestCase
 			'save_view',
 			'set_floor_underlay',
 			'set_material_prices',
+			'set_terrain',
 			'switch_variant',
 			'undo',
 			'ungroup',
@@ -175,11 +182,14 @@ final class McpServerTest extends IntegrationTestCase
 			'update_opening',
 			'update_plot',
 			'update_project',
+			'update_railing',
 			'update_roof',
 			'update_roof_window',
 			'update_room',
+			'update_section_line',
 			'update_share_link',
 			'update_stair',
+			'update_void',
 			'update_wall',
 			'upload_model',
 			'upload_project_file',
@@ -430,10 +440,15 @@ final class McpServerTest extends IntegrationTestCase
 			$electrical['totals'],
 		);
 
-		// Walls without a material are the default paint: 14 m around, 2.6 m high; the ceiling white plaster.
+		// Walls without a material are the default paint: 14 m around, 2.6 m high; the ceiling white plaster; the outer
+		// faces the default façade, 2 × (4.6 + 3.6) m round the mitred corners.
 		$prices = $this->client->call('set_material_prices', [
 			'projectId' => $this->project->id,
-			'prices' => [['surface' => 'Wall', 'pricePerArea' => 5], ['surface' => 'Ceiling', 'pricePerArea' => 10]],
+			'prices' => [
+				['surface' => 'Wall', 'pricePerArea' => 5],
+				['surface' => 'Ceiling', 'pricePerArea' => 10],
+				['surface' => 'Facade', 'pricePerArea' => 2],
+			],
 			'currency' => 'czk',
 		]);
 		self::assertIsArray($prices);
@@ -441,7 +456,7 @@ final class McpServerTest extends IntegrationTestCase
 		$quantities = $this->client->call('get_quantities', ['projectId' => $this->project->id]);
 		self::assertIsArray($quantities);
 		self::assertTrue($quantities['complete']);
-		self::assertEqualsWithDelta(14 * 2.6 * 5 + 12 * 10, $quantities['total'], 0.01);
+		self::assertEqualsWithDelta(14 * 2.6 * 5 + 12 * 10 + 2 * (4.6 + 3.6) * 2.6 * 2, $quantities['total'], 0.01);
 
 		$this->client->call('undo', ['projectId' => $this->project->id]);
 		$this->client->call('undo', ['projectId' => $this->project->id]);
@@ -629,6 +644,42 @@ final class McpServerTest extends IntegrationTestCase
 		$floorId = Fixture::firstFloor($this->project)->id;
 		$isError = false;
 		$this->client->call('delete_floor', ['projectId' => $this->project->id, 'floorId' => $floorId], $isError);
+		self::assertTrue($isError);
+	}
+
+	public function testSetsTheTerrainFromSpotHeightsAndContours(): void
+	{
+		$floorId = Fixture::firstFloor($this->project)->id;
+		$plot = $this->client->call('add_plot', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'polygon' => [[-5000, -5000], [15000, -5000], [15000, 15000], [-5000, 15000]],
+			'terrain' => [[0, 0, 100]],
+		]);
+		self::assertIsArray($plot);
+		self::assertIsArray($plot['element']);
+		self::assertSame([[0, 0, 100]], $plot['element']['terrain']);
+		self::assertIsInt($plot['element']['id']);
+
+		$set = $this->client->call('set_terrain', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'plotId' => $plot['element']['id'],
+			'points' => [[0, 0, 2960]],
+			// 5 m long: sampled at 1667 mm; its start lies on the spot height, which wins.
+			'contours' => [['z' => 0, 'points' => [[0, 5], [5000, 5]]]],
+		]);
+		self::assertIsArray($set);
+		self::assertIsArray($set['element']);
+		self::assertSame([[0, 0, 2960], [1667, 5, 0], [3333, 5, 0], [5000, 5, 0]], $set['element']['terrain']);
+
+		$isError = false;
+		$this->client->call('set_terrain', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'plotId' => $plot['element']['id'],
+			'contours' => [['z' => 0, 'points' => [[0, 0]]]],
+		], $isError);
 		self::assertTrue($isError);
 	}
 

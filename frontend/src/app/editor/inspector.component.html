@@ -80,6 +80,9 @@
                         (paramsChange)="commitValue(def, $event)"
                     />
                 }
+                @case ('spots') {
+                    <fd-spot-heights [spots]="spots(def)" [disabled]="disabled()" (spotsChange)="commitValue(def, $event)" />
+                }
                 @case ('json') {
                     <textarea [id]="'field-' + def.key" class="input input--compact input--code" rows="3" [value]="value(def)" [disabled]="disabled()" (change)="commit(def, $event)"></textarea>
                 }

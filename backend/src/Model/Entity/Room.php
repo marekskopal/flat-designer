@@ -55,6 +55,10 @@ class Room extends AEntity
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $ceilingMaterial = null;
 
+	/** The underside and edge of the room's slab where it overhangs the floor below (FD-88); null: the façade material. */
+	#[ManyToOne(entityClass: Material::class, nullable: true)]
+	public ?Material $soffitMaterial = null;
+
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $vaultSpacing = null;
 

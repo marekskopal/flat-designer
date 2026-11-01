@@ -18,6 +18,7 @@
     [underlayVisible]="editor.underlayVisible()"
     [ghost]="ghost()"
     [stack]="stack()"
+    [walkFloors]="walkScenes()"
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
@@ -29,11 +30,13 @@
     [tool]="editor.tool()"
     [wallDraft]="editor.wallDraft()"
     [drawWallsHandler]="drawWalls"
+    [drawRailingHandler]="drawRailing"
     (roomDetect)="detectRoom($event)"
     (toolStatus)="toolStatus.set($event)"
     (measureStatus)="measureStatus.set($event)"
     (calibrated)="editor.calibration.set($event)"
     (walkthroughEnded)="onWalkthroughEnded()"
+    (walkFloorChanged)="walkedFloorId.set($event)"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
     [walkFloorHandler]="walkToFloor"
@@ -61,18 +64,21 @@
 }
 
 @if (walking() && touchWalk) {
-    <fd-walk-pad [viewer]="viewerRef" [floorUp]="walkFloors().up?.name ?? null" [floorDown]="walkFloors().down?.name ?? null" />
+    <fd-walk-pad [viewer]="viewerRef" [floorUp]="walkPlace().up?.name ?? null" [floorDown]="walkPlace().down?.name ?? null" />
 } @else if (walking()) {
     <div class="walk-hint" role="status">
         @if (!walkLocked()) {
             <strong class="walk-hint__prompt">Click the view to look around</strong>
+        }
+        @if (walkScenes() !== null && walkPlace().floor; as floor) {
+            <strong class="walk-hint__floor">{{ floor.name }}</strong>
         }
         @if (doorAim(); as aim) {
             <strong class="walk-hint__prompt">{{ aim.open ? 'Close' : 'Open' }} with <kbd>E</kbd> or a click</strong>
         }
         <span>
             <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around · <kbd>E</kbd> open/close ·
-            @if (walkFloors().up !== null || walkFloors().down !== null) {
+            @if (walkPlace().up !== null || walkPlace().down !== null) {
                 <kbd>PgUp</kbd><kbd>PgDn</kbd> floor up/down ·
             }
             <kbd>Esc</kbd> back to 3D
@@ -227,7 +233,7 @@
     @if (viewedScene(); as s) {
         <section class="panel__section" [hidden]="editor.enabled() || walking()">
             <h2 class="section-title">Export</h2>
-            <fd-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" [glb]="exportGlb" />
+            <fd-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" [glb]="exportGlb" [building]="building" />
         </section>
     }
 

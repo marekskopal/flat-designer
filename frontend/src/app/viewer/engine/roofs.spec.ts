@@ -77,6 +77,17 @@ describe('buildRoof', () => {
         expect(flat.min.y).toBeCloseTo(2600, 0);
         expect(flat.max.y).toBeCloseTo(2600 + 300 + 900, 0);
     });
+
+    it('turns a flat roof\'s end and its parapet with a skew (FD-101)', () => {
+        // Square, the roof and its parapet start at x 0; skewed 10°, one corner reaches 4000 · tan 10° = 705 mm further west.
+        const flat: Roof = {...gable, shape: 'Flat', parapet: 900, thickness: 300, overhang: 0};
+        expect(bounds(buildRoof(flat, materials, section)).min.x).toBeCloseTo(0, 0);
+        const skewed = bounds(buildRoof({...flat, startSkew: 10}, materials, section));
+        expect(skewed.min.x).toBeCloseTo(-705.3, 0);
+        // Mitred at its acute corners, the parapet stays within the front (y 0) and the back (y 8000); scene z is −y.
+        expect(skewed.max.z).toBeLessThan(0.5);
+        expect(skewed.min.z).toBeGreaterThan(-8000.5);
+    });
 });
 
 describe('buildRoofOutline', () => {
@@ -116,6 +127,47 @@ describe('resizeRoofByCorner', () => {
         expect([squashed.width, squashed.depth]).toEqual([1000, 1000]);
         expect(roofCorners({...turned, ...squashed})[2].x).toBeCloseTo(roofCorners(turned)[2].x, 0);
         expect(roofCorners({...turned, ...squashed})[2].y).toBeCloseTo(roofCorners(turned)[2].y, 0);
+    });
+
+    it('keeps the skewed verges (FD-97): the opposite corner stays and the dragged one follows the pointer', () => {
+        const skewed: Roof = {...gable, x: 0, y: 0, rotation: 30, startSkew: 5, endSkew: -12};
+        // The end verge at −12° runs from (5000 − 4000 · tan 12°) at the front to (5000 + 4000 · tan 12°) at the back.
+        const corners = roofCorners({...skewed, rotation: 0});
+        expect(corners[1].x).toBeCloseTo(5000 - 4000 * Math.tan((12 * Math.PI) / 180), 6);
+        expect(corners[2].x).toBeCloseTo(5000 + 4000 * Math.tan((12 * Math.PI) / 180), 6);
+        for (const index of [0, 1, 2, 3]) {
+            const before = roofCorners(skewed);
+            const target = {x: before[index].x + 700, y: before[index].y - 400};
+            const after = roofCorners({...skewed, ...resizeRoofByCorner(skewed, index, target, 1000)});
+            const opposite = (index + 2) % 4;
+            // Within the rounding of the centre and the sides to whole mm.
+            expect(Math.hypot(after[opposite].x - before[opposite].x, after[opposite].y - before[opposite].y)).toBeLessThan(2);
+            expect(Math.hypot(after[index].x - target.x, after[index].y - target.y)).toBeLessThan(2);
+        }
+    });
+});
+
+describe('a roof with skewed verges (FD-97)', () => {
+    const skewed: Roof = {...gable, startSkew: 10, endSkew: 10, gutters: 'HalfRound'};
+
+    it('draws its outline and eaves line as parallelograms in the top view', () => {
+        const outline = buildRoofOutline(skewed);
+        const loops = outline.children.filter((c): c is THREE.LineLoop => c instanceof THREE.LineLoop);
+        const eaves = loops[1].geometry.getAttribute('position');
+        // Front right and back right eaves corners: x = 5000 ∓ (−4000 · tan 10°) from the centre, in metres.
+        const tan = Math.tan((10 * Math.PI) / 180);
+        expect(eaves.getX(1)).toBeCloseTo((5000 + 4000 * tan) * MM, 6);
+        expect(eaves.getX(2)).toBeCloseTo((5000 - 4000 * tan) * MM, 6);
+    });
+
+    it('builds and runs its ridge cap between the skewed verges', () => {
+        const group = buildRoof(skewed, materials, section);
+        const box = new THREE.Box3().setFromObject(group);
+        // The back left corner of the outline lies furthest west: −5000 − 200 / cos 10° − 4400 · tan 10° from the centre.
+        const tan = Math.tan((10 * Math.PI) / 180);
+        const west = 5000 - 5000 - 200 / Math.cos((10 * Math.PI) / 180) - 4400 * tan;
+        expect(box.min.x).toBeLessThan(west * MM + 0.2);
+        expect(box.min.x).toBeGreaterThan(west * MM - 0.2);
     });
 });
 

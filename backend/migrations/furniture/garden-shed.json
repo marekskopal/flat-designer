@@ -1,0 +1,176 @@
+{
+ "name": "Garden shed",
+ "description": "A timber garden shed with a gable roof, the ridge along its width: clad walls (the gables in boards stepping up to the ridge), a door in the front and roof planes overhanging all round. The height is to the ridge.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 2500,
+   "depth": 2000,
+   "height": 2400
+  },
+  "parameters": [
+   {
+    "key": "pitch",
+    "label": "Roof pitch",
+    "type": "select",
+    "default": "30",
+    "options": [
+     "20",
+     "25",
+     "30",
+     "35",
+     "40",
+     "45"
+    ]
+   },
+   {
+    "key": "overhang",
+    "label": "Roof overhang",
+    "type": "int",
+    "default": 200,
+    "min": 0,
+    "max": 600,
+    "unit": "mm"
+   },
+   {
+    "key": "doorWidth",
+    "label": "Door width",
+    "type": "int",
+    "default": 900,
+    "min": 600,
+    "max": 1800,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "k": "pitch == '20' ? 0.364 : pitch == '25' ? 0.466 : pitch == '30' ? 0.577 : pitch == '35' ? 0.7 : pitch == '40' ? 0.839 : 1",
+   "sec": "pitch == '20' ? 1.064 : pitch == '25' ? 1.103 : pitch == '30' ? 1.155 : pitch == '35' ? 1.221 : pitch == '40' ? 1.305 : 1.414",
+   "deg": "pitch == '20' ? 20 : pitch == '25' ? 25 : pitch == '30' ? 30 : pitch == '35' ? 35 : pitch == '40' ? 40 : 45",
+   "t": 20,
+   "roofT": 40,
+   "rise": "round(D / 2 * k)",
+   "eave": "H - rise - round(roofT * sec)",
+   "slope": "round((D / 2 + overhang) * sec)",
+   "courses": "max(ceil(rise / 100), 1)"
+  },
+  "materialSlots": [
+   {
+    "key": "walls",
+    "label": "Cladding",
+    "default": "larch-cladding"
+   },
+   {
+    "key": "roof",
+    "label": "Roof",
+    "default": "roof-membrane"
+   },
+   {
+    "key": "door",
+    "label": "Door",
+    "default": "larch-cladding"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Front wall",
+    "x": 0,
+    "y": 0,
+    "z": "D - t - 10",
+    "w": "W",
+    "h": "eave",
+    "d": "t",
+    "material": "walls",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Back wall",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "eave",
+    "d": "t",
+    "material": "walls",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "End wall",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": 0,
+    "z": "t",
+    "w": "t",
+    "h": "eave",
+    "d": "D - 2 * t",
+    "material": "walls",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Gable board",
+    "repeat": {
+     "count": "2 * courses"
+    },
+    "x": "(i % 2) * (W - t)",
+    "y": "eave + floor(i / 2) * 100",
+    "z": "round(D / 2) - round(max(round((rise - (floor(i / 2) + 1) * 100) / k), 10))",
+    "w": "t",
+    "h": "min(100, rise - floor(i / 2) * 100)",
+    "d": "2 * round(max(round((rise - (floor(i / 2) + 1) * 100) / k), 10))",
+    "material": "walls",
+    "grain": "horizontal"
+   },
+   {
+    "type": "front",
+    "name": "Door",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "right",
+    "x": "round((W - doorWidth) / 2)",
+    "y": 0,
+    "z": "D - 30",
+    "w": "doorWidth",
+    "h": "min(1900, eave - 60)",
+    "d": 30,
+    "material": "door",
+    "grain": "vertical"
+   },
+   {
+    "type": "block",
+    "name": "Front roof",
+    "x": "-overhang",
+    "y": "eave - round(overhang * k)",
+    "z": "D + overhang - roofT",
+    "w": "W + 2 * overhang",
+    "h": "slope",
+    "d": "roofT",
+    "tilt": {
+     "expr": "90 - deg"
+    },
+    "material": "roof"
+   },
+   {
+    "type": "block",
+    "name": "Back roof",
+    "x": "-overhang",
+    "y": "eave - round(overhang * k)",
+    "z": "-overhang",
+    "w": "W + 2 * overhang",
+    "h": "slope",
+    "d": "roofT",
+    "tilt": {
+     "expr": "deg - 90"
+    },
+    "tiltZ": {
+     "expr": "-overhang + roofT"
+    },
+    "material": "roof"
+   }
+  ]
+ }
+}

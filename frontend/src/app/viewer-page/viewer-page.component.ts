@@ -47,6 +47,7 @@ import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {Selection} from '@app/viewer/engine/selection';
 import {isSunDown} from '@app/viewer/engine/sun';
 import {DoorAim, ViewPreset} from '@app/viewer/engine/viewer-engine';
+import {netRoomArea} from '@app/viewer/engine/voids';
 import {walkthroughTouchMode} from '@app/viewer/engine/walkthrough';
 import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {SunTimeComponent} from '@app/viewer/sun-time.component';
@@ -201,6 +202,42 @@ export class ViewerPageComponent {
         },
         {equal: (a, b) => a.up?.id === b.up?.id && a.up?.name === b.up?.name && a.down === b.down},
     );
+    /** In a walk over all floors (FD-102), the floor the walker is on; null: this one. */
+    protected readonly walkedFloorId = signal<number | null>(null);
+    /** The floor a walk started on: ending it on another one shows that one, unless the page moved on meanwhile. */
+    private walkStartFloorId: number | null = null;
+    /** The floor the walker is on and those next above and below it, for the walk's hint and floor buttons. */
+    protected readonly walkPlace = computed(() => {
+        const floors = this.floors();
+        const current = floors.find((f) => f.id === (this.walkedFloorId() ?? this.floorId()));
+        if (current === undefined) {
+            return {floor: null, up: null, down: null};
+        }
+        const above = floors.filter((f) => f.level > current.level);
+        const below = floors.filter((f) => f.level < current.level);
+        return {
+            floor: current,
+            up: above.length === 0 ? null : above.reduce((a, b) => (b.level < a.level ? b : a)),
+            down: below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a)),
+        };
+    });
+    /** The project's other floors while walking (from the same version as this floor): the walk goes over all of them. */
+    private readonly walkData = resource({
+        params: () => {
+            const floorIds = this.floors()
+                .filter((f) => f.id !== this.floorId())
+                .map((f) => f.id);
+            return !this.walking() || floorIds.length === 0 ? undefined : {projectId: this.projectId(), floorIds, versionId: this.version()};
+        },
+        // Quietly: without them the walk stays on this floor, the page loading another one at its stairs.
+        loader: async ({params}) => {
+            const loads = params.floorIds.map((id) => this.projects.getScene(params.projectId, id, params.versionId, {quiet: true}));
+            return (await Promise.allSettled(loads)).flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+        },
+    });
+    protected readonly walkScenes = computed<readonly Scene[] | null>(() =>
+        this.walking() && this.walkData.hasValue() ? this.walkData.value() : null,
+    );
     /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
     protected readonly floorBelow = computed(() => this.walkFloors().down);
     /** Shows the floor below by hand on this floor; null follows edit mode. */
@@ -353,7 +390,11 @@ export class ViewerPageComponent {
     protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
 
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
-    protected readonly rooms = computed(() => this.scene()?.rooms ?? []);
+    /** The floor's rooms, their areas less the floor's voids (FD-90). */
+    protected readonly rooms = computed(() => {
+        const scene = this.scene();
+        return (scene?.rooms ?? []).map((room) => ({...room, area: netRoomArea(room, scene?.voids ?? [])}));
+    });
     protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
     protected readonly indoorArea = computed(() => this.areaOf((type) => !isOutdoorRoom({type})));
     protected readonly terraceArea = computed(() => this.areaOf((type) => type === 'Terrace'));
@@ -363,6 +404,21 @@ export class ViewerPageComponent {
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */
     protected readonly exportGlb = (): Promise<Blob> => this.viewer().exportGlb();
+    /** The building for the façades and sections: the viewed floor with the floors below it (the loaded stack, else loaded now). */
+    protected readonly building = async (): Promise<readonly Scene[]> => {
+        const scene = this.viewedScene();
+        if (scene === null) {
+            return [];
+        }
+        const under = this.floorsUnder();
+        const loaded = this.stack();
+        // The stack keeps its last load while the next runs (another floor, a live update): only a settled one of these floors.
+        const settled = loaded !== null && !this.stackData.isLoading() && sameIds(loaded.map((s) => s.floor.id), under.map((f) => f.id));
+        if (settled) {
+            return [scene, ...loaded];
+        }
+        return [scene, ...(await Promise.all(under.map((f) => this.projects.getScene(this.projectId(), f.id, this.version()))))];
+    };
 
     public constructor() {
         this.editor.connect({
@@ -483,6 +539,9 @@ export class ViewerPageComponent {
             if (update.floorId === null || this.floorsUnder().some((f) => f.id === update.floorId)) {
                 this.stackData.reload();
             }
+            if (this.walking() && update.floorId !== this.floorId()) {
+                this.walkData.reload();
+            }
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
                 const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
@@ -516,12 +575,20 @@ export class ViewerPageComponent {
         this.activeView.set('walkthrough');
         this.walkLocked.set(false);
         this.walking.set(true);
+        this.walkStartFloorId = this.floorId();
         // Synchronously within the click: the pointer lock needs the user gesture.
         this.viewer().startWalkthrough();
     }
 
     /** Esc: the engine flies back to the overview, the panel returns with its settings. */
     protected onWalkthroughEnded(): void {
+        // A walk over all floors that ended on another floor goes on showing that one (not when the walk ended because
+        // another floor was picked).
+        const walked = this.walkedFloorId();
+        this.walkedFloorId.set(null);
+        if (walked !== null && walked !== this.floorId() && this.floorId() === this.walkStartFloorId) {
+            void this.router.navigate(['/projects', this.projectId(), 'floors', walked], {queryParamsHandling: 'preserve'});
+        }
         this.walking.set(false);
         this.walkLocked.set(false);
         this.doorAim.set(null);
@@ -606,6 +673,8 @@ export class ViewerPageComponent {
 
     protected readonly drawWalls = (points: PlanPoint[], closed: boolean, sagittas: number[] | null): Promise<boolean> =>
         this.editor.drawWalls(points, closed, sagittas);
+
+    protected readonly drawRailing = (points: PlanPoint[]): Promise<boolean> => this.editor.drawRailing(points);
 
     /** Drags in the viewer (moves, wall ends, room corners) go through the editor like inspector edits. */
     protected readonly applyDrag = (selection: Selection, fields: Record<string, unknown>): Promise<boolean> =>
@@ -846,4 +915,9 @@ export class ViewerPageComponent {
         }
         this.builtFloorId.set(scene.floor.id);
     }
+}
+
+/** Whether two lists hold the same ids, in any order. */
+function sameIds(a: readonly number[], b: readonly number[]): boolean {
+    return a.length === b.length && a.every((id) => b.includes(id));
 }

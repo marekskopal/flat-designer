@@ -83,7 +83,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertCount(1, $view['scene']['walls']);
 	}
 
-	public function testAllFloorsLinksShowTheFloorsBelow(): void
+	public function testAllFloorsLinksShowTheFloorsBelowAndAbove(): void
 	{
 		$user = Fixture::createUser();
 		$project = Fixture::createProject($user);
@@ -111,6 +111,27 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertIsList($view['stack'][0]['walls']);
 		self::assertCount(1, $view['stack'][0]['walls']);
 		self::assertIsList($view['stack'][0]['materials']);
+		self::assertSame([], $view['above']);
+
+		// The ground floor's link has the attic above it only when it offers the walk (over all floors).
+		$groundView = function (array $views) use ($project, $user): array {
+			$settings = [...self::Settings, 'allFloors' => true, 'views' => $views];
+			$link = $this->jsonBody($this->request(
+				'POST',
+				self::path(Routes::ProjectShareLinks, $project->id),
+				['floorId' => Fixture::firstFloor($project)->id, 'name' => 'House', 'settings' => $settings],
+				$user,
+			));
+
+			return $this->jsonBody($this->request('GET', self::sharePath(self::stringField($link['token']))));
+		};
+		self::assertSame([[], []], [$groundView(['overview'])['stack'], $groundView(['overview'])['above']]);
+		$walking = $groundView(['overview', 'walkthrough']);
+		self::assertSame([], $walking['stack']);
+		self::assertIsList($walking['above']);
+		self::assertIsArray($walking['above'][0]);
+		self::assertIsArray($walking['above'][0]['floor']);
+		self::assertSame('Attic', $walking['above'][0]['floor']['name']);
 
 		// A link of one floor shows no other.
 		$single = $this->jsonBody($this->request(
@@ -119,7 +140,8 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 			['floorId' => $attic['id'], 'name' => 'Attic', 'settings' => self::Settings],
 			$user,
 		));
-		self::assertSame([], $this->jsonBody($this->request('GET', self::sharePath(self::stringField($single['token']))))['stack']);
+		$singleView = $this->jsonBody($this->request('GET', self::sharePath(self::stringField($single['token']))));
+		self::assertSame([[], []], [$singleView['stack'], $singleView['above']]);
 	}
 
 	public function testGuestSeesTheFloorAsItWasWhenShared(): void

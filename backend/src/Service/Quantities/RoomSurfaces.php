@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Quantities;
 
+use FlatDesigner\Dto\FloorVoidDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
@@ -13,17 +14,19 @@ use FlatDesigner\Service\Editor\Geometry\RoofCover;
 use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
 use FlatDesigner\Service\Editor\Geometry\Spans;
 use FlatDesigner\Service\Editor\Geometry\WallFaceSpans;
+use FlatDesigner\Service\Schedule\VoidArea;
 use const M_PI;
 
 /**
  * The surfaces of one room as the viewer draws them, in mm² (or mm for skirting), per surface and material:
  *
- * - the floor in the floor material;
+ * - the floor in the floor material, less the floor's voids (FD-90);
  * - wall finish bands along the wall faces on the room's edges (`WallFaceSpans`), up to the wall's top, without openings:
  *   the face's own bands (`WallDto::finishesOn()`) or else the room's;
  * - the rest of those wall faces up to the ceiling in the wall's material (paint), without bands and openings; open-air
  *   rooms have no ceiling and paint none (their walls are façades);
- * - the ceiling, on a vault its arched surface, and the beams' underside and sides;
+ * - the ceiling, on a vault its arched surface, and the beams' underside and sides; a flat one less the voids of the floor
+ *   above, a sloped one scaled by the share of the floor they leave;
  * - skirting along the walls, except doorways.
  *
  * Wall faces outside every room (the façade) are not counted. A wall between two rooms counts once for each. Under the
@@ -40,21 +43,25 @@ final class RoomSurfaces
 
 	/**
 	 * @param list<WallDto> $walls
+	 * @param list<FloorVoidDto> $voids the floor's
+	 * @param list<FloorVoidDto> $voidsAbove the floor above's, through the ceiling
 	 * @return list<array{surface: QuantitySurfaceEnum, materialId: int|null, amount: float}> amount in mm², or mm for skirting
 	 */
-	public static function of(RoomDto $room, array $walls, ?RoofCover $roofs = null): array
+	public static function of(RoomDto $room, array $walls, ?RoofCover $roofs = null, array $voids = [], array $voidsAbove = []): array
 	{
 		$surfaces = new self();
 		$points = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room->polygon);
 		$area = abs(PlanMath::signedArea($points));
 		if ($room->floorMaterialId !== null) {
-			$surfaces->add(QuantitySurfaceEnum::Floor, $room->floorMaterialId, $area);
+			$surfaces->add(QuantitySurfaceEnum::Floor, $room->floorMaterialId, max(0.0, $area - VoidArea::of($room->polygon, $voids)));
 		}
 		// Under the roofs: the ceiling along the slope, and the cover to follow it along the walls.
 		$under = $roofs === null
 			? null
 			: RoomUnderRoof::measure($points, $room->ceilingHeight, $room->floorElevation, $room->vaultSpacing !== null, $roofs);
-		$surfaces->addCeiling($room, $under->ceilingArea ?? $area);
+		// The voids of the floor above come off a flat ceiling; a sloped one is scaled by the share of the floor they leave.
+		$aboveLeft = $room->vaultSpacing === null && $area > 0 ? max(0.0, $area - VoidArea::of($room->polygon, $voidsAbove)) / $area : 1.0;
+		$surfaces->addCeiling($room, $aboveLeft * ($under->ceilingArea ?? $area));
 		$cover = $under === null ? null : $roofs;
 
 		$wallTop = self::wallTop($room);

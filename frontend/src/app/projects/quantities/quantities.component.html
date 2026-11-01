@@ -36,8 +36,8 @@
     </div>
     <p class="hint no-print">
         Surfaces of the working copy as drawn: floors, wall finish bands, the paint around and above them up to the ceiling (openings left
-        out, façades not counted), ceilings and skirting, following the roofs where they slope; the roofs' covering and soffit along
-        the slope; furniture boards from the cut list. Tiles and planks are whole pieces with the waste
+        out), ceilings and skirting, following the roofs where they slope; the roofs' covering and soffit along the slope; the
+        façades (wall faces outside every room) per material; furniture boards from the cut list. Tiles and planks are whole pieces with the waste
         allowance. Prices are per m², skirting and edge banding per running metre.
         @if (dirty()) {
             <strong>Save the prices to update the costs.</strong>
@@ -190,6 +190,45 @@
                     </thead>
                     <tbody>
                         @for (line of roof.lines; track line.surface + ':' + line.materialId) {
+                            <tr>
+                                <td>{{ labels[line.surface] }}</td>
+                                <td [class.muted]="line.materialId === null">{{ line.material }}</td>
+                                <td class="num">{{ lineQuantity(line) }}</td>
+                                <td class="num">{{ line.pieces ?? '' }}</td>
+                                <td class="num">{{ line.cost === null ? '—' : (line.cost | number: '1.2-2') }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+        }
+
+        @for (facade of q.facades ?? []; track facade.floorId) {
+            <section class="card card--table">
+                <h2 class="section">
+                    <span>
+                        Façades
+                        <span class="muted">{{ facade.floorName }}</span>
+                    </span>
+                    <span class="section__totals">
+                        {{ facade.cost | number: '1.2-2' }} {{ q.currency }}
+                        @if (!facade.complete) {
+                            (not all priced)
+                        }
+                    </span>
+                </h2>
+                <table class="table table--lines">
+                    <thead>
+                        <tr>
+                            <th>Surface</th>
+                            <th>Material</th>
+                            <th class="num">Quantity</th>
+                            <th class="num">Pcs</th>
+                            <th class="num">Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (line of facade.lines; track line.surface + ':' + line.materialId) {
                             <tr>
                                 <td>{{ labels[line.surface] }}</td>
                                 <td [class.muted]="line.materialId === null">{{ line.material }}</td>

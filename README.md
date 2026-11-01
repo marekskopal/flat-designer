@@ -8,8 +8,8 @@ a first-person walkthrough and a cut list from them, and AI agents can do all of
 ![A flat in Barcelona, cut away at 2.2 m](docs/screenshots/view-tour-01-cut-away.webp)
 
 All geometry is generated from parameters. The repository contains no 3D model files: bought products are glTF
-models you upload into the app. The screenshots show the demo flat, which an AI agent modelled over MCP (see
-[Built over MCP by an AI agent](#built-over-mcp-by-an-ai-agent)).
+models you upload into the app. The screenshots show the demo flat and the demo house, which an AI agent modelled
+over MCP (see [Built over MCP by an AI agent](#built-over-mcp-by-an-ai-agent)).
 
 ## Feature tour
 
@@ -79,6 +79,45 @@ a WC. Doors have panelled, flush or glazed leaves, frame styles and handles.
 Pendants whose cables follow the vaulted ceiling, downlights and lamp lights have lumens and a colour
 temperature. The night view switches off the sun and lights the flat with its own fixtures.
 
+### Houses: floors, roofs, stairs and the site
+
+![A family house on a slope, its garden façade in the morning sun](docs/screenshots/view-house-tour-01-garden-facade.webp)
+
+A project can be a whole house: floors stacked at their levels with slabs between them, roofs over them and the land
+around them. The demo house stands on a slope in Brno, so the sun above is where it really is on 21 June at 9:30,
+from the site's latitude, longitude and north angle.
+
+![All three floors, cut at the first floor](docs/screenshots/view-house-tour-02-all-floors-cut.webp)
+
+The All floors view draws the floors under the shown one, here cut at the first floor's walls. The plot follows spot
+heights, so the ground floor is dug into the hill on one side and opens onto a larch deck on the other; garden walls,
+fences and steps stand on the ground.
+
+![The beaver-tail roof with roof windows, snow guards, gutters and the chimney](docs/screenshots/view-house-tour-03-roof.webp)
+
+Roofs are gable, hip, shed or flat, with overhangs, a skewed verge where the gable wall is not square, valleys where
+they meet, roof windows, gutters with downpipes, snow guards and ridge tiles. A chimney rises through the floors to
+the roof, and the walls under a roof are cut at its underside or rise to it.
+
+![A child's room under the slope, lit by a roof window](docs/screenshots/view-house-tour-04-attic.webp)
+
+Under the roof, ceilings follow the slope and open under the roof windows. The room schedule gives each room's clear
+height and its area with at least 1.2 m of headroom.
+
+![Standing on the stairs, looking down into the living room](docs/screenshots/view-house-tour-05-on-the-stairs.webp)
+
+Stairs are straight, L-shaped, U-shaped or spiral, on stringers or solid, with railings; they cut their void through
+the floor above. The walkthrough climbs them to the next floor and walks under them where there is headroom.
+
+![The living room at night with the fireplace and the lights on](docs/screenshots/view-house-tour-06-living-room-at-night.webp)
+
+![The first floor's plan with its section lines](docs/screenshots/house-plan.webp)
+
+![Section B–B through the house and the slope](docs/screenshots/house-section.webp)
+
+The exports include the building's façades and sections: a section line drawn on the plan cuts the walls, slabs,
+roofs, stairs and the ground, with level marks at the floors, eaves and ridge.
+
 ### Editor
 
 ![Editor with the kitchen's inspector open](docs/screenshots/editor.webp)
@@ -112,7 +151,7 @@ the page totals the cost per room and for the whole project, furniture boards fr
 ![Guest view of a share link](docs/screenshots/share-link.webp)
 
 A read-only guest view of a floor, without an account, with the allowed views, a start camera and display options.
-Guests can orbit, read the plan, walk through and switch variants, and download the plan, elevations and 3D
+Guests can orbit, read the plan, walk through and switch variants, and download the plan, elevations, façades, sections and 3D
 model unless the link forbids it. A link can also show the floor's open review comments, and let guests add some.
 
 ### Review comments
@@ -129,8 +168,9 @@ it has made the change.
   them (these images are made that way), and the viewer saves a PNG at presentation quality.
 - **Exports**: the floor plan on A4 at a standard scale (walls, door swings, windows, room areas, dimensions and
   furniture footprints) as a PDF with the room schedule, or as an SVG; wall elevations of every room for the tiler
-  and the joiner (tile joints on the room's grid, openings, fitted furniture, dimensions); and the floor as a 3D
-  model (glTF) for Blender or SketchUp.
+  and the joiner (tile joints on the room's grid, openings, fitted furniture, dimensions); the building's façades
+  from all four sides and sections along section lines drawn on the plan (cut walls, slabs, roofs, stairs and terrain,
+  with level marks); and the floor as a 3D model (glTF) for Blender or SketchUp.
 - **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
 - **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.
@@ -172,6 +212,27 @@ after each one:
 The product models are CC0 models from [Poly Haven](https://polyhaven.com), uploaded into the app and not part of
 this repository. Where no model matched (the Cesca and butterfly chairs, the vessel basin, black taps), the
 demo uses stand-ins.
+
+### The demo house
+
+The demo house was built the same way, modelled after a house by JRA Jarousek.Rochova.Architekti (*Family House
+Žebětín*, 2015), photos Filip Šlapal. As with the flat, the original drawings and photos are not part of this
+repository, and the images here are our own renders. The agent read the three floor plans, the section, the
+elevations and 22 photos, and worked through nine phases: the site and floors, the shell, the openings, the stairs and
+gallery, the roofs, the sloping plot with its garden, the finishes, the furniture, and the saved views with a share
+link ([docs/demo-house.md](docs/demo-house.md) has the inventory and the result). What the app could not do yet was
+logged as tasks, and several were built along the way (sloping terrain, site walls and garden steps, skewed roof verges,
+the building sections).
+
+| | |
+| --- | --- |
+| Time | 17 minutes |
+| MCP tool calls | about 270 |
+| Logged changes | 276 |
+| Floors | 3, on a slope from +3.240 at the street to −2.000 at the garden's end |
+| Walls, openings, rooms | 41, 30, 22 |
+| Stairs, roofs, roof windows | 4, 4, 5 |
+| Items | 100 in 6 groups |
 
 ## Tech stack
 
@@ -219,9 +280,11 @@ the viewer (the stack must be running; with `cwebp` installed they are saved as 
 
 ```sh
 make screenshots PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·" ROOM=Kitchen
+make screenshots PROJECT=13 EMAIL=you@example.com PASSWORD=… VIEWS="House tour ·" VIEWS_ONLY=1
 ```
 
-`VIEWS` keeps only the saved views whose name starts with it, and `ROOM` is the room selected for the editor shot.
+`VIEWS` keeps only the saved views whose name starts with it, `VIEWS_ONLY=1` leaves out the editor and the pages (the
+house's views beside the flat's), and `ROOM` is the room selected for the editor shot.
 The plan underlay is hidden in the screenshots.
 
 To measure the rendering cost of the saved views, run the benchmark before and after a change. Add `?stats` to a

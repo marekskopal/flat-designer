@@ -1,0 +1,26 @@
+@use 'variables' as *;
+
+.spots {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: $space-4;
+    align-items: center;
+}
+
+.spots__head,
+.spots__hint,
+.spots__empty {
+    margin: 0;
+    font-size: 11px;
+    color: $color-text-muted;
+}
+
+.spots__remove {
+    padding: 2px $space-8;
+}
+
+.input--compact {
+    min-width: 0;
+    padding: 5px 6px;
+    font-size: $font-size-13;
+}

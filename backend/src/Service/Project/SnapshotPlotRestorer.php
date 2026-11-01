@@ -36,6 +36,9 @@ final readonly class SnapshotPlotRestorer
 			);
 			// Snapshots taken before plot levels have none.
 			$plot->groundLevel = $data->nullableInt('groundLevel') ?? 0;
+			// Before terrain (FD-86): flat.
+			$terrain = $data->raw('terrain');
+			$plot->terrain = $terrain === null || $terrain === [] ? null : json_encode($terrain, JSON_THROW_ON_ERROR);
 			$plot->createdAt = new DateTimeImmutable();
 			$plot->updatedAt = $plot->createdAt;
 			$this->plotRepository->persist($plot);

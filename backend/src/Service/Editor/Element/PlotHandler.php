@@ -15,17 +15,18 @@ use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\WallRepository;
 use FlatDesigner\Service\Editor\FieldReader;
 use FlatDesigner\Service\Editor\PolygonValidator;
+use FlatDesigner\Service\Editor\SpotHeights;
 use FlatDesigner\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
 
-/** Plots: the boundary of the land around the building and the ground's material. */
+/** Plots: the boundary of the land around the building, the ground's material and level, and its spot heights (FD-86). */
 final readonly class PlotHandler implements ElementHandler
 {
 	/** A plot may reach further from the floor's origin than a room (`State::CoordinateLimit`): a kilometre, mm. */
-	private const int CoordinateLimit = 1000000;
+	public const int CoordinateLimit = 1000000;
 
-	/** How far the ground may lie above or below the floor's level, mm. */
-	private const int MaxGroundLevel = 10000;
+	/** How far the ground may lie above or below the floor's level, mm (spot heights too). */
+	public const int MaxGroundLevel = 10000;
 
 	/** How far a new plot's boundary stands off the floor's walls and rooms, mm. */
 	private const int DefaultMargin = 3000;
@@ -49,7 +50,7 @@ final readonly class PlotHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name', 'polygon', 'groundMaterialId', 'groundLevel'];
+		return ['name', 'polygon', 'groundMaterialId', 'groundLevel', 'terrain'];
 	}
 
 	/** @return list<string> */
@@ -66,7 +67,12 @@ final readonly class PlotHandler implements ElementHandler
 	 */
 	public function defaults(Floor $floor, array $fields): array
 	{
-		return ['name' => 'Plot', 'polygon' => $this->defaultBoundary($floor), 'groundMaterialId' => null, 'groundLevel' => 0];
+		return [
+			'name' => 'Plot',
+			'polygon' => $this->defaultBoundary($floor),
+			'groundMaterialId' => null,
+			'groundLevel' => 0,
+			'terrain' => []];
 	}
 
 	/** @return list<array{int, int}> */
@@ -127,6 +133,8 @@ final readonly class PlotHandler implements ElementHandler
 			'groundMaterialId' => $groundMaterialId,
 			// Missing in older change states: the floor's level.
 			'groundLevel' => $fields->raw('groundLevel') === null ? 0 : self::groundLevel($fields),
+			// Missing in older change states: flat.
+			'terrain' => SpotHeights::validate($fields->raw('terrain') ?? [], self::CoordinateLimit, self::MaxGroundLevel),
 		];
 	}
 
@@ -166,6 +174,8 @@ final readonly class PlotHandler implements ElementHandler
 		$plot->polygon = json_encode($fields->raw('polygon'), JSON_THROW_ON_ERROR);
 		$plot->groundMaterial = $this->materialResolver->resolve($fields->nullableId('groundMaterialId'));
 		$plot->groundLevel = self::groundLevel($fields);
+		$terrain = $fields->raw('terrain');
+		$plot->terrain = $terrain === null || $terrain === [] ? null : json_encode($terrain, JSON_THROW_ON_ERROR);
 		$this->plotRepository->persist($plot);
 	}
 

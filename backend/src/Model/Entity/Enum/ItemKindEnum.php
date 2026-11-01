@@ -23,6 +23,11 @@ enum ItemKindEnum: string
 	case Column = 'Column';
 	/** A structural downstand beam along its width; z is its soffit. */
 	case Beam = 'Beam';
+	/**
+	 * A structural chimney from the floor up through the slabs and roofs above (FD-91), square or round
+	 * (`params.shape`), its top `params.aboveRoof` over the highest roof it passes, with an optional cap (`params.cap`).
+	 */
+	case Chimney = 'Chimney';
 	/** Drawn from a furniture definition (`Item::$definition`). */
 	case Custom = 'Custom';
 	/** A bought product drawn from a 3D model of the library (`items.model_id`), scaled to fit the item's box. */
@@ -31,6 +36,6 @@ enum ItemKindEnum: string
 	/** Part of the building rather than furniture: cut by the section plane like walls. */
 	public function isStructural(): bool
 	{
-		return $this === self::Column || $this === self::Beam;
+		return $this === self::Column || $this === self::Beam || $this === self::Chimney;
 	}
 }

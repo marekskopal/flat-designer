@@ -25,13 +25,23 @@ final readonly class OpeningHead
 	 * makes it rise to the roof or stop at its height; null for any other change, whose heads are not checked (a roof
 	 * lowered since does not block renaming or undoing the wall).
 	 *
-	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, ...} $next
+	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, heightEnd: int|null, ...} $next
 	 * @param list<Roof> $roofs
 	 */
 	public static function wallTopIfReshaped(Wall $wall, array $next, WallLine $line, array $roofs): ?WallTop
 	{
-		$was = [$wall->startX, $wall->startY, $wall->endX, $wall->endY, $wall->sagitta, $wall->thickness, $wall->height, $wall->upToRoof];
-		$is = [$next['startX'], $next['startY'], $next['endX'], $next['endY'], $next['sagitta'], $next['thickness'], $next['height'], $next['upToRoof']];
+		$was = [$wall->startX, $wall->startY, $wall->endX, $wall->endY, $wall->sagitta, $wall->thickness, $wall->height, $wall->upToRoof, $wall->heightEnd];
+		$is = [
+			$next['startX'],
+			$next['startY'],
+			$next['endX'],
+			$next['endY'],
+			$next['sagitta'],
+			$next['thickness'],
+			$next['height'],
+			$next['upToRoof'],
+			$next['heightEnd'],
+		];
 		if ($was === $is) {
 			return null;
 		}
@@ -41,6 +51,7 @@ final readonly class OpeningHead
 			$next['height'],
 			$next['upToRoof'],
 			array_map(fn (Roof $roof): RoofGeometry => RoofGeometry::fromRoof($roof), $roofs),
+			$next['heightEnd'],
 		);
 	}
 
@@ -57,17 +68,27 @@ final readonly class OpeningHead
 			|| [$offset, $width, $sillHeight, $height] !== [$current->offset, $current->width, $current->sillHeight, $current->height];
 	}
 
-	/** The opening's head stays under the wall's top over it: its height, or under a roof `WallTop`'s. */
-	public static function check(WallTop $top, int $wallHeight, int $offset, int $width, int $head): void
+	/**
+	 * The opening's head, plus the `$headroom` it needs above it (a lifting garage door's tracks or drum,
+	 * `OpeningClearances::headroom()`), stays under the wall's top over it: its height, or under a roof `WallTop`'s.
+	 */
+	public static function check(WallTop $top, int $wallHeight, int $offset, int $width, int $head, int $headroom = 0): void
 	{
 		$limit = $top->lowestOver($offset, $offset + $width);
-		if ($head <= $limit) {
+		if ($head + $headroom <= $limit) {
 			return;
 		}
+		$what = $headroom > 0
+			? sprintf('Sill plus height plus the %d mm a lifting garage door needs above it', $headroom)
+			: 'Sill plus height';
 		if (!$top->underRoof($offset, $offset + $width)) {
-			throw EditException::invalid(sprintf('Sill plus height exceeds the wall height (%d mm).', $wallHeight));
+			throw EditException::invalid(sprintf(
+				$limit === $wallHeight ? '%s exceeds the wall height (%d mm).' : '%s exceeds the wall\'s sloping top over the opening (%d mm).',
+				$what,
+				$limit,
+			));
 		}
 
-		throw EditException::invalid(sprintf('Sill plus height exceeds the wall\'s top over the opening (%d mm, under the roof).', $limit));
+		throw EditException::invalid(sprintf('%s exceeds the wall\'s top over the opening (%d mm, under the roof).', $what, $limit));
 	}
 }

@@ -5,9 +5,17 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\QuantitiesController;
+use FlatDesigner\Dto\FloorInputDto;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\Material;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
+use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Route\Routes;
+use FlatDesigner\Service\Editor\Element\State;
+use FlatDesigner\Service\Editor\Geometry\RoofGutters;
+use FlatDesigner\Service\Project\FloorProvider;
+use FlatDesigner\Service\Quantities\FacadeSurfaces;
 use FlatDesigner\Service\Quantities\MaterialPriceService;
 use FlatDesigner\Service\Quantities\PriceList;
 use FlatDesigner\Service\Quantities\QuantitiesService;
@@ -26,6 +34,8 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(RoomSurfaces::class)]
 #[CoversClass(RoomFaceUnderRoof::class)]
 #[CoversClass(RoofSurfaces::class)]
+#[CoversClass(RoofGutters::class)]
+#[CoversClass(FacadeSurfaces::class)]
 #[CoversClass(PriceList::class)]
 #[CoversClass(MaterialPriceService::class)]
 final class QuantitiesControllerTest extends EditorTestCase
@@ -104,8 +114,9 @@ final class QuantitiesControllerTest extends EditorTestCase
 			),
 		);
 
-		// Tiles are bought in whole pieces.
-		$priced = 37 * 0.36 * 30 + $wallPieces * $tile * 40 + 4.48 * 3 + 12.1 * 2 + 12 * 4;
+		// Tiles are bought in whole pieces. The painted south wall's outer face is paint too: a façade of 4.4 × 2.6 m
+		// (mitred at the corners) less the door.
+		$priced = 37 * 0.36 * 30 + $wallPieces * $tile * 40 + (4.48 + 4.4 * 2.6 - 1.8) * 3 + 12.1 * 2 + 12 * 4;
 		$quantities = $this->quantities();
 		self::assertFalse($quantities['complete']);
 		self::assertEqualsWithDelta($priced, $quantities['total'], 0.01);
@@ -113,12 +124,19 @@ final class QuantitiesControllerTest extends EditorTestCase
 		$this->putPrices([
 			'currency' => 'CZK',
 			'wastePercent' => 10,
-			'prices' => [...self::rows($prices['prices']), ['surface' => 'Skirting', 'pricePerLength' => 5]],
+			'prices' => [
+				...self::rows($prices['prices']),
+				['surface' => 'Skirting', 'pricePerLength' => 5],
+				['surface' => 'Facade', 'pricePerArea' => 1],
+			],
 		]);
 		$quantities = $this->quantities();
 		self::assertTrue($quantities['complete']);
-		self::assertEqualsWithDelta($priced + 13.1 * 5, $quantities['total'], 0.01);
-		self::assertEqualsWithDelta($priced + 13.1 * 5, self::rows($quantities['rooms'])[0]['cost'], 0.01);
+		// The other three outer faces are the default façade, less the window.
+		$facade = (4.4 + 3.4 + 3.4) * 2.6 - 1.2;
+		self::assertEqualsWithDelta($priced + 13.1 * 5 + $facade, $quantities['total'], 0.01);
+		// The room's own cost leaves out the façades (the south wall's painted outer face).
+		self::assertEqualsWithDelta($priced - (4.4 * 2.6 - 1.8) * 3 + 13.1 * 5, self::rows($quantities['rooms'])[0]['cost'], 0.01);
 		$materials = self::rows($quantities['materials']);
 		$tiles = array_values(array_filter($materials, static fn (array $m): bool => $m['materialId'] === $wallTiles->id))[0];
 		self::assertSame($wallPieces, $tiles['pieces']);
@@ -152,6 +170,22 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertGreaterThan(920, $arch);
 		self::assertEqualsWithDelta(12 * $arch / 1000, $lines['Ceiling']['area'], 0.01);
 		self::assertEqualsWithDelta(12 * 0.14, $lines['Beams']['area'], 0.01);
+	}
+
+	/** A void through the floor (FD-90) takes its area off the flooring, one through the floor above off the ceiling. */
+	public function testFloorVoidsAreLeftOutOfTheFloorAndTheCeiling(): void
+	{
+		$this->buildRoom(null);
+		$this->create('voids', ['polygon' => [[1000, 1000], [2000, 1000], [2000, 2000], [1000, 2000]]]);
+		$upper = Fixture::service(FloorProvider::class)->create($this->project, new FloorInputDto('First floor', 1, 3000));
+		Fixture::service(FloorVoidRepository::class)->persist(State::stamp(
+			new FloorVoid(floor: $upper, name: 'Well', polygon: '[[3000,0],[5000,0],[5000,2000],[3000,2000]]'),
+		));
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(11.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
+		// Half the well lies over the room.
+		self::assertEqualsWithDelta(10.0, $lines['Ceiling:-']['area'], 0.01);
 	}
 
 	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
@@ -207,6 +241,33 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertContains('Roof tiles, red clay (300 × 420)', array_column(self::rows($quantities['materials']), 'material'));
 	}
 
+	/** A gable's gutters run along both eaves with the overhangs, the downpipes at its corners down to the datum (FD-91). */
+	public function testGuttersAndDownpipesCountByTheRunningMetre(): void
+	{
+		$this->create('roofs', [
+			'shape' => 'Gable',
+			'x' => 5000,
+			'y' => 4000,
+			'width' => 10000,
+			'depth' => 8000,
+			'eaveHeight' => 2600,
+			'pitch' => 45,
+			'overhang' => 500,
+			'vergeOverhang' => 300,
+			'gutters' => 'HalfRound',
+		]);
+
+		$roofLines = [];
+		foreach (self::rows(self::rows($this->quantities()['roofs'])[0]['lines']) as $line) {
+			$roofLines[self::stringField($line['surface'])] = $line;
+		}
+		// Two eaves of 10 m with the verges' 0.3 m each; four downpipes from 2.6 − 0.5 m at the overhang's edge to ±0.
+		self::assertEqualsWithDelta(2 * 10.6, $roofLines['Gutter']['length'], 0.01);
+		self::assertEqualsWithDelta(4 * 2.1, $roofLines['Downpipe']['length'], 0.01);
+		self::assertSame(self::material('zinc-titanium')->id, $roofLines['Gutter']['materialId']);
+		self::assertNull($roofLines['Gutter']['area']);
+	}
+
 	public function testAWallFaceTakesItsOwnFinish(): void
 	{
 		$terrazzo = self::material('terrazzo-white');
@@ -231,6 +292,77 @@ final class QuantitiesControllerTest extends EditorTestCase
 		$lines = $this->lines();
 		self::assertEqualsWithDelta(12 - 0.3, $lines['WallFinish:' . self::material('tile-wall-beige')->id]['area'], 0.001);
 		self::assertEqualsWithDelta(4 * 2.5 - 0.9 * 2.0, $lines['Wall:' . $paint->id]['area'], 0.001);
+	}
+
+	public function testCountsTheFacadesPerMaterialWithoutTheOpenings(): void
+	{
+		$render = self::material('wall-paint-white');
+		$this->buildRoom(null, [], ['rightFinishes' => [['materialId' => $render->id, 'bottom' => 0, 'top' => 2600]]]);
+
+		$facades = self::rows($this->quantities()['facades']);
+		self::assertCount(1, $facades);
+		$lines = [];
+		foreach (self::rows($facades[0]['lines']) as $line) {
+			$materialId = $line['materialId'];
+			$lines[is_int($materialId) ? $materialId : '-'] = $line;
+		}
+		// The south wall's outer face, mitred at both corners (4.4 m), less the door (0.9 × 2.0).
+		self::assertEqualsWithDelta(4.4 * 2.6 - 1.8, $lines[$render->id]['area'], 0.01);
+		self::assertSame('Facade', $lines[$render->id]['surface']);
+		// The other three outer faces in the walls' own (default) look, less the window (1.0 × 1.2).
+		self::assertEqualsWithDelta((4.4 + 3.4 + 3.4) * 2.6 - 1.2, $lines['-']['area'], 0.01);
+		self::assertSame('Wall finish (default)', $lines['-']['material']);
+	}
+
+	public function testABareFaceAndOverlappingBandsCountAsTheViewerDrawsThem(): void
+	{
+		$render = self::material('wall-paint-white');
+		$terrazzo = self::material('terrazzo-white');
+		$tiles = self::material('tile-wall-beige');
+		// The south face is bare ([]); the east wall's outer face has two bands overlapping by 1 m, the first keeping it.
+		$this->buildRoom(null, [], ['type' => 'Exterior', 'rightFinishes' => []]);
+		$east = array_values(
+			array_filter($this->sceneList('walls'), static fn (array $w): bool => $w['startX'] === 4100 && $w['endX'] === 4100),
+		)[0];
+		$this->edit('PATCH', 'walls', self::id($east), [
+			'type' => 'Exterior',
+			'rightFinishes' => [
+				['materialId' => $terrazzo->id, 'bottom' => 0, 'top' => 2000],
+				['materialId' => $tiles->id, 'bottom' => 1000, 'top' => 2600],
+			],
+		]);
+		$this->project->exteriorMaterial = $render;
+		Fixture::service(ProjectRepository::class)->persist($this->project);
+
+		$lines = [];
+		foreach (self::rows(self::rows($this->quantities()['facades'])[0]['lines']) as $line) {
+			$materialId = $line['materialId'];
+			$lines[is_int($materialId) ? $materialId : '-'] = $line;
+		}
+		// The east face is 3.4 m long with the window (1.0 × 1.2, sill 0.9): terrazzo 0–2000 less the window's 0.9–2.0 part,
+		// tiles 2000–2600 less its 2.0–2.1 part.
+		self::assertEqualsWithDelta(3.4 * 2.0 - 1.0 * 1.1, $lines[$terrazzo->id]['area'], 0.01);
+		self::assertEqualsWithDelta(3.4 * 0.6 - 1.0 * 0.1, $lines[$tiles->id]['area'], 0.01);
+		// The bare south face (less the door) stays the walls' default look, not the project's render, as do the north
+		// and west faces, which are interior walls: no render anywhere.
+		self::assertEqualsWithDelta(4.4 * 2.6 - 1.8 + (4.4 + 3.4) * 2.6, $lines['-']['area'], 0.01);
+		self::assertArrayNotHasKey($render->id, $lines);
+	}
+
+	public function testAnExteriorWallTakesTheProjectsFacade(): void
+	{
+		$render = self::material('wall-paint-white');
+		$this->buildRoom(null, [], ['type' => 'Exterior']);
+		$this->project->exteriorMaterial = $render;
+		Fixture::service(ProjectRepository::class)->persist($this->project);
+
+		$lines = [];
+		foreach (self::rows(self::rows($this->quantities()['facades'])[0]['lines']) as $line) {
+			$materialId = $line['materialId'];
+			$lines[is_int($materialId) ? $materialId : '-'] = $line;
+		}
+		self::assertEqualsWithDelta(4.4 * 2.6 - 1.8, $lines[$render->id]['area'], 0.01);
+		self::assertEqualsWithDelta((4.4 + 3.4 + 3.4) * 2.6 - 1.2, $lines['-']['area'], 0.01);
 	}
 
 	public function testRejectsAWrongPriceList(): void

@@ -31,6 +31,9 @@ final readonly class ItemDto
 		public int $rotation,
 		public ?int $materialId,
 		public array|stdClass $params,
+		public bool $onGround = false,
+		/** `z` counts from the roof's top under the item's centre, and the item takes the plane's slope (FD-91). */
+		public bool $onRoof = false,
 	) {
 	}
 
@@ -57,6 +60,8 @@ final readonly class ItemDto
 			materialId: $item->material?->id,
 			// An empty PHP array would encode as `[]`; keep params a JSON object for the client.
 			params: $params === [] ? new stdClass() : $params,
+			onGround: $item->onGround,
+			onRoof: $item->onRoof,
 		);
 	}
 }

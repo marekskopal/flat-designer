@@ -2,6 +2,7 @@ import {Item, PlanPoint, Scene} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {buildBuilding} from './building';
+import {chimneyStretches} from './chimneys';
 import {definitionLibrary} from './custom/custom';
 import {leafObjects, LeafStates} from './doors';
 import {buildItem, ItemAssets} from './items';
@@ -17,6 +18,9 @@ export interface ContextFloor {
     items: Map<number, THREE.Object3D>;
     /** Its roofs, which follow the Display's Roof toggle like the shown floor's. */
     roofs: THREE.Group;
+    /** Its doors: as outside a walk, or opened and closed by the walker of a walk over all floors (FD-102). */
+    leafStates: LeafStates;
+    leaves: THREE.Object3D[];
 }
 
 /**
@@ -34,11 +38,12 @@ export function buildContextFloor(scene: Scene, materials: MaterialLibrary, asse
     // The floor below draws its own stairs in the stack, so the copies coming up through this one would double them.
     parts.stairsBelow.visible = false;
     group.add(parts.root);
-    const leaves = new LeafStates();
-    leaves.reset(scene.walls);
-    leaves.apply(leafObjects(parts.root));
+    const leafStates = new LeafStates();
+    leafStates.reset(scene.walls);
+    const leaves = leafObjects(parts.root);
+    leafStates.apply(leaves);
 
-    const layer: ContextFloor = {scene, group, items: new Map(), roofs: parts.roofBodies};
+    const layer: ContextFloor = {scene, group, items: new Map(), roofs: parts.roofBodies, leafStates, leaves};
     rebuildContextItems(layer, () => true, materials, assets, () => undefined);
     return layer;
 }
@@ -66,8 +71,9 @@ export function rebuildContextItems(
         if (previous !== undefined) {
             dispose(previous);
         }
-        // Its pendants hang from its own roofs, not the shown floor's.
-        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, {...assets, roofs: scene.roofs ?? []});
+        // Its pendants hang from its own roofs, its items on its own ground, its chimneys up its own storey, not the shown floor's.
+        const floorAssets = {...assets, roofs: scene.roofs ?? [], plots: scene.plots ?? [], chimneys: chimneyStretches(scene)};
+        const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, floorAssets);
         object.visible = !hidden.has(item.id);
         layer.items.set(item.id, object);
         layer.group.add(object);

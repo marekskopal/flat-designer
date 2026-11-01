@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
-import {Opening, Room, Wall} from '@app/models/scene';
+import {Opening, PlanPoint, Room, Wall} from '@app/models/scene';
 import {describe, expect, it} from 'vitest';
 
 import {
@@ -9,6 +9,7 @@ import {
     ceilingHeightAt,
     ceilingSteps,
     clipToBand,
+    facadeSpans,
     roomBeams,
     skirtingPieces,
     vaultBreaks,
@@ -157,6 +158,12 @@ interface WallSpansCase {
 /** Shared with the backend twin (`WallFaceSpansTest`), which the quantities use. */
 const wallSpansFixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests/fixtures/wall-spans.json'), 'utf8')) as {
     cases: WallSpansCase[];
+    facades: {
+        name: string;
+        walls: WallSpansCase['walls'];
+        rooms: {polygon: PlanPoint[]; outdoor?: boolean}[];
+        facades: {wall: number; side: 'Left' | 'Right'; spans: [number, number][]}[];
+    }[];
 };
 
 describe('wall faces along an edge (shared fixture)', () => {
@@ -185,6 +192,26 @@ describe('wall faces along an edge (shared fixture)', () => {
         near(
             wallGapsAlongEdge(a, b, walls).map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche ? 1 : 0]),
             testCase.gaps.map((gap) => [gap.from, gap.to, gap.bottom, gap.top, gap.niche === true ? 1 : 0]),
+        );
+    });
+});
+
+describe('façades (shared fixture)', () => {
+    it.each(wallSpansFixture.facades)('$name', (testCase) => {
+        const walls = testCase.walls.map(
+            (w, i): Wall => ({...wall(i + 1, [w.startX, w.startY], [w.endX, w.endY]), thickness: w.thickness, sagitta: w.sagitta ?? 0}),
+        );
+        const facades = facadeSpans(
+            walls,
+            testCase.rooms.map((r) => ({polygon: r.polygon, outdoor: r.outdoor === true})),
+        );
+
+        expect(facades.map((f) => [f.wall.id, f.side])).toEqual(testCase.facades.map((f) => [walls[f.wall].id, f.side]));
+        facades.forEach((f, i) =>
+            testCase.facades[i].spans.forEach(([from, to], k) => {
+                expect(f.spans[k][0]).toBeCloseTo(from, 2);
+                expect(f.spans[k][1]).toBeCloseTo(to, 2);
+            }),
         );
     });
 });

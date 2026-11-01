@@ -7,12 +7,18 @@ namespace FlatDesigner\Tests\Support;
 use DateTimeImmutable;
 use FlatDesigner\Dto\ProjectInputDto;
 use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
+use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
+use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
+use FlatDesigner\Model\Entity\Enum\RidgeStyleEnum;
 use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
 use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
@@ -23,10 +29,12 @@ use FlatDesigner\Model\Entity\Enum\StairTurnEnum;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\Opening;
 use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Project;
+use FlatDesigner\Model\Entity\Railing;
 use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Entity\Room;
@@ -34,10 +42,12 @@ use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
+use FlatDesigner\Model\Repository\RailingRepository;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
@@ -114,8 +124,9 @@ final class Fixture
 	}
 
 	/**
-	 * One room with tiling, a plot, an L stair, a hip roof with a window, a wall rising to the roof with a door and
-	 * finishes of its own and two items (one with empty params) on the floor.
+	 * One room with tiling, a plot, an L stair (balusters, a wall handrail, a lined void), a floor void and a railing, a hip roof with a window,
+	 * gutters, downpipes, snow guards and round ridge tiles, a wall rising to the roof with a door and finishes of its own, two items (one
+	 * with empty params) on the floor, a chimney and a panel lying on the roof.
 	 */
 	public static function furnishFloor(Floor $floor): void
 	{
@@ -132,6 +143,7 @@ final class Fixture
 			wallFinishes: $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":1200}]',
 		));
 		$room->floorElevation = 20;
+		$room->soffitMaterial = $material;
 		self::service(RoomRepository::class)->persist($room);
 		$plot = new Plot(
 			floor: $floor,
@@ -140,8 +152,9 @@ final class Fixture
 			groundMaterial: $material,
 		);
 		$plot->groundLevel = -300;
+		$plot->terrain = '[[-3000,-3000,-300],[9000,8000,450]]';
 		self::service(PlotRepository::class)->persist(self::stamp($plot));
-		self::service(StairRepository::class)->persist(self::stamp(new Stair(
+		$stair = self::stamp(new Stair(
 			floor: $floor,
 			name: 'Main stairs',
 			shape: StairShapeEnum::LShaped,
@@ -157,7 +170,34 @@ final class Fixture
 			construction: StairConstructionEnum::Stringers,
 			railing: StairRailingEnum::Both,
 			treadMaterial: $material,
-		)));
+		));
+		$stair->railingStyle = RailingStyleEnum::Balusters;
+		$stair->railingMaterial = $material;
+		$stair->wallHandrail = StairRailingEnum::Left;
+		$stair->voidLiningMaterial = $material;
+		self::service(StairRepository::class)->persist($stair);
+		$void = new FloorVoid(
+			floor: $floor,
+			name: 'Gallery void',
+			polygon: '[[500,500],[1500,500],[1500,1500],[500,1500]]',
+			liningMaterial: $material,
+		);
+		$void->liningDepth = 400;
+		self::service(FloorVoidRepository::class)->persist(self::stamp($void));
+		$railing = new Railing(
+			floor: $floor,
+			name: 'Gallery balustrade',
+			points: '[[500,500],[1500,500],[1500,1500]]',
+			height: 1100,
+			style: RailingStyleEnum::Glass,
+			postSpacing: 900,
+			handrail: HandrailProfileEnum::Flat,
+			material: $material,
+			infillMaterial: $material,
+		);
+		$railing->baseZ = 150;
+		$railing->spacing = 80;
+		self::service(RailingRepository::class)->persist(self::stamp($railing));
 		$roof = self::stamp(new Roof(
 			floor: $floor,
 			name: 'Main roof',
@@ -174,6 +214,11 @@ final class Fixture
 			thickness: 280,
 			coveringMaterial: $material,
 		));
+		$roof->gutters = GutterProfileEnum::HalfRound;
+		$roof->gutterMaterial = $material;
+		$roof->downpipes = '[{"edge":"Front","along":-1500},{"edge":"Left","along":0}]';
+		$roof->snowGuards = 2;
+		$roof->ridgeStyle = RidgeStyleEnum::Round;
 		self::service(RoofRepository::class)->persist($roof);
 		self::service(RoofWindowRepository::class)->persist(self::stamp(new RoofWindow(
 			roof: $roof,
@@ -217,6 +262,12 @@ final class Fixture
 		$door->entrance = true;
 		$door->frameStyle = DoorFrameStyleEnum::Architrave;
 		$door->handle = DoorHandleEnum::Knob;
+		$door->frameMaterial = $material;
+		$door->leafMaterial = $material;
+		$door->leafStyle = DoorLeafStyleEnum::Boarded;
+		$door->leafPanels = 9;
+		$door->boardDirection = BoardDirectionEnum::Horizontal;
+		$door->inset = 60;
 		self::service(OpeningRepository::class)->persist($door);
 		$frenchWindow = self::stamp(new Opening(
 			wall: $wall,
@@ -231,6 +282,8 @@ final class Fixture
 			side: null,
 		));
 		$frenchWindow->walkable = true;
+		$frenchWindow->revealLining = true;
+		$frenchWindow->outsideFrameMaterial = $material;
 		self::service(OpeningRepository::class)->persist($frenchWindow);
 
 		$items = self::service(ItemRepository::class);
@@ -264,6 +317,55 @@ final class Fixture
 			material: null,
 			params: null,
 		)));
+		$planter = self::stamp(new Item(
+			floor: $floor,
+			room: null,
+			kind: ItemKindEnum::Box,
+			name: 'Planter',
+			x: 7000,
+			y: 6000,
+			z: 0,
+			width: 800,
+			depth: 400,
+			height: 450,
+			rotation: 0,
+			material: null,
+			params: null,
+		));
+		$planter->onGround = true;
+		$items->persist($planter);
+		$items->persist(self::stamp(new Item(
+			floor: $floor,
+			room: $room,
+			kind: ItemKindEnum::Chimney,
+			name: 'Chimney',
+			x: 3500,
+			y: 2500,
+			z: 20,
+			width: 450,
+			depth: 450,
+			height: 3000,
+			rotation: 0,
+			material: $material,
+			params: '{"shape":"rect","aboveRoof":600,"cap":true}',
+		)));
+		$panel = self::stamp(new Item(
+			floor: $floor,
+			room: null,
+			kind: ItemKindEnum::Box,
+			name: 'Solar panel',
+			x: 1500,
+			y: 600,
+			z: 80,
+			width: 1000,
+			depth: 1700,
+			height: 40,
+			rotation: 0,
+			material: null,
+			params: null,
+		));
+		$panel->onRoof = true;
+		$items->persist($panel);
 	}
 
 	/**

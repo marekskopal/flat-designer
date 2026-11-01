@@ -60,9 +60,28 @@ final readonly class FlatDesignerServer
 		its `sagitta` is how far (mm) the middle of its centre line lies off the straight line from start to end, + to
 		the left (an arc, a semicircle at most); offsets of openings run along the arc, and doors and windows on it
 		stand straight, so they have to be narrow enough for the curve. Stairs (add_stair) go on the floor they start
-		from and climb to the next one up, cutting their void through it. A roof (add_roof) goes on the floor it
+		from and climb to the next one up, cutting their void through it. A larger opening in a floor (a gallery over
+		a double-height hall) is a void (add_void) on the upper floor, its edges lined if you like; railings (add_railing)
+		run along polylines (a void's open edge, a terrace, a retaining wall's top). A roof (add_roof) goes on the floor it
 		covers; without a size it covers the floor's walls. Every wall is cut at the roof's underside, and the walls
 		under its gables are set to rise to it (upToRoof on add_wall, add_walls or update_wall). Roof windows are added with add_roof_window.
+		A roof may have gutters with downpipes, snow guards and a ridge style (add_roof / update_roof); a chimney is an
+		item of kind Chimney on the floor it starts from, rising through the floors and roofs above to aboveRoof over
+		them; vent tiles, roof steps and solar panels are items with onRoof, lying on the roof's slope.
+		A section line (add_section_line) on a floor's plan is where the viewer's export cuts the building section
+		through that floor and those below, looking to the left of start → end; the export also draws the façades.
+		A plot (add_plot) is the land round the building; on a slope give it spot heights (terrain on add_plot, or
+		set_terrain with points or contour lines, z against the floor's level): gardens, paths and driveways follow
+		the ground, rooms below it are cut out of it, and items with onGround stand on it. Garden and retaining
+		walls slope (heightEnd) and stand on a base or the ground (baseStart / baseEnd, onGround); garden steps are
+		stairs with a rise of their own (rise, baseZ); fences follow the slope (params follow).
+		A wall face outside every room is a façade: its own leftFinishes / rightFinishes run along it (render,
+		cladding, a plinth starting below the floor); exterior walls nobody set take the project's exteriorMaterialId
+		(update_project). A room's soffitMaterialId clads its slab where it overhangs the floor below; an opening's
+		revealLining lines its reveal with the façade. Doors and windows take frameMaterialId, leafMaterialId and
+		outsideFrameMaterialId (timber-aluminium), a frame set in from the outer face (inset) and boarded leaves
+		(leafStyle Boarded); a garage (room type Garage) gets a GarageDoor (garageDoorStyle), and lift-and-slide
+		glazing is a SlidingDoor with fixedPanes.
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);

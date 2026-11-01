@@ -13,6 +13,7 @@ use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\FloorRepository;
+use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\ModelAssetRepository;
 use FlatDesigner\Model\Repository\ProjectRepository;
 use FlatDesigner\Model\Repository\ProjectVersionRepository;
@@ -33,6 +34,7 @@ final readonly class ProjectProvider
 		private ModelAssetRepository $modelRepository,
 		private ProjectUpdatePublisher $updatePublisher,
 		private ORM $orm,
+		private MaterialRepository $materialRepository,
 	) {
 	}
 
@@ -79,6 +81,7 @@ final readonly class ProjectProvider
 		$before = self::details($project);
 		$project->name = self::name($input->name);
 		self::applyDetails($project, $input);
+		$this->applyExterior($project, $input);
 		if ($before !== self::details($project)) {
 			$this->touch($project);
 			$this->updatePublisher->markDetailsChanged($project->id);
@@ -123,7 +126,19 @@ final readonly class ProjectProvider
 			$project->latitude,
 			$project->longitude,
 			$project->timeZone,
+			$project->exteriorMaterial?->id,
 		];
+	}
+
+	/** The default façade material: an existing one, or none. */
+	private function applyExterior(Project $project, ProjectInputDto $input): void
+	{
+		$id = $input->exteriorMaterialId;
+		$material = $id === null ? null : $this->materialRepository->findById($id);
+		if ($id !== null && $material === null) {
+			throw new ProjectException(sprintf('Material %d does not exist.', $id));
+		}
+		$project->exteriorMaterial = $material;
 	}
 
 	private static function name(string $name): string

@@ -1,5 +1,5 @@
 {
- "description": "Cases for the roof geometry twins: RoofGeometry (PHP, Service/Editor/Geometry) and roof-geometry.ts (TS, viewer/engine). roof is a roof's fields; expected lists its planes (outline in plan, counter-clockwise from the eaves; the underside over it is height + gradient · (p − centre)), its ridge height and, per probe point, the underside, the top and the index of the plane over it (all null where the roof does not reach). Per window (along, across, width, length in the roof's frame): the index of its plane and its corners counter-clockwise from the low left (null plane: off the roof or a flat roof), and whether it fits 300 mm inside its plane. Lengths in mm above the floor's level, compared within 0.01. junctions: roofs of one floor, and per roof the plan area (m², within 0.001) of each of its planes where it is the top, its underside the highest (exactly where planes cross; parallel planes within 0.5 mm are the earlier roof's). rooms: a room under roofs, its clear height range (mm, within 0.01), volume (m³) and area with a clear height of at least 1.2 m and ceiling area along the slope (m², all within 0.001).",
+ "description": "Cases for the roof geometry twins: RoofGeometry (PHP, Service/Editor/Geometry) and roof-geometry.ts (TS, viewer/engine). roof is a roof's fields (startSkew / endSkew missing: square verges); expected lists its planes (outline in plan, counter-clockwise from the eaves; the underside over it is height + gradient · (p − centre)), its ridge height and, per probe point, the underside, the top and the index of the plane over it (all null where the roof does not reach). Per window (along, across, width, length in the roof's frame): the index of its plane and its corners counter-clockwise from the low left (null plane: off the roof or a flat roof), and whether it fits 300 mm inside its plane. Lengths in mm above the floor's level, compared within 0.01. junctions: roofs of one floor, and per roof the plan area (m², within 0.001) of each of its planes where it is the top, its underside the highest (exactly where planes cross; parallel planes within 0.5 mm are the earlier roof's). rooms: a room under roofs, its clear height range (mm, within 0.01), volume (m³) and area with a clear height of at least 1.2 m and ceiling area along the slope (m², all within 0.001).",
  "cases": [
   {
    "name": "a gable along plan x, at 45°",
@@ -1115,6 +1115,302 @@
      }
     ]
    }
+  },
+  {
+   "name": "a gable with skewed verges (FD-97): the start turned 5°, the end −10°, so the planes are trapezoids",
+   "roof": {
+    "shape": "Gable",
+    "x": 5000,
+    "y": 4000,
+    "rotation": 0,
+    "width": 10000,
+    "depth": 8000,
+    "eaveHeight": 2600,
+    "pitch": 45,
+    "overhang": 400,
+    "vergeOverhang": 200,
+    "thickness": 250,
+    "startSkew": 5,
+    "endSkew": -10
+   },
+   "expected": {
+    "ridgeHeight": 6600,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": 184.1862,
+        "y": -400
+       },
+       {
+        "x": 9427.2466,
+        "y": -400
+       },
+       {
+        "x": 10203.0853,
+        "y": 4000
+       },
+       {
+        "x": -200.764,
+        "y": 4000
+       }
+      ],
+      "gradient": {
+       "x": 0,
+       "y": 1
+      },
+      "height": 6600
+     },
+     {
+      "polygon": [
+       {
+        "x": 10978.924,
+        "y": 8400
+       },
+       {
+        "x": -585.7141,
+        "y": 8400
+       },
+       {
+        "x": -200.764,
+        "y": 4000
+       },
+       {
+        "x": 10203.0853,
+        "y": 4000
+       }
+      ],
+      "gradient": {
+       "x": 0,
+       "y": -1
+      },
+      "height": 6600
+     }
+    ],
+    "probes": [
+     {
+      "x": 5000,
+      "y": 4000,
+      "underside": 6600,
+      "top": 6953.5534,
+      "plane": 1
+     },
+     {
+      "x": 10900,
+      "y": 8300,
+      "underside": 2300,
+      "top": 2653.5534,
+      "plane": 1
+     },
+     {
+      "x": 9500,
+      "y": 0,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 10500,
+      "y": -300,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 9500,
+      "y": 8300,
+      "underside": 2300,
+      "top": 2653.5534,
+      "plane": 1
+     },
+     {
+      "x": 8800,
+      "y": 8300,
+      "underside": 2300,
+      "top": 2653.5534,
+      "plane": 1
+     },
+     {
+      "x": -150,
+      "y": 8300,
+      "underside": 2300,
+      "top": 2653.5534,
+      "plane": 1
+     },
+     {
+      "x": -250,
+      "y": -300,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": -300,
+      "y": -300,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ],
+    "windows": [
+     {
+      "along": 4000,
+      "across": -2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 3610,
+        "y": -2417.193
+       },
+       {
+        "x": 4390,
+        "y": -2417.193
+       },
+       {
+        "x": 4390,
+        "y": -1582.807
+       },
+       {
+        "x": 3610,
+        "y": -1582.807
+       }
+      ],
+      "fits": true
+     },
+     {
+      "along": 4400,
+      "across": -2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 0,
+      "corners": [
+       {
+        "x": 4010,
+        "y": -2417.193
+       },
+       {
+        "x": 4790,
+        "y": -2417.193
+       },
+       {
+        "x": 4790,
+        "y": -1582.807
+       },
+       {
+        "x": 4010,
+        "y": -1582.807
+       }
+      ],
+      "fits": false
+     },
+     {
+      "along": -4400,
+      "across": 2000,
+      "width": 780,
+      "length": 1180,
+      "plane": 1,
+      "corners": [
+       {
+        "x": -4010,
+        "y": 2417.193
+       },
+       {
+        "x": -4790,
+        "y": 2417.193
+       },
+       {
+        "x": -4790,
+        "y": 1582.807
+       },
+       {
+        "x": -4010,
+        "y": 1582.807
+       }
+      ],
+      "fits": true
+     }
+    ]
+   }
+  },
+  {
+   "name": "a flat roof whose start end is skewed 5° over a skewed wall (FD-101): its outline a trapezoid, the corner beyond it uncovered",
+   "roof": {
+    "shape": "Flat",
+    "x": 0,
+    "y": 0,
+    "rotation": 90,
+    "width": 7000,
+    "depth": 4000,
+    "eaveHeight": 2300,
+    "pitch": 35,
+    "overhang": 200,
+    "vergeOverhang": 200,
+    "thickness": 400,
+    "startSkew": 5,
+    "endSkew": 0
+   },
+   "expected": {
+    "ridgeHeight": 2300,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": 2200,
+        "y": -3508.2889
+       },
+       {
+        "x": 2200,
+        "y": 3700
+       },
+       {
+        "x": -2200,
+        "y": 3700
+       },
+       {
+        "x": -2200,
+        "y": -3893.239
+       }
+      ],
+      "gradient": {
+       "x": 0,
+       "y": 0
+      },
+      "height": 2300
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 2300,
+      "top": 2700,
+      "plane": 0
+     },
+     {
+      "x": -1900,
+      "y": -3600,
+      "underside": 2300,
+      "top": 2700,
+      "plane": 0
+     },
+     {
+      "x": 1900,
+      "y": -3600,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 1900,
+      "y": -3750,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ]
+   }
   }
  ],
  "junctions": [
@@ -1199,6 +1495,49 @@
     [
      15.2163,
      15.2163
+    ]
+   ]
+  },
+  {
+   "name": "a wing runs into a main gable whose end verge is skewed 20°",
+   "roofs": [
+    {
+     "shape": "Gable",
+     "x": 0,
+     "y": 0,
+     "rotation": 0,
+     "width": 10000,
+     "depth": 8000,
+     "eaveHeight": 2600,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250,
+     "startSkew": 0,
+     "endSkew": 20
+    },
+    {
+     "shape": "Gable",
+     "x": 0,
+     "y": -4500,
+     "rotation": 90,
+     "width": 9000,
+     "depth": 4000,
+     "eaveHeight": 2600,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250
+    }
+   ],
+   "areas": [
+    [
+     38.9118,
+     37.0882
+    ],
+    [
+     12,
+     12
     ]
    ]
   }
@@ -1356,6 +1695,55 @@
     "volume": 70.8731,
     "headroomArea": 28.7682,
     "ceilingArea": 30.8282
+   }
+  },
+  {
+   "name": "a room under a gable whose end verge is skewed 10°: its north-east corner lies beyond the verge, at the full ceiling height",
+   "roofs": [
+    {
+     "shape": "Gable",
+     "x": 5000,
+     "y": 4000,
+     "rotation": 0,
+     "width": 10000,
+     "depth": 8000,
+     "eaveHeight": 1000,
+     "pitch": 45,
+     "overhang": 0,
+     "vergeOverhang": 0,
+     "thickness": 250,
+     "startSkew": 0,
+     "endSkew": 10
+    }
+   ],
+   "room": {
+    "polygon": [
+     [
+      0,
+      0
+     ],
+     [
+      10000,
+      0
+     ],
+     [
+      10000,
+      8000
+     ],
+     [
+      0,
+      8000
+     ]
+    ],
+    "ceilingHeight": 2500,
+    "floorElevation": 0
+   },
+   "expected": {
+    "minHeight": 1000,
+    "maxHeight": 2500,
+    "volume": 178.1943,
+    "headroomArea": 76.1375,
+    "ceilingArea": 92.0704
    }
   }
  ]

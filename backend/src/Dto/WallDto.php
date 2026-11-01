@@ -16,6 +16,10 @@ final readonly class WallDto
 	 * @param list<WallFinishDto>|null $leftFinishes bands on the face left of start → end, overriding the room's (null: the room's)
 	 * @param list<WallFinishDto>|null $rightFinishes the same on the right face
 	 * @param bool $upToRoof the wall rises to the underside of the roofs over it (a gable) instead of stopping at `height`
+	 * @param int|null $heightEnd the top's height at the end (a straight slope from `height`); null: level
+	 * @param int $baseStart the bottom at the start, mm against the floor's level
+	 * @param int $baseEnd the bottom at the end
+	 * @param bool $onGround the bottom follows the plots' ground instead
 	 * @param list<OpeningDto> $openings
 	 */
 	public function __construct(
@@ -34,6 +38,10 @@ final readonly class WallDto
 		public ?array $rightFinishes,
 		public array $openings,
 		public bool $upToRoof = false,
+		public ?int $heightEnd = null,
+		public int $baseStart = 0,
+		public int $baseEnd = 0,
+		public bool $onGround = false,
 	) {
 	}
 
@@ -56,6 +64,10 @@ final readonly class WallDto
 			rightFinishes: self::finishes($wall->rightFinishes),
 			openings: $openings,
 			upToRoof: $wall->upToRoof,
+			heightEnd: $wall->heightEnd,
+			baseStart: $wall->baseStart,
+			baseEnd: $wall->baseEnd,
+			onGround: $wall->onGround,
 		);
 	}
 

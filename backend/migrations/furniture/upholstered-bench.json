@@ -1,0 +1,111 @@
+{
+ "name": "Built-in bench with an upholstered back",
+ "description": "A built-in bench along a wall: an oak seat on a closed base with a recessed plinth, and upholstered back panels on the wall above it.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 3000,
+   "depth": 450,
+   "height": 950
+  },
+  "parameters": [
+   {
+    "key": "seat",
+    "label": "Seat height",
+    "type": "int",
+    "default": 440,
+    "min": 300,
+    "max": 600,
+    "unit": "mm"
+   },
+   {
+    "key": "panels",
+    "label": "Back panels",
+    "type": "int",
+    "default": 3,
+    "min": 1,
+    "max": 8
+   },
+   {
+    "key": "backDepth",
+    "label": "Back panel thickness",
+    "type": "int",
+    "default": 60,
+    "min": 20,
+    "max": 150,
+    "unit": "mm"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Seat and base",
+    "default": "oak-veneer"
+   },
+   {
+    "key": "upholstery",
+    "label": "Back panels",
+    "default": "fabric-linen-white"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Plinth",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": 60,
+    "d": "D - 80",
+    "material": "wood",
+    "grain": "horizontal",
+    "shade": 0.3
+   },
+   {
+    "type": "block",
+    "name": "Base",
+    "x": 0,
+    "y": 60,
+    "z": 0,
+    "w": "W",
+    "h": "seat - 100",
+    "d": "D - 20",
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Seat",
+    "x": 0,
+    "y": "seat - 40",
+    "z": 0,
+    "w": "W",
+    "h": 40,
+    "d": "D",
+    "material": "wood",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "left",
+     "right"
+    ]
+   },
+   {
+    "type": "cushion",
+    "name": "Back panel",
+    "repeat": {
+     "count": "panels"
+    },
+    "x": "round(i * W / panels) + 3",
+    "y": "seat + 20",
+    "z": 0,
+    "w": "round(W / panels) - 6",
+    "h": "H - seat - 20",
+    "d": "backDepth",
+    "radius": 15,
+    "material": "upholstery"
+   }
+  ]
+ }
+}

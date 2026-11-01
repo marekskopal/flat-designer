@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Tests\Controller;
 
+use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Service\Dbal\ReconnectableDatabase;
 use FlatDesigner\Service\Furniture\BuiltInItemConverter;
@@ -67,6 +68,9 @@ final class ConvertBuiltInFurnitureTest extends EditorTestCase
 			new ConvertBuiltInFurnitureMigration($this->databaseProvider())->up();
 		} finally {
 			$kinds->up();
+			// That migration's list predates later kinds (FD-91's Chimney): the column takes every kind there is now again.
+			$all = implode(', ', array_map(static fn (ItemKindEnum $kind): string => "'" . $kind->value . "'", ItemKindEnum::cases()));
+			$pdo->exec('ALTER TABLE items MODIFY kind ENUM(' . $all . ') NOT NULL');
 		}
 
 		AppHarness::app()->dbContext->resetOrmState();

@@ -3,8 +3,8 @@ import {Wall} from '@app/models/scene';
 import {centreLineSegments, snapPoint, SnapResult, snapToGrid, Vec2} from './plan-geometry';
 import {RoomDetectError} from './room-detect';
 
-/** What a click in the editor's top view does: select and drag, draw a run of walls, or outline a room. */
-export type EditorTool = 'select' | 'drawWalls' | 'detectRoom';
+/** What a click in the editor's top view does: select and drag, draw a run of walls or a railing, or outline a room. */
+export type EditorTool = 'select' | 'drawWalls' | 'detectRoom' | 'drawRailing';
 
 /** Directions of drawn walls snap to multiples of this, degrees. */
 export const DrawAngleStep = 15;
@@ -23,6 +23,13 @@ export type ToolStatus =
           arc: boolean;
           /** The curve (sagitta, mm) of the segment waiting for it; null when none waits. */
           sagitta: number | null;
+      }
+    | {
+          tool: 'drawRailing';
+          points: number;
+          length: number | null;
+          angle: number | null;
+          snap: SnapResult['kind'] | null;
       }
     | {
           tool: 'detectRoom';

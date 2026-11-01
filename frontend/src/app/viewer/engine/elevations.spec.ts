@@ -242,6 +242,34 @@ describe('roomElevationSheets', () => {
         expect(heads).not.toContain(4750);
     });
 
+    it('draws cladding boards along the wall and formwork from the edge\'s start (FD-92)', () => {
+        const wide = {...room, polygon: [[0, 0], [4870, 0], [4870, 3000], [0, 3000]] as PlanPoint[]};
+        const walls = (materialId: number): Wall[] => [
+            wall(1, [-150, -150], [5020, -150], {leftFinishes: [{materialId, bottom: 0, top: 1000}]}),
+            wall(2, [5020, -150], [5020, 3150]),
+            wall(3, [5020, 3150], [-150, 3150]),
+            wall(4, [-150, 3150], [-150, -150]),
+        ];
+        const lines = (svg: string): {upright: number[]; level: number[]} => {
+            const layoutLeft = 16 + 52;
+            const all = [...svg.matchAll(/<path d="M ([\d.]+) ([\d.]+) L ([\d.]+) ([\d.]+)" fill="none" stroke="#7d786f" stroke-width="0.08"/g)];
+            return {
+                upright: all.filter((m) => m[2] !== m[4]).map((m) => Math.round((Number(m[1]) - layoutLeft) * 50)),
+                level: all.filter((m) => m[2] === m[4]).map((m) => Number(m[2])),
+            };
+        };
+        // Boards 120 high: level joints at 120, 240 … 960 up the 1 m band, none upright.
+        const boards = {...tiles, id: 6, pattern: 'Planks' as const, tileWidth: 120, tileHeight: 4000};
+        const [clad] = roomElevationSheets(scene({materials: [boards], rooms: [wide], walls: walls(6)}), wide, info);
+        expect(lines(clad.svg).upright).toEqual([]);
+        expect(new Set(lines(clad.svg).level).size).toBe(8);
+        // Panels 2000 × 500: head joints at t = 2000 k from the edge's start, x = 4870 − 2000 k; one level joint at 500.
+        const panels = {...tiles, id: 7, pattern: 'Formwork' as const, tileWidth: 2000, tileHeight: 500};
+        const [cast] = roomElevationSheets(scene({materials: [panels], rooms: [wide], walls: walls(7)}), wide, info);
+        expect(lines(cast.svg).upright).toEqual(expect.arrayContaining([2870, 870]));
+        expect(new Set(lines(cast.svg).level).size).toBe(1);
+    });
+
     it('clips the bands to a vaulted ceiling', () => {
         const vaulted = {...room, vaultSpacing: 1000, vaultRise: 200, vaultAngle: 90, beamWidth: 80, beamDrop: 30};
         const walls = box({leftFinishes: [{materialId: 5, bottom: 0, top: 2600}]});
@@ -259,6 +287,22 @@ describe('roomElevationSheets', () => {
         const layoutLeft = 16 + 52;
         const stile = (3000 - 50 - 900 - 0) / 50 + layoutLeft;
         expect(sheet.svg).toContain(`M ${stile} `);
+    });
+
+    it('draws the sections of a garage door and the joints of a boarded leaf (FD-89)', () => {
+        const garage: Opening = {...door, type: 'GarageDoor', offset: 300, width: 2500, height: 2125, garageDoorStyle: 'Sectional'};
+        const thin = (o: Opening): number => {
+            const [sheet] = roomElevationSheets(scene({walls: box({leftFinishes: [], openings: [o]})}), room, info);
+            return (sheet.svg.match(/stroke="#2f2c28" stroke-width="0.13"/g) ?? []).length;
+        };
+        // 2125 mm in about 550 mm sections: four, three joints more than one tilting panel.
+        expect(thin(garage) - thin({...garage, garageDoorStyle: 'UpAndOver'})).toBe(3);
+        const [boarded] = roomElevationSheets(
+            scene({walls: box({leftFinishes: [], openings: [{...door, leafStyle: 'Boarded', leafPanels: 6}]})}),
+            room,
+            info,
+        );
+        expect(boarded.svg.match(/stroke-width="0.1"/g)).toHaveLength(5);
     });
 
     it('draws a herringbone clipped to its band', () => {

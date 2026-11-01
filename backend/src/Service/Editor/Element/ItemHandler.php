@@ -19,10 +19,11 @@ use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
-use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\CustomItemValidator;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Editor\FieldReader;
+use FlatDesigner\Service\Editor\ItemPlacement;
+use FlatDesigner\Service\Editor\StructureParamsValidator;
 use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
 use FlatDesigner\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
@@ -55,7 +56,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params'];
+		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params', 'onGround', 'onRoof'];
 	}
 
 	/** @return list<string> */
@@ -104,6 +105,8 @@ final readonly class ItemHandler implements ElementHandler
 			'rotation' => 0,
 			'materialId' => null,
 			'params' => [],
+			'onGround' => false,
+			'onRoof' => false,
 		];
 	}
 
@@ -149,7 +152,7 @@ final readonly class ItemHandler implements ElementHandler
 			$definition = null;
 			$params = [];
 		}
-		ColumnParamsValidator::validate($kind, $params);
+		StructureParamsValidator::validate($kind, $params);
 
 		$state = [
 			'roomId' => $roomId,
@@ -172,7 +175,11 @@ final readonly class ItemHandler implements ElementHandler
 			'rotation' => (($fields->int('rotation', -3600, 3600, 'degrees') % 360) + 360) % 360,
 			'materialId' => $materialId,
 			'params' => $params,
+			// Missing in older change states: on the floor's level.
+			'onGround' => $fields->bool('onGround'),
+			'onRoof' => $fields->bool('onRoof'),
 		];
+		ItemPlacement::check($kind, $state['onGround'], $state['onRoof']);
 		$this->customValidator->validate(
 			$floor->project,
 			$kind,
@@ -254,6 +261,8 @@ final readonly class ItemHandler implements ElementHandler
 		$item->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$params = $fields->raw('params');
 		$item->params = $params === [] || $params === null ? null : json_encode($params, JSON_THROW_ON_ERROR);
+		$item->onGround = $fields->bool('onGround');
+		$item->onRoof = $fields->bool('onRoof');
 		$this->itemRepository->persist($item);
 	}
 

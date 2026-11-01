@@ -4,7 +4,8 @@ import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
-import {MM, polygonBounds, Vec2, WallCollider, wallFrame} from './plan-geometry';
+import {MM, pointInPolygon, pointOnWall, polygonBounds, Vec2, WallCollider, WallFrame, wallFrame} from './plan-geometry';
+import {buildRailRun, buildWallHandrail, railingSpacing, RailLook, RailPoint} from './railings';
 
 /** mm, the highest riser an automatic count gives (`StairRise::MaxAutoRiser`). */
 export const MaxAutoRiser = 180;
@@ -136,11 +137,13 @@ export function flightRun(flight: StairFlight, going: number): number {
 }
 
 /**
- * Lays out a stair climbing `rise` mm. (x, y) is the middle of the first riser and `rotation` the walking-up direction.
+ * Lays out a stair climbing `floorRise` mm, or its own `rise`. (x, y) is the middle of the first riser and `rotation` the walking-up direction.
  * A straight stair is one flight; an L stair turns on a square quarter landing, a U stair comes back beside itself
  * over a half landing (`gap` between the flights); a spiral winds round a pole, `width` being its diameter.
  */
-export function stairGeometry(stair: Stair, rise: number): StairGeometry {
+export function stairGeometry(stair: Stair, floorRise: number): StairGeometry {
+    // A stair with a rise of its own (garden or deck steps, FD-87) climbs that, not to the next floor.
+    const rise = stair.rise ?? floorRise;
     const risers = stairRisers(rise, stair.risers);
     const riser = rise / risers;
     const going = stair.going;
@@ -157,6 +160,9 @@ export function stairGeometry(stair: Stair, rise: number): StairGeometry {
 
     if (stair.shape === 'Spiral') {
         return {...base, ...spiralLayout(stair, origin, risers, riser)};
+    }
+    if (stair.shape === 'Curved') {
+        return {...base, ...curvedLayout(stair, origin, risers, riser)};
     }
     const first: StairFlight = {origin, direction: stair.rotation, width, base: 0, first: 1, risers};
     const frame = stairFrame(origin, stair.rotation);
@@ -270,26 +276,9 @@ function spiralLayout(stair: Stair, origin: Vec2, risers: number, riser: number)
     const centre = framePoint(frame, 0, -s * (radius / 2));
     const start = (Math.atan2(origin.y - centre.y, origin.x - centre.x) * 180) / Math.PI;
     const step = (s * (stair.going / (radius * SpiralWalkLine)) * 180) / Math.PI;
-    const at = (r: number, angle: number): Vec2 => ({
-        x: centre.x + r * Math.cos((angle * Math.PI) / 180),
-        y: centre.y + r * Math.sin((angle * Math.PI) / 180),
-    });
-    const treads: StairTread[] = [];
-    for (let k = 1; k < risers; k++) {
-        const a = start + (k - 1) * step;
-        const b = a + step;
-        const outer = arcPoints(centre, radius, a, b, 4);
-        const inner = arcPoints(centre, PoleRadius, b, a, 2);
-        treads.push({outline: [...outer, ...inner], top: k * riser, riser: k});
-    }
-    const walkLine: StairLinePoint[] = [];
-    const railPath: StairLinePoint[] = [];
-    for (let j = 0; j <= risers - 1; j++) {
-        const angle = start + j * step;
-        walkLine.push({point: at(radius * SpiralWalkLine, angle), height: j * riser});
-        railPath.push({point: at(radius, angle), height: (j + 1) * riser + RailHeight});
-    }
-    walkLine[walkLine.length - 1].height = risers * riser;
+    const ring: StepRing = {centre, start, step, risers, riser, inner: PoleRadius, outer: radius, walk: radius * SpiralWalkLine};
+    const {treads, walkLine, rails} = ringSteps(ring, 4, 2);
+    const railPath = rails.outer;
     return {
         flights: [],
         landings: [],
@@ -299,6 +288,90 @@ function spiralLayout(stair: Stair, origin: Vec2, risers: number, riser: number)
         rails: [railOf(stair.turn === 'Left' ? 'Right' : 'Left', railPath)],
         spiral: {centre, radius, start, step},
     };
+}
+
+/** mm, a curved flight's inner radius when it has none (`StairHandler::DefaultInnerRadius`). */
+const DefaultInnerRadius = 1500;
+
+/**
+ * One flight curving round a centre (FD-99: fan-shaped steps round a curved wall): ring-sector treads from
+ * `innerRadius` out to `innerRadius + width`, wider at the outer edge; the walking line in the middle of the width, the
+ * going measured along it. (x, y) is the middle of the first riser and `rotation` the walking-up direction there; the
+ * centre lies to the side it turns to (`turn`). A rail on either edge, its side as walking up.
+ */
+function curvedLayout(stair: Stair, origin: Vec2, risers: number, riser: number): StairLayout {
+    const inner = stair.innerRadius ?? DefaultInnerRadius;
+    const outer = inner + stair.width;
+    const walk = inner + stair.width / 2;
+    const s = stair.turn === 'Left' ? 1 : -1;
+    const frame = stairFrame(origin, stair.rotation);
+    const centre = framePoint(frame, 0, -s * walk);
+    const start = (Math.atan2(origin.y - centre.y, origin.x - centre.x) * 180) / Math.PI;
+    const step = (s * (stair.going / walk) * 180) / Math.PI;
+    // Arc pieces per tread, so the outer edge stays within a few mm of its circle.
+    const pieces = Math.max(2, Math.ceil(Math.abs(step) / 6));
+    const {treads, walkLine, rails} = ringSteps({centre, start, step, risers, riser, inner, outer, walk}, pieces, pieces);
+    const end = start + (risers - 1) * step;
+    const sweep = Math.max(1, risers - 1) * pieces;
+    // Turning left, the inner edge is on the left walking up.
+    const [innerSide, outerSide]: StairRail['side'][] = stair.turn === 'Left' ? ['Left', 'Right'] : ['Right', 'Left'];
+    return {
+        flights: [],
+        landings: [],
+        treads,
+        footprint: [...arcPoints(centre, outer, start, end, sweep), ...arcPoints(centre, inner, end, start, sweep)],
+        walkLine,
+        rails: [railOf(innerSide, rails.inner), railOf(outerSide, rails.outer)],
+        spiral: null,
+    };
+}
+
+/** Steps round a centre: the first riser at `start` (degrees), each tread `step` on, between two radii. */
+interface StepRing {
+    centre: Vec2;
+    start: number;
+    step: number;
+    risers: number;
+    riser: number;
+    inner: number;
+    outer: number;
+    /** The walking line's radius. */
+    walk: number;
+}
+
+interface RingSteps {
+    treads: StairTread[];
+    walkLine: StairLinePoint[];
+    rails: Record<'inner' | 'outer', StairLinePoint[]>;
+}
+
+/**
+ * A spiral's or curved flight's ring-sector treads (each edge in `outerPieces` / `innerPieces` arc pieces), its walking
+ * line (the top reached at its end) and the rail paths along both edges, `RailHeight` over the nosings.
+ */
+function ringSteps(ring: StepRing, outerPieces: number, innerPieces: number): RingSteps {
+    const {centre, start, step, risers, riser} = ring;
+    const at = (r: number, angle: number): Vec2 => ({
+        x: centre.x + r * Math.cos((angle * Math.PI) / 180),
+        y: centre.y + r * Math.sin((angle * Math.PI) / 180),
+    });
+    const treads: StairTread[] = [];
+    for (let k = 1; k < risers; k++) {
+        const a = start + (k - 1) * step;
+        const b = a + step;
+        const outline = [...arcPoints(centre, ring.outer, a, b, outerPieces), ...arcPoints(centre, ring.inner, b, a, innerPieces)];
+        treads.push({outline, top: k * riser, riser: k});
+    }
+    const walkLine: StairLinePoint[] = [];
+    const rails: Record<'inner' | 'outer', StairLinePoint[]> = {inner: [], outer: []};
+    for (let j = 0; j <= risers - 1; j++) {
+        const angle = start + j * step;
+        walkLine.push({point: at(ring.walk, angle), height: j * riser});
+        rails.inner.push({point: at(ring.inner, angle), height: (j + 1) * riser + RailHeight});
+        rails.outer.push({point: at(ring.outer, angle), height: (j + 1) * riser + RailHeight});
+    }
+    walkLine[walkLine.length - 1].height = risers * riser;
+    return {treads, walkLine, rails};
 }
 
 /** `count` + 1 points along the arc from angle `a` to `b` (degrees). */
@@ -382,8 +455,9 @@ function pointInOutline(point: Vec2, outline: readonly Vec2[]): boolean {
 }
 
 /**
- * The voids the floor's stairs cut (`own`: through the flat ceilings of its rooms) and the floor below's stairs cut
- * through it (`below`: its slab and room floors).
+ * The voids over the floor (`own`: cut through the flat ceilings of its rooms: its stairs' footprints and the floor
+ * above's voids) and through it (`below`: cut through its slab and room floors: the floor below's stairs coming up and
+ * its own voids, FD-90).
  */
 export interface SceneVoids {
     own: PlanPoint[][];
@@ -397,11 +471,18 @@ export function stairFootprints(stairs: readonly Stair[], rise: number): PlanPoi
     return stairs.map((stair) => stairGeometry(stair, rise).footprint.map((p): PlanPoint => [p.x, p.y]));
 }
 
-export function sceneVoids(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBelow'>): SceneVoids {
+export function sceneVoids(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBelow' | 'voids' | 'voidsAbove'>): SceneVoids {
     const below = scene.stairsBelow ?? null;
     return {
-        own: stairFootprints(scene.stairs ?? [], scene.stairRise ?? 0),
-        below: below === null ? [] : stairFootprints(below.stairs, below.rise),
+        // Garden and deck steps (a rise of their own) stay on their floor: no void.
+        own: [
+            ...stairFootprints(
+                (scene.stairs ?? []).filter((s) => s.rise == null),
+                scene.stairRise ?? 0,
+            ),
+            ...(scene.voidsAbove?.voids ?? []).map((v) => v.polygon),
+        ],
+        below: [...(below === null ? [] : stairFootprints(below.stairs, below.rise)), ...(scene.voids ?? []).map((v) => v.polygon)],
     };
 }
 
@@ -461,16 +542,17 @@ const SteelColor = '#4a4845';
 
 /**
  * The stair in 3D, in its own group at the stair's (x, y) so a drag moves it: the flights (a solid run with a sloping
- * soffit, stringers with treads and risers, or floating treads), the landings, the handrails with their posts, and a
- * spiral's pole and wedge treads. Tagged `stairId` for picking; the solid parts have a section-fill twin for the wall
- * cut. The group is merged (`mergeStatic()`).
+ * soffit, stringers with treads and risers, or floating treads), the landings, the handrails with their posts (and the
+ * `railingStyle` infill, FD-90, in `railingMaterialId`), the wall handrails, and a spiral's pole and wedge treads.
+ * Tagged `stairId` for picking; the solid parts have a section-fill twin for the wall cut. The group is merged
+ * (`mergeStatic()`).
  */
 export function buildStair(stair: Stair, rise: number, materials: MaterialLibrary, sectionMaterial: THREE.Material): THREE.Group {
     const geometry = stairGeometry({...stair, x: 0, y: 0}, rise);
     const group = new THREE.Group();
     group.name = `stair:${stair.name}`;
     group.userData = {stairId: stair.id};
-    group.position.set(stair.x * MM, 0, -stair.y * MM);
+    group.position.set(stair.x * MM, (stair.baseZ ?? 0) * MM, -stair.y * MM);
 
     const solid = stair.construction === 'Solid' && stair.shape !== 'Spiral';
     const structure =
@@ -498,11 +580,34 @@ export function buildStair(stair: Stair, rise: number, materials: MaterialLibrar
     if (geometry.spiral !== null) {
         group.add(buildSpiral(geometry, geometry.spiral, structure, tread));
     }
-    if (stair.railing !== 'None') {
-        for (const r of geometry.rails) {
-            if (stair.railing === 'Both' || stair.railing === r.side || geometry.spiral !== null) {
-                group.add(buildRail(r, structure));
+    if (stair.shape === 'Curved') {
+        // Ring-sector treads: solid blocks down to the stair's base, or boards (no stringers round the curve).
+        for (const step of geometry.treads) {
+            const block = extrudeStep(step.outline, solid ? 0 : step.top - TreadThickness, step.top, solid ? structure : tread);
+            group.add(block);
+            if (solid) {
+                group.add(sectionTwin(block, sectionMaterial));
             }
+        }
+    }
+    const railing = stair.railingMaterialId == null ? structure : materials.get(stair.railingMaterialId);
+    const style = stair.railingStyle ?? null;
+    const glass = materials.byCode('glass');
+    // A spiral has one rail, on its outer side, whichever side is asked for.
+    const hasSide = (sides: Stair['railing'], r: StairRail): boolean =>
+        sides === 'Both' || sides === r.side || (sides !== 'None' && geometry.spiral !== null);
+    for (const r of geometry.rails) {
+        const path = r.path.map((p): RailPoint => ({point: p.point, top: p.height}));
+        if (hasSide(stair.railing, r) && style === null) {
+            group.add(buildRail(r, railing));
+        } else if (hasSide(stair.railing, r) && style !== null) {
+            const spacing = railingSpacing(style, null);
+            const look: RailLook = {style, height: RailHeight, spacing, postSpacing: PostSpacing, postSize: PostSize, handrail: 'Round'};
+            group.add(buildRailRun(path, look, railing, style === 'Glass' ? glass : railing));
+        }
+        if (hasSide(stair.wallHandrail ?? 'None', r)) {
+            // The wall is on the rail's side: the left rail's wall handrail stands off it to the right, into the stair.
+            group.add(buildWallHandrail(path, r.side === 'Left' ? 1 : -1, railing));
         }
     }
     mergeStatic(group);
@@ -710,9 +815,10 @@ const SpiralOpening = 0.75;
 
 /**
  * A stair the walker may walk on: its walking line and footprint in plan mm, and how far its floor lies under the
- * shown one (0 for the floor's own stairs, −rise for those coming up from below). `below` marks the latter. `open`
- * says whether a footprint edge (by its middle) is where the walker steps on (the floor's own stairs) or off (those
- * from below).
+ * shown one (0 for the floor's own stairs, or their `baseZ`; −rise for those coming up from below). `below` marks the
+ * latter, `free` the floor's own with a rise of their own (garden steps, FD-87), which lead to no other floor and are
+ * open at both ends. `open` says whether a footprint edge (by its middle) is where the walker steps on (the floor's own
+ * stairs) or off (those from below).
  */
 export interface StairPath {
     walk: StairLinePoint[];
@@ -720,9 +826,12 @@ export interface StairPath {
     width: number;
     offset: number;
     below: boolean;
+    free: boolean;
     /** The walking line's plan length, mm. */
     length: number;
     open: (middle: Vec2) => boolean;
+    /** Solid down to its base (a curved solid flight's blocks): never walked under. */
+    solid?: boolean;
 }
 
 /** Where a plan point lies along a stair's walking line: `s` mm from its start, at `height` above the stair's floor. */
@@ -741,8 +850,16 @@ export function stairPaths(scene: Pick<Scene, 'stairs' | 'stairRise' | 'stairsBe
         for (let i = 1; i < walk.length; i++) {
             length += Math.hypot(walk[i].point.x - walk[i - 1].point.x, walk[i].point.y - walk[i - 1].point.y);
         }
-        return {walk, footprint: geometry.footprint, width: geometry.width, offset: below ? -rise : 0, below, length, open: opening(geometry, below)};
+        const free = !below && stair.rise != null;
+        const offset = below ? -rise : (stair.baseZ ?? 0);
+        const open = free ? either(opening(geometry, false), opening(geometry, true)) : opening(geometry, below);
+        const solid = stair.shape === 'Curved' && stair.construction === 'Solid';
+        return {walk, footprint: geometry.footprint, width: geometry.width, offset, below, free, length, open, solid};
     };
+    const either =
+        (a: (middle: Vec2) => boolean, b: (middle: Vec2) => boolean) =>
+        (middle: Vec2): boolean =>
+            a(middle) || b(middle);
     const below = scene.stairsBelow ?? null;
     return [
         ...(scene.stairs ?? []).map((stair) => path(stair, scene.stairRise ?? 0, false)),
@@ -800,11 +917,13 @@ export function stairSpot(paths: readonly StairPath[], point: Vec2, near?: numbe
             s0 += length;
         }
     }
-    if (candidates.length === 0) {
+    // A flight more than a step above the walker's feet is overhead: the walker is under it, not on it.
+    const reachable = near === undefined ? candidates : candidates.filter((c) => c.path.offset + c.height <= near + StairStepUp);
+    if (reachable.length === 0) {
         return null;
     }
-    const best = Math.min(...candidates.map((c) => c.distance));
-    const close = candidates.filter((c) => c.distance <= best + c.path.width / 2);
+    const best = Math.min(...reachable.map((c) => c.distance));
+    const close = reachable.filter((c) => c.distance <= best + c.path.width / 2);
     const level = (c: {path: StairPath; height: number}): number => c.path.offset + c.height;
     const pick =
         near === undefined
@@ -813,26 +932,134 @@ export function stairSpot(paths: readonly StairPath[], point: Vec2, near?: numbe
     return {path: pick.path, s: pick.s, height: pick.height};
 }
 
+/** mm of clear height the walker needs: under a flight higher than this it walks beneath. */
+export const StairHeadroom = 2000;
+/** mm a walker climbs onto a stair at once; a flight higher above the walker's feet than this is overhead. */
+const StairStepUp = 600;
+/** mm over the floor's level up to which the stairwell of a stair from below stops the walker (its railing). */
+const StairwellTop = 100;
+
 /**
  * What the walker bumps into at the stairs: the sides of the floor's own stairs (open where they start, so the walker
  * steps on, closed at the top, where the walk goes on upstairs), and the edges of the voids of the stairs coming up
  * from below (open where they arrive, closed elsewhere: the stairwell's railing). `StairPath.open` tells the edges.
+ *
+ * Each stops the walker only at some levels (`WallCollider.levels`): a flight's sides the walker on it and, where the
+ * flight is lower than `StairHeadroom`, the walker beside it; where it is higher, the walker walks under it, as far as
+ * a crosswise collider where the flight comes down to the headroom. The stairwell of a stair from below stops only the
+ * walker on the floor (not one climbing the floor's own flight over it).
  */
 export function stairColliders(paths: readonly StairPath[]): WallCollider[] {
     const colliders: WallCollider[] = [];
+    const own = paths.filter((path) => !path.below).map((path) => path.footprint.map((p): PlanPoint => [p.x, p.y]));
     for (const path of paths) {
+        const level = (point: Vec2): number => path.offset + walkHeightAt(path, point);
         path.footprint.forEach((a, i) => {
             const b = path.footprint[(i + 1) % path.footprint.length];
             if (path.open({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2})) {
                 return;
             }
             const frame = wallFrame({startX: a.x, startY: a.y, endX: b.x, endY: b.y});
-            if (frame.length > 0) {
-                colliders.push({frame, from: 0, to: frame.length, halfThickness: StairSideHalf});
+            if (frame.length <= 0) {
+                return;
+            }
+            if (path.below) {
+                // Where one of the floor's own stairs flies over the stairwell, the walker is on that stair, its sides bounding it.
+                for (const [from, to, covered] of stretches(frame, (p) => own.some((footprint) => pointInPolygon(p, footprint)))) {
+                    if (!covered) {
+                        colliders.push({frame, from, to, halfThickness: StairSideHalf, levels: [-Infinity, StairwellTop]});
+                    }
+                }
+                return;
+            }
+            for (const [from, to, overhead] of stretches(frame, (p) => path.solid !== true && level(p) - path.offset >= StairHeadroom)) {
+                const high = Math.max(level(pointOnWall(frame, from, 0)), level(pointOnWall(frame, to, 0)));
+                // Beside a stretch over the headroom, the walker at the floor passes under it; one in a stairwell below passes any.
+                const low = overhead ? path.offset + 1 : path.offset - StairStepUp;
+                colliders.push({frame, from, to, halfThickness: StairSideHalf, levels: [low, high + StairStepUp]});
             }
         });
+        const crossing = path.below || path.solid === true ? null : headroomCrossing(path);
+        if (crossing !== null) {
+            colliders.push(crossing);
+        }
     }
     return colliders;
+}
+
+/**
+ * A footprint edge cut where a test of its points changes (sampled every 50 mm), e.g. where the flight beside it rises
+ * past `StairHeadroom`: [from, to] mm along it, and the test's result there.
+ */
+function stretches(frame: WallFrame, test: (point: Vec2) => boolean): [number, number, boolean][] {
+    const samples = Math.max(2, Math.ceil(frame.length / 50));
+    const passes = (t: number): boolean => test(pointOnWall(frame, t, 0));
+    const result: [number, number, boolean][] = [];
+    let start = 0;
+    let state = passes(0);
+    for (let k = 1; k <= samples; k++) {
+        const t = (k / samples) * frame.length;
+        if (passes(t) !== state) {
+            result.push([start, t, state]);
+            start = t;
+            state = !state;
+        }
+    }
+    result.push([start, frame.length, state]);
+    return result.filter(([from, to]) => to - from > 1);
+}
+
+/**
+ * Under a flight that rises past `StairHeadroom`, a collider across it where it comes down to the headroom: the walker
+ * beneath stops there (not one on the flight, nor one in a stairwell well below it). Null for a flight that never gets so high.
+ */
+function headroomCrossing(path: StairPath): WallCollider | null {
+    for (let i = 1; i < path.walk.length; i++) {
+        const a = path.walk[i - 1];
+        const b = path.walk[i];
+        const [la, lb] = [a.height, b.height];
+        if ((la < StairHeadroom) === (lb < StairHeadroom) || lb === la) {
+            continue;
+        }
+        const t = (StairHeadroom - la) / (lb - la);
+        const at = {x: a.point.x + (b.point.x - a.point.x) * t, y: a.point.y + (b.point.y - a.point.y) * t};
+        const length = Math.hypot(b.point.x - a.point.x, b.point.y - a.point.y);
+        if (length < 1e-6) {
+            continue;
+        }
+        // Square to the walking line, the flight's width across.
+        const across = {x: -(b.point.y - a.point.y) / length, y: (b.point.x - a.point.x) / length};
+        const half = path.width / 2;
+        const frame = wallFrame({
+            startX: at.x - across.x * half,
+            startY: at.y - across.y * half,
+            endX: at.x + across.x * half,
+            endY: at.y + across.y * half,
+        });
+        const levels: [number, number] = [path.offset - StairStepUp, path.offset + StairHeadroom - StairStepUp - 1];
+        return {frame, from: 0, to: frame.length, halfThickness: StairSideHalf, levels};
+    }
+    return null;
+}
+
+/** The height of a stair's walking line (above its floor) nearest a plan point. */
+function walkHeightAt(path: StairPath, point: Vec2): number {
+    let best = Infinity;
+    let height = 0;
+    for (let i = 1; i < path.walk.length; i++) {
+        const a = path.walk[i - 1];
+        const b = path.walk[i];
+        const dx = b.point.x - a.point.x;
+        const dy = b.point.y - a.point.y;
+        const length2 = dx * dx + dy * dy;
+        const t = length2 < 1e-9 ? 0 : Math.min(1, Math.max(0, ((point.x - a.point.x) * dx + (point.y - a.point.y) * dy) / length2));
+        const distance = Math.hypot(point.x - (a.point.x + dx * t), point.y - (a.point.y + dy * t));
+        if (distance < best) {
+            best = distance;
+            height = a.height + (b.height - a.height) * t;
+        }
+    }
+    return height;
 }
 
 /**
@@ -840,7 +1067,7 @@ export function stairColliders(paths: readonly StairPath[]): WallCollider[] {
  * bottom of those coming up from below; 0 otherwise.
  */
 export function stairFloorStep(spot: StairSpot | null): 1 | -1 | 0 {
-    if (spot === null) {
+    if (spot === null || spot.path.free) {
         return 0;
     }
     if (!spot.path.below && spot.path.length - spot.s < StairLanding) {

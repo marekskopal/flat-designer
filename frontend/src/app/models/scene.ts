@@ -3,18 +3,40 @@ import {FurnitureDefinitionBody} from './furniture';
 // Mirrors the backend DTOs (FlatDesigner\Dto). All lengths are millimetres in plan coordinates:
 // origin at the inner south-west corner of the floor, x east, y north.
 
-export type MaterialPattern = 'Plain' | 'Wood' | 'Planks' | 'Tiles' | 'Glass' | 'Grass' | 'Gravel' | 'Terrazzo' | 'Brick' | 'Herringbone';
-export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway';
+export type MaterialPattern =
+    | 'Plain'
+    | 'Wood'
+    | 'Planks'
+    | 'Tiles'
+    | 'Glass'
+    | 'Grass'
+    | 'Gravel'
+    | 'Terrazzo'
+    | 'Brick'
+    | 'Herringbone'
+    /** Round-ended roof tiles in half-bond rows, a row showing `BeaverTailGauge` of a tile's length (FD-91). */
+    | 'BeaverTail'
+    /** Random coursed dry-stone walling (FD-92): stones about `tileWidth` long in courses about `tileHeight` high. */
+    | 'Stone'
+    /** Cast concrete showing its formwork panels or boards, `tileWidth` along the wall by `tileHeight` up it (FD-92). */
+    | 'Formwork';
+export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
 export const OutdoorRoomTypes: readonly RoomType[] = ['Terrace', 'Garden', 'Path', 'Driveway'];
 
 export const isOutdoorRoom = (room: {type: RoomType}): boolean => OutdoorRoomTypes.includes(room.type);
+
+/** Indoor but unheated room types (`RoomTypeEnum::isAncillary()`, FD-89): totalled apart from the living area. */
+export const isAncillaryRoom = (room: {type: RoomType}): boolean => room.type === 'Garage';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
-export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche';
+export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche' | 'GarageDoor';
 export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
-export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed';
+export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed' | 'Boarded';
+export type BoardDirection = 'Vertical' | 'Horizontal';
+/** How a garage door opens (FD-89); all but `SideHinged` lift into the room. */
+export type GarageDoorStyle = 'Sectional' | 'UpAndOver' | 'SideHinged' | 'Roller';
 export type ShutterStyle = 'Louvred' | 'Solid';
 export type ItemKind =
     | 'Sink'
@@ -34,12 +56,17 @@ export type ItemKind =
     | 'Column'
     /** A structural downstand beam along its width; z is its soffit. */
     | 'Beam'
+    /** A structural chimney rising through the floors and roofs above (FD-91, `params.shape`, `aboveRoof`, `cap`). */
+    | 'Chimney'
     /** Drawn from a furniture definition (`definitionId`, in the scene's `definitions`). */
     | 'Custom'
     /** A bought product drawn from a 3D model (`modelId`, in the scene's `models`), scaled to fit the item's box. */
     | 'Model';
 
 export type PlanPoint = [number, number];
+
+/** A spot height of a plot's terrain: x, y in plan mm and z, mm against the floor's level (FD-86). */
+export type SpotHeight = [number, number, number];
 
 export interface Floor {
     id: number;
@@ -85,12 +112,85 @@ export interface Plot {
     groundMaterialId: number | null;
     /** mm the ground lies above (+) or below (−) the floor's level; missing in older versions: 0. */
     groundLevel?: number;
+    /**
+     * Spot heights of a sloping ground (`terrain.ts`); without them the ground is flat at `groundLevel`. Missing in
+     * older versions.
+     */
+    terrain?: SpotHeight[];
 }
 
-export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral';
+export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral' | 'Curved';
 export type StairTurn = 'Left' | 'Right';
 export type StairConstruction = 'Solid' | 'Stringers' | 'Open';
 export type StairRailing = 'None' | 'Left' | 'Right' | 'Both';
+/** A railing's infill between its posts (FD-90). */
+/** A railing's infill; `Mesh` and `Boards` make it a fence (FD-100). */
+export type RailingStyle = 'Balusters' | 'Rods' | 'Glass' | 'Panel' | 'Cable' | 'Mesh' | 'Boards';
+
+/** How a railing (a fence) meets the ground (FD-100): level at `baseZ`, or on the plots' ground raking or stepping. */
+export type RailingFollow = 'Level' | 'Rake' | 'Step';
+export type HandrailProfile = 'Round' | 'Square' | 'Flat' | 'None';
+
+/**
+ * A section line (FD-94, `SectionLineDto`): a cut through the building drawn on the floor's plan, start → end in plan mm,
+ * looking to the left of that direction, `depth` mm deep (null: all that lies beyond).
+ */
+export interface SectionLine {
+    id: number;
+    name: string;
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    depth: number | null;
+}
+
+/**
+ * A hole through the floor (`FloorVoidDto`, FD-90): cut out of its slab and room floors and out of the ceilings of the
+ * floor below, its edges lined with `liningMaterialId` (null: unlined) `liningDepth` mm down from the floor's level
+ * (null: down to the ceilings below).
+ */
+export interface FloorVoid {
+    id: number;
+    name: string;
+    polygon: PlanPoint[];
+    /** m². */
+    area: number;
+    liningMaterialId: number | null;
+    liningDepth: number | null;
+}
+
+/**
+ * A balustrade along a polyline (`RailingDto`, FD-90): `height` mm from its base at `baseZ` (against the floor's level)
+ * to the top of its handrail, posts at its corners and at most `postSpacing` apart, `style` between them.
+ */
+export interface Railing {
+    id: number;
+    name: string;
+    /** Plan mm; a closed one repeats its first point last. */
+    points: PlanPoint[];
+    height: number;
+    baseZ: number;
+    style: RailingStyle;
+    /** mm, the balusters' clear gap or the rods' and cables' pitch; null: the style's (`railingSpacing()`). */
+    spacing: number | null;
+    postSpacing: number;
+    handrail: HandrailProfile;
+    /** Posts, handrail and bars; null: brushed steel. */
+    materialId: number | null;
+    /** A glass pane's or panel's; null: clear glass, or the railing's material. */
+    infillMaterialId: number | null;
+    /** Missing in older versions: level. */
+    follow?: RailingFollow;
+}
+
+/** The floor above (`VoidsAboveDto`): its level `rise` mm up, its slab and its voids, which cut this floor's ceilings. */
+export interface VoidsAbove {
+    floorId: number;
+    rise: number;
+    slabThickness: number;
+    voids: FloorVoid[];
+}
 
 /**
  * Stairs from their floor up to the next one (`StairDto`, FD-37). The rise is not a field but the scene's `stairRise`.
@@ -121,6 +221,23 @@ export interface Stair {
     railing: StairRailing;
     treadMaterialId: number | null;
     structureMaterialId: number | null;
+    /**
+     * A rise of its own, mm (FD-87): the stair does not climb to the next floor (garden or deck steps) and cuts no void;
+     * null or missing: the floor's `stairRise`.
+     */
+    rise?: number | null;
+    /** Where its first riser stands, mm against the floor's level; missing: 0. */
+    baseZ?: number;
+    /** The railing's infill (FD-90); null or missing: posts and a handrail only. */
+    railingStyle?: RailingStyle | null;
+    /** Null or missing: the structure's. */
+    railingMaterialId?: number | null;
+    /** The sides with a handrail on brackets on the wall beside the flight; missing: none. */
+    wallHandrail?: StairRailing;
+    /** Boards lining the void it cuts through the floor above; null or missing: none. */
+    voidLiningMaterialId?: number | null;
+    /** A curved flight's inner edge, mm from the centre it curves round (FD-99); null for the other shapes, absent in older versions. */
+    innerRadius?: number | null;
 }
 
 export type RoofShape = 'Gable' | 'Hip' | 'Shed' | 'Flat';
@@ -147,6 +264,12 @@ export interface Roof {
     overhang: number;
     /** mm past a gable or a shed's sides. */
     vergeOverhang: number;
+    /**
+     * A gable's or shed's verge at the ridge's start (−along) and end, degrees counter-clockwise (±45, 0 square to the
+     * ridge), turned about the ridge's end on the eaves line (FD-97); missing in older versions: square.
+     */
+    startSkew?: number;
+    endSkew?: number;
     /** mm, rafters and covering, square to the slope. */
     thickness: number;
     /** A flat roof's parapet, mm above it; null none. */
@@ -154,6 +277,29 @@ export interface Roof {
     coveringMaterialId: number | null;
     soffitMaterialId: number | null;
     windows: RoofWindow[];
+    /** Gutters along a pitched roof's eaves (FD-91); missing in older versions: none. */
+    gutters?: GutterProfile;
+    /** The gutters' and downpipes' material; null titanium zinc. */
+    gutterMaterialId?: number | null;
+    /** null: at the corners of the front and back eaves. */
+    downpipes?: Downpipe[] | null;
+    /** Rows of snow guards on each plane. */
+    snowGuards?: number;
+    ridgeStyle?: RidgeStyle;
+}
+
+export type GutterProfile = 'None' | 'HalfRound' | 'Box';
+export type RidgeStyle = 'Box' | 'Round' | 'Angled';
+/** An eaves edge in the roof's frame: the front (−across, where a shed is low), the back, a hip roof's left (−along) and right. */
+export type RoofEdge = 'Front' | 'Back' | 'Left' | 'Right';
+
+/**
+ * A downpipe on an eaves edge, `along` mm from the roof's centre line (the edge's middle unless a verge is skewed; + along
+ * the ridge, or + across it on the left and right).
+ */
+export interface Downpipe {
+    edge: RoofEdge;
+    along: number;
 }
 
 /** A window in a roof's plane: its centre `along` the ridge and `across` it (+ to the back) from the roof's centre. */
@@ -220,6 +366,8 @@ export interface Room {
     /** Skirting boards along the room's walls (doors left free), mm high; null: none. */
     skirtingHeight?: number | null;
     skirtingMaterialId?: number | null;
+    /** The underside and edge of the room's slab where it overhangs the floor below (FD-88); null: the façade material. */
+    soffitMaterialId?: number | null;
 }
 
 /**
@@ -258,9 +406,13 @@ export interface Opening {
     mullions?: number;
     transoms?: number;
     sillBoard?: number | null;
-    /** Door leaves: a plain slab, raised panels or glass panes (`leafPanels` of them, stacked). Missing in older snapshots: Flush. */
+    /**
+     * Door leaves: a plain slab, raised panels or glass panes (`leafPanels` of them, stacked) or boards (`leafPanels` of
+     * them, running `boardDirection`). Missing in older snapshots: Flush.
+     */
     leafStyle?: DoorLeafStyle;
     leafPanels?: number;
+    boardDirection?: BoardDirection;
     /** Window: solid lower panel of the glazing, mm from the sill; null: glass down to the bottom rail. */
     panelHeight?: number | null;
     /**
@@ -270,8 +422,23 @@ export interface Opening {
     shutters?: ShutterStyle | null;
     shutterMaterialId?: number | null;
     shuttersClosed?: boolean;
+    /** The reveal (jambs and head across the wall) is lined with the outer face's band (FD-88); missing: bare. */
+    revealLining?: boolean;
     /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
     depth?: number | null;
+    /**
+     * FD-89 (missing in older snapshots: the defaults): the frame's and sashes' material (null: white doors, anthracite
+     * windows), a window's outer face's (timber-aluminium; null: the frame's) and the leaves' (null: the frame's).
+     */
+    frameMaterialId?: number | null;
+    outsideFrameMaterialId?: number | null;
+    leafMaterialId?: number | null;
+    /** GarageDoor: how it opens (null for other types). */
+    garageDoorStyle?: GarageDoorStyle | null;
+    /** SlidingDoor: fixed panes beside the sliding one, a lift-and-slide door inside its opening (0: a leaf hung on the face). */
+    fixedPanes?: number;
+    /** The frame set this far (mm) in from the outer face, opposite `side`; null: centred (a door's lining across the wall). */
+    inset?: number | null;
 }
 
 export interface Wall {
@@ -297,6 +464,13 @@ export interface Wall {
     openings: Opening[];
     /** The wall rises to the underside of the roofs over it (a gable) instead of stopping at `height`; missing in older snapshots. */
     upToRoof?: boolean;
+    /** The top's height at the end (a straight slope from `height`, FD-87); null or missing: level. */
+    heightEnd?: number | null;
+    /** The bottom at the start and the end, mm against the floor's level; missing: 0. */
+    baseStart?: number;
+    baseEnd?: number;
+    /** The bottom follows the ground of the floor's plots instead of the base. */
+    onGround?: boolean;
 }
 
 export interface Item {
@@ -313,6 +487,10 @@ export interface Item {
     x: number;
     y: number;
     z: number;
+    /** z counts from the ground under the item's centre (its plot's terrain), not the floor's level; missing in older versions. */
+    onGround?: boolean;
+    /** z counts from the roof's covering under the item's centre and it takes the plane's slope (FD-91); missing in older versions. */
+    onRoof?: boolean;
     width: number;
     depth: number;
     height: number;
@@ -363,10 +541,22 @@ export interface Scene {
     stairs?: Stair[];
     /** mm the floor's stairs climb (`StairRise`): to the next floor up, or over the tallest wall on the top floor; absent in older versions. */
     stairRise?: number;
+    /** The project's default façade material (FD-88): the outer faces of exterior walls nobody set; missing: none. */
+    exteriorMaterialId?: number | null;
     /** The stairs of the floor below coming up through this one; null without a floor below, absent in older versions. */
     stairsBelow?: StairsBelow | null;
     /** The roofs over this floor; absent in older versions. */
     roofs?: Roof[];
+    /** Holes through this floor (FD-90); absent in older versions. */
+    voids?: FloorVoid[];
+    /** The building sections drawn on this floor's plan (FD-94); absent in older versions. */
+    sections?: SectionLine[];
+    /** Balustrades along polylines (FD-90); absent in older versions. */
+    railings?: Railing[];
+    /** The floor above with its voids; null without a floor above, absent in older versions. */
+    voidsAbove?: VoidsAbove | null;
+    /** The project's other floors with roofs or chimneys, when it has a chimney (FD-91); missing in older versions. */
+    chimneyFloors?: ChimneyFloor[];
     /** Where the building stands, for the sun; absent in older versions. */
     location?: SiteLocation | null;
 }
@@ -430,4 +620,15 @@ export interface SceneDefinition {
     name: string;
     definition: FurnitureDefinitionBody;
     updatedAt: string;
+}
+
+/**
+ * Another floor of a project with chimneys (`ChimneyFloorDto`, FD-91): `offset` mm from this floor's level up to its own
+ * (negative below), its roofs (without windows), which the chimneys' tops reach over, and its chimneys.
+ */
+export interface ChimneyFloor {
+    floorId: number;
+    offset: number;
+    roofs: Roof[];
+    chimneys: Item[];
 }

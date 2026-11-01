@@ -1,12 +1,29 @@
 import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
-import {isOutdoorRoom, Item, Opening, PlanPoint, Plot, Room, Scene, Wall} from '@app/models/scene';
+import {
+    FloorVoid,
+    isAncillaryRoom,
+    isOutdoorRoom,
+    Item,
+    Opening,
+    PlanPoint,
+    Plot,
+    Railing,
+    Roof,
+    Room,
+    Scene,
+    SectionLine,
+    Wall,
+} from '@app/models/scene';
 import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
+import {isChimney, sceneChimneys} from './chimneys';
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
+import {itemsOverFloor} from './items';
 import {
     Bounds,
     cornerWindows,
+    frameBand,
     itemFootprint,
     Leaf,
     NoCorners,
@@ -15,6 +32,7 @@ import {
     pointInPolygon,
     pointOnWall,
     polygonCentroid,
+    RollerDrum,
     SquareEnds,
     Vec2,
     WallEnds,
@@ -26,6 +44,7 @@ import {
     wallPieces,
     wallSamples,
 } from './plan-geometry';
+import {DownpipeRadius, gutterOffset, roofDownpipes, roofGutters} from './rainwater';
 import {roofPlanes, roofToPlan, roofVerticalThickness, roofWindowLayouts} from './roof-geometry';
 import {
     frameSvg,
@@ -52,8 +71,10 @@ import {
     truncate,
 } from './sheet-svg';
 import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
-import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallTopAt} from './under-roof';
+import {hasTerrain, plotTerrain, terrainContours} from './terrain';
+import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallHeightAt, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
+import {netRoomArea, voidDiagonals} from './voids';
 
 // The floor plan as a drawing on paper (A4, in paper mm): walls cut at `PlanCutHeight`, doors with their swings,
 // windows, room names and areas, the rooms' dimension lines and the items' footprints, at a standard scale. Plain
@@ -145,22 +166,31 @@ export function planLayout(bounds: Bounds): PlanLayout {
 /** The floor plan on one A4 page, with the title block, a scale bar and a north arrow. */
 export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number} {
     const hidden = hiddenItemIds(scene);
-    const items = scene.items.filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
+    const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
     const rooms = scene.rooms.map(roomShape);
     const plots = (scene.plots ?? []).map(plotShape);
+    const contours = (scene.plots ?? []).flatMap(contourShapes);
     const itemShapes = items.map(itemShape);
     const walls = wallShapes(scene.walls, scene.roofs ?? []);
     const openings = scene.walls.flatMap((wall) => openingShapes(wall, scene.roofs ?? []));
     const stairs = stairPlanShapes(scene);
-    const roofs = roofPlanShapes(scene.roofs ?? []);
+    const roofs = [...roofPlanShapes(scene.roofs ?? []), ...rainwaterShapes(scene.roofs ?? [])];
+    const chimneysBelow = sceneChimneys(scene).flatMap(({item, offset}) => (offset === 0 ? [] : [itemShape(item)]));
+    const voids = (scene.voids ?? []).flatMap(voidShapes);
+    const railings = (scene.railings ?? []).map(railingShape);
 
-    const bounds = shapeBounds([...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs]);
+    const cuts = (scene.sections ?? []).map((section): Shape => ({points: sectionEnds(section), closed: false, style: SectionStyle}));
+    const drawn = [...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs, ...voids, ...railings, ...chimneysBelow];
+    // The section lines reach a little past the walls: the plan takes them in.
+    drawn.push(...cuts);
+    const bounds = shapeBounds(drawn);
     const layout = planLayout(bounds);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
+    const crosses = (scene.plots ?? []).flatMap((plot) => spotHeightCrosses(plot, s));
 
     // Room names first, then the dimensions and the item names where they do not run into the text placed before them.
-    const roomLabels = scene.rooms.map((room) => roomLabel(room, s));
+    const roomLabels = scene.rooms.map((room) => roomLabel({...room, area: netRoomArea(room, scene.voids ?? [])}, s));
     const taken = roomLabels.map((label) => labelBox(label, toPaper));
     const free = (label: Label): boolean => {
         const box = labelBox(label, toPaper);
@@ -171,13 +201,29 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
         return true;
     };
     const dimensions = dimensionLabels(scene, s).filter(free);
+    const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s)).filter(free);
     const itemLabels = items.flatMap((item) => itemLabel(item, s)).filter(free);
-    const labels = [...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
+    const sections = (scene.sections ?? []).flatMap((section) => sectionMarks(section, s));
+    const labels = [...sections, ...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
 
     const body = [
-        ...[...plots, ...rooms, ...stairs.shapes, ...roofs, ...walls, ...openings, ...itemShapes, ...labels.flatMap((l) => l.shapes ?? [])].map(
-            (shape) => shapeSvg(shape, toPaper),
-        ),
+        ...[
+            ...[
+                ...plots,
+                ...contours,
+                ...crosses,
+                ...rooms,
+                ...voids,
+                ...stairs.shapes,
+                ...railings,
+                ...roofs,
+                ...walls,
+                ...openings,
+                ...itemShapes,
+                ...chimneysBelow,
+            ],
+            ...labels.flatMap((l) => l.shapes ?? []),
+        ].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
         planBandSvg(layout, info, scene.location?.northAngle ?? 0),
@@ -188,15 +234,21 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
 /**
  * The room schedule of the floor on A4 portrait pages: area, perimeter, clear height and volume per room, with totals.
  * A room under the roofs (`roomUnderRoofs()`, as the backend's schedule) gets its clear height's range and its volume
- * under the slope, and a column its area with at least 1.2 m of headroom.
+ * under the slope, and a column its area with at least 1.2 m of headroom. The floor's voids (FD-90) are taken off the
+ * rooms' areas (`netRoomArea()`) and listed after them, in no total.
  */
 export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
     if (scene.rooms.length === 0) {
         return [];
     }
     const roofs = scene.roofs ?? [];
-    const measured = scene.rooms.map((room) => {
-        const under = roomUnderRoofs(room, roofs);
+    const measured = scene.rooms.map((gross) => {
+        const room = {...gross, area: netRoomArea(gross, scene.voids ?? [])};
+        // Under a roof the volume and the headroom scale with the share of the floor the voids leave (as the backend's schedule).
+        const left = gross.area > 0 ? room.area / gross.area : 1;
+        const measuredUnder = roomUnderRoofs(room, roofs);
+        const under =
+            measuredUnder === null ? null : {...measuredUnder, volume: left * measuredUnder.volume, headroomArea: left * measuredUnder.headroomArea};
         const volume = under !== null ? under.volume / 1e9 : room.ceilingHeight === null ? null : (room.area * room.ceilingHeight) / 1000;
         return {room, under, volume};
     });
@@ -217,16 +269,19 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
                 ...(underRoofs ? [under === null ? '' : (under.headroomArea / 1e6).toFixed(2)] : []),
             ];
         });
-    const total = (outdoor: boolean): string[] | null => {
-        const matching = measured.filter((m) => isOutdoor(m.room) === outdoor);
+    const voidRows = (scene.voids ?? []).map((v): string[] => ['', `${v.name} (void)`, v.area.toFixed(2), '', '', '', ...(underRoofs ? [''] : [])]);
+    // The living area, garages (indoor, unheated; FD-89) and open-air rooms, each totalled apart.
+    const kind = (room: Pick<Room, 'type'>): string => (isOutdoor(room) ? 'Outdoor' : isAncillaryRoom(room) ? 'Garage' : 'Indoor');
+    const total = (label: string): string[] | null => {
+        const matching = measured.filter((m) => kind(m.room) === label);
         if (matching.length === 0) {
             return null;
         }
         const area = matching.reduce((sum, m) => sum + m.room.area, 0);
         const volume = matching.reduce((sum, m) => sum + (m.volume ?? 0), 0);
-        return ['', outdoor ? 'Outdoor' : 'Indoor', area.toFixed(2), '', '', volume > 0 ? volume.toFixed(1) : '', ...(underRoofs ? [''] : [])];
+        return ['', label, area.toFixed(2), '', '', volume > 0 ? volume.toFixed(1) : '', ...(underRoofs ? [''] : [])];
     };
-    const totals = [total(false), total(true)].filter((t) => t !== null);
+    const totals = [total('Indoor'), total('Garage'), total('Outdoor')].filter((t) => t !== null);
 
     const width = PaperShort;
     const height = PaperLong;
@@ -247,7 +302,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
     const tableTop = Margin + Padding + 20;
     const tableBottom = height - Margin - Padding - 8;
     const perPage = Math.floor((tableBottom - tableTop) / RowHeight) - 1;
-    const allRows = [...rows.map((cells) => ({cells, bold: false})), ...totals.map((cells) => ({cells, bold: true}))];
+    const allRows = [...[...rows, ...voidRows].map((cells) => ({cells, bold: false})), ...totals.map((cells) => ({cells, bold: true}))];
     const pages = Math.max(1, Math.ceil(allRows.length / perPage));
 
     return Array.from({length: pages}, (_, page) => {
@@ -343,9 +398,138 @@ function roofPlanShapes(roofs: FloorRoofs): Shape[] {
     return [...dashed, ...seen, ...sections];
 }
 
+/**
+ * The roofs' rainwater goods (FD-91): the gutters' outer edge dashed above the cut, and the downpipes, which the cut
+ * passes, as small circles.
+ */
+function rainwaterShapes(roofs: readonly Roof[]): Shape[] {
+    return roofs.flatMap((roof, index): Shape[] => {
+        const profile = roof.gutters ?? 'None';
+        if (profile === 'None' || roof.shape === 'Flat') {
+            return [];
+        }
+        const runs = roofGutters(roofs, index);
+        const reach = 2 * gutterOffset(profile) - 10;
+        const gutters = runs.map((run): Shape => {
+            const length = Math.hypot(run.to.x - run.from.x, run.to.y - run.from.y) || 1;
+            const out = {x: (run.to.y - run.from.y) / length, y: -(run.to.x - run.from.x) / length};
+            return {
+                points: [run.from, run.to].map((p) => ({x: p.x + out.x * reach, y: p.y + out.y * reach})),
+                closed: false,
+                style: RoofStyle,
+            };
+        });
+        const pipes = roofDownpipes(roof, roof.downpipes, runs).map(
+            ({at}): Shape => ({
+                points: Array.from({length: 12}, (_, i) => ({
+                    x: at.x + DownpipeRadius * Math.cos((i * Math.PI) / 6),
+                    y: at.y + DownpipeRadius * Math.sin((i * Math.PI) / 6),
+                })),
+                closed: true,
+                style: {fill: '#ffffff', stroke: Ink, width: 0.18},
+            }),
+        );
+        return [...gutters, ...pipes];
+    });
+}
+
+/** Contour lines of a sloping plot, mm apart; every `ContourMajor` mm drawn heavier. */
+const ContourInterval = 500;
+const ContourMajor = 1000;
+
+/**
+ * The contour lines of a plot's sloping ground (`terrainContours()`) inside its boundary, under the rooms; the house
+ * draws over them.
+ */
+function contourShapes(plot: Plot): Shape[] {
+    if (!hasTerrain(plot)) {
+        return [];
+    }
+    return terrainContours(plotTerrain(plot), ContourInterval).flatMap(({level, segments}) => {
+        const style: Style = {stroke: ContourColor, width: level % ContourMajor === 0 ? 0.18 : 0.09};
+        return segments
+            .filter(([a, b]) => pointInPolygon({x: (a[0] + b[0]) / 2, y: (a[1] + b[1]) / 2}, plot.polygon))
+            .map(([a, b]): Shape => ({points: [{x: a[0], y: a[1]}, {x: b[0], y: b[1]}], closed: false, style}));
+    });
+}
+const ContourColor = '#9a8f7c';
+
+/** A plot's spot heights as small crosses. */
+function spotHeightCrosses(plot: Plot, scale: number): Shape[] {
+    const arm = SpotArm * scale;
+    const style: Style = {stroke: Ink, width: 0.13};
+    return (plot.terrain ?? []).flatMap(([x, y]): Shape[] => [
+        {points: [{x: x - arm, y: y - arm}, {x: x + arm, y: y + arm}], closed: false, style},
+        {points: [{x: x - arm, y: y + arm}, {x: x + arm, y: y - arm}], closed: false, style},
+    ]);
+}
+
+/** The levels of a plot's spot heights (+1.250) beside their crosses, where they do not run into other text. */
+function spotHeightLabels(plot: Plot, scale: number): Label[] {
+    return (plot.terrain ?? []).map(([x, y, z]) => ({
+        at: {x: x + 3.2 * scale, y: y - 1.6 * scale},
+        lines: [{text: levelText(z), size: 1.5, color: Muted}],
+    }));
+}
+/** Half the spot height's cross, paper mm. */
+const SpotArm = 0.7;
+
 /** A plot's boundary: the dash-dot line of a property line. */
 function plotShape(plot: Plot): Shape {
     return {points: plot.polygon.map(([x, y]) => ({x, y})), closed: true, style: {stroke: Ink, width: 0.35, dash: PlotDash}};
+}
+
+/** A void (FD-90): its outline crossed by its diagonals, as voids are drawn on plans. */
+function voidShapes(floorVoid: FloorVoid): Shape[] {
+    const points = floorVoid.polygon.map(([x, y]) => ({x, y}));
+    return [
+        {points, closed: true, style: {...VoidStyle, fill: '#ffffff'}},
+        ...voidDiagonals(floorVoid.polygon).map((diagonal): Shape => ({points: diagonal.map(([x, y]) => ({x, y})), closed: false, style: VoidStyle})),
+    ];
+}
+
+/** A railing (FD-90): a thin line along it. */
+/** A section line's dash-dot cut (FD-94). */
+const SectionStyle: Style = {stroke: Ink, width: 0.35, dash: '5 1.2 0.8 1.2'};
+
+const sectionEnds = (section: SectionLine): Vec2[] => [
+    {x: section.startX, y: section.startY},
+    {x: section.endX, y: section.endY},
+];
+
+/**
+ * A section line as plans mark it: its cut dash-dot, and at either end an arrow the way it looks (to the left of start →
+ * end) with its name; `s` is the plan's scale (plan mm per paper mm), the arrows 6 mm long on paper.
+ */
+function sectionMarks(section: SectionLine, s: number): Label[] {
+    const [a, b] = sectionEnds(section);
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length < 1) {
+        return [];
+    }
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const look = {x: -dir.y, y: dir.x};
+    const [arrow, head] = [6 * s, 1.6 * s];
+    const marks = [a, b].map((end): Label => {
+        const tip = {x: end.x + look.x * arrow, y: end.y + look.y * arrow};
+        const barb = (side: number): Vec2 => ({x: tip.x + (dir.x * side * 0.6 - look.x) * head, y: tip.y + (dir.y * side * 0.6 - look.y) * head});
+        const barbs = [barb(-1), barb(1)];
+        return {
+            at: {x: tip.x + look.x * 2.6 * s, y: tip.y + look.y * 2.6 * s - 1.2 * s},
+            lines: [{text: section.name, size: 3.2, bold: true}],
+            shapes: [
+                {points: [end, tip], closed: false, style: {stroke: Ink, width: 0.35}},
+                {points: [barbs[0], tip, barbs[1]], closed: true, style: {fill: Ink, stroke: Ink, width: 0.2}},
+            ],
+        };
+    });
+    // The cut itself goes with the first end's label.
+    marks[0].shapes?.unshift({points: [a, b], closed: false, style: SectionStyle});
+    return marks;
+}
+
+function railingShape(railing: Railing): Shape {
+    return {points: railing.points.map(([x, y]) => ({x, y})), closed: false, style: {stroke: Ink, width: 0.25}};
 }
 
 function roomShape(room: Room): Shape {
@@ -373,13 +557,22 @@ function cutsThrough(opening: Opening, level: number): boolean {
  * it). The top is piecewise linear (`roofBreaks()`), and every height the answer turns on is a break, so the middle of
  * a stretch decides for all of it.
  */
-function cutStretches(frame: WallFrame, piece: WallPiece, top: HeightAt, roofs: FloorRoofs, wallHeight: number): [number, number][] {
+function cutStretches(
+    frame: WallFrame,
+    piece: WallPiece,
+    top: HeightAt,
+    roofs: FloorRoofs,
+    wallHeight: number,
+    slope: HeightAt | null = null,
+): [number, number][] {
     const levels = [PlanCutHeight, 2 * piece.bottom, 2 * piece.top, wallHeight, piece.top];
+    // A sloping top (FD-87) bends where it crosses the cut, or where half of it does (a low wall's cut).
+    const slopes: HeightAt[] = slope === null ? [] : [slope, (p): number => slope(p) / 2];
     const spans: [number, number][] = [];
     const samples = wallSamples(frame, piece.from, piece.to);
     for (let i = 1; i < samples.length; i++) {
         const [a, b] = [samples[i - 1], samples[i]];
-        const ts = roofBreaks(pointOnWall(frame, a), pointOnWall(frame, b), roofs, levels);
+        const ts = roofBreaks(pointOnWall(frame, a), pointOnWall(frame, b), roofs, levels, slopes);
         for (let k = 1; k < ts.length; k++) {
             const [s0, s1] = [a + (b - a) * ts[k - 1], a + (b - a) * ts[k]];
             const height = top(pointOnWall(frame, (s0 + s1) / 2));
@@ -414,13 +607,14 @@ function wallShapes(walls: readonly Wall[], roofs: FloorRoofs = []): Shape[] {
             return [];
         }
         const level = cutLevel(wall);
-        const top = wallTopAt(wall, roofs);
-        const pieces = wallPieces(frame.length, wall.height, shownOpenings(wall, frame, top, roofs))
+        const top = wallTopAt(wall, roofs, frame);
+        const slope = wallHeightAt(wall, frame);
+        const pieces = wallPieces(frame.length, wall.height, shownOpenings(wall, frame, top, roofs, slope))
             .flatMap((p) => {
                 if (top === null) {
                     return p.bottom <= level && level < p.top ? [p] : [];
                 }
-                return cutStretches(frame, p, top, roofs, wall.height).map(([from, to]) => ({...p, from, to}));
+                return cutStretches(frame, p, top, roofs, wall.height, slope).map(([from, to]) => ({...p, from, to}));
             })
             .sort((a, b) => a.from - b.from);
         const merged: typeof pieces = [];
@@ -472,9 +666,12 @@ const HiddenStyle: Style = {stroke: Muted, width: 0.15, dash: '1 0.7'};
  * high window, a hatch) is dashed in the solid wall.
  */
 /** The wall's openings the roofs leave wall for (`buildWall()` draws the same): all of them without roofs. */
-function shownOpenings(wall: Wall, frame: WallFrame, top: HeightAt | null, roofs: FloorRoofs): Opening[] {
+function shownOpenings(wall: Wall, frame: WallFrame, top: HeightAt | null, roofs: FloorRoofs, slope: HeightAt | null = null): Opening[] {
+    const slopes = slope === null ? [] : [slope];
     return wall.openings.filter(
-        (o) => top === null || o.sillHeight < lowestTopAlong(pointOnWall(frame, o.offset), pointOnWall(frame, o.offset + o.width), top, roofs),
+        (o) =>
+            top === null ||
+            o.sillHeight < lowestTopAlong(pointOnWall(frame, o.offset), pointOnWall(frame, o.offset + o.width), top, roofs, [], slopes),
     );
 }
 
@@ -484,9 +681,9 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
     if (!(wallPath.length > 0)) {
         return [];
     }
-    const top = wallTopAt(wall, roofs);
+    const top = wallTopAt(wall, roofs, wallPath);
     const h = wall.thickness / 2;
-    return shownOpenings(wall, wallPath, top, roofs).flatMap((opening): Shape[] => {
+    return shownOpenings(wall, wallPath, top, roofs, wallHeightAt(wall, wallPath)).flatMap((opening): Shape[] => {
         const from = opening.offset;
         const to = opening.offset + opening.width;
         // Under a roof the cut over the opening follows the wall's top there.
@@ -513,11 +710,22 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
             }
             shapes.push(wallRect(frame, from, to, h, -h, OutlineStyle));
             if (opening.walkable !== true) {
-                shapes.push(wallLine(frame, from, to, GlassGap, ThinStyle), wallLine(frame, from, to, -GlassGap, ThinStyle));
+                // The glass where the frame stands across the wall (set in by `inset`, FD-89).
+                const centre = frameBand(opening, wall.thickness).centre;
+                shapes.push(
+                    wallLine(frame, from, to, centre + GlassGap, ThinStyle),
+                    wallLine(frame, from, to, centre - GlassGap, ThinStyle),
+                );
             }
         }
         for (const leaf of openingLeaves(opening, wall.thickness)) {
-            shapes.push(...(leaf.motion === 'swing' ? swingShapes(frame, leaf) : slideShapes(frame, leaf, opening)));
+            shapes.push(
+                ...(leaf.motion === 'swing'
+                    ? swingShapes(frame, leaf)
+                    : leaf.motion === 'lift'
+                        ? liftShapes(frame, leaf)
+                        : slideShapes(frame, leaf, opening)),
+            );
         }
         return shapes;
     });
@@ -553,7 +761,29 @@ function slideShapes(frame: WallFrame, leaf: Leaf, opening: Opening): Shape[] {
             wallRect(frame, leaf.along + leaf.travel, leaf.along + leaf.travel + leaf.width, t + 10, -t - 10, {...OutlineStyle, width: 0.13}),
             leafRect(0, OutlineStyle),
         ]
-        : [leafRect(leaf.travel, HiddenStyle), leafRect(0, OutlineStyle)];
+        : leaf.travel === 0
+            ? [leafRect(0, OutlineStyle)]
+            : [leafRect(leaf.travel, HiddenStyle), leafRect(0, OutlineStyle)];
+}
+
+/**
+ * A lifting garage door (FD-89): the leaf closed behind the opening, and dashed where it goes overhead in the garage: a
+ * sectional door's as deep as it is high, an up-and-over door's two thirds in (and a third out over the drive), a
+ * roller door's drum over the opening.
+ */
+function liftShapes(frame: WallFrame, leaf: Leaf): Shape[] {
+    const t = leaf.thickness / 2;
+    const [from, to] = [leaf.along, leaf.along + leaf.width];
+    const height = leaf.height ?? 0;
+    // Into the garage is `swing` across the wall.
+    const inside = (reach: number): number => leaf.across + leaf.swing * reach;
+    const overhead =
+        leaf.lift === 'Roller'
+            ? wallRect(frame, from, to, inside(-RollerDrum / 2), inside(RollerDrum / 2), HiddenStyle)
+            : leaf.lift === 'UpAndOver'
+                ? wallRect(frame, from, to, inside(-height / 3), inside((2 * height) / 3), HiddenStyle)
+                : wallRect(frame, from, to, inside(t), inside(height), HiddenStyle);
+    return [overhead, wallRect(frame, from, to, leaf.across + t, leaf.across - t, OutlineStyle)];
 }
 
 /** The arrowhead of a walking line, plan mm. */
@@ -574,10 +804,12 @@ function stairPlanShapes(scene: Scene): {shapes: Shape[]; labels: Label[]} {
     for (const stair of scene.stairs ?? []) {
         const geometry = stairGeometry(stair, scene.stairRise ?? 0);
         const steps = [...geometry.landings, ...geometry.treads].sort((a, b) => a.top - b.top);
+        // Garden steps stand at their base: the cut is that much lower against them.
+        const cut = PlanCutHeight - (stair.baseZ ?? 0);
         for (const step of steps) {
-            shapes.push({points: step.outline, closed: true, style: step.top <= PlanCutHeight ? StairStyle : StairHiddenStyle});
+            shapes.push({points: step.outline, closed: true, style: step.top <= cut ? StairStyle : StairHiddenStyle});
         }
-        const cutTread = geometry.treads.find((t) => t.top > PlanCutHeight);
+        const cutTread = geometry.treads.find((t) => t.top > cut);
         if (cutTread !== undefined) {
             shapes.push(breakLine(cutTread.outline));
         }
@@ -640,10 +872,13 @@ function stairAngle(geometry: StairGeometry): number {
     return b === undefined ? 0 : Math.atan2(b.point.y - a.point.y, b.point.x - a.point.x);
 }
 
-/** An item's footprint: a column filled like the walls, an item above the cut (a wall cabinet, a beam, a lamp) dashed. */
+/**
+ * An item's footprint: a column or chimney filled like the walls (a round chimney round), an item above the cut (a wall
+ * cabinet, a beam, a lamp, a panel on the roof) dashed.
+ */
 function itemShape(item: Item): Shape {
     const style: Style =
-        item.kind === 'Column'
+        item.kind === 'Column' || isChimney(item)
             ? {fill: WallFill}
             : item.z >= PlanCutHeight
               ? {stroke: Muted, width: 0.15, dash: '1 0.7'}
@@ -651,9 +886,9 @@ function itemShape(item: Item): Shape {
     return {points: itemFootprint(item), closed: true, style};
 }
 
-/** The item's name in its footprint, along its width or else its depth, if it fits; none for columns and items above the cut. */
+/** The item's name in its footprint, along its width or else its depth, if it fits; none for columns, chimneys and items above the cut. */
 function itemLabel(item: Item, scale: number): Label[] {
-    if (item.kind === 'Column' || item.z >= PlanCutHeight || item.name.trim() === '') {
+    if (item.kind === 'Column' || isChimney(item) || item.z >= PlanCutHeight || item.name.trim() === '') {
         return [];
     }
     const r = (item.rotation * Math.PI) / 180;

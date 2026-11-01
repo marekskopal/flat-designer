@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {MaterialLibrary} from './materials';
-import {polygonSignedArea, Vec2} from './plan-geometry';
+import {collideCircle, polygonSignedArea, Vec2} from './plan-geometry';
 import {
     buildStair,
     buildStairsBelow,
@@ -12,11 +12,13 @@ import {
     RailHeight,
     RailRadius,
     roomsCutBy,
+    sceneVoids,
     stairColliders,
     stairFirstFlight,
     stairFloorStep,
     stairGeometry,
     stairHeightAt,
+    StairPath,
     stairPaths,
     stairRisers,
     stairSpot,
@@ -186,6 +188,57 @@ describe('stairGeometry', () => {
     });
 });
 
+describe('curved stairs', () => {
+    // Garden steps: 5 risers over 750 mm, 1200 wide, curving left round a centre 2000 mm from their inner edge.
+    const curved: Stair = {...stair, shape: 'Curved', width: 1200, going: 350, risers: 5, rise: 750, innerRadius: 2000, construction: 'Solid'};
+
+    it('lays ring-sector treads round a centre on the side it turns to, wider at the outer edge', () => {
+        const g = stairGeometry(curved, 0);
+        expect(g.treads).toHaveLength(4);
+        expect(g.flights).toEqual([]);
+        // The walking line runs 2600 mm from the centre, which lies to the left (west) of the first riser at (1000, 2000).
+        const centre = {x: 1000 - 2600, y: 2000};
+        for (const point of g.walkLine) {
+            expect(Math.hypot(point.point.x - centre.x, point.point.y - centre.y)).toBeCloseTo(2600);
+        }
+        // Each tread turns 350 / 2600 rad along it: the risers are 350 mm apart there, more at the outer edge.
+        const [a, b] = [g.walkLine[0].point, g.walkLine[1].point];
+        const chord = 2 * 2600 * Math.sin(350 / 2600 / 2);
+        expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(chord);
+        const tread = g.treads[0].outline;
+        const radii = tread.map((p) => Math.hypot(p.x - centre.x, p.y - centre.y));
+        expect(Math.min(...radii)).toBeCloseTo(2000);
+        expect(Math.max(...radii)).toBeCloseTo(3200);
+        // Climbing its own rise, the top at 750.
+        expect(g.walkLine[g.walkLine.length - 1].height).toBeCloseTo(750);
+        expect(g.rails.map((r) => r.side)).toEqual(['Left', 'Right']);
+    });
+
+    it('turning right curves the other way', () => {
+        const g = stairGeometry({...curved, turn: 'Right'}, 0);
+        expect(g.walkLine[g.walkLine.length - 1].point.x).toBeGreaterThan(1000);
+        expect(stairGeometry(curved, 0).walkLine[4].point.x).toBeLessThan(1000);
+    });
+
+    it('is never walked under when solid, as its treads are blocks down to its base', () => {
+        // A storey: 16 risers of 180 over 2880 mm, round a centre 2000 mm from the inner edge (about 95°).
+        const storey = (construction: Stair['construction']): StairPath[] =>
+            stairPaths({stairs: [{...curved, risers: 16, rise: null, going: 270, width: 900, construction}], stairRise: 2880, stairsBelow: null});
+        const overhead = (paths: StairPath[]): boolean => stairColliders(paths).some((c) => (c.levels?.[0] ?? -Infinity) > 0);
+        expect(overhead(storey('Open'))).toBe(true);
+        expect(overhead(storey('Solid'))).toBe(false);
+    });
+
+    it('builds solid blocks for its treads', () => {
+        // Without a railing: the blocks stand on the base and reach the fourth tread's top (4 × 150 mm).
+        const group = buildStair({...curved, railing: 'None'}, 0, new MaterialLibrary([], 1), new THREE.MeshBasicMaterial());
+        group.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(group);
+        expect(box.max.y).toBeCloseTo(0.6);
+        expect(box.min.y).toBeCloseTo(0);
+    });
+});
+
 describe('cutVoids', () => {
     const square: [number, number][] = [
         [0, 0],
@@ -350,11 +403,74 @@ describe('walking the stairs', () => {
         expect(openStart(stairColliders(below))).toBe(false);
     });
 
+    it('lets the walker under a storey-high flight where it clears the headroom, and stops it where the flight comes down', () => {
+        // 16 risers of 180 over 2880 mm, 15 treads of 270: the walking line runs north from (1000, 2000) to (1000, 6050).
+        const tall = stairPaths({stairs: [{...stair, risers: 16}], stairRise: 2880, stairsBelow: null});
+        const colliders = stairColliders(tall);
+        // Under the high part, at the floor: not on the stair, and not stopped beside it.
+        expect(stairSpot(tall, {x: 1000, y: 5500}, 0)).toBeNull();
+        expect(collideCircle({x: 1000 + 450 + 150, y: 5500}, 200, colliders, 0).x).toBeCloseTo(1000 + 450 + 150);
+        // Beside the low part the side stops it, at any level up to the flight's.
+        expect(collideCircle({x: 1000 + 450 + 150, y: 2500}, 200, colliders, 0).x).toBeGreaterThan(1000 + 450 + 150);
+        // Walking under it from the high end, it stops where the flight comes down to the headroom (2000 mm: 11.1 risers up).
+        const under = collideCircle({x: 1000, y: 2000 + 270 * 10.6}, 200, colliders, 0);
+        expect(under.y).toBeGreaterThan(2000 + 270 * 10.6);
+        // On the flight there, the walker passes.
+        expect(collideCircle({x: 1000, y: 2000 + 270 * 10.6}, 200, colliders, 1900).y).toBeCloseTo(2000 + 270 * 10.6);
+    });
+
+    it('stops at the stairwell of a stair from below only the walker on the floor, not one on a flight over it', () => {
+        const colliders = stairColliders(below);
+        const side = {x: 1000 + 450 + 50, y: 2400};
+        expect(collideCircle(side, 200, colliders, 0).x).not.toBeCloseTo(side.x);
+        expect(collideCircle(side, 200, colliders, 300).x).toBeCloseTo(side.x);
+    });
+
+    it('leaves the stairwell from below open where the floor\'s own stair flies over it', () => {
+        // The floor's stair starts 300 mm before the closed end of the stairwell (y 2000) and climbs north over it.
+        const stacked = stairPaths({stairs: [{...short, y: 1700}], stairRise: 720, stairsBelow: {floorId: 3, rise: 720, stairs: [short]}});
+        const onStair = {x: 1000, y: 1850};
+        expect(collideCircle(onStair, 200, stairColliders(below), 50).y).not.toBeCloseTo(onStair.y);
+        expect(collideCircle(onStair, 200, stairColliders(stacked), 50).y).toBeCloseTo(onStair.y);
+    });
+
+    it('lets the walker on a stair from below pass under the floor\'s own flight above it', () => {
+        // A storey-high flight north from (1000, 2000) over the stairwell of one coming up beside it, 1000 mm below its crossing.
+        const tall = stairPaths({stairs: [{...stair, risers: 16}], stairRise: 2880, stairsBelow: null});
+        const under = {x: 1000, y: 2000 + 270 * 10.6};
+        expect(collideCircle(under, 200, stairColliders(tall), 0).y).not.toBeCloseTo(under.y);
+        expect(collideCircle(under, 200, stairColliders(tall), -1000).y).toBeCloseTo(under.y);
+    });
+
     it('goes on upstairs near the top of the floor\'s stairs, downstairs near the bottom of those from below', () => {
         expect(stairFloorStep(stairSpot(own, {x: 1000, y: 2700}))).toBe(1);
         expect(stairFloorStep(stairSpot(own, {x: 1000, y: 2300}))).toBe(0);
         expect(stairFloorStep(stairSpot(below, {x: 1000, y: 2100}))).toBe(-1);
         expect(stairFloorStep(stairSpot(below, {x: 1000, y: 2700}))).toBe(0);
         expect(stairFloorStep(null)).toBe(0);
+    });
+});
+
+describe('garden steps (FD-87)', () => {
+    const steps: Stair = {...stair, rise: 900, baseZ: -900};
+
+    it('climb a rise of their own from their base, and cut no void', () => {
+        const geometry = stairGeometry(steps, 2850);
+
+        expect([geometry.rise, geometry.risers]).toEqual([900, 5]);
+        expect(sceneVoids({stairs: [steps, stair], stairRise: 2850, stairsBelow: null}).own).toHaveLength(1);
+        const group = buildStair(steps, 2850, new MaterialLibrary([], 1), new THREE.MeshBasicMaterial());
+        expect(Math.round(group.position.y * 1000)).toBe(-900);
+    });
+
+    it('are walked from their base, open at both ends, and lead to no other floor', () => {
+        const [path] = stairPaths({stairs: [steps], stairRise: 2850, stairsBelow: null});
+        const top = path.walk[path.walk.length - 1].point;
+        const spot = stairSpot([path], {x: top.x, y: top.y - 50});
+
+        expect([path.free, path.offset]).toEqual([true, -900]);
+        expect(spot).not.toBeNull();
+        expect(stairFloorStep(spot)).toBe(0);
+        expect(spot!.path.offset + spot!.height).toBeGreaterThan(-100);
     });
 });

@@ -8,9 +8,11 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\FloorDto;
 use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Model\Entity\AEntity;
+use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
 use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
 use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
+use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
 use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
@@ -51,11 +53,11 @@ use const JSON_THROW_ON_ERROR;
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], location: LocationDto, floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
  * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
- * plots: [PlotDto], stairs: [StairDto], roofs: [RoofDto with windows]}],
+ * plots: [PlotDto], stairs: [StairDto], roofs: [RoofDto with windows], voids: [FloorVoidDto], railings: [RailingDto], sections: [SectionLineDto]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
  * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
  * and walls by `FloorStack`)
- * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` / `roofs` missing in snapshots taken before they
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` / `roofs` / `voids` / `railings` / `sections` missing in snapshots taken before they
  * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
@@ -83,6 +85,8 @@ final readonly class ProjectSnapshotService
 		private SnapshotPlotRestorer $plotRestorer,
 		private SnapshotStairRestorer $stairRestorer,
 		private SnapshotRoofRestorer $roofRestorer,
+		private SnapshotVoidRestorer $voidRestorer,
+		private SnapshotSectionRestorer $sectionRestorer,
 		private SnapshotViewRestorer $viewRestorer,
 		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
@@ -108,6 +112,9 @@ final readonly class ProjectSnapshotService
 				'plots' => $scene->plots,
 				'stairs' => $scene->stairs,
 				'roofs' => $scene->roofs,
+				'voids' => $scene->voids,
+				'railings' => $scene->railings,
+				'sections' => $scene->sections,
 			];
 		}
 
@@ -117,6 +124,7 @@ final readonly class ProjectSnapshotService
 				'project' => ['name' => $project->name, 'address' => $project->address, 'description' => $project->description],
 				'materials' => $this->sceneProvider->getMaterials(),
 				'location' => LocationDto::fromEntity($project),
+				'exteriorMaterialId' => $project->exteriorMaterial?->id,
 				'floors' => $floors,
 				'views' => $this->viewRestorer->snapshot($project),
 			],
@@ -152,14 +160,14 @@ final readonly class ProjectSnapshotService
 	}
 
 	/**
-	 * The stored scene of one floor and those of the floors under it (of a lower level, lowest first), shaped alike,
-	 * from one decode of the snapshot. The scene is null when the floor is gone.
+	 * The stored scene of one floor, those of the floors under it (of a lower level) and, with `$withAbove`, those above
+	 * it, lowest first, shaped alike, from one decode of the snapshot. The scene is null when the floor is gone.
 	 *
-	 * @return array{scene: ?stdClass, below: list<stdClass>}
+	 * @return array{scene: ?stdClass, below: list<stdClass>, above: list<stdClass>}
 	 */
-	public function getFloorScenes(string $snapshot, int $floorId): array
+	public function getFloorScenes(string $snapshot, int $floorId, bool $withAbove = false): array
 	{
-		return SnapshotScenes::of($this->decode($snapshot, false), $floorId, fn (): SnapshotReader => $this->read($snapshot));
+		return SnapshotScenes::of($this->decode($snapshot, false), $floorId, fn (): SnapshotReader => $this->read($snapshot), $withAbove);
 	}
 
 	/**
@@ -210,6 +218,8 @@ final readonly class ProjectSnapshotService
 			$this->plotRestorer->restore($floor, $entry, $materials);
 			$this->stairRestorer->restore($floor, $entry, $materials);
 			$this->roofRestorer->restore($floor, $entry, $materials);
+			$this->voidRestorer->restore($floor, $entry, $materials);
+			$this->sectionRestorer->restore($floor, $entry);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
 			$setIds = $this->restoreVariantSets($floor, $sets);
@@ -256,6 +266,8 @@ final readonly class ProjectSnapshotService
 			$room->floorElevation = $data->nullableInt('floorElevation') ?? 0;
 			// Nor ceilings and skirting before they had their own fields.
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
+			// Snapshots taken before façades (FD-88) have none: the façade material.
+			$room->soffitMaterial = $materials[$data->nullableInt('soffitMaterialId') ?? 0] ?? null;
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
 			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
 			$room->vaultRise = $data->nullableInt('vaultRise') ?? 130;
@@ -297,6 +309,11 @@ final readonly class ProjectSnapshotService
 			$wall->rightFinishes = $data->nullableFinishes('rightFinishes');
 			// Snapshots taken before roofs have no wall rising to one.
 			$wall->upToRoof = $data->raw('upToRoof') === true;
+			// Snapshots taken before site walls (FD-87): level, on the floor.
+			$wall->heightEnd = $data->nullableInt('heightEnd');
+			$wall->baseStart = $data->nullableInt('baseStart') ?? 0;
+			$wall->baseEnd = $data->nullableInt('baseEnd') ?? 0;
+			$wall->onGround = $data->raw('onGround') === true;
 			$this->wallRepository->persist($wall);
 
 			foreach ($data->objects('openings') as $opening) {
@@ -333,8 +350,20 @@ final readonly class ProjectSnapshotService
 				$restored->shutters = ShutterStyleEnum::tryFrom($opening->nullableString('shutters') ?? '');
 				$restored->shutterMaterial = $materials[$opening->nullableInt('shutterMaterialId') ?? 0] ?? null;
 				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
+				// Snapshots taken before façades (FD-88): a bare reveal.
+				$restored->revealLining = $opening->raw('revealLining') === true;
 				// And before niches.
 				$restored->depth = $opening->nullableInt('depth');
+				// And before opening materials, garage doors, fixed panes and insets (FD-89).
+				$restored->frameMaterial = $materials[$opening->nullableInt('frameMaterialId') ?? 0] ?? null;
+				$restored->outsideFrameMaterial = $materials[$opening->nullableInt('outsideFrameMaterialId') ?? 0] ?? null;
+				$restored->leafMaterial = $materials[$opening->nullableInt('leafMaterialId') ?? 0] ?? null;
+				$restored->boardDirection = BoardDirectionEnum::tryFrom(
+					$opening->nullableString('boardDirection') ?? '',
+				) ?? BoardDirectionEnum::Vertical;
+				$restored->garageDoorStyle = GarageDoorStyleEnum::tryFrom($opening->nullableString('garageDoorStyle') ?? '');
+				$restored->fixedPanes = $opening->nullableInt('fixedPanes') ?? 0;
+				$restored->inset = $opening->nullableInt('inset');
 				$this->openingRepository->persist($restored);
 			}
 		}
@@ -420,6 +449,9 @@ final readonly class ProjectSnapshotService
 			// Snapshots taken before Custom items existed have no definition ids, before Model items no model ids.
 			$item->definition = $definitions[$data->nullableInt('definitionId') ?? 0] ?? null;
 			$item->model = $this->modelLink->forProject($floor->project, $data->nullableInt('modelId'));
+			// Snapshots taken before terrain (FD-86): on the floor's level.
+			$item->onGround = $data->raw('onGround') === true;
+			$item->onRoof = $data->raw('onRoof') === true;
 			$this->itemRepository->persist($item);
 		}
 	}

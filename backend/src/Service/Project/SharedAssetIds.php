@@ -32,15 +32,16 @@ final class SharedAssetIds
 	}
 
 	/**
-	 * The models and pictures of the floors under a shared floor (the all floors view), remembered the same way.
+	 * The models and pictures of the other floors of a shared floor's version (the all floors view draws those under it,
+	 * with `$withAbove` a walk all of them), remembered the same way.
 	 *
 	 * @param callable(): list<stdClass> $scenes decodes their scenes when they are not remembered yet
 	 * @return array{models: list<int>, pictures: list<int>}
 	 */
-	public function below(int $versionId, int $floorId, callable $scenes): array
+	public function others(int $versionId, int $floorId, bool $withAbove, callable $scenes): array
 	{
 		return $this->remember(
-			$versionId . ':' . $floorId . ':below',
+			$versionId . ':' . $floorId . ($withAbove ? ':all' : ':below'),
 			fn (): array => self::assetsOf($scenes()),
 		) ?? ['models' => [], 'pictures' => []];
 	}

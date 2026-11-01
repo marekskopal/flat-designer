@@ -12,7 +12,8 @@ use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 
 /**
- * The size a new column or beam starts with in a room: a column reaches the room's ceiling, a beam hangs from it. A
+ * The size a new column or beam starts with in a room: a column reaches the room's ceiling, a beam hangs from it (a
+ * chimney stands on its floor). A
  * vaulted ceiling counts at its springing, where its own beams start; under a roof sloping lower than the ceiling, the
  * roof's underside at the item's footprint centre counts (FD-38), unless it comes down to the room's floor (an
  * overhang beside a raised room), where there is no room for a column anyway. A height or elevation the client gives wins.
@@ -57,6 +58,10 @@ final readonly class StructureSize
 		$soffit = min($soffit, $this->underRoof($floor, $given('x'), $given('y'), $floorLevel) ?? $soffit);
 		if ($kind === ItemKindEnum::Column) {
 			return $given('height') === null && $given('z') === null ? ['height' => $soffit, 'z' => $floorLevel] : [];
+		}
+		// A chimney rises through the roofs above, whatever the ceiling: only its foot is the room's floor.
+		if ($kind === ItemKindEnum::Chimney) {
+			return $given('z') === null ? ['z' => $floorLevel] : [];
 		}
 
 		return $given('z') === null ? ['z' => max(0, $floorLevel + $soffit - ($given('height') ?? $defaultHeight))] : [];

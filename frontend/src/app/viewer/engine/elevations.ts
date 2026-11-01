@@ -12,15 +12,18 @@ import {
     wallFacesAlongEdge,
     wallSpansAlongEdge,
 } from './ceilings';
+import {itemsOverFloor} from './items';
 import {herringboneLength, herringboneTiles} from './materials';
 import {
     acrossWall,
     alongWall,
     DoorFrameWidth,
+    garageSections,
     itemFootprint,
     pointInPolygon,
     pointOnWall,
     polygonBounds,
+    rollerSlats,
     tangentAt,
     tileOrigin,
     Vec2,
@@ -53,7 +56,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
-import {CeilingUnderRoof, FloorRoofs, roofBreaks, roofsReach} from './under-roof';
+import {CeilingUnderRoof, FloorRoofs, HeightAt, roofBreaks, roofsReach, wallHeightAt, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
 
 // Wall elevations for tiling and joinery: per room, every wall face along its outline seen from inside the room, on
@@ -246,8 +249,21 @@ function curvedFace(
  */
 function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along: readonly Wall[], roofs: FloorRoofs, straight: boolean): Vec2[] {
     if (room.ceilingHeight === null) {
-        const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
-        return [{x: 0, y: height}, {x: length, y: height}];
+        // The tallest of the walls on the edge; one with a sloping top (FD-87) is followed along it.
+        const slopes = along.map((w) => wallHeightAt(w, wallFrame(w))).filter((h): h is HeightAt => h !== null);
+        if (slopes.length === 0) {
+            const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
+            return [{x: 0, y: height}, {x: length, y: height}];
+        }
+        const tops = along.map((w) => wallTopAt(w, roofs, wallFrame(w)) ?? ((): number => w.height));
+        const atX = (x: number): Vec2 => {
+            const point = pointAt(length - x);
+            return {x, y: Math.max(0, ...tops.map((t) => t(point)))};
+        };
+        const ts = straight
+            ? roofBreaks(pointAt(length), pointAt(0), roofs, [], slopes)
+            : Array.from({length: Math.max(2, Math.ceil(length / 20)) + 1}, (_, i) => i / Math.max(2, Math.ceil(length / 20)));
+        return ts.map((u) => atX(u * length));
     }
     const vaulted = vaultProfile(room) !== null;
     if (!vaulted && roofs.length === 0) {
@@ -286,7 +302,7 @@ export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo): 
     };
     const {scale, pages} = layoutFaces(faces, area);
     const hidden = hiddenItemIds(scene);
-    const items = scene.items.filter((i) => !hidden.has(i.id) && (i.roomId === room.id || pointInPolygon(i, room.polygon)));
+    const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id) && (i.roomId === room.id || pointInPolygon(i, room.polygon)));
     let clipIds = 0;
     const context: FaceContext = {room, walls: scene.walls, items, materials, scale, clipId: () => `clip-${clipIds++}`};
 
@@ -441,7 +457,9 @@ function faceSvg(face: ElevationFace, at: Vec2, context: FaceContext): string {
             if (material === undefined) {
                 continue;
             }
-            const phase = material.pattern === 'Brick' && face.curve === undefined ? -face.length : gridPhase;
+            // Bricks and formwork keep the wall's own UVs (from its start), tiles lie on the room's grid.
+            const ownUvs = material.pattern === 'Brick' || material.pattern === 'Formwork';
+            const phase = ownUvs && face.curve === undefined ? -face.length : gridPhase;
             const bandGaps = face.gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top, segment));
             for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
                 const x0 = xOf(segment.from + piece.to);
@@ -529,7 +547,7 @@ function bandPieceSvg(
     }
     const joint: Style = {stroke: JointColor, width: 0.08};
     const joints: string[] = [];
-    if (material.pattern === 'Tiles' || material.pattern === 'Terrazzo') {
+    if (material.pattern === 'Tiles' || material.pattern === 'Terrazzo' || material.pattern === 'Formwork') {
         if (w / s >= MinJointPitch && h / s >= MinJointPitch) {
             for (const x of gridLines(x0, x1, w, phase)) {
                 joints.push(line(toPaper(x, z0), toPaper(x, z1), joint));
@@ -551,6 +569,13 @@ function bandPieceSvg(
                 for (const x of gridLines(x0, x1, w, phase - shift)) {
                     joints.push(line(toPaper(x, bottom), toPaper(x, top), joint));
                 }
+            }
+        }
+    } else if (material.pattern === 'Planks') {
+        // Boards on a wall run along it (`MaterialLibrary.upright()`), `tileWidth` high, from the floor.
+        if (w / s >= MinJointPitch) {
+            for (const z of gridLines(z0, z1, w, 0)) {
+                joints.push(line(toPaper(x0, z), toPaper(x1, z), joint));
             }
         }
     } else if (material.pattern === 'Herringbone') {
@@ -688,7 +713,8 @@ function edgeOpenings(a: Vec2, dir: Vec2, length: number, edgeFaces: readonly {w
 
 /**
  * An opening seen from the room: cut out of the bands; a window with its frame, panes and solid panel; a door's leaves
- * with the dashed lines that point at the hinges (sliding ones with an arrow the way they open); a niche shaded.
+ * with the dashed lines that point at the hinges (sliding ones with an arrow the way they open; a lift-and-slide door's
+ * panes divided), boarded leaves with their joints; a garage door's sections or slats (FD-89); a niche shaded.
  * Its size (and sill) is written in it when it fits.
  */
 function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: number, z: number) => Vec2, s: number): string {
@@ -720,8 +746,19 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
             const z = Math.min(z0 + opening.panelHeight, iz1);
             parts.push(box(ix0, ix1, iz0, z, {fill: NicheFill, stroke: Ink, width: 0.13}));
         }
-    } else if (opening.type === 'Door' || opening.type === 'DoubleDoor') {
-        const frame = Math.min(DoorFrameWidth, (x1 - x0) / 4);
+    } else if (opening.type === 'GarageDoor' && opening.garageDoorStyle !== 'SideHinged') {
+        // Sections, or a roller door's slats where they stay apart on paper; an up-and-over door is one panel.
+        const style = opening.garageDoorStyle ?? 'Sectional';
+        const rows = style === 'Roller' ? rollerSlats(z1 - z0) : style === 'Sectional' ? garageSections(z1 - z0) : 1;
+        if ((z1 - z0) / rows / s >= MinJointPitch) {
+            for (let i = 1; i < rows; i++) {
+                const z = z0 + ((z1 - z0) * i) / rows;
+                parts.push(line(toPaper(x0, z), toPaper(x1, z), thin));
+            }
+        }
+        parts.push(boardLines(opening, x0, x1, z0, z1, toPaper, s));
+    } else if (opening.type === 'Door' || opening.type === 'DoubleDoor' || opening.type === 'GarageDoor') {
+        const frame = opening.type === 'GarageDoor' ? 0 : Math.min(DoorFrameWidth, (x1 - x0) / 4);
         const [lx0, lx1, top] = [x0 + frame, x1 - frame, z1 - frame];
         parts.push(box(lx0, lx1, z0, top, thin));
         const swing: Style = {stroke: Muted, width: 0.13, dash: '1 0.7'};
@@ -732,14 +769,15 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
         const active = Math.min(Math.max(opening.leafWidth ?? space / 2, 0), space);
         const meeting = hingeLeft ? lx0 + active : lx1 - active;
         const leaves: [number, number][] =
-            opening.type === 'DoubleDoor'
+            opening.type !== 'Door'
                 ? [
                     [lx0, meeting],
                     [lx1, meeting],
                 ]
                 : [hingeLeft ? [lx0, lx1] : [lx1, lx0]];
+        parts.push(boardLines(opening, lx0, lx1, z0, top, toPaper, s));
         for (const [hinged, free] of leaves) {
-            if (opening.type === 'DoubleDoor') {
+            if (opening.type !== 'Door') {
                 parts.push(line(toPaper(free, z0), toPaper(free, top), thin));
             }
             parts.push(path([toPaper(free, top), toPaper(hinged, (z0 + top) / 2), toPaper(free, z0)], false, swing));
@@ -747,6 +785,12 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
     } else if (opening.type === 'SlidingDoor' || opening.type === 'PocketDoor') {
         const frame = Math.min(DoorFrameWidth, (x1 - x0) / 4);
         parts.push(box(x0 + frame, x1 - frame, z0, z1 - frame, thin));
+        // A lift-and-slide door's panes.
+        const panes = opening.type === 'SlidingDoor' ? (opening.fixedPanes ?? 0) + 1 : 1;
+        for (let i = 1; i < panes; i++) {
+            const x = x0 + frame + ((x1 - x0 - 2 * frame) * i) / panes;
+            parts.push(line(toPaper(x, z0), toPaper(x, z1 - frame), thin));
+        }
         if (hingeX !== null) {
             // It slides open towards the hinge edge.
             const towards = Math.abs(hingeX - x0) < Math.abs(hingeX - x1) ? -1 : 1;
@@ -772,6 +816,32 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
         }
     }
     return parts.join('');
+}
+
+/** The joints of a `Boarded` leaf filling `x0`–`x1`, `z0`–`z1` (mm on the face), where they stay apart on paper; empty otherwise. */
+function boardLines(
+    opening: Opening,
+    x0: number,
+    x1: number,
+    z0: number,
+    z1: number,
+    toPaper: (x: number, z: number) => Vec2,
+    s: number,
+): string {
+    if (opening.leafStyle !== 'Boarded') {
+        return '';
+    }
+    const boards = Math.max(1, Math.round(opening.leafPanels ?? 8));
+    const horizontal = opening.boardDirection === 'Horizontal';
+    const span = horizontal ? z1 - z0 : x1 - x0;
+    if (span / boards / s < MinJointPitch) {
+        return '';
+    }
+    const style: Style = {stroke: Muted, width: 0.1};
+    return Array.from({length: boards - 1}, (_, i) => {
+        const at = (span * (i + 1)) / boards;
+        return horizontal ? line(toPaper(x0, z0 + at), toPaper(x1, z0 + at), style) : line(toPaper(x0 + at, z0), toPaper(x0 + at, z1), style);
+    }).join('');
 }
 
 /** The items standing against a face (their footprint within `AgainstWall` of it, on the room's side), with their extent along it. */

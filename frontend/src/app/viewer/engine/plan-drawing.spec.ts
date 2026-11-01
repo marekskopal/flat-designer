@@ -124,6 +124,13 @@ describe('planLayout', () => {
 });
 
 describe('planSheet', () => {
+    it('marks a section line: its dash-dot cut and the name at both arrows', () => {
+        const line = {id: 1, name: 'A', startX: -1000, startY: 1500, endX: 5000, endY: 1500, depth: null};
+        const sheet = planSheet(scene({sections: [line]}), info);
+        expect(texts(sheet.svg).filter((t) => t === 'A')).toHaveLength(2);
+        expect(sheet.svg).toContain('stroke-dasharray="5 1.2 0.8 1.2"');
+    });
+
     it('draws a well-formed A4 page with the room, its dimensions and the title block', () => {
         const sheet = planSheet(scene({walls: box([opening(9, {})])}), info);
 
@@ -168,6 +175,33 @@ describe('planSheet', () => {
 
         expect(sheet.scale).toBe(100);
         expect(sheet.svg).toContain('stroke-dasharray="6 1.2 0.6 1.2"');
+    });
+
+    it('draws the contour lines and spot heights of a sloping plot', () => {
+        const polygon: PlanPoint[] = [[-3000, -3000], [12000, -3000], [12000, 9000], [-3000, 9000]];
+        const terrain: [number, number, number][] = [[-3000, -3000, 1250], [-3000, 9000, 1250], [12000, -3000, -250], [12000, 9000, -250]];
+        const plot = {id: 7, name: 'Parcel', polygon, area: 180, groundMaterialId: null, terrain};
+        const svg = planSheet(scene({plots: [plot]}), info).svg;
+        const labels = texts(svg);
+
+        expect(labels).toContain('+1.250');
+        expect(labels).toContain('−0.250');
+        // Contours at 0, +0.5 and +1.0 m: the full metres heavier.
+        expect(svg.match(/stroke="#9a8f7c" stroke-width="0.18"/g)?.length).toBeGreaterThan(0);
+        expect(svg.match(/stroke="#9a8f7c" stroke-width="0.09"/g)?.length).toBeGreaterThan(0);
+        expect(planSheet(scene({plots: [{...plot, terrain: []}]}), info).svg).not.toContain('#9a8f7c');
+    });
+
+    it('draws an item standing on high ground as one above the cut', () => {
+        const polygon: PlanPoint[] = [[-3000, -3000], [12000, -3000], [12000, 9000], [-3000, 9000]];
+        const terrain: [number, number, number][] = [[-3000, -3000, 2000], [-3000, 9000, 2000], [12000, -3000, 2000], [12000, 9000, 2000]];
+        const plot = {id: 7, name: 'Parcel', polygon, area: 180, groundMaterialId: null, terrain};
+        const shed = item(1, {name: 'Shed', x: 8000, y: 6000, z: 0, width: 2000, depth: 2000});
+        const onGround = planSheet(scene({plots: [plot], items: [{...shed, onGround: true}]}), info).svg;
+        const onFloor = planSheet(scene({plots: [plot], items: [shed]}), info).svg;
+
+        expect(texts(onFloor)).toContain('Shed');
+        expect(texts(onGround)).not.toContain('Shed');
     });
 
     it('dimensions only the room edges along a wall, not where open-plan rooms meet', () => {
@@ -350,6 +384,44 @@ describe('planSheet fixes from review', () => {
         expect(svg).toContain('stroke-dasharray');
     });
 
+    it('fills a chimney like the walls, its own and one coming up from below, and dashes the gutters with the downpipes round (FD-91)', () => {
+        const chimney = item(5, {kind: 'Chimney', name: 'Chimney', x: 1000, y: 1000, width: 450, depth: 450, height: 3000});
+        const below = item(6, {...chimney, id: 6, x: 3000, y: 2000, params: {shape: 'round'}});
+        const filled = (svg: string): number => wallPaths(svg).length;
+        const plain = filled(planSheet(scene({}), info).svg);
+        const svg = planSheet(scene({items: [chimney], chimneyFloors: [{floorId: 2, offset: -2900, roofs: [], chimneys: [below]}]}), info).svg;
+        expect(filled(svg)).toBe(plain + 2);
+        // Its name is not written in it.
+        expect(svg).not.toContain('>Chimney<');
+
+        const gable = {
+            id: 1,
+            name: 'Roof',
+            shape: 'Gable' as const,
+            x: 2000,
+            y: 1500,
+            rotation: 0,
+            width: 4600,
+            depth: 3600,
+            eaveHeight: 2600,
+            pitch: 45,
+            overhang: 400,
+            vergeOverhang: 200,
+            thickness: 250,
+            parapet: null,
+            coveringMaterialId: null,
+            soffitMaterialId: null,
+            windows: [],
+        };
+        const roofDashes = (sheet: string): number => (sheet.match(/stroke-dasharray="2 0.8"/g) ?? []).length;
+        const pipes = (sheet: string): number => (sheet.match(/fill="#ffffff" stroke="#2f2c28" stroke-width="0.18"/g) ?? []).length;
+        const bare = planSheet(scene({roofs: [gable]}), info).svg;
+        const guttered = planSheet(scene({roofs: [{...gable, gutters: 'HalfRound'}]}), info).svg;
+        // Two eaves' gutters; the four downpipes at the corners.
+        expect(roofDashes(guttered)).toBe(roofDashes(bare) + 2);
+        expect(pipes(guttered)).toBe(pipes(bare) + 4);
+    });
+
     it('draws a round column as a circle', () => {
         const svg = planSheet(scene({items: [item(1, {kind: 'Column', name: 'C1', width: 300, depth: 300, params: {shape: 'round'}})]}), info).svg;
         const column = svg.match(/<path d="M[^"]*" fill="#2f2c28"\/>/g)?.find((p) => (p.match(/ L /g) ?? []).length === 31);
@@ -396,7 +468,27 @@ describe('planSheet stairs', () => {
     });
 });
 
+describe('garage doors on the plan (FD-89)', () => {
+    const dashed = (o: Opening): number => (planSheet(scene({walls: box([o])}), info).svg.match(/stroke-dasharray/g) ?? []).length;
+
+    it('dashes where a lifting door goes overhead, and draws a side-hinged one swinging', () => {
+        const garage = opening(9, {type: 'GarageDoor', offset: 700, width: 2500, height: 2125, garageDoorStyle: 'Sectional'});
+        const plain = dashed(opening(9, {type: 'Passage', offset: 700, width: 2500}));
+        expect(dashed(garage)).toBe(plain + 1);
+        expect(dashed({...garage, garageDoorStyle: 'Roller'})).toBe(plain + 1);
+        expect(planSheet(scene({walls: box([{...garage, garageDoorStyle: 'SideHinged'}])}), info).svg).not.toContain('NaN');
+    });
+});
+
 describe('roomScheduleSheets', () => {
+    it('totals a garage apart from the living area (FD-89)', () => {
+        const rooms = [room({id: 1, code: '1.1', area: 20}), room({id: 2, code: '1.2', name: 'Double garage', type: 'Garage', area: 18})];
+        const labels = texts(roomScheduleSheets(scene({rooms}), info)[0].svg);
+        // The rows, then the totals: the living area and the garage apart.
+        expect(labels.slice(labels.indexOf('Indoor'))).toEqual(expect.arrayContaining(['Indoor', '20.00', 'Garage', '18.00']));
+        expect(labels.filter((t) => t === 'Garage')).toHaveLength(1);
+    });
+
     it('lists the rooms by code with the indoor and outdoor totals', () => {
         const rooms = [
             room({id: 2, code: '1.10', name: 'Bedroom', area: 10}),
@@ -445,5 +537,44 @@ describe('roomScheduleSheets', () => {
         const rooms = Array.from({length: 70}, (_, i) => room({id: i + 1, code: `R${i + 1}`}));
         expect(roomScheduleSheets(scene({rooms}), info).length).toBeGreaterThan(1);
         expect(roomScheduleSheets(scene({rooms: []}), info)).toEqual([]);
+    });
+});
+
+describe('planSheet voids and railings (FD-90)', () => {
+    const polygon: PlanPoint[] = [
+        [3000, 1000],
+        [5000, 1000],
+        [5000, 3000],
+        [3000, 3000],
+    ];
+    const hole = {id: 5, name: 'Gallery', polygon, area: 4, liningMaterialId: null, liningDepth: null};
+    const railing = {
+        id: 6,
+        name: 'Balustrade',
+        points: [[3000, 1000], [3000, 3000]] as PlanPoint[],
+        height: 1000,
+        baseZ: 0,
+        style: 'Balusters' as const,
+        spacing: null,
+        postSpacing: 1200,
+        handrail: 'Round' as const,
+        materialId: null,
+        infillMaterialId: null,
+    };
+
+    it('crosses a void, draws a railing as a thin line and takes the void off the room it cuts', () => {
+        const svg = planSheet(scene({voids: [hole], railings: [railing]}), info).svg;
+        // Half the void lies in the 12 m² room.
+        expect(texts(svg)).toContain('10.00 m²');
+        const thin = svg.match(/<path d="M[^"]*"[^>]*stroke="#2f2c28" stroke-width="0.25"[^>]*\/>/g) ?? [];
+        // The void's outline and two diagonals, and the railing.
+        expect(thin.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('lists the voids in the room schedule, outside the totals', () => {
+        const labels = texts(roomScheduleSheets(scene({voids: [hole]}), info)[0].svg);
+        expect(labels).toContain('Gallery (void)');
+        expect(labels).toContain('4.00');
+        expect(labels.filter((t) => t === '10.00')).toHaveLength(2);
     });
 });

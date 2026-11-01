@@ -1,0 +1,127 @@
+{
+ "name": "Square ceiling light, oak frame",
+ "description": "A square surface-mounted ceiling light: an oak frame round an opal diffuser. Put its top at the ceiling.",
+ "definition": {
+  "format": 1,
+  "category": "light",
+  "size": {
+   "width": 600,
+   "depth": 600,
+   "height": 80
+  },
+  "parameters": [
+   {
+    "key": "frame",
+    "label": "Frame width",
+    "type": "int",
+    "default": 30,
+    "min": 10,
+    "max": 80,
+    "unit": "mm"
+   },
+   {
+    "key": "lumens",
+    "label": "Light output",
+    "type": "int",
+    "default": 2500,
+    "min": 0,
+    "max": 8000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 3000,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "wood",
+    "label": "Frame",
+    "default": "oak-solid"
+   },
+   {
+    "key": "back",
+    "label": "Back plate",
+    "default": "metal-white"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Frame",
+    "repeat": {
+     "count": 2
+    },
+    "x": 0,
+    "y": 0,
+    "z": "i * (D - frame)",
+    "w": "W",
+    "h": "H",
+    "d": "frame",
+    "material": "wood",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Frame",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - frame)",
+    "y": 0,
+    "z": "frame",
+    "w": "frame",
+    "h": "H",
+    "d": "D - 2 * frame",
+    "material": "wood",
+    "grain": "vertical"
+   },
+   {
+    "type": "block",
+    "name": "Back plate",
+    "x": "frame",
+    "y": 10,
+    "z": "frame",
+    "w": "W - 2 * frame",
+    "h": "H - 10",
+    "d": "D - 2 * frame",
+    "material": "back"
+   },
+   {
+    "type": "led",
+    "name": "Diffuser",
+    "x": "frame",
+    "y": 4,
+    "z": "frame",
+    "w": "W - 2 * frame",
+    "h": 6,
+    "d": "D - 2 * frame",
+    "color": "#fff6e8",
+    "intensity": 1
+   },
+   {
+    "type": "light",
+    "name": "Light",
+    "x": "W / 2 - 50",
+    "y": 0,
+    "z": "D / 2 - 50",
+    "w": 100,
+    "h": 4,
+    "d": 100,
+    "kind": "point",
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "bulb": "none"
+   }
+  ]
+ }
+}

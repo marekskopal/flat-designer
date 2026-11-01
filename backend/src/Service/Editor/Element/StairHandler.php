@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use FlatDesigner\Dto\StairDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
+use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
 use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
 use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
@@ -41,12 +42,33 @@ final readonly class StairHandler implements ElementHandler
 
 	private const int MaxRisers = 60;
 
+	/** A rise of its own (FD-87): two risers at least (2 × 140 mm), at most a storey and a half, mm. */
+	private const int MinOwnRise = 2 * StairRise::MinRiser;
+
+	private const int MaxOwnRise = 6000;
+
+	/** How far the first riser may stand above or below the floor's level, mm (as a plot's ground). */
+	private const int MaxBaseZ = 10000;
+
 	/** mm between the flights of a U stair. */
 	private const int MaxGap = 1000;
 
 	private const int DefaultWidth = 900;
 
 	private const int DefaultSpiralDiameter = 1600;
+
+	/** mm, a curved flight's inner edge from its centre (FD-99). */
+	private const int MinInnerRadius = 300;
+
+	private const int MaxInnerRadius = 20000;
+
+	private const int DefaultInnerRadius = 1500;
+
+	/** Degrees a curved flight turns at most, so it never overlaps itself. */
+	private const int MaxSweep = 330;
+
+	/** mm, the least depth of a curved flight's treads along its inner edge. */
+	private const int MinInnerGoing = 100;
 
 	public function __construct(
 		private StairRepository $stairRepository,
@@ -79,6 +101,13 @@ final readonly class StairHandler implements ElementHandler
 			'railing',
 			'treadMaterialId',
 			'structureMaterialId',
+			'rise',
+			'baseZ',
+			'railingStyle',
+			'railingMaterialId',
+			'wallHandrail',
+			'voidLiningMaterialId',
+			'innerRadius',
 		];
 	}
 
@@ -89,7 +118,7 @@ final readonly class StairHandler implements ElementHandler
 	}
 
 	/**
-	 * A straight concrete flight 900 mm wide with a railing on the right; a spiral is 1600 mm across.
+	 * A straight concrete flight 900 mm wide with a railing (posts and a handrail) on the right; a spiral is 1600 mm across.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -113,6 +142,13 @@ final readonly class StairHandler implements ElementHandler
 			'railing' => StairRailingEnum::Right->value,
 			'treadMaterialId' => null,
 			'structureMaterialId' => null,
+			'rise' => null,
+			'baseZ' => 0,
+			'railingStyle' => null,
+			'railingMaterialId' => null,
+			'wallHandrail' => StairRailingEnum::None->value,
+			'voidLiningMaterialId' => null,
+			'innerRadius' => null,
 		];
 	}
 
@@ -149,11 +185,13 @@ final readonly class StairHandler implements ElementHandler
 		$width = $this->width($fields, $shape, $stair);
 		$risers = $fields->nullableInt('risers', 2, self::MaxRisers);
 		$firstFlight = $fields->nullableInt('firstFlight', 1, self::MaxRisers);
-		$risersChanged = $stair === null || $risers !== $stair->risers;
+		// Missing in changes logged before outdoor stairs: to the next floor, from the floor's level.
+		$ownRise = $fields->nullableInt('rise', self::MinOwnRise, self::MaxOwnRise);
+		$risersChanged = $stair === null || $risers !== $stair->risers || $ownRise !== $stair->rise;
 		$landingChanged = $stair === null || $firstFlight !== $stair->firstFlight || $shape !== $stair->shape;
 		$rise = null;
 		if ($risers !== null && $risersChanged) {
-			$rise = $this->stairRise->of($floor);
+			$rise = $ownRise ?? $this->stairRise->of($floor);
 			$riser = $rise / $risers;
 			if ($riser < StairRise::MinRiser || $riser > StairRise::MaxRiser) {
 				throw EditException::invalid(sprintf(
@@ -167,15 +205,18 @@ final readonly class StairHandler implements ElementHandler
 			}
 		}
 		if ($shape->hasLanding() && $firstFlight !== null && ($risersChanged || $landingChanged)) {
-			$count = StairRise::risers($rise ?? $this->stairRise->of($floor), $risers);
+			$count = StairRise::risers($rise ?? $ownRise ?? $this->stairRise->of($floor), $risers);
 			if ($firstFlight >= $count) {
 				throw EditException::invalid(sprintf('Field "firstFlight" must be fewer than the stair\'s %d risers.', $count));
 			}
 		}
 		$treadMaterialId = $fields->nullableId('treadMaterialId');
 		$structureMaterialId = $fields->nullableId('structureMaterialId');
-		$this->materialResolver->resolve($treadMaterialId);
-		$this->materialResolver->resolve($structureMaterialId);
+		$railingMaterialId = $fields->nullableId('railingMaterialId');
+		$voidLiningMaterialId = $fields->nullableId('voidLiningMaterialId');
+		foreach ([$treadMaterialId, $structureMaterialId, $railingMaterialId, $voidLiningMaterialId] as $materialId) {
+			$this->materialResolver->resolve($materialId);
+		}
 
 		return [
 			'name' => $fields->string('name', 255),
@@ -189,11 +230,82 @@ final readonly class StairHandler implements ElementHandler
 			'firstFlight' => $firstFlight,
 			'turn' => $fields->enum('turn', StairTurnEnum::class)->value,
 			'gap' => $fields->int('gap', 0, self::MaxGap),
-			'construction' => $fields->enum('construction', StairConstructionEnum::class)->value,
+			'construction' => self::construction($fields, $shape, $stair)->value,
 			'railing' => $fields->enum('railing', StairRailingEnum::class)->value,
 			'treadMaterialId' => $treadMaterialId,
 			'structureMaterialId' => $structureMaterialId,
+			'rise' => $ownRise,
+			'baseZ' => $fields->raw('baseZ') === null ? 0 : $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ),
+			'railingStyle' => self::railingStyle($fields)?->value,
+			'railingMaterialId' => $railingMaterialId,
+			'wallHandrail' => self::wallHandrail($fields)->value,
+			'voidLiningMaterialId' => $voidLiningMaterialId,
+			'innerRadius' => $this->innerRadius($floor, $fields, $shape, $width, $ownRise, $risers, $stair),
 		];
+	}
+
+	/**
+	 * A curved flight's inner radius (the default when it has none; the other shapes keep theirs), checked with its width,
+	 * going and risers when one of them is set anew: it turns `MaxSweep` at most and keeps `MinInnerGoing` at its inner edge.
+	 */
+	private function innerRadius(
+		Floor $floor,
+		FieldReader $fields,
+		StairShapeEnum $shape,
+		int $width,
+		?int $ownRise,
+		?int $risers,
+		?Stair $stair,
+	): ?int
+	{
+		if ($shape !== StairShapeEnum::Curved) {
+			return $fields->nullableInt('innerRadius', self::MinInnerRadius, self::MaxInnerRadius);
+		}
+		$inner = $fields->raw('innerRadius') === null
+			? self::DefaultInnerRadius
+			: $fields->int('innerRadius', self::MinInnerRadius, self::MaxInnerRadius);
+		$going = $fields->int('going', self::MinGoing, self::MaxGoing);
+		$same = $stair !== null
+			&& [$stair->shape, $stair->innerRadius, $stair->width, $stair->going, $stair->risers, $stair->rise]
+			=== [$shape, $inner, $width, $going, $risers, $ownRise];
+		if ($same) {
+			return $inner;
+		}
+		$walk = $inner + $width / 2;
+		$count = StairRise::risers($ownRise ?? $this->stairRise->of($floor), $risers);
+		$sweep = rad2deg(($count - 1) * $going / $walk);
+		if ($sweep > self::MaxSweep) {
+			throw EditException::invalid(sprintf(
+				'The curved flight would turn %.0f° (at most %d°): give it a larger inner radius, a shorter going or fewer risers.',
+				$sweep,
+				self::MaxSweep,
+			));
+		}
+		if ($going * $inner / $walk < self::MinInnerGoing) {
+			throw EditException::invalid(sprintf(
+				'The treads would be under %d mm deep at the inner edge: give the curved flight a larger inner radius or a narrower width.',
+				self::MinInnerGoing,
+			));
+		}
+
+		return $inner;
+	}
+
+	/**
+	 * A curved flight is solid or open (no stringers follow its curve): a stair with stringers made curved becomes solid,
+	 * stringers asked for anew are refused.
+	 */
+	private static function construction(FieldReader $fields, StairShapeEnum $shape, ?Stair $stair): StairConstructionEnum
+	{
+		$construction = $fields->enum('construction', StairConstructionEnum::class);
+		if ($shape !== StairShapeEnum::Curved || $construction !== StairConstructionEnum::Stringers) {
+			return $construction;
+		}
+		if ($stair !== null && $stair->shape !== $shape && $stair->construction === $construction) {
+			return StairConstructionEnum::Solid;
+		}
+
+		throw EditException::invalid('A curved flight is Solid or Open: no stringers follow its curve.');
 	}
 
 	public function create(Floor $floor, array $state): Stair
@@ -239,6 +351,23 @@ final readonly class StairHandler implements ElementHandler
 		return sprintf('stairs "%s"', is_string($state['name'] ?? null) ? $state['name'] : '?');
 	}
 
+	/** A stair's railing infill; a fence's (FD-100) stands on the ground, not along nosings. */
+	private static function railingStyle(FieldReader $fields): ?RailingStyleEnum
+	{
+		$style = $fields->nullableEnum('railingStyle', RailingStyleEnum::class);
+		if ($style?->isFence() === true) {
+			throw EditException::invalid(sprintf('A stair\'s railing cannot be a fence (%s).', $style->value));
+		}
+
+		return $style;
+	}
+
+	/** Missing in changes logged before wall handrails (FD-90): none. */
+	private static function wallHandrail(FieldReader $fields): StairRailingEnum
+	{
+		return $fields->raw('wallHandrail') === null ? StairRailingEnum::None : $fields->enum('wallHandrail', StairRailingEnum::class);
+	}
+
 	/** The width in the shape's range; the stored width of another shape, left as it was, gives way to the default. */
 	private function width(FieldReader $fields, StairShapeEnum $shape, ?Stair $current): int
 	{
@@ -276,6 +405,13 @@ final readonly class StairHandler implements ElementHandler
 		$stair->railing = $railing;
 		$stair->treadMaterial = $this->materialResolver->resolve($fields->nullableId('treadMaterialId'));
 		$stair->structureMaterial = $this->materialResolver->resolve($fields->nullableId('structureMaterialId'));
+		$stair->rise = $fields->nullableInt('rise', self::MinOwnRise, self::MaxOwnRise);
+		$stair->baseZ = $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ);
+		$stair->railingStyle = $fields->nullableEnum('railingStyle', RailingStyleEnum::class);
+		$stair->railingMaterial = $this->materialResolver->resolve($fields->nullableId('railingMaterialId'));
+		$stair->wallHandrail = $fields->enum('wallHandrail', StairRailingEnum::class);
+		$stair->voidLiningMaterial = $this->materialResolver->resolve($fields->nullableId('voidLiningMaterialId'));
+		$stair->innerRadius = $fields->nullableInt('innerRadius', self::MinInnerRadius, self::MaxInnerRadius);
 		$this->stairRepository->persist($stair);
 	}
 

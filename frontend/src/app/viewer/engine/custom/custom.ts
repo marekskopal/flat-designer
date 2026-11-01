@@ -140,6 +140,8 @@ function buildPart(
         }
         case 'board':
             return buildBoard(part, shaded(material(grain), part.props['shade'], materials));
+        case 'block':
+            return box(part, shaded(material(grain), part.props['shade'], materials));
         case 'front':
             return buildFront(part, item, material(grain), materials);
         case 'cylinder':
@@ -382,19 +384,46 @@ function buildFront(part: ResolvedPart, item: Item, material: THREE.Material, ma
     return group;
 }
 
-/** Round rod or leg along `axis` (default y), as thick as the box's smaller side across it. */
+/**
+ * Round rod or leg along `axis` (default y), as thick as the box's smaller side across it; `radius` (FD-93) rounds the
+ * edges of its ends (a pouf, a vessel basin), at most half its length or thickness.
+ */
 function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     const axis = part.props['axis'] === 'x' || part.props['axis'] === 'z' ? part.props['axis'] : 'y';
     const across = {x: [part.h, part.d], y: [part.w, part.d], z: [part.w, part.h]}[axis];
     const length = {x: part.w, y: part.h, z: part.d}[axis];
     const radius = Math.min(across[0], across[1]) / 2;
-    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * MM, radius * MM, length * MM, CylinderSegments), material);
+    const rounding = typeof part.props['radius'] === 'number' ? Math.max(0, Math.min(part.props['radius'], radius, length / 2) - 0.5) : 0;
+    const geometry =
+        rounding > 0
+            ? roundedCylinder(radius, length, rounding)
+            : new THREE.CylinderGeometry(radius * MM, radius * MM, length * MM, CylinderSegments);
+    const mesh = new THREE.Mesh(geometry, material);
     if (axis === 'x') {
         mesh.rotation.z = Math.PI / 2;
     } else if (axis === 'z') {
         mesh.rotation.x = Math.PI / 2;
     }
     return centredInBox(mesh, part);
+}
+
+/** An upright cylinder `length` long round its centre whose end edges are rounded by `rounding` (all mm): a lathed profile. */
+function roundedCylinder(radius: number, length: number, rounding: number): THREE.BufferGeometry {
+    const half = length / 2;
+    const profile = [new THREE.Vector2(0, -half)];
+    const arc = (cy: number, from: number): void => {
+        for (let k = 0; k <= 6; k++) {
+            const angle = from + (k / 6) * (Math.PI / 2);
+            profile.push(new THREE.Vector2(radius - rounding + Math.cos(angle) * rounding, cy + Math.sin(angle) * rounding));
+        }
+    };
+    arc(-half + rounding, -Math.PI / 2);
+    arc(half - rounding, 0);
+    profile.push(new THREE.Vector2(0, half));
+    return new THREE.LatheGeometry(
+        profile.map((p) => p.multiplyScalar(MM)),
+        CylinderSegments,
+    );
 }
 
 /** A mesh built around its own origin, placed at the centre of the part's box, casting and taking shadows. */

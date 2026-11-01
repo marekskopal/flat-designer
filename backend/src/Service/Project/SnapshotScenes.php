@@ -11,19 +11,20 @@ use stdClass;
 /**
  * Floor scenes served straight from a decoded snapshot (`ProjectSnapshotService::getFloorScene()` /
  * `getFloorScenes()`), shaped like `SceneDto`: the floor's entry with the snapshot's materials and location, the stairs'
- * rise and the stairs coming up from below (`SnapshotStairs`), its floor
+ * rise and the stairs coming up from below (`SnapshotStairs`), the floors with chimneys and roofs (`chimneyFloors`), its floor
  * stacked by `FloorStack` when the snapshot predates stacked floors. Decoded to objects rather than arrays so empty JSON
  * objects (item params) stay objects when re-encoded.
  */
 final class SnapshotScenes
 {
 	/**
-	 * The scene of a floor and those of the floors under it (of a lower level), lowest first, from one decode.
+	 * The scene of a floor, those of the floors under it (of a lower level) and, with `$withAbove`, those above it (of a
+	 * higher one), lowest first, from one decode.
 	 *
 	 * @param Closure(): SnapshotReader $read the snapshot read as arrays, for stacking an older one's floors
-	 * @return array{scene: ?stdClass, below: list<stdClass>}
+	 * @return array{scene: ?stdClass, below: list<stdClass>, above: list<stdClass>}
 	 */
-	public static function of(mixed $data, int $floorId, Closure $read): array
+	public static function of(mixed $data, int $floorId, Closure $read, bool $withAbove = false): array
 	{
 		if (!$data instanceof stdClass || !is_array($data->floors ?? null)) {
 			throw new InvalidSnapshotException('Snapshot has no floors.');
@@ -34,7 +35,10 @@ final class SnapshotScenes
 		foreach ($floors as $floor) {
 			$level = $floor['id'] === $floorId ? $floor['level'] : $level;
 		}
-		$chosen = array_filter($floors, fn (array $f): bool => $level !== null && ($f['level'] < $level || $f['id'] === $floorId));
+		if ($level === null) {
+			return ['scene' => null, 'below' => [], 'above' => []];
+		}
+		$chosen = array_filter($floors, fn (array $f): bool => $withAbove || $f['level'] < $level || $f['id'] === $floorId);
 		usort($chosen, fn (array $a, array $b): int => $a['level'] <=> $b['level']);
 		// An older snapshot's floors are stacked once, for all the scenes that need it.
 		$stack = null;
@@ -51,22 +55,74 @@ final class SnapshotScenes
 		}
 		$stairs = new SnapshotStairs($floors, $sceneFloors);
 
-		$result = ['scene' => null, 'below' => []];
+		$result = ['scene' => null, 'below' => [], 'above' => []];
 		foreach ($chosen as $f) {
 			$scene = clone $f['entry'];
 			$id = $f['id'];
 			$scene->floor = $sceneFloors[$id];
 			$scene->materials = $data->materials ?? [];
 			$scene->location = $data->location ?? null;
+			// Missing in snapshots taken before façades (FD-88).
+			$scene->exteriorMaterialId = $data->exteriorMaterialId ?? null;
 			$stairs->addTo($scene, $f);
+			$scene->chimneyFloors = self::chimneyFloors($floors, $sceneFloors, $id);
 			if ($id === $floorId) {
 				$result['scene'] = $scene;
-			} else {
+			} elseif ($f['level'] < $level) {
 				$result['below'][] = $scene;
+			} else {
+				$result['above'][] = $scene;
 			}
 		}
 
 		return $result;
+	}
+
+	/**
+	 * A scene's `chimneyFloors` (FD-91), as `SceneProvider` derives them from the rows: the other floors with roofs or
+	 * chimneys, their levels against this one's; none in a snapshot without chimneys.
+	 *
+	 * @param list<array{entry: stdClass, floor: stdClass, id: int, level: int}> $floors
+	 * @param array<int, stdClass> $sceneFloors with their elevations, by id
+	 * @return list<array{floorId: int, offset: int, roofs: list<mixed>, chimneys: list<stdClass>}>
+	 */
+	private static function chimneyFloors(array $floors, array $sceneFloors, int $floorId): array
+	{
+		$chimneys = array_filter(array_map(self::chimneys(...), array_column($floors, 'entry', 'id')));
+		if ($chimneys === []) {
+			return [];
+		}
+		$elevation = static function (int $id) use ($sceneFloors): int {
+			$elevation = $sceneFloors[$id]->elevation ?? null;
+
+			return is_int($elevation) ? $elevation : 0;
+		};
+		$result = [];
+		foreach ($floors as $f) {
+			$roofs = is_array($f['entry']->roofs ?? null) ? array_values($f['entry']->roofs) : [];
+			if ($f['id'] === $floorId || ($roofs === [] && !isset($chimneys[$f['id']]))) {
+				continue;
+			}
+
+			$result[] = [
+				'floorId' => $f['id'],
+				'offset' => $elevation($f['id']) - $elevation($floorId),
+				'roofs' => $roofs,
+				'chimneys' => $chimneys[$f['id']] ?? [],
+			];
+		}
+
+		return $result;
+	}
+
+	/** @return list<stdClass> a floor entry's chimneys */
+	private static function chimneys(stdClass $entry): array
+	{
+		$items = is_array($entry->items ?? null) ? $entry->items : [];
+
+		return array_values(
+			array_filter($items, static fn (mixed $item): bool => $item instanceof stdClass && ($item->kind ?? null) === 'Chimney'),
+		);
 	}
 
 	/**

@@ -20,9 +20,9 @@ const DetectErrors: Record<RoomDetectError, string> = {
 };
 
 /**
- * Readout of the editor's drawing tools over the viewer: the length and direction of the wall being drawn
- * (with an input for exact lengths, focused by typing a digit) and the arc mode, in which a placed wall waits for its
- * curve (typed or clicked), or the area of the room a click would add.
+ * Readout of the editor's drawing tools over the viewer: the length and direction of the wall (or railing) being
+ * drawn (with an input for exact lengths, focused by typing a digit) and the arc mode, in which a placed wall waits for
+ * its curve (typed or clicked), or the area of the room a click would add.
  */
 @Component({
     selector: 'fd-draw-hud',
@@ -87,6 +87,38 @@ const DetectErrors: Record<RoomDetectError, string> = {
                 <span class="hud__keys">
                     Click the first point to close · double-click or <kbd>Enter</kbd> ends · <kbd>Backspace</kbd> undoes a point ·
                     <kbd>A</kbd> arcs · <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> cancels
+                </span>
+            } @else if (s.tool === 'drawRailing') {
+                @if (s.points === 0) {
+                    <strong class="hud__prompt">Click where the railing starts</strong>
+                } @else {
+                    @if (s.length !== null) {
+                        <span class="hud__value">
+                            {{ s.length | number: '1.0-0' }} mm
+                            @if (s.angle !== null) {
+                                · {{ s.angle | number: '1.0-1' }}°
+                            }
+                        </span>
+                    } @else {
+                        <strong class="hud__prompt">Point to the next post, or type a length</strong>
+                    }
+                    <input
+                        #lengthInput
+                        class="input input--compact hud__input"
+                        [class.hud__input--invalid]="invalid()"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="length<angle"
+                        aria-label="Length of the next stretch of railing, mm (optionally <angle in degrees)"
+                        [value]="typed()"
+                        (input)="onInput($event)"
+                        (keydown.enter)="place()"
+                        (keydown.escape)="clear()"
+                    />
+                }
+                <span class="hud__keys">
+                    Click the first point to close · double-click or <kbd>Enter</kbd> ends · <kbd>Backspace</kbd> undoes a point ·
+                    <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> cancels
                 </span>
             } @else {
                 @if (s.error !== null) {

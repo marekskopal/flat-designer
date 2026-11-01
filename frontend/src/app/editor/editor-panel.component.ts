@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
 import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
-import {Group, Item, Opening, OpeningType, Roof, RoofWindow, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
+import {Group, Item, Opening, OpeningType, Roof, RoofWindow, Room, Scene, SectionLine, VariantSet, Wall, WallType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
@@ -19,6 +19,9 @@ const KindLabels: Record<ElementKind, string> = {
     room: 'Room',
     plot: 'Plot',
     stair: 'Stairs',
+    void: 'Void',
+    railing: 'Railing',
+    section: 'Section line',
     roof: 'Roof',
     roofWindow: 'Roof window',
     group: 'Group',
@@ -30,6 +33,7 @@ const Tools: {tool: EditorTool; label: string; title: string}[] = [
     {tool: 'select', label: 'Select', title: 'Select and drag elements (Esc)'},
     {tool: 'drawWalls', label: 'Draw walls', title: 'Click the centre-line points of a run of walls; type a length for an exact one (W)'},
     {tool: 'detectRoom', label: 'Room from walls', title: 'Click inside walls to add the room they enclose (M)'},
+    {tool: 'drawRailing', label: 'Draw railing', title: 'Click the points of a railing; double-click ends it, a click on its start closes it (B)'},
 ];
 
 const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
@@ -37,6 +41,9 @@ const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
 const NewRoomSize = 3000;
+/** Size of a new void, and length of a new railing, mm. */
+const NewVoidSize = 1200;
+const NewRailingLength = 2000;
 /** Width of an opening added from the Add menu (the server's default, used to centre it on the wall). */
 const NewOpeningWidths: Record<OpeningType, number> = {
     Door: 900,
@@ -46,6 +53,7 @@ const NewOpeningWidths: Record<OpeningType, number> = {
     Passage: 900,
     Window: 1200,
     Niche: 600,
+    GarageDoor: 2500,
 };
 
 /** Nudge steps for arrow keys, mm (Shift: coarse). */
@@ -227,6 +235,9 @@ export class EditorPanelComponent {
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
                 void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
+        } else if (choice === 'section') {
+            // The backend runs it west to east through the middle of the walls, looking north, named by the next letter.
+            void this.editor.create('section', {});
         } else if (choice === 'roof') {
             // Its rectangle comes from the backend: round the floor's walls, the ridge along the longer side.
             void this.editor.create('roof', {});
@@ -239,6 +250,23 @@ export class EditorPanelComponent {
         } else if (choice === 'stair') {
             // The first riser at the view's centre (or the selected room's), walking up north.
             void this.editor.create('stair', {x: at.x, y: at.y});
+        } else if (choice === 'void') {
+            const half = NewVoidSize / 2;
+            void this.editor.create('void', {
+                polygon: [
+                    [at.x - half, at.y - half],
+                    [at.x + half, at.y - half],
+                    [at.x + half, at.y + half],
+                    [at.x - half, at.y + half],
+                ],
+            });
+        } else if (choice === 'railing') {
+            void this.editor.create('railing', {
+                points: [
+                    [at.x - NewRailingLength / 2, at.y],
+                    [at.x + NewRailingLength / 2, at.y],
+                ],
+            });
         } else if (choice === 'plot') {
             // Its boundary comes from the backend: a rectangle round the floor's walls and rooms.
             void this.editor.create('plot', {});
@@ -300,8 +328,8 @@ export class EditorPanelComponent {
             } else {
                 this.editor.setTool('select');
             }
-        } else if (!mod && !event.altKey && (key === 'w' || key === 'm')) {
-            const tool = key === 'w' ? 'drawWalls' : 'detectRoom';
+        } else if (!mod && !event.altKey && (key === 'w' || key === 'm' || key === 'b')) {
+            const tool = key === 'w' ? 'drawWalls' : key === 'm' ? 'detectRoom' : 'drawRailing';
             this.editor.setTool(this.editor.tool() === tool ? 'select' : tool);
         } else if (!mod) {
             this.moveItem(event);
@@ -331,9 +359,16 @@ export class EditorPanelComponent {
         }
     }
 
-    /** Arrow keys nudge the selected item, stairs, roof or roof window by the step in plan, R turns the first three by 90°. */
+    /**
+     * Arrow keys nudge the selected item, stairs, roof, roof window or section line by the step in plan, R turns the
+     * first three by 90° and a section line round (it then looks the other way).
+     */
     private moveItem(event: KeyboardEvent): void {
         const selected = this.selected();
+        if (selected?.kind === 'section') {
+            this.moveSectionLine(event, selected.element as unknown as SectionLine);
+            return;
+        }
         if (selected?.kind === 'roofWindow') {
             this.moveRoofWindow(event, selected.element as unknown as RoofWindow & {roofId: number});
             return;
@@ -355,6 +390,30 @@ export class EditorPanelComponent {
         if (fields !== undefined) {
             event.preventDefault();
             void this.editor.update(selected.kind, item.id, fields);
+        }
+    }
+
+    private moveSectionLine(event: KeyboardEvent, line: SectionLine): void {
+        const step = event.shiftKey ? NudgeStepCoarse : NudgeStep;
+        const shift = (dx: number, dy: number): Partial<SectionLine> => ({
+            startX: line.startX + dx,
+            startY: line.startY + dy,
+            endX: line.endX + dx,
+            endY: line.endY + dy,
+        });
+        const turned: Partial<SectionLine> = {startX: line.endX, startY: line.endY, endX: line.startX, endY: line.startY};
+        const moves: Record<string, Partial<SectionLine>> = {
+            ArrowLeft: shift(-step, 0),
+            ArrowRight: shift(step, 0),
+            ArrowUp: shift(0, step),
+            ArrowDown: shift(0, -step),
+            r: turned,
+            R: turned,
+        };
+        const fields = moves[event.key];
+        if (fields !== undefined) {
+            event.preventDefault();
+            void this.editor.update('section', line.id, fields);
         }
     }
 
@@ -400,6 +459,12 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             const stair = find(scene.stairs ?? []);
             return stair === null ? null : {...stair, stairRise: scene.stairRise ?? 0};
         }
+        case 'void':
+            return find(scene.voids ?? []);
+        case 'railing':
+            return find(scene.railings ?? []);
+        case 'section':
+            return find(scene.sections ?? []);
         case 'roof':
             return find(scene.roofs ?? []);
         case 'roofWindow':

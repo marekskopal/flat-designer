@@ -6,7 +6,7 @@ namespace FlatDesigner\Dto;
 
 use FlatDesigner\Service\Request\BodyReader;
 
-/** Body of project create and update; update replaces all fields (the site fields left out are 0 / none). */
+/** Body of project create and update; update replaces all fields (the site fields and the façade left out are 0 / none). */
 final readonly class ProjectInputDto implements ArrayFactoryInterface
 {
 	public function __construct(
@@ -18,6 +18,8 @@ final readonly class ProjectInputDto implements ArrayFactoryInterface
 		public ?float $latitude = null,
 		public ?float $longitude = null,
 		public ?string $timeZone = null,
+		/** The default façade material (FD-88). */
+		public ?int $exteriorMaterialId = null,
 	) {
 	}
 
@@ -31,6 +33,7 @@ final readonly class ProjectInputDto implements ArrayFactoryInterface
 			latitude: BodyReader::optionalNumber($data, 'latitude'),
 			longitude: BodyReader::optionalNumber($data, 'longitude'),
 			timeZone: BodyReader::optionalString($data, 'timeZone'),
+			exteriorMaterialId: BodyReader::optionalInt($data, 'exteriorMaterialId'),
 		);
 	}
 }

@@ -14,6 +14,8 @@ export interface Project {
     longitude: number | null;
     /** IANA name the sun's clock time is read in; null: local solar time. */
     timeZone: string | null;
+    /** The façade of the exterior walls' outer faces nobody set (FD-88); null: the walls' own material. */
+    exteriorMaterialId?: number | null;
     ownerId: number | null;
     ownerName: string | null;
     /** Ordered by level. A project always has at least one. */
@@ -35,6 +37,7 @@ export interface ProjectInput {
     latitude?: number | null;
     longitude?: number | null;
     timeZone?: string | null;
+    exteriorMaterialId?: number | null;
 }
 
 export interface FloorInput {

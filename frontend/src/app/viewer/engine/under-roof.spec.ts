@@ -1,11 +1,11 @@
-import {Room, Wall} from '@app/models/scene';
+import {Opening, Plot, Room, Wall} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {buildRoom, buildWall} from './building';
 import {ceilingHeightAt, ceilingSteps} from './ceilings';
 import {MaterialLibrary} from './materials';
-import {MM} from './plan-geometry';
+import {MM, Vec2} from './plan-geometry';
 import {RoofShapeFields} from './roof-geometry';
 import {ceilingParts, CeilingUnderRoof, lowestTopAlong, outlineWithout, profileRuns, roofBreaks, roofsReach, wallTopAt} from './under-roof';
 
@@ -84,6 +84,15 @@ describe('wallTopAt', () => {
 });
 
 describe('roofBreaks', () => {
+    it('breaks a sloping line where it crosses a level or another slope, without roofs', () => {
+        // 2000 → 800 along 6 m crosses 1300 at 0.5833; the two slopes cross at 0.3.
+        const down = (p: Vec2): number => 2000 - 1200 * (p.x / 6000);
+        const up = (p: Vec2): number => 1400 + 800 * (p.x / 6000);
+        const breaks = roofBreaks({x: 0, y: 0}, {x: 6000, y: 0}, [], [1300], [down, up]);
+        expect(breaks.map((t) => Math.round(t * 1000) / 1000)).toEqual([0, 0.3, 0.583, 1]);
+        expect(roofBreaks({x: 0, y: 0}, {x: 6000, y: 0}, [], [1300])).toEqual([0, 1]);
+    });
+
     it('finds the ridge and where the underside passes a level', () => {
         expect(roofBreaks({x: 0, y: 0}, {x: 0, y: 8000}, [gable], [])).toEqual([0, 0.5, 1]);
         // A 3 m partition under it bends where the underside reaches 3000, 400 mm in from either eaves.
@@ -226,5 +235,71 @@ describe('ceilings under a roof', () => {
         expect(Math.max(...ys)).toBeCloseTo(7490, 0);
         expect(steps.every((step) => Math.abs(step.bottom - 2500) < 1e-6 && Math.abs((step.atB?.bottom ?? 0) - 2500) < 1e-6)).toBe(true);
         expect(Math.max(...steps.map((step) => step.top))).toBeCloseTo(2800, 6);
+    });
+});
+
+describe('site walls (FD-87)', () => {
+    // The wall's mesh height over a plan point, from a ray down onto it (and up from below for the bottom).
+    const heightAt = (object: THREE.Object3D, x: number, y: number, from: 'above' | 'below'): number | null => {
+        object.updateMatrixWorld(true);
+        const down = from === 'above';
+        const ray = new THREE.Raycaster(new THREE.Vector3(x * MM, down ? 50 : -50, -y * MM), new THREE.Vector3(0, down ? -1 : 1, 0));
+        const hit = ray.intersectObject(object, true).find((h) => h.object.visible && h.object.userData['sectionFill'] !== true);
+        return hit === undefined ? null : Math.round(hit.point.y / MM);
+    };
+
+    it('slopes the top from its height at the start to heightEnd at the end', () => {
+        const drive = buildWall(wall([0, 0], [6000, 0], {height: 2000, heightEnd: 800}), materials, section);
+
+        expect(heightAt(drive, 100, 0, 'above')).toBe(1980);
+        expect(heightAt(drive, 3000, 0, 'above')).toBe(1400);
+        expect(heightAt(drive, 5900, 0, 'above')).toBe(820);
+        expect(wallTopAt(wall([0, 0], [6000, 0]), [])).toBeNull();
+    });
+
+    it('keeps the parapet under a window level while the lintel over it follows the sloping top', () => {
+        // A wall 2000 → 800 with a window at x 2000–3000 over a 1000 mm parapet, its head at 1200 under the top (1400 at x 3000).
+        const window: Opening = {
+            id: 2,
+            name: 'W',
+            type: 'Window',
+            offset: 2000,
+            width: 1000,
+            height: 200,
+            sillHeight: 1000,
+            leafWidth: null,
+            hinge: null,
+            side: 'Left',
+            entrance: false,
+        };
+        const parapet = buildWall(wall([0, 0], [6000, 0], {height: 2000, heightEnd: 800, openings: [window]}), materials, section);
+
+        expect(heightAt(parapet, 2500, 0, 'above')).toBe(1500);
+        expect(heightAt(parapet, 2500, 0, 'below')).toBe(0);
+        expect(heightAt(parapet, 5500, 0, 'above')).toBe(900);
+    });
+
+    it('stands on its base, sloping between its ends', () => {
+        const based = buildWall(wall([0, 0], [6000, 0], {height: 1000, baseStart: -600, baseEnd: -1200}), materials, section);
+
+        expect(heightAt(based, 100, 0, 'below')).toBe(-610);
+        expect(heightAt(based, 5900, 0, 'below')).toBe(-1190);
+        expect(heightAt(based, 3000, 0, 'above')).toBe(1000);
+    });
+
+    it('stands on the ground of the plots', () => {
+        const plot: Plot = {
+            id: 1,
+            name: 'Slope',
+            polygon: [[-1000, -1000], [7000, -1000], [7000, 1000], [-1000, 1000]],
+            area: 0,
+            groundMaterialId: null,
+            terrain: [[-1000, -1000, 400], [-1000, 1000, 400], [7000, -1000, -400], [7000, 1000, -400]],
+        };
+        const retaining = buildWall(wall([0, 0], [6000, 0], {height: 1200, onGround: true}), materials, section, undefined, undefined, [], [plot]);
+
+        expect(heightAt(retaining, 0, 0, 'below')).toBe(300);
+        expect(heightAt(retaining, 6000, 0, 'below')).toBe(-300);
+        expect(heightAt(retaining, 3000, 0, 'above')).toBe(1200);
     });
 });

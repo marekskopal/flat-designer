@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Quantities;
 
+use Closure;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\RoofDto;
+use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
 use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
 use FlatDesigner\Service\Editor\Geometry\PlanMath;
 use FlatDesigner\Service\Editor\Geometry\RoofCover;
+use FlatDesigner\Service\Editor\Geometry\RoofGutters;
 use FlatDesigner\Service\Editor\Geometry\RoofWindowGeometry;
 
 /**
  * The surfaces of a floor's roofs as the viewer draws them (FD-38), in mm²: each roof's covering and soffit over the parts
  * of its planes where it is the top (`RoofCover`), along the slope, without its windows. A roof without a covering
- * material has the viewer's default (clay tiles, a flat roof's membrane).
+ * material has the viewer's default (clay tiles, a flat roof's membrane). Its gutters (`RoofGutters`, FD-91) count by the
+ * running metre along the runs, its downpipes from the gutter down to the ground under them, both in the gutter
+ * material (titanium zinc without one).
  */
 final readonly class RoofSurfaces
 {
@@ -23,12 +28,15 @@ final readonly class RoofSurfaces
 
 	private const string MembraneCode = 'roof-membrane';
 
+	private const string GutterCode = 'zinc-titanium';
+
 	/**
 	 * @param list<RoofDto> $roofs the floor's
 	 * @param array<int, MaterialDto> $materials by id
+	 * @param Closure(float, float): float $ground mm against the floor's level under a plan point, where downpipes end
 	 * @return list<array{roof: RoofDto, windows: int, surfaces: list<array{surface: QuantitySurfaceEnum, materialId: int|null, amount: float}>}>
 	 */
-	public static function of(array $roofs, array $materials, RoofCover $cover): array
+	public static function of(array $roofs, array $materials, RoofCover $cover, Closure $ground): array
 	{
 		$result = [];
 		foreach ($roofs as $r => $roof) {
@@ -50,11 +58,41 @@ final readonly class RoofSurfaces
 				'surfaces' => [
 					['surface' => QuantitySurfaceEnum::RoofCovering, 'materialId' => $covering, 'amount' => $area],
 					['surface' => QuantitySurfaceEnum::Soffit, 'materialId' => $roof->soffitMaterialId, 'amount' => $area],
+					...self::rainwater($roof, $cover, $r, $materials, $ground),
 				],
 			];
 		}
 
 		return $result;
+	}
+
+	/**
+	 * The gutters' and the downpipes' running mm; none without gutters.
+	 *
+	 * @param array<int, MaterialDto> $materials
+	 * @param Closure(float, float): float $ground
+	 * @return list<array{surface: QuantitySurfaceEnum, materialId: int|null, amount: float}>
+	 */
+	private static function rainwater(RoofDto $roof, RoofCover $cover, int $index, array $materials, Closure $ground): array
+	{
+		if ($roof->gutters === GutterProfileEnum::None->value || !$cover->roofs[$index]->shape->isPitched()) {
+			return [];
+		}
+		$runs = RoofGutters::runs($cover->roofs, $index);
+		$gutters = 0.0;
+		foreach ($runs as $run) {
+			$gutters += hypot($run['to'][0] - $run['from'][0], $run['to'][1] - $run['from'][1]);
+		}
+		$downpipes = 0.0;
+		foreach (RoofGutters::downpipes($cover->roofs[$index], $roof->downpipes, $runs) as $downpipe) {
+			$downpipes += max(0.0, $downpipe['top'] - $ground($downpipe['at'][0], $downpipe['at'][1]));
+		}
+		$material = $roof->gutterMaterialId ?? self::byCode($materials, self::GutterCode);
+
+		return [
+			['surface' => QuantitySurfaceEnum::Gutter, 'materialId' => $material, 'amount' => $gutters],
+			['surface' => QuantitySurfaceEnum::Downpipe, 'materialId' => $material, 'amount' => $downpipes],
+		];
 	}
 
 	/**

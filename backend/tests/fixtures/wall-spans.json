@@ -1,5 +1,5 @@
 {
- "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting/faces (PHP) and wallSpansAlongEdge, wallGapsAlongEdge, skirtingPieces and wallFacesAlongEdge (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines (curved by an optional `sagitta`, mm + to the left of start → end) with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. `faces` are the wall faces one by one ({wall: index into walls, side: the wall's side facing the edge, from, to}; where walls overlap, the first keeps the stretch). Expected lengths are mm along the edge from a, compared within 0.01.",
+ "description": "Cases for the wall face twins: WallFaceSpans::spans/gaps/skirting/faces/facades (PHP) and wallSpansAlongEdge, wallGapsAlongEdge, skirtingPieces and wallFacesAlongEdge (TS, viewer/engine/ceilings.ts, plan-geometry.ts). edge is the room edge [a, b] in plan mm; walls are centre lines (curved by an optional `sagitta`, mm + to the left of start → end) with openings {offset, width, sillHeight, height, type?, side?} (type: a Door, or a Window above the floor, unless given; side: a niche's face). A gap's `niche` (default false) says it is a niche, which stays in the plan. `faces` are the wall faces one by one ({wall: index into walls, side: the wall's side facing the edge, from, to}; where walls overlap, the first keeps the stretch). Expected lengths are mm along the edge from a, compared within 0.01.",
  "cases": [
   {
    "name": "a wall along the edge with a door and a window",
@@ -152,6 +152,89 @@
    "gaps": [{"from": 0, "to": 509, "bottom": 0, "top": 2000}],
    "skirting": [],
    "faces": [{"wall": 0, "side": "Right", "from": 0, "to": 509}]
+  }
+ ],
+ "facades": [
+  {
+   "name": "a closed box round a room: the outer faces, mitred at the corners",
+   "walls": [
+    {"startX": -150, "startY": -150, "endX": 4150, "endY": -150, "thickness": 300, "openings": []},
+    {"startX": 4150, "startY": -150, "endX": 4150, "endY": 3150, "thickness": 300, "openings": []},
+    {"startX": 4150, "startY": 3150, "endX": -150, "endY": 3150, "thickness": 300, "openings": []},
+    {"startX": -150, "startY": 3150, "endX": -150, "endY": -150, "thickness": 300, "openings": []}
+   ],
+   "rooms": [
+    {"polygon": [[0, 0], [4000, 0], [4000, 3000], [0, 3000]]}
+   ],
+   "facades": [
+    {"wall": 0, "side": "Right", "spans": [[-150, 4450]]},
+    {"wall": 1, "side": "Right", "spans": [[-150, 3450]]},
+    {"wall": 2, "side": "Right", "spans": [[-150, 4450]]},
+    {"wall": 3, "side": "Right", "spans": [[-150, 3450]]}
+   ]
+  },
+  {
+   "name": "a box without a room: both faces of every wall",
+   "walls": [
+    {"startX": -150, "startY": -150, "endX": 4150, "endY": -150, "thickness": 300, "openings": []},
+    {"startX": 4150, "startY": -150, "endX": 4150, "endY": 3150, "thickness": 300, "openings": []},
+    {"startX": 4150, "startY": 3150, "endX": -150, "endY": 3150, "thickness": 300, "openings": []},
+    {"startX": -150, "startY": 3150, "endX": -150, "endY": -150, "thickness": 300, "openings": []}
+   ],
+   "rooms": [],
+   "facades": [
+    {"wall": 0, "side": "Left", "spans": [[150, 4150]]},
+    {"wall": 0, "side": "Right", "spans": [[-150, 4450]]},
+    {"wall": 1, "side": "Left", "spans": [[150, 3150]]},
+    {"wall": 1, "side": "Right", "spans": [[-150, 3450]]},
+    {"wall": 2, "side": "Left", "spans": [[150, 4150]]},
+    {"wall": 2, "side": "Right", "spans": [[-150, 4450]]},
+    {"wall": 3, "side": "Left", "spans": [[150, 3150]]},
+    {"wall": 3, "side": "Right", "spans": [[-150, 3450]]}
+   ]
+  },
+  {
+   "name": "a garden wall with a room along part of one face",
+   "walls": [
+    {"startX": 0, "startY": -100, "endX": 6000, "endY": -100, "thickness": 200, "openings": []}
+   ],
+   "rooms": [
+    {"polygon": [[0, 0], [3000, 0], [3000, 2000], [0, 2000]]}
+   ],
+   "facades": [
+    {"wall": 0, "side": "Left", "spans": [[3000, 6000]]},
+    {"wall": 0, "side": "Right", "spans": [[0, 6000]]}
+   ]
+  },
+  {
+   "name": "a partition between two rooms: no façade",
+   "walls": [
+    {"startX": 3000, "startY": 0, "endX": 3000, "endY": 3000, "thickness": 100, "openings": []}
+   ],
+   "rooms": [
+    {"polygon": [[0, 0], [2950, 0], [2950, 3000], [0, 3000]]},
+    {"polygon": [[3050, 0], [6000, 0], [6000, 3000], [3050, 3000]]}
+   ],
+   "facades": []
+  },
+  {
+   "name": "a garden along the south wall covers no façade",
+   "walls": [
+    {"startX": -150, "startY": -150, "endX": 4150, "endY": -150, "thickness": 300, "openings": []},
+    {"startX": 4150, "startY": -150, "endX": 4150, "endY": 3150, "thickness": 300, "openings": []},
+    {"startX": 4150, "startY": 3150, "endX": -150, "endY": 3150, "thickness": 300, "openings": []},
+    {"startX": -150, "startY": 3150, "endX": -150, "endY": -150, "thickness": 300, "openings": []}
+   ],
+   "rooms": [
+    {"polygon": [[0, 0], [4000, 0], [4000, 3000], [0, 3000]]},
+    {"polygon": [[-300, -5000], [4300, -5000], [4300, -300], [-300, -300]], "outdoor": true}
+   ],
+   "facades": [
+    {"wall": 0, "side": "Right", "spans": [[-150, 4450]]},
+    {"wall": 1, "side": "Right", "spans": [[-150, 3450]]},
+    {"wall": 2, "side": "Right", "spans": [[-150, 4450]]},
+    {"wall": 3, "side": "Right", "spans": [[-150, 3450]]}
+   ]
   }
  ]
 }

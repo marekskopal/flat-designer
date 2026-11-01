@@ -4,9 +4,10 @@
 //
 // Environment: FD_EMAIL, FD_PASSWORD (an account that may open the project) or FD_AUTHENTICATION (the JSON the app keeps
 // in localStorage under "authentication", from a signed-in browser), FD_PROJECT (the project's id), FD_VIEWS (only the
-// saved views whose name starts with it), FD_ROOM (the room to select for the editor shot, default the first one listed),
-// FD_URL (default http://localhost:4400), FD_OUT (default ../docs/screenshots), FD_HEADED=1 to watch it work. With
-// `cwebp` on the PATH, the images are saved as WebP FD_WIDTH pixels wide (default 1600), otherwise as PNG at 2×.
+// saved views whose name starts with it), FD_VIEWS_ONLY=1 (the views alone, not the editor and the pages), FD_ROOM (the
+// room to select for the editor shot, default the first one listed), FD_URL (default http://localhost:4400), FD_OUT
+// (default ../docs/screenshots), FD_HEADED=1 to watch it work. With `cwebp` on the PATH, the images are saved as WebP
+// FD_WIDTH pixels wide (default 1600), otherwise as PNG at 2×.
 import {spawnSync} from 'node:child_process';
 import {mkdir, unlink} from 'node:fs/promises';
 import {resolve} from 'node:path';
@@ -20,6 +21,7 @@ const email = process.env.FD_EMAIL;
 const password = process.env.FD_PASSWORD;
 const signedIn = process.env.FD_AUTHENTICATION;
 const viewPrefix = process.env.FD_VIEWS ?? '';
+const viewsOnly = process.env.FD_VIEWS_ONLY === '1';
 const editorRoom = process.env.FD_ROOM;
 const width = Number(process.env.FD_WIDTH ?? 1600);
 const webp = spawnSync('cwebp', ['-version']).status === 0;
@@ -96,6 +98,11 @@ for (const view of views) {
     // A few frames for the shadows and the ambient occlusion to settle.
     await page.waitForTimeout(800);
     await shoot(`view-${slug(view.name)}`);
+}
+
+if (viewsOnly) {
+    await browser.close();
+    process.exit(0);
 }
 
 // The editor: a room picked in the sidebar's list (which frames it), then edit mode with its inspector. It starts from

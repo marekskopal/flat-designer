@@ -8,16 +8,43 @@ use FlatDesigner\Dto\EditResultDto;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
+use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
 
 /** Roofs over a floor and the windows in them (FD-38). */
 final readonly class RoofTools
 {
-	private const array Clearable = ['parapet', 'coveringMaterialId', 'soffitMaterialId'];
+	private const array Clearable = ['parapet', 'coveringMaterialId', 'soffitMaterialId', 'gutterMaterialId', 'downpipes'];
+
+	private const array DownpipesSchema = [
+		'type' => ['array', 'null'],
+		'description' => 'downpipes from the gutters to the ground (default: at the corners of the eaves); [] none',
+		'items' => [
+			'type' => 'object',
+			'properties' => [
+				'edge' => [
+					'type' => 'string',
+					'enum' => ['Front', 'Back', 'Left', 'Right'],
+					'description' => 'the eaves edge: Front (−across, where a shed is low), Back, or a hip roof\'s Left (−along) or Right',
+				],
+				'along' => ['type' => 'integer', 'description' => 'mm along the edge from the roof\'s centre line, its middle unless a verge is skewed (+ along, or + across on Left / Right)'],
+			],
+			'required' => ['edge', 'along'],
+		],
+		'default' => null,
+	];
+
+	private const string Details = ' A pitched roof may have gutters (HalfRound or Box) along its eaves with downpipes to the ground, '
+		. 'rows of snow guards on its planes and a ridgeStyle (Box, Round ridge tiles, Angled metal). A chimney (an item of kind '
+		. 'Chimney) passing through the roof is cut out of it. Items with onRoof (add_item) lie on the roof: a solar panel, a vent tile, '
+		. 'a roof step.';
 
 	private const string Shape = 'A roof covers a rectangle, its eaves line: width × depth centred on (x, y), the ridge along the width, '
 		. 'turned by rotation. The underside is eaveHeight above the floor\'s level along the eaves line and rises at pitch inwards; '
-		. 'it reaches overhang past the eaves and vergeOverhang past the gables. Every wall of the floor is cut at the underside of '
+		. 'it reaches overhang past the eaves and vergeOverhang past the gables. A gable\'s or shed\'s verge may be skewed to follow a '
+		. 'gable wall that is not square to the ridge: startSkew (at the ridge\'s start, −along) and endSkew turn it by degrees '
+		. 'counter-clockwise about the ridge\'s end on the eaves line, so the eaves line is a trapezoid; a flat roof\'s two ends (along its width) '
+		. 'turn alike over a skewed wall, its parapet following (turn the roof so the skewed edge is an end). Every wall of the floor is cut at the underside of '
 		. 'the roofs over it; a wall with upToRoof (add_wall, add_walls, update_wall) rises to it, as a gable does. An L- or T-shaped house takes two '
 		. 'or three roofs.';
 
@@ -44,13 +71,24 @@ final readonly class RoofTools
 	 * @param int|null $pitch degrees, 5–75 (default 35); unused by a flat roof
 	 * @param int|null $overhang mm past the eaves, 0–2000 (default 400)
 	 * @param int|null $vergeOverhang mm past the gables (and a shed's sides), 0–2000 (default 200)
+	 * @param int|null $startSkew degrees counter-clockwise the verge at the ridge's start (−along) is turned, −45–45 (default 0,
+	 *   square to the ridge); a gable or shed, or a flat roof's end at −along (over a skewed wall); not a hip
+	 * @param int|null $endSkew the same at the ridge's end (+along)
 	 * @param int|null $thickness mm of rafters and covering, square to the slope, 50–1000 (default 250)
 	 * @param int|null $parapet a flat roof's parapet, mm above it, 100–2000 (default none)
 	 * @param int|null $coveringMaterialId from list_materials, e.g. roof-tiles-clay, roof-slate, roof-metal-seam, roof-membrane
 	 *   (default clay tiles; a flat roof membrane)
 	 * @param int|null $soffitMaterialId the underside of the overhang, from list_materials (default painted timber)
+	 * @param string|null $gutters "None" (default) | "HalfRound" | "Box": gutters along the eaves of a pitched roof
+	 * @param int|null $gutterMaterialId the gutters' and downpipes' material, from list_materials (default titanium zinc)
+	 * @param int|null $snowGuards rows of snow guards on each plane from the eaves up, 0–5 (default 0)
+	 * @param string|null $ridgeStyle "Box" (default, a square cap) | "Round" (half-round ridge tiles) | "Angled" (a metal ridge)
+	 * @param list<array{edge: string, along: int}>|null $downpipes
 	 */
-	#[McpTool(name: 'add_roof', description: 'Add a roof over a floor; without a size it covers the floor\'s walls. ' . self::Shape)]
+	#[McpTool(
+		name: 'add_roof',
+		description: 'Add a roof over a floor; without a size it covers the floor\'s walls. ' . self::Shape . self::Details,
+	)]
 	public function addRoof(
 		int $projectId,
 		int $floorId,
@@ -65,10 +103,18 @@ final readonly class RoofTools
 		?int $pitch = null,
 		?int $overhang = null,
 		?int $vergeOverhang = null,
+		?int $startSkew = null,
+		?int $endSkew = null,
 		?int $thickness = null,
 		?int $parapet = null,
 		?int $coveringMaterialId = null,
 		?int $soffitMaterialId = null,
+		?string $gutters = null,
+		?int $gutterMaterialId = null,
+		#[Schema(definition: self::DownpipesSchema)]
+		?array $downpipes = null,
+		?int $snowGuards = null,
+		?string $ridgeStyle = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -86,10 +132,17 @@ final readonly class RoofTools
 				'pitch' => $pitch,
 				'overhang' => $overhang,
 				'vergeOverhang' => $vergeOverhang,
+				'startSkew' => $startSkew,
+				'endSkew' => $endSkew,
 				'thickness' => $thickness,
 				'parapet' => $parapet,
 				'coveringMaterialId' => $coveringMaterialId,
 				'soffitMaterialId' => $soffitMaterialId,
+				'gutters' => $gutters,
+				'gutterMaterialId' => $gutterMaterialId,
+				'downpipes' => $downpipes,
+				'snowGuards' => $snowGuards,
+				'ridgeStyle' => $ridgeStyle,
 			]),
 		);
 	}
@@ -97,11 +150,18 @@ final readonly class RoofTools
 	/**
 	 * @param string|null $shape "Gable" | "Hip" | "Shed" | "Flat"
 	 * @param int|null $rotation degrees counter-clockwise of the ridge from plan east (+x)
-	 * @param list<string>|null $clear fields to set to none: "parapet", "coveringMaterialId", "soffitMaterialId"
+	 * @param int|null $startSkew degrees counter-clockwise the verge (a flat roof's end) at the ridge's start is turned, −45–45 (0 square); not a hip
+	 * @param int|null $endSkew the same at the ridge's end
+	 * @param string|null $gutters "None" | "HalfRound" | "Box"
+	 * @param int|null $snowGuards rows of snow guards on each plane, 0–5
+	 * @param string|null $ridgeStyle "Box" | "Round" | "Angled"
+	 * @param list<array{edge: string, along: int}>|null $downpipes
+	 * @param list<string>|null $clear fields to set to none: "parapet", "coveringMaterialId", "soffitMaterialId", "gutterMaterialId",
+	 *   "downpipes" (back to the eaves' corners)
 	 */
 	#[McpTool(
 		name: 'update_roof',
-		description: 'Change a roof. Only the given fields change; its windows move with it but are not checked again. ' . self::Shape,
+		description: 'Change a roof. Only the given fields change; its windows move with it but are not checked again. ' . self::Shape . self::Details,
 	)]
 	public function updateRoof(
 		int $projectId,
@@ -118,10 +178,18 @@ final readonly class RoofTools
 		?int $pitch = null,
 		?int $overhang = null,
 		?int $vergeOverhang = null,
+		?int $startSkew = null,
+		?int $endSkew = null,
 		?int $thickness = null,
 		?int $parapet = null,
 		?int $coveringMaterialId = null,
 		?int $soffitMaterialId = null,
+		?string $gutters = null,
+		?int $gutterMaterialId = null,
+		#[Schema(definition: self::DownpipesSchema)]
+		?array $downpipes = null,
+		?int $snowGuards = null,
+		?string $ridgeStyle = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -142,10 +210,17 @@ final readonly class RoofTools
 					'pitch' => $pitch,
 					'overhang' => $overhang,
 					'vergeOverhang' => $vergeOverhang,
+					'startSkew' => $startSkew,
+					'endSkew' => $endSkew,
 					'thickness' => $thickness,
 					'parapet' => $parapet,
 					'coveringMaterialId' => $coveringMaterialId,
 					'soffitMaterialId' => $soffitMaterialId,
+					'gutters' => $gutters,
+					'gutterMaterialId' => $gutterMaterialId,
+					'downpipes' => $downpipes,
+					'snowGuards' => $snowGuards,
+					'ridgeStyle' => $ridgeStyle,
 				],
 				$clear,
 				self::Clearable,

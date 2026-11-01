@@ -1,23 +1,31 @@
 import {PlanPoint, Roof, RoofWindow} from '@app/models/scene';
-import {MultiPolygon, Pair} from 'polygon-clipping';
+import polygonClipping, {MultiPolygon, Pair} from 'polygon-clipping';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {MM, pointInPolygon, polygonSignedArea, Vec2} from './plan-geometry';
+import {BoxGutterDepth, BoxGutterWidth, DownpipeRadius, gutterOffset, GutterRadius, roofDownpipes, roofGutters} from './rainwater';
 import {
     LocalRoofPlane,
+    roofCovers,
     RoofFrame,
     roofHalfExtent,
     roofLocal,
+    roofLocalOutline,
     roofLocalPlanes,
+    roofPlanes,
+    RoofShapeFields,
     roofSlope,
     roofToPlan,
+    roofVergeAt,
+    roofVergeSlope,
     roofVerticalThickness,
     RoofWindowLayout,
     roofWindowLayouts,
 } from './roof-geometry';
 import {FloorRoofs, roofPlaneParts, topStretches} from './under-roof';
+import {insetOutline} from './voids';
 
 /** A soffit without a material: white-painted timber. */
 const SoffitColor = '#f1eee8';
@@ -43,22 +51,53 @@ const WindowFlashing = 60;
 /** A roof window without a material: anthracite, like the walls' windows. */
 const WindowFrameCode = 'window-frame-anthracite';
 
+/** Gutters and downpipes without a material: titanium zinc (the seeded `zinc-titanium`). */
+const GutterCode = 'zinc-titanium';
+/** mm, the sheet the gutters are drawn in. */
+const GutterSheet = 4;
+/** mm the gutter's rim lies under the top of the covering at the eaves. */
+const GutterRimDrop = 30;
+/** mm a downpipe drops from the gutter before its neck turns back to the wall. */
+const DownpipeDrop = 100;
+/** mm in plan from the eaves line to a plane's first row of snow guards, and between rows. */
+const SnowGuardFirst = 400;
+const SnowGuardSpacing = 1500;
+/** mm: the snow guards' two bars over the covering, their radius, and their brackets' spacing. */
+const SnowGuardBars = [90, 170];
+const SnowGuardBar = 12;
+const SnowGuardBracket = 900;
+
 const OutlineColor = '#8a5a2b';
 const SelectedOutlineColor = '#e07b00';
 /** mm either side of the dashed outline that a click picks the roof by in the top view. */
 const PickBand = 150;
 
+/** What a roof's details need of the floor (FD-91). */
+export interface RoofSurroundings {
+    /** The outlines of the chimneys the floor draws (`chimneyOutline()`), cut out of the roofs they pass. */
+    chimneys?: readonly PlanPoint[][];
+    /** The ground under a plan point, mm against the floor's level, where downpipes end. */
+    ground?: (x: number, y: number) => number;
+}
+
 /**
  * A roof (FD-38) in its own frame: a group at its centre, turned by its rotation, so a drag or turn moves the group. Each
  * plane is a slab `thickness` thick square to the slope: the covering on top, the soffit under it and along its edges
- * (fascia and verges); pitched roofs get caps along the ridge and hips, a flat one its parapet. Its windows go through
- * the slab (`buildRoofWindow()`, holes square to the slope cut in the plane), each tagged `roofWindowId`; a window the
- * roof has left behind (`roofWindowLayouts()` leaves it out) is not drawn. Tagged `roofId`, merged, with a section-fill
- * twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`, each without where one of
- * `others` (the floor's other roofs) is higher (`roofPlaneParts()`): roofs that meet form valleys, and the caps stop
- * there too.
+ * (fascia and verges); pitched roofs get caps along the ridge and hips (`ridgeStyle`), a flat one its parapet. Its
+ * windows go through the slab (`buildRoofWindow()`, holes square to the slope cut in the plane), each tagged
+ * `roofWindowId`; a window the roof has left behind (`roofWindowLayouts()` leaves it out) is not drawn. Tagged `roofId`,
+ * merged, with a section-fill twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`,
+ * each without where one of `others` (the floor's other roofs) is higher (`roofPlaneParts()`): roofs that meet form
+ * valleys, and the caps stop there too. The chimneys passing through are cut out of the planes (upright holes), and a
+ * pitched roof has its gutters, downpipes and snow guards (FD-91, `buildRoofDetails()`).
  */
-export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMaterial: THREE.Material, others: FloorRoofs = []): THREE.Group {
+export function buildRoof(
+    roof: Roof,
+    materials: MaterialLibrary,
+    sectionMaterial: THREE.Material,
+    others: FloorRoofs = [],
+    surroundings: RoofSurroundings = {},
+): THREE.Group {
     const group = new THREE.Group();
     group.name = `roof:${roof.name}`;
     group.userData = {roofId: roof.id};
@@ -73,7 +112,7 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
 
     // The whole list, in its order: a roof alike an earlier one lies under it (`roofPlaneParts()`).
     const met = others.filter((other) => other !== roof);
-    const clipped = met.length === 0 ? null : roofPlaneParts(roof, others);
+    const clipped = withoutChimneys(roof, met.length === 0 ? null : roofPlaneParts(roof, others), surroundings.chimneys ?? []);
     const holes = new Map(windows.map(({window, layout}): [RoofWindow, SlabHole] => [window, {top: layout.corners, under: layout.soffit}]));
     const placed = new Set<SlabHole>();
     planes.forEach((plane, index) => {
@@ -100,10 +139,11 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
     if (roof.shape !== 'Flat') {
         const cap = materials.darkened(covering, 0.8);
         for (const [from, to] of capLines(roof)) {
-            for (const [a, b] of capStretches(roof, from, to, others)) {
-                group.add(capAlong(a, b, cap));
+            for (const [a, b] of capStretches(roof, from, to, others, surroundings.chimneys)) {
+                group.add(capAlong(a, b, cap, roof.ridgeStyle ?? 'Box'));
             }
         }
+        group.add(...buildRoofDetails(roof, others, thick, materials, surroundings));
     }
     if (roof.shape === 'Flat' && roof.parapet !== null) {
         for (const wall of parapetWalls(roof, roof.eaveHeight + thick, roof.parapet, soffit)) {
@@ -114,6 +154,23 @@ export function buildRoof(roof: Roof, materials: MaterialLibrary, sectionMateria
     }
     mergeStatic(group);
     return group;
+}
+
+/**
+ * The planes' parts in plan (`roofPlaneParts()`, or each whole plane without it) without the chimneys passing through
+ * the roof; null as it was without any.
+ */
+function withoutChimneys(roof: Roof, clipped: MultiPolygon[] | null, chimneys: readonly PlanPoint[][]): MultiPolygon[] | null {
+    const through = chimneys.filter((outline) => outline.some(([x, y]) => roofCovers(roof, x, y)));
+    if (through.length === 0) {
+        return clipped;
+    }
+    const ring = (points: readonly {x: number; y: number}[] | readonly PlanPoint[]): Pair[] => {
+        const pairs = points.map((p): Pair => (Array.isArray(p) ? [p[0], p[1]] : [p.x, p.y]));
+        return [...pairs, pairs[0]];
+    };
+    const holes = through.map((outline) => [ring(outline)]);
+    return roofPlanes(roof).map((plane, index) => polygonClipping.difference(clipped?.[index] ?? [[ring(plane.polygon)]], ...holes));
 }
 
 /** A plane's outline to build a slab of: counter-clockwise in the roof's frame, with the holes through it. */
@@ -147,13 +204,81 @@ const centreOf = (points: readonly Vec2[]): Vec2 => ({
     y: points.reduce((sum, p) => sum + p.y, 0) / points.length,
 });
 
-/** The stretches of a cap (a ridge, a hip; points in the group's coordinates) where no other roof is higher. */
-function capStretches(roof: Roof, from: THREE.Vector3, to: THREE.Vector3, others: FloorRoofs): [THREE.Vector3, THREE.Vector3][] {
-    if (others.every((other) => other === roof)) {
-        return [[from, to]];
-    }
+/**
+ * The stretches of a cap (a ridge, a hip; points in the group's coordinates) where no other roof is higher and no chimney
+ * passes (`chimneys`, outlines in plan).
+ */
+function capStretches(
+    roof: Roof,
+    from: THREE.Vector3,
+    to: THREE.Vector3,
+    others: FloorRoofs,
+    chimneys: readonly PlanPoint[][] = [],
+): [THREE.Vector3, THREE.Vector3][] {
     const plan = (v: THREE.Vector3): Vec2 => roofToPlan(roof, v.x / MM, -v.z / MM);
-    return topStretches(plan(from), plan(to), roof, others).map(([a, b]) => [from.clone().lerp(to, a), from.clone().lerp(to, b)]);
+    const p = plan(from);
+    const q = plan(to);
+    const top = others.every((other) => other === roof) ? [[0, 1] as [number, number]] : topStretches(p, q, roof, others);
+    return top
+        .flatMap(([a, b]) => outsideOutlines(p, q, a, b, chimneys))
+        .map(([a, b]) => [from.clone().lerp(to, a), from.clone().lerp(to, b)]);
+}
+
+/** The parts of the stretch a–b (0–1 along p → q) outside the convex outlines, in plan. */
+function outsideOutlines(p: Vec2, q: Vec2, a: number, b: number, outlines: readonly PlanPoint[][]): [number, number][] {
+    let stretches: [number, number][] = [[a, b]];
+    for (const outline of outlines) {
+        const inside = segmentInConvex(p, q, outline);
+        if (inside === null) {
+            continue;
+        }
+        stretches = stretches.flatMap(([s, e]): [number, number][] => {
+            const [i, j] = inside;
+            if (j <= s || i >= e) {
+                return [[s, e]];
+            }
+            const kept: [number, number][] = [];
+            if (i > s) {
+                kept.push([s, i]);
+            }
+            if (j < e) {
+                kept.push([j, e]);
+            }
+            return kept;
+        });
+    }
+    return stretches;
+}
+
+/** Where (0–1 along p → q) the line lies inside a convex outline (`itemFootprint()`, any winding); null when it misses it. */
+function segmentInConvex(p: Vec2, q: Vec2, outline: readonly PlanPoint[]): [number, number] | null {
+    const signed = polygonSignedArea(outline);
+    if (signed === 0) {
+        return null;
+    }
+    let from = 0;
+    let to = 1;
+    const n = outline.length;
+    for (let i = 0; i < n; i++) {
+        const [ax, ay] = outline[i];
+        const [bx, by] = outline[(i + 1) % n];
+        // Inside is left of each edge of a counter-clockwise outline; the sign turns a clockwise one round.
+        const side = ((bx - ax) * (p.y - ay) - (by - ay) * (p.x - ax)) * Math.sign(signed);
+        const rate = ((bx - ax) * (q.y - p.y) - (by - ay) * (q.x - p.x)) * Math.sign(signed);
+        if (Math.abs(rate) < 1e-12) {
+            if (side < 0) {
+                return null;
+            }
+            continue;
+        }
+        const t = -side / rate;
+        if (rate > 0) {
+            from = Math.max(from, t);
+        } else {
+            to = Math.min(to, t);
+        }
+    }
+    return to > from ? [from, to] : null;
 }
 
 /** A box (mm) centred at (x, y, z) of its parent. */
@@ -379,7 +504,7 @@ function capLines(roof: Roof): [THREE.Vector3, THREE.Vector3][] {
         at(s, t, Math.min(...planes.map((p) => p.base + p.gs * s + p.gt * t)) + thick);
     switch (roof.shape) {
         case 'Gable':
-            return [[topAt(-a, 0), topAt(a, 0)]];
+            return [[topAt(roofVergeAt(roof, false, 0, true), 0), topAt(roofVergeAt(roof, true, 0, true), 0)]];
         case 'Hip': {
             const ks = Math.max(a - b, 0);
             const kt = Math.max(b - a, 0);
@@ -399,10 +524,13 @@ function capLines(roof: Roof): [THREE.Vector3, THREE.Vector3][] {
     }
 }
 
-/** A cap along a line on the roof's top, its middle on the line. */
-function capAlong(from: THREE.Vector3, to: THREE.Vector3, material: THREE.Material): THREE.Mesh {
+/**
+ * A cap along a line on the roof's top, its middle on the line: a box, half-round ridge tiles (a half cylinder over the
+ * line) or an angled metal ridge (a low triangle).
+ */
+function capAlong(from: THREE.Vector3, to: THREE.Vector3, material: THREE.Material, style: NonNullable<Roof['ridgeStyle']>): THREE.Mesh {
     const length = from.distanceTo(to);
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(CapWidth * MM, CapHeight * MM, length), material);
+    const cap = new THREE.Mesh(capGeometry(style, length), material);
     cap.position.copy(from).add(to).multiplyScalar(0.5);
     // Not yet in the group, so its own coordinates are the world's.
     cap.lookAt(to);
@@ -410,23 +538,232 @@ function capAlong(from: THREE.Vector3, to: THREE.Vector3, material: THREE.Materi
     return cap;
 }
 
-/** A flat roof's parapet: four walls along its outer edge, from its top `height` mm up. */
-function parapetWalls(roof: Roof, bottom: number, height: number, material: THREE.Material): THREE.Mesh[] {
-    const {x: a, y: b} = roofHalfExtent(roof);
-    const t = ParapetThickness;
-    const wall = (s: number, tt: number, along: number, across: number): THREE.Mesh => {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(along * MM, height * MM, across * MM), material);
-        mesh.position.copy(at(s, tt, bottom + height / 2));
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        return mesh;
+/** A cap's shape along +z (`lookAt()` turns it onto its line), `length` m long and centred. */
+function capGeometry(style: NonNullable<Roof['ridgeStyle']>, length: number): THREE.BufferGeometry {
+    switch (style) {
+        case 'Round': {
+            // Theta from −90° to 90° is the cylinder's +z half; turned about x, its axis runs along z and the half faces up.
+            const geometry = new THREE.CylinderGeometry((CapWidth / 2) * MM, (CapWidth / 2) * MM, length, 16, 1, false, -Math.PI / 2, Math.PI);
+            geometry.rotateX(-Math.PI / 2);
+            return geometry;
+        }
+        case 'Angled': {
+            const half = (CapWidth / 2) * MM;
+            const shape = new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(0, CapHeight * MM)]);
+            const geometry = new THREE.ExtrudeGeometry(shape, {depth: length, bevelEnabled: false});
+            // A little into the covering, so no gap shows under its edges.
+            geometry.translate(0, -5 * MM, -length / 2);
+            return geometry;
+        }
+        case 'Box':
+            return new THREE.BoxGeometry(CapWidth * MM, CapHeight * MM, length);
+    }
+}
+
+/**
+ * A pitched roof's details (FD-91) in its group: the gutters along its eaves (`roofGutters()`, hung under the covering's
+ * edge, in front of the fascia), the downpipes from them back to the walls and down to the ground (`roofDownpipes()`), and
+ * `snowGuards` rows of two bars on brackets on each plane, from `SnowGuardFirst` inside the eaves line up, where the roof is
+ * the top.
+ */
+function buildRoofDetails(
+    roof: Roof,
+    others: FloorRoofs,
+    thick: number,
+    materials: MaterialLibrary,
+    surroundings: RoofSurroundings,
+): THREE.Object3D[] {
+    const parts: THREE.Object3D[] = [];
+    const metal = roof.gutterMaterialId != null ? materials.get(roof.gutterMaterialId) : materials.byCode(GutterCode);
+    const local = (x: number, y: number, h: number): THREE.Vector3 => {
+        const p = roofLocal(roof, x, y);
+        return at(p.x, p.y, h);
     };
+    const gutters = roof.gutters ?? 'None';
+    if (gutters !== 'None') {
+        const floorRoofs = others.includes(roof) ? others : [roof, ...others];
+        const runs = roofGutters(floorRoofs, floorRoofs.indexOf(roof));
+        const off = gutterOffset(gutters);
+        const depth = gutters === 'Box' ? BoxGutterDepth : GutterRadius;
+        for (const run of runs) {
+            const length = Math.hypot(run.to.x - run.from.x, run.to.y - run.from.y);
+            const dir = {x: (run.to.x - run.from.x) / length, y: (run.to.y - run.from.y) / length};
+            // Out of the counter-clockwise eaves: right of the run.
+            const out = {x: dir.y, y: -dir.x};
+            const rim = run.height + thick - GutterRimDrop;
+            const start = local(run.from.x + out.x * off - dir.x * off, run.from.y + out.y * off - dir.y * off, rim);
+            const end = local(run.to.x + out.x * off + dir.x * off, run.to.y + out.y * off + dir.y * off, rim);
+            parts.push(gutterAlong(start, end, gutters, metal));
+        }
+        const ground = surroundings.ground ?? ((): number => 0);
+        for (const pipe of roofDownpipes(roof, roof.downpipes, runs)) {
+            const outward = {x: pipe.outlet.x - pipe.at.x, y: pipe.outlet.y - pipe.at.y};
+            const reach = Math.hypot(outward.x, outward.y);
+            const unit = reach > 0 ? {x: outward.x / reach, y: outward.y / reach} : {x: 0, y: 0};
+            const outlet = {x: pipe.outlet.x + unit.x * off, y: pipe.outlet.y + unit.y * off};
+            const bottom = pipe.top + thick - GutterRimDrop - depth;
+            const neck = bottom - DownpipeDrop;
+            // The neck runs back to the wall at 45°.
+            const wall = neck - (reach + off);
+            const foot = Math.min(ground(pipe.at.x, pipe.at.y), wall);
+            const points = [
+                local(outlet.x, outlet.y, bottom),
+                local(outlet.x, outlet.y, neck),
+                local(pipe.at.x, pipe.at.y, wall),
+                local(pipe.at.x, pipe.at.y, foot),
+            ];
+            for (let i = 1; i < points.length; i++) {
+                if (points[i - 1].distanceTo(points[i]) > 0) {
+                    parts.push(pipeBetween(points[i - 1], points[i], DownpipeRadius, metal));
+                }
+            }
+        }
+    }
+    if ((roof.snowGuards ?? 0) > 0) {
+        const steel = materials.plain('#3b3e41', 0.5, 0.6);
+        roofLocalPlanes(roof).forEach((plane) => {
+            for (let row = 0; row < (roof.snowGuards ?? 0); row++) {
+                const line = snowGuardLine(roof, plane, roof.overhang + SnowGuardFirst + row * SnowGuardSpacing);
+                if (line === null) {
+                    continue;
+                }
+                const [p, q] = line;
+                const top = plane.base + plane.gs * p.x + plane.gt * p.y + thick;
+                for (const [a, b] of capStretches(roof, at(p.x, p.y, top), at(q.x, q.y, top), others)) {
+                    parts.push(...snowGuard(a, b, steel));
+                }
+            }
+        });
+    }
+    return parts;
+}
+
+/** A gutter of the profile from `start` to `end` (rim height, in the group), open on top. */
+function gutterAlong(start: THREE.Vector3, end: THREE.Vector3, profile: 'HalfRound' | 'Box', material: THREE.Material): THREE.Mesh {
+    const shape = new THREE.Shape();
+    const t = GutterSheet * MM;
+    if (profile === 'HalfRound') {
+        const r = GutterRadius * MM;
+        shape.moveTo(-r, 0);
+        shape.absarc(0, 0, r, Math.PI, 2 * Math.PI, false);
+        shape.lineTo(r - t, 0);
+        shape.absarc(0, 0, r - t, 2 * Math.PI, Math.PI, true);
+    } else {
+        const w = (BoxGutterWidth / 2) * MM;
+        const d = BoxGutterDepth * MM;
+        shape.moveTo(-w, 0);
+        shape.lineTo(-w, -d);
+        shape.lineTo(w, -d);
+        shape.lineTo(w, 0);
+        shape.lineTo(w - t, 0);
+        shape.lineTo(w - t, -d + t);
+        shape.lineTo(-w + t, -d + t);
+        shape.lineTo(-w + t, 0);
+    }
+    shape.closePath();
+    const length = start.distanceTo(end);
+    const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {depth: length, bevelEnabled: false, curveSegments: 12}), material);
+    // The profile across the run (x), up (y) and along it (z): a right-handed basis whatever the run's direction.
+    const along = new THREE.Vector3().subVectors(end, start).normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const across = new THREE.Vector3().crossVectors(up, along).normalize();
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(across, up, along));
+    mesh.position.copy(start);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+/** A round pipe between two points of the group. */
+function pipeBetween(from: THREE.Vector3, to: THREE.Vector3, radius: number, material: THREE.Material): THREE.Mesh {
+    const length = from.distanceTo(to);
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * MM, radius * MM, length, 12), material);
+    mesh.position.copy(from).add(to).multiplyScalar(0.5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3().subVectors(to, from).normalize());
+    mesh.castShadow = true;
+    return mesh;
+}
+
+/**
+ * The level line across a plane `inside` mm (in plan) up from its eaves (the outline's first edge), as far as it lies on
+ * the plane, in the roof's frame; null past the plane's top.
+ */
+function snowGuardLine(roof: Roof, plane: LocalRoofPlane, inside: number): [Vec2, Vec2] | null {
+    const [a, b] = plane.polygon;
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const origin = {x: a.x - dir.y * inside, y: a.y + dir.x * inside};
+    // Clip the line origin + t · dir to the convex outline, counter-clockwise: inside is left of every edge.
+    let from = -Infinity;
+    let to = Infinity;
+    const n = plane.polygon.length;
+    for (let i = 0; i < n; i++) {
+        const p = plane.polygon[i];
+        const q = plane.polygon[(i + 1) % n];
+        const ex = q.x - p.x;
+        const ey = q.y - p.y;
+        const side = ex * (origin.y - p.y) - ey * (origin.x - p.x);
+        const rate = ex * dir.y - ey * dir.x;
+        if (Math.abs(rate) < 1e-9) {
+            if (side < 0) {
+                return null;
+            }
+            continue;
+        }
+        const t = -side / rate;
+        if (rate > 0) {
+            from = Math.max(from, t);
+        } else {
+            to = Math.min(to, t);
+        }
+    }
+    // A guard keeps a little off the verges and hips.
+    from += 100;
+    to -= 100;
+    if (!(to > from) || roof.shape === 'Flat') {
+        return null;
+    }
     return [
-        wall(0, -b + t / 2, 2 * a, t),
-        wall(0, b - t / 2, 2 * a, t),
-        wall(-a + t / 2, 0, t, 2 * b - 2 * t),
-        wall(a - t / 2, 0, t, 2 * b - 2 * t),
+        {x: origin.x + dir.x * from, y: origin.y + dir.y * from},
+        {x: origin.x + dir.x * to, y: origin.y + dir.y * to},
     ];
+}
+
+/** A row of snow guards between two points on the covering (in the group): two bars on brackets. */
+function snowGuard(from: THREE.Vector3, to: THREE.Vector3, material: THREE.Material): THREE.Mesh[] {
+    const meshes = SnowGuardBars.map((rise) => {
+        const lift = new THREE.Vector3(0, rise * MM, 0);
+        return pipeBetween(from.clone().add(lift), to.clone().add(lift), SnowGuardBar, material);
+    });
+    const length = from.distanceTo(to) / MM;
+    const brackets = Math.max(2, Math.floor(length / SnowGuardBracket) + 1);
+    for (let i = 0; i < brackets; i++) {
+        const point = from.clone().lerp(to, brackets === 1 ? 0.5 : i / (brackets - 1));
+        const height = SnowGuardBars[SnowGuardBars.length - 1] + SnowGuardBar;
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(20 * MM, height * MM, 60 * MM), material);
+        bracket.position.copy(point).add(new THREE.Vector3(0, (height / 2) * MM, 0));
+        bracket.castShadow = true;
+        meshes.push(bracket);
+    }
+    return meshes;
+}
+
+/**
+ * A flat roof's parapet: one wall round its outline (with the overhang; skewed ends follow, FD-101), between the outline
+ * and the outline set `ParapetThickness` in (`insetOutline()`, mitred at the corners), from its top `height` mm up.
+ */
+function parapetWalls(roof: Roof, bottom: number, height: number, material: THREE.Material): THREE.Mesh[] {
+    const outline = roofLocalOutline(roof);
+    const shape = new THREE.Shape(outline.map((p) => new THREE.Vector2(p.x * MM, p.y * MM)));
+    shape.holes.push(new THREE.Path(insetOutline(outline, ParapetThickness).map((p) => new THREE.Vector2(p.x * MM, p.y * MM)).reverse()));
+    const geometry = new THREE.ExtrudeGeometry(shape, {depth: height * MM, bevelEnabled: false});
+    // The shape lies in the roof's frame (s, t): standing up, t runs to −z as `at()` maps it.
+    geometry.rotateX(-Math.PI / 2);
+    geometry.translate(0, bottom * MM, 0);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return [mesh];
 }
 
 /**
@@ -441,17 +778,16 @@ export function buildRoofOutline(roof: Roof): THREE.Group {
     group.userData = {roofId: roof.id, planOnly: true};
     placeRoof(group, roof);
 
-    const {x: a, y: b} = roofHalfExtent(roof);
     const flat = (s: number, t: number): THREE.Vector3 => new THREE.Vector3(s * MM, 0, -t * MM);
-    const loop = (half: Vec2): THREE.Vector3[] => [flat(-half.x, -half.y), flat(half.x, -half.y), flat(half.x, half.y), flat(-half.x, half.y)];
+    const loop = (points: readonly Vec2[]): THREE.Vector3[] => points.map((p) => flat(p.x, p.y));
 
     const material = (dashed: boolean): THREE.LineBasicMaterial =>
         dashed
             ? new THREE.LineDashedMaterial({color: OutlineColor, dashSize: 0.3, gapSize: 0.15, depthTest: false, transparent: true})
             : new THREE.LineBasicMaterial({color: OutlineColor, depthTest: false, transparent: true, opacity: 0.6});
-    const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop({x: a, y: b})), material(true));
+    const outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop(roofLocalOutline(roof))), material(true));
     outline.computeLineDistances();
-    const eaves = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop({x: roof.width / 2, y: roof.depth / 2})), material(false));
+    const eaves = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(loop(roofLocalOutline(roof, false))), material(false));
     const lines = capLines({...roof, eaveHeight: 0, thickness: 0}).flatMap(([from, to]) => [from.setY(0), to.setY(0)]);
     const ridges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(lines), material(false));
     for (const line of [outline, eaves, ridges]) {
@@ -461,21 +797,15 @@ export function buildRoofOutline(roof: Roof): THREE.Group {
         group.add(line);
     }
 
-    const band = new THREE.Shape([
-        new THREE.Vector2(-(a + PickBand) * MM, -(b + PickBand) * MM),
-        new THREE.Vector2((a + PickBand) * MM, -(b + PickBand) * MM),
-        new THREE.Vector2((a + PickBand) * MM, (b + PickBand) * MM),
-        new THREE.Vector2(-(a + PickBand) * MM, (b + PickBand) * MM),
-    ]);
-    const inner = {x: Math.max(a - PickBand, 0), y: Math.max(b - PickBand, 0)};
-    band.holes.push(
-        new THREE.Path([
-            new THREE.Vector2(-inner.x * MM, -inner.y * MM),
-            new THREE.Vector2(-inner.x * MM, inner.y * MM),
-            new THREE.Vector2(inner.x * MM, inner.y * MM),
-            new THREE.Vector2(inner.x * MM, -inner.y * MM),
-        ]),
-    );
+    // The band: the outline grown by `PickBand`, less the outline shrunk by it (as far as it goes).
+    const {x: a, y: b} = roofHalfExtent(roof);
+    const vec = (p: Vec2): THREE.Vector2 => new THREE.Vector2(p.x * MM, p.y * MM);
+    const band = new THREE.Shape(roofLocalOutline(roof, true, PickBand).map(vec));
+    // `RoofSkew` keeps the outline's front and back at least `RoofMinSide` long, so it shrinks by the band without crossing.
+    const shrink = Math.min(PickBand, a - 1, b - 1);
+    if (shrink > 0) {
+        band.holes.push(new THREE.Path(roofLocalOutline(roof, true, -shrink).map(vec).reverse()));
+    }
     const pick = new THREE.Mesh(new THREE.ShapeGeometry(band).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({visible: false}));
     group.add(pick);
 
@@ -508,9 +838,12 @@ export function highlightRoofOutline(group: THREE.Object3D, selected: boolean, w
     });
 }
 
-type RoofRectangle = RoofFrame & Pick<Roof, 'width' | 'depth'>;
+/** The fields the corners and the corner drag read: the frame, the eaves line and the verges' skews. */
+type RoofRectangle = RoofFrame &
+    Pick<Roof, 'shape' | 'width' | 'depth' | 'overhang' | 'vergeOverhang'> &
+    Partial<Pick<Roof, 'startSkew' | 'endSkew'>>;
 
-/** The corners of the eaves rectangle in the roof's frame, as signs of the half sides, counter-clockwise from the front left. */
+/** The corners of the eaves line in the roof's frame, as signs of the half sides, counter-clockwise from the front left. */
 const CornerSigns: [number, number][] = [
     [-1, -1],
     [1, -1],
@@ -518,23 +851,30 @@ const CornerSigns: [number, number][] = [
     [-1, 1],
 ];
 
-/** The corners of a roof's eaves rectangle in plan (mm), counter-clockwise from its front left. */
+/** A roof's fields for the geometry, its heights left out (the corners do not read them). */
+const shapeOf = (roof: RoofRectangle): RoofShapeFields => ({...roof, eaveHeight: 0, pitch: 0, thickness: 0});
+
+/** The corners of a roof's eaves line in plan (mm), counter-clockwise from its front left; its verges turned by the skews (FD-97). */
 export function roofCorners(roof: RoofRectangle): Vec2[] {
-    return CornerSigns.map(([i, j]) => roofToPlan(roof, (i * roof.width) / 2, (j * roof.depth) / 2));
+    return roofLocalOutline(shapeOf(roof), false).map((corner) => roofToPlan(roof, corner.x, corner.y));
 }
 
 /**
- * The roof resized by dragging one corner of its eaves rectangle to a plan point: the opposite corner stays, the
- * rotation too; each side at least `minSide` mm.
+ * The roof resized by dragging one corner of its eaves line to a plan point: the opposite corner stays, the rotation and
+ * the verges' skews too; each side at least `minSide` mm.
  */
 export function resizeRoofByCorner(roof: RoofRectangle, index: number, to: Vec2, minSide: number): Pick<Roof, 'x' | 'y' | 'width' | 'depth'> {
     const [i, j] = CornerSigns[index];
-    // The fixed corner in the roof's frame, and the pointer there.
-    const fixed = {s: (-i * roof.width) / 2, t: (-j * roof.depth) / 2};
+    const shape = shapeOf(roof);
+    // The fixed corner in the roof's frame, the pointer there, and how far each verge runs along per mm across.
+    const fixed = roofLocalOutline(shape, false)[(index + 2) % 4];
     const pointer = roofLocal(roof, to.x, to.y);
-    // The dragged corner stays on its side of the fixed one.
-    const width = Math.max(minSide, Math.round(i * (pointer.x - fixed.s)));
-    const depth = Math.max(minSide, Math.round(j * (pointer.y - fixed.t)));
-    const centre = roofToPlan(roof, fixed.s + (i * width) / 2, fixed.t + (j * depth) / 2);
+    const dragged = roofVergeSlope(shape, i > 0);
+    const kept = roofVergeSlope(shape, i < 0);
+    // The dragged corner stays on its side of the fixed one; its verge runs back to the fixed corner's depth.
+    const depth = Math.max(minSide, Math.round(j * (pointer.y - fixed.y)));
+    const width = Math.max(minSide, Math.round(i * (pointer.x - fixed.x) - (i * j * depth * (dragged + kept)) / 2));
+    // The centre: the fixed corner's verge back to the ridge, then half the width along it.
+    const centre = roofToPlan(roof, fixed.x + (i * width) / 2 + ((j * depth) / 2) * kept, fixed.y + (j * depth) / 2);
     return {x: Math.round(centre.x), y: Math.round(centre.y), width, depth};
 }

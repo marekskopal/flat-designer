@@ -26,6 +26,10 @@ class Plot extends AEntity
 	#[Column(type: Type::Int)]
 	public int $groundLevel = 0;
 
+	/** JSON `[[x, y, z], …]`: spot heights of a sloping ground (FD-86, `Terrain`); null: flat at `groundLevel`. */
+	#[Column(type: Type::Text, nullable: true)]
+	public ?string $terrain = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

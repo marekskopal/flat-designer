@@ -12,6 +12,7 @@ use FlatDesigner\Model\Entity\Enum\ChangeOperationEnum;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\User;
+use FlatDesigner\Service\Editor\Element\SectionLineHandler;
 use FlatDesigner\Service\Editor\Element\State;
 use FlatDesigner\Service\Editor\Exception\EditException;
 use FlatDesigner\Service\Project\ProjectRevisionService;
@@ -141,7 +142,7 @@ final readonly class SceneEditor
 
 	/**
 	 * Copy of an element; `$fields` override the copy's fields (e.g. its position). An item copy is
-	 * shifted 100 mm along x, other copies stay in place (an opening copy needs another offset). A group
+	 * shifted 100 mm along x, a section line a metre the way it looks (named anew), other copies stay in place (an opening copy needs another offset). A group
 	 * is copied with its items (see `duplicateGroup`).
 	 *
 	 * @param array<string, mixed> $fields
@@ -185,6 +186,9 @@ final readonly class SceneEditor
 		}
 		if ($type === ElementTypeEnum::RoofWindow && is_int($copy['along'] ?? null) && is_int($copy['width'] ?? null)) {
 			$copy['along'] += $copy['width'] + GroupEditor::DuplicateShift;
+		}
+		if ($type === ElementTypeEnum::SectionLine) {
+			$copy = SectionLineHandler::copied($copy);
 		}
 
 		// An item's copy is checked against the source: what the source shows (a picture file deleted since) stays allowed.

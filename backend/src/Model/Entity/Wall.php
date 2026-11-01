@@ -39,6 +39,21 @@ class Wall extends AEntity
 	#[Column(type: Type::Boolean)]
 	public bool $upToRoof = false;
 
+	/** The top's height at the wall's end; null: `height` all along, else a straight slope from `height` (FD-87). */
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $heightEnd = null;
+
+	/** The bottom at the wall's start and end, mm against the floor's level (a garden wall down a slope). */
+	#[Column(type: Type::Int)]
+	public int $baseStart = 0;
+
+	#[Column(type: Type::Int)]
+	public int $baseEnd = 0;
+
+	/** The bottom follows the ground of the floor's plots instead of `baseStart` / `baseEnd`. */
+	#[Column(type: Type::Boolean)]
+	public bool $onGround = false;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

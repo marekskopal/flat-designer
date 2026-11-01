@@ -45,6 +45,35 @@ describe('floorLevels', () => {
     });
 });
 
+describe('floorLevels on a sloping plot', () => {
+    // 3 m down from west to east over 20 m (8.5°), and a 6 m cliff of 45° beyond x 20000.
+    const slope: Plot = {
+        ...plot,
+        polygon: square(0, 0, 30000),
+        terrain: [[0, 0, 3000], [0, 30000, 3000], [20000, 0, 0], [20000, 30000, 0], [26000, 0, -6000], [26000, 30000, -6000]],
+    };
+    const garden = {...room(square(4000, 4000, 2000), 50), type: 'Garden' as const};
+    const levels = floorLevels({rooms: [garden, room(square(10000, 10000, 2000), 1000)], plots: [slope]});
+
+    it('follows the ground, a garden on it and a terrace at its own level', () => {
+        expect(levels({x: 2000, y: 1000})).toBeCloseTo(2700);
+        expect(levels({x: 5000, y: 5000})).toBeCloseTo(2300);
+        expect(levels({x: 11000, y: 11000})).toBe(1000);
+    });
+
+    it('stops at ground steeper than 35°, not on gentle slopes or off it', () => {
+        expect(levels.tooSteep?.({x: 2000, y: 1000}, {x: 2100, y: 1000})).toBe(false);
+        expect(levels.tooSteep?.({x: 21000, y: 1000}, {x: 21100, y: 1000})).toBe(true);
+        expect(levels.tooSteep?.({x: 11000, y: 11000}, {x: 11100, y: 11000})).toBe(false);
+        expect(floorLevels({rooms: [], plots: [plot]}).tooSteep).toBeUndefined();
+        // Off a draped garden onto the plot's ground on the cliff: still the ground.
+        const bank = floorLevels({rooms: [{...room(square(19000, 0, 2000), 0), type: 'Garden'}], plots: [slope]});
+        expect(bank.tooSteep?.({x: 20950, y: 1000}, {x: 21050, y: 1000})).toBe(true);
+        // Stepping off a terrace at its own level onto the ground is a step, not a slope.
+        expect(levels.tooSteep?.({x: 11950, y: 11000}, {x: 12050, y: 11000})).toBe(false);
+    });
+});
+
 describe('Walkthrough between floors', () => {
     const start = (): {walk: Walkthrough; camera: THREE.PerspectiveCamera; steps: number[]} => {
         const camera = new THREE.PerspectiveCamera();

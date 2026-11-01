@@ -4,46 +4,57 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Service\Provider;
 
+use FlatDesigner\Dto\ChimneyFloorDto;
 use FlatDesigner\Dto\FloorDto;
+use FlatDesigner\Dto\FloorVoidDto;
 use FlatDesigner\Dto\GroupDto;
 use FlatDesigner\Dto\ItemDto;
 use FlatDesigner\Dto\LocationDto;
 use FlatDesigner\Dto\MaterialDto;
 use FlatDesigner\Dto\OpeningDto;
 use FlatDesigner\Dto\PlotDto;
+use FlatDesigner\Dto\RailingDto;
 use FlatDesigner\Dto\RoofDto;
 use FlatDesigner\Dto\RoofWindowDto;
 use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
 use FlatDesigner\Dto\SceneModelDto;
+use FlatDesigner\Dto\SectionLineDto;
 use FlatDesigner\Dto\StairDto;
 use FlatDesigner\Dto\StairsBelowDto;
 use FlatDesigner\Dto\UnderlayDto;
 use FlatDesigner\Dto\VariantSetDto;
+use FlatDesigner\Dto\VoidsAboveDto;
 use FlatDesigner\Dto\WallDto;
 use FlatDesigner\Model\Entity\Floor;
+use FlatDesigner\Model\Entity\FloorVoid;
 use FlatDesigner\Model\Entity\FurnitureDefinition;
 use FlatDesigner\Model\Entity\Item;
 use FlatDesigner\Model\Entity\ItemGroup;
 use FlatDesigner\Model\Entity\Material;
 use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Plot;
+use FlatDesigner\Model\Entity\Railing;
 use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\SectionLine;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Model\Repository\FloorUnderlayRepository;
+use FlatDesigner\Model\Repository\FloorVoidRepository;
 use FlatDesigner\Model\Repository\ItemGroupRepository;
 use FlatDesigner\Model\Repository\ItemRepository;
 use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\OpeningRepository;
 use FlatDesigner\Model\Repository\PlotRepository;
+use FlatDesigner\Model\Repository\RailingRepository;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\SectionLineRepository;
 use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -69,6 +80,9 @@ final readonly class SceneProvider
 		private ShownPictures $shownPictures,
 		private RoofRepository $roofRepository,
 		private RoofWindowRepository $roofWindowRepository,
+		private FloorVoidRepository $voidRepository,
+		private RailingRepository $railingRepository,
+		private SectionLineRepository $sectionLineRepository,
 	) {
 	}
 
@@ -128,7 +142,86 @@ final readonly class SceneProvider
 			stairRise: $this->stairRise->of($floor, $floors, $walls),
 			stairsBelow: $this->stairsBelow($floor, $floors),
 			roofs: $this->roofs($floor),
+			exteriorMaterialId: $floor->project->exteriorMaterial?->id,
+			voids: $this->voids($floor),
+			railings: array_map(
+				fn (Railing $r): RailingDto => RailingDto::fromEntity($r),
+				$this->railingRepository->findByFloor($floor->id),
+			),
+			voidsAbove: $this->voidsAbove($floor, $floors, $walls),
+			chimneyFloors: $this->chimneyFloors($floor, $floors),
+			sections: array_map(
+				fn (SectionLine $line): SectionLineDto => SectionLineDto::fromEntity($line),
+				$this->sectionLineRepository->findByFloor($floor->id),
+			),
 		);
+	}
+
+	/**
+	 * The other floors with roofs or chimneys, their levels against this one's; none in a project without chimneys.
+	 *
+	 * @param list<Floor> $floors the project's floors
+	 * @return list<ChimneyFloorDto>
+	 */
+	private function chimneyFloors(Floor $floor, array $floors): array
+	{
+		$ids = array_map(fn (Floor $f): int => $f->id, $floors);
+		$chimneys = [];
+		foreach ($this->itemRepository->findChimneysOnFloors($ids) as $chimney) {
+			$chimneys[$chimney->floor->id][] = ItemDto::fromEntity($chimney);
+		}
+		if ($chimneys === []) {
+			return [];
+		}
+		$roofs = [];
+		foreach ($this->roofRepository->findByFloors($ids) as $roof) {
+			$roofs[$roof->floor->id][] = RoofDto::fromEntity($roof, []);
+		}
+		$result = [];
+		foreach ($floors as $other) {
+			if ($other->id !== $floor->id && (isset($roofs[$other->id]) || isset($chimneys[$other->id]))) {
+				$result[] = new ChimneyFloorDto(
+					$other->id,
+					$other->elevation - $floor->elevation,
+					$roofs[$other->id] ?? [],
+					$chimneys[$other->id] ?? [],
+				);
+			}
+		}
+
+		return $result;
+	}
+
+	/** @return list<FloorVoidDto> */
+	private function voids(Floor $floor): array
+	{
+		return array_map(
+			fn (FloorVoid $void): FloorVoidDto => FloorVoidDto::fromEntity($void),
+			$this->voidRepository->findByFloor($floor->id),
+		);
+	}
+
+	/**
+	 * The floor this floor's stairs climb to, with its slab and voids; null without one above.
+	 *
+	 * @param list<Floor> $floors the project's floors
+	 * @param list<Wall> $walls the floor's
+	 */
+	private function voidsAbove(Floor $floor, array $floors, array $walls): ?VoidsAboveDto
+	{
+		$above = StairRise::above($floor->level, StairRise::levels($floors));
+		foreach ($floors as $other) {
+			if ($above !== null && $other->id === $above['id']) {
+				return new VoidsAboveDto(
+					$other->id,
+					$this->stairRise->of($floor, $floors, $walls),
+					$other->slabThickness,
+					$this->voids($other),
+				);
+			}
+		}
+
+		return null;
 	}
 
 	/** @return list<RoofDto> with their windows */
@@ -158,7 +251,13 @@ final readonly class SceneProvider
 	{
 		$below = $this->stairRise->floorBelow($floor, $floors);
 
-		return $below === null ? null : new StairsBelowDto($below->id, $this->stairRise->of($below, $floors), $this->stairs($below));
+		if ($below === null) {
+			return null;
+		}
+		// A stair with a rise of its own (garden steps) stays on its floor.
+		$through = array_values(array_filter($this->stairs($below), static fn (StairDto $stair): bool => $stair->rise === null));
+
+		return new StairsBelowDto($below->id, $this->stairRise->of($below, $floors), $through);
 	}
 
 	/** @return list<MaterialDto> */

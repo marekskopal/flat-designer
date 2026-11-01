@@ -26,6 +26,7 @@ final readonly class ProjectDto
 		public int $revision,
 		public string $createdAt,
 		public string $updatedAt,
+		public ?int $exteriorMaterialId = null,
 	) {
 	}
 
@@ -48,6 +49,7 @@ final readonly class ProjectDto
 			revision: $project->revision,
 			createdAt: $project->createdAt->format(DATE_ATOM),
 			updatedAt: $project->updatedAt->format(DATE_ATOM),
+			exteriorMaterialId: $project->exteriorMaterial?->id,
 		);
 	}
 }

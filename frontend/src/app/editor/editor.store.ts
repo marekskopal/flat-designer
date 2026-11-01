@@ -112,6 +112,12 @@ export class EditorStore {
         return result?.change != null;
     }
 
+    /** Adds a drawn railing (FD-90) in the default look; resolves true when it was added. */
+    public async drawRailing(points: PlanPoint[]): Promise<boolean> {
+        const result = await this.run((c) => this.api.create(c.projectId(), c.floorId(), 'railing', {points}, revisionOf(c)));
+        return result?.change != null;
+    }
+
     /** Adds the room enclosed by the walls around the point and selects it (to name it in the inspector). */
     public async detectRoom(point: PlanPoint): Promise<void> {
         const fields = newRoomFields(this.context?.scene() ?? null);

@@ -11,6 +11,7 @@ use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Service\Editor\FieldReader;
 use FlatDesigner\Service\Editor\PolygonValidator;
@@ -25,11 +26,15 @@ final readonly class RoomHandler implements ElementHandler
 	/** How far a room's floor may lie above or below the floor's level, mm. */
 	private const int MaxFloorElevation = 3000;
 
+	/** The floor a new garage gets (FD-89). */
+	public const string GarageFloor = 'concrete-floor';
+
 	public function __construct(
 		private RoomRepository $roomRepository,
 		private MaterialResolver $materialResolver,
 		private RoomCeiling $ceiling,
 		private WallFinishBands $wallFinishBands,
+		private MaterialRepository $materialRepository,
 	) {
 	}
 
@@ -54,6 +59,7 @@ final readonly class RoomHandler implements ElementHandler
 			'floorAngle',
 			'floorElevation',
 			...array_keys(RoomCeiling::Defaults),
+			'soffitMaterialId',
 		];
 	}
 
@@ -63,22 +69,28 @@ final readonly class RoomHandler implements ElementHandler
 		return $this->fields();
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * A living room 3 m square; a garage on a concrete floor.
+	 *
+	 * @return array<string, mixed>
+	 */
 	public function defaults(Floor $floor, array $fields): array
 	{
+		$garage = ($fields['type'] ?? null) === RoomTypeEnum::Garage->value;
+
 		return [
 			'code' => 'R',
 			'name' => 'Room',
 			'type' => RoomTypeEnum::Living->value,
 			'polygon' => [[0, 0], [3000, 0], [3000, 3000], [0, 3000]],
 			'ceilingHeight' => 2600,
-			'floorMaterialId' => null,
+			'floorMaterialId' => $garage ? $this->materialRepository->findByCode(self::GarageFloor)?->id : null,
 			'wallFinishes' => [],
 			'tileOriginX' => null,
 			'tileOriginY' => null,
 			'floorAngle' => 0,
 			'floorElevation' => 0,
-		] + RoomCeiling::Defaults;
+		] + RoomCeiling::Defaults + ['soffitMaterialId' => null];
 	}
 
 	public function find(Floor $floor, int $id): ?Room
@@ -105,6 +117,8 @@ final readonly class RoomHandler implements ElementHandler
 		$fields = new FieldReader($state);
 		$floorMaterialId = $fields->nullableId('floorMaterialId');
 		$this->materialResolver->resolve($floorMaterialId);
+		$soffitMaterialId = $fields->nullableId('soffitMaterialId');
+		$this->materialResolver->resolve($soffitMaterialId);
 		$ceilingHeight = $fields->nullableInt('ceilingHeight', 1000, State::MaxSize);
 
 		return [
@@ -121,7 +135,7 @@ final readonly class RoomHandler implements ElementHandler
 			'floorAngle' => ((self::floorAngle($fields) % 180) + 180) % 180,
 			// Missing in older change states: the floor's level.
 			'floorElevation' => $fields->raw('floorElevation') === null ? 0 : self::floorElevation($fields),
-		] + $this->ceiling->fields($ceilingHeight, $fields);
+		] + $this->ceiling->fields($ceilingHeight, $fields) + ['soffitMaterialId' => $soffitMaterialId];
 	}
 
 	public function create(Floor $floor, array $state): Room
@@ -178,6 +192,7 @@ final readonly class RoomHandler implements ElementHandler
 		$room->floorAngle = $fields->int('floorAngle', 0, 179, 'degrees');
 		$room->floorElevation = self::floorElevation($fields);
 		$this->ceiling->apply($room, $fields);
+		$room->soffitMaterial = $this->materialResolver->resolve($fields->nullableId('soffitMaterialId'));
 		$this->roomRepository->persist($room);
 	}
 

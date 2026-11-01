@@ -1,0 +1,92 @@
+{
+ "name": "Satellite dish",
+ "description": "Satellite dish on a mast with its arm and LNB, the dish leaning back; fix the mast to a chimney or a wall.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 700,
+   "depth": 500,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "dia",
+    "label": "Dish diameter",
+    "type": "int",
+    "default": 600,
+    "min": 400,
+    "max": 900,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "centre": "H - 80 - dia / 2"
+  },
+  "materialSlots": [
+   {
+    "key": "dish",
+    "label": "Dish",
+    "default": "metal-white"
+   },
+   {
+    "key": "mast",
+    "label": "Mast",
+    "default": "aluminium-brushed"
+   },
+   {
+    "key": "lnb",
+    "label": "LNB",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Mast",
+    "x": "W / 2 - 20",
+    "y": 0,
+    "z": 0,
+    "w": 40,
+    "h": "H",
+    "d": 40,
+    "material": "mast"
+   },
+   {
+    "type": "cylinder",
+    "name": "Dish",
+    "axis": "z",
+    "x": "(W - dia) / 2",
+    "y": "centre - dia / 2",
+    "z": 50,
+    "w": "dia",
+    "h": "dia",
+    "d": 40,
+    "material": "dish",
+    "tilt": 20
+   },
+   {
+    "type": "cylinder",
+    "name": "Arm",
+    "axis": "z",
+    "x": "W / 2 - 12",
+    "y": "centre - dia / 2 + 20",
+    "z": 90,
+    "w": 24,
+    "h": 24,
+    "d": "D - 170",
+    "material": "mast"
+   },
+   {
+    "type": "board",
+    "name": "LNB",
+    "x": "W / 2 - 30",
+    "y": "centre - dia / 2",
+    "z": "D - 90",
+    "w": 60,
+    "h": 60,
+    "d": 90,
+    "material": "lnb"
+   }
+  ]
+ }
+}

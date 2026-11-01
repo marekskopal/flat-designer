@@ -38,6 +38,7 @@ final readonly class WallHandler implements ElementHandler
 		private MaterialResolver $materialResolver,
 		private WallFinishBands $wallFinishBands,
 		private RoofRepository $roofRepository,
+		private WallBase $wallBase,
 	) {
 	}
 
@@ -49,7 +50,7 @@ final readonly class WallHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'sagitta', 'thickness', 'height', 'materialId', 'leftFinishes', 'rightFinishes', 'upToRoof'];
+		return ['name', 'type', 'startX', 'startY', 'endX', 'endY', 'sagitta', 'thickness', 'height', 'materialId', 'leftFinishes', 'rightFinishes', 'upToRoof', 'heightEnd', 'baseStart', 'baseEnd', 'onGround'];
 	}
 
 	/** @return list<string> */
@@ -75,6 +76,10 @@ final readonly class WallHandler implements ElementHandler
 			'leftFinishes' => null,
 			'rightFinishes' => null,
 			'upToRoof' => false,
+			'heightEnd' => null,
+			'baseStart' => 0,
+			'baseEnd' => 0,
+			'onGround' => false,
 		];
 	}
 
@@ -122,21 +127,33 @@ final readonly class WallHandler implements ElementHandler
 			// Missing in changes logged before walls could curve.
 			'sagitta' => WallCurve::read($fields),
 			'thickness' => $fields->int('thickness', 10, 2000),
-			'height' => $fields->int('height', 100, State::MaxSize),
+			'height' => (int) WallBase::readTop($fields, 'height'),
 			'materialId' => $materialId,
 			'leftFinishes' => $this->faceFinishes($fields->raw('leftFinishes'), 'leftFinishes'),
 			'rightFinishes' => $this->faceFinishes($fields->raw('rightFinishes'), 'rightFinishes'),
 			// Missing in changes logged before roofs.
 			'upToRoof' => $fields->bool('upToRoof'),
+			// Missing in changes logged before site walls: level, on the floor.
+			'heightEnd' => WallBase::readTop($fields, 'heightEnd'),
+			'baseStart' => WallBase::read($fields, 'baseStart'),
+			'baseEnd' => WallBase::read($fields, 'baseEnd'),
+			'onGround' => $fields->bool('onGround'),
 		];
+		// The check holds either way round, so it may come before the turn below.
+		WallBase::check($normalized);
 
 		// Turning the wall round turns its faces round: unless the request sets the bands (undo, redo), they stay
-		// on the same side of the plan, as the openings do; so does its curve unless the request sets it.
+		// on the same side of the plan, as the openings do; so do its curve, its sloping top and its base unless the
+		// request sets them.
 		if ($currentWall !== null && self::reverses($currentWall, $normalized)) {
 			if (self::keepsFaces($currentWall, $normalized)) {
 				[$normalized['leftFinishes'], $normalized['rightFinishes']] = [$normalized['rightFinishes'], $normalized['leftFinishes']];
 			}
 			$normalized['sagitta'] = WallCurve::turnedRound($currentWall->sagitta, $normalized['sagitta']);
+			[$normalized['height'], $normalized['heightEnd'], $normalized['baseStart'], $normalized['baseEnd']] = WallBase::turnedRound(
+				$currentWall,
+				$normalized,
+			);
 		}
 
 		$line = self::line($normalized);
@@ -145,6 +162,7 @@ final readonly class WallHandler implements ElementHandler
 			throw EditException::invalid(sprintf('A wall must be at least %d mm long.', self::MinLength));
 		}
 		WallCurve::check($line);
+		$this->wallBase->checkOverGround($normalized, $line, $floor->id, $currentWall);
 
 		$normalized['openingOffsets'] = $currentWall === null ? [] : self::offsetList(
 			$this->openingOffsets($currentWall, $normalized, $length, $fields->raw('openingOffsets')),
@@ -209,7 +227,7 @@ final readonly class WallHandler implements ElementHandler
 	 * taken as it is when it differs from the current offsets; otherwise a moved start point shifts them so
 	 * every opening keeps its place on the plan.
 	 *
-	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, ...} $next
+	 * @param array{startX: int, startY: int, endX: int, endY: int, sagitta: int, thickness: int, height: int, upToRoof: bool, heightEnd: int|null, baseStart: int, baseEnd: int, onGround: bool, ...} $next
 	 * @return array<int, int> offset by opening id
 	 */
 	private function openingOffsets(Wall $wall, array $next, int $length, mixed $requested): array
@@ -233,6 +251,7 @@ final readonly class WallHandler implements ElementHandler
 
 		$radius = $new->arc()['radius'] ?? null;
 		$top = OpeningHead::wallTopIfReshaped($wall, $next, $new, $this->roofRepository->findByFloor($wall->floor->id));
+		$this->wallBase->checkSills($wall, $next, $new, $openings, $offsets);
 		foreach ($openings as $opening) {
 			$offset = $offsets[$opening->id];
 			// Sliding and pocket doors also keep the wall their open leaf slides along; on a curved wall it has to stay
@@ -256,7 +275,7 @@ final readonly class WallHandler implements ElementHandler
 	 */
 	private function faceFinishes(mixed $bands, string $field): ?array
 	{
-		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field);
+		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field, WallBase::Limit);
 	}
 
 	/** @param array{startX: int, startY: int, endX: int, endY: int, ...} $next */
@@ -324,11 +343,15 @@ final readonly class WallHandler implements ElementHandler
 		$wall->endY = $fields->int('endY', -State::CoordinateLimit, State::CoordinateLimit);
 		$wall->sagitta = $fields->int('sagitta', -State::CoordinateLimit, State::CoordinateLimit);
 		$wall->thickness = $fields->int('thickness', 10, 2000);
-		$wall->height = $fields->int('height', 100, State::MaxSize);
+		$wall->height = (int) WallBase::readTop($fields, 'height');
 		$wall->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$wall->leftFinishes = WallFinishBands::encodeFace($fields->raw('leftFinishes'));
 		$wall->rightFinishes = WallFinishBands::encodeFace($fields->raw('rightFinishes'));
 		$wall->upToRoof = $fields->bool('upToRoof');
+		$wall->heightEnd = WallBase::readTop($fields, 'heightEnd');
+		$wall->baseStart = $fields->int('baseStart', -WallBase::Limit, WallBase::Limit);
+		$wall->baseEnd = $fields->int('baseEnd', -WallBase::Limit, WallBase::Limit);
+		$wall->onGround = $fields->bool('onGround');
 		$this->wallRepository->persist($wall);
 
 		$offsets = $fields->raw('openingOffsets');

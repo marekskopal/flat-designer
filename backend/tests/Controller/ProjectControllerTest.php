@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ProjectController;
+use FlatDesigner\Model\Repository\MaterialRepository;
 use FlatDesigner\Route\Routes;
 use FlatDesigner\Service\Project\ProjectProvider;
 use FlatDesigner\Tests\Support\Fixture;
@@ -109,6 +110,32 @@ final class ProjectControllerTest extends IntegrationTestCase
 		self::assertSame(
 			['northAngle' => 0, 'latitude' => null, 'longitude' => null, 'timeZone' => null],
 			array_intersect_key($cleared, $site),
+		);
+	}
+
+	public function testUpdateSetsTheFacadeMaterialWhichTheScenesCarry(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$render = Fixture::service(MaterialRepository::class)->findAllOrdered()[0] ?? self::fail('No material');
+
+		$body = $this->jsonBody(
+			$this->request('PUT', self::path($project->id), ['name' => 'House', 'exteriorMaterialId' => $render->id], $user),
+		);
+		self::assertSame($render->id, $body['exteriorMaterialId']);
+		$scene = $this->jsonBody($this->request(
+			'GET',
+			str_replace(
+				['{projectId:number}', '{floorId:number}'],
+				[(string) $project->id, (string) self::firstFloorId($body)],
+				Routes::ProjectFloorScene->value,
+			),
+			authenticatedAs: $user,
+		));
+		self::assertSame($render->id, $scene['exteriorMaterialId']);
+		self::assertSame(
+			422,
+			$this->request('PUT', self::path($project->id), ['name' => 'House', 'exteriorMaterialId' => 999999], $user)->getStatusCode(),
 		);
 	}
 

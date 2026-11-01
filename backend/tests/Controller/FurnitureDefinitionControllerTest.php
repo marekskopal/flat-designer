@@ -184,6 +184,11 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		yield 'option of another part type' => [$definition, 'parts[1].color: A board part has no option "color"'];
 
 		$definition = self::Definition;
+		$definition['parts'][1] = ['type' => 'cylinder', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D', 'radius' => 'soft'];
+
+		yield 'a cylinder\'s rounding not a number' => [$definition, 'parts[1].radius: Must be a number, 0 or more.'];
+
+		$definition = self::Definition;
 		$definition['materialSlots'][0]['default'] = 'unobtainium';
 
 		yield 'unknown material code' => [$definition, 'materialSlots[0].default: Must be the code of a material'];

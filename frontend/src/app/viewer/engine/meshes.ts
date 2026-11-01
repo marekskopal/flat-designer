@@ -106,20 +106,22 @@ export interface PrismTops {
 /**
  * Upright solid between two faces given as polylines of the same number of points (x, z in the parent's frame,
  * metres), `right` and `left`, from their start to their end, from `bottom` to `top`: a piece of a curved wall. The
- * faces are smooth (normals averaged at the joints), the ends and the bottom flat; the top is flat too, or with `top`
- * per point it runs straight between them (a wall cut by a roof). UVs are in metres: along each face (from `uStart`)
- * and up, top and bottom in x/z.
+ * faces are smooth (normals averaged at the joints), the ends flat; the top and bottom are flat too, or given per point
+ * they run straight between them (a wall cut by a roof, a garden wall on the ground). UVs are in metres: along each
+ * face (from `uStart`) and up, top and bottom in x/z.
  */
 export function curvedPrismAt(
     material: THREE.Material,
     right: readonly {x: number; z: number}[],
     left: readonly {x: number; z: number}[],
-    bottom: number,
+    bottom: number | PrismTops,
     top: number | PrismTops,
     uStart = 0,
 ): THREE.Mesh {
     const topRight = (i: number): number => (typeof top === 'number' ? top : top.right[i]);
     const topLeft = (i: number): number => (typeof top === 'number' ? top : top.left[i]);
+    const bottomRight = (i: number): number => (typeof bottom === 'number' ? bottom : bottom.right[i]);
+    const bottomLeft = (i: number): number => (typeof bottom === 'number' ? bottom : bottom.left[i]);
     const positions: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
@@ -146,9 +148,9 @@ export function curvedPrismAt(
             const normal = new THREE.Vector3(after.z - before.z, 0, -(after.x - before.x)).normalize();
             return normal.dot(new THREE.Vector3(p.x - other[i].x, 0, p.z - other[i].z)) < 0 ? normal.negate() : normal;
         });
-    for (const [face, other, faceTop] of [
-        [right, left, topRight],
-        [left, right, topLeft],
+    for (const [face, other, faceTop, faceBottom] of [
+        [right, left, topRight, bottomRight],
+        [left, right, topLeft, bottomLeft],
     ] as const) {
         const faceNormal = faceNormals(face, other);
         let u = uStart;
@@ -164,7 +166,8 @@ export function curvedPrismAt(
             });
             const [n0, n1] = [faceNormal[i - 1], faceNormal[i]];
             const [top0, top1] = [faceTop(i - 1), faceTop(i)];
-            quad(at(p, bottom, n0, u), at(q, bottom, n1, u + step), at(q, top1, n1, u + step), at(p, top0, n0, u), n0.clone().add(n1));
+            const [bottom0, bottom1] = [faceBottom(i - 1), faceBottom(i)];
+            quad(at(p, bottom0, n0, u), at(q, bottom1, n1, u + step), at(q, top1, n1, u + step), at(p, top0, n0, u), n0.clone().add(n1));
             u += step;
         }
     }
@@ -184,11 +187,17 @@ export function curvedPrismAt(
             normal.negate();
         }
         const side = (point: {x: number; z: number}, y: number): Vertex => ({...point, y, normal, uv: [Math.hypot(point.x - r.x, point.z - r.z), y]});
-        quad(side(r, bottom), side(l, bottom), side(l, topLeft(i)), side(r, topRight(i)), normal);
+        quad(side(r, bottomRight(i)), side(l, bottomLeft(i)), side(l, topLeft(i)), side(r, topRight(i)), normal);
     }
     const down = new THREE.Vector3(0, -1, 0);
     for (let i = 1; i < right.length; i++) {
-        quad(flat(right[i - 1], bottom, down), flat(right[i], bottom, down), flat(left[i], bottom, down), flat(left[i - 1], bottom, down), down);
+        quad(
+            flat(right[i - 1], bottomRight(i - 1), down),
+            flat(right[i], bottomRight(i), down),
+            flat(left[i], bottomLeft(i), down),
+            flat(left[i - 1], bottomLeft(i - 1), down),
+            down,
+        );
         // The top's normal from its diagonals, upwards (straight up where it is flat).
         const corner = (p: {x: number; z: number}, y: number): THREE.Vector3 => new THREE.Vector3(p.x, y, p.z);
         const [r0, r1, l1, l0] = [

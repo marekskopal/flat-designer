@@ -6,7 +6,6 @@ namespace FlatDesigner\Tests\Controller;
 
 use FlatDesigner\Controller\ElementController;
 use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\ColumnParamsValidator;
 use FlatDesigner\Service\Editor\Element\ItemHandler;
 use FlatDesigner\Service\Editor\Element\OpeningHandler;
 use FlatDesigner\Service\Editor\Element\OpeningLook;
@@ -18,6 +17,7 @@ use FlatDesigner\Service\Editor\Element\WallHandler;
 use FlatDesigner\Service\Editor\Geometry\WallLine;
 use FlatDesigner\Service\Editor\PolygonValidator;
 use FlatDesigner\Service\Editor\SceneEditor;
+use FlatDesigner\Service\Editor\StructureParamsValidator;
 use FlatDesigner\Tests\Support\EditorTestCase;
 use FlatDesigner\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -33,7 +33,7 @@ use const JSON_THROW_ON_ERROR;
 #[CoversClass(RoomCeiling::class)]
 #[CoversClass(StructureSize::class)]
 #[CoversClass(PolygonValidator::class)]
-#[CoversClass(ColumnParamsValidator::class)]
+#[CoversClass(StructureParamsValidator::class)]
 #[CoversClass(WallCurve::class)]
 #[CoversClass(WallLine::class)]
 final class ElementControllerTest extends EditorTestCase
@@ -376,6 +376,101 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 90])->getStatusCode());
 	}
 
+	public function testGarageDoorsLiftAndSlideDoorsInsetsAndOpeningMaterials(): void
+	{
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 9000, 'endY' => 0, 'thickness' => 300, 'height' => 2600]);
+		$wallId = self::id($wall);
+		$oak = Fixture::service(MaterialRepository::class)->findByCode('kitchen-oak');
+		self::assertNotNull($oak);
+
+		// A garage door starts as a single garage's sectional door; a lifting one needs 200 mm above its head.
+		$garage = $this->create('openings', ['wallId' => $wallId, 'type' => 'GarageDoor', 'offset' => 100]);
+		self::assertSame(
+			['Garage door', 2500, 2125, 'Sectional', 'Start', 'Left', 'None'],
+			[$garage['name'], $garage['width'], $garage['height'], $garage['garageDoorStyle'], $garage['hinge'], $garage['side'], $garage['frameStyle']],
+		);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($garage), ['height' => 2500])->getStatusCode());
+		$hinged = $this->jsonBody($this->edit('PATCH', 'openings', self::id($garage), [
+			'height' => 2500,
+			'garageDoorStyle' => 'SideHinged',
+			'leafStyle' => 'Boarded',
+			'leafPanels' => 12,
+			'boardDirection' => 'Horizontal',
+			'leafMaterialId' => $oak->id,
+		]));
+		self::assertIsArray($hinged['element']);
+		self::assertSame(
+			['SideHinged', 'Boarded', 12, 'Horizontal', $oak->id],
+			[
+				$hinged['element']['garageDoorStyle'],
+				$hinged['element']['leafStyle'],
+				$hinged['element']['leafPanels'],
+				$hinged['element']['boardDirection'],
+				$hinged['element']['leafMaterialId'],
+			],
+		);
+		// Turning it back into a lifting door checks the headroom again; the wall cannot lose it either.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($garage), ['garageDoorStyle' => 'Roller'])->getStatusCode());
+		self::assertSame(
+			200,
+			$this->edit('PATCH', 'openings', self::id($garage), ['height' => 2300, 'garageDoorStyle' => 'Roller'])->getStatusCode(),
+		);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['height' => 2400])->getStatusCode());
+		// Restyled without a new count, the leaf takes the new style's default (12 boards are no panel count).
+		$panelled = $this->jsonBody($this->edit('PATCH', 'openings', self::id($garage), ['leafStyle' => 'Panelled']));
+		self::assertIsArray($panelled['element']);
+		self::assertSame(['Panelled', 2], [$panelled['element']['leafStyle'], $panelled['element']['leafPanels']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($garage), ['leafPanels' => 7])->getStatusCode());
+		// A garage door has no frame, nor an inset (its leaf hangs behind the opening).
+		$bare = $this->jsonBody($this->edit('PATCH', 'openings', self::id($garage), ['frameStyle' => 'Lining', 'inset' => 0]));
+		self::assertIsArray($bare['element']);
+		self::assertSame(['None', null], [$bare['element']['frameStyle'], $bare['element']['inset']]);
+
+		// A lift-and-slide door slides within its opening, so it needs no wall beside it; others keep the defaults.
+		$slide = $this->create('openings', [
+			'wallId' => $wallId,
+			'type' => 'SlidingDoor',
+			'offset' => 2700,
+			'width' => 3600,
+			'height' => 2200,
+			'fixedPanes' => 2,
+			'frameMaterialId' => $oak->id,
+			'outsideFrameMaterialId' => $oak->id,
+			'inset' => 0,
+		]);
+		self::assertSame(
+			[2, $oak->id, $oak->id, 0],
+			[$slide['fixedPanes'], $slide['frameMaterialId'], $slide['outsideFrameMaterialId'], $slide['inset']],
+		);
+		// Its frame is 130 mm deep: set in at most 170 mm in this wall. Without fixed panes the leaf hangs on the face: no
+		// wall beside it here, and no inset on a pocket door either.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($slide), ['inset' => 171])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'openings', self::id($slide), ['inset' => 170])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($slide), ['fixedPanes' => 0])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($slide), ['fixedPanes' => 4])->getStatusCode());
+		$pocket = $this->create('openings', ['wallId' => $wallId, 'type' => 'PocketDoor', 'offset' => 7700, 'width' => 600, 'inset' => 0]);
+		self::assertNull($pocket['inset']);
+		$this->edit('DELETE', 'openings', self::id($pocket));
+		$door = $this->create(
+			'openings',
+			['wallId' => $wallId, 'type' => 'Door', 'offset' => 6500, 'fixedPanes' => 2, 'outsideFrameMaterialId' => $oak->id],
+		);
+		self::assertSame([0, null], [$door['fixedPanes'], $door['outsideFrameMaterialId']]);
+
+		// The frame stays within the wall: at most its thickness less 80 mm in from the outer face; a passage has none.
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['inset' => 221])->getStatusCode());
+		$inset = $this->jsonBody($this->edit('PATCH', 'openings', self::id($door), ['inset' => 220]));
+		self::assertIsArray($inset['element']);
+		self::assertSame(220, $inset['element']['inset']);
+		self::assertSame(422, $this->edit('PATCH', 'walls', $wallId, ['thickness' => 290])->getStatusCode());
+		$passage = $this->create(
+			'openings',
+			['wallId' => $wallId, 'type' => 'Passage', 'offset' => 7600, 'inset' => 50, 'frameMaterialId' => $oak->id],
+		);
+		self::assertSame([null, $oak->id], [$passage['inset'], $passage['frameMaterialId']]);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($door), ['frameMaterialId' => 999999])->getStatusCode());
+	}
+
 	public function testNichesAreRecessesIntoOneFace(): void
 	{
 		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0, 'thickness' => 200]);
@@ -553,6 +648,106 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertNull($this->sceneList('walls')[0]['leftFinishes']);
 		self::assertSame(200, $this->undo()->getStatusCode());
 		self::assertSame([[$band], []], [$this->sceneList('walls')[0]['leftFinishes'], $this->sceneList('walls')[0]['rightFinishes']]);
+	}
+
+	public function testSiteWallsSlopeAndStandOnABaseOrTheGround(): void
+	{
+		// A garden wall down a drive: 2000 mm high at its start, 800 at its end, from −600 to −1200 below the floor.
+		$wall = $this->create('walls', [
+			'startX' => 0,
+			'startY' => 0,
+			'endX' => 6000,
+			'endY' => 0,
+			'height' => 2000,
+			'heightEnd' => 800,
+			'baseStart' => -600,
+			'baseEnd' => -1200,
+		]);
+		self::assertSame([800, -600, -1200, false], [$wall['heightEnd'], $wall['baseStart'], $wall['baseEnd'], $wall['onGround']]);
+		// Its top must stand over its base at both ends.
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['baseEnd' => 780])->getStatusCode());
+
+		// A gate: its head under the sloping top (1280 mm at x 3600), its sill on the base (−960 there).
+		$opening = fn (int $sill, int $height): int => $this->edit(
+			'POST',
+			'openings',
+			body: [
+				'wallId' => self::id(
+					$wall,
+				),
+				'type' => 'Passage',
+				'offset' => 2400,
+				'width' => 1200,
+				'sillHeight' => $sill,
+				'height' => $height],
+		)->getStatusCode();
+		self::assertSame(422, $opening(0, 1500));
+		self::assertSame(201, $opening(0, 1250));
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['baseStart' => 200, 'baseEnd' => 0])->getStatusCode());
+
+		// Turned round, the slope and the base stay where they are on the plan.
+		$turned = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => 6000, 'endX' => 0]));
+		self::assertIsArray($turned['element']);
+		self::assertSame(
+			[800, 2000, -1200, -600],
+			[$turned['element']['height'], $turned['element']['heightEnd'], $turned['element']['baseStart'], $turned['element']['baseEnd']],
+		);
+		self::assertSame(200, $this->undo()->getStatusCode());
+
+		// On the ground: its bottom is the plot's (+300 under it), so a passage from the floor's level no longer stands on it.
+		$this->create('plots', ['polygon' => [[-5000, -5000], [10000, -5000], [10000, 5000], [-5000, 5000]], 'groundLevel' => 300]);
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['onGround' => true])->getStatusCode());
+	}
+
+	public function testAGardenWallsTopMayLieBelowTheFloorsLevel(): void
+	{
+		// A wall on the floor's level keeps 100 mm at least.
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'walls',
+				body: ['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'height' => 50],
+			)->getStatusCode(),
+		);
+
+		// On a base 1.5 m down, its top 600 over it: −900 against the floor.
+		$based = $this->create(
+			'walls',
+			['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'height' => -900, 'baseStart' => -1500, 'baseEnd' => -1500],
+		);
+		self::assertSame(-900, $based['height']);
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($based), ['height' => -1480])->getStatusCode());
+
+		// On ground 1 m below the floor, 600 high, and not sunk into it.
+		$this->create('plots', ['polygon' => [[-5000, 5000], [10000, 5000], [10000, 15000], [-5000, 15000]], 'groundLevel' => -1000]);
+		$garden = $this->create(
+			'walls',
+			['startX' => 0, 'startY' => 8000, 'endX' => 3000, 'endY' => 8000, 'height' => -400, 'onGround' => true],
+		);
+		self::assertSame([-400, true], [$garden['height'], $garden['onGround']]);
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($garden), ['height' => -980])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($garden), ['heightEnd' => -1200])->getStatusCode());
+		// Renaming it does not look at the ground again.
+		self::assertSame(200, $this->edit('PATCH', 'walls', self::id($garden), ['name' => 'Garden wall'])->getStatusCode());
+	}
+
+	public function testAWallOnTheGroundMovedUphillKeepsItsOpeningsOnIt(): void
+	{
+		// The ground rises 0.1 mm per mm northwards.
+		$this->create('plots', [
+			'polygon' => [[-5000, -5000], [10000, -5000], [10000, 15000], [-5000, 15000]],
+			'terrain' => [[-5000, -5000, -500], [10000, -5000, -500], [-5000, 15000, 1500], [10000, 15000, 1500]],
+		]);
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 6000, 'endY' => 0, 'height' => 1800, 'onGround' => true]);
+		$this->create(
+			'openings',
+			['wallId' => self::id($wall), 'type' => 'Passage', 'offset' => 2000, 'width' => 1000, 'sillHeight' => 100, 'height' => 1600],
+		);
+
+		// At y 0 the ground is at 0; 4 m uphill it is at +400, over the passage's sill.
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['startY' => 4000, 'endY' => 4000])->getStatusCode());
+		self::assertSame(200, $this->edit('PATCH', 'walls', self::id($wall), ['startY' => -4000, 'endY' => -4000])->getStatusCode());
 	}
 
 	public function testCurvedWalls(): void

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Model\Entity\Enum;
 
-/** The stair's railing on its left or right side walking up, both or none; it also runs round the void upstairs. */
+/** A side of a stair walking up, both or none: where it has a railing, or a handrail on the wall (FD-90). */
 enum StairRailingEnum: string
 {
 	case None = 'None';

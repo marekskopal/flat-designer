@@ -56,8 +56,10 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (`floorPoints()`, `stackGround()`); the model and picture libraries keep the stack's assets. A slab lies under its
   floor's rooms (not gardens, paths, driveways) and wall footprints, extruded and merged (`buildSlab()`), so an upper
   slab roofs only what it covers. Saved views and share links keep it as `allFloors`; a share link with it serves the
-  floors below in `SharedViewDto::$stack` (`ProjectSnapshotService::getScenesBelow()`, `SnapshotScenes`) and their
-  models and pictures (`SharedAssetIds::below()`). The glTF export holds the shown floor only.
+  floors below in `SharedViewDto::$stack` and, when it offers the walk too, those above in `$above` (for the walk,
+  FD-102; `ProjectSnapshotService::getFloorScenes()` with `$withAbove`, `SnapshotScenes`) and their models and pictures
+  (`SharedAssetIds::others()`).
+  The glTF export holds the shown floor only.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
@@ -73,7 +75,7 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   travel included); niches follow the curve. Turning a wall round negates its sagitta (as the face finishes swap).
   Corner windows need straight walls.
 - Opening types (`OpeningTypeEnum`): `Door`, `DoubleDoor`, `SlidingDoor`, `PocketDoor`, `Passage` (no leaf),
-  `Window` and `Niche`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
+  `Window`, `Niche` and `GarageDoor`. A swing door hangs on `hinge` and swings into `side`. For a double door, `leafWidth` is the leaf on
   `hinge`. Sliding and pocket doors slide open towards `hinge`; a sliding door hangs on the `side` face.
   `OpeningPlacement` keeps the wall beside them free for the open leaf (both the handler and `WallHandler` check it)
   and makes pocket doors need a wall at least 100 mm thick. Doors also have a `frameStyle` and a `handle` (null means
@@ -95,6 +97,27 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
 - A window may have a solid lower `panelHeight` (mm from the sill) and exterior `shutters` (Louvred or Solid, in
   `shutterMaterialId`, null for painted timber). They are two leaves on the face opposite `side`. They lie folded back
   against the wall beside the window unless `shuttersClosed`. Shutters do not take part in the walkthrough.
+- Opening looks (FD-89, `OpeningLook`; inset and headroom in `OpeningClearances`): `frameMaterialId` (frame and sashes;
+  null: `door-white` doors, `window-frame-anthracite` windows), `leafMaterialId` (null: the frame's) and a window's or
+  lift-and-slide door's `outsideFrameMaterialId` (a 15 mm outer face, `frameBar()`). Leaf style `Boarded` is
+  `leafPanels` boards (up to 24) running `boardDirection` (`boardedLeaf()`); a leaf restyled without a new count takes
+  the new style's default. `inset` sets the frame of a door, window or lift-and-slide door (`OpeningClearances::framed()`)
+  that far in from the outer face (opposite `side`), `InsetFrameDepth` (80, a lift-and-slide door's `LiftSlideFrameDepth`,
+  130) deep: `frameBand()` in `plan-geometry.ts` gives the frame's centre and depth across the wall, which the frame
+  bars, leaves, sashes, sill boards, corner windows (`cornerReach()`, assuming both frames set in alike) and the plan's
+  glazing follow. A `SlidingDoor` with `fixedPanes` (1–3) is a lift-and-slide door inside its opening (`isLiftSlide()`,
+  `liftSlidePanes()`): equal panes on two tracks, the one away from `hinge` sliding a pane's width towards it, the fixed
+  ones leaves with no travel (they block the walk), so `occupied()` / `occupiedSpan()` take no wall beside it. A
+  `GarageDoor` (`garageDoorStyle`: Sectional, the default, UpAndOver, SideHinged, Roller) hangs behind its opening on
+  the `side` face, the garage's, with `frameStyle` None; all but the side-hinged one (a double door's leaves) need
+  `GarageHeadroom` (200 mm) above their head under the wall's top (`OpeningHead::check()` takes it, when the door is
+  placed or restyled, and `WallHandler` when the wall changes). Their leaf has `motion: 'lift'`
+  (`garageLeaves()`): `buildLiftingDoor()` tags its sections (`section`), panel (`tilt`) or slats (`roll`), and
+  `setLeafPose()` runs them along the track (`trackPoint()`), tilts or rolls them. Garage doors show closed outside a
+  walk, block their opening until `LiftClear` open, draw a dashed overhead outline on the plan and their sections or
+  slats in the elevations (`garageSections()` / `rollerSlats()` and `RollerDrum` in `plan-geometry.ts`, shared by the
+  builder and the sheets). New room type `Garage` (`isAncillary()` / `isAncillaryRoom()`): indoor, summed apart from
+  the living area in the room schedules (`ancillary` totals), a new one on `concrete-floor`.
 - Hierarchy: `Project` → `Floor` → rooms / walls / items. Access goes through `ProjectProvider::findAccessible()`, which
   allows the owner or an admin and answers 404 otherwise.
 - Foreign keys cascade on delete (project → floors → content), so deletes go through the parent row.
@@ -190,6 +213,13 @@ format is the text in `FurnitureTools::Format`.
   cushion. Curtains and blinds are furniture placed at a window, not fields of the opening. Upholstery uses the `cushion` part, a
   box with rounded edges (`radius`), which the cut list counts among the other parts. Round tops and mirrors are
   `cylinder` parts.
+- The demo house's catalogue (`SeedDemoHouseFurnitureMigration`, FD-93): a corner fireplace, a bench with an upholstered
+  back, a pouf, linear pendant, square ceiling and linear wall lights, a vanity with vessel basins, a walk-in rain shower,
+  a freestanding bath, a bin store, a garden shed, stepping slabs and a roller blind in a cassette; a `cylinder` part's
+  `radius` rounds the edges of its ends, and a `block` part is a solid box not cut from sheet (stone, concrete, metal,
+  a solid bar, fabric), which the cut list counts among the other parts. The kitchen cabinets' `plinthVent` adds a plinth grille; a migration that
+  changes an earlier seed file rewrites its rows with `FurnitureSeeds::update()`. Their models and stand-ins are listed in
+  `docs/demo-house.md`.
 - Removed built-in furniture kinds (`BaseCabinet`, `WallCabinet`, `TallCabinet`, `Worktop`, `Backsplash`, `Wardrobe`,
   `Chair`, `Table`): `ConvertFlat50FurnitureToDefinitions` turned the sample project's into Custom items in place
   (same ids), then `ConvertBuiltInFurniture` the rest in every project, the saved versions and the change log, and
@@ -260,6 +290,13 @@ format is the text in `FurnitureTools::Format`.
   brick) and `Herringbone`. A herringbone tile's length is rounded to a whole multiple of its width, and the texture
   is drawn axis-aligned and turned 45°. Tiles, terrazzo and herringbone go on the room's tile grid; bricks keep
   their surface's UVs, which on a vaulted ceiling run along and across the beams.
+- Planks with a tile size and no photo are drawn at that size (`drawSizedPlanks()`, FD-92), along v (plan y on floors).
+  On upright faces (walls, their finish bands, façades, reveals, void linings: `MaterialLibrary.upright()`) planks run
+  along the wall, as cladding does; elsewhere planks ignore the grain direction. `Stone` is random coursed dry-stone
+  walling (`drawStones()`: stones about `tile_width` long in courses about `tile_height` high) and `Formwork` cast
+  concrete showing its panels (with tie holes) or boards (`drawFormwork()`: `tile_width` along the wall, `tile_height` up
+  it); both keep their surface's UVs and are not counted in pieces. Bricks vary in sRGB lightness (`vary()`) with joints
+  7 % of the course (5–10 mm), so pavers and facing bricks alike look right. The demo house's materials are listed in `docs/demo-house.md`.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
@@ -272,6 +309,21 @@ format is the text in `FurnitureTools::Format`.
   room's, `[]` leaves the face bare; validated by `WallFinishBands`; turning a wall round swaps them, so the bands stay
   on the same side of the plan). `faces()` / `wallFacesAlongEdge()` say which wall
   and side covers which stretch of a room edge; `buildWallFinishes()` and `RoomSurfaces` use them.
+- Façades (FD-88): a wall face outside every indoor room is a façade (`FacadeSpans::of()` / `facadeSpans()` in
+  `ceilings.ts`, twins kept identical by the `facades` cases of `wall-spans.json`: each face's mitred extent less the
+  stretches indoor room edges run along; open-air rooms, a garden by the house, cover none). It draws its own
+  `leftFinishes` / `rightFinishes` along it (`buildFacades()` in `facades.ts`: a group per wall face tagged `wallId`,
+  `FacadeLining` off the face, cut by its openings, every piece between the wall's top and its bottom on a base or the
+  ground); a face's bands may start below the floor (a plinth, to −`WallBase::Limit`; inside a room they start on its
+  floor), and where they overlap the first keeps the stretch. An exterior wall without a material and with bands null
+  (not `[]`, which keeps it bare) takes the project's `exteriorMaterialId` (`facadeBands()`; project details, which a
+  REST update replaces like the site fields, carried as the scene's `exteriorMaterialId` and at the snapshot's top
+  level, a restore leaving the project's own). A
+  room's slab piece is in its `soffitMaterialId`, else the façade material (`buildSlab()`, a group merged per
+  material): the underside of an oriel or a balcony. An opening with `revealLining` lines its jambs, head and a
+  window's sill with the outer face's band (`revealLining()` in `building.ts`). Quantities: `FacadeSurfaces` (surface
+  `Facade`, per floor in `QuantitiesDto::$facades`) sums the faces in 50 mm strips per band material, the rest in the
+  wall's own or the façade material.
 - Ceilings and skirting are room fields (rules in `RoomCeiling`). A room has a `ceilingMaterialId`. With
   `vaultSpacing`, its ceiling is vaulted: sine arches `vaultRise` high spring between beams spaced at whole
   multiples of `vaultSpacing` from the plan origin, so neighbouring rooms line up. The beams run at `vaultAngle`,
@@ -305,6 +357,47 @@ format is the text in `FurnitureTools::Format`.
   engine's `Outlined` vertex drag). The plan PDF draws the boundary as a dash-dot property line. Paths and lawns on it
   are rooms (the types `Path` and `Driveway`, with the seeded `paving-concrete-grey` and `asphalt`); fences are
   `Fence` items.
+- Sloping terrain (FD-86): a plot's `terrain` is spot heights `[x, y, z]` (mm, z against the floor's level, at least
+  10 mm apart, `SpotHeights`; MCP `terrain` on `add_plot` / `update_plot`, and `set_terrain` taking points and contour
+  lines, `ContourLines`). The ground is their Delaunay triangulation extended to the boundary: each boundary corner
+  takes the height the spot heights give it, and all are triangulated together, so the plot is covered and each
+  triangle is planar; outside it the nearest point of the outline counts; without spot heights the ground is flat at
+  `groundLevel`. The twins are `Terrain` / `Delaunay` (`Service/Editor/Geometry`) and `terrain.ts` (`terrainOf()`,
+  `terrainAt()`, `plotTerrain()` cached per plot object, `groundAt()`), kept identical by
+  `backend/tests/fixtures/terrain.json` (the same arithmetic in the same order, so co-circular grids triangulate
+  alike). **Always change both twins and add a fixture case in the same change.** The viewer cuts the plot and the
+  rooms draped on it along the triangles (`drapedGeometry()` in `plots.ts`). Gardens, paths and driveways on a sloping
+  plot follow it (`drapedOn()`, `floorElevation` lifting them); other rooms keep their flat floor, and its edge steps
+  down to the ground along the outline (`groundBeside()`; an indoor room's never up, as its walls stand there). A room
+  is cut out of the ground where its floor lies below it anywhere (`groundHoles()`, together with the footprints of the
+  walls round it that are not `onGround`, so no ground shows in their window reveals; a draped one where its elevation
+  is negative). An item with `onGround` (`items.on_ground`) counts its z from the ground under its centre
+  (`ItemAssets.plots`); a plot change rebuilds those items and every room. The
+  walkthrough follows the ground and stops at slopes over 35° between two points on sloping ground
+  (`FloorLevels.tooSteep`). The plan PDF draws contours every 0.5 m (the full metres heavier) and the spot heights with
+  their levels. Editing: a selected plot's spot heights get blue handles in the top view (dragged); a
+  double-click on its ground adds one at the ground's height, on a handle removes it; the inspector's `spots` field
+  (`SpotHeightsComponent`) types them.
+- Site walls (FD-87): a wall's top may slope, `heightEnd` being its height at the end (`height` at the start, both
+  against the floor's level), and its bottom lie on a base (`baseStart` → `baseEnd`) or follow the ground (`onGround`,
+  the plots' `groundAt()`; PHP `Ground` with `Terrain`). The backend twins are `WallTop` (with `heightEnd`) and
+  `WallBottom` (`WallBase` checks the top stands 50 mm over the base, or on the ground over the ground at the wall's ends
+  when its top, line or `onGround` changes, so the top may lie below the floor's level, FD-98; a wall on the floor's
+  level is at least `MinHeight` (100) high; and it keeps the openings' sills on the bottom, when an
+  opening is placed anew or the wall gets a new base); the viewer's are `wallTopAt(wall, roofs, frame)` and
+  `wallBottomAt()` (`under-roof.ts`). Such a wall is built like one under roofs (`profiledWallPiece()`: `profileRuns()`
+  with a bottom per station, `curvedPrismAt()` with per-point bottoms; on the ground the faces are densified every
+  250 mm), stands on no slab (`isSiteWall()`), and a plot change rebuilds the walls on the ground. The own top and base
+  are linear along the wall, so `roofBreaks()` / `RoofBreaks` take them as `slopes` and the solids, the plan cut
+  (`cutStretches()`), the finish bands (`finishLining()` under `wallCap`), the open-air elevation faces and the
+  quantities (`RoomFaceUnderRoof`) bend where they cross a level. Turning the wall round turns the slope and the base
+  round too, as the finishes (`WallBase::turnedRound()`), and a wall on the ground moved along it keeps its sills on
+  it. Garden walls take the wall's `materialId` (exposed concrete, stone).
+- Fences (`Fence` items, `outdoor.ts`; a fence along a polyline is a railing, FD-100): `params.style` `Mesh` (welded mesh over an optional `baseBoard`, the default) or
+  `Boards` (vertical boards on two rails); `follow` `Rake` (the panels run with the ground) or `Step` (each bay level
+  over the highest ground under it) stands the fence on the ground (`standsOnGround()` in `items.ts`: `onGround` or
+  `fenceFollows()`; the sheets take `itemsOverFloor()`; the ground along its width comes from `ItemAssets.plots`); `gate: true` makes it one sliding leaf of boards on a track, `open` (0–1)
+  of its width slid along +x.
 - Levels: a room's `floorElevation` (mm, ±3000; a terrace a step down, a raised deck) lifts everything the room draws
   (`buildRoom()`: floor, ceiling and finishes, whose opening gaps are brought down to the room's floor; `buildFloor()`
   adds the upright `floor-edge`, 2 mm inside the outline, stepping to the ground beside the room: its plot's
@@ -322,14 +415,24 @@ format is the text in `FurnitureTools::Format`.
 - The plan is `docs/stairs-plan.md`. A `Stair` (`stairs`, element type `Stair`, `StairHandler` through `SceneEditor`:
   undo, change log; REST `…/stairs`, MCP `add_stair` / `update_stair` / `delete_stair`) belongs to the floor it starts
   on and climbs to the next one up. (x, y) is the middle of the first step's front edge and `rotation` the walking-up
-  direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights)
-  or Spiral (`width` is then the diameter); `firstFlight` is the risers up to the landing (null halves them), `turn`
+  direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights),
+  Spiral (`width` is then the diameter) or Curved (FD-99: one flight curving round a centre, ring-sector treads from
+  `innerRadius` out to `innerRadius + width`, the walking line in the middle of the width, `turn` the way it curves;
+  `curvedLayout()`, sharing `ringSteps()` with the spiral; fan-shaped garden steps round a curved wall; it turns 330° at
+  most and keeps 100 mm treads at its inner edge, checked when its radius, width, going or risers change; it is Solid
+  (blocks down to its base, never walked under, cut so in the sections) or Open, a stringer stair made curved becoming
+  Solid; other shapes keep `innerRadius`); `firstFlight` is the risers up to the landing (null halves them), `turn`
   the way it turns or winds. Also `going`, `construction` (Solid, Stringers, Open), `railing` and two materials.
 - The rise comes from the floors (`StairRise`): the next floor up's elevation minus the floor's (`above()`: the lowest
   of the higher levels), or the tallest wall plus the slab a floor stacked on it would get (`FloorStack::defaultSlab()`)
   on the top floor. It is not a field: the scene carries it as `stairRise`, so a floor's new elevation changes the steps
   without changing (or blocking the undo of) the stair. `risers` null takes as few risers as keep each at most 180 mm; a
   count given must make them 140–220 mm, checked only when the count (or the landing's split) is set anew.
+- Garden steps (FD-87): a stair with a `rise` of its own (100–6000 mm) climbs that from `baseZ` (its first riser's
+  height against the floor's level) instead of to the next floor: `stairGeometry()` takes it over the floor's rise, it
+  cuts no void (left out of `sceneVoids().own` and of `stairsBelow` in `SceneProvider` / `SnapshotStairs`), and the walk
+  climbs it from its base, open at both ends and leading to no other floor (`StairPath.free`). Deck steps, the steps
+  down a slope and a stair to a garden terrace are such stairs.
 - The scene's `stairsBelow` (`StairsBelowDto`) are the stairs of the floor below (`below()`: the highest lower floor
   whose stairs climb to this one, so a mezzanine on the same level gets none) with their rise: they cut their voids (the
   stair's footprint) through this floor. Snapshots keep `stairs` (`SnapshotStairRestorer`); a version's scenes derive
@@ -339,7 +442,8 @@ format is the text in `FurnitureTools::Format`.
   landings, every tread with its top, the footprint, the walking line and the handrail paths (`RailHeight` over the
   nosings; the outer rail runs round the landing); `stairRisers()` / `stairFirstFlight()` twin the backend's rules.
   `buildStair()` draws it in a group at (x, y) tagged `stairId` (merged; a solid flight is the sawtooth over a sloping
-  soffit, with a section-fill twin; stringers get tread and riser boards; a spiral is wedge treads round a pole).
+  soffit, with a section-fill twin; stringers get tread and riser boards; a spiral is wedge treads round a pole; a
+  curved flight's treads are solid blocks down to its base, or boards, without stringers).
   `BuildingParts.stairs` holds them; `buildStairsBelow()` draws `stairsBelow` under the floor, untagged and not
   pickable (`parts.stairsBelow`, hidden while the stack draws that floor). The voids are `sceneVoids()`: the floor
   below's footprints are cut out of the slab and the room floors, the floor's own out of its flat ceilings (vaults stay
@@ -349,6 +453,81 @@ format is the text in `FurnitureTools::Format`.
   dragged (x, y), nudged and turned with R like items; the inspector's `stair` fields get `stairRise` beside them for
   the step hint (`stairStepHint()`, 2R + G).
 
+## Voids and railings (FD-90)
+
+- Floor voids (`FloorVoid`, `floor_voids`, element type `FloorVoid`, `FloorVoidHandler` through `SceneEditor`: undo, change
+  log; REST `…/voids`, MCP `add_void` / `update_void` / `delete_void`, the scene's `voids`, snapshots' `voids` restored by
+  `SnapshotVoidRestorer`): a hole through a floor, a `polygon` like a room's. `sceneVoids()` puts a floor's voids in
+  `below` (cut out of its slab and room floors, as the stairs coming up) and the floor above's in `own` (out of the flat
+  ceilings): the scene's `voidsAbove` (`VoidsAboveDto`: the floor the stairs climb to, `StairRise::above()`, with its
+  `rise`, `slabThickness` and voids; `SnapshotStairs` derives it for a version's scenes). Linings (`buildVoidLinings()` in
+  `voids.ts`, a ring `LiningThickness` inside the outline): a void's `liningMaterialId` lines it through its floor's slab,
+  `liningDepth` down (null: the whole well), and the floor below lines the rest from its ceilings (`ceilingUnder()`) up to
+  the slab above; a stair's `voidLiningMaterialId` lines its footprint alike (in the stack each floor draws its part). In
+  the top view a void's dashed outline with the plan's diagonals (`buildVoidOutline()`, `parts.voidOutlines`, `planOnly`)
+  picks it, and its corners get handles (`Outlined` kind `void`). The walkthrough stops at its edges except over a stair
+  arriving from below (`voidColliders()`). Areas: `VoidArea` / `PolygonOverlap` (ear clipping, `ConvexClip`) take the
+  floor's voids off the room schedule's areas (`voidArea`, voids listed in `FloorScheduleDto::$voids`, in no total) and
+  the flooring, and the floor above's off a flat ceiling in the quantities (under a roof the volume, headroom and sloped
+  ceiling are scaled by the share of the floor left); the viewer's labels, the sidebar and the PDF schedule do the same
+  with `netRoomArea()` (`polygon-clipping`), the twins kept identical by `backend/tests/fixtures/void-area.json`.
+  **Always change both twins and add a fixture case in the same change.** Voids are taken not to overlap; the stairs'
+  own footprints (TS only) are not taken off. The plan PDF crosses a void (`voidDiagonals()`).
+- Railings (`Railing`, `railings`, element type `Railing`, `RailingHandler`; REST `…/railings`, MCP `add_railing` /
+  `update_railing` / `delete_railing`, the scene's and snapshots' `railings`): a polyline (`points`, 2–200, 10 mm apart; a
+  closed one repeats its first point) `height` from its base at `baseZ` to the top of the handrail, `style` (`Balusters`,
+  `Rods`, `Glass`, `Panel`, `Cable`) with `spacing` (null: `railingSpacing()`), `postSpacing`, `handrail` (`Round`,
+  `Square`, `Flat`, `None`), `materialId` (null: steel) and `infillMaterialId` (a pane's or panel's). `buildRailRun()`
+  (`railings.ts`) draws posts, handrail and infill along a top line and is shared with the stairs; `buildRailing()` tags
+  the group `railingId` at the plan origin, so a drag moves it (`points` shifted). The walkthrough collides with each
+  stretch (`railingColliders()`), the plan PDF draws a thin line. The editor's Draw railing tool (key B, `drawRailing`)
+  reuses the wall run (typed lengths, snapping; no arcs) and creates it with `EditorStore.drawRailing()`. The balcony
+  railing definition stays a definition (one straight run).
+- Fences along polylines (FD-100) are railings: `style` `Mesh` or `Boards` (`RailingStyleEnum::isFence()`, TS
+  `isFenceStyle()`; no handrail, no spacing; a stair's `railingStyle` may not be one) and `follow` (`Level` at `baseZ`,
+  `Rake` / `Step` on the plots' ground, `RailingFollowEnum`; another style is stored level). `buildRailing(railing,
+  materials, plots)` draws each stretch as the `Fence` item's run (`buildFenceRun()` in `outdoor.ts`, posts at most
+  `postSpacing` apart, one post at each corner: `FenceRun.posts`), the ground under it from `groundAt()`; a plot change
+  rebuilds the fences on the ground; the sections stand them on the ground (stepped bays for `Step`). Draw one with the Draw railing tool and set its style. Gates stay `Fence` items.
+- Stairs: `railingStyle` (null: posts and a handrail, as before) fills the `railing` sides with `buildRailRun()` in
+  `railingMaterialId` (null: the structure's); `wallHandrail` (None, Left, Right, Both) adds a rail on brackets
+  `WallRailOffset` in from that side (`buildWallHandrail()`, `offsetLine()`), `RailHeight` over the nosings.
+
+## Chimneys and roof details (FD-91)
+
+- Chimneys: the structural item kind `Chimney` (`params.shape` rect or round, `aboveRoof` mm, default 600, `cap` false
+  leaves out the metal cap; `StructureParamsValidator`), on the floor it starts from (`StructureSize` stands it on its room's
+  floor). Its top is `aboveRoof` over the highest roof covering its outline (`itemFootprint()`) on its floor or higher,
+  else its own `height` (`chimneyTop()` in `viewer/engine/chimneys.ts`, TS only). The scene's `chimneyFloors`
+  (`ChimneyFloorDto`, empty in a project without chimneys; `SnapshotScenes` derives them for a version) are the other
+  floors with roofs or chimneys and their level `offset`. Each floor draws the stretch passing through it
+  (`chimneyStretch()`, `sceneChimneys()`): its own from their foot (the item builder, `ItemAssets.chimneys`, the stack's
+  context floors with their own), those of the floors at or below its level from its level (`buildChimneysBelow()`,
+  `parts.chimneysBelow`, untagged), each up to the next floor's level (`voidsAbove.rise`) or the top with its cap, so the
+  stack's floors meet. `buildRoof()` cuts every chimney passing through out of the planes and the ridge and hip caps
+  (`RoofSurroundings.chimneys`, upright holes). The plan PDF fills them like columns, the walkthrough collides with them;
+  `ItemPlacement` keeps them (and every structural kind) off `onRoof`. Quantities do not count them.
+- Roof details (`RoofDetails`, missing in older states and snapshots: none): `gutters` (None, HalfRound, Box) along the
+  eaves of a pitched roof (a gable's front and back, a shed's front, a hip's four sides; `RoofEdgeEnum`) and
+  `gutterMaterialId` (null `zinc-titanium`); `downpipes` `[{edge, along}]` (mm from the roof's centre line on the eaves line, its middle unless a verge is skewed;
+  null at the ends of the front and back eaves, `CornerInset` in), checked only when given anew; `snowGuards` rows per
+  plane; `ridgeStyle` (Box, Round half-round ridge tiles, Angled metal). A flat roof given anew gutters or snow guards is
+  refused, one made flat leaves them behind. The twins are `RoofGutters` (`Service/Editor/Geometry`) and
+  `roofGutters()` / `roofDownpipes()` (`viewer/engine/rainwater.ts`): gutters on the overhang's edge where the roof is
+  the top (`topStretches()`, stopping under a higher roof, as the caps do), downpipes `DownpipeOffset` off the eaves line, one whose outlet
+  misses a gutter left out; kept identical by `backend/tests/fixtures/roof-gutters.json`. **Always change both twins and
+  add a fixture case in the same change.** `buildRoof()` draws them in the roof's group, the downpipes down to the
+  ground (`RoofSurroundings.ground`: the floor's plots, else the datum ±0.000; a plot change rebuilds the roofs with
+  gutters); the plan PDF dashes the gutters and draws the downpipes as circles. Quantities: surfaces `Gutter` and `Downpipe`, by the running metre (`RoofSurfaces`).
+- Items on the roof: `items.on_roof` (`onRoof`, not with `onGround`): `z` counts from the top of the floor's highest
+  roof covering under the item's centre and the item is turned onto that plane's slope (`layOnRoof()` / `roofUnder()` in
+  `items.ts`; `itemsOverFloor()` adds the roof's top for the sheets). A roof change rebuilds them. The seeded definitions
+  `roof-vent-tile`, `roof-step` (its tread levelled by a `pitch` parameter), `solar-collector` and `satellite-dish`
+  (`SeedRoofAccessoriesMigration`) go there or on a chimney.
+- The material pattern `BeaverTail` (`roof-tiles-beaver-clay`, 180 × 380): round-ended tiles in half-bond rows
+  `BeaverTailGauge` (0.4) of a tile's length apart (`drawBeaverTails()`), counted in pieces of that visible gauge.
+- `ConvertBuiltInFurnitureTest` puts back the current `items.kind` enum after running an older migration's down/up.
+
 ## Roofs (FD-38)
 
 - The plan is `docs/roofs-plan.md`. A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,
@@ -356,7 +535,15 @@ format is the text in `FurnitureTools::Format`.
   counting from that floor's level. It is a rectangle, the eaves line: `width` × `depth` centred on (x, y), the ridge
   along the width, turned by `rotation`. `shape` is Gable, Hip (a pyramid over a square), Shed (rising from the front,
   −y at 0°) or Flat (`parapet`); the underside is `eaveHeight` along the eaves line and rises at `pitch`, reaching
-  `overhang` past the eaves and `vergeOverhang` past the gables; `thickness` is square to the slope. A new roof without
+  `overhang` past the eaves and `vergeOverhang` past the gables; `thickness` is square to the slope. A gable's or shed's
+  verges may be skewed (FD-97, `RoofSkew`): `startSkew` / `endSkew` (degrees counter-clockwise, ±45, 0 square) turn the
+  verge at the ridge's start (−along) or end about the ridge's end on the eaves line, the overhang square to it, so the
+  eaves line and the planes are trapezoids (`localOutline()` / `vergeAt()`, `roofLocalOutline()` / `roofVergeAt()`; the
+  heights do not change, only where the roof reaches, so `covers()`, `RoofBreaks`, the gutters, the roof windows' margin
+  and the corner drag follow it; a downpipe stands where both its foot on the eaves line and its outlet on the overhang's
+  edge lie between the verges, `downpipeSpan()` / `roofDownpipeSpan()`). A flat roof's ends turn alike (FD-101,
+  `canSkew()`: over a skewed wall, its parapet one ring between the outline and the outline set in, mitred at the corners, `insetOutline()`). A hip roof given a skew anew is refused,
+  one made so leaves it behind; the front and back, of the eaves line and of the outline, stay at least `MinSide` long. A new roof does not take a skew from the walls yet. A new roof without
   a size takes the rectangle round the walls' outer faces, turned along the longest exterior wall, the ridge along the
   longer side, the eaves at the tallest wall. An L- or T-shaped house takes several roofs.
 - The geometry exists twice: `RoofGeometry` (`Service/Editor/Geometry`) and `viewer/engine/roof-geometry.ts` (planes in
@@ -513,8 +700,11 @@ format is the text in `FurnitureTools::Format`.
 - `make screenshots PROJECT=… EMAIL=… PASSWORD=… [VIEWS=… ROOM=…]` (`frontend/scripts/screenshots.mjs`, Playwright)
   writes the saved views of the project whose name starts with `VIEWS`, the editor with `ROOM`'s inspector open, the
   project page, cut list, furniture library, furniture editor and a share link to `docs/screenshots/`, with the app's
-  UI and the plan underlay hidden. With `cwebp` on the PATH it saves WebP 1600 px wide. The README tour uses the demo
-  flat's "Tour · …" views; keep the unlicensed poster and plan out of them.
+  UI and the plan underlay hidden; `VIEWS_ONLY=1` writes the views alone. With `cwebp` on the PATH it saves WebP 1600 px
+  wide. The README tour uses the demo flat's "Tour · …" views and the demo house's "House tour · …" views (project 13
+  locally, `VIEWS_ONLY=1`), plus its first floor's plan PDF and section B–B rendered from the exports
+  (`house-plan.webp`, `house-section.webp`); keep the unlicensed poster and plan, and the house's source drawings and
+  photos, out of them.
 
 ## Review comments
 
@@ -555,11 +745,28 @@ format is the text in `FurnitureTools::Format`.
   - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle, or its current
     position along the wall for a sliding or pocket leaf (`Leaf.motion`).
   - Items do not block.
-- Between floors (FD-73): PageUp / PageDown (the walk pad's floor buttons on touch) ask the page for the next floor up
-  or down (`walkFloorHandler`); it navigates there, and `load()` of that floor keeps the walk going
-  (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`): the walker stands at the same plan point if it lies in one of
-  the floor's rooms, else where a walk of the floor starts, with its doors closed as at a walk's start. Any other
-  floor change ends the walk. Share links have one floor, so guests cannot.
+- All floors at once (FD-102): the viewer page loads the project's other floors while walking (`walkData`, the same
+  version) and passes them as `walkFloors` (`ViewerEngine.setWalkFloors()`; a share link with `allFloors` its `stack`
+  and `above`; a null during a walk is ignored). During the walk `rebuildStack()` draws all of them as context floors
+  (above the shown one too), each with its own `leafStates`, so their doors open and close (`doorAt()` picks them,
+  `doorStates()` finds the floor). `building-walk.ts` (framework-free) walks them in the shown floor's frame:
+  `walkFloors()` gives each a band of walker heights from `BandBelow` (600) under its level to as far under the next
+  one's; `floorColliders()` moves a floor's colliders (walls, stairs, railings, voids, door leaves) by its offset and
+  keeps them within its band (`WallCollider.levels`); `buildingLevels()` reads what is underfoot on the band's floor
+  (`floorSurface()`: its stairs, then its rooms) and else the ground of any floor's plots (sloping ground stops only the
+  walker on the plot's floor). A floor's band starts under its lowest room (sunken ones), above the floor below's level;
+  two floors at one elevation share no band. So a stair's ramp carries on from floor to floor, with no switch.
+  `onWalkFloorChange` tells the page the floor the walker is on (the walk's hint names it; `walkPlace` for the floor
+  buttons). Ending the walk on another floor moves the camera to the walker's place against the shown floor's level
+  (`shiftView()`), and the page navigates to that floor unless it moved on meanwhile (`walkStartFloorId`); its `load()`
+  then leaves the view as it is (`walkEndedOn`). PageUp / PageDown stand the walker on the next floor in the engine
+  (`walkToBuildingFloor()`); E opens the doors of the walker's floor (`doorAt()` raycasts only that layer). Drawing all three floors of the demo house costs about 0.7 ms of CPU a
+  frame more than the shown floor alone.
+- Between floors without the others loaded (FD-73; a share link without `allFloors`, or before they load): PageUp /
+  PageDown (the walk pad's floor buttons on touch) ask the page for the next floor up or down (`walkFloorHandler`); it
+  navigates there, and `load()` of that floor keeps the walk going (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`):
+  the walker stands at the same plan point if it lies in one of the floor's rooms, else where a walk of the floor
+  starts, with its doors closed as at a walk's start. Any other floor change ends the walk.
 - Stairs (FD-78, `stairs.ts`): `stairPaths()` are the floor's own stairs and those coming up through it (`stairsBelow`,
   under the floor by their rise), laid out once per `load()` (`walkStairs`) for the colliders and `floorLevels()`. Over
   one, the eye follows the walking line (`stairSpot()`, a smooth ramp; where lines pass beside or over one another, a
@@ -567,10 +774,15 @@ format is the text in `FurnitureTools::Format`.
   last height wins: `Walkthrough` passes it, and `setFloorLevels(levels, level)` carries it over to a floor walked
   onto). `stairColliders()` block a stair's sides, open where the floor's own stairs start and where those from below
   arrive (`StairPath.open`: half the flight's width, or a tread's turn round a spiral; the stairwell's other edges are
-  its railing, and an upper floor's walls over a stairwell block too). Within `StairLanding` of the top, or of the
+  its railing, and an upper floor's walls over a stairwell block too). Colliders may have `levels`, the walker's levels
+  they stop (`collideCircle(…, level)`): a stairwell's edges only the walker on its floor (and not where the floor's own
+  stair flies over it), a flight's sides only up to a step (`StairStepUp`) over the flight, and where it is over
+  `StairHeadroom` not the walker underneath, who is stopped across the flight where it comes down to the headroom
+  (`headroomCrossing()`), unless deep in a stairwell below; `stairSpot()` takes no stair over a step above the walker. Within `StairLanding` of the top, or of the
   bottom of a stair from below, `ViewerEngine.followStairs()` walks to the next floor as PageUp / PageDown do; the
   walker keeps the spot they have reached when it loads, and no further floor until they leave the landing zone
-  (`stairArrival`). While climbing, the floor above is not drawn until it loads.
+  (`stairArrival`). While climbing, the floor above is not drawn until it loads. In a walk over all floors (FD-102) none
+  of this is needed: the stairs are walked across the floors' bands.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
   tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.
@@ -586,7 +798,8 @@ format is the text in `FurnitureTools::Format`.
 - Room schedule: `Service/Schedule/RoomScheduleService` (REST `…/room-schedule`, MCP `get_room_schedule`, the project
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
-  gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) are totalled separately. Only
+  gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) and garages (`isAncillary()`)
+  are totalled separately. Only
   PHP computes it, except under roofs (`RoomUnderRoof`, twinned for the PDF's schedule; see Roofs).
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
@@ -597,7 +810,7 @@ format is the text in `FurnitureTools::Format`.
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without
   openings, along the wall faces on the room's edges; the ceiling (a vault's arc length and its beams) and skirting.
-  Façades (wall faces outside every room) are not counted, and open-air rooms get no paint. Materials with a tile size
+  Façades (wall faces outside every room) are counted apart (`FacadeSurfaces`), and open-air rooms get no paint. Materials with a tile size
   and a pattern laid in pieces are counted in whole pieces plus `projects.waste_percent` (`Costing`).
 - Prices are per project (`ProjectMaterialPrice`, `MaterialPriceService`, REST `…/material-prices` replaces the list, MCP
   `set_material_prices` merges): per m² and per running metre (skirting, edge banding), in `projects.currency`. A price
@@ -650,8 +863,37 @@ format is the text in `FurnitureTools::Format`.
 - The sheets share `sheet-svg.ts` (paper size, frame, title block, SVG writing).
 - `app/export/`: `sheetsPdf()` turns the sheets into PDF pages with `jspdf` and `svg2pdf.js` (loaded lazily) and
   embeds Inter from `assets/fonts/` (SIL OFL; jsPDF's own fonts lack Czech letters). `ExportComponent` (Plan PDF,
-  Plan SVG, Elevations PDF, 3D glTF) exports the scene as shown on the viewer page and the shared viewer page;
-  `ShareSettingsDto.exports` (missing in older links: allowed) lets a share link forbid it.
+  Plan SVG, Elevations PDF, Façades PDF / SVG, Sections PDF / SVG, 3D glTF) exports the scene as shown on the viewer
+  page and the shared viewer page; `ShareSettingsDto.exports` (missing in older links: allowed) lets a share link
+  forbid it.
+- Building drawings (FD-94, `viewer/engine/sections.ts`, framework-free): the façades and sections of the building,
+  the shown floor with the floors below it (`ExportComponent.building`: the viewer page loads them, or takes the All
+  floors stack; a share link has its stack only with `allFloors`). `buildingView()` collects what a `ViewPlane` sees
+  (u along its `right`, levels against ±0.000, depth along `look`) as groups drawn far to near by their nearest
+  point, each filled so it covers what lies behind (painter's order): wall faces facing the viewer from bottom to top
+  (`wallTopAt()` / `wallBottomAt()`, bent at `roofBreaks()` with the wall's own slopes) with their openings and, on a
+  face outside every indoor room, their `facadeBands()`, slab edges
+  (rooms not on the ground and walls joined, cached per scene), roof planes' parts (`roofPlaneParts()`; the covering, hatched every
+  350 mm up the slope, where the plane rises away from the viewer, else the soffit), roof windows, gutters,
+  downpipes, chimneys, stair treads and railings. The extent is the house (site walls, garden steps and the ground
+  do not widen it) plus `GroundMargin`, and each drawing is clipped to it. A façade (`facadeSheets()`: plan south,
+  north, east and west, named by the true compass, `facadeName()`) adds the terrain along the line in front of the
+  house; four to an A3 sheet, or two where that gives a larger scale. A section (`sectionSheets()`, A4) keeps what
+  lies 0 to `depth` beyond its line (`clipRange()` / `clipRing()`) and fills the cut over it (`sectionCutShapes()`):
+  walls less the opening the line passes through (glass in a window, lift-and-slide or glazed door), slabs, roof
+  planes, stair treads and landings, and the ground (`cutGround()`: down to the lowest slab's underside where the
+  building stands). Level marks (`levelText()`): every floor, the eaves and ridges, a flat roof's top. Scales from
+  `BuildingScales`. polygon-clipping trips over some slab unions; `slabOutline()` rounds to 0.1 mm and joins piece by
+  piece then.
+- Section lines (`SectionLine`, `section_lines`, element type `SectionLine`, `SectionLineHandler` through `SceneEditor`:
+  undo, change log; REST `…/sections`, MCP `add_section_line` / `update_section_line` / `delete_section_line`, the
+  scene's and snapshots' `sections`, `SnapshotSectionRestorer`): start → end in plan mm, looking to the left of it,
+  `depth` beyond (null: all); a new one runs west to east through the middle of the floor's walls, looking north,
+  named by the next free name (A … Z, AA …; up to two characters it is drawn as `A–A`); a copy lies a metre the way it
+  looks under the next name (`SectionLineHandler::copied()`). The top view draws it dash-dot with arrows the way it
+  looks (`section-lines.ts`, `parts.sectionLines`, `planOnly`, tagged `sectionId`), lifted just over the roof outlines
+  so a click picks it before the walls and furniture; it is dragged like a railing, the arrows nudge it and R turns it
+  round (swaps its ends). The plan PDF marks it (`sectionMarks()`).
 - glTF: `ViewerEngine.exportGlb()` writes the built floor through `GLTFExporter` (loaded lazily). `exportTree()`
   (`viewer/engine/gltf-export.ts`) copies the content with the ceilings shown and leaves out the room labels, the
   section-fill twins, the selection highlight and hidden variants; nodes are named after their elements and

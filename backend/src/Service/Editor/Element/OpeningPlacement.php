@@ -8,12 +8,15 @@ use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Opening;
+use FlatDesigner\Model\Entity\Wall;
 use FlatDesigner\Service\Editor\Exception\EditException;
+use FlatDesigner\Service\Editor\Geometry\WallLine;
 
 /**
  * Where an opening may sit along its wall. Besides the opening itself, a sliding or pocket door takes the
- * stretch of wall its leaf slides into when open (towards `hinge`); a pocket door also needs a wall thick
- * enough for the pocket. A niche keeps a back of the wall behind it.
+ * stretch of wall its leaf slides into when open (towards `hinge`; a lift-and-slide door with fixed panes slides
+ * within its opening); a pocket door also needs a wall thick enough for the pocket. A niche keeps a back of the wall
+ * behind it. The frame's inset and a garage door's headroom are `OpeningClearances`.
  */
 final class OpeningPlacement
 {
@@ -59,9 +62,9 @@ final class OpeningPlacement
 	 *
 	 * @return array{int, int}
 	 */
-	public static function occupied(OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $offset, int $width): array
+	public static function occupied(OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $offset, int $width, int $fixedPanes = 0): array
 	{
-		if (!$type->isSliding()) {
+		if (!$type->isSliding() || $fixedPanes > 0) {
 			return [$offset, $offset + $width];
 		}
 		// The open leaf clears the opening: a pocket door's leaf is as wide as it, a sliding one overlaps both edges.
@@ -86,11 +89,12 @@ final class OpeningPlacement
 		iterable $others,
 		?OpeningSideEnum $side = null,
 		?int $depth = null,
+		int $fixedPanes = 0,
 	): void {
 		if ($type === OpeningTypeEnum::PocketDoor && $wallThickness < self::MinPocketWallThickness) {
 			throw EditException::invalid(sprintf('A pocket door needs a wall at least %d mm thick.', self::MinPocketWallThickness));
 		}
-		[$from, $to] = self::occupied($type, $hinge, $offset, $width);
+		[$from, $to] = self::occupied($type, $hinge, $offset, $width, $fixedPanes);
 		if ($from < 0 || $to > $wallLength) {
 			throw EditException::invalid(sprintf(
 				'The open %s needs %d mm of wall beside the opening towards its hinge edge; there is %d mm.',
@@ -114,7 +118,7 @@ final class OpeningPlacement
 		if ($offset < $other->offset + $other->width && $other->offset < $offset + $width) {
 			throw EditException::invalid(sprintf('The opening overlaps "%s" on this wall.', $other->name));
 		}
-		[$otherFrom, $otherTo] = self::occupied($other->type, $other->hinge, $other->offset, $other->width);
+		[$otherFrom, $otherTo] = self::occupied($other->type, $other->hinge, $other->offset, $other->width, $other->fixedPanes);
 		if ($from < $otherTo && $otherFrom < $to) {
 			throw EditException::invalid(sprintf('The opening or "%s" needs that part of the wall for its open leaf.', $other->name));
 		}
@@ -159,14 +163,33 @@ final class OpeningPlacement
 	 * a wall curved at `radius` (null: straight): built straight, it may stand off the arc by a quarter of the wall's
 	 * thickness at most. Niches follow the curve. Twin of `openingFitsCurve()` in `plan-geometry.ts`.
 	 */
-	public static function fitsCurve(OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $width, ?float $radius, int $wallThickness): bool
-	{
+	public static function fitsCurve(
+		OpeningTypeEnum $type,
+		?OpeningHingeEnum $hinge,
+		int $width,
+		?float $radius,
+		int $wallThickness,
+		int $fixedPanes = 0,
+	): bool {
 		if ($radius === null || $type === OpeningTypeEnum::Niche) {
 			return true;
 		}
-		[$from, $to] = self::occupied($type, $hinge, 0, $width);
+		[$from, $to] = self::occupied($type, $hinge, 0, $width, $fixedPanes);
 
 		return $radius * (1 - cos(($to - $from) / (2 * $radius))) <= $wallThickness / 4;
+	}
+
+	/** On a curved wall a door or window is built straight, so it has to be shallow (`fitsCurve()`). */
+	public static function checkCurve(Wall $wall, OpeningTypeEnum $type, ?OpeningHingeEnum $hinge, int $width, int $fixedPanes): void
+	{
+		$radius = WallLine::fromWall($wall)->arc()['radius'] ?? null;
+		if ($radius !== null && !self::fitsCurve($type, $hinge, $width, $radius, $wall->thickness, $fixedPanes)) {
+			throw EditException::invalid(sprintf(
+				'On this curved wall a door or window is built straight, so it may take %d mm of the wall at most%s.',
+				self::maxCurvedWidth($radius, $wall->thickness),
+				$type->isSliding() ? ' with the wall its open leaf slides along' : '',
+			));
+		}
 	}
 
 	/** The widest opening (mm) `fitsCurve()` allows on a wall curved at `radius`. */
@@ -185,13 +208,13 @@ final class OpeningPlacement
 		?float $wallRadius = null,
 	): bool
 	{
-		[$from, $to] = self::occupied($opening->type, $opening->hinge, $offset, $opening->width);
+		[$from, $to] = self::occupied($opening->type, $opening->hinge, $offset, $opening->width, $opening->fixedPanes);
 
 		return $from >= 0
 			&& $to <= $wallLength
-			&& $opening->sillHeight + $opening->height <= $wallHeight
+			&& OpeningClearances::fit($opening, $wallThickness, $wallHeight)
 			&& ($opening->type !== OpeningTypeEnum::PocketDoor || $wallThickness >= self::MinPocketWallThickness)
 			&& ($opening->type !== OpeningTypeEnum::Niche || ($opening->depth ?? 0) <= $wallThickness - self::MinNicheBack)
-			&& self::fitsCurve($opening->type, $opening->hinge, $opening->width, $wallRadius, $wallThickness);
+			&& self::fitsCurve($opening->type, $opening->hinge, $opening->width, $wallRadius, $wallThickness, $opening->fixedPanes);
 	}
 }

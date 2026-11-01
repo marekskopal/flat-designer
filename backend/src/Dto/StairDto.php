@@ -29,6 +29,13 @@ final readonly class StairDto
 		public string $railing,
 		public ?int $treadMaterialId,
 		public ?int $structureMaterialId,
+		public ?int $rise = null,
+		public int $baseZ = 0,
+		public ?string $railingStyle = null,
+		public ?int $railingMaterialId = null,
+		public string $wallHandrail = 'None',
+		public ?int $voidLiningMaterialId = null,
+		public ?int $innerRadius = null,
 	) {
 	}
 
@@ -51,6 +58,13 @@ final readonly class StairDto
 			railing: $stair->railing->value,
 			treadMaterialId: $stair->treadMaterial?->id,
 			structureMaterialId: $stair->structureMaterial?->id,
+			rise: $stair->rise,
+			baseZ: $stair->baseZ,
+			innerRadius: $stair->innerRadius,
+			railingStyle: $stair->railingStyle?->value,
+			railingMaterialId: $stair->railingMaterial?->id,
+			wallHandrail: $stair->wallHandrail->value,
+			voidLiningMaterialId: $stair->voidLiningMaterial?->id,
 		);
 	}
 }

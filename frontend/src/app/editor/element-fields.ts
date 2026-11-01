@@ -1,5 +1,6 @@
-import {OpeningType} from '@app/models/scene';
-import {roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
+import {OpeningType, RailingStyle} from '@app/models/scene';
+import {isFenceStyle} from '@app/viewer/engine/railings';
+import {canSkew, hasVerges, roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {stairRisers} from '@app/viewer/engine/stairs';
 
@@ -20,7 +21,8 @@ export type FieldType =
     | 'bool'
     | 'definition'
     | 'model'
-    | 'custom';
+    | 'custom'
+    | 'spots';
 
 /** Opening types in the order of the inspector and the Add menu. */
 export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
@@ -31,11 +33,19 @@ export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
     Passage: 'Passage',
     Window: 'Window',
     Niche: 'Niche',
+    GarageDoor: 'Garage door',
 };
 
 /** Doors with a leaf (or two): not windows, passages or niches. */
 const hasLeaf = (element: Record<string, unknown>): boolean =>
     element['type'] !== 'Window' && element['type'] !== 'Passage' && element['type'] !== 'Niche';
+
+/** Openings with a frame of their own (FD-89): not passages or niches. */
+const framed = (element: Record<string, unknown>): boolean => element['type'] !== 'Passage' && element['type'] !== 'Niche';
+
+/** A window, or a lift-and-slide door (with fixed panes): glazing in a frame. */
+const glazedFrame = (element: Record<string, unknown>): boolean =>
+    element['type'] === 'Window' || (element['type'] === 'SlidingDoor' && Number(element['fixedPanes'] ?? 0) > 0);
 
 /** One editable field of an element, as the inspector shows it. */
 export interface FieldDef {
@@ -58,11 +68,21 @@ export interface FieldDef {
     hint?: (element: Record<string, unknown>) => string | null;
 }
 
+/** A railing's infill (FD-90), a stair's too. */
+const RailingStyles: readonly RailingStyle[] = ['Balusters', 'Rods', 'Glass', 'Panel', 'Cable'];
+/** A railing's infill may make it a fence (FD-100); a stair's may not. */
+const RailingAndFenceStyles: readonly RailingStyle[] = [...RailingStyles, 'Mesh', 'Boards'];
+const RailingStyleLabels: Readonly<Record<string, string>> = {Mesh: 'Fence: welded mesh', Boards: 'Fence: boards'};
+/** What a railing without a material looks like, by style (`railings.ts`): steel, a fence's timber or dark grey mesh. */
+const RailingDefaultLooks: Readonly<Record<string, string>> = {Boards: 'timber', Mesh: 'dark grey'};
+const isFence = (railing: Record<string, unknown>): boolean => isFenceStyle(railing['style'] as RailingStyle);
+
 const StairShapeLabels: Readonly<Record<string, string>> = {
     Straight: 'Straight',
     LShaped: 'L (quarter landing)',
     UShaped: 'U (half landing)',
     Spiral: 'Spiral',
+    Curved: 'Curved (fan-shaped steps)',
 };
 const hasLanding = (stair: Record<string, unknown>): boolean => stair['shape'] === 'LShaped' || stair['shape'] === 'UShaped';
 
@@ -71,11 +91,11 @@ const StepRuleMin = 600;
 const StepRuleMax = 650;
 
 /**
- * The riser the stair gets over its floor's rise (`stairRise`, put beside the stair's fields by the panel) and the
- * step rule 2R + G, with a warning when it falls outside 600–650 mm.
+ * The riser the stair gets over its own rise or its floor's (`stairRise`, put beside the stair's fields by the panel)
+ * and the step rule 2R + G, with a warning when it falls outside 600–650 mm.
  */
 export function stairStepHint(stair: Record<string, unknown>): string | null {
-    const rise = stair['stairRise'];
+    const rise = typeof stair['rise'] === 'number' ? stair['rise'] : stair['stairRise'];
     const going = stair['going'];
     if (typeof rise !== 'number' || typeof going !== 'number' || rise <= 0) {
         return null;
@@ -95,6 +115,20 @@ const RoofShapeLabels: Readonly<Record<string, string>> = {
 };
 const isPitched = (roof: Record<string, unknown>): boolean => roof['shape'] !== 'Flat';
 
+const RidgeStyleLabels: Readonly<Record<string, string>> = {
+    Box: 'Square cap',
+    Round: 'Half-round ridge tiles',
+    Angled: 'Angled metal ridge',
+};
+
+const GutterLabels: Readonly<Record<string, string>> = {
+    None: 'None',
+    HalfRound: 'Half-round',
+    Box: 'Box',
+};
+
+const hasGutters = (roof: Record<string, unknown>): boolean => isPitched(roof) && (roof['gutters'] ?? 'None') !== 'None';
+
 const RoofWindowTypeLabels: Readonly<Record<string, string>> = {
     CentrePivot: 'Centre pivot',
     TopHung: 'Top hung',
@@ -112,10 +146,10 @@ export function roofRidgeHint(roof: Record<string, unknown>): string | null {
 
 const ItemKinds = [
     'Sink', 'Hob', 'LedStrip', 'Box', 'Bathtub', 'Washbasin', 'Toilet', 'WashingMachine', 'Mirror', 'TowelRadiator', 'FlushPlate',
-    'Fixture', 'Fence', 'Column', 'Beam', 'Custom', 'Model',
+    'Fixture', 'Fence', 'Column', 'Beam', 'Chimney', 'Custom', 'Model',
 ] as const;
 
-const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway'] as const;
+const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway', 'Garage'] as const;
 
 /**
  * A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east (at its
@@ -151,8 +185,22 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'width', label: 'Width', type: 'int', unit: 'mm', half: true},
         {key: 'depth', label: 'Depth', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
-        {key: 'z', label: 'Elevation', type: 'int', unit: 'mm', half: true},
+        {
+            key: 'z',
+            label: 'Elevation',
+            labelOf: (item) => (item['onGround'] === true ? 'Above the ground' : item['onRoof'] === true ? 'Above the roof' : 'Elevation'),
+            type: 'int',
+            unit: 'mm',
+            half: true,
+        },
         {key: 'rotation', label: 'Rotation', type: 'int', unit: '°'},
+        {key: 'onGround', label: 'Stands on the ground (a sloping plot)', type: 'bool', when: (item) => item['onRoof'] !== true},
+        {
+            key: 'onRoof',
+            label: 'Lies on the roof (a solar panel, a vent tile)',
+            type: 'bool',
+            when: (item) => item['onGround'] !== true && item['kind'] !== 'Chimney',
+        },
         {key: 'roomId', label: 'Room', type: 'room', nullable: true},
         {key: 'groupId', label: 'Group', type: 'group', nullable: true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
@@ -170,6 +218,10 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'thickness', label: 'Thickness', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
         {key: 'upToRoof', label: 'Up to the roof (a gable)', type: 'bool'},
+        {key: 'heightEnd', label: 'Height at the end (empty: level top)', type: 'int', unit: 'mm', nullable: true},
+        {key: 'onGround', label: 'Stands on the ground (a garden wall on a slope)', type: 'bool'},
+        {key: 'baseStart', label: 'Bottom at the start', type: 'int', unit: 'mm', half: true, when: (wall) => wall['onGround'] !== true},
+        {key: 'baseEnd', label: 'Bottom at the end', type: 'int', unit: 'mm', half: true, when: (wall) => wall['onGround'] !== true},
         {key: 'materialId', label: 'Material', type: 'material', nullable: true},
         {
             key: 'leftFinishes',
@@ -200,7 +252,26 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             unit: 'mm',
             nullable: true,
             half: true,
-            when: (element) => element['type'] === 'Door' || element['type'] === 'DoubleDoor',
+            when: (element) =>
+                element['type'] === 'Door' ||
+                element['type'] === 'DoubleDoor' ||
+                (element['type'] === 'GarageDoor' && element['garageDoorStyle'] === 'SideHinged'),
+        },
+        {
+            key: 'garageDoorStyle',
+            label: 'Garage door',
+            type: 'select',
+            options: ['Sectional', 'UpAndOver', 'SideHinged', 'Roller'],
+            optionLabels: {Sectional: 'Sectional', UpAndOver: 'Up and over', SideHinged: 'Side-hinged', Roller: 'Roller'},
+            half: true,
+            when: (element) => element['type'] === 'GarageDoor',
+        },
+        {
+            key: 'fixedPanes',
+            label: 'Fixed panes (lift-and-slide)',
+            type: 'int',
+            half: true,
+            when: (element) => element['type'] === 'SlidingDoor',
         },
         {
             key: 'hinge',
@@ -213,7 +284,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         },
         {
             key: 'side',
-            label: 'Side (swing; sliding: hangs on; window: interior; niche: cut into)',
+            label: 'Side (swing; sliding: hangs on; window: interior; niche: cut into; garage: inside)',
             type: 'select',
             options: ['Left', 'Right'],
             nullable: true,
@@ -226,7 +297,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'select',
             options: ['Lining', 'Architrave', 'Flush', 'None'],
             half: true,
-            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche',
+            when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche' && element['type'] !== 'GarageDoor',
         },
         {
             key: 'handle',
@@ -251,16 +322,53 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             key: 'leafStyle',
             label: 'Leaf',
             type: 'select',
-            options: ['Flush', 'Panelled', 'Glazed'],
+            options: ['Flush', 'Panelled', 'Glazed', 'Boarded'],
             half: true,
-            when: hasLeaf,
+            when: (element) => hasLeaf(element) && !glazedFrame(element),
         },
         {
             key: 'leafPanels',
-            label: 'Panels / panes',
+            label: 'Panels / panes / boards',
             type: 'int',
             half: true,
-            when: (element) => element['leafStyle'] === 'Panelled' || element['leafStyle'] === 'Glazed',
+            when: (element) => hasLeaf(element) && element['leafStyle'] !== 'Flush' && element['leafStyle'] != null && !glazedFrame(element),
+        },
+        {
+            key: 'boardDirection',
+            label: 'Boards',
+            type: 'select',
+            options: ['Vertical', 'Horizontal'],
+            half: true,
+            when: (element) => hasLeaf(element) && element['leafStyle'] === 'Boarded' && !glazedFrame(element),
+        },
+        {key: 'frameMaterialId', label: 'Frame material', type: 'material', nullable: true, half: true, when: framed},
+        {
+            key: 'outsideFrameMaterialId',
+            label: 'Frame outside (empty: as inside)',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: glazedFrame,
+        },
+        {
+            key: 'leafMaterialId',
+            label: 'Leaf material (empty: the frame\'s)',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: (element) => hasLeaf(element) && !glazedFrame(element),
+        },
+        {
+            key: 'inset',
+            label: 'Frame in from the outer face (empty: centred)',
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            when: (element) =>
+                framed(element) &&
+                element['type'] !== 'PocketDoor' &&
+                element['type'] !== 'GarageDoor' &&
+                (element['type'] !== 'SlidingDoor' || glazedFrame(element)),
         },
         {
             key: 'panelHeight',
@@ -296,11 +404,13 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {key: 'depth', label: 'Depth (into the wall)', type: 'int', unit: 'mm', when: (element) => element['type'] === 'Niche'},
         {key: 'entrance', label: 'Main entrance (walkthrough starts here)', type: 'bool', when: (element) => element['type'] !== 'Niche'},
         {key: 'walkable', label: 'Walk through (opens in the walkthrough)', type: 'bool', when: (element) => element['type'] === 'Window'},
+        {key: 'revealLining', label: 'Line the reveal with the façade', type: 'bool', when: (element) => element['type'] !== 'Niche'},
     ],
     plot: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
         {key: 'groundLevel', label: 'Ground level (+ above, − below the floor)', type: 'int', unit: 'mm'},
+        {key: 'terrain', label: 'Spot heights (sloping ground)', type: 'spots'},
         {key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
     ],
     stair: [
@@ -318,6 +428,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
         },
         {key: 'going', label: 'Going (tread depth)', type: 'int', unit: 'mm', half: true},
+        {key: 'rise', label: 'Own rise (garden steps; empty: to the next floor)', type: 'int', unit: 'mm', nullable: true, half: true},
+        {key: 'baseZ', label: 'First riser at', type: 'int', unit: 'mm', half: true},
         {key: 'risers', label: 'Risers (empty: as the rise needs)', type: 'int', nullable: true, hint: stairStepHint},
         {key: 'firstFlight', label: 'Risers up to the landing (empty: half)', type: 'int', nullable: true, half: true, when: hasLanding},
         {
@@ -326,7 +438,15 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'select',
             options: ['Left', 'Right'],
             half: true,
-            when: (stair) => hasLanding(stair) || stair['shape'] === 'Spiral',
+            when: (stair) => hasLanding(stair) || stair['shape'] === 'Spiral' || stair['shape'] === 'Curved',
+        },
+        {
+            key: 'innerRadius',
+            label: 'Inner edge from the centre',
+            type: 'int',
+            unit: 'mm',
+            half: true,
+            when: (stair) => stair['shape'] === 'Curved',
         },
         {key: 'gap', label: 'Gap between the flights', type: 'int', unit: 'mm', half: true, when: (stair) => stair['shape'] === 'UShaped'},
         {
@@ -338,9 +458,93 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
             when: (stair) => stair['shape'] !== 'Spiral',
         },
-        {key: 'railing', label: 'Handrail (walking up)', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {key: 'railing', label: 'Railing (walking up)', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {
+            key: 'railingStyle',
+            label: 'Railing infill (empty: posts only)',
+            type: 'select',
+            options: RailingStyles,
+            nullable: true,
+            half: true,
+            when: (stair) => stair['railing'] !== 'None',
+        },
+        {key: 'wallHandrail', label: 'Wall handrail', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {key: 'railingMaterialId', label: 'Railing material', type: 'material', nullable: true, half: true},
         {key: 'treadMaterialId', label: 'Tread material', type: 'material', nullable: true, half: true},
         {key: 'structureMaterialId', label: 'Structure material', type: 'material', nullable: true, half: true},
+        {
+            key: 'voidLiningMaterialId',
+            label: 'Lining of the void upstairs',
+            type: 'material',
+            nullable: true,
+            when: (stair) => stair['rise'] == null,
+        },
+    ],
+    void: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'liningMaterialId', label: 'Edge lining (empty: none)', type: 'material', nullable: true, half: true},
+        {key: 'liningDepth', label: 'Lining depth (empty: to the ceilings below)', type: 'int', unit: 'mm', nullable: true, half: true},
+        {key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
+    ],
+    railing: [
+        {key: 'name', label: 'Name', type: 'text'},
+        {key: 'style', label: 'Infill', type: 'select', options: RailingAndFenceStyles, optionLabels: RailingStyleLabels, half: true},
+        {
+            key: 'handrail',
+            label: 'Handrail',
+            type: 'select',
+            options: ['Round', 'Square', 'Flat', 'None'],
+            optionLabels: {Flat: 'Flat cap'},
+            half: true,
+            when: (railing) => !isFence(railing),
+        },
+        {
+            key: 'follow',
+            label: 'On the ground',
+            type: 'select',
+            options: ['Level', 'Rake', 'Step'],
+            optionLabels: {Level: 'No: level at its base', Rake: 'Raking with it', Step: 'Stepping per bay'},
+            half: true,
+            when: isFence,
+        },
+        {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
+        {key: 'baseZ', label: 'Base (+ above, − below the floor)', type: 'int', unit: 'mm', half: true},
+        {
+            key: 'spacing',
+            label: 'Spacing (empty: the style\'s)',
+            labelOf: (railing) => (railing['style'] === 'Balusters' ? 'Gap between balusters (empty: 100)' : 'Pitch (empty: the style\'s)'),
+            type: 'int',
+            unit: 'mm',
+            nullable: true,
+            half: true,
+            when: (railing) => railing['style'] !== 'Glass' && railing['style'] !== 'Panel' && !isFence(railing),
+        },
+        {key: 'postSpacing', label: 'Posts at most', type: 'int', unit: 'mm', half: true},
+        {
+            key: 'materialId',
+            label: 'Material (empty: steel)',
+            labelOf: (railing) => `Material (empty: ${RailingDefaultLooks[railing['style'] as string] ?? 'steel'})`,
+            type: 'material',
+            nullable: true,
+            half: true,
+        },
+        {
+            key: 'infillMaterialId',
+            label: 'Infill material',
+            type: 'material',
+            nullable: true,
+            half: true,
+            when: (railing) => railing['style'] === 'Glass' || railing['style'] === 'Panel',
+        },
+        {key: 'points', label: 'Points [[x, y], …] (JSON)', type: 'json'},
+    ],
+    section: [
+        {key: 'name', label: 'Name (A: Section A–A)', type: 'text'},
+        {key: 'startX', label: 'Start x', type: 'int', unit: 'mm', half: true},
+        {key: 'startY', label: 'Start y', type: 'int', unit: 'mm', half: true},
+        {key: 'endX', label: 'End x', type: 'int', unit: 'mm', half: true},
+        {key: 'endY', label: 'End y', type: 'int', unit: 'mm', half: true},
+        {key: 'depth', label: 'Depth beyond the cut (empty: all)', type: 'int', unit: 'mm', nullable: true},
     ],
     roof: [
         {key: 'name', label: 'Name', type: 'text'},
@@ -359,12 +563,49 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'int',
             unit: 'mm',
             half: true,
-            when: (roof) => roof['shape'] === 'Gable' || roof['shape'] === 'Shed',
+            when: (roof) => hasVerges(roof as Pick<RoofShapeFields, 'shape'>),
+        },
+        {
+            key: 'startSkew',
+            label: 'Start verge skew',
+            labelOf: (roof) => (roof['shape'] === 'Flat' ? 'Start edge skew' : 'Start verge skew'),
+            type: 'int',
+            unit: '°',
+            half: true,
+            when: (roof) => canSkew(roof as Pick<RoofShapeFields, 'shape'>),
+        },
+        {
+            key: 'endSkew',
+            label: 'End verge skew',
+            labelOf: (roof) => (roof['shape'] === 'Flat' ? 'End edge skew' : 'End verge skew'),
+            type: 'int',
+            unit: '°',
+            half: true,
+            when: (roof) => canSkew(roof as Pick<RoofShapeFields, 'shape'>),
         },
         {key: 'thickness', label: 'Thickness (square to the slope)', type: 'int', unit: 'mm', half: true},
         {key: 'parapet', label: 'Parapet (empty: none)', type: 'int', unit: 'mm', nullable: true, half: true, when: (roof) => !isPitched(roof)},
         {key: 'coveringMaterialId', label: 'Covering', type: 'material', nullable: true, half: true},
         {key: 'soffitMaterialId', label: 'Soffit', type: 'material', nullable: true, half: true},
+        {key: 'ridgeStyle', label: 'Ridge', type: 'select', options: Object.keys(RidgeStyleLabels), optionLabels: RidgeStyleLabels, when: isPitched},
+        {key: 'snowGuards', label: 'Rows of snow guards', type: 'int', half: true, when: isPitched},
+        {
+            key: 'gutters',
+            label: 'Gutters',
+            type: 'select',
+            options: Object.keys(GutterLabels),
+            optionLabels: GutterLabels,
+            half: true,
+            when: isPitched,
+        },
+        {key: 'gutterMaterialId', label: 'Gutters and downpipes', type: 'material', nullable: true, when: hasGutters},
+        {
+            key: 'downpipes',
+            label: 'Downpipes [{edge: Front | Back | Left | Right, along}] (JSON, empty: at the corners)',
+            type: 'json',
+            nullable: true,
+            when: hasGutters,
+        },
     ],
     roofWindow: [
         {key: 'name', label: 'Name', type: 'text'},
@@ -405,6 +646,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
             when: (room) => room['skirtingHeight'] != null,
         },
+        {key: 'soffitMaterialId', label: 'Slab soffit where it overhangs (empty: façade)', type: 'material', nullable: true},
         {key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
         {key: 'wallFinishes', label: 'Wall finishes [{materialId, bottom, top}] (JSON)', type: 'json'},
         {key: 'tileOriginX', label: 'Tile joints cross at x', type: 'int', unit: 'mm', nullable: true, half: true},

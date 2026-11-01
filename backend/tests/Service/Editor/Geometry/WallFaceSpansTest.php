@@ -11,6 +11,7 @@ use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
 use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
 use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
+use FlatDesigner\Service\Editor\Geometry\FacadeSpans;
 use FlatDesigner\Service\Editor\Geometry\Spans;
 use FlatDesigner\Service\Editor\Geometry\WallFaceSpans;
 use FlatDesigner\Service\Json\JsonDecoder;
@@ -20,6 +21,7 @@ use PHPUnit\Framework\TestCase;
 
 /** Runs the shared fixture tests/fixtures/wall-spans.json (also run by the frontend twin, `ceilings.spec.ts`). */
 #[CoversClass(WallFaceSpans::class)]
+#[CoversClass(FacadeSpans::class)]
 #[CoversClass(Spans::class)]
 final class WallFaceSpansTest extends TestCase
 {
@@ -96,6 +98,55 @@ final class WallFaceSpansTest extends TestCase
 			self::assertSame([$walls[$face['wall']]->id, $face['side']], [$actualFaces[$i]['wall']->id, $actualFaces[$i]['side']->value]);
 			self::assertEqualsWithDelta($face['from'], $actualFaces[$i]['from'], self::Delta);
 			self::assertEqualsWithDelta($face['to'], $actualFaces[$i]['to'], self::Delta);
+		}
+	}
+
+	/** @return iterable<string, array{list<WallDto>, list<array{polygon: list<array{float, float}>, outdoor: bool}>, list<array{wall: int, side: string, spans: list<array{float, float}>}>}> */
+	public static function facadeCases(): iterable
+	{
+		$fixture = JsonDecoder::decodeObject((string) file_get_contents(self::Fixture));
+		/** @var list<array{name: string, walls: list<array{startX: int, startY: int, endX: int, endY: int, sagitta?: int, thickness: int, openings: list<array{offset: int, width: int, sillHeight: int, height: int, type?: string, side?: string}>}>, rooms: list<array{polygon: list<array{int|float, int|float}>, outdoor?: bool}>, facades: list<array{wall: int, side: string, spans: list<array{int|float, int|float}>}>}> $cases */
+		$cases = $fixture['facades'];
+		$pair = static fn (array $p): array => [(float) $p[0], (float) $p[1]];
+		foreach ($cases as $case) {
+			$walls = [];
+			foreach ($case['walls'] as $i => $wall) {
+				$walls[] = self::wall($i + 1, $wall);
+			}
+
+			yield $case['name'] => [
+				$walls,
+				array_map(
+					static fn (array $room): array => [
+						'polygon' => array_map(
+							$pair,
+							$room['polygon'],
+						),
+						'outdoor' => $room['outdoor'] ?? false],
+					$case['rooms'],
+				),
+				array_map(
+					static fn (array $f): array => ['wall' => $f['wall'], 'side' => $f['side'], 'spans' => array_map($pair, $f['spans'])],
+					$case['facades'],
+				),
+			];
+		}
+	}
+
+	/**
+	 * @param list<WallDto> $walls
+	 * @param list<array{polygon: list<array{float, float}>, outdoor: bool}> $rooms
+	 * @param list<array{wall: int, side: string, spans: list<array{float, float}>}> $facades
+	 */
+	#[DataProvider('facadeCases')]
+	public function testFacades(array $walls, array $rooms, array $facades): void
+	{
+		$actual = FacadeSpans::of($walls, $rooms);
+
+		self::assertCount(count($facades), $actual);
+		foreach ($facades as $i => $facade) {
+			self::assertSame([$walls[$facade['wall']]->id, $facade['side']], [$actual[$i]['wall']->id, $actual[$i]['side']->value]);
+			self::assertPairs($facade['spans'], $actual[$i]['spans']);
 		}
 	}
 
