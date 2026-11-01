@@ -368,6 +368,21 @@ export class ViewerPageComponent {
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */
     protected readonly exportGlb = (): Promise<Blob> => this.viewer().exportGlb();
+    /** The building for the façades and sections: the viewed floor with the floors below it (the loaded stack, else loaded now). */
+    protected readonly building = async (): Promise<readonly Scene[]> => {
+        const scene = this.viewedScene();
+        if (scene === null) {
+            return [];
+        }
+        const under = this.floorsUnder();
+        const loaded = this.stack();
+        // The stack keeps its last load while the next runs (another floor, a live update): only a settled one of these floors.
+        const settled = loaded !== null && !this.stackData.isLoading() && sameIds(loaded.map((s) => s.floor.id), under.map((f) => f.id));
+        if (settled) {
+            return [scene, ...loaded];
+        }
+        return [scene, ...(await Promise.all(under.map((f) => this.projects.getScene(this.projectId(), f.id, this.version()))))];
+    };
 
     public constructor() {
         this.editor.connect({
@@ -853,4 +868,9 @@ export class ViewerPageComponent {
         }
         this.builtFloorId.set(scene.floor.id);
     }
+}
+
+/** Whether two lists hold the same ids, in any order. */
+function sameIds(a: readonly number[], b: readonly number[]): boolean {
+    return a.length === b.length && a.every((id) => b.includes(id));
 }

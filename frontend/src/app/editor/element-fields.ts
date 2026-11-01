@@ -505,6 +505,14 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         },
         {key: 'points', label: 'Points [[x, y], …] (JSON)', type: 'json'},
     ],
+    section: [
+        {key: 'name', label: 'Name (A: Section A–A)', type: 'text'},
+        {key: 'startX', label: 'Start x', type: 'int', unit: 'mm', half: true},
+        {key: 'startY', label: 'Start y', type: 'int', unit: 'mm', half: true},
+        {key: 'endX', label: 'End x', type: 'int', unit: 'mm', half: true},
+        {key: 'endY', label: 'End y', type: 'int', unit: 'mm', half: true},
+        {key: 'depth', label: 'Depth beyond the cut (empty: all)', type: 'int', unit: 'mm', nullable: true},
+    ],
     roof: [
         {key: 'name', label: 'Name', type: 'text'},
         {key: 'shape', label: 'Shape', type: 'select', options: Object.keys(RoofShapeLabels), optionLabels: RoofShapeLabels},

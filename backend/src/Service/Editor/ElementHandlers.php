@@ -15,6 +15,7 @@ use FlatDesigner\Service\Editor\Element\RailingHandler;
 use FlatDesigner\Service\Editor\Element\RoofHandler;
 use FlatDesigner\Service\Editor\Element\RoofWindowHandler;
 use FlatDesigner\Service\Editor\Element\RoomHandler;
+use FlatDesigner\Service\Editor\Element\SectionLineHandler;
 use FlatDesigner\Service\Editor\Element\StairHandler;
 use FlatDesigner\Service\Editor\Element\VariantSetHandler;
 use FlatDesigner\Service\Editor\Element\WallHandler;
@@ -34,6 +35,7 @@ final readonly class ElementHandlers
 		private RailingHandler $railingHandler,
 		private RoofHandler $roofHandler,
 		private RoofWindowHandler $roofWindowHandler,
+		private SectionLineHandler $sectionLineHandler,
 	) {
 	}
 
@@ -52,6 +54,7 @@ final readonly class ElementHandlers
 			ElementTypeEnum::Railing => $this->railingHandler,
 			ElementTypeEnum::Roof => $this->roofHandler,
 			ElementTypeEnum::RoofWindow => $this->roofWindowHandler,
+			ElementTypeEnum::SectionLine => $this->sectionLineHandler,
 		};
 	}
 }

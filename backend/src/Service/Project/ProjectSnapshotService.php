@@ -53,11 +53,11 @@ use const JSON_THROW_ON_ERROR;
  * Format 1: `{format, project: {name, address, description}, materials: [MaterialDto], location: LocationDto, floors: [{floor:
  * FloorDto, rooms: [RoomDto], walls: [WallDto with openings], items: [ItemDto], groups: [GroupDto], variantSets:
  * [VariantSetDto], definitions: [SceneDefinitionDto], underlay: UnderlayDto|null, models: [SceneModelDto], pictures: [int],
- * plots: [PlotDto], stairs: [StairDto], roofs: [RoofDto with windows], voids: [FloorVoidDto], railings: [RailingDto]}],
+ * plots: [PlotDto], stairs: [StairDto], roofs: [RoofDto with windows], voids: [FloorVoidDto], railings: [RailingDto], sections: [SectionLineDto]}],
  * views: [{floorId, name, settings: SavedViewSettingsDto}]}` (the saved views, see `SnapshotViewRestorer`)
  * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
  * and walls by `FloorStack`)
- * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` / `roofs` / `voids` / `railings` missing in snapshots taken before they
+ * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` / `roofs` / `voids` / `railings` / `sections` missing in snapshots taken before they
  * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
@@ -86,6 +86,7 @@ final readonly class ProjectSnapshotService
 		private SnapshotStairRestorer $stairRestorer,
 		private SnapshotRoofRestorer $roofRestorer,
 		private SnapshotVoidRestorer $voidRestorer,
+		private SnapshotSectionRestorer $sectionRestorer,
 		private SnapshotViewRestorer $viewRestorer,
 		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
@@ -113,6 +114,7 @@ final readonly class ProjectSnapshotService
 				'roofs' => $scene->roofs,
 				'voids' => $scene->voids,
 				'railings' => $scene->railings,
+				'sections' => $scene->sections,
 			];
 		}
 
@@ -217,6 +219,7 @@ final readonly class ProjectSnapshotService
 			$this->stairRestorer->restore($floor, $entry, $materials);
 			$this->roofRestorer->restore($floor, $entry, $materials);
 			$this->voidRestorer->restore($floor, $entry, $materials);
+			$this->sectionRestorer->restore($floor, $entry);
 			$this->restoreWalls($floor, $entry->objects('walls'), $materials);
 			$sets = $entry->raw('variantSets') === null ? [] : $entry->objects('variantSets');
 			$setIds = $this->restoreVariantSets($floor, $sets);

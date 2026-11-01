@@ -217,7 +217,7 @@
         @if (settings.exports !== false && scene(); as s) {
             <section class="panel__section">
                 <h2 class="section-title">Export</h2>
-                <fd-export [scene]="s" [projectName]="shared()?.projectName ?? ''" [glb]="exportGlb" />
+                <fd-export [scene]="s" [projectName]="shared()?.projectName ?? ''" [glb]="exportGlb" [building]="building" />
             </section>
         }
 

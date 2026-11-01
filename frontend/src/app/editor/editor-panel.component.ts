@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
 import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
-import {Group, Item, Opening, OpeningType, Roof, RoofWindow, Room, Scene, VariantSet, Wall, WallType} from '@app/models/scene';
+import {Group, Item, Opening, OpeningType, Roof, RoofWindow, Room, Scene, SectionLine, VariantSet, Wall, WallType} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
@@ -21,6 +21,7 @@ const KindLabels: Record<ElementKind, string> = {
     stair: 'Stairs',
     void: 'Void',
     railing: 'Railing',
+    section: 'Section line',
     roof: 'Roof',
     roofWindow: 'Roof window',
     group: 'Group',
@@ -234,6 +235,9 @@ export class EditorPanelComponent {
                 const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
                 void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
             }
+        } else if (choice === 'section') {
+            // The backend runs it west to east through the middle of the walls, looking north, named by the next letter.
+            void this.editor.create('section', {});
         } else if (choice === 'roof') {
             // Its rectangle comes from the backend: round the floor's walls, the ridge along the longer side.
             void this.editor.create('roof', {});
@@ -355,9 +359,16 @@ export class EditorPanelComponent {
         }
     }
 
-    /** Arrow keys nudge the selected item, stairs, roof or roof window by the step in plan, R turns the first three by 90°. */
+    /**
+     * Arrow keys nudge the selected item, stairs, roof, roof window or section line by the step in plan, R turns the
+     * first three by 90° and a section line round (it then looks the other way).
+     */
     private moveItem(event: KeyboardEvent): void {
         const selected = this.selected();
+        if (selected?.kind === 'section') {
+            this.moveSectionLine(event, selected.element as unknown as SectionLine);
+            return;
+        }
         if (selected?.kind === 'roofWindow') {
             this.moveRoofWindow(event, selected.element as unknown as RoofWindow & {roofId: number});
             return;
@@ -379,6 +390,30 @@ export class EditorPanelComponent {
         if (fields !== undefined) {
             event.preventDefault();
             void this.editor.update(selected.kind, item.id, fields);
+        }
+    }
+
+    private moveSectionLine(event: KeyboardEvent, line: SectionLine): void {
+        const step = event.shiftKey ? NudgeStepCoarse : NudgeStep;
+        const shift = (dx: number, dy: number): Partial<SectionLine> => ({
+            startX: line.startX + dx,
+            startY: line.startY + dy,
+            endX: line.endX + dx,
+            endY: line.endY + dy,
+        });
+        const turned: Partial<SectionLine> = {startX: line.endX, startY: line.endY, endX: line.startX, endY: line.startY};
+        const moves: Record<string, Partial<SectionLine>> = {
+            ArrowLeft: shift(-step, 0),
+            ArrowRight: shift(step, 0),
+            ArrowUp: shift(0, step),
+            ArrowDown: shift(0, -step),
+            r: turned,
+            R: turned,
+        };
+        const fields = moves[event.key];
+        if (fields !== undefined) {
+            event.preventDefault();
+            void this.editor.update('section', line.id, fields);
         }
     }
 
@@ -428,6 +463,8 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
             return find(scene.voids ?? []);
         case 'railing':
             return find(scene.railings ?? []);
+        case 'section':
+            return find(scene.sections ?? []);
         case 'roof':
             return find(scene.roofs ?? []);
         case 'roofWindow':

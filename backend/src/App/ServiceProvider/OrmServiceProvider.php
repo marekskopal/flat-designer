@@ -27,6 +27,7 @@ use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\RoofWindow;
 use FlatDesigner\Model\Entity\Room;
 use FlatDesigner\Model\Entity\SavedView;
+use FlatDesigner\Model\Entity\SectionLine;
 use FlatDesigner\Model\Entity\ShareLink;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\UploadTicket;
@@ -56,6 +57,7 @@ use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
 use FlatDesigner\Model\Repository\SavedViewRepository;
+use FlatDesigner\Model\Repository\SectionLineRepository;
 use FlatDesigner\Model\Repository\ShareLinkRepository;
 use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\UploadTicketRepository;
@@ -101,6 +103,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			StairRepository::class,
 			FloorVoidRepository::class,
 			RailingRepository::class,
+			SectionLineRepository::class,
 			RoofRepository::class,
 			RoofWindowRepository::class,
 			WallRepository::class,
@@ -143,6 +146,7 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, StairRepository::class, Stair::class);
 		$this->addRepository($container, $orm, FloorVoidRepository::class, FloorVoid::class);
 		$this->addRepository($container, $orm, RailingRepository::class, Railing::class);
+		$this->addRepository($container, $orm, SectionLineRepository::class, SectionLine::class);
 		$this->addRepository($container, $orm, RoofRepository::class, Roof::class);
 		$this->addRepository($container, $orm, RoofWindowRepository::class, RoofWindow::class);
 		$this->addRepository($container, $orm, WallRepository::class, Wall::class);

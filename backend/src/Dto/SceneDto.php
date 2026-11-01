@@ -23,6 +23,7 @@ final readonly class SceneDto
 	 * @param list<RoofDto> $roofs with their windows
 	 * @param list<int> $pictures the project files the Custom items show as pictures (their `image` parameters)
 	 * @param list<ChimneyFloorDto> $chimneyFloors
+	 * @param list<SectionLineDto> $sections the building sections drawn on this floor's plan (FD-94)
 	 */
 	public function __construct(
 		public FloorDto $floor,
@@ -60,6 +61,7 @@ final readonly class SceneDto
 		 * highest roof over them, and those of the floors below rise through this one. Empty without a chimney.
 		 */
 		public array $chimneyFloors = [],
+		public array $sections = [],
 	)
 	{
 	}

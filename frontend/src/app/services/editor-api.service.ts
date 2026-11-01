@@ -15,6 +15,7 @@ const Segments: Record<ElementKind, string> = {
     stair: 'stairs',
     void: 'voids',
     railing: 'railings',
+    section: 'sections',
     roof: 'roofs',
     roofWindow: 'roof-windows',
     group: 'groups',

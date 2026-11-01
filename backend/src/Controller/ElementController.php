@@ -42,6 +42,7 @@ final readonly class ElementController
 		'railings' => ElementTypeEnum::Railing,
 		'roofs' => ElementTypeEnum::Roof,
 		'roof-windows' => ElementTypeEnum::RoofWindow,
+		'sections' => ElementTypeEnum::SectionLine,
 	];
 
 	public function __construct(

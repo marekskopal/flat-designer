@@ -10,6 +10,7 @@ export type ElementKind =
     | 'stair'
     | 'void'
     | 'railing'
+    | 'section'
     | 'roof'
     | 'roofWindow'
     | 'group'
@@ -22,7 +23,7 @@ export interface Selection {
 
 /**
  * The element a scene object belongs to: the nearest ancestor (or the object itself) tagged by the
- * builders with `itemId`, `openingId`, `wallId`, `roomId`, `plotId`, `stairId`, `voidId`, `railingId`, `roofWindowId` or
+ * builders with `itemId`, `openingId`, `wallId`, `roomId`, `plotId`, `stairId`, `voidId`, `railingId`, `sectionId`, `roofWindowId` or
  * `roofId` in its `userData`. A
  * door hit therefore selects the opening, not the wall around it, and a roof window hit the window, not its roof.
  */
@@ -52,6 +53,7 @@ const TagKinds: readonly (readonly [string, ElementKind])[] = [
     ['stairId', 'stair'],
     ['voidId', 'void'],
     ['railingId', 'railing'],
+    ['sectionId', 'section'],
     ['roofWindowId', 'roofWindow'],
     ['roofId', 'roof'],
 ];

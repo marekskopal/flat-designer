@@ -112,7 +112,7 @@ the page totals the cost per room and for the whole project, furniture boards fr
 ![Guest view of a share link](docs/screenshots/share-link.webp)
 
 A read-only guest view of a floor, without an account, with the allowed views, a start camera and display options.
-Guests can orbit, read the plan, walk through and switch variants, and download the plan, elevations and 3D
+Guests can orbit, read the plan, walk through and switch variants, and download the plan, elevations, façades, sections and 3D
 model unless the link forbids it. A link can also show the floor's open review comments, and let guests add some.
 
 ### Review comments
@@ -129,8 +129,9 @@ it has made the change.
   them (these images are made that way), and the viewer saves a PNG at presentation quality.
 - **Exports**: the floor plan on A4 at a standard scale (walls, door swings, windows, room areas, dimensions and
   furniture footprints) as a PDF with the room schedule, or as an SVG; wall elevations of every room for the tiler
-  and the joiner (tile joints on the room's grid, openings, fitted furniture, dimensions); and the floor as a 3D
-  model (glTF) for Blender or SketchUp.
+  and the joiner (tile joints on the room's grid, openings, fitted furniture, dimensions); the building's façades
+  from all four sides and sections along section lines drawn on the plan (cut walls, slabs, roofs, stairs and terrain,
+  with level marks); and the floor as a 3D model (glTF) for Blender or SketchUp.
 - **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
 - **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.

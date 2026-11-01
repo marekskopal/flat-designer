@@ -1,5 +1,5 @@
 import {Change, EditResult} from '@app/models/editor';
-import {FloorVoid, Group, Item, Opening, Plot, Railing, Roof, RoofWindow, Room, Scene, Stair, VariantSet, Wall} from '@app/models/scene';
+import {FloorVoid, Group, Item, Opening, Plot, Railing, Roof, RoofWindow, Room, Scene, SectionLine, Stair, VariantSet, Wall} from '@app/models/scene';
 
 /**
  * The scene after an edit, undo or redo, built from the result's element state instead of loading the
@@ -58,6 +58,8 @@ function patchElements(scene: Scene, change: Change, element: Record<string, unk
             return {...scene, voids: upsert(scene.voids ?? [], id, element as unknown as FloorVoid | null)};
         case 'Railing':
             return {...scene, railings: upsert(scene.railings ?? [], id, element as unknown as Railing | null)};
+        case 'SectionLine':
+            return {...scene, sections: upsert(scene.sections ?? [], id, element as unknown as SectionLine | null)};
         case 'Wall':
             return patchWall(scene, id, element);
         case 'Opening':

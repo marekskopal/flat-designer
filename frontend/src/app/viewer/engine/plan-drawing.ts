@@ -1,6 +1,20 @@
 import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
-import {FloorVoid, isAncillaryRoom, isOutdoorRoom, Item, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, Wall} from '@app/models/scene';
+import {
+    FloorVoid,
+    isAncillaryRoom,
+    isOutdoorRoom,
+    Item,
+    Opening,
+    PlanPoint,
+    Plot,
+    Railing,
+    Roof,
+    Room,
+    Scene,
+    SectionLine,
+    Wall,
+} from '@app/models/scene';
 import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
 import {isChimney, sceneChimneys} from './chimneys';
@@ -165,7 +179,10 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const voids = (scene.voids ?? []).flatMap(voidShapes);
     const railings = (scene.railings ?? []).map(railingShape);
 
+    const cuts = (scene.sections ?? []).map((section): Shape => ({points: sectionEnds(section), closed: false, style: SectionStyle}));
     const drawn = [...plots, ...rooms, ...itemShapes, ...walls, ...openings, ...stairs.shapes, ...roofs, ...voids, ...railings, ...chimneysBelow];
+    // The section lines reach a little past the walls: the plan takes them in.
+    drawn.push(...cuts);
     const bounds = shapeBounds(drawn);
     const layout = planLayout(bounds);
     const s = layout.scale;
@@ -186,7 +203,8 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     const dimensions = dimensionLabels(scene, s).filter(free);
     const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s)).filter(free);
     const itemLabels = items.flatMap((item) => itemLabel(item, s)).filter(free);
-    const labels = [...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
+    const sections = (scene.sections ?? []).flatMap((section) => sectionMarks(section, s));
+    const labels = [...sections, ...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
 
     const body = [
         ...[
@@ -471,6 +489,45 @@ function voidShapes(floorVoid: FloorVoid): Shape[] {
 }
 
 /** A railing (FD-90): a thin line along it. */
+/** A section line's dash-dot cut (FD-94). */
+const SectionStyle: Style = {stroke: Ink, width: 0.35, dash: '5 1.2 0.8 1.2'};
+
+const sectionEnds = (section: SectionLine): Vec2[] => [
+    {x: section.startX, y: section.startY},
+    {x: section.endX, y: section.endY},
+];
+
+/**
+ * A section line as plans mark it: its cut dash-dot, and at either end an arrow the way it looks (to the left of start →
+ * end) with its name; `s` is the plan's scale (plan mm per paper mm), the arrows 6 mm long on paper.
+ */
+function sectionMarks(section: SectionLine, s: number): Label[] {
+    const [a, b] = sectionEnds(section);
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length < 1) {
+        return [];
+    }
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const look = {x: -dir.y, y: dir.x};
+    const [arrow, head] = [6 * s, 1.6 * s];
+    const marks = [a, b].map((end): Label => {
+        const tip = {x: end.x + look.x * arrow, y: end.y + look.y * arrow};
+        const barb = (side: number): Vec2 => ({x: tip.x + (dir.x * side * 0.6 - look.x) * head, y: tip.y + (dir.y * side * 0.6 - look.y) * head});
+        const barbs = [barb(-1), barb(1)];
+        return {
+            at: {x: tip.x + look.x * 2.6 * s, y: tip.y + look.y * 2.6 * s - 1.2 * s},
+            lines: [{text: section.name, size: 3.2, bold: true}],
+            shapes: [
+                {points: [end, tip], closed: false, style: {stroke: Ink, width: 0.35}},
+                {points: [barbs[0], tip, barbs[1]], closed: true, style: {fill: Ink, stroke: Ink, width: 0.2}},
+            ],
+        };
+    });
+    // The cut itself goes with the first end's label.
+    marks[0].shapes?.unshift({points: [a, b], closed: false, style: SectionStyle});
+    return marks;
+}
+
 function railingShape(railing: Railing): Shape {
     return {points: railing.points.map(([x, y]) => ({x, y})), closed: false, style: {stroke: Ink, width: 0.25}};
 }

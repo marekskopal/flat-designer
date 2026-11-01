@@ -128,6 +128,20 @@ export type RailingStyle = 'Balusters' | 'Rods' | 'Glass' | 'Panel' | 'Cable';
 export type HandrailProfile = 'Round' | 'Square' | 'Flat' | 'None';
 
 /**
+ * A section line (FD-94, `SectionLineDto`): a cut through the building drawn on the floor's plan, start → end in plan mm,
+ * looking to the left of that direction, `depth` mm deep (null: all that lies beyond).
+ */
+export interface SectionLine {
+    id: number;
+    name: string;
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    depth: number | null;
+}
+
+/**
  * A hole through the floor (`FloorVoidDto`, FD-90): cut out of its slab and room floors and out of the ceilings of the
  * floor below, its edges lined with `liningMaterialId` (null: unlined) `liningDepth` mm down from the floor's level
  * (null: down to the ceilings below).
@@ -527,6 +541,8 @@ export interface Scene {
     roofs?: Roof[];
     /** Holes through this floor (FD-90); absent in older versions. */
     voids?: FloorVoid[];
+    /** The building sections drawn on this floor's plan (FD-94); absent in older versions. */
+    sections?: SectionLine[];
     /** Balustrades along polylines (FD-90); absent in older versions. */
     railings?: Railing[];
     /** The floor above with its voids; null without a floor above, absent in older versions. */

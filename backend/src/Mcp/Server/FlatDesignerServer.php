@@ -68,6 +68,8 @@ final readonly class FlatDesignerServer
 		A roof may have gutters with downpipes, snow guards and a ridge style (add_roof / update_roof); a chimney is an
 		item of kind Chimney on the floor it starts from, rising through the floors and roofs above to aboveRoof over
 		them; vent tiles, roof steps and solar panels are items with onRoof, lying on the roof's slope.
+		A section line (add_section_line) on a floor's plan is where the viewer's export cuts the building section
+		through that floor and those below, looking to the left of start → end; the export also draws the façades.
 		A plot (add_plot) is the land round the building; on a slope give it spot heights (terrain on add_plot, or
 		set_terrain with points or contour lines, z against the floor's level): gardens, paths and driveways follow
 		the ground, rooms below it are cut out of it, and items with onGround stand on it. Garden and retaining

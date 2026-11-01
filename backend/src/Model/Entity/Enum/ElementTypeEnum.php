@@ -18,4 +18,5 @@ enum ElementTypeEnum: string
 	case RoofWindow = 'RoofWindow';
 	case FloorVoid = 'FloorVoid';
 	case Railing = 'Railing';
+	case SectionLine = 'SectionLine';
 }

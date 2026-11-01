@@ -9,6 +9,7 @@ import {
     RoofWindow,
     Room,
     Scene,
+    SectionLine,
     SpotHeight,
     Stair,
     SunTime,
@@ -26,6 +27,7 @@ import {
     addRailing,
     addRoof,
     addRoom,
+    addSectionLine,
     addVoid,
     buildBuilding,
     buildCeilingSteps,
@@ -114,6 +116,7 @@ import {buildRailing, railingColliders} from './railings';
 import {roofLocal, roofSlope, roofWindowFits} from './roof-geometry';
 import {buildRoof, buildRoofOutline, highlightRoofOutline, resizeRoofByCorner, roofCorners, RoofMinSide} from './roofs';
 import {pickRoom, prepareRoomFaces, RoomDetection, RoomFaces} from './room-detect';
+import {highlightSectionLine} from './section-lines';
 import {sameSelection, Selection, selectionOf} from './selection';
 import {buildContextFloor, ContextFloor, floorOffset, floorPoints, floorsBelow, rebuildContextItems, stackGround} from './stack';
 import {
@@ -249,6 +252,7 @@ type Drag = DragBase &
         | {kind: 'item'; item: Item; object: THREE.Object3D; x: number; y: number}
         | {kind: 'stair'; stair: Stair; object: THREE.Object3D; x: number; y: number}
         | {kind: 'railing'; railing: Railing; object: THREE.Object3D; dx: number; dy: number}
+        | {kind: 'section'; line: SectionLine; object: THREE.Object3D; dx: number; dy: number}
         | {kind: 'roof'; roof: Roof; objects: THREE.Object3D[]; x: number; y: number}
         | {kind: 'roofCorner'; roof: Roof; index: number; current: RoofRectangle}
         | {kind: 'roofWindow'; roof: Roof; window: RoofWindow; along: number; across: number}
@@ -873,6 +877,18 @@ export class ViewerEngine {
             }
         }
         railings.changed.forEach((railing) => addRailing(parts, railing, materials));
+        const sections = diffById(previous.sections ?? [], scene.sections ?? []);
+        for (const id of [...sections.removed, ...sections.changed.map((l) => l.id)]) {
+            const group = parts.sections.get(id);
+            if (group !== undefined) {
+                this.disposeObject(group);
+                parts.sections.delete(id);
+            }
+        }
+        sections.changed.forEach((line) => addSectionLine(parts, line));
+        if (sections.changed.length > 0) {
+            this.highlightSections();
+        }
 
         // The roofs: a changed one is drawn anew, with its outline, and so are those it met before or meets now (their
         // junctions with it).
@@ -1143,6 +1159,7 @@ export class ViewerEngine {
         this.highlightPlots();
         this.highlightRoofs();
         this.highlightVoids();
+        this.highlightSections();
 
         this.removeOutline();
         const objects = this.objectsOf(selection);
@@ -1936,6 +1953,12 @@ export class ViewerEngine {
         return null;
     }
 
+    /** The selected section line in the highlight colour. */
+    private highlightSections(): void {
+        const selection = this.selection;
+        this.parts?.sections.forEach((group, id) => highlightSectionLine(group, selection?.kind === 'section' && selection.id === id));
+    }
+
     /** The selected void's outline in the highlight colour. */
     private highlightVoids(): void {
         const selection = this.selection;
@@ -1958,10 +1981,14 @@ export class ViewerEngine {
         return Math.max(top - RoofOutlineBelowCut, 0);
     }
 
-    /** Lifts the roofs' outlines to `roofOutlineHeight()`; called when the scene or the wall cut changes. */
+    /**
+     * Lifts the roofs' outlines to `roofOutlineHeight()`, and the section lines just over them (above the walls and
+     * furniture, so a click picks them); called when the scene or the wall cut changes.
+     */
     private placeRoofOutlines(): void {
         if (this.parts !== null) {
             this.parts.roofOutlines.position.y = this.roofOutlineHeight() * MM;
+            this.parts.sectionLines.position.y = (this.roofOutlineHeight() + 10) * MM;
         }
     }
 
@@ -2313,6 +2340,7 @@ export class ViewerEngine {
         if (this.parts !== null) {
             this.parts.roofOutlines.visible = topDown;
             this.parts.voidOutlines.visible = topDown;
+            this.parts.sectionLines.visible = topDown;
         }
         if (this.outline !== null && (this.selection?.kind === 'roof' || this.selection?.kind === 'roofWindow')) {
             // The roof is cut away over the plan, where its outline shows the selection.
@@ -2506,6 +2534,12 @@ export class ViewerEngine {
             if (railing !== undefined && object !== undefined) {
                 drag = {kind: 'railing', plane, grab, moved: false, railing, object, dx: 0, dy: 0};
             }
+        } else if (selection.kind === 'section') {
+            const line = (scene.sections ?? []).find((l) => l.id === selection.id);
+            const object = this.parts?.sections.get(selection.id);
+            if (line !== undefined && object !== undefined) {
+                drag = {kind: 'section', plane, grab, moved: false, line, object, dx: 0, dy: 0};
+            }
         } else if (selection.kind === 'roofWindow') {
             const roof = this.roofOfWindow(selection.id);
             const window = roof?.windows.find((w) => w.id === selection.id);
@@ -2586,7 +2620,8 @@ export class ViewerEngine {
                 drag.object.position.z = -drag.y * MM;
                 break;
             }
-            case 'railing': {
+            case 'railing':
+            case 'section': {
                 const step = free ? 1 : DragSnap;
                 drag.dx = snapToGrid(delta.x, step);
                 drag.dy = snapToGrid(delta.y, step);
@@ -2852,6 +2887,13 @@ export class ViewerEngine {
                     edit = {selection: {kind: 'railing', id: drag.railing.id}, fields: {points}};
                 }
                 break;
+            case 'section':
+                if (drag.dx !== 0 || drag.dy !== 0) {
+                    const {line, dx, dy} = drag;
+                    const fields = {startX: line.startX + dx, startY: line.startY + dy, endX: line.endX + dx, endY: line.endY + dy};
+                    edit = {selection: {kind: 'section', id: line.id}, fields};
+                }
+                break;
             case 'roof':
                 if (drag.x !== drag.roof.x || drag.y !== drag.roof.y) {
                     edit = {selection: {kind: 'roof', id: drag.roof.id}, fields: {x: drag.x, y: drag.y}};
@@ -2941,7 +2983,7 @@ export class ViewerEngine {
                 object.position.z = -drag.roof.y * MM;
             }
         }
-        if (drag.kind === 'railing') {
+        if (drag.kind === 'railing' || drag.kind === 'section') {
             drag.object.position.x = 0;
             drag.object.position.z = 0;
         }

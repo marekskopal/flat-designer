@@ -124,6 +124,13 @@ describe('planLayout', () => {
 });
 
 describe('planSheet', () => {
+    it('marks a section line: its dash-dot cut and the name at both arrows', () => {
+        const line = {id: 1, name: 'A', startX: -1000, startY: 1500, endX: 5000, endY: 1500, depth: null};
+        const sheet = planSheet(scene({sections: [line]}), info);
+        expect(texts(sheet.svg).filter((t) => t === 'A')).toHaveLength(2);
+        expect(sheet.svg).toContain('stroke-dasharray="5 1.2 0.8 1.2"');
+    });
+
     it('draws a well-formed A4 page with the room, its dimensions and the title block', () => {
         const sheet = planSheet(scene({walls: box([opening(9, {})])}), info);
 

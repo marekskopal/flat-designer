@@ -1,4 +1,4 @@
-import {FloorVoid, isOutdoorRoom, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, Wall, WallFinish} from '@app/models/scene';
+import {FloorVoid, isOutdoorRoom, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, SectionLine, Wall, WallFinish} from '@app/models/scene';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -60,6 +60,7 @@ import {
 import {buildPlot, drapedGeometry, drapedOn, groundBeside} from './plots';
 import {buildRailing} from './railings';
 import {buildRoof, buildRoofOutline, RoofSurroundings} from './roofs';
+import {buildSectionLine} from './section-lines';
 import {buildStair, buildStairsBelow, cutShape, cutVoids, NoVoids, SceneVoids,sceneVoids} from './stairs';
 import {groundAt, Terrain} from './terrain';
 import {alignTiles, turnLevelUvs} from './tiling';
@@ -114,6 +115,9 @@ export interface BuildingParts {
     /** The voids' top-view outlines keyed by void id, in `voidOutlines`, shown in the top view only. */
     voids: Map<number, THREE.Group>;
     voidOutlines: THREE.Group;
+    /** The section lines keyed by id (FD-94), in `sectionLines`, shown in the top view only. */
+    sections: Map<number, THREE.Group>;
+    sectionLines: THREE.Group;
     /** The linings of the voids through and over the floor (`buildVoidLinings()`). */
     voidLinings: THREE.Group;
     /** The chimneys of the floors below rising through this floor (`buildChimneysBelow()`, FD-91). */
@@ -167,6 +171,8 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         railings: new Map(),
         voids: new Map(),
         voidOutlines: new THREE.Group(),
+        sections: new Map(),
+        sectionLines: new THREE.Group(),
         voidLinings: buildVoidLinings(scene, materials),
         chimneysBelow: buildChimneysBelow(scene, materials),
     };
@@ -175,6 +181,8 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     parts.roofBodies.name = 'roofs';
     parts.voidOutlines.name = 'void-outlines';
     parts.voidOutlines.visible = false;
+    parts.sectionLines.name = 'section-lines';
+    parts.sectionLines.visible = false;
     root.add(
         parts.slab,
         parts.stairsBelow,
@@ -182,6 +190,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         parts.roofOutlines,
         parts.facades,
         parts.voidOutlines,
+        parts.sectionLines,
         parts.voidLinings,
         parts.chimneysBelow,
     );
@@ -190,6 +199,9 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
     }
     for (const floorVoid of scene.voids ?? []) {
         addVoid(parts, floorVoid);
+    }
+    for (const line of scene.sections ?? []) {
+        addSectionLine(parts, line);
     }
 
     for (const room of scene.rooms) {
@@ -238,6 +250,14 @@ export function addRailing(parts: BuildingParts, railing: Railing, materials: Ma
     const group = buildRailing(railing, materials);
     parts.railings.set(railing.id, group);
     parts.root.add(group);
+    return group;
+}
+
+/** Adds a section line's top-view drawing to the building. */
+export function addSectionLine(parts: BuildingParts, line: SectionLine): THREE.Group {
+    const group = buildSectionLine(line);
+    parts.sections.set(line.id, group);
+    parts.sectionLines.add(group);
     return group;
 }
 

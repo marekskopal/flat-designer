@@ -146,6 +146,11 @@ export class SharedViewerPageComponent {
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */
     protected readonly exportGlb = (): Promise<Blob> => this.viewer().exportGlb();
+    /** The building for the façades and sections: the shared floor with the floors below it, when the link shows them. */
+    protected readonly building = (): Promise<readonly Scene[]> => {
+        const scene = this.scene();
+        return Promise.resolve(scene === null ? [] : [scene, ...(this.stack() ?? [])]);
+    };
     /** The link's start state is applied once, when its floor is first built; another link starts over. */
     private started = false;
 

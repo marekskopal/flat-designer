@@ -825,8 +825,37 @@ format is the text in `FurnitureTools::Format`.
 - The sheets share `sheet-svg.ts` (paper size, frame, title block, SVG writing).
 - `app/export/`: `sheetsPdf()` turns the sheets into PDF pages with `jspdf` and `svg2pdf.js` (loaded lazily) and
   embeds Inter from `assets/fonts/` (SIL OFL; jsPDF's own fonts lack Czech letters). `ExportComponent` (Plan PDF,
-  Plan SVG, Elevations PDF, 3D glTF) exports the scene as shown on the viewer page and the shared viewer page;
-  `ShareSettingsDto.exports` (missing in older links: allowed) lets a share link forbid it.
+  Plan SVG, Elevations PDF, Façades PDF / SVG, Sections PDF / SVG, 3D glTF) exports the scene as shown on the viewer
+  page and the shared viewer page; `ShareSettingsDto.exports` (missing in older links: allowed) lets a share link
+  forbid it.
+- Building drawings (FD-94, `viewer/engine/sections.ts`, framework-free): the façades and sections of the building,
+  the shown floor with the floors below it (`ExportComponent.building`: the viewer page loads them, or takes the All
+  floors stack; a share link has its stack only with `allFloors`). `buildingView()` collects what a `ViewPlane` sees
+  (u along its `right`, levels against ±0.000, depth along `look`) as groups drawn far to near by their nearest
+  point, each filled so it covers what lies behind (painter's order): wall faces facing the viewer from bottom to top
+  (`wallTopAt()` / `wallBottomAt()`, bent at `roofBreaks()` with the wall's own slopes) with their openings and, on a
+  face outside every indoor room, their `facadeBands()`, slab edges
+  (rooms not on the ground and walls joined, cached per scene), roof planes' parts (`roofPlaneParts()`; the covering, hatched every
+  350 mm up the slope, where the plane rises away from the viewer, else the soffit), roof windows, gutters,
+  downpipes, chimneys, stair treads and railings. The extent is the house (site walls, garden steps and the ground
+  do not widen it) plus `GroundMargin`, and each drawing is clipped to it. A façade (`facadeSheets()`: plan south,
+  north, east and west, named by the true compass, `facadeName()`) adds the terrain along the line in front of the
+  house; four to an A3 sheet, or two where that gives a larger scale. A section (`sectionSheets()`, A4) keeps what
+  lies 0 to `depth` beyond its line (`clipRange()` / `clipRing()`) and fills the cut over it (`sectionCutShapes()`):
+  walls less the opening the line passes through (glass in a window, lift-and-slide or glazed door), slabs, roof
+  planes, stair treads and landings, and the ground (`cutGround()`: down to the lowest slab's underside where the
+  building stands). Level marks (`levelText()`): every floor, the eaves and ridges, a flat roof's top. Scales from
+  `BuildingScales`. polygon-clipping trips over some slab unions; `slabOutline()` rounds to 0.1 mm and joins piece by
+  piece then.
+- Section lines (`SectionLine`, `section_lines`, element type `SectionLine`, `SectionLineHandler` through `SceneEditor`:
+  undo, change log; REST `…/sections`, MCP `add_section_line` / `update_section_line` / `delete_section_line`, the
+  scene's and snapshots' `sections`, `SnapshotSectionRestorer`): start → end in plan mm, looking to the left of it,
+  `depth` beyond (null: all); a new one runs west to east through the middle of the floor's walls, looking north,
+  named by the next free name (A … Z, AA …; up to two characters it is drawn as `A–A`); a copy lies a metre the way it
+  looks under the next name (`SectionLineHandler::copied()`). The top view draws it dash-dot with arrows the way it
+  looks (`section-lines.ts`, `parts.sectionLines`, `planOnly`, tagged `sectionId`), lifted just over the roof outlines
+  so a click picks it before the walls and furniture; it is dragged like a railing, the arrows nudge it and R turns it
+  round (swaps its ends). The plan PDF marks it (`sectionMarks()`).
 - glTF: `ViewerEngine.exportGlb()` writes the built floor through `GLTFExporter` (loaded lazily). `exportTree()`
   (`viewer/engine/gltf-export.ts`) copies the content with the ceilings shown and leaves out the room labels, the
   section-fill twins, the selection highlight and hidden variants; nodes are named after their elements and

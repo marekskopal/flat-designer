@@ -20,6 +20,7 @@ use FlatDesigner\Dto\RoomDto;
 use FlatDesigner\Dto\SceneDefinitionDto;
 use FlatDesigner\Dto\SceneDto;
 use FlatDesigner\Dto\SceneModelDto;
+use FlatDesigner\Dto\SectionLineDto;
 use FlatDesigner\Dto\StairDto;
 use FlatDesigner\Dto\StairsBelowDto;
 use FlatDesigner\Dto\UnderlayDto;
@@ -37,6 +38,7 @@ use FlatDesigner\Model\Entity\Plot;
 use FlatDesigner\Model\Entity\Railing;
 use FlatDesigner\Model\Entity\Roof;
 use FlatDesigner\Model\Entity\Room;
+use FlatDesigner\Model\Entity\SectionLine;
 use FlatDesigner\Model\Entity\Stair;
 use FlatDesigner\Model\Entity\VariantSet;
 use FlatDesigner\Model\Entity\Wall;
@@ -52,6 +54,7 @@ use FlatDesigner\Model\Repository\RailingRepository;
 use FlatDesigner\Model\Repository\RoofRepository;
 use FlatDesigner\Model\Repository\RoofWindowRepository;
 use FlatDesigner\Model\Repository\RoomRepository;
+use FlatDesigner\Model\Repository\SectionLineRepository;
 use FlatDesigner\Model\Repository\StairRepository;
 use FlatDesigner\Model\Repository\VariantSetRepository;
 use FlatDesigner\Model\Repository\WallRepository;
@@ -79,6 +82,7 @@ final readonly class SceneProvider
 		private RoofWindowRepository $roofWindowRepository,
 		private FloorVoidRepository $voidRepository,
 		private RailingRepository $railingRepository,
+		private SectionLineRepository $sectionLineRepository,
 	) {
 	}
 
@@ -146,6 +150,10 @@ final readonly class SceneProvider
 			),
 			voidsAbove: $this->voidsAbove($floor, $floors, $walls),
 			chimneyFloors: $this->chimneyFloors($floor, $floors),
+			sections: array_map(
+				fn (SectionLine $line): SectionLineDto => SectionLineDto::fromEntity($line),
+				$this->sectionLineRepository->findByFloor($floor->id),
+			),
 		);
 	}
 
