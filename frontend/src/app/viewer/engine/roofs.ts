@@ -25,6 +25,7 @@ import {
     roofWindowLayouts,
 } from './roof-geometry';
 import {FloorRoofs, roofPlaneParts, topStretches} from './under-roof';
+import {insetOutline} from './voids';
 
 /** A soffit without a material: white-painted timber. */
 const SoffitColor = '#f1eee8';
@@ -747,23 +748,22 @@ function snowGuard(from: THREE.Vector3, to: THREE.Vector3, material: THREE.Mater
     return meshes;
 }
 
-/** A flat roof's parapet: four walls along its outer edge, from its top `height` mm up. */
+/**
+ * A flat roof's parapet: one wall round its outline (with the overhang; skewed ends follow, FD-101), between the outline
+ * and the outline set `ParapetThickness` in (`insetOutline()`, mitred at the corners), from its top `height` mm up.
+ */
 function parapetWalls(roof: Roof, bottom: number, height: number, material: THREE.Material): THREE.Mesh[] {
-    const {x: a, y: b} = roofHalfExtent(roof);
-    const t = ParapetThickness;
-    const wall = (s: number, tt: number, along: number, across: number): THREE.Mesh => {
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(along * MM, height * MM, across * MM), material);
-        mesh.position.copy(at(s, tt, bottom + height / 2));
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        return mesh;
-    };
-    return [
-        wall(0, -b + t / 2, 2 * a, t),
-        wall(0, b - t / 2, 2 * a, t),
-        wall(-a + t / 2, 0, t, 2 * b - 2 * t),
-        wall(a - t / 2, 0, t, 2 * b - 2 * t),
-    ];
+    const outline = roofLocalOutline(roof);
+    const shape = new THREE.Shape(outline.map((p) => new THREE.Vector2(p.x * MM, p.y * MM)));
+    shape.holes.push(new THREE.Path(insetOutline(outline, ParapetThickness).map((p) => new THREE.Vector2(p.x * MM, p.y * MM)).reverse()));
+    const geometry = new THREE.ExtrudeGeometry(shape, {depth: height * MM, bevelEnabled: false});
+    // The shape lies in the roof's frame (s, t): standing up, t runs to −z as `at()` maps it.
+    geometry.rotateX(-Math.PI / 2);
+    geometry.translate(0, bottom * MM, 0);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return [mesh];
 }
 
 /**

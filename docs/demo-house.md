@@ -433,7 +433,8 @@ with the architect's plan. These remain, each logged as a task where it is a gap
   risers (450 mm, stepping-slab concrete) follows the wall's south-west face, concentric with it.
 - **FD-100** (done) Fences were straight items: the boundaries were four 10 m items. Now the north and south fences are
   one fence railing each (larch boards, raking with the ground); the sliding gate stays a Fence item.
-- **FD-101** Flat roofs are rectangles: the garage roof leaves slivers along the skewed south wall.
+- **FD-101** (done) Flat roofs were rectangles: the garage roof left slivers along the skewed south wall. Now it is turned
+  so its start end is the south edge, skewed 5° along the wall.
 - **FD-54** Saved views have no lens, so photo 19 shows only the shower wall instead of the whole bathroom.
 - The fire does not flicker (FD-93), and the bath is rounded rather than oval.
 - The ground floor's plan PDF takes in the whole plot (40 m of garden), so it comes out at 1:500; the README shows the

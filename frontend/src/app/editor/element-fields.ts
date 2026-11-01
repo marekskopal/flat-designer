@@ -1,6 +1,6 @@
 import {OpeningType, RailingStyle} from '@app/models/scene';
 import {isFenceStyle} from '@app/viewer/engine/railings';
-import {hasVerges, roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
+import {canSkew, hasVerges, roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {stairRisers} from '@app/viewer/engine/stairs';
 
@@ -568,18 +568,20 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {
             key: 'startSkew',
             label: 'Start verge skew',
+            labelOf: (roof) => (roof['shape'] === 'Flat' ? 'Start edge skew' : 'Start verge skew'),
             type: 'int',
             unit: '°',
             half: true,
-            when: (roof) => hasVerges(roof as Pick<RoofShapeFields, 'shape'>),
+            when: (roof) => canSkew(roof as Pick<RoofShapeFields, 'shape'>),
         },
         {
             key: 'endSkew',
             label: 'End verge skew',
+            labelOf: (roof) => (roof['shape'] === 'Flat' ? 'End edge skew' : 'End verge skew'),
             type: 'int',
             unit: '°',
             half: true,
-            when: (roof) => hasVerges(roof as Pick<RoofShapeFields, 'shape'>),
+            when: (roof) => canSkew(roof as Pick<RoofShapeFields, 'shape'>),
         },
         {key: 'thickness', label: 'Thickness (square to the slope)', type: 'int', unit: 'mm', half: true},
         {key: 'parapet', label: 'Parapet (empty: none)', type: 'int', unit: 'mm', nullable: true, half: true, when: (roof) => !isPitched(roof)},

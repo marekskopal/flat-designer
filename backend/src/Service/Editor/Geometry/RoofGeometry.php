@@ -18,7 +18,7 @@ use const M_PI;
  * `pitch` inwards; past the eaves the planes go on down over the overhang. Every pitched roof's underside is the lowest
  * of its planes, so a point's height needs no lookup of the plane under it.
  *
- * A gable's or shed's verges may be skewed (FD-97): `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
+ * A gable's or shed's verges, and a flat roof's ends (FD-101), may be skewed (FD-97): `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
  * ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on the eaves line, so the eaves line
  * and the outline are trapezoids (`localOutline()`), the overhang `vergeOverhang` square to the turned verge. The planes
  * and so the heights stay as they were; only where the roof reaches changes.
@@ -170,7 +170,7 @@ final readonly class RoofGeometry
 
 	/**
 	 * The s of the verge at the ridge's end (+s) or start (−s) at t, on the outline with the overhang or on the eaves line;
-	 * a hip's or flat roof's sides (never skewed) alike.
+	 * a hip's sides (never skewed) alike; a flat roof's ends turn as verges do.
 	 */
 	public function vergeAt(bool $end, float $t, bool $outline): float
 	{
@@ -218,10 +218,10 @@ final readonly class RoofGeometry
 		];
 	}
 
-	/** Degrees a verge is turned; 0 on a roof without verges. */
+	/** Degrees a verge (a flat roof's end) is turned; 0 on a hip roof. */
 	private function skew(bool $end): int
 	{
-		if (!$this->shape->hasVerges()) {
+		if (!$this->shape->canSkew()) {
 			return 0;
 		}
 

@@ -43,7 +43,8 @@ final readonly class RoofTools
 		. 'turned by rotation. The underside is eaveHeight above the floor\'s level along the eaves line and rises at pitch inwards; '
 		. 'it reaches overhang past the eaves and vergeOverhang past the gables. A gable\'s or shed\'s verge may be skewed to follow a '
 		. 'gable wall that is not square to the ridge: startSkew (at the ridge\'s start, −along) and endSkew turn it by degrees '
-		. 'counter-clockwise about the ridge\'s end on the eaves line, so the eaves line is a trapezoid. Every wall of the floor is cut at the underside of '
+		. 'counter-clockwise about the ridge\'s end on the eaves line, so the eaves line is a trapezoid; a flat roof\'s two ends (along its width) '
+		. 'turn alike over a skewed wall, its parapet following (turn the roof so the skewed edge is an end). Every wall of the floor is cut at the underside of '
 		. 'the roofs over it; a wall with upToRoof (add_wall, add_walls, update_wall) rises to it, as a gable does. An L- or T-shaped house takes two '
 		. 'or three roofs.';
 
@@ -71,7 +72,7 @@ final readonly class RoofTools
 	 * @param int|null $overhang mm past the eaves, 0–2000 (default 400)
 	 * @param int|null $vergeOverhang mm past the gables (and a shed's sides), 0–2000 (default 200)
 	 * @param int|null $startSkew degrees counter-clockwise the verge at the ridge's start (−along) is turned, −45–45 (default 0,
-	 *   square to the ridge); a gable or shed only
+	 *   square to the ridge); a gable or shed, or a flat roof's end at −along (over a skewed wall); not a hip
 	 * @param int|null $endSkew the same at the ridge's end (+along)
 	 * @param int|null $thickness mm of rafters and covering, square to the slope, 50–1000 (default 250)
 	 * @param int|null $parapet a flat roof's parapet, mm above it, 100–2000 (default none)
@@ -149,7 +150,7 @@ final readonly class RoofTools
 	/**
 	 * @param string|null $shape "Gable" | "Hip" | "Shed" | "Flat"
 	 * @param int|null $rotation degrees counter-clockwise of the ridge from plan east (+x)
-	 * @param int|null $startSkew degrees counter-clockwise the verge at the ridge's start is turned, −45–45 (0 square)
+	 * @param int|null $startSkew degrees counter-clockwise the verge (a flat roof's end) at the ridge's start is turned, −45–45 (0 square); not a hip
 	 * @param int|null $endSkew the same at the ridge's end
 	 * @param string|null $gutters "None" | "HalfRound" | "Box"
 	 * @param int|null $snowGuards rows of snow guards on each plane, 0–5

@@ -1333,6 +1333,84 @@
      }
     ]
    }
+  },
+  {
+   "name": "a flat roof whose start end is skewed 5° over a skewed wall (FD-101): its outline a trapezoid, the corner beyond it uncovered",
+   "roof": {
+    "shape": "Flat",
+    "x": 0,
+    "y": 0,
+    "rotation": 90,
+    "width": 7000,
+    "depth": 4000,
+    "eaveHeight": 2300,
+    "pitch": 35,
+    "overhang": 200,
+    "vergeOverhang": 200,
+    "thickness": 400,
+    "startSkew": 5,
+    "endSkew": 0
+   },
+   "expected": {
+    "ridgeHeight": 2300,
+    "planes": [
+     {
+      "polygon": [
+       {
+        "x": 2200,
+        "y": -3508.2889
+       },
+       {
+        "x": 2200,
+        "y": 3700
+       },
+       {
+        "x": -2200,
+        "y": 3700
+       },
+       {
+        "x": -2200,
+        "y": -3893.239
+       }
+      ],
+      "gradient": {
+       "x": 0,
+       "y": 0
+      },
+      "height": 2300
+     }
+    ],
+    "probes": [
+     {
+      "x": 0,
+      "y": 0,
+      "underside": 2300,
+      "top": 2700,
+      "plane": 0
+     },
+     {
+      "x": -1900,
+      "y": -3600,
+      "underside": 2300,
+      "top": 2700,
+      "plane": 0
+     },
+     {
+      "x": 1900,
+      "y": -3600,
+      "underside": null,
+      "top": null,
+      "plane": null
+     },
+     {
+      "x": 1900,
+      "y": -3750,
+      "underside": null,
+      "top": null,
+      "plane": null
+     }
+    ]
+   }
   }
  ],
  "junctions": [

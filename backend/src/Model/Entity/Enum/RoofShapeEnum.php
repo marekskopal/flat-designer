@@ -26,4 +26,10 @@ enum RoofShapeEnum: string
 	{
 		return $this === self::Gable || $this === self::Shed;
 	}
+
+	/** Whether its ends may be skewed (FD-97): a gable's or shed's verges, a flat roof's ends over a skewed wall (FD-101). */
+	public function canSkew(): bool
+	{
+		return $this->hasVerges() || $this === self::Flat;
+	}
 }

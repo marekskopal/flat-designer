@@ -11,10 +11,11 @@ import {Vec2} from './plan-geometry';
  * inwards; past the eaves the planes go on down over the overhang. Every pitched roof's underside is the lowest of its
  * planes, so a point's height needs no lookup of the plane under it.
  *
- * A gable's or shed's verges may be skewed (FD-97): `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
- * ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on the eaves line, so the eaves line and
- * the outline are trapezoids (`roofLocalOutline()`), the overhang `vergeOverhang` square to the turned verge. The planes and
- * so the heights stay as they were; only where the roof reaches changes.
+ * A gable's or shed's verges, and a flat roof's ends (FD-101), may be skewed (FD-97): `startSkew` / `endSkew` (degrees
+ * counter-clockwise, 0 square to the ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on
+ * the eaves line, so the eaves line and the outline are trapezoids (`roofLocalOutline()`), the overhang (a gable's or
+ * shed's `vergeOverhang`) square to the turned verge. The planes and so the heights stay as they were; only where the roof
+ * reaches changes.
  */
 
 /** The fields the geometry reads. */
@@ -53,6 +54,9 @@ export function roofSlope(roof: RoofShapeFields): number {
 /** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed (FD-97). */
 export const hasVerges = (roof: Pick<Roof, 'shape'>): boolean => roof.shape === 'Gable' || roof.shape === 'Shed';
 
+/** Whether its ends may be skewed (`RoofShapeEnum::canSkew()`): a gable's or shed's verges, a flat roof's ends (FD-101). */
+export const canSkew = (roof: Pick<Roof, 'shape'>): boolean => hasVerges(roof) || roof.shape === 'Flat';
+
 /**
  * Half the roof's size in its own frame, overhangs included: along the ridge (x; the square verges', skewed ones are
  * `roofVergeAt()`) and across it (y).
@@ -77,7 +81,7 @@ const vergeCache = new WeakMap<RoofShapeFields, Verges>();
 function vergesOf(roof: RoofShapeFields): Verges {
     let verges = vergeCache.get(roof);
     if (verges === undefined) {
-        const skew = (end: boolean): number => (hasVerges(roof) ? ((end ? roof.endSkew : roof.startSkew) ?? 0) : 0) * (Math.PI / 180);
+        const skew = (end: boolean): number => (canSkew(roof) ? ((end ? roof.endSkew : roof.startSkew) ?? 0) : 0) * (Math.PI / 180);
         const [start, end] = [skew(false), skew(true)];
         const overhang = hasVerges(roof) ? roof.vergeOverhang : roof.overhang;
         const half = roof.width / 2;
@@ -94,7 +98,7 @@ function vergesOf(roof: RoofShapeFields): Verges {
 
 /**
  * The s of the verge at the ridge's end (+s) or start (−s) at t, on the outline with the overhang or on the eaves line; a
- * hip's or flat roof's sides (never skewed) alike.
+ * hip's sides (never skewed) alike; a flat roof's ends turn as verges do.
  */
 export function roofVergeAt(roof: RoofShapeFields, end: boolean, t: number, outline: boolean): number {
     const verges = vergesOf(roof);

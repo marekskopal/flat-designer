@@ -12,7 +12,7 @@ use FlatDesigner\Tests\Support\EditorTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use const JSON_THROW_ON_ERROR;
 
-/** A gable's or shed's skewed verges (FD-97). */
+/** A gable's or shed's skewed verges (FD-97), a flat roof's skewed ends (FD-101). */
 #[CoversClass(RoofSkew::class)]
 #[CoversClass(RoofHandler::class)]
 #[CoversClass(RoofDetails::class)]
@@ -33,6 +33,10 @@ final class RoofSkewTest extends EditorTestCase
 
 		$shed = $this->create('roofs', ['shape' => 'Shed', 'startSkew' => -45, 'endSkew' => 45] + self::Gable);
 		self::assertSame([-45, 45], [$shed['startSkew'], $shed['endSkew']]);
+
+		// A flat roof's ends follow a skewed wall too (FD-101).
+		$flat = $this->create('roofs', ['shape' => 'Flat', 'startSkew' => 5, 'parapet' => 300] + self::Gable);
+		self::assertSame([5, 0, 300], [$flat['startSkew'], $flat['endSkew'], $flat['parapet']]);
 	}
 
 	public function testRejectsSkewsTheRoofCannotHave(): void

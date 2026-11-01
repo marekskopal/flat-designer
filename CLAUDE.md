@@ -541,7 +541,8 @@ format is the text in `FurnitureTools::Format`.
   eaves line and the planes are trapezoids (`localOutline()` / `vergeAt()`, `roofLocalOutline()` / `roofVergeAt()`; the
   heights do not change, only where the roof reaches, so `covers()`, `RoofBreaks`, the gutters, the roof windows' margin
   and the corner drag follow it; a downpipe stands where both its foot on the eaves line and its outlet on the overhang's
-  edge lie between the verges, `downpipeSpan()` / `roofDownpipeSpan()`). A hip or flat roof given a skew anew is refused,
+  edge lie between the verges, `downpipeSpan()` / `roofDownpipeSpan()`). A flat roof's ends turn alike (FD-101,
+  `canSkew()`: over a skewed wall, its parapet one ring between the outline and the outline set in, mitred at the corners, `insetOutline()`). A hip roof given a skew anew is refused,
   one made so leaves it behind; the front and back, of the eaves line and of the outline, stay at least `MinSide` long. A new roof does not take a skew from the walls yet. A new roof without
   a size takes the rectangle round the walls' outer faces, turned along the longest exterior wall, the ridge along the
   longer side, the eaves at the tallest wall. An L- or T-shaped house takes several roofs.

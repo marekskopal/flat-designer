@@ -12,8 +12,9 @@ use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
 
 /**
  * Skewed verges (FD-97): a gable's or shed's `startSkew` / `endSkew`, degrees counter-clockwise (±`MaxSkew`, 0 square to
- * the ridge), turning the verge at the ridge's start or end about the ridge's end on the eaves line (`RoofGeometry`). Like
- * the parapet, a hip or flat roof given a skew anew is refused, and one made so leaves its skews behind. The eaves line's
+ * the ridge), turning the verge at the ridge's start or end about the ridge's end on the eaves line (`RoofGeometry`); a
+ * flat roof's ends turn alike (FD-101: over a skewed wall, its parapet following). A hip roof given a skew anew is
+ * refused, and one made so leaves its skews behind. The eaves line's
  * front and back stay at least `RoofHandler::MinSide` long.
  */
 final readonly class RoofSkew
@@ -30,9 +31,9 @@ final readonly class RoofSkew
 		$skews = [];
 		foreach (['startSkew', 'endSkew'] as $key) {
 			$skew = $fields->int($key, -self::MaxSkew, self::MaxSkew, 'degrees');
-			if ($skew !== 0 && !$shape->hasVerges()) {
+			if ($skew !== 0 && !$shape->canSkew()) {
 				if ($current === null || ($key === 'startSkew' ? $current->startSkew : $current->endSkew) !== $skew) {
-					throw EditException::invalid('Only a gable or shed roof has skewed verges.');
+					throw EditException::invalid('Only a gable, shed or flat roof has skewed ends.');
 				}
 				$skew = 0;
 			}
@@ -51,7 +52,7 @@ final readonly class RoofSkew
 		foreach ([$roof->localOutline(false), $roof->localOutline()] as [$frontLeft, $frontRight, $backRight, $backLeft]) {
 			if (min($frontRight[0] - $frontLeft[0], $backRight[0] - $backLeft[0]) < RoofHandler::MinSide) {
 				throw EditException::invalid(sprintf(
-					'The skewed verges leave the eaves too short: the front and back, with the overhangs and without, must be at least %d mm long.',
+					'The skewed ends leave the roof\'s front or back too short: with the overhangs and without, they must be at least %d mm long.',
 					RoofHandler::MinSide,
 				));
 			}

@@ -77,6 +77,17 @@ describe('buildRoof', () => {
         expect(flat.min.y).toBeCloseTo(2600, 0);
         expect(flat.max.y).toBeCloseTo(2600 + 300 + 900, 0);
     });
+
+    it('turns a flat roof\'s end and its parapet with a skew (FD-101)', () => {
+        // Square, the roof and its parapet start at x 0; skewed 10°, one corner reaches 4000 · tan 10° = 705 mm further west.
+        const flat: Roof = {...gable, shape: 'Flat', parapet: 900, thickness: 300, overhang: 0};
+        expect(bounds(buildRoof(flat, materials, section)).min.x).toBeCloseTo(0, 0);
+        const skewed = bounds(buildRoof({...flat, startSkew: 10}, materials, section));
+        expect(skewed.min.x).toBeCloseTo(-705.3, 0);
+        // Mitred at its acute corners, the parapet stays within the front (y 0) and the back (y 8000); scene z is −y.
+        expect(skewed.max.z).toBeLessThan(0.5);
+        expect(skewed.min.z).toBeGreaterThan(-8000.5);
+    });
 });
 
 describe('buildRoofOutline', () => {
