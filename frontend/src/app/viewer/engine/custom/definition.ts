@@ -22,8 +22,11 @@ import {
  * `<as>_index` — evaluated per scope, so a nested part repeats by its parent's item. Each copy is kept when `when` is
  * true; `x y z w h d` are numbers or expressions, rounded half away from zero to mm, and `w h d` must come out
  * positive. An `assembly` makes no part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`.
- * An option written `{"expr": "…"}` is evaluated per copy. Only what the evaluation reads is checked here. The input is
- * untrusted JSON; like PHP's decoder, `{}` and `[]` are both accepted as an empty list or object.
+ * An option written `{"expr": "…"}` is evaluated per copy. An assembly whose `opens` is not `none` moves as one leaf
+ * (FD-106): each of its parts gets `props.leaf`, `{key, box, …the assembly's options}` (`leafKey()`, the box in the
+ * item's frame), and none of them may open on its own (an `opens` other than `none`). Only what the evaluation reads
+ * is checked here. The input is untrusted JSON; like PHP's decoder, `{}` and `[]` are both accepted as an empty list
+ * or object.
  */
 
 export const DefinitionFormat = 1;
@@ -356,7 +359,7 @@ function readParts(entriesValue: unknown, variables: Variables, slots: string[])
     const collector = new PartCollector();
     list.forEach((data, index) => {
         collector.entry('parts');
-        PartEntry.read(data, `parts[${index}]`, slots, 1, collector).resolve(variables, [0, 0, 0], collector);
+        PartEntry.read(data, `parts[${index}]`, slots, 1, collector).resolve(variables, [0, 0, 0], collector, '', null);
     });
     return collector.parts;
 }
@@ -450,6 +453,15 @@ function placed(props: Record<string, unknown>, offset: [number, number, number]
     return moved;
 }
 
+/**
+ * The key of an assembly's copy, unique in the item and alike in both twins: the last segment of each entry's path
+ * (`parts[3]`) with its copy index (`#2`) when repeated, joined by dots from the top, e.g. `parts[5]#2.parts[1]`.
+ */
+function leafKey(trail: string, path: string, index: number | null): string {
+    const segment = path.slice(path.lastIndexOf('.') + 1) + (index === null ? '' : `#${index}`);
+    return trail === '' ? segment : `${trail}.${segment}`;
+}
+
 /** An option written `{"expr": "…"}`, parsed. */
 class OptionExpression {
     public constructor(public readonly expression: Expression) {}
@@ -508,8 +520,17 @@ class PartEntry {
         return new PartEntry(path, type, name, material as string | OptionExpression | null, repeat, when, geometry, options, children, slots);
     }
 
-    /** Adds the parts of this entry for the variables, its box shifted by the offset (mm) of the assemblies around it. */
-    public resolve(variables: Variables, offset: [number, number, number], collector: PartCollector): void {
+    /**
+     * Adds the parts of this entry for the variables, its box shifted by the offset (mm) of the assemblies around it.
+     * `trail` is the copy path of the assemblies around it (see `leafKey()`), `leaf` the moving assembly it is in.
+     */
+    public resolve(
+        variables: Variables,
+        offset: [number, number, number],
+        collector: PartCollector,
+        trail: string,
+        leaf: Record<string, unknown> | null,
+    ): void {
         const copies: [number | null, Variables][] = this.repeat === null ? [[null, variables]] : this.repeat.copies(variables);
         for (const [index, scope] of copies) {
             if (!condition(this.when, scope, `${this.path}.when`)) {
@@ -519,10 +540,21 @@ class PartEntry {
             const at: [number, number, number] = [offset[0] + mm.x, offset[1] + mm.y, offset[2] + mm.z];
             if (this.type === Assembly) {
                 const inner = {...scope, AW: mm.w, AH: mm.h, AD: mm.d};
+                const key = leafKey(trail, this.path, index);
+                const options = this.evaluateOptions(scope);
+                const opens = this.opensAlone(options, leaf);
+                const moving = opens ? {key, box: [...at, mm.w, mm.h, mm.d], ...options} : leaf;
                 for (const child of this.children) {
-                    child.resolve(inner, at, collector);
+                    child.resolve(inner, at, collector, key, moving);
                 }
                 continue;
+            }
+            // The material first, as the PHP twin evaluates it.
+            const material = this.materialOf(scope);
+            const props = placed(this.evaluateOptions(scope), offset);
+            this.opensAlone(props, leaf);
+            if (leaf !== null) {
+                props['leaf'] = leaf;
             }
             collector.add(
                 {
@@ -535,12 +567,22 @@ class PartEntry {
                     w: mm.w,
                     h: mm.h,
                     d: mm.d,
-                    material: this.materialOf(scope),
-                    props: placed(this.evaluateOptions(scope), offset),
+                    material,
+                    props,
                 },
                 this.path,
             );
         }
+    }
+
+    /** Whether the part's evaluated `opens` makes it open (not `none`); refused inside an opening assembly. */
+    private opensAlone(options: Record<string, unknown>, leaf: Record<string, unknown> | null): boolean {
+        const value = options['opens'];
+        const opens = value !== undefined && value !== null && value !== 'none';
+        if (opens && leaf !== null) {
+            throw invalid(`${this.path}.opens`, 'A part of an opening assembly moves with it; it cannot open on its own.');
+        }
+        return opens && typeof options['opens'] === 'string';
     }
 
     private measure(scope: Variables): Record<GeometryKey, number> {

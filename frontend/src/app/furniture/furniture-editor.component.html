@@ -59,6 +59,15 @@
             <div class="tryout">
                 <div class="tryout__head">
                     <h2 class="tryout__title">Try it out</h2>
+                    <button
+                        type="button"
+                        class="link"
+                        title="Or click a front in the preview"
+                        [attr.aria-pressed]="frontsOpen()"
+                        (click)="toggleFronts()"
+                    >
+                        {{ frontsOpen() ? 'Close fronts' : 'Open fronts' }}
+                    </button>
                     <button type="button" class="link" (click)="resetTryout()">Defaults</button>
                 </div>
                 <div class="sizes">

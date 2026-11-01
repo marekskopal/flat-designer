@@ -12,6 +12,7 @@ import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {FloorRoofs} from '../under-roof';
 import {evaluateDefinition, ResolvedPart} from './definition';
+import {FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, pivotPoint} from './fronts';
 import {taperedLeg} from './legs';
 
 /** The scene's furniture definitions by id. */
@@ -77,12 +78,27 @@ export function buildCustomItemBody(
         // The evaluator reads `{}` as an empty list too (PHP decodes both alike).
         const slots = Array.isArray(definition.definition.materialSlots) ? definition.definition.materialSlots : [];
         const group = new THREE.Group();
+        const fronts = new Map<string, THREE.Group>();
+        let ordinal = 0;
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
-            const mesh = posed(buildPart(part, item, material, materials, pictures, room, roofs), part);
-            mesh.name = `part:${part.name}`;
-            mesh.userData['partName'] = part.name;
+            const spec = frontSpec(part, ordinal);
+            if (spec !== null && part.props['leaf'] === undefined) {
+                ordinal++;
+            }
+            if (spec?.motion === 'fold') {
+                const [upper, lower] = foldingFront(part, spec, item, material(grainOf(part)), materials);
+                const front = frontGroup(fronts, spec, group, item);
+                addToPivot(front, 'upper', named(posed(upper, part), part), spec);
+                addToPivot(front, 'lower', named(posed(lower, part), part), spec);
+                continue;
+            }
+            const mesh = named(posed(buildPart(part, item, material, materials, pictures, room, roofs), part), part);
+            if (spec !== null) {
+                addToPivot(frontGroup(fronts, spec, group, item), 'main', mesh, spec);
+                continue;
+            }
             mesh.position.x -= (item.width / 2) * MM;
             mesh.position.z -= (item.depth / 2) * MM;
             group.add(mesh);
@@ -114,6 +130,60 @@ export function partMaterial(
         return materials.byCode(code, grain);
     }
     return materials.get(item.materialId, grain);
+}
+
+function named(object: THREE.Object3D, part: ResolvedPart): THREE.Object3D {
+    object.name = `part:${part.name}`;
+    object.userData['partName'] = part.name;
+    return object;
+}
+
+function grainOf(part: ResolvedPart): GrainDirection {
+    return part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
+}
+
+/**
+ * The group of an openable front (`fronts.ts`), made once per key: at the parts frame's origin in the item, tagged with
+ * its spec so that `mergeStatic()` merges it on its own and the engine finds it.
+ */
+function frontGroup(fronts: Map<string, THREE.Group>, spec: FrontSpec, group: THREE.Group, item: Item): THREE.Group {
+    let front = fronts.get(spec.key);
+    if (front === undefined) {
+        front = new THREE.Group();
+        front.name = `front:${spec.key}`;
+        front.userData[FrontTag] = spec;
+        front.position.set((-item.width / 2) * MM, 0, (-item.depth / 2) * MM);
+        fronts.set(spec.key, front);
+        group.add(front);
+    }
+    return front;
+}
+
+/** Puts a part (built in the parts frame) into the front's pivot, which stands on the motion's axis, closed. */
+function addToPivot(front: THREE.Group, name: FrontPivot, object: THREE.Object3D, spec: FrontSpec): void {
+    let pivot = front.children.find((c) => c.userData[FrontPivotTag] === name);
+    if (pivot === undefined) {
+        pivot = new THREE.Group();
+        pivot.userData[FrontPivotTag] = name;
+        pivot.position.copy(pivotPoint(spec, name)).multiplyScalar(MM);
+        front.add(pivot);
+    }
+    object.position.sub(pivot.position);
+    pivot.add(object);
+}
+
+/** A bi-fold flap as its two panels, upper and lower (`FoldJoint` apart), the handle on the lower one. */
+function foldingFront(
+    part: ResolvedPart,
+    spec: FrontSpec,
+    item: Item,
+    material: THREE.Material,
+    materials: MaterialLibrary,
+): [THREE.Object3D, THREE.Object3D] {
+    const [upper, lower] = spec.fold ?? [part.h, 0];
+    const upperPart = {...part, y: part.y + part.h - upper, h: upper, props: {...part.props, handle: 'none'}};
+    const lowerPart = {...part, h: lower, props: {...part.props, handle: part.props['handle'] ?? 'horizontal'}};
+    return [buildFront(upperPart, item, material, materials), buildFront(lowerPart, item, material, materials)];
 }
 
 /** One part as a mesh (or a group, for a front with its handle) in the parts' frame, metres. */

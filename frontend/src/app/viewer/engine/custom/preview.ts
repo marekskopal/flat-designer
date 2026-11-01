@@ -8,6 +8,7 @@ import {buildItem} from '../items';
 import {MaterialLibrary} from '../materials';
 import {MM} from '../plan-geometry';
 import {definitionLibrary} from './custom';
+import {frontOf, FrontStates} from './fronts';
 
 const BackgroundColor = '#efece6';
 
@@ -35,6 +36,11 @@ export class FurniturePreview {
     private materials: MaterialLibrary | null = null;
     private object: THREE.Object3D | null = null;
     private framedSize = '';
+    /** The fronts as opened by a click or `setFrontsOpen()` (FD-106), kept across rebuilds. */
+    private readonly fronts = new FrontStates();
+    private readonly raycaster = new THREE.Raycaster();
+    private readonly pointerDown = new THREE.Vector2();
+    private lastFrame = performance.now();
 
     public constructor(private readonly container: HTMLElement) {
         RectAreaLightUniformsLib.init();
@@ -71,7 +77,14 @@ export class FurniturePreview {
         this.resizeObserver = new ResizeObserver(() => this.resize());
         this.resizeObserver.observe(container);
         this.resize();
+        this.renderer.domElement.addEventListener('pointerdown', this.handlePointerDown);
+        this.renderer.domElement.addEventListener('pointerup', this.handlePointerUp);
         this.renderer.setAnimationLoop(() => {
+            const now = performance.now();
+            if (this.fronts.update((now - this.lastFrame) / 1000)) {
+                this.fronts.apply(this.items());
+            }
+            this.lastFrame = now;
             this.controls.update();
             this.renderer.render(this.scene, this.camera);
         });
@@ -107,6 +120,7 @@ export class FurniturePreview {
         };
         this.object = buildItem(item, this.materials, undefined, definitionLibrary([preview.definition]));
         this.scene.add(this.object);
+        this.fronts.apply(this.items());
 
         const size = `${preview.width}×${preview.depth}×${preview.height}`;
         if (size !== this.framedSize) {
@@ -117,7 +131,14 @@ export class FurniturePreview {
         return typeof error === 'string' ? error : null;
     }
 
+    /** Opens or closes every front of the item. */
+    public setFrontsOpen(open: boolean): void {
+        this.fronts.setAll(open, this.items());
+    }
+
     public dispose(): void {
+        this.renderer.domElement.removeEventListener('pointerdown', this.handlePointerDown);
+        this.renderer.domElement.removeEventListener('pointerup', this.handlePointerUp);
         this.renderer.setAnimationLoop(null);
         this.resizeObserver.disconnect();
         this.clear();
@@ -126,6 +147,28 @@ export class FurniturePreview {
         this.renderer.dispose();
         this.renderer.domElement.remove();
     }
+
+    private items(): Map<number, THREE.Object3D> {
+        return new Map(this.object === null ? [] : [[0, this.object]]);
+    }
+
+    private readonly handlePointerDown = (event: PointerEvent): void => {
+        this.pointerDown.set(event.clientX, event.clientY);
+    };
+
+    /** A click (not an orbit) on a front opens or closes it. */
+    private readonly handlePointerUp = (event: PointerEvent): void => {
+        if (this.object === null || this.pointerDown.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 4) {
+            return;
+        }
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        const ndc = new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+        this.raycaster.setFromCamera(ndc, this.camera);
+        const front = frontOf(this.raycaster.intersectObject(this.object, true)[0]?.object ?? null);
+        if (front !== null) {
+            this.fronts.toggle(0, front);
+        }
+    };
 
     /** Looks at the item from the front left, slightly above, far enough to see all of it. */
     private frame(width: number, depth: number, height: number): void {

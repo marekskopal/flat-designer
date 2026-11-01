@@ -46,6 +46,7 @@ import {buildingLevels, floorAt, floorColliders, otherFloors, WalkFloor, walkFlo
 import {buildChimneysBelow, chimneyStretches, isChimney, sceneChimneys} from './chimneys';
 import {CommentPin, CommentPins, CommentPoint, commentPointOf} from './comments';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
+import {frontObjects, frontOf, frontSpecOf, FrontStates} from './custom/fronts';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, sagittaToward, snapDrawPoint, ToolStatus} from './drawing';
@@ -274,11 +275,17 @@ type Drag = DragBase &
 /** Where a roof's eaves rectangle lies (plan mm), as a corner drag changes it. */
 type RoofRectangle = Pick<Roof, 'x' | 'y' | 'width' | 'depth'>;
 
-/** The door (or walkable French window) the walker looks at, and whether it is open or opening. */
+/**
+ * The door (or walkable French window), or the front of a cupboard (FD-106), the walker looks at: `target` names it
+ * (`opening:<id>`, `front:<itemId>:<key>`), `open` whether it is open or opening.
+ */
 export interface DoorAim {
-    openingId: number;
+    target: string;
     open: boolean;
 }
+
+/** What a click or E opens or closes: a door, or a front of an item of the shown floor. */
+type Usable = {kind: 'door'; openingId: number} | {kind: 'front'; itemId: number; front: THREE.Object3D};
 
 /** Objects shown instead of the originals while a drag (or its commit) is in progress. */
 interface Preview {
@@ -308,6 +315,8 @@ export class ViewerEngine {
     public onWalkthroughLock: (locked: boolean) => void = () => undefined;
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
+    /** A front of an item was opened or closed by a click (FD-106), for the selection card. */
+    public onFrontsChange: () => void = () => undefined;
     /**
      * The walker asks for the floor above (+1) or below (−1); the id of the floor the page goes to (it then loads that
      * floor, and the walk carries on there), null when there is none.
@@ -453,6 +462,9 @@ export class ViewerEngine {
     private readonly leafStates = new LeafStates();
     /** The door in view during a walk, as last reported to `onWalkthroughAim`. */
     private aim: DoorAim | null = null;
+    private aimed: Usable | null = null;
+    /** How far the fronts of the shown floor's items are open (FD-106), session only. */
+    private readonly frontStates = new FrontStates();
     private selection: Selection | null = null;
     private editMode = false;
     private tool: EditorTool = 'select';
@@ -625,6 +637,7 @@ export class ViewerEngine {
         const walkedHere = this.walkEndedOn === scene.floor.id;
         if (this.loadedFloorId !== scene.floor.id) {
             this.walkEndedOn = null;
+            this.frontStates.clear();
         }
         if (this.loadedFloorId !== scene.floor.id && walkTo === null) {
             if (this.walkthrough !== null) {
@@ -657,6 +670,7 @@ export class ViewerEngine {
             }
         }
         this.leafStates.apply(this.leaves);
+        this.frontStates.apply(this.items);
         this.refreshShadows();
         // On a floor walked onto, the walker's height carries over against the new floor's level.
         const level = walkTo === null || previous === null ? undefined : (this.walkthrough?.level() ?? 0) - floorOffset(scene, previous);
@@ -1182,6 +1196,7 @@ export class ViewerEngine {
             content.add(object);
             this.refreshShadows();
         }
+        this.frontStates.apply(this.items);
         this.applyLights();
         if (this.selection?.kind === 'item' || this.selection?.kind === 'group') {
             this.setSelection(this.selection);
@@ -1345,6 +1360,36 @@ export class ViewerEngine {
         }
         this.items.forEach((object) => this.showCeilingParts(object));
         this.refreshShadows();
+    }
+
+    /** Opens or closes every front of the floor's items (FD-106), animated; fronts of items built later follow. */
+    public setFrontsOpen(open: boolean): void {
+        if (open !== this.frontStates.everyOpen) {
+            this.frontStates.setAll(open, this.items);
+            this.onFrontsChange();
+            this.invalidate();
+        }
+    }
+
+    /** Whether the items (one, or a group's) have fronts that open, and whether any of them is open: null for none. */
+    public itemFrontsOpen(itemIds: readonly number[]): boolean | null {
+        const withFronts = itemIds.filter((id) => {
+            const item = this.items.get(id);
+            return item !== undefined && frontObjects(item).length > 0;
+        });
+        return withFronts.length === 0 ? null : withFronts.some((id) => this.frontStates.anyOpen(id));
+    }
+
+    /** Opens or closes the fronts of the items (one, or a group's), animated. */
+    public setItemFrontsOpen(itemIds: readonly number[], open: boolean): void {
+        for (const id of itemIds) {
+            const item = this.items.get(id);
+            if (item !== undefined) {
+                this.frontStates.setItem(id, item, open);
+            }
+        }
+        this.onFrontsChange();
+        this.invalidate();
     }
 
     /** Shows or hides the roofs, the floors below's too; hidden, the shown floor's still shade the floor under them. */
@@ -1903,7 +1948,7 @@ export class ViewerEngine {
             this.onWalkthroughEnd();
         };
         walkthrough.onLockChange = (locked): void => this.onWalkthroughLock(locked);
-        walkthrough.onUse = (): void => this.toggleDoor(this.aim?.openingId ?? null);
+        walkthrough.onUse = (): void => this.use(this.aimed);
         walkthrough.onFloor = (step): void => this.walkToFloor(step);
         this.walkthrough = walkthrough;
         // Every door starts closed but the entrance, open at once: swinging open it could sweep the walker aside.
@@ -2048,6 +2093,7 @@ export class ViewerEngine {
         this.walkthrough.dispose();
         this.walkthrough = null;
         this.floorWalk = null;
+        this.aimed = null;
         this.setAim(null);
         // Back to the display state: doors open, French windows closed; the floors above the shown one go.
         this.leafStates.reset(this.sceneData?.walls ?? [], true);
@@ -2543,6 +2589,10 @@ export class ViewerEngine {
             this.updateLeafColliders();
             this.refreshShadows();
         }
+        if (this.frontStates.update(dt)) {
+            this.frontStates.apply(this.items, true);
+            this.refreshShadows();
+        }
         const moving = this.drag !== null || this.preview !== null || this.drawLayer.children.length > 0;
         if (moving || this.moving) {
             this.refreshShadows();
@@ -2686,7 +2736,7 @@ export class ViewerEngine {
             if (this.walkthrough.isLocked()) {
                 // Looking around with the mouse: a click opens or closes the door in view.
                 if (event.button === 0) {
-                    this.toggleDoor(this.aim?.openingId ?? null);
+                    this.use(this.aimed);
                 }
             } else {
                 // The lock was refused or lost without ending the walk: a click captures the mouse again.
@@ -3074,7 +3124,7 @@ export class ViewerEngine {
         if (this.walkthrough !== null) {
             // Touch walk: tapping a door within reach opens or closes it (the mouse uses the view centre instead).
             if (event.pointerType !== 'mouse') {
-                this.toggleDoor(this.doorAt(this.toNdc(event)));
+                this.use(this.usableAt(this.toNdc(event)));
             }
             return;
         }
@@ -3114,12 +3164,28 @@ export class ViewerEngine {
         if (this.editMode && this.isTopDown() && this.pickHandle(event) !== null) {
             return;
         }
-        const picked = selectionOf(this.pick(event)?.object ?? null);
+        const hit = this.pick(event);
+        const picked = selectionOf(hit?.object ?? null);
+        // In view mode a click on a front of the selected item (or of an item of the selected group) opens or closes it (FD-106).
+        const front = frontOf(hit?.object ?? null);
+        if (!this.editMode && front !== null && picked?.kind === 'item' && this.isSelectedItem(picked.id)) {
+            this.use({kind: 'front', itemId: picked.id, front});
+            return;
+        }
         // A plot's ground surrounds the building: outside the plan view, where it has no handles, a click on it is a
         // click on the background, which clears the selection as it did before the plot was there.
         const selection = picked?.kind === 'plot' && !this.isTopDown() ? null : picked;
         this.onSelect(this.groupOf(selection, event), event.shiftKey);
     };
+
+    /** Whether the item is selected, alone or with its group. */
+    private isSelectedItem(itemId: number): boolean {
+        const selection = this.selection;
+        if (selection?.kind === 'item') {
+            return selection.id === itemId;
+        }
+        return selection?.kind === 'group' && this.sceneData?.items.find((i) => i.id === itemId)?.groupId === selection.id;
+    }
 
     /**
      * The group of a clicked item: an item that is part of a group stands for the whole group, unless Alt is
@@ -4053,8 +4119,11 @@ export class ViewerEngine {
         return hits.find((h) => isVisible(h.object) && (clip === undefined || clip.distanceToPoint(h.point) >= 0));
     }
 
-    /** The door or walkable French window within reach at a screen point (NDC), unless something else is in front. */
-    private doorAt(ndc: THREE.Vector2): number | null {
+    /**
+     * The door or walkable French window, or the front of one of the shown floor's items, within reach at a screen point
+     * (NDC), unless something else is in front.
+     */
+    private usableAt(ndc: THREE.Vector2): Usable | null {
         // In a walk over all floors, the doors of the other floors too (the shown floor's first, as `pickAt()` would).
         let hit = this.pickAt(ndc, DoorReach);
         // The floor the walker is on, when it is another one: its doors are those within reach.
@@ -4071,7 +4140,15 @@ export class ViewerEngine {
             }
         }
         const selection = selectionOf(hit?.object ?? null);
-        return selection?.kind === 'opening' && this.doorStates(selection.id) !== null ? selection.id : null;
+        if (selection?.kind === 'opening' && this.doorStates(selection.id) !== null) {
+            return {kind: 'door', openingId: selection.id};
+        }
+        const front = frontOf(hit?.object ?? null);
+        if (front === null || selection?.kind !== 'item') {
+            return null;
+        }
+        const item = this.items.get(selection.id);
+        return item !== undefined && frontObjects(item).includes(front) ? {kind: 'front', itemId: selection.id, front} : null;
     }
 
     /** The door states holding an opening: the shown floor's, or another floor's in a walk over all floors. */
@@ -4082,24 +4159,38 @@ export class ViewerEngine {
         return this.walkWorld === null ? null : (this.stackLayers.find((l) => l.leafStates.has(openingId))?.leafStates ?? null);
     }
 
-    /** Opens or closes a door (nothing for null). */
-    private toggleDoor(openingId: number | null): void {
-        const states = openingId === null ? null : this.doorStates(openingId);
-        if (openingId !== null && states !== null) {
-            states.toggle(openingId);
+    /** Opens or closes a door or a front (nothing for null). */
+    private use(usable: Usable | null): void {
+        if (usable?.kind === 'door') {
+            this.doorStates(usable.openingId)?.toggle(usable.openingId);
+        } else if (usable?.kind === 'front') {
+            this.frontStates.toggle(usable.itemId, usable.front);
+            this.onFrontsChange();
+            this.invalidate();
+        }
+        if (this.walkthrough !== null) {
             this.updateAim();
         }
     }
 
-    /** Follows the door at the centre of the walker's view. */
+    /** Follows the door or front at the centre of the walker's view. */
     private updateAim(): void {
-        const openingId = this.doorAt(new THREE.Vector2(0, 0));
-        const states = openingId === null ? null : this.doorStates(openingId);
-        this.setAim(openingId === null || states === null ? null : {openingId, open: states.isOpen(openingId)});
+        const usable = this.usableAt(new THREE.Vector2(0, 0));
+        this.aimed = usable;
+        this.setAim(usable === null ? null : this.aimOf(usable));
+    }
+
+    private aimOf(usable: Usable): DoorAim | null {
+        if (usable.kind === 'door') {
+            const states = this.doorStates(usable.openingId);
+            return states === null ? null : {target: `opening:${usable.openingId}`, open: states.isOpen(usable.openingId)};
+        }
+        const key = frontSpecOf(usable.front).key;
+        return {target: `front:${usable.itemId}:${key}`, open: this.frontStates.isOpen(usable.itemId, key)};
     }
 
     private setAim(aim: DoorAim | null): void {
-        if (aim?.openingId !== this.aim?.openingId || aim?.open !== this.aim?.open) {
+        if (aim?.target !== this.aim?.target || aim?.open !== this.aim?.open) {
             this.aim = aim;
             this.onWalkthroughAim(aim);
         }

@@ -1,6 +1,6 @@
 {
  "name": "Sideboard",
- "description": "Low cabinet with doors (handles at the meeting edges), an optional row of drawers above them, on a plinth or legs.",
+ "description": "Low cabinet with doors (handles at the meeting edges) and a shelf behind them, an optional row of drawers with their boxes above them, on a plinth or legs. softClose damps the closing of the doors and drawers.",
  "definition": {
   "format": 1,
   "catalogue": "storage",
@@ -42,6 +42,12 @@
     "min": 16,
     "max": 30,
     "unit": "mm"
+   },
+   {
+    "key": "softClose",
+    "label": "Soft close",
+    "type": "bool",
+    "default": true
    }
   ],
   "derived": {
@@ -120,6 +126,22 @@
    },
    {
     "type": "board",
+    "name": "Shelf",
+    "when": "ch - t - dh > 500",
+    "x": "t",
+    "y": "b + round((ch - t - dh) / 2)",
+    "z": 20,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "D - f - 40",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
     "name": "Plinth",
     "when": "base == 'plinth'",
     "x": 20,
@@ -148,7 +170,7 @@
     "bottomSize": 30
    },
    {
-    "type": "front",
+    "type": "assembly",
     "name": "Drawer",
     "when": "drawers",
     "repeat": {
@@ -156,13 +178,89 @@
     },
     "x": "i * fw + 2",
     "y": "H - t - dh + 2",
-    "z": "D - f",
+    "z": 10,
     "w": "fw - 4",
     "h": "dh - 4",
-    "d": "f",
-    "material": "fronts",
-    "kind": "drawer",
-    "handle": "horizontal"
+    "d": "D - 10",
+    "opens": "slide",
+    "softClose": {
+     "expr": "softClose"
+    },
+    "parts": [
+     {
+      "type": "front",
+      "name": "Drawer",
+      "x": 0,
+      "y": 0,
+      "z": "AD - f",
+      "w": "AW",
+      "h": "AH",
+      "d": "f",
+      "material": "fronts",
+      "kind": "drawer",
+      "handle": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Drawer side",
+      "repeat": {
+       "count": 2,
+       "as": "s"
+      },
+      "x": "s == 0 ? (i == 0 ? t : 0) + 12 : AW - (i == doors - 1 ? t : 0) - 28",
+      "y": 30,
+      "z": 10,
+      "w": 16,
+      "h": "max(AH - 70, 30)",
+      "d": "AD - f - 10",
+      "material": "carcass",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Drawer bottom",
+      "x": "(i == 0 ? t : 0) + 28",
+      "y": 30,
+      "z": 10,
+      "w": "AW - (i == 0 ? t : 0) - (i == doors - 1 ? t : 0) - 56",
+      "h": 8,
+      "d": "AD - f - 10",
+      "material": "carcass",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Drawer back",
+      "x": "(i == 0 ? t : 0) + 28",
+      "y": 38,
+      "z": 10,
+      "w": "AW - (i == 0 ? t : 0) - (i == doors - 1 ? t : 0) - 56",
+      "h": "max(AH - 78, 22)",
+      "d": 16,
+      "material": "carcass",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Drawer inner front",
+      "x": "(i == 0 ? t : 0) + 28",
+      "y": 38,
+      "z": "AD - f - 16",
+      "w": "AW - (i == 0 ? t : 0) - (i == doors - 1 ? t : 0) - 56",
+      "h": "max(AH - 78, 22)",
+      "d": 16,
+      "material": "carcass",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     }
+    ]
    },
    {
     "type": "front",
@@ -180,7 +278,10 @@
     "material": "fronts",
     "kind": "door",
     "handle": "vertical",
-    "handleSide": "right"
+    "handleSide": "right",
+    "softClose": {
+     "expr": "softClose"
+    }
    },
    {
     "type": "front",
@@ -198,7 +299,10 @@
     "material": "fronts",
     "kind": "door",
     "handle": "vertical",
-    "handleSide": "left"
+    "handleSide": "left",
+    "softClose": {
+     "expr": "softClose"
+    }
    }
   ]
  }

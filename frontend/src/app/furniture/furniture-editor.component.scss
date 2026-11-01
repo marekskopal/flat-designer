@@ -138,11 +138,11 @@
 .tryout__head {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
+    gap: $space-12;
 }
 
 .tryout__title {
-    margin: 0;
+    margin: 0 auto 0 0;
     font-size: $font-size-14;
     font-weight: 650;
 }

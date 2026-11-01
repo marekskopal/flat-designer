@@ -684,6 +684,9 @@ $inspector-width: 320px;
 }
 
 .room-card__foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-8;
     padding: 0 $space-16 $space-16;
 }
 

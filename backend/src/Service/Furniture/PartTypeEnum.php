@@ -18,7 +18,7 @@ enum PartTypeEnum: string
 	 * sides, or only the left / right edge), e.g. a chair seat.
 	 */
 	case Board = 'board';
-	/** Door or drawer leaf with a handle, as on the kitchen cabinets. */
+	/** Door or drawer leaf with a handle, as on the kitchen cabinets; it opens as its `Motion` options say. */
 	case Front = 'front';
 	/**
 	 * A solid box not cut from sheet material (FD-93): stone, concrete, cast or solid metal, a solid timber bar, fabric;
@@ -64,7 +64,10 @@ enum PartTypeEnum: string
 	 * vaulted) instead of at the top of the box.
 	 */
 	case Cable = 'cable';
-	/** No part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`. */
+	/**
+	 * No part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`. With `opens` (the
+	 * `Motion` options) they move as one leaf, e.g. a drawer front with its drawer box.
+	 */
 	case Assembly = 'assembly';
 
 	private const array Grain = ['vertical', 'horizontal'];
@@ -87,11 +90,37 @@ enum PartTypeEnum: string
 		'turnZ' => 'coordinate',
 	];
 
+	/**
+	 * How a front, or an assembly moving as one leaf (a drawer with its box), opens in the viewer (FD-106): `opens`
+	 * swing (a door on its `hinge` edge, default the side away from `handleSide`), slide (a drawer, `travel` mm out),
+	 * lift (a flap turning up about its top edge), fold (a bi-fold flap folding `foldAt` mm below its top, at most half
+	 * way) or parallel (a flap rising `travel` mm upright), or none; `angle` is how far it turns (degrees) and `softClose`
+	 * damps its closing. They change the drawing only; the cut list splits a folding front in two.
+	 */
+	private const array Motion = [
+		'opens' => ['swing', 'slide', 'lift', 'fold', 'parallel', 'none'],
+		'hinge' => ['left', 'right'],
+		'angle' => 'opening',
+		'travel' => 'mm',
+		'foldAt' => 'mm',
+		'softClose' => 'bool',
+	];
+
+	/** An assembly moves as a whole: it does not fold. */
+	private const array AssemblyMotion = [
+		'opens' => ['swing', 'slide', 'lift', 'parallel', 'none'],
+		'hinge' => ['left', 'right'],
+		'angle' => 'opening',
+		'travel' => 'mm',
+		'softClose' => 'bool',
+	];
+
 	private const array KindErrors = [
 		'mm' => 'Must be a whole number of mm above 0.',
 		'color' => 'Must be a colour "#rrggbb".',
 		'fraction' => 'Must be a number from 0 to 1.',
 		'angle' => 'Must be degrees from -90 to 90.',
+		'opening' => 'Must be degrees from 1 to 180.',
 		'coordinate' => 'Must be a number (mm).',
 		'bool' => 'Must be true or false.',
 		'slot' => 'Must be the key of one of the materialSlots.',
@@ -156,7 +185,7 @@ enum PartTypeEnum: string
 
 	private static function fits(string $kind, mixed $value): bool
 	{
-		if (in_array($kind, ['fraction', 'angle', 'coordinate', 'number'], true)) {
+		if (in_array($kind, ['fraction', 'angle', 'opening', 'coordinate', 'number'], true)) {
 			return (is_int($value) || is_float($value)) && self::inRange($kind, (float) $value);
 		}
 
@@ -176,6 +205,7 @@ enum PartTypeEnum: string
 		return match ($kind) {
 			'fraction' => $value >= 0 && $value <= 1,
 			'angle' => abs($value) <= 90,
+			'opening' => $value >= 1 && $value <= 180,
 			'coordinate' => true,
 			default => $value >= 0,
 		};
@@ -198,7 +228,7 @@ enum PartTypeEnum: string
 				'handleSide' => ['left', 'right'],
 				'grain' => self::Grain,
 				'edges' => 'sides',
-			] + self::Pose,
+			] + self::Motion + self::Pose,
 			self::Cylinder => ['axis' => ['x', 'y', 'z'], 'radius' => 'number'] + self::Pose,
 			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Pose,
 			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Pose,
@@ -217,7 +247,7 @@ enum PartTypeEnum: string
 				'bulb' => ['none', 'sphere', 'disc'],
 			],
 			self::Cable => ['path' => 'points', 'ceiling' => 'bool', 'sag' => 'number', 'rose' => 'number'],
-			self::Assembly => [],
+			self::Assembly => self::AssemblyMotion,
 		};
 	}
 

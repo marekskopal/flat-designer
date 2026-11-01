@@ -1,6 +1,6 @@
 {
  "name": "Kitchen wall cabinet",
- "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts.",
+ "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts.",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
@@ -24,6 +24,9 @@
       "options": [
        "door",
        "drawer",
+       "liftUp",
+       "bifold",
+       "parallelLift",
        "oven",
        "microwave"
       ],
@@ -85,6 +88,12 @@
     "default": "right"
    },
    {
+    "key": "softClose",
+    "label": "Soft close",
+    "type": "bool",
+    "default": true
+   },
+   {
     "key": "blindLeft",
     "label": "Blind left (corner)",
     "type": "int",
@@ -132,7 +141,8 @@
    "plinth": "0",
    "heights": "share(field(fronts, 'height'), H - plinth)",
    "starts": "offsets(heights)",
-   "carcassD": "D - ft"
+   "carcassD": "D - ft",
+   "runner": "t + 13 - gap / 2"
   },
   "materialSlots": [
    {
@@ -220,7 +230,7 @@
      {
       "type": "front",
       "name": "Front",
-      "when": "f.type == 'door' || f.type == 'drawer'",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
       "repeat": {
        "count": "(f.type == 'door' ? f.count : 1)",
        "as": "k"
@@ -238,15 +248,120 @@
        "bottom",
        "top"
       ],
-      "kind": {
-       "expr": "f.type"
-      },
+      "kind": "door",
       "handle": {
        "expr": "f.handle ?? handle"
       },
       "handleSide": {
        "expr": "(f.type == 'door' ? f.count : 1) == 2 ? (k == 0 ? 'right' : 'left') : handleSide"
+      },
+      "opens": {
+       "expr": "f.type == 'liftUp' ? 'lift' : f.type == 'bifold' ? 'fold' : f.type == 'parallelLift' ? 'parallel' : 'swing'"
+      },
+      "softClose": {
+       "expr": "softClose"
       }
+     },
+     {
+      "type": "assembly",
+      "name": "Drawer",
+      "when": "f.type == 'drawer'",
+      "x": "gap / 2",
+      "y": "gap / 2",
+      "z": "30 - carcassD",
+      "w": "AW - gap",
+      "h": "AH - gap",
+      "d": "carcassD - 30 + AD",
+      "opens": "slide",
+      "travel": {
+       "expr": "max(carcassD - 90, 50)"
+      },
+      "softClose": {
+       "expr": "softClose"
+      },
+      "parts": [
+       {
+        "type": "front",
+        "name": "Front",
+        "x": 0,
+        "y": 0,
+        "z": "AD - ft",
+        "w": "AW",
+        "h": "AH",
+        "d": "ft",
+        "material": "fronts",
+        "edges": [
+         "left",
+         "right",
+         "bottom",
+         "top"
+        ],
+        "kind": "drawer",
+        "handle": {
+         "expr": "f.handle ?? handle"
+        }
+       },
+       {
+        "type": "board",
+        "name": "Drawer side",
+        "repeat": {
+         "count": 2,
+         "as": "s"
+        },
+        "x": "s == 0 ? runner : AW - runner - 16",
+        "y": 30,
+        "z": 10,
+        "w": 16,
+        "h": "max(AH - 70, 30)",
+        "d": "AD - ft - 10",
+        "material": "carcass",
+        "edges": [
+         "top"
+        ]
+       },
+       {
+        "type": "board",
+        "name": "Drawer bottom",
+        "x": "runner + 16",
+        "y": 30,
+        "z": 10,
+        "w": "AW - 2 * runner - 32",
+        "h": 8,
+        "d": "AD - ft - 10",
+        "material": "carcass",
+        "grain": "horizontal"
+       },
+       {
+        "type": "board",
+        "name": "Drawer back",
+        "x": "runner + 16",
+        "y": 38,
+        "z": 10,
+        "w": "AW - 2 * runner - 32",
+        "h": "max(AH - 78, 22)",
+        "d": 16,
+        "material": "carcass",
+        "grain": "horizontal",
+        "edges": [
+         "top"
+        ]
+       },
+       {
+        "type": "board",
+        "name": "Drawer inner front",
+        "x": "runner + 16",
+        "y": 38,
+        "z": "AD - ft - 16",
+        "w": "AW - 2 * runner - 32",
+        "h": "max(AH - 78, 22)",
+        "d": 16,
+        "material": "carcass",
+        "grain": "horizontal",
+        "edges": [
+         "top"
+        ]
+       }
+      ]
      },
      {
       "type": "appliance",
@@ -261,6 +376,26 @@
       "kind": {
        "expr": "f.type"
       }
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "when": "f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift'",
+      "repeat": {
+       "count": "floor(AH / 400)",
+       "as": "s"
+      },
+      "x": "t - blindLeft",
+      "y": "round((s + 1) * AH / (floor(AH / 400) + 1)) - round(t / 2)",
+      "z": "20 - carcassD",
+      "w": "W - 2 * t",
+      "h": "t",
+      "d": "carcassD - 40",
+      "material": "carcass",
+      "grain": "horizontal",
+      "edges": [
+       "front"
+      ]
      }
     ]
    }

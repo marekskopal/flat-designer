@@ -1,6 +1,6 @@
 {
  "name": "Wall-hung vanity with vessel basins",
- "description": "A long wall-hung vanity: a cabinet of handleless drawers under a solid-surface top with one or two vessel basins and wall-mounted spouts. Its elevation is the cabinet's bottom (about 400).",
+ "description": "A long wall-hung vanity: a cabinet of handleless drawers (with their boxes, soft closing by softClose) under a solid-surface top with one or two vessel basins and wall-mounted spouts. Its elevation is the cabinet's bottom (about 400).",
  "definition": {
   "format": 1,
   "catalogue": "bathroom",
@@ -43,6 +43,12 @@
     "min": 300,
     "max": 500,
     "unit": "mm"
+   },
+   {
+    "key": "softClose",
+    "label": "Soft close",
+    "type": "bool",
+    "default": true
    }
   ],
   "derived": {
@@ -84,21 +90,97 @@
     "grain": "horizontal"
    },
    {
-    "type": "front",
+    "type": "assembly",
     "name": "Drawer",
     "repeat": {
      "count": "2 * drawers"
     },
-    "kind": "drawer",
-    "handle": "none",
     "x": "(i % 2) * round(W / 2) + 2",
     "y": "floor(i / 2) * round(cabinet / drawers) + 2",
-    "z": "D - 19",
+    "z": 20,
     "w": "round(W / 2) - 4",
     "h": "round(cabinet / drawers) - 4",
-    "d": 19,
-    "material": "fronts",
-    "grain": "horizontal"
+    "d": "D - 20",
+    "opens": "slide",
+    "softClose": {
+     "expr": "softClose"
+    },
+    "parts": [
+     {
+      "type": "front",
+      "name": "Drawer",
+      "kind": "drawer",
+      "handle": "none",
+      "x": 0,
+      "y": 0,
+      "z": "AD - 19",
+      "w": "AW",
+      "h": "AH",
+      "d": 19,
+      "material": "fronts",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Drawer side",
+      "repeat": {
+       "count": 2,
+       "as": "s"
+      },
+      "x": "s == 0 ? 20 : AW - 20 - 16",
+      "y": 30,
+      "z": 10,
+      "w": 16,
+      "h": "max(AH - 70, 30)",
+      "d": "AD - 19 - 10",
+      "material": "fronts",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Drawer bottom",
+      "x": "20 + 16",
+      "y": 30,
+      "z": 10,
+      "w": "AW - 2 * 20 - 32",
+      "h": 8,
+      "d": "AD - 19 - 10",
+      "material": "fronts",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Drawer back",
+      "x": "20 + 16",
+      "y": 38,
+      "z": 10,
+      "w": "AW - 2 * 20 - 32",
+      "h": "max(AH - 78, 22)",
+      "d": 16,
+      "material": "fronts",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Drawer inner front",
+      "x": "20 + 16",
+      "y": 38,
+      "z": "AD - 19 - 16",
+      "w": "AW - 2 * 20 - 32",
+      "h": "max(AH - 78, 22)",
+      "d": 16,
+      "material": "fronts",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     }
+    ]
    },
    {
     "type": "board",

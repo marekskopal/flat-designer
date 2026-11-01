@@ -70,6 +70,8 @@ export class ViewerComponent {
     public readonly scene = input<Scene | null>(null);
     public readonly ceilingsVisible = input(false);
     public readonly roofsVisible = input(true);
+    /** Every front of the floor's cupboards open (FD-106); session only. */
+    public readonly frontsOpen = input(false);
     public readonly labelsVisible = input(true);
     /** Dimension lines along the room edges, in the top view. */
     public readonly dimensionsVisible = input(false);
@@ -143,6 +145,8 @@ export class ViewerComponent {
     public readonly walkFloorChanged = output<number>();
     /** Whether the walkthrough has the mouse captured. */
     public readonly walkthroughLocked = output<boolean>();
+    /** A front of an item was opened or closed by a click (FD-106). */
+    public readonly frontsChanged = output();
     /** The door the walker looks at (within reach) and whether it is open; null when none. */
     public readonly walkthroughAim = output<DoorAim | null>();
     /** A scene was built (the first floor shown starts at the overview, another floor keeps the view; set another from here). */
@@ -176,6 +180,7 @@ export class ViewerComponent {
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
+            engine.onFrontsChange = (): void => this.frontsChanged.emit();
             engine.onWalkthroughFloor = (step): number | null => this.walkFloorHandler()(step);
             engine.onWalkFloorChange = (floorId): void => this.walkFloorChanged.emit(floorId);
             engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
@@ -217,6 +222,7 @@ export class ViewerComponent {
         });
         effect(() => this.engine()?.setCeilingsVisible(this.ceilingsVisible()));
         effect(() => this.engine()?.setRoofsVisible(this.roofsVisible()));
+        effect(() => this.engine()?.setFrontsOpen(this.frontsOpen()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
         effect(() => this.engine()?.setElectricalVisible(this.electricalVisible(), this.electricalSymbols()));
@@ -356,5 +362,15 @@ export class ViewerComponent {
     /** Turns the camera to a commented point. */
     public focusPoint(point: CommentPoint): void {
         this.engine()?.focusPoint(point);
+    }
+
+    /** Whether the items have fronts that open and whether any is open; null for none (or before the floor is built). */
+    public itemFrontsOpen(itemIds: readonly number[]): boolean | null {
+        return this.engine()?.itemFrontsOpen(itemIds) ?? null;
+    }
+
+    /** Opens or closes the fronts of the items (one, or a group's). */
+    public setItemFrontsOpen(itemIds: readonly number[], open: boolean): void {
+        this.engine()?.setItemFrontsOpen(itemIds, open);
     }
 }

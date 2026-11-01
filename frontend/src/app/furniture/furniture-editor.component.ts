@@ -62,6 +62,8 @@ export class FurnitureEditorComponent implements OnDestroy {
     protected readonly serverOk = signal(false);
     /** Why the preview shows the red placeholder. */
     protected readonly previewError = signal<string | null>(null);
+    /** Every front of the preview open (FD-106). */
+    protected readonly frontsOpen = signal(false);
 
     protected readonly parsed = computed((): Parsed => {
         try {
@@ -195,6 +197,11 @@ export class FurnitureEditorComponent implements OnDestroy {
         } catch {
             // The error interceptor shows the toast.
         }
+    }
+
+    protected toggleFronts(): void {
+        this.frontsOpen.update((open) => !open);
+        this.preview?.setFrontsOpen(this.frontsOpen());
     }
 
     private updatePreview(): void {

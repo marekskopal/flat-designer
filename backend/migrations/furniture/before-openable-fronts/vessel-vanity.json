@@ -1,0 +1,161 @@
+{
+ "name": "Wall-hung vanity with vessel basins",
+ "description": "A long wall-hung vanity: a cabinet of handleless drawers under a solid-surface top with one or two vessel basins and wall-mounted spouts. Its elevation is the cabinet's bottom (about 400).",
+ "definition": {
+  "format": 1,
+  "catalogue": "bathroom",
+  "size": {
+   "width": 1800,
+   "depth": 500,
+   "height": 700
+  },
+  "parameters": [
+   {
+    "key": "cabinet",
+    "label": "Cabinet height",
+    "type": "int",
+    "default": 450,
+    "min": 200,
+    "max": 700,
+    "unit": "mm"
+   },
+   {
+    "key": "basins",
+    "label": "Basins",
+    "type": "int",
+    "default": 2,
+    "min": 1,
+    "max": 2
+   },
+   {
+    "key": "drawers",
+    "label": "Drawer rows",
+    "type": "int",
+    "default": 1,
+    "min": 1,
+    "max": 3
+   },
+   {
+    "key": "basin",
+    "label": "Basin diameter",
+    "type": "int",
+    "default": 420,
+    "min": 300,
+    "max": 500,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "topY": "cabinet + 30"
+  },
+  "materialSlots": [
+   {
+    "key": "fronts",
+    "label": "Cabinet",
+    "default": "oak-veneer"
+   },
+   {
+    "key": "top",
+    "label": "Top",
+    "default": "solid-surface-white"
+   },
+   {
+    "key": "basinMaterial",
+    "label": "Basins",
+    "default": "ceramic-white"
+   },
+   {
+    "key": "tap",
+    "label": "Spouts",
+    "default": "chrome"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Carcass",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "cabinet",
+    "d": "D - 19",
+    "material": "fronts",
+    "grain": "horizontal"
+   },
+   {
+    "type": "front",
+    "name": "Drawer",
+    "repeat": {
+     "count": "2 * drawers"
+    },
+    "kind": "drawer",
+    "handle": "none",
+    "x": "(i % 2) * round(W / 2) + 2",
+    "y": "floor(i / 2) * round(cabinet / drawers) + 2",
+    "z": "D - 19",
+    "w": "round(W / 2) - 4",
+    "h": "round(cabinet / drawers) - 4",
+    "d": 19,
+    "material": "fronts",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": 0,
+    "y": "cabinet",
+    "z": 0,
+    "w": "W",
+    "h": 30,
+    "d": "D",
+    "material": "top",
+    "grain": "horizontal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Basin",
+    "repeat": {
+     "count": "basins"
+    },
+    "x": "round(basins == 1 ? W / 2 : W * (2 * i + 1) / 4) - round(basin / 2)",
+    "y": "topY",
+    "z": "round((D - basin) / 2)",
+    "w": "basin",
+    "h": 140,
+    "d": "basin",
+    "radius": 40,
+    "material": "basinMaterial"
+   },
+   {
+    "type": "cylinder",
+    "name": "Waste",
+    "repeat": {
+     "count": "basins"
+    },
+    "x": "round(basins == 1 ? W / 2 : W * (2 * i + 1) / 4) - 20",
+    "y": "topY + 140",
+    "z": "round(D / 2) - 20",
+    "w": 40,
+    "h": 2,
+    "d": 40,
+    "material": "tap"
+   },
+   {
+    "type": "cylinder",
+    "name": "Spout",
+    "repeat": {
+     "count": "basins"
+    },
+    "axis": "z",
+    "x": "round(basins == 1 ? W / 2 : W * (2 * i + 1) / 4) - 12",
+    "y": "topY + 200",
+    "z": 0,
+    "w": 24,
+    "h": 24,
+    "d": "round((D - basin) / 2) + 110",
+    "material": "tap"
+   }
+  ]
+ }
+}
