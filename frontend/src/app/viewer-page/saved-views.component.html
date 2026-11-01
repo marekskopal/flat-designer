@@ -9,8 +9,12 @@
                     }
                 </button>
                 @if (canSave()) {
-                    <button type="button" class="icon" title="Replace with the current view" [disabled]="busy()" (click)="overwrite.emit(view)">↻</button>
-                    <button type="button" class="icon icon--danger" title="Delete" [disabled]="busy()" (click)="remove.emit(view)">×</button>
+                    <button type="button" class="icon-button" title="Replace with the current view" aria-label="Replace with the current view" [disabled]="busy()" (click)="overwrite.emit(view)">
+                        <fd-icon name="refresh" [size]="15" />
+                    </button>
+                    <button type="button" class="icon-button icon-button--danger" title="Delete" aria-label="Delete" [disabled]="busy()" (click)="remove.emit(view)">
+                        <fd-icon name="trash" [size]="15" />
+                    </button>
                 }
             </li>
         }
@@ -33,11 +37,11 @@
 }
 <div class="capture">
     <button type="button" class="btn btn--ghost" [disabled]="busy()" title="1600 × 1000 at 2×, in the presentation quality" (click)="capture.emit('download')">
-        Capture PNG
+        <fd-icon name="camera" [size]="15" /> Capture PNG
     </button>
     @if (canSave()) {
         <button type="button" class="btn btn--ghost" [disabled]="busy()" title="Save the capture among the project's files" (click)="capture.emit('file')">
-            To files
+            <fd-icon name="folder" [size]="15" /> To files
         </button>
     }
 </div>

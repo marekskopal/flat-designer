@@ -51,3 +51,46 @@
     font-size: $font-size-12;
     resize: vertical;
 }
+
+// Groups of fields: the inspector panel runs them edge to edge, each folding on its title.
+.fields--plain {
+    padding: $space-12 $space-16;
+}
+
+.section {
+    border-bottom: 1px solid $color-border;
+
+    .fields {
+        padding: 0 $space-16 $space-16;
+    }
+}
+
+.section__title {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    padding: $space-12 $space-16;
+    font-size: $font-size-13;
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+
+    &::-webkit-details-marker {
+        display: none;
+    }
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+}
+
+.section__chevron {
+    margin-left: auto;
+    color: $color-text-subtle;
+    transition: transform 0.15s ease;
+}
+
+.section[open] .section__chevron {
+    transform: rotate(180deg);
+}

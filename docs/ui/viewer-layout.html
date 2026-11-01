@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Viewer Layout Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* Tokens copied from frontend/src/styles/_variables.scss */
+:root {
+    --bg: #e8e4dd;
+    --surface: rgba(252, 251, 248, 0.94);
+    --surface-solid: #fcfbf8;
+    --surface-muted: #f1eee8;
+    --border: #e2ddd4;
+    --border-strong: #cfc8bc;
+    --text: #23211e;
+    --muted: #6a655d;
+    --subtle: #9a948a;
+    --accent: #4c5f51;
+    --accent-soft: #e4eae4;
+    --highlight: #d9822b;
+    --danger: #b3261e;
+    --shadow: 0 1px 2px rgba(35, 33, 30, 0.06), 0 12px 32px rgba(35, 33, 30, 0.12);
+    --shadow-sm: 0 1px 2px rgba(35, 33, 30, 0.08), 0 4px 12px rgba(35, 33, 30, 0.08);
+    --r6: 6px; --r10: 10px; --r14: 14px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+    font: 13px/1.4 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    overflow: hidden;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+svg.i--sm { width: 15px; height: 15px; }
+kbd {
+    display: inline-block; min-width: 18px; padding: 0 4px; border: 1px solid var(--border-strong); border-bottom-width: 2px;
+    border-radius: 4px; background: var(--surface-solid); font: 500 11px/16px 'Inter', sans-serif; text-align: center; color: var(--muted);
+}
+
+/* ---------- App bar (unchanged global nav) ---------- */
+.appbar {
+    height: 44px; display: flex; align-items: center; gap: 4px; padding: 0 16px;
+    background: var(--surface-solid); border-bottom: 1px solid var(--border);
+}
+.appbar__logo { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 14px; margin-right: 16px; }
+.appbar a { padding: 6px 10px; border-radius: var(--r6); color: var(--muted); text-decoration: none; }
+.appbar a.active { background: var(--surface-muted); color: var(--text); }
+.appbar__spacer { flex: 1; }
+.notes-btn { border: 1px dashed var(--highlight); background: #fff7ef; color: #8a4f12; border-radius: 999px; padding: 4px 12px; font-weight: 500; }
+
+/* ---------- Workspace grid ---------- */
+.workspace { position: relative; height: calc(100% - 44px); display: flex; }
+
+/* Left rail: panels, one at a time */
+.rail {
+    width: 56px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0;
+    background: var(--surface-solid); border-right: 1px solid var(--border); z-index: 40; position: relative;
+}
+.rail__sep { width: 28px; height: 1px; background: var(--border); margin: 6px 0; }
+.rail__label { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); margin-top: 2px; }
+.rail__spacer { flex: 1; }
+.rail-btn {
+    position: relative; width: 40px; height: 40px; border: 0; border-radius: var(--r10); background: transparent;
+    display: grid; place-items: center; color: var(--muted);
+}
+.rail-btn:hover { background: var(--surface-muted); color: var(--text); }
+.rail-btn.active { background: var(--accent-soft); color: var(--accent); }
+.rail-btn .badge {
+    position: absolute; top: 4px; right: 3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+    background: var(--highlight); color: #fff; font-size: 10px; font-weight: 600; line-height: 16px;
+}
+body:not(.editing) .edit-only, body:not(.editing) .insp-edit { display: none !important; }
+body.editing .insp-edit { display: flex !important; }
+body.editing .insp-view { display: none !important; }
+
+/* Tooltips */
+[data-tip] { position: relative; }
+[data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; white-space: nowrap; pointer-events: none; z-index: 50;
+    background: var(--text); color: #fff; font-size: 12px; padding: 4px 8px; border-radius: var(--r6);
+}
+.rail [data-tip]:hover::after { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+.dock [data-tip]:hover::after { bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); }
+.ctx [data-tip]:hover::after, .insp [data-tip]:hover::after { top: calc(100% + 8px); left: 50%; transform: translateX(-50%); }
+
+/* ---------- Canvas ---------- */
+.canvas { position: relative; flex: 1; overflow: clip; background: #e9e6e1; }
+.canvas__img {
+    /* The screenshots hold the old panel in their left 20 % and the app bar on top: crop both away */
+    position: absolute; left: -25%; top: -6.6%; width: 125%; height: auto; user-select: none; pointer-events: none;
+}
+.canvas__hit { position: absolute; inset: 0; cursor: default; }
+body.editing .canvas__hit { cursor: crosshair; }
+
+.float { position: absolute; z-index: 10; background: var(--surface); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--r14); box-shadow: var(--shadow-sm); }
+
+/* Context bar (top) */
+.ctx { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: flex-start; gap: 8px; z-index: 12; pointer-events: none; }
+.ctx > * { pointer-events: auto; }
+.ctx__spacer { flex: 1; }
+.crumb { position: static; display: flex; align-items: center; gap: 2px; padding: 4px; }
+.crumb__project { padding: 6px 10px; color: var(--muted); text-decoration: none; border-radius: var(--r10); }
+.crumb__project:hover { background: var(--surface-muted); }
+.crumb__floor { display: flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 6px 10px; border-radius: var(--r10); font-weight: 600; font-size: 14px; }
+.crumb__floor:hover { background: var(--surface-muted); }
+.crumb__sep { color: var(--subtle); }
+.version-chip { margin-left: 4px; padding: 3px 8px; border-radius: 999px; background: #fdf0e2; color: #8a4f12; font-size: 12px; font-weight: 500; }
+
+.seg { position: static; display: flex; padding: 3px; gap: 2px; }
+.seg button {
+    display: flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 6px 12px; border-radius: var(--r10); color: var(--muted); font-weight: 500;
+}
+.seg button:hover { color: var(--text); }
+.seg button.active { background: var(--surface-solid); color: var(--text); box-shadow: 0 1px 2px rgba(35,33,30,.12); }
+
+.actions { position: static; display: flex; gap: 2px; padding: 3px; align-items: center; }
+.icon-btn { width: 34px; height: 34px; border: 0; background: transparent; border-radius: var(--r10); display: grid; place-items: center; color: var(--muted); }
+.icon-btn:hover { background: var(--surface-muted); color: var(--text); }
+.icon-btn:disabled { opacity: .35; cursor: default; background: transparent; }
+.btn {
+    display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: var(--r10);
+    border: 1px solid var(--border-strong); background: var(--surface-solid); font-weight: 500;
+}
+.btn:hover { border-color: var(--muted); }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn--primary:hover { background: #3e4f43; border-color: #3e4f43; }
+.btn--ghost { border-color: transparent; background: transparent; }
+.btn--sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn--danger { color: var(--danger); }
+.vsep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+.edit-pill { display: none; align-items: center; gap: 6px; padding: 0 10px; height: 34px; border-radius: var(--r10); background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 12px; }
+body.editing .edit-pill { display: inline-flex; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.save-state { color: var(--subtle); font-size: 12px; padding: 0 6px; display: flex; gap: 4px; align-items: center; }
+
+/* Floor picker (left, under the context bar) */
+.levels { left: 12px; bottom: 52px; padding: 4px; display: flex; flex-direction: column; gap: 2px; width: 46px; align-items: center; }
+.levels__btn { width: 38px; height: 34px; border: 0; border-radius: var(--r10); background: transparent; font-weight: 600; color: var(--muted); }
+.levels__btn:hover { background: var(--surface-muted); color: var(--text); }
+.levels__btn.active { background: var(--accent); color: #fff; }
+.levels__stack { color: var(--muted); }
+.levels__stack.on { color: var(--accent); background: var(--accent-soft); }
+.levels__cap { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--subtle); padding: 2px 0 4px; }
+
+/* Bottom dock: tools */
+.dock { left: 50%; bottom: 16px; transform: translateX(-50%); transition: left .2s; display: flex; gap: 2px; padding: 5px; align-items: center; }
+.tool-btn {
+    position: relative; width: 40px; height: 40px; border: 0; border-radius: var(--r10); background: transparent; color: var(--muted);
+    display: grid; place-items: center;
+}
+.tool-btn:hover { background: var(--surface-muted); color: var(--text); }
+.tool-btn.active { background: var(--accent); color: #fff; }
+.tool-btn .key { position: absolute; right: 3px; bottom: 2px; font-size: 9px; font-weight: 600; opacity: .55; }
+.add-btn { height: 40px; padding: 0 14px 0 10px; border: 0; border-radius: var(--r10); background: var(--highlight); color: #fff; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.add-btn:hover { background: #c4721f; }
+.add-btn.open { background: #a95f17; }
+
+/* Options bar of the active tool */
+.opts { left: 50%; transition: left .2s; bottom: 72px; transform: translateX(-50%); display: none; gap: 10px; align-items: center; padding: 6px 8px 6px 12px; white-space: nowrap; }
+body.editing.tool-drawWalls .opts { display: flex; }
+.opts__title { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+.opts label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.opts .input { width: 72px; }
+.opts__hint { color: var(--subtle); font-size: 12px; }
+
+.input {
+    height: 30px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: var(--r6); background: var(--surface-solid); width: 100%; min-width: 0;
+}
+.input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+select.input { padding-right: 4px; }
+.unit-wrap { position: relative; }
+.unit-wrap .input { padding-right: 32px; }
+.unit-wrap span { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--subtle); font-size: 11px; pointer-events: none; }
+
+body.inspector-open .dock, body.inspector-open .opts, body.inspector-open .status, body.inspector-open .lib { left: calc(50% - 166px); }
+.cut { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 6px; color: var(--muted); font-size: 12px; }
+.cut input { width: 90px; accent-color: var(--accent); }
+.cut b { color: var(--text); font-weight: 600; width: 44px; text-align: right; }
+
+/* Status line */
+.status { position: absolute; left: 50%; transform: translateX(-50%); bottom: 72px; z-index: 9; color: var(--muted); font-size: 12px; background: rgba(252,251,248,.8); padding: 4px 10px; border-radius: 999px; white-space: nowrap; transition: left .2s; }
+body.editing.tool-drawWalls .status, body.lib-open .status { display: none; }
+
+/* ---------- Left flyout panel ---------- */
+.flyout {
+    left: 12px; top: 64px; bottom: 112px; width: 300px; display: none; flex-direction: column; overflow: hidden; z-index: 13;
+}
+.flyout.open { display: flex; }
+.flyout__head { display: flex; align-items: center; gap: 8px; padding: 12px 8px 10px 16px; border-bottom: 1px solid var(--border); }
+.flyout__head h2 { margin: 0; font-size: 14px; font-weight: 600; flex: 1; }
+.flyout__body { overflow: auto; padding: 8px; flex: 1; }
+.flyout__foot { border-top: 1px solid var(--border); padding: 10px 12px; display: flex; gap: 8px; }
+.pane { display: none; }
+.pane.active { display: block; }
+
+.row {
+    display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left;
+    padding: 8px; border-radius: var(--r10);
+}
+.row:hover { background: var(--surface-muted); }
+.row.selected { background: var(--accent-soft); }
+.row__thumb { width: 40px; height: 28px; border-radius: 4px; background: var(--surface-muted) center/cover; flex: none; border: 1px solid var(--border); }
+.row__code { font-size: 11px; color: var(--subtle); width: 34px; font-variant-numeric: tabular-nums; }
+.row__main { flex: 1; min-width: 0; }
+.row__name { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row__sub { font-size: 12px; color: var(--muted); }
+.row__end { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.row__more { opacity: 0; }
+.row:hover .row__more { opacity: 1; }
+.group-title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); padding: 12px 8px 4px; font-weight: 600; }
+.totals { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 8px; margin: 8px 0 0; border-top: 1px solid var(--border); font-size: 12px; }
+.totals dt { color: var(--muted); }
+.totals dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.variant-set { padding: 8px; border-radius: var(--r10); border: 1px solid var(--border); margin: 4px 0 8px; }
+.variant-set__name { font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--border-strong); background: var(--surface-solid); border-radius: 999px; padding: 4px 10px; font-size: 12px; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.comment { display: flex; gap: 10px; padding: 10px 8px; border-radius: var(--r10); }
+.comment:hover { background: var(--surface-muted); }
+.pin { width: 22px; height: 22px; border-radius: 50% 50% 50% 2px; background: var(--highlight); color: #fff; font-size: 11px; font-weight: 600; display: grid; place-items: center; flex: none; }
+.comment p { margin: 2px 0 0; color: var(--muted); }
+.comment__who { font-weight: 500; }
+.comment__meta { font-size: 11px; color: var(--subtle); }
+
+.export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px; }
+.export-card { border: 1px solid var(--border); background: var(--surface-solid); border-radius: var(--r10); padding: 12px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+.export-card:hover { border-color: var(--accent); }
+.export-card small { color: var(--muted); }
+
+.activity li { list-style: none; display: flex; gap: 10px; padding: 8px; border-radius: var(--r10); }
+.activity ul { margin: 0; padding: 0; }
+.activity .who { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 600; display: grid; place-items: center; flex: none; }
+.activity .who--agent { background: #efe7fb; color: #6941a8; }
+.activity small { color: var(--subtle); display: block; }
+
+.shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; padding: 8px; align-items: center; font-size: 12px; }
+.shortcuts dt { text-align: right; }
+.shortcuts dd { margin: 0; color: var(--muted); }
+
+/* ---------- Inspector (right) ---------- */
+.insp { right: 12px; top: 64px; bottom: 16px; width: 320px; display: none; flex-direction: column; overflow: hidden; z-index: 12; }
+body.inspector-open .insp { display: flex; }
+.insp__head { display: flex; gap: 10px; align-items: center; padding: 12px 8px 12px 12px; border-bottom: 1px solid var(--border); }
+.insp__icon { width: 36px; height: 36px; border-radius: var(--r10); background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
+.insp__title { flex: 1; min-width: 0; }
+.insp__title strong { display: block; font-size: 14px; }
+.insp__title span { color: var(--muted); font-size: 12px; }
+.insp__actions { display: flex; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.insp__body { overflow: auto; flex: 1; }
+.insp__foot { border-top: 1px solid var(--border); padding: 8px 12px; color: var(--subtle); font-size: 11px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+
+details.sec { border-bottom: 1px solid var(--border); }
+details.sec > summary {
+    list-style: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px; cursor: pointer; font-weight: 600; user-select: none;
+}
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary .chev { margin-left: auto; color: var(--subtle); transition: transform .15s; }
+details.sec[open] > summary .chev { transform: rotate(180deg); }
+details.sec > summary .sum { font-weight: 400; color: var(--subtle); font-size: 12px; margin-left: auto; }
+details.sec > summary .sum + .chev { margin-left: 0; }
+.sec__body { padding: 0 14px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.f { display: flex; flex-direction: column; gap: 4px; }
+.f--full { grid-column: 1 / -1; }
+.f > span { font-size: 12px; color: var(--muted); }
+.mat { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 4px; border: 1px solid var(--border-strong); border-radius: var(--r6); background: var(--surface-solid); text-align: left; width: 100%; }
+.mat:hover { border-color: var(--muted); }
+.swatch { width: 26px; height: 26px; border-radius: 4px; flex: none; border: 1px solid rgba(0,0,0,.08); }
+.mat__name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw-terrazzo { background: radial-gradient(circle at 30% 30%, #555 1.5px, transparent 2px) 0 0/7px 7px, radial-gradient(circle at 70% 60%, #999 1.5px, transparent 2px) 0 0/9px 9px, #f2f0eb; }
+.sw-white { background: #f7f6f2; }
+.sw-tile { background: linear-gradient(90deg, rgba(0,0,0,.15) 1px, transparent 1px) 0 0/8px 8px, linear-gradient(rgba(0,0,0,.15) 1px, transparent 1px) 0 0/8px 8px, #dfe6e8; }
+.sw-oak { background: repeating-linear-gradient(90deg, #d9b17c 0 6px, #cfa46d 6px 7px, #dcb886 7px 13px); }
+.sw-black { background: #2a2a2a; }
+.bands { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+.band { display: grid; grid-template-columns: 1fr 70px 70px 28px; gap: 6px; align-items: center; }
+.band .mat { height: 30px; }
+.band .swatch { width: 22px; height: 22px; }
+.band__head { display: grid; grid-template-columns: 1fr 70px 70px 28px; gap: 6px; font-size: 11px; color: var(--subtle); }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; grid-column: 1 / -1; }
+.switch input { appearance: none; width: 34px; height: 20px; border-radius: 10px; background: var(--border-strong); position: relative; cursor: pointer; transition: background .15s; flex: none; margin: 0; }
+.switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(14px); }
+.with-btn { display: flex; gap: 6px; }
+.with-btn .icon-btn { width: 30px; height: 30px; border: 1px solid var(--border-strong); background: var(--surface-solid); flex: none; }
+.hint { color: var(--subtle); font-size: 12px; grid-column: 1 / -1; margin: 0; }
+.corners { grid-column: 1 / -1; font-size: 12px; font-variant-numeric: tabular-nums; border: 1px solid var(--border); border-radius: var(--r6); overflow: hidden; }
+.corners div { display: grid; grid-template-columns: 24px 1fr 1fr; padding: 4px 8px; }
+.corners div:nth-child(odd) { background: var(--surface-muted); }
+.corners b { color: var(--subtle); font-weight: 500; }
+
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.facts div { background: var(--surface-solid); padding: 10px 12px; }
+.facts small { color: var(--muted); display: block; font-size: 11px; }
+.facts b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.readonly-list { padding: 8px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.readonly-list div { display: flex; align-items: center; gap: 10px; }
+.readonly-list small { color: var(--muted); display: block; }
+.insp-view { display: flex; flex-direction: column; overflow: auto; }
+
+/* ---------- Popovers ---------- */
+.pop { display: none; z-index: 30; }
+.pop.open { display: block; }
+.display-pop { left: calc(50% + 40px); bottom: 72px; width: 320px; padding: 4px 0; }
+body.inspector-open .display-pop { left: calc(50% - 126px); }
+.pop__sec { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.pop__sec:last-child { border-bottom: 0; }
+.pop__title { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); font-weight: 600; margin-bottom: 8px; }
+.tgl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tgl {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: var(--r10);
+    border: 1px solid var(--border); background: var(--surface-solid); color: var(--muted); font-size: 11px;
+}
+.tgl:hover { border-color: var(--border-strong); color: var(--text); }
+.tgl.on { background: var(--accent-soft); border-color: #c3d0c4; color: var(--accent); font-weight: 500; }
+.line { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; }
+.line > span { display: flex; align-items: center; gap: 8px; }
+.mini-seg { display: flex; background: var(--surface-muted); padding: 2px; border-radius: var(--r10); }
+.mini-seg button { border: 0; background: transparent; padding: 4px 10px; border-radius: 8px; font-size: 12px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+.mini-seg button.active { background: var(--surface-solid); color: var(--text); box-shadow: 0 1px 2px rgba(35,33,30,.12); }
+.sun { display: grid; grid-template-columns: 52px 1fr 54px; gap: 6px 8px; align-items: center; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.sun input { accent-color: var(--highlight); width: 100%; }
+.sun b { color: var(--text); font-weight: 500; text-align: right; }
+
+/* Floor menu */
+.floor-pop { left: 120px; top: 58px; width: 260px; padding: 6px; }
+
+/* Add library */
+.lib { left: 50%; bottom: 72px; transform: translateX(-50%); width: min(760px, calc(100% - 24px)); height: min(460px, calc(100% - 150px)); display: none; overflow: hidden; z-index: 30; }
+.lib.open { display: grid; grid-template-columns: 190px 1fr; grid-template-rows: auto 1fr; }
+.lib__search { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.lib__search input { border: 0; background: transparent; outline: 0; flex: 1; font-size: 14px; }
+.lib__cats { border-right: 1px solid var(--border); padding: 6px; overflow: auto; }
+.cat { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: transparent; text-align: left; padding: 7px 8px; border-radius: var(--r10); color: var(--muted); }
+.cat:hover { background: var(--surface-muted); color: var(--text); }
+.cat.active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.cat .n { margin-left: auto; font-size: 11px; color: var(--subtle); }
+.lib__grid { overflow: auto; padding: 10px; }
+.lib__grid h3 { margin: 4px 4px 8px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.tile { border: 1px solid var(--border); background: var(--surface-solid); border-radius: var(--r10); padding: 12px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-size: 12px; }
+.tile:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+.tile svg.i { width: 30px; height: 30px; stroke-width: 1.4; color: var(--accent); }
+.tile small { color: var(--subtle); font-size: 10px; margin-top: -4px; }
+.tile[disabled] { opacity: .45; cursor: not-allowed; box-shadow: none; border-color: var(--border); }
+.lib__note { display: flex; gap: 8px; align-items: center; background: #fdf0e2; color: #8a4f12; border-radius: var(--r10); padding: 8px 10px; margin: 0 4px 10px; font-size: 12px; }
+
+/* Walk mode */
+.walk-ui { display: none; }
+body.walking .walk-ui { display: flex; }
+body.walking .rail, body.walking .dock, body.walking .levels, body.walking .status,
+body.walking .flyout, body.walking .insp, body.walking .opts, body.walking .crumb, body.walking .actions { display: none !important; }
+.walk-hint { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 12; gap: 10px; align-items: center; padding: 8px 14px; color: var(--muted); font-size: 12px; }
+.walk-hint strong { color: var(--text); }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px; z-index: 11; }
+.crosshair::before, .crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 2px rgba(0,0,0,.6); }
+.crosshair::before { left: 6px; top: 0; width: 2px; height: 14px; }
+.crosshair::after { top: 6px; left: 0; height: 2px; width: 14px; }
+
+/* Design notes */
+.notes { position: absolute; z-index: 60; right: 16px; top: 54px; width: 380px; max-height: calc(100% - 70px); overflow: auto; display: none; padding: 16px 18px; background: #fffaf3; border: 1px solid #f0d8bb; border-radius: var(--r14); box-shadow: var(--shadow); }
+.notes.open { display: block; }
+.notes h2 { margin: 0 0 8px; font-size: 15px; }
+.notes ol { margin: 0; padding-left: 18px; }
+.notes li { margin-bottom: 8px; color: #4a4038; }
+.notes li b { color: var(--text); }
+
+@media (max-width: 900px) {
+    .seg button span { display: none; }
+    .insp { width: auto; left: 12px; top: auto; height: 55%; }
+    body.inspector-open .dock, body.inspector-open .lib { left: 50%; }
+    .status { display: none; }
+    .cut { display: none; }
+}
+</style>
+</head>
+<body class="tool-select">
+
+<!-- Icon sprite (Lucide-style strokes; in the app: lucide-angular or an inline sprite like this) -->
+<svg width="0" height="0" style="position:absolute">
+    <defs>
+        <symbol id="i-cube" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></symbol>
+        <symbol id="i-plan" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 11h7v10M10 3v4M14 11h7M14 11v3"/></symbol>
+        <symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13" cy="4" r="2"/><path d="m7 22 3-7 3 3v4"/><path d="m6 12 3-4 4 1 3 4 3 1"/><path d="m10 15 1-6"/></symbol>
+        <symbol id="i-pointer" viewBox="0 0 24 24"><path d="M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.13 1.58a2 2 0 0 0-1.43 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z"/></symbol>
+        <symbol id="i-wall" viewBox="0 0 24 24"><path d="M4 20V8h9v6h7"/><circle cx="4" cy="20" r="1.6"/><circle cx="4" cy="8" r="1.6"/><circle cx="13" cy="8" r="1.6"/><circle cx="13" cy="14" r="1.6"/><circle cx="20" cy="14" r="1.6"/></symbol>
+        <symbol id="i-room" viewBox="0 0 24 24"><path d="M3 3h18v18H3z"/><path d="M8 8h8v8H8z" stroke-dasharray="2 2"/><path d="M12 11v2M11 12h2"/></symbol>
+        <symbol id="i-railing" viewBox="0 0 24 24"><path d="M2 6h20"/><path d="M4 6v14M20 6v14M8 6v14M12 6v14M16 6v14"/></symbol>
+        <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2M11.5 9.5l2-2M8.5 6.5l2-2M17.5 15.5l2-2"/></symbol>
+        <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+        <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+        <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+        <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+        <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+        <symbol id="i-rooms" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h9v9M12 3v5M16 12h5"/></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+        <symbol id="i-variants" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M11 7h4a2 2 0 0 1 2 2v4"/><path d="m15 11 2 2 2-2"/></symbol>
+        <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></symbol>
+        <symbol id="i-group" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></symbol>
+        <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+        <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></symbol>
+        <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4M17 19h4"/></symbol>
+        <symbol id="i-ceiling" viewBox="0 0 24 24"><path d="M2 5h20"/><path d="M5 5v4h14V5"/><path d="M12 9v4"/><circle cx="12" cy="15" r="2"/><path d="M3 21h18"/></symbol>
+        <symbol id="i-roof" viewBox="0 0 24 24"><path d="m2 13 10-9 10 9"/><path d="M5 11v10h14V11"/></symbol>
+        <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
+        <symbol id="i-dims" viewBox="0 0 24 24"><path d="M3 7v10M21 7v10M3 12h18M7 9l-4 3 4 3M17 9l4 3-4 3"/></symbol>
+        <symbol id="i-cut" viewBox="0 0 24 24"><path d="M3 10h18" stroke-dasharray="3 2"/><path d="M5 21V14M19 21V14M5 6V3M19 6V3"/></symbol>
+        <symbol id="i-door" viewBox="0 0 24 24"><path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01"/><path d="M13 4.56v16.16a.5.5 0 0 1-.68.47L5 19V5.98a1 1 0 0 1 .68-.95l6-2A1 1 0 0 1 13 4.56z"/></symbol>
+        <symbol id="i-window" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M12 3v18M4 12h16"/></symbol>
+        <symbol id="i-stairs" viewBox="0 0 24 24"><path d="M3 21h5v-5h5v-5h5V6h3"/></symbol>
+        <symbol id="i-column" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M9 3v18M15 3v18"/></symbol>
+        <symbol id="i-void" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" stroke-dasharray="3 2"/><path d="M4 4l16 16M20 4 4 20"/></symbol>
+        <symbol id="i-plot" viewBox="0 0 24 24"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z" stroke-dasharray="3 2"/></symbol>
+        <symbol id="i-section" viewBox="0 0 24 24"><path d="M4 12h16" stroke-dasharray="5 2 1 2"/><path d="M4 12V6l3 3M20 12V6l-3 3"/></symbol>
+        <symbol id="i-chair" viewBox="0 0 24 24"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M5 18v2M19 18v2"/></symbol>
+        <symbol id="i-cabinet" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="1"/><path d="M12 3v16M10 10v2M14 10v2M6 19v2M18 19v2"/></symbol>
+        <symbol id="i-bed" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"/></symbol>
+        <symbol id="i-table" viewBox="0 0 24 24"><path d="M3 8h18M5 8v12M19 8v12M3 12h18"/></symbol>
+        <symbol id="i-bath" viewBox="0 0 24 24"><path d="M9 6 6.5 3.5a1.5 1.5 0 0 0-1-.5C4.7 3 4 3.7 4 4.5V17a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><path d="M2 12h20M7 19v2M17 19v2"/></symbol>
+        <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z"/></symbol>
+        <symbol id="i-frame" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><rect x="7" y="7" width="10" height="10"/><path d="m7 15 3-3 2 2 2-2 3 3"/></symbol>
+        <symbol id="i-tree" viewBox="0 0 24 24"><path d="M12 22v-6"/><path d="M12 2 6 10h3l-4 6h14l-4-6h3z"/></symbol>
+        <symbol id="i-box" viewBox="0 0 24 24"><path d="M11 21.7a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7z"/><path d="M12 22V12M3.3 7l7.7 4.5a2 2 0 0 0 2 0L20.7 7M7.5 4.3l9 5.1"/></symbol>
+        <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+        <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+        <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 16h8"/></symbol>
+        <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+        <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+        <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="m9 14 2 2 4-4"/></symbol>
+    </defs>
+</svg>
+
+<!-- Global app bar: unchanged -->
+<header class="appbar">
+    <span class="appbar__logo"><svg class="i"><use href="#i-roof"/></svg>Flat Designer</span>
+    <a class="active" href="#">Projects</a>
+    <a href="#">Furniture</a>
+    <a href="#">Users</a>
+    <span class="appbar__spacer"></span>
+    <button class="notes-btn" id="notesBtn">Design notes</button>
+    <a href="#">Admin</a>
+    <a href="#">Sign out</a>
+</header>
+
+<div class="workspace">
+
+    <!-- ================= LEFT RAIL: one panel at a time ================= -->
+    <nav class="rail" aria-label="Panels">
+        <button class="rail-btn" data-panel="rooms" data-tip="Rooms & areas"><svg class="i"><use href="#i-rooms"/></svg></button>
+        <button class="rail-btn" data-panel="views" data-tip="Saved views"><svg class="i"><use href="#i-camera"/></svg></button>
+        <button class="rail-btn" data-panel="variants" data-tip="Variants"><svg class="i"><use href="#i-variants"/></svg></button>
+        <button class="rail-btn" data-panel="comments" data-tip="Comments"><svg class="i"><use href="#i-comment"/></svg><span class="badge">3</span></button>
+        <button class="rail-btn" data-panel="export" data-tip="Export & share"><svg class="i"><use href="#i-download"/></svg></button>
+        <div class="rail__sep edit-only"></div>
+        <button class="rail-btn edit-only" data-panel="activity" data-tip="Activity"><svg class="i"><use href="#i-history"/></svg></button>
+        <button class="rail-btn edit-only" data-panel="underlay" data-tip="Plan underlay"><svg class="i"><use href="#i-image"/></svg></button>
+        <div class="rail__spacer"></div>
+        <button class="rail-btn" data-panel="keys" data-tip="Keyboard shortcuts (?)"><svg class="i"><use href="#i-keyboard"/></svg></button>
+    </nav>
+
+    <main class="canvas" id="canvas">
+        <img class="canvas__img" id="sceneImg" src="../screenshots/view-tour-01-cut-away.webp" alt="" />
+        <div class="canvas__hit" id="hit" title="Click to select a room (mockup)"></div>
+
+        <!-- ================= TOP CONTEXT BAR ================= -->
+        <div class="ctx">
+            <div class="float crumb">
+                <a class="crumb__project" href="#">Demo flat</a>
+                <span class="crumb__sep">/</span>
+                <button class="crumb__floor" id="floorBtn">Ground floor <svg class="i i--sm"><use href="#i-chev"/></svg></button>
+            </div>
+
+            <span class="ctx__spacer"></span>
+
+            <div class="float seg" role="group" aria-label="Camera view">
+                <button class="active" data-view="3d"><svg class="i i--sm"><use href="#i-cube"/></svg><span>3D</span></button>
+                <button data-view="plan"><svg class="i i--sm"><use href="#i-plan"/></svg><span>Plan</span></button>
+                <button data-view="walk"><svg class="i i--sm"><use href="#i-walk"/></svg><span>Walk</span></button>
+            </div>
+
+            <span class="ctx__spacer"></span>
+
+            <div class="float actions">
+                <span class="edit-pill"><span class="dot"></span>Editing</span>
+                <button class="icon-btn edit-only" data-tip="Undo · Ctrl+Z"><svg class="i"><use href="#i-undo"/></svg></button>
+                <button class="icon-btn edit-only" data-tip="Redo · Ctrl+Shift+Z" disabled><svg class="i"><use href="#i-redo"/></svg></button>
+                <span class="save-state edit-only"><svg class="i i--sm"><use href="#i-cloud"/></svg>Saved</span>
+                <span class="vsep edit-only"></span>
+                <button class="btn btn--ghost" data-tip="Share a link to this floor"><svg class="i i--sm"><use href="#i-share"/></svg>Share</button>
+                <button class="btn btn--primary" id="editBtn"><svg class="i i--sm"><use href="#i-pencil"/></svg><span>Edit</span></button>
+            </div>
+        </div>
+
+        <!-- Walk mode -->
+        <div class="walk-ui float walk-hint">
+            <strong>Ground floor</strong> ·
+            <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</span>
+            <span><kbd>Shift</kbd> run</span>
+            <span><kbd>E</kbd> open door</span>
+            <span><kbd>PgUp</kbd><kbd>PgDn</kbd> floor</span>
+            <button class="btn btn--sm" id="walkBack"><kbd>Esc</kbd> Back to 3D</button>
+        </div>
+        <span class="walk-ui crosshair"></span>
+
+        <!-- ================= FLOOR PICKER (left bottom) ================= -->
+        <div class="float levels" aria-label="Floors">
+            <span class="levels__cap">Floor</span>
+            <button class="levels__btn" data-tip="Attic · +5.950">2</button>
+            <button class="levels__btn" data-tip="First floor · +2.950">1</button>
+            <button class="levels__btn active" data-tip="Ground floor · ±0.000">0</button>
+            <button class="levels__btn" data-tip="Basement · −2.800">−1</button>
+            <span class="rail__sep" style="width:24px;margin:4px 0"></span>
+            <button class="levels__btn levels__stack on" id="stackBtn" data-tip="Show the floors below"><svg class="i"><use href="#i-layers"/></svg></button>
+        </div>
+
+        <!-- ================= STATUS / HINTS ================= -->
+        <div class="status" id="status"></div>
+
+        <!-- ================= TOOL OPTIONS BAR (contextual) ================= -->
+        <div class="float opts" aria-label="Draw walls options">
+            <span class="opts__title"><svg class="i i--sm"><use href="#i-wall"/></svg>New walls</span>
+            <label>Type <select class="input" style="width:100px"><option>Interior</option><option>Exterior</option><option>Load-bearing</option></select></label>
+            <label>Thickness <span class="unit-wrap"><input class="input" value="100" /><span>mm</span></span></label>
+            <label>Height <span class="unit-wrap"><input class="input" value="2510" /><span>mm</span></span></label>
+            <button class="btn btn--sm" data-tip="Curve the next segment (A)">Arc <kbd>A</kbd></button>
+            <span class="opts__hint">type <kbd>3200</kbd> or <kbd>3200&lt;90</kbd></span>
+        </div>
+
+        <!-- ================= BOTTOM DOCK: tools ================= -->
+        <div class="float dock" role="toolbar" aria-label="Tools">
+            <button class="tool-btn active" data-tool="select" data-tip="Select & move · V / Esc"><svg class="i"><use href="#i-pointer"/></svg><span class="key">V</span></button>
+            <span class="edit-only" style="display:contents">
+                <button class="tool-btn edit-only" data-tool="drawWalls" data-tip="Draw walls · W"><svg class="i"><use href="#i-wall"/></svg><span class="key">W</span></button>
+                <button class="tool-btn edit-only" data-tool="detectRoom" data-tip="Room from walls · M"><svg class="i"><use href="#i-room"/></svg><span class="key">M</span></button>
+                <button class="tool-btn edit-only" data-tool="drawRailing" data-tip="Draw railing · B"><svg class="i"><use href="#i-railing"/></svg><span class="key">B</span></button>
+            </span>
+            <span class="vsep"></span>
+            <button class="tool-btn" data-tool="measure" data-tip="Measure · D"><svg class="i"><use href="#i-ruler"/></svg><span class="key">D</span></button>
+            <button class="tool-btn" data-tool="comment" data-tip="Pin a comment · C"><svg class="i"><use href="#i-comment"/></svg><span class="key">C</span></button>
+            <span class="vsep edit-only"></span>
+            <button class="add-btn edit-only" id="addBtn"><svg class="i"><use href="#i-plus"/></svg>Add</button>
+            <span class="vsep"></span>
+            <label class="cut" data-tip="Wall cut height"><svg class="i i--sm"><use href="#i-cut"/></svg>
+                <input type="range" min="0" max="100" value="70" id="cut" /><b id="cutVal">2.20 m</b>
+            </label>
+            <button class="tool-btn" id="displayBtn" data-tip="Display options"><svg class="i"><use href="#i-eye"/></svg></button>
+        </div>
+
+        <!-- ================= LEFT FLYOUT PANEL ================= -->
+        <section class="float flyout" id="flyout">
+            <header class="flyout__head">
+                <h2 id="flyoutTitle">Rooms</h2>
+                <button class="icon-btn" id="flyoutClose" aria-label="Close"><svg class="i i--sm"><use href="#i-x"/></svg></button>
+            </header>
+            <div class="flyout__body">
+
+                <div class="pane" data-pane="rooms">
+                    <div class="group-title">Indoor</div>
+                    <button class="row"><span class="row__code">D_01</span><span class="row__main"><span class="row__name">Living room</span></span><span class="row__end">12.8 m²</span></button>
+                    <button class="row"><span class="row__code">D_02</span><span class="row__main"><span class="row__name">Master bedroom</span></span><span class="row__end">10.8 m²</span></button>
+                    <button class="row"><span class="row__code">D_03</span><span class="row__main"><span class="row__name">Bathroom</span></span><span class="row__end">3.5 m²</span></button>
+                    <button class="row"><span class="row__code">D_04</span><span class="row__main"><span class="row__name">Bedroom 2</span></span><span class="row__end">5.2 m²</span></button>
+                    <button class="row"><span class="row__code">D_06</span><span class="row__main"><span class="row__name">Dining</span></span><span class="row__end">6.3 m²</span></button>
+                    <button class="row"><span class="row__code">D_07</span><span class="row__main"><span class="row__name">Corridor</span></span><span class="row__end">4.8 m²</span></button>
+                    <button class="row selected" data-select-room><span class="row__code">D_08</span><span class="row__main"><span class="row__name">Kitchen</span></span><span class="row__end">3.2 m²</span></button>
+                    <button class="row"><span class="row__code">D_09</span><span class="row__main"><span class="row__name">Entrance hall</span></span><span class="row__end">3.6 m²</span></button>
+                    <div class="group-title">Outdoor</div>
+                    <button class="row"><span class="row__code">D_10</span><span class="row__main"><span class="row__name">Balcony, bedroom</span></span><span class="row__end">1.2 m²</span></button>
+                    <button class="row"><span class="row__code">D_11</span><span class="row__main"><span class="row__name">Terrace</span></span><span class="row__end">2.4 m²</span></button>
+                    <dl class="totals">
+                        <dt>Indoor</dt><dd>56.5 m²</dd>
+                        <dt>Terrace</dt><dd>2.4 m²</dd>
+                        <dt>Garden</dt><dd>0.0 m²</dd>
+                    </dl>
+                </div>
+
+                <div class="pane" data-pane="views">
+                    <button class="row"><span class="row__thumb" style="background-image:url(../screenshots/view-tour-01-cut-away.webp)"></span><span class="row__main"><span class="row__name">Tour · 01 Cut-away</span><span class="row__sub">3D · 14 mm</span></span><svg class="i i--sm row__more"><use href="#i-more"/></svg></button>
+                    <button class="row"><span class="row__thumb" style="background-image:url(../screenshots/view-tour-02-plan.webp)"></span><span class="row__main"><span class="row__name">Tour · 02 Plan</span><span class="row__sub">Plan · dimensions</span></span><svg class="i i--sm row__more"><use href="#i-more"/></svg></button>
+                    <button class="row"><span class="row__thumb" style="background-image:url(../screenshots/view-tour-03-kitchen-open.webp)"></span><span class="row__main"><span class="row__name">Tour · 03 Kitchen open</span><span class="row__sub">3D · variant: open</span></span><svg class="i i--sm row__more"><use href="#i-more"/></svg></button>
+                    <button class="row"><span class="row__thumb" style="background-image:url(../screenshots/view-tour-05-living-room.webp)"></span><span class="row__main"><span class="row__name">Tour · 05 Living room</span><span class="row__sub">Eye level</span></span><svg class="i i--sm row__more"><use href="#i-more"/></svg></button>
+                    <button class="row"><span class="row__thumb" style="background-image:url(../screenshots/view-tour-08-night.webp)"></span><span class="row__main"><span class="row__name">Tour · 08 Night</span><span class="row__sub">3D · night, lights on</span></span><svg class="i i--sm row__more"><use href="#i-more"/></svg></button>
+                    <button class="row"><span class="row__thumb" style="background-image:url(../screenshots/view-tour-09-eye-level.webp)"></span><span class="row__main"><span class="row__name">Tour · 09 Eye level</span><span class="row__sub">Eye level · 14 mm</span></span><svg class="i i--sm row__more"><use href="#i-more"/></svg></button>
+                </div>
+
+                <div class="pane" data-pane="variants">
+                    <div class="variant-set">
+                        <div class="variant-set__name">Kitchen open / closed <svg class="i i--sm" style="color:var(--subtle)"><use href="#i-more"/></svg></div>
+                        <div class="chips"><button class="chip">Kitchen closed</button><button class="chip active">Kitchen open</button><button class="chip edit-only">+ Variant</button></div>
+                    </div>
+                    <div class="variant-set">
+                        <div class="variant-set__name">Living room sofa</div>
+                        <div class="chips"><button class="chip active">Corner sofa</button><button class="chip">Two-seater</button><button class="chip edit-only">+ Variant</button></div>
+                    </div>
+                    <p class="hint" style="padding:4px 8px">Switching here changes what the project shows. Saved views remember their own variants.</p>
+                </div>
+
+                <div class="pane" data-pane="comments">
+                    <div class="comment"><span class="pin">1</span><div><span class="comment__who">Jana</span> <span class="comment__meta">· guest · 2 h</span><p>Could the island be 20 cm narrower?</p></div></div>
+                    <div class="comment"><span class="pin">2</span><div><span class="comment__who">Marek</span> <span class="comment__meta">· yesterday</span><p>Check the socket height behind the sofa.</p></div></div>
+                    <div class="comment"><span class="pin">4</span><div><span class="comment__who">Claude</span> <span class="comment__meta">· agent · 3 d</span><p>The bathroom door swings into the radiator; flip the hinge?</p></div></div>
+                    <label class="switch" style="padding:10px 8px;color:var(--muted);font-size:12px">Show resolved <input type="checkbox" /></label>
+                </div>
+
+                <div class="pane" data-pane="export">
+                    <div class="group-title">Drawings</div>
+                    <div class="export-grid">
+                        <button class="export-card"><svg class="i"><use href="#i-plan"/></svg><b>Plan</b><small>PDF · SVG</small></button>
+                        <button class="export-card"><svg class="i"><use href="#i-frame"/></svg><b>Elevations</b><small>PDF, per room</small></button>
+                        <button class="export-card"><svg class="i"><use href="#i-roof"/></svg><b>Façades</b><small>PDF · SVG</small></button>
+                        <button class="export-card"><svg class="i"><use href="#i-section"/></svg><b>Sections</b><small>PDF · SVG</small></button>
+                    </div>
+                    <div class="group-title">Images & models</div>
+                    <div class="export-grid">
+                        <button class="export-card"><svg class="i"><use href="#i-camera"/></svg><b>Capture PNG</b><small>Download or to files</small></button>
+                        <button class="export-card"><svg class="i"><use href="#i-box"/></svg><b>3D glTF</b><small>Shown floor</small></button>
+                    </div>
+                    <div class="group-title">Lists</div>
+                    <button class="row"><svg class="i i--sm"><use href="#i-file"/></svg><span class="row__main">Room schedule</span></button>
+                    <button class="row"><svg class="i i--sm"><use href="#i-file"/></svg><span class="row__main">Quantities & cost</span></button>
+                    <button class="row"><svg class="i i--sm"><use href="#i-file"/></svg><span class="row__main">Cut list</span></button>
+                </div>
+
+                <div class="pane activity" data-pane="activity">
+                    <ul>
+                        <li><span class="who">MS</span><div>Changed <b>Kitchen</b> floor material<small>Just now</small></div></li>
+                        <li><span class="who">MS</span><div>Moved <b>Sofa</b><small>4 min</small></div></li>
+                        <li><span class="who who--agent">AI</span><div>Added 6 walls<small>Claude · 1 h</small></div></li>
+                        <li><span class="who">MS</span><div>Grouped <b>Kitchen run</b><small>Yesterday</small></div></li>
+                    </ul>
+                </div>
+
+                <div class="pane" data-pane="underlay">
+                    <button class="row selected"><span class="row__thumb" style="background:#fff linear-gradient(90deg,#ccc 1px,transparent 1px) 0 0/6px 6px"></span><span class="row__main"><span class="row__name">plan-ground.png</span><span class="row__sub">Calibrated · 1 px = 9.8 mm</span></span></button>
+                    <div class="sec__body" style="padding:12px 8px">
+                        <label class="f f--full"><span>Opacity</span><input type="range" value="55" style="accent-color:var(--accent)" /></label>
+                        <button class="btn btn--sm"><svg class="i i--sm"><use href="#i-ruler"/></svg>Calibrate…</button>
+                        <button class="btn btn--sm btn--danger"><svg class="i i--sm"><use href="#i-trash"/></svg>Remove</button>
+                    </div>
+                </div>
+
+                <div class="pane" data-pane="keys">
+                    <dl class="shortcuts">
+                        <dt><kbd>V</kbd></dt><dd>Select</dd>
+                        <dt><kbd>W</kbd> <kbd>M</kbd> <kbd>B</kbd></dt><dd>Draw walls · Room · Railing</dd>
+                        <dt><kbd>D</kbd> <kbd>C</kbd></dt><dd>Measure · Comment</dd>
+                        <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>3D · Plan · Walk</dd>
+                        <dt><kbd>E</kbd></dt><dd>Toggle edit mode</dd>
+                        <dt><kbd>A</kbd></dt><dd>Add… (search)</dd>
+                        <dt>Arrows</dt><dd>Nudge selection</dd>
+                        <dt><kbd>R</kbd></dt><dd>Turn 90°</dd>
+                        <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Duplicate</dd>
+                        <dt><kbd>Del</kbd></dt><dd>Delete</dd>
+                        <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>Undo</dd>
+                        <dt><kbd>Shift</kbd>+click</dt><dd>Pick items to group</dd>
+                        <dt><kbd>Alt</kbd>+click</dt><dd>Item inside a group</dd>
+                        <dt><kbd>Esc</kbd></dt><dd>Deselect / cancel</dd>
+                    </dl>
+                </div>
+            </div>
+            <footer class="flyout__foot" id="flyoutFoot"></footer>
+        </section>
+
+        <!-- ================= RIGHT INSPECTOR ================= -->
+        <aside class="float insp" aria-label="Inspector">
+            <header class="insp__head">
+                <span class="insp__icon"><svg class="i"><use href="#i-rooms"/></svg></span>
+                <span class="insp__title"><strong>Kitchen</strong><span>Room · D_08 · #31</span></span>
+                <button class="icon-btn" id="inspClose" data-tip="Deselect · Esc"><svg class="i i--sm"><use href="#i-x"/></svg></button>
+            </header>
+
+            <!-- View mode: facts, not a form -->
+            <div class="insp-view">
+                <div class="facts">
+                    <div><small>Area</small><b>3.2 m²</b></div>
+                    <div><small>Height</small><b>2.51 m</b></div>
+                    <div><small>Perimeter</small><b>7.4 m</b></div>
+                </div>
+                <div class="readonly-list">
+                    <div><span class="swatch sw-terrazzo"></span><span><small>Floor</small>Terrazzo, white with grey and black chips</span></div>
+                    <div><span class="swatch sw-white"></span><span><small>Ceiling</small>White plaster</span></div>
+                    <div><span class="swatch sw-tile"></span><span><small>Walls 0–1200 mm</small>Tiles, pale blue 100×100</span></div>
+                </div>
+                <div style="padding:0 14px 14px"><button class="btn btn--sm" id="editFromInfo"><svg class="i i--sm"><use href="#i-pencil"/></svg>Edit room</button></div>
+            </div>
+
+            <!-- Edit mode: actions + grouped form -->
+            <div class="insp__actions insp-edit">
+                <button class="icon-btn" data-tip="Duplicate · Ctrl+D"><svg class="i i--sm"><use href="#i-copy"/></svg></button>
+                <button class="icon-btn" data-tip="Turn 90° · R" disabled><svg class="i i--sm"><use href="#i-undo"/></svg></button>
+                <button class="icon-btn" data-tip="Zoom to it"><svg class="i i--sm"><use href="#i-target"/></svg></button>
+                <span style="flex:1"></span>
+                <button class="icon-btn" data-tip="Delete · Del" style="color:var(--danger)"><svg class="i i--sm"><use href="#i-trash"/></svg></button>
+            </div>
+            <div class="insp__body insp-edit" style="flex-direction:column">
+                <details class="sec" open>
+                    <summary>General <svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <label class="f f--full"><span>Name</span><input class="input" value="Kitchen" /></label>
+                        <label class="f"><span>Code</span><input class="input" value="D_08" /></label>
+                        <label class="f"><span>Type</span><select class="input"><option>Living</option><option>Kitchen</option><option>Bathroom</option><option>Garage</option><option>Terrace</option></select></label>
+                    </div>
+                </details>
+                <details class="sec" open>
+                    <summary>Height & level <svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <label class="f"><span>Ceiling height</span><span class="unit-wrap"><input class="input" value="2510" /><span>mm</span></span></label>
+                        <label class="f"><span>Floor level</span><span class="unit-wrap"><input class="input" value="0" /><span>mm</span></span></label>
+                    </div>
+                </details>
+                <details class="sec" open>
+                    <summary>Surfaces <svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <div class="f f--full"><span>Floor</span><button class="mat"><span class="swatch sw-terrazzo"></span><span class="mat__name">Terrazzo, white with grey and black chips</span><svg class="i i--sm"><use href="#i-chev"/></svg></button></div>
+                        <div class="f f--full"><span>Ceiling</span><button class="mat"><span class="swatch sw-white"></span><span class="mat__name">White plaster</span><svg class="i i--sm"><use href="#i-chev"/></svg></button></div>
+                        <label class="f"><span>Skirting</span><span class="unit-wrap"><input class="input" placeholder="none" /><span>mm</span></span></label>
+                        <div class="f"><span>Skirting material</span><button class="mat" style="height:30px"><span class="swatch sw-oak" style="width:22px;height:22px"></span><span class="mat__name">Oak</span></button></div>
+                    </div>
+                </details>
+                <details class="sec" open>
+                    <summary>Wall finishes <span class="sum">1 band</span><svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <div class="bands">
+                            <div class="band__head"><span>Material</span><span>From</span><span>To</span><span></span></div>
+                            <div class="band">
+                                <button class="mat"><span class="swatch sw-tile"></span><span class="mat__name">Tiles, pale blue</span></button>
+                                <span class="unit-wrap"><input class="input" value="0" /><span>mm</span></span>
+                                <span class="unit-wrap"><input class="input" value="1200" /><span>mm</span></span>
+                                <button class="icon-btn" style="width:28px;height:28px"><svg class="i i--sm"><use href="#i-x"/></svg></button>
+                            </div>
+                            <button class="btn btn--sm btn--ghost" style="align-self:flex-start;color:var(--accent)"><svg class="i i--sm"><use href="#i-plus"/></svg>Add band</button>
+                        </div>
+                    </div>
+                </details>
+                <details class="sec">
+                    <summary>Tiling <span class="sum">origin 7201, 3487 · 0°</span><svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <label class="f"><span>Joints cross at x</span><input class="input" value="7201" /></label>
+                        <label class="f"><span>at y</span><div class="with-btn"><input class="input" value="3487" /><button class="icon-btn" data-tip="Pick on the plan"><svg class="i i--sm"><use href="#i-target"/></svg></button></div></label>
+                        <label class="f"><span>Floor pattern angle</span><span class="unit-wrap"><input class="input" value="0" /><span>°</span></span></label>
+                    </div>
+                </details>
+                <details class="sec">
+                    <summary>Vaulted ceiling <span class="sum">off</span><svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <label class="switch">Vault between beams <input type="checkbox" /></label>
+                        <p class="hint">Beam spacing, rise, angle and the beam size appear once it is on.</p>
+                    </div>
+                </details>
+                <details class="sec">
+                    <summary>Outline <span class="sum">4 corners</span><svg class="i i--sm chev"><use href="#i-chev"/></svg></summary>
+                    <div class="sec__body">
+                        <p class="hint">Drag the corners on the plan; drag a midpoint for a new one, double-click a corner to remove it.</p>
+                        <div class="corners">
+                            <div><b>1</b><span>7201</span><span>3487</span></div>
+                            <div><b>2</b><span>10890</span><span>3487</span></div>
+                            <div><b>3</b><span>10890</span><span>4359</span></div>
+                            <div><b>4</b><span>7201</span><span>4359</span></div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+            <footer class="insp__foot insp-edit">
+                <span><kbd>←</kbd><kbd>→</kbd> nudge</span><span><kbd>R</kbd> turn</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd> copy</span><span><kbd>Del</kbd> delete</span>
+            </footer>
+        </aside>
+
+        <!-- ================= POPOVERS ================= -->
+        <div class="float pop floor-pop" id="floorPop">
+            <button class="row"><span class="row__code">+5.950</span><span class="row__main"><span class="row__name">Attic</span></span></button>
+            <button class="row"><span class="row__code">+2.950</span><span class="row__main"><span class="row__name">First floor</span></span></button>
+            <button class="row selected"><span class="row__code">±0.000</span><span class="row__main"><span class="row__name">Ground floor</span></span><svg class="i i--sm" style="color:var(--accent)"><use href="#i-check"/></svg></button>
+            <button class="row"><span class="row__code">−2.800</span><span class="row__main"><span class="row__name">Basement</span></span></button>
+            <div class="rail__sep" style="width:auto;margin:6px 8px"></div>
+            <button class="row"><svg class="i i--sm"><use href="#i-history"/></svg><span class="row__main">Versions…</span></button>
+            <button class="row"><svg class="i i--sm"><use href="#i-folder"/></svg><span class="row__main">Project page</span></button>
+        </div>
+
+        <div class="float pop display-pop" id="displayPop">
+            <div class="pop__sec">
+                <div class="pop__title">Show</div>
+                <div class="tgl-grid">
+                    <button class="tgl"><svg class="i"><use href="#i-ceiling"/></svg>Ceilings</button>
+                    <button class="tgl on"><svg class="i"><use href="#i-roof"/></svg>Roof</button>
+                    <button class="tgl on"><svg class="i"><use href="#i-tag"/></svg>Labels</button>
+                    <button class="tgl on"><svg class="i"><use href="#i-dims"/></svg>Dimensions</button>
+                    <button class="tgl on"><svg class="i"><use href="#i-pin"/></svg>Comments</button>
+                    <button class="tgl"><svg class="i"><use href="#i-image"/></svg>Underlay</button>
+                </div>
+            </div>
+            <div class="pop__sec">
+                <div class="pop__title">Floors</div>
+                <div class="line"><span><svg class="i i--sm"><use href="#i-layers"/></svg>All floors below</span><label class="switch" style="width:auto"><input type="checkbox" checked /></label></div>
+                <div class="line"><span><svg class="i i--sm"><use href="#i-plan"/></svg>Trace floor below (Basement)</span><label class="switch" style="width:auto"><input type="checkbox" /></label></div>
+            </div>
+            <div class="pop__sec">
+                <div class="pop__title">Light</div>
+                <div class="line">
+                    <div class="mini-seg"><button class="active"><svg class="i i--sm"><use href="#i-sun"/></svg>Day</button><button><svg class="i i--sm"><use href="#i-moon"/></svg>Night</button></div>
+                    <span><svg class="i i--sm"><use href="#i-bulb"/></svg>Lamps <label class="switch" style="width:auto"><input type="checkbox" /></label></span>
+                </div>
+                <div class="sun">
+                    <span>Month</span><input type="range" min="1" max="12" value="6" /><b>June</b>
+                    <span>Time</span><input type="range" min="5" max="21" value="15" /><b>15:00</b>
+                </div>
+            </div>
+            <div class="pop__sec">
+                <div class="pop__title">Camera & quality</div>
+                <div class="line"><span>Lens</span><select class="input" style="width:130px"><option>Standard</option><option>14 mm</option><option>24 mm</option><option>35 mm</option><option>50 mm</option></select></div>
+                <div class="line"><span><svg class="i i--sm"><use href="#i-sparkle"/></svg>Quality</span><div class="mini-seg"><button>Fast</button><button class="active">Presentation</button></div></div>
+            </div>
+        </div>
+
+        <!-- Add library -->
+        <section class="float lib" id="lib" aria-label="Add">
+            <div class="lib__search">
+                <svg class="i" style="color:var(--subtle)"><use href="#i-search"/></svg>
+                <input placeholder="Search furniture, products, building parts…" />
+                <kbd>Esc</kbd>
+            </div>
+            <nav class="lib__cats">
+                <button class="cat active"><svg class="i i--sm"><use href="#i-roof"/></svg>Building<span class="n">16</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-cabinet"/></svg>Kitchen<span class="n">9</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-cabinet"/></svg>Storage<span class="n">4</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-chair"/></svg>Seating<span class="n">5</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-table"/></svg>Tables<span class="n">3</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-bed"/></svg>Beds<span class="n">2</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-bath"/></svg>Bathroom<span class="n">7</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-bulb"/></svg>Lighting<span class="n">6</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-plug"/></svg>Electrical<span class="n">4</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-frame"/></svg>Decor<span class="n">10</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-tree"/></svg>Outdoor<span class="n">6</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-box"/></svg>3D products<span class="n">24</span></button>
+                <button class="cat"><svg class="i i--sm"><use href="#i-folder"/></svg>Project's own<span class="n">2</span></button>
+            </nav>
+            <div class="lib__grid">
+                <h3>Structure</h3>
+                <div class="tiles">
+                    <button class="tile"><svg class="i"><use href="#i-wall"/></svg>Wall</button>
+                    <button class="tile"><svg class="i"><use href="#i-rooms"/></svg>Room</button>
+                    <button class="tile"><svg class="i"><use href="#i-stairs"/></svg>Stairs</button>
+                    <button class="tile"><svg class="i"><use href="#i-void"/></svg>Floor void</button>
+                    <button class="tile"><svg class="i"><use href="#i-railing"/></svg>Railing</button>
+                    <button class="tile"><svg class="i"><use href="#i-column"/></svg>Column</button>
+                    <button class="tile"><svg class="i"><use href="#i-column"/></svg>Beam</button>
+                    <button class="tile"><svg class="i"><use href="#i-column"/></svg>Chimney</button>
+                </div>
+                <h3>Openings</h3>
+                <div class="lib__note"><svg class="i i--sm"><use href="#i-info"/></svg>Select a wall first to put a door or window in it.</div>
+                <div class="tiles">
+                    <button class="tile" disabled><svg class="i"><use href="#i-door"/></svg>Door</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-door"/></svg>Double door</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-door"/></svg>Sliding door</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-door"/></svg>Pocket door</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-window"/></svg>Window</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-frame"/></svg>Niche</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-door"/></svg>Garage door</button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-rooms"/></svg>Passage</button>
+                </div>
+                <h3>Roof & site</h3>
+                <div class="tiles">
+                    <button class="tile"><svg class="i"><use href="#i-roof"/></svg>Roof<small>over the floor</small></button>
+                    <button class="tile" disabled><svg class="i"><use href="#i-window"/></svg>Roof window<small>select a roof</small></button>
+                    <button class="tile"><svg class="i"><use href="#i-plot"/></svg>Plot</button>
+                    <button class="tile"><svg class="i"><use href="#i-section"/></svg>Section line</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Design notes -->
+        <aside class="notes" id="notes">
+            <h2>What changed and why</h2>
+            <ol>
+                <li><b>The canvas is the page.</b> No full-height column: every control floats over the 3D view and only what's needed is open.</li>
+                <li><b>Top bar = where am I + mode.</b> Project / floor (dropdown with levels, versions), the 3D · Plan · Walk switch in the middle, Share and <i>Edit</i> on the right. In edit mode undo / redo and a "Saved" state show up there.</li>
+                <li><b>Left rail = panels, one at a time.</b> Rooms, Saved views, Variants, Comments, Export; in edit mode also Activity and Underlay. Each opens a flyout with its own scroll, so nothing pushes anything else down.</li>
+                <li><b>Bottom dock = tools.</b> Icon buttons with their shortcut letter: Select, Draw walls, Room from walls, Railing, Measure, Comment, and one orange <i>Add</i>. The active tool's options (wall type, thickness, height, arc) appear in a bar above the dock instead of inside the panel.</li>
+                <li><b>Add is a library, not a &lt;select&gt;.</b> Categories, search and icon tiles; parts that need a selection (doors need a wall, a roof window a roof) are greyed with the reason.</li>
+                <li><b>Right inspector only when something is selected.</b> Header with name and type, an icon action row (copy, turn, zoom to, delete), fields in collapsible groups with units inside the inputs, materials as swatches and wall finishes as a band list instead of JSON. In view mode it is a read-only fact card.</li>
+                <li><b>Display is one popover</b> (eye, bottom right): icon toggles for what to show, floors, day / night / sun, lens and quality. The wall cut, used constantly, stays visible as a slider.</li>
+                <li><b>Floors are a level picker</b> at the bottom left (like indoor maps), with the "floors below" stack toggle.</li>
+                <li><b>Help leaves the panel.</b> The long how-to paragraphs become tooltips, a status line with the current tool's hint, and a shortcuts sheet (keyboard icon).</li>
+                <li><b>Icons:</b> Lucide (ISC), via <code>lucide-angular</code> or a small inline sprite like this page's.</li>
+            </ol>
+        </aside>
+    </main>
+</div>
+
+<script>
+(() => {
+    const body = document.body;
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+    const images = {
+        '3d': '../screenshots/view-tour-01-cut-away.webp',
+        plan: '../screenshots/view-tour-02-plan.webp',
+        walk: '../screenshots/view-tour-09-eye-level.webp',
+    };
+    const titles = {
+        rooms: 'Rooms', views: 'Saved views', variants: 'Variants', comments: 'Comments', export: 'Export',
+        activity: 'Activity', underlay: 'Plan underlay', keys: 'Keyboard shortcuts',
+    };
+    const feet = {
+        views: '<input class="input" placeholder="Name of the current view" /><button class="btn btn--sm btn--primary">Save</button>',
+        comments: '<button class="btn btn--sm" style="flex:1;justify-content:center"><svg class="i i--sm"><use href="#i-comment"/></svg>Pin a comment <kbd>C</kbd></button>',
+        variants: '<button class="btn btn--sm edit-only" style="flex:1;justify-content:center"><svg class="i i--sm"><use href="#i-plus"/></svg>New variant set</button>',
+        export: '<button class="btn btn--sm" style="flex:1;justify-content:center"><svg class="i i--sm"><use href="#i-share"/></svg>Share link…</button>',
+    };
+    const hints = {
+        select: () => body.classList.contains('editing')
+            ? 'Click to select · Shift+click picks items to group · drag to move · Shift drags without snapping'
+            : 'Drag to orbit · right-drag to pan · scroll to zoom · click to select',
+        drawWalls: () => 'Click centre-line points · type a length (3200) or angle (3200<90) · A for arc · double-click or Esc ends',
+        detectRoom: () => 'Click inside walls to add the room they enclose',
+        drawRailing: () => 'Click the railing points · double-click ends it · click its start to close it',
+        measure: () => 'Click two points in the plan · Esc clears',
+        comment: () => 'Click a surface to pin a comment',
+    };
+
+    let panel = null;
+    let tool = 'select';
+    let view = '3d';
+
+    function setPanel(next) {
+        panel = panel === next ? null : next;
+        $$('.rail-btn').forEach(b => b.classList.toggle('active', b.dataset.panel === panel));
+        $('#flyout').classList.toggle('open', panel !== null);
+        $$('.pane').forEach(p => p.classList.toggle('active', p.dataset.pane === panel));
+        if (panel) {
+            $('#flyoutTitle').textContent = titles[panel];
+            const foot = feet[panel];
+            $('#flyoutFoot').innerHTML = foot ?? '';
+            $('#flyoutFoot').style.display = foot ? 'flex' : 'none';
+        }
+    }
+
+    function setTool(next) {
+        tool = next;
+        body.className = body.className.replace(/\btool-\S+/g, '').trim() + ' tool-' + tool;
+        $$('.tool-btn[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+        $('#status').textContent = hints[tool]();
+    }
+
+    function setView(next) {
+        if (next === 'walk' && view !== 'walk') { closePops(); }
+        view = next;
+        $$('.seg button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+        $('#sceneImg').src = images[view];
+        body.classList.toggle('walking', view === 'walk');
+    }
+
+    function setEditing(on) {
+        body.classList.toggle('editing', on);
+        $('#editBtn span').textContent = on ? 'Done' : 'Edit';
+        $('#editBtn use').setAttribute('href', on ? '#i-check' : '#i-pencil');
+        if (!on) { setTool(tool === 'measure' || tool === 'comment' ? tool : 'select'); closePop('lib'); }
+        if (!on && (panel === 'activity' || panel === 'underlay')) setPanel(panel);
+        setTool(tool);
+    }
+
+    function select(on) { body.classList.toggle('inspector-open', on); }
+
+    function closePop(id) { $('#' + id).classList.remove('open'); if (id === 'lib') { $('#addBtn').classList.remove('open'); body.classList.remove('lib-open'); } }
+    function closePops() { ['floorPop', 'displayPop', 'lib'].forEach(closePop); }
+    function togglePop(id) {
+        const open = !$('#' + id).classList.contains('open');
+        closePops();
+        $('#' + id).classList.toggle('open', open);
+        if (id === 'lib') { $('#addBtn').classList.toggle('open', open); body.classList.toggle('lib-open', open); }
+    }
+
+    $$('.rail-btn').forEach(b => b.addEventListener('click', () => setPanel(b.dataset.panel)));
+    $('#flyoutClose').addEventListener('click', () => setPanel(panel));
+    $$('.tool-btn[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+    $$('.seg button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    $('#walkBack').addEventListener('click', () => setView('3d'));
+    $('#editBtn').addEventListener('click', () => setEditing(!body.classList.contains('editing')));
+    $('#editFromInfo').addEventListener('click', () => setEditing(true));
+    $('#inspClose').addEventListener('click', () => select(false));
+    $('#hit').addEventListener('click', () => { closePops(); if (tool === 'select') select(true); });
+    $$('[data-select-room]').forEach(b => b.addEventListener('click', () => select(true)));
+    $('#floorBtn').addEventListener('click', e => { e.stopPropagation(); togglePop('floorPop'); });
+    $('#displayBtn').addEventListener('click', e => { e.stopPropagation(); togglePop('displayPop'); });
+    $('#addBtn').addEventListener('click', e => { e.stopPropagation(); togglePop('lib'); });
+    $('#stackBtn').addEventListener('click', e => e.currentTarget.classList.toggle('on'));
+    $$('.levels__btn:not(.levels__stack)').forEach(b => b.addEventListener('click', () => {
+        $$('.levels__btn:not(.levels__stack)').forEach(x => x.classList.toggle('active', x === b));
+    }));
+    $$('.tgl').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));
+    $$('.mini-seg').forEach(g => $$('button', g).forEach(b => b.addEventListener('click', () => {
+        $$('button', g).forEach(x => x.classList.toggle('active', x === b));
+    })));
+    $$('.cat').forEach(b => b.addEventListener('click', () => $$('.cat').forEach(x => x.classList.toggle('active', x === b))));
+    $('#cut').addEventListener('input', e => {
+        const v = +e.target.value;
+        $('#cutVal').textContent = v >= 100 ? 'off' : (0.3 + v * 0.0272).toFixed(2) + ' m';
+    });
+    $('#notesBtn').addEventListener('click', () => $('#notes').classList.toggle('open'));
+    $$('.pop, .lib').forEach(p => p.addEventListener('click', e => e.stopPropagation()));
+    document.addEventListener('click', e => { if (!e.target.closest('.pop, .lib, #addBtn, #displayBtn, #floorBtn')) closePops(); });
+
+    document.addEventListener('keydown', e => {
+        if (e.target.matches('input, select, textarea')) return;
+        const k = e.key.toLowerCase();
+        const editing = body.classList.contains('editing');
+        if (e.key === 'Escape') {
+            if (view === 'walk') return setView('3d');
+            if ($('.pop.open, .lib.open')) return closePops();
+            if (tool !== 'select') return setTool('select');
+            return select(false);
+        }
+        if (k === '1') setView('3d');
+        if (k === '2') setView('plan');
+        if (k === '3') setView('walk');
+        if (k === 'e' && view !== 'walk') setEditing(!editing);
+        if (k === 'v') setTool('select');
+        if (k === 'd') setTool('measure');
+        if (k === 'c') setTool('comment');
+        if (editing && k === 'w') setTool('drawWalls');
+        if (editing && k === 'm') setTool('detectRoom');
+        if (editing && k === 'b') setTool('drawRailing');
+        if (editing && k === 'a') togglePop('lib');
+        if (k === '?') setPanel('keys');
+    });
+
+    setTool('select');
+})();
+</script>
+</body>
+</html>

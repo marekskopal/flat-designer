@@ -1,15 +1,11 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
-import {FurnitureDefinition, ScopeLabels} from '@app/models/furniture';
-import {Group, Item, Opening, OpeningType, Roof, RoofWindow, Room, Scene, SectionLine, VariantSet, Wall, WallType} from '@app/models/scene';
+import {Group, Item, Opening, RoofWindow, Scene, SectionLine, VariantSet} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
-import {EditorTool} from '@app/viewer/engine/drawing';
-import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
+import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {roofLocal} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
-import {ActivityComponent} from './activity.component';
-import {EditorStore, newRoomFields} from './editor.store';
-import {OpeningTypeLabels} from './element-fields';
+import {EditorStore} from './editor.store';
 import {FieldChange, InspectorComponent} from './inspector.component';
 
 const KindLabels: Record<ElementKind, string> = {
@@ -28,32 +24,20 @@ const KindLabels: Record<ElementKind, string> = {
     variantSet: 'Variant set',
 };
 
-/** The tools of the top view, with their shortcuts. */
-const Tools: {tool: EditorTool; label: string; title: string}[] = [
-    {tool: 'select', label: 'Select', title: 'Select and drag elements (Esc)'},
-    {tool: 'drawWalls', label: 'Draw walls', title: 'Click the centre-line points of a run of walls; type a length for an exact one (W)'},
-    {tool: 'detectRoom', label: 'Room from walls', title: 'Click inside walls to add the room they enclose (M)'},
-    {tool: 'drawRailing', label: 'Draw railing', title: 'Click the points of a railing; double-click ends it, a click on its start closes it (B)'},
-];
-
-const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
-
-/** Size of a new wall and a new room, mm. */
-const NewWallLength = 3000;
-const NewRoomSize = 3000;
-/** Size of a new void, and length of a new railing, mm. */
-const NewVoidSize = 1200;
-const NewRailingLength = 2000;
-/** Width of an opening added from the Add menu (the server's default, used to centre it on the wall). */
-const NewOpeningWidths: Record<OpeningType, number> = {
-    Door: 900,
-    DoubleDoor: 1400,
-    SlidingDoor: 900,
-    PocketDoor: 900,
-    Passage: 900,
-    Window: 1200,
-    Niche: 600,
-    GarageDoor: 2500,
+const KindIcons: Record<ElementKind, IconName> = {
+    item: 'chair',
+    wall: 'wall',
+    opening: 'door',
+    room: 'rooms',
+    plot: 'plot',
+    stair: 'stairs',
+    void: 'void',
+    railing: 'railing',
+    section: 'section',
+    roof: 'roof',
+    roofWindow: 'window',
+    group: 'group',
+    variantSet: 'variants',
 };
 
 /** Nudge steps for arrow keys, mm (Shift: coarse). */
@@ -61,12 +45,12 @@ const NudgeStep = 10;
 const NudgeStepCoarse = 100;
 
 /**
- * Editing tools of the viewer panel: undo/redo, add, duplicate, delete, the inspector of the selected
- * element (or grouping of the Shift-picked items) and the activity list, plus the keyboard shortcuts while editing.
+ * The editor's inspector panel: the selected element's form and actions (duplicate, turn, delete), or the grouping of
+ * the Shift-picked items; nothing while nothing is selected. It also holds the keyboard shortcuts while editing.
  */
 @Component({
     selector: 'fd-editor-panel',
-    imports: [ActivityComponent, InspectorComponent],
+    imports: [InspectorComponent, IconComponent],
     templateUrl: './editor-panel.component.html',
     styleUrl: './editor-panel.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,13 +58,8 @@ const NudgeStepCoarse = 100;
 })
 export class EditorPanelComponent {
     public readonly scene = input.required<Scene>();
-    /** Plan point the camera looks at, where new elements go. */
-    public readonly viewCenter = input.required<() => {x: number; y: number}>();
 
     protected readonly editor = inject(EditorStore);
-    protected readonly tools = Tools;
-    protected readonly wallTypes = WallTypes;
-    protected readonly openingTypes = Object.entries(OpeningTypeLabels);
     private readonly alerts = inject(AlertService);
 
     /** The selected element's current state, or null when it is gone (deleted, other floor). */
@@ -91,7 +70,16 @@ export class EditorPanelComponent {
             return null;
         }
         const element = findElement(scene, selection.kind, selection.id);
-        return element === null ? null : {kind: selection.kind, label: KindLabels[selection.kind], element};
+        if (element === null) {
+            return null;
+        }
+        const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : KindLabels[selection.kind];
+        return {kind: selection.kind, label: KindLabels[selection.kind], icon: KindIcons[selection.kind], name, element};
+    });
+    /** The selected element turns by 90° (R): items, groups, stairs, roofs; a section line turns round. */
+    protected readonly canTurn = computed(() => {
+        const kind = this.selected()?.kind;
+        return kind === 'item' || kind === 'group' || kind === 'stair' || kind === 'roof' || kind === 'section';
     });
     /** Items of the selected group. */
     protected readonly groupMembers = computed((): Item[] => {
@@ -105,33 +93,6 @@ export class EditorPanelComponent {
         const setId = selected?.kind === 'group' ? (selected.element as unknown as Group).variantSetId : null;
         return (this.scene().variantSets ?? []).find((set) => set.id === setId) ?? null;
     });
-    protected readonly selectedWall = computed(() => {
-        const selected = this.selected();
-        return selected?.kind === 'wall' ? (selected.element as unknown as Wall) : null;
-    });
-    /** A pitched roof selected, which a roof window can be added to. */
-    protected readonly selectedPitchedRoof = computed(() => {
-        const selected = this.selected();
-        return selected?.kind === 'roof' && selected.element['shape'] !== 'Flat' ? (selected.element as unknown as Roof) : null;
-    });
-
-    /** Item kinds of the Add menu; columns and beams go under Building. */
-    protected readonly currentKinds = computed(() => this.editor.itemKinds().filter((k) => !k.structural));
-    protected readonly structureKinds = computed(() => this.editor.itemKinds().filter((k) => k.structural));
-
-    /** The furniture of the Add menu by where it comes from. */
-    protected readonly furnitureSections = computed(() => {
-        const sections: {label: string; definitions: FurnitureDefinition[]}[] = [];
-        for (const scope of ['project', 'user', 'global'] as const) {
-            const definitions = this.editor.definitions().filter((d) => d.scope === scope);
-            if (definitions.length > 0) {
-                const label = scope === 'user' ? 'Furniture — library' : `Furniture — ${ScopeLabels[scope].toLowerCase()}`;
-                sections.push({label, definitions});
-            }
-        }
-        return sections;
-    });
-
     protected onFieldChange(change: FieldChange): void {
         const selection = this.editor.selection();
         if (selection === null) {
@@ -200,107 +161,14 @@ export class EditorPanelComponent {
         this.editor.select({kind: 'variantSet', id});
     }
 
+    /** The Turn button: as R does. */
+    protected turn(): void {
+        this.moveItem(new KeyboardEvent('keydown', {key: 'r'}));
+        this.moveGroup(new KeyboardEvent('keydown', {key: 'r'}));
+    }
+
     protected selectItem(item: Item): void {
         this.editor.select({kind: 'item', id: item.id});
-    }
-
-    protected add(event: Event): void {
-        const select = event.target as HTMLSelectElement;
-        const choice = select.value;
-        select.value = '';
-        const center = this.viewCenter()();
-        const room = this.selectedRoom();
-
-        const at = room === null ? center : roundPoint(polygonCentroid(room.polygon));
-        if (choice.startsWith('item:')) {
-            void this.editor.create('item', {kind: choice.slice(5), x: at.x, y: at.y, roomId: room?.id ?? null});
-        } else if (choice.startsWith('custom:')) {
-            void this.editor.create('item', {kind: 'Custom', definitionId: Number(choice.slice(7)), x: at.x, y: at.y, roomId: room?.id ?? null});
-        } else if (choice.startsWith('model:')) {
-            void this.editor.create('item', {kind: 'Model', modelId: Number(choice.slice(6)), x: at.x, y: at.y, roomId: room?.id ?? null});
-        } else if (choice === 'wall') {
-            void this.editor.create('wall', {
-                startX: center.x - NewWallLength / 2,
-                startY: center.y,
-                endX: center.x + NewWallLength / 2,
-                endY: center.y,
-            });
-        } else if (choice.startsWith('opening:')) {
-            const wall = this.selectedWall();
-            if (wall !== null) {
-                const type = choice.slice(8) as OpeningType;
-                const length = wallLength(wall);
-                const width = NewOpeningWidths[type];
-                // Centred; a sliding or pocket door opens towards the wall start, so it sits past the middle.
-                const offset = type === 'SlidingDoor' || type === 'PocketDoor' ? Math.round((length + width) / 2) : Math.round((length - width) / 2);
-                void this.editor.create('opening', {wallId: wall.id, type, offset: Math.max(0, Math.min(offset, length - width))});
-            }
-        } else if (choice === 'section') {
-            // The backend runs it west to east through the middle of the walls, looking north, named by the next letter.
-            void this.editor.create('section', {});
-        } else if (choice === 'roof') {
-            // Its rectangle comes from the backend: round the floor's walls, the ridge along the longer side.
-            void this.editor.create('roof', {});
-        } else if (choice === 'roofWindow') {
-            // The backend puts it low on the roof's front plane.
-            const roof = this.selectedPitchedRoof();
-            if (roof !== null) {
-                void this.editor.create('roofWindow', {roofId: roof.id});
-            }
-        } else if (choice === 'stair') {
-            // The first riser at the view's centre (or the selected room's), walking up north.
-            void this.editor.create('stair', {x: at.x, y: at.y});
-        } else if (choice === 'void') {
-            const half = NewVoidSize / 2;
-            void this.editor.create('void', {
-                polygon: [
-                    [at.x - half, at.y - half],
-                    [at.x + half, at.y - half],
-                    [at.x + half, at.y + half],
-                    [at.x - half, at.y + half],
-                ],
-            });
-        } else if (choice === 'railing') {
-            void this.editor.create('railing', {
-                points: [
-                    [at.x - NewRailingLength / 2, at.y],
-                    [at.x + NewRailingLength / 2, at.y],
-                ],
-            });
-        } else if (choice === 'plot') {
-            // Its boundary comes from the backend: a rectangle round the floor's walls and rooms.
-            void this.editor.create('plot', {});
-        } else if (choice === 'room') {
-            const half = NewRoomSize / 2;
-            void this.editor.create('room', {
-                ...newRoomFields(this.scene()),
-                polygon: [
-                    [center.x - half, center.y - half],
-                    [center.x + half, center.y - half],
-                    [center.x + half, center.y + half],
-                    [center.x - half, center.y + half],
-                ],
-            });
-        }
-    }
-
-    /** Changes a field of the walls drawn next; values out of range are left as they were. */
-    protected setDraft(field: 'type' | 'thickness' | 'height', event: Event): void {
-        const value = (event.target as HTMLInputElement | HTMLSelectElement).value;
-        const draft = this.editor.wallDraft();
-        if (field === 'type') {
-            this.editor.wallDraft.set({...draft, type: value as WallType});
-            return;
-        }
-        const [min, max] = field === 'thickness' ? [10, 2000] : [100, 20000];
-        const number = Math.round(Number(value));
-        if (Number.isFinite(number) && number >= min && number <= max) {
-            this.editor.wallDraft.set({...draft, [field]: number});
-        }
-    }
-
-    protected kindLabel(kind: string): string {
-        return kind.replace(/([a-z])([A-Z])/g, '$1 $2');
     }
 
     protected onKeydown(event: KeyboardEvent): void {
@@ -435,11 +303,6 @@ export class EditorPanelComponent {
         const local = roofLocal({x: 0, y: 0, rotation: roof.rotation}, move.x, move.y);
         void this.editor.update('roofWindow', window.id, {along: Math.round(window.along + local.x), across: Math.round(window.across + local.y)});
     }
-
-    private selectedRoom(): Room | null {
-        const selected = this.selected();
-        return selected?.kind === 'room' ? (selected.element as unknown as Room) : null;
-    }
 }
 
 function findElement(scene: Scene, kind: ElementKind, id: number): Record<string, unknown> | null {
@@ -476,10 +339,6 @@ function findElement(scene: Scene, kind: ElementKind, id: number): Record<string
         case 'variantSet':
             return find(scene.variantSets ?? []);
     }
-}
-
-function roundPoint(p: {x: number; y: number}): {x: number; y: number} {
-    return {x: Math.round(p.x), y: Math.round(p.y)};
 }
 
 function isTyping(target: EventTarget | null): boolean {

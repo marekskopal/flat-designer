@@ -193,6 +193,58 @@ a {
     color: $color-danger;
 }
 
+.btn--small {
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: $font-size-12;
+}
+
+// A square button showing only an icon (`fd-icon`); its `title` names it.
+.icon-button {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: $radius-10;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: $color-surface-muted;
+        color: $color-text;
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+}
+
+.icon-button--danger {
+    color: $color-danger;
+
+    &:hover:not(:disabled) {
+        color: $color-danger;
+    }
+}
+
+kbd {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 4px;
+    border: 1px solid $color-border-strong;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: $color-surface-solid;
+    font: 500 11px/16px $font-sans;
+    text-align: center;
+    color: $color-text-muted;
+}
+
 .field {
     display: flex;
     flex-direction: column;

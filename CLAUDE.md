@@ -154,8 +154,16 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - `EditorStore` is provided per viewer page. It holds the selection and edit mode and makes the API calls, sending
     the scene revision as `If-Match`. `scene-patch.ts` patches the returned element into the scene and falls back to a
     reload.
-  - `EditorPanelComponent` has the toolbar, the Add menu and the shortcuts.
-  - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. `when` limits a field
+  - Layout of the viewer page (mockup `docs/ui/viewer-layout.html`): the 3D view fills it and the controls float over
+    it: a rail of panels on the left (one open at a time: rooms, saved views, variants, comments, export; activity and
+    the underlay while editing), the floor menu, 3D / Plan / Walk, Share and Edit on top, the tools in a dock at the
+    bottom (drawing tools, measure, comment, Add, the wall cut, the Display popover), a level picker for the floors, and
+    the selection on the right. Icons are `fd-icon` (`shared/icon`, Lucide-style paths; add one to `Icons`). The shared
+    viewer keeps the old side panel (its own stylesheet).
+  - `EditorPanelComponent` is the inspector panel (shown with a selection) and holds the editing shortcuts;
+    `AddLibraryComponent` is the Add library (categories, search), `WallDraftComponent` the Draw walls options.
+  - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. A field's `section` starts
+    a collapsible group (`folded` starts it closed). `when` limits a field
     to certain elements, e.g. the `custom` form of Custom items.
 - Engine picking: builders tag objects with `itemId` / `openingId` / `wallId` / `roomId` in `userData`
   (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
@@ -230,7 +238,7 @@ format is the text in `FurnitureTools::Format`.
   (same ids), then `ConvertBuiltInFurniture` the rest in every project, the saved versions and the change log, and
   `RemoveBuiltInFurnitureKinds` dropped them from `items.kind`. `BuiltInFurnitureConverter` (params to values) and
   `BuiltInItemConverter` (scene JSON) are kept only for these migrations.
-- UI: the Add menu's "Furniture —" groups; the inspector's `definition` / `custom` fields (`CustomParamsComponent`
+- UI: the Add library's Furniture, Lights & sockets and My furniture categories; the inspector's `definition` / `custom` fields (`CustomParamsComponent`
   generates a form from the definition's parameters and slots; `EditorStore.definitions`); `/furniture` (the library,
   `?projectId=`); and `/furniture/:id` (a JSON editor with `FurniturePreview`, a framework-free one-item scene in
   `viewer/engine/custom/preview.ts`).

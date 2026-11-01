@@ -19,12 +19,16 @@ import {Router, RouterLink} from '@angular/router';
 import {CommentAction, CommentsComponent} from '@app/comments/comments.component';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
+import {levelText} from '@app/core/level-text';
 import {roomCodeText} from '@app/core/room-code';
+import {ActivityComponent} from '@app/editor/activity.component';
+import {AddLibraryComponent} from '@app/editor/add-library.component';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
 import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
+import {WallDraftComponent} from '@app/editor/wall-draft.component';
 import {downloadBlob, safeFilename} from '@app/export/download';
 import {ExportComponent} from '@app/export/export.component';
 import {Comment, commentPinsOf} from '@app/models/comment';
@@ -41,8 +45,9 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {SavedViewService} from '@app/services/saved-view.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
+import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
-import {ToolStatus} from '@app/viewer/engine/drawing';
+import {EditorTool, ToolStatus} from '@app/viewer/engine/drawing';
 import {electricalPoints} from '@app/viewer/engine/electrical';
 import {GhostFloor} from '@app/viewer/engine/ghost';
 import {MeasureStatus} from '@app/viewer/engine/measure';
@@ -73,7 +78,42 @@ type ViewMode = ViewPreset | 'walkthrough';
 interface ViewOption {
     mode: ViewMode;
     label: string;
+    icon: IconName;
+    /** Its keyboard shortcut. */
+    key: string;
 }
+
+/** The drawing tools of the dock (edit mode), with their shortcuts. */
+const DrawTools: {tool: EditorTool; label: string; icon: IconName; key: string}[] = [
+    {tool: 'drawWalls', label: 'Draw walls', icon: 'wall', key: 'W'},
+    {tool: 'detectRoom', label: 'Room from walls', icon: 'roomFromWalls', key: 'M'},
+    {tool: 'drawRailing', label: 'Draw railing', icon: 'railing', key: 'B'},
+];
+
+/** The panels of the left rail; one is open at a time. */
+type PanelKey = 'rooms' | 'views' | 'variants' | 'comments' | 'export' | 'activity' | 'underlay' | 'keys';
+
+const PanelTitles: Record<PanelKey, string> = {
+    rooms: 'Rooms',
+    views: 'Saved views',
+    variants: 'Variants',
+    comments: 'Comments',
+    export: 'Export',
+    activity: 'Activity',
+    underlay: 'Plan underlay',
+    keys: 'Keyboard shortcuts',
+};
+
+/** The popovers of the top bar and the dock; one is open at a time. */
+type MenuKey = 'floors' | 'display' | 'add';
+
+/** What the status line says the tool at hand does. */
+const ToolHints: Record<EditorTool, string> = {
+    select: 'Click to select · Shift+click picks items to group · drag to move, Shift without snapping',
+    drawWalls: 'Click the centre-line points · type a length (3200) or with an angle (3200<90) · A curves · Enter or Esc ends',
+    detectRoom: 'Click inside walls to add the room they enclose',
+    drawRailing: 'Click the railing’s points · double-click ends it · a click on its start closes it',
+};
 
 /** An image file decoded for use as a texture. */
 const optionalId = (value: string | number | null | undefined): number | null =>
@@ -100,13 +140,21 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         ExportComponent,
         CommentsComponent,
         SunTimeComponent,
+        IconComponent,
+        AddLibraryComponent,
+        WallDraftComponent,
+        ActivityComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
     styleUrl: './viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     // `data-view-ready`: the saved view of the URL is shown with all its models and pictures (for the screenshot script).
-    host: {'(document:keydown)': 'onKeydown($event)', '[attr.data-view-ready]': 'viewReady() ? "" : null'},
+    host: {
+        '(document:keydown)': 'onKeydown($event)',
+        '(document:pointerdown)': 'onDocumentPointerDown($event)',
+        '[attr.data-view-ready]': 'viewReady() ? "" : null',
+    },
 })
 export class ViewerPageComponent {
     public readonly projectId = input.required({transform: numberAttribute});
@@ -116,16 +164,26 @@ export class ViewerPageComponent {
     /** Id of a saved view to show once the floor is loaded (query parameter). */
     public readonly view = input(null, {transform: optionalId});
 
-    /** Panel width plus its margins, so the 3D view frames the model beside it. */
-    protected readonly panelInset = 332;
+    /** The rail's width, so the 3D view frames the model beside it. */
+    protected readonly railWidth = 56;
     protected readonly sectionMin = SectionMin;
     protected readonly roomCodeText = roomCodeText;
     protected readonly sectionMax = SectionMax;
+    protected readonly levelText = levelText;
+    protected readonly drawTools = DrawTools;
     protected readonly views: ViewOption[] = [
-        {mode: 'overview', label: '3D'},
-        {mode: 'top', label: 'Plan'},
-        {mode: 'walkthrough', label: 'Walk'},
+        {mode: 'overview', label: '3D', icon: 'cube', key: '1'},
+        {mode: 'top', label: 'Plan', icon: 'plan', key: '2'},
+        {mode: 'walkthrough', label: 'Walk', icon: 'walk', key: '3'},
     ];
+    /** The rail's panel shown beside it. */
+    protected readonly panel = signal<PanelKey | null>(null);
+    protected readonly panelTitle = computed(() => {
+        const panel = this.panel();
+        return panel === null ? '' : PanelTitles[panel];
+    });
+    /** The open popover (floor menu, display options, Add library). */
+    protected readonly menu = signal<MenuKey | null>(null);
 
     protected readonly editor = inject(EditorStore);
     private readonly modelAssets = inject(ModelAssetService);
@@ -425,6 +483,98 @@ export class ViewerPageComponent {
     protected readonly gardenArea = computed(() => this.areaOf((type) => type === 'Garden'));
     protected readonly pavedArea = computed(() => this.areaOf((type) => type === 'Path' || type === 'Driveway'));
 
+    /** The rail's buttons: the panels this page offers now (variants only with some, comments on the working copy, the editor's while editing). */
+    protected readonly railItems = computed((): {key: PanelKey; label: string; icon: IconName; badge: number}[] => {
+        const items: {key: PanelKey; label: string; icon: IconName; badge: number}[] = [
+            {key: 'rooms', label: 'Rooms & areas', icon: 'rooms', badge: 0},
+            {key: 'views', label: 'Saved views & capture', icon: 'camera', badge: 0},
+        ];
+        if (this.hasVariants()) {
+            items.push({key: 'variants', label: 'Variants', icon: 'variants', badge: 0});
+        }
+        if (this.scene() !== null && this.version() === null) {
+            const open = this.comments().filter((c) => c.parentId === null && !c.resolved).length;
+            items.push({key: 'comments', label: 'Comments', icon: 'comment', badge: open});
+        }
+        items.push({key: 'export', label: 'Export drawings & 3D', icon: 'download', badge: 0});
+        if (this.editor.enabled()) {
+            items.push({key: 'activity', label: 'Activity', icon: 'history', badge: 0});
+            items.push({key: 'underlay', label: 'Plan underlay', icon: 'image', badge: 0});
+        }
+        return items;
+    });
+    /** The floors from the highest level down, as the level picker stacks them. */
+    protected readonly floorsByLevel = computed(() => [...this.floors()].sort((a, b) => b.level - a.level || b.elevation - a.elevation));
+    /** The dock's tool in use: the measure or comment tool, else the editor's (select outside edit mode). */
+    protected readonly activeTool = computed((): EditorTool | 'measure' | 'comment' => {
+        if (this.measuring()) {
+            return 'measure';
+        }
+        if (this.commenting()) {
+            return 'comment';
+        }
+        return this.editor.enabled() ? this.editor.tool() : 'select';
+    });
+    /** The right-hand panel is shown: the inspector while editing with something selected, else a room's card. */
+    protected readonly inspectorOpen = computed(() => {
+        if (this.editor.enabled()) {
+            return this.editor.selection() !== null || this.editor.picked().length > 0;
+        }
+        return this.roomInfo() !== null;
+    });
+    /** The selected room as the viewer's card shows it: its area, clear height, perimeter and finishes. */
+    protected readonly roomInfo = computed(() => {
+        const id = this.selectedRoomId();
+        const room = this.rooms().find((r) => r.id === id);
+        if (room === undefined) {
+            return null;
+        }
+        const materials = this.scene()?.materials ?? [];
+        const material = (materialId: number | null | undefined): {name: string; color: string} | null => {
+            const found = materials.find((m) => m.id === materialId);
+            return found === undefined ? null : {name: found.name, color: found.color};
+        };
+        const finishes: {label: string; name: string; color: string}[] = [];
+        const floor = material(room.floorMaterialId);
+        if (floor !== null) {
+            finishes.push({label: 'Floor', ...floor});
+        }
+        const ceiling = material(room.ceilingMaterialId);
+        if (ceiling !== null) {
+            finishes.push({label: 'Ceiling', ...ceiling});
+        }
+        for (const band of room.wallFinishes) {
+            const wall = material(band.materialId);
+            if (wall !== null) {
+                finishes.push({label: `Walls ${band.bottom}–${band.top} mm`, ...wall});
+            }
+        }
+        const perimeter = room.polygon.reduce((sum, [x, y], i) => {
+            const [nx, ny] = room.polygon[(i + 1) % room.polygon.length];
+            return sum + Math.hypot(nx - x, ny - y);
+        }, 0);
+        return {room, height: room.ceilingHeight, perimeter, finishes};
+    });
+    /** The status line: what the tool at hand does (nothing while a HUD or the tool's options say it). */
+    protected readonly statusHint = computed((): string | null => {
+        if (this.measureStatus() !== null || this.menu() !== null) {
+            return null;
+        }
+        if (this.commenting()) {
+            return 'Click a surface to pin a comment there · Esc cancels';
+        }
+        if (this.editor.calibration() !== null) {
+            return null;
+        }
+        if (!this.editor.enabled()) {
+            return this.activeView() === 'top'
+                ? 'Drag to pan · scroll to zoom · click a room to see it'
+                : 'Drag to orbit · right-drag to pan · scroll to zoom · click a room to see it';
+        }
+        const tool = this.editor.tool();
+        return tool === 'drawWalls' && this.toolStatus() !== null ? null : ToolHints[tool];
+    });
+
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */
     protected readonly exportGlb = (): Promise<Blob> => this.viewer().exportGlb();
@@ -511,6 +661,19 @@ export class ViewerPageComponent {
         effect(() => {
             if (this.editor.enabled()) {
                 untracked(() => this.variantOverride.set(null));
+            }
+        });
+        // The editor's panels and the Add library go with edit mode.
+        effect(() => {
+            if (!this.editor.enabled()) {
+                untracked(() => {
+                    if (this.panel() === 'activity' || this.panel() === 'underlay') {
+                        this.panel.set(null);
+                    }
+                    if (this.menu() === 'add') {
+                        this.menu.set(null);
+                    }
+                });
             }
         });
         // A different floor has different rooms (a live reload of the same floor keeps the selection) and its own links.
@@ -656,6 +819,33 @@ export class ViewerPageComponent {
         if (this.walking() || target?.closest('input, textarea, select') != null || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
+        // Esc closes a popover before it cancels a tool or the selection.
+        if (event.key === 'Escape' && this.menu() !== null) {
+            event.stopImmediatePropagation();
+            this.menu.set(null);
+            return;
+        }
+        // The view and mode keys, unless a tool takes the typing (a wall's length, a calibration).
+        const idle = this.editor.tool() === 'select' && this.editor.calibration() === null;
+        const view = idle ? this.views.find((v) => v.key === event.key) : undefined;
+        if (view !== undefined) {
+            event.preventDefault();
+            this.setView(view.mode);
+            return;
+        }
+        if (idle && (event.key === 'e' || event.key === 'E') && this.canEdit()) {
+            event.preventDefault();
+            this.toggleEdit();
+            return;
+        }
+        if (event.key === 'v' || event.key === 'V') {
+            this.selectTool();
+            return;
+        }
+        if (event.key === '?') {
+            this.togglePanel('keys');
+            return;
+        }
         if ((event.key === 'd' || event.key === 'D') && this.editor.calibration() === null) {
             event.preventDefault();
             this.toggleMeasuring();
@@ -668,6 +858,40 @@ export class ViewerPageComponent {
             this.editor.calibration.set(null);
         } else if (event.key === 'Escape' && this.measuring()) {
             this.measuring.set(false);
+        }
+    }
+
+    protected togglePanel(key: PanelKey): void {
+        this.panel.set(this.panel() === key ? null : key);
+    }
+
+    protected toggleMenu(key: MenuKey): void {
+        this.menu.set(this.menu() === key ? null : key);
+    }
+
+    /** A press outside the popover and its button closes it. */
+    protected onDocumentPointerDown(event: PointerEvent): void {
+        const target = event.target as HTMLElement | null;
+        if (this.menu() !== null && target?.closest('[data-menu]') == null) {
+            this.menu.set(null);
+        }
+    }
+
+    /** V: back to selecting, from a drawing tool, the measure tool or the comment tool. */
+    protected selectTool(): void {
+        this.editor.setTool('select');
+        this.measuring.set(false);
+        this.pickCommentPoint(false);
+    }
+
+    /** The level picker's label: 0 for the ground floor, −1 for the one under it. */
+    protected levelLabel(level: number): string {
+        return level < 0 ? `−${-level}` : String(level);
+    }
+
+    protected setNight(night: boolean): void {
+        if (this.night() !== night) {
+            this.toggleNight();
         }
     }
 
@@ -734,11 +958,15 @@ export class ViewerPageComponent {
     protected placeComment(point: CommentPoint): void {
         this.commenting.set(false);
         this.commentPoint.set(point);
+        this.panel.set('comments');
     }
 
     /** A thread picked in the panel (the camera turns to its pin) or on its pin. */
     protected selectComment(id: number | null, focus: boolean): void {
         this.activeCommentId.set(id);
+        if (id !== null) {
+            this.panel.set('comments');
+        }
         const comment = this.comments().find((c) => c.id === id);
         if (focus && comment !== undefined) {
             this.viewer().focusPoint(comment);

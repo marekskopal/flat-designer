@@ -1,9 +1,17 @@
 @use 'variables' as *;
 
+// The viewer page: the 3D view fills it, and the controls float over it, grouped by what they do — the rail of panels
+// on the left, where and how on top, the tools at the bottom, the selection on the right.
+
+$rail-width: 56px;
+$gap: $space-12;
+$inspector-width: 320px;
+
 :host {
     position: absolute;
     inset: 0;
     display: block;
+    overflow: hidden;
 }
 
 .viewer {
@@ -11,100 +19,307 @@
     inset: 0;
 }
 
-.panel {
+.float {
     position: absolute;
-    top: $space-16;
-    left: $space-16;
-    bottom: calc(#{$space-16} + env(safe-area-inset-bottom));
-    width: 300px;
-    display: flex;
-    flex-direction: column;
-    gap: $space-4;
-    padding: $space-16 0;
+    z-index: 10;
     background: $color-surface;
     backdrop-filter: blur(14px);
     border: 1px solid $color-border;
     border-radius: $radius-14;
-    box-shadow: $shadow-panel;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    box-shadow: 0 1px 2px rgba(35, 33, 30, 0.08), 0 4px 12px rgba(35, 33, 30, 0.08);
 }
 
-.panel__header,
-.panel__section,
-.panel__footer {
-    padding: 0 $space-16;
+.separator {
+    width: 1px;
+    height: 22px;
+    margin: 0 $space-4;
+    flex: none;
+    background: $color-border;
 }
 
-.panel__header {
-    padding-bottom: $space-12;
-    border-bottom: 1px solid $color-border;
+// Tooltips: `data-tip` on a control, shown on hover (below in the top bar, above in the dock, beside in the rail).
+[data-tip] {
+    position: relative;
 }
 
-.eyebrow {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    z-index: 50;
+    left: 50%;
+    top: calc(100% + 8px);
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    border-radius: $radius-6;
+    background: $color-text;
+    font-size: $font-size-12;
+    font-weight: 400;
+    color: #fff;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.actions [data-tip]:hover::after {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
+[aria-expanded='true'][data-tip]:hover::after {
+    display: none;
+}
+
+.rail [data-tip]:hover::after {
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.dock [data-tip]:hover::after,
+.levels [data-tip]:hover::after {
+    top: auto;
+    bottom: calc(100% + 10px);
+}
+
+.levels [data-tip]:hover::after {
+    left: calc(100% + 8px);
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+// ---------- Rail ----------
+
+.rail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-4;
+    width: $rail-width;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+    background: $color-surface-solid;
+    border-right: 1px solid $color-border;
+}
+
+.rail__button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: $radius-10;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+        color: $color-text;
+    }
+}
+
+.rail__button--active,
+.rail__button--active:hover {
+    background: $color-accent-soft;
     color: $color-accent;
 }
 
-.title {
-    margin: $space-4 0 0;
-    font-size: $font-size-18;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-}
-
-.subtitle {
-    margin: 2px 0 0;
-    font-size: $font-size-12;
-    color: $color-text-muted;
-}
-
-.error {
-    margin: $space-4 0 0;
-    font-size: $font-size-13;
-    color: #b3261e;
-}
-
-.panel__section {
-    padding-top: $space-12;
-    padding-bottom: $space-4;
-}
-
-.panel__section--rooms {
-    flex: 1 0 auto;
-    display: flex;
-    flex-direction: column;
-}
-
-.section-title {
-    margin: 0 0 $space-8;
-    font-size: 11px;
+.rail__badge {
+    position: absolute;
+    top: 3px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: $color-highlight;
+    font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    line-height: 16px;
+    color: #fff;
+}
+
+.rail__separator {
+    width: 28px;
+    height: 1px;
+    margin: 6px 0;
+    background: $color-border;
+}
+
+.rail__spacer {
+    flex: 1;
+}
+
+// ---------- Top bar ----------
+
+.bar {
+    position: absolute;
+    top: $gap;
+    left: calc(#{$rail-width} + #{$gap});
+    right: $gap;
+    z-index: 15;
+    display: flex;
+    align-items: flex-start;
+    gap: $space-8;
+    pointer-events: none;
+
+    > * {
+        pointer-events: auto;
+    }
+
+    > .float {
+        position: relative;
+    }
+}
+
+.bar__spacer {
+    flex: 1;
+}
+
+.crumb {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 4px;
+}
+
+.crumb__project {
+    max-width: 220px;
+    overflow: hidden;
+    padding: 6px 10px;
+    border-radius: $radius-10;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+        background: $color-surface-muted;
+        color: $color-text;
+    }
+}
+
+.crumb__separator {
     color: $color-text-subtle;
 }
 
-.segmented {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    padding: 3px;
-    background: $color-surface-muted;
+.crumb__floor {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 0;
     border-radius: $radius-10;
+    background: transparent;
+    font-size: $font-size-14;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+}
+
+.crumb__floor--error {
+    color: $color-danger;
+    cursor: default;
+}
+
+.crumb__version {
+    margin-left: $space-4;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, $color-highlight 16%, white);
+    font-size: $font-size-12;
+    font-weight: 500;
+    color: color-mix(in srgb, $color-highlight 60%, black);
+    white-space: nowrap;
+}
+
+.crumb__back {
+    padding: 0 $space-8;
+    font-size: $font-size-12;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.menu {
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    padding: 6px;
+    background: $color-surface-solid;
+}
+
+.menu__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: $space-8;
+    border-radius: $radius-10;
+    font-size: $font-size-13;
+    color: $color-text;
+    text-decoration: none;
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+
+    fd-icon {
+        color: $color-accent;
+    }
+}
+
+.menu__row--active {
+    background: $color-accent-soft;
+}
+
+.menu__level {
+    width: 48px;
+    font-size: $font-size-12;
+    color: $color-text-subtle;
+    font-variant-numeric: tabular-nums;
+}
+
+.menu__label {
+    flex: 1;
+}
+
+.menu__separator {
+    height: 1px;
+    margin: 6px $space-8;
+    background: $color-border;
+}
+
+.segmented {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
 
     button {
-        padding: 6px 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
         border: 0;
-        border-radius: 8px;
+        border-radius: $radius-10;
         background: transparent;
         font-size: $font-size-13;
         font-weight: 500;
         color: $color-text-muted;
         cursor: pointer;
-        transition: background 0.15s ease, color 0.15s ease;
 
         &:hover {
             color: $color-text;
@@ -118,91 +333,158 @@
     }
 }
 
-.measure-toggle {
+.actions {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: $space-8;
-    width: 100%;
-    margin-top: $space-8;
-    padding: 6px 0;
-    border: 1px solid $color-border;
+    gap: 2px;
+    padding: 3px;
+
+    .btn {
+        padding: 6px 12px;
+        border-radius: $radius-10;
+    }
+}
+
+.actions__editing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    height: 32px;
+    border-radius: $radius-10;
+    background: $color-accent-soft;
+    font-size: $font-size-12;
+    font-weight: 600;
+    color: $color-accent;
+}
+
+.actions__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: $color-accent;
+}
+
+// ---------- Level picker ----------
+
+.levels {
+    left: calc(#{$rail-width} + #{$gap});
+    bottom: calc(#{$space-16} + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    width: 46px;
+    padding: 4px;
+}
+
+.levels__caption {
+    padding: 2px 0 4px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-text-subtle;
+}
+
+.levels__button {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 34px;
+    border: 0;
     border-radius: $radius-10;
     background: transparent;
     font-size: $font-size-13;
-    font-weight: 500;
+    font-weight: 600;
     color: $color-text-muted;
+    text-decoration: none;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
 
     &:hover {
+        background: $color-surface-muted;
         color: $color-text;
     }
-
-    kbd {
-        padding: 0 4px;
-        border: 1px solid $color-border;
-        border-radius: 4px;
-        font: inherit;
-        font-size: 11px;
-    }
 }
 
-.lens {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space-8;
-    margin-top: $space-8;
-    font-size: $font-size-13;
-
-    .input {
-        width: auto;
-        padding: 4px 8px;
-        font-size: $font-size-13;
-    }
+.levels__button--active,
+.levels__button--active:hover {
+    background: $color-accent;
+    color: #fff;
 }
 
-.measure-toggle--on {
-    border-color: $color-accent;
-    background: $color-surface-solid;
-    color: $color-text;
+.levels__button--on {
+    background: $color-accent-soft;
+    color: $color-accent;
 }
 
-.toggle {
-    display: flex;
-    align-items: center;
-    gap: $space-8;
-    padding: 3px 0;
-    font-size: $font-size-13;
-    cursor: pointer;
-
-    input {
-        accent-color: $color-accent;
-    }
+.levels__separator {
+    width: 24px;
+    height: 1px;
+    margin: 4px 0;
+    background: $color-border;
 }
 
-.slider {
+// ---------- Flyout panel ----------
+
+.flyout {
+    top: 64px;
+    left: calc(#{$rail-width} + #{$gap});
+    bottom: calc(#{$space-16} + env(safe-area-inset-bottom));
+    z-index: 16;
     display: flex;
     flex-direction: column;
-    gap: $space-4;
-    margin-top: $space-8;
-    font-size: $font-size-13;
-
-    input {
-        width: 100%;
-        accent-color: $color-accent;
-    }
+    width: 320px;
+    overflow: hidden;
+    box-shadow: $shadow-panel;
 }
 
-.slider__label {
+.flyout__head {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    gap: $space-8;
+    padding: 10px $space-8 10px $space-16;
+    border-bottom: 1px solid $color-border;
 }
 
-.slider__value {
+.flyout__title {
+    flex: 1;
+    margin: 0;
+    font-size: $font-size-14;
+    font-weight: 600;
+}
+
+.flyout__body {
+    flex: 1;
+    min-height: 0;
+    padding: $space-12 $space-16;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.flyout__note {
+    margin: $space-12 0 0;
+    font-size: $font-size-12;
     color: $color-text-muted;
-    font-variant-numeric: tabular-nums;
+    list-style: none;
+}
+
+.shortcuts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px $space-12;
+    align-items: center;
+    margin: 0;
+    font-size: $font-size-12;
+
+    dt {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    dd {
+        margin: 0;
+        color: $color-text-muted;
+    }
 }
 
 .rooms {
@@ -279,87 +561,411 @@
     }
 }
 
-.panel__footer {
-    padding-top: $space-12;
-    border-top: 1px solid $color-border;
+// ---------- Room card (viewing) ----------
+
+.room-card {
+    top: 64px;
+    right: $gap;
+    z-index: 12;
+    width: $inspector-width;
+    max-height: calc(100% - 64px - #{$space-16});
+    overflow-y: auto;
+    box-shadow: $shadow-panel;
+}
+
+.room-card__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: $space-12 $space-8 $space-12 $space-12;
+    border-bottom: 1px solid $color-border;
+}
+
+.room-card__icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: $radius-10;
+    background: $color-accent-soft;
+    color: $color-accent;
+}
+
+.room-card__title {
+    flex: 1;
+    min-width: 0;
+
+    strong {
+        display: block;
+        font-size: $font-size-14;
+    }
+
+    span {
+        font-size: $font-size-12;
+        color: $color-text-muted;
+    }
+}
+
+.facts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: $color-border;
+    border-bottom: 1px solid $color-border;
+
+    div {
+        padding: 10px $space-12;
+        background: $color-surface-solid;
+    }
+
+    small {
+        display: block;
+        font-size: 11px;
+        color: $color-text-muted;
+    }
+
+    b {
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.finishes {
+    display: flex;
+    flex-direction: column;
+    gap: $space-8;
+    margin: 0;
+    padding: $space-12 $space-16;
+    list-style: none;
+    font-size: $font-size-13;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    small {
+        display: block;
+        font-size: 11px;
+        color: $color-text-muted;
+    }
+}
+
+.swatch {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+}
+
+.room-card__foot {
+    padding: 0 $space-16 $space-16;
+}
+
+// ---------- Dock, tool options, hints ----------
+
+// Centred in the view, or in what the right panel leaves of it.
+.dock,
+.options,
+.status {
+    left: calc(50% + #{$rail-width} / 2);
+    transform: translateX(-50%);
+    transition: left 0.2s ease;
+
+    &.shifted {
+        left: calc(50% + #{$rail-width} / 2 - #{$inspector-width} / 2 - #{$gap} / 2);
+    }
+}
+
+.dock {
+    bottom: calc(#{$space-16} + env(safe-area-inset-bottom));
+    z-index: 14;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 5px;
+}
+
+.tool {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: $radius-10;
+    background: transparent;
+    color: $color-text-muted;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+        color: $color-text;
+    }
+}
+
+.tool--active,
+.tool--active:hover {
+    background: $color-accent;
+    color: #fff;
+}
+
+.tool__key {
+    position: absolute;
+    right: 3px;
+    bottom: 1px;
+    font-size: 9px;
+    font-weight: 600;
+    opacity: 0.55;
+}
+
+.add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 14px 0 10px;
+    border: 0;
+    border-radius: $radius-10;
+    background: $color-highlight;
+    font-size: $font-size-13;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+
+    &:hover {
+        background: color-mix(in srgb, $color-highlight 88%, black);
+    }
+}
+
+.add--open {
+    background: color-mix(in srgb, $color-highlight 75%, black);
+}
+
+.cut {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    padding: 0 6px;
+    font-size: $font-size-12;
+    color: $color-text-muted;
+
+    input {
+        width: 96px;
+        accent-color: $color-accent;
+    }
+}
+
+.cut__value {
+    width: 42px;
+    font-weight: 600;
+    color: $color-text;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.options {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 13;
+    padding: 6px $space-12;
+}
+
+.status {
+    position: absolute;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 9;
+    max-width: calc(100% - #{$rail-width} - 2 * #{$gap});
+    overflow: hidden;
+    padding: 4px $space-12;
+    border-radius: 999px;
+    background: rgba(252, 251, 248, 0.85);
+    font-size: $font-size-12;
+    color: $color-text-muted;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+// The measure and draw readouts place themselves 16 px over the bottom of their container, centred: this strip over
+// the dock (and the draw tool's options), between the rail and the right panel.
+.hud-slot {
+    position: absolute;
+    left: $rail-width;
+    right: 0;
+    bottom: 60px;
+    z-index: 13;
+    height: 0;
+    transition: right 0.2s ease;
+
+    &.shifted {
+        right: calc(#{$inspector-width} + #{$gap});
+    }
+}
+
+.hud-slot--high {
+    bottom: 108px;
+}
+
+// ---------- Popovers of the dock ----------
+
+.popover {
+    bottom: calc(100% + 8px);
+    z-index: 30;
+    background: $color-surface-solid;
+    box-shadow: $shadow-panel;
+}
+
+.add-library {
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(760px, calc(100vw - #{$rail-width} - 2 * #{$gap}));
+    height: min(460px, calc(100dvh - 220px));
+}
+
+.display {
+    right: 0;
+    width: 320px;
+    max-height: calc(100dvh - 200px);
+    overflow-y: auto;
+}
+
+.display__section {
+    padding: 10px $space-16;
+    border-bottom: 1px solid $color-border;
+
+    &:last-child {
+        border-bottom: 0;
+    }
+}
+
+.display__title {
+    margin: 0 0 $space-8;
     font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: $color-text-subtle;
 }
 
-@media (max-width: 640px) {
-    .panel {
-        top: auto;
-        left: $space-8;
-        right: $space-8;
-        bottom: calc(#{$space-8} + env(safe-area-inset-bottom));
-        width: auto;
-        height: 70dvh;
-    }
+.toggles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
 }
 
-.eyebrow--link {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-decoration: none;
+.toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: $space-8 $space-4;
+    border: 1px solid $color-border;
+    border-radius: $radius-10;
+    background: $color-surface-solid;
+    font-size: 11px;
+    color: $color-text-muted;
+    cursor: pointer;
 
     &:hover {
-        text-decoration: underline;
+        border-color: $color-border-strong;
+        color: $color-text;
     }
 }
 
-.version-banner {
+.toggle--on,
+.toggle--on:hover {
+    border-color: color-mix(in srgb, $color-accent 30%, white);
+    background: $color-accent-soft;
+    color: $color-accent;
+    font-weight: 500;
+}
+
+.line {
     display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    gap: $space-4 $space-8;
-    margin-top: $space-12;
-    padding: $space-8 10px;
-    border-radius: $radius-6;
-    background: color-mix(in srgb, $color-highlight 14%, white);
-    font-size: $font-size-12;
-
-    a {
-        font-weight: 600;
-    }
+    gap: $space-8;
+    padding: 4px 0;
+    font-size: $font-size-13;
 }
 
-.version-banner__note {
-    display: block;
-    color: $color-text-muted;
-}
-
-.floors {
+.line__label {
     display: flex;
-    flex-wrap: wrap;
-    gap: $space-4;
-    margin-top: $space-12;
+    align-items: center;
+    gap: $space-8;
+}
 
-    a {
+.line__select {
+    width: 130px;
+    padding: 4px 8px;
+    font-size: $font-size-13;
+}
+
+.mini-segmented {
+    display: flex;
+    padding: 2px;
+    border-radius: $radius-10;
+    background: $color-surface-muted;
+
+    button {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         padding: 4px 10px;
-        border-radius: 999px;
-        background: $color-surface-muted;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
         font-size: $font-size-12;
-        font-weight: 500;
         color: $color-text-muted;
-        text-decoration: none;
-
-        &:hover {
-            color: $color-text;
-        }
+        cursor: pointer;
 
         &.active {
-            background: $color-accent;
-            color: #fff;
+            background: $color-surface-solid;
+            color: $color-text;
+            box-shadow: 0 1px 2px rgba(35, 33, 30, 0.12);
         }
     }
 }
 
-.panel--hidden {
-    display: none;
+// A checkbox drawn as a switch.
+.switch {
+    position: relative;
+    width: 34px;
+    height: 20px;
+    flex: none;
+    margin: 0;
+    border-radius: 10px;
+    background: $color-border-strong;
+    appearance: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        transition: transform 0.15s ease;
+    }
+
+    &:checked {
+        background: $color-accent;
+
+        &::after {
+            transform: translateX(14px);
+        }
+    }
 }
+
+// ---------- Walkthrough ----------
 
 .walk-hint {
     position: absolute;
@@ -430,145 +1036,10 @@
     background: transparent;
 }
 
-.title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space-8;
-}
-
-.edit-toggle {
-    flex: none;
-    padding: 4px 12px;
-    border: 1px solid $color-accent;
-    border-radius: 999px;
-    background: transparent;
-    font-size: $font-size-12;
-    font-weight: 600;
-    color: $color-accent;
-    cursor: pointer;
-
-    &:hover {
-        background: $color-accent-soft;
-    }
-}
-
-.edit-toggle--on {
-    background: $color-accent;
-    color: #fff;
-
-    &:hover {
-        background: $color-accent;
-    }
-}
-
-// Share links: the guest page (shared-viewer) uses these styles too.
-
-.panel__footer--end {
-    margin-top: auto;
-}
-
-.reset {
-    width: 100%;
-    padding: 7px 0;
-    border: 1px solid $color-border-strong;
-    border-radius: $radius-10;
-    background: $color-surface-solid;
-    font-size: $font-size-13;
-    font-weight: 500;
-    cursor: pointer;
-
-    &:hover {
-        background: $color-surface-muted;
-    }
-}
-
-.walk-start {
-    position: absolute;
-    left: calc(50% + 166px);
-    top: 50%;
-    transform: translate(-50%, -50%);
-    padding: 12px 22px;
-    border: 0;
-    border-radius: 999px;
-    background: $color-accent;
-    box-shadow: $shadow-panel;
-    font-size: $font-size-14;
-    font-weight: 600;
-    color: #fff;
-    cursor: pointer;
-}
-
-.walk-start--centered {
-    left: 50%;
-}
-
-.panel-show {
-    position: absolute;
-    top: $space-16;
-    left: $space-16;
-    display: flex;
-    align-items: center;
-    gap: $space-8;
-    max-width: calc(100% - 2 * #{$space-16});
-    padding: $space-8 $space-8 $space-8 $space-16;
-    background: $color-surface;
-    backdrop-filter: blur(14px);
-    border: 1px solid $color-border;
-    border-radius: 999px;
-    box-shadow: $shadow-panel;
-    font-size: $font-size-13;
-    font-weight: 600;
-    color: $color-text;
-    white-space: nowrap;
-    cursor: pointer;
-
-    @media (max-width: 640px) {
-        top: auto;
-        left: $space-8;
-        bottom: calc(#{$space-8} + env(safe-area-inset-bottom));
-    }
-}
-
-.panel-show__name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.panel-show__hint {
-    padding: 2px 10px;
-    border-radius: 999px;
-    background: $color-accent;
-    font-size: $font-size-12;
-    color: #fff;
-}
-
-.share-button {
-    flex: none;
-    padding: 4px 12px;
-    border: 1px solid $color-border-strong;
-    border-radius: 999px;
-    background: transparent;
-    font-size: $font-size-12;
-    font-weight: 600;
-    color: $color-text-muted;
-    cursor: pointer;
-
-    &:hover {
-        color: $color-text;
-        background: $color-surface-muted;
-    }
-}
-
-.title-actions {
-    display: flex;
-    gap: $space-4;
-}
-
 .share-card {
     position: absolute;
-    top: $space-16;
+    z-index: 25;
+    top: 64px;
     right: $space-16;
     width: 340px;
     max-height: calc(100% - 2 * #{$space-16});
@@ -605,7 +1076,48 @@
     }
 }
 
-// The shared page: the name a guest signs comments with.
-.guest-name {
-    margin-bottom: $space-8;
+// ---------- Narrow screens ----------
+
+@media (max-width: 900px) {
+    .segmented__label,
+    .crumb__project,
+    .crumb__separator,
+    .cut {
+        display: none;
+    }
+
+    .dock.shifted,
+    .options.shifted,
+    .status.shifted {
+        left: calc(50% + #{$rail-width} / 2);
+    }
+
+    .hud-slot.shifted {
+        right: 0;
+    }
+
+    .room-card {
+        top: auto;
+        left: calc(#{$rail-width} + #{$space-8});
+        right: $space-8;
+        bottom: 76px;
+        width: auto;
+        max-height: 45dvh;
+    }
+
+    .status {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .flyout {
+        left: calc(#{$rail-width} + #{$space-8});
+        right: $space-8;
+        width: auto;
+    }
+
+    .levels {
+        bottom: 76px;
+    }
 }
