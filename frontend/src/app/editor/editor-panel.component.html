@@ -1,171 +1,120 @@
-<section class="panel__section">
-    <div class="toolbar" role="toolbar" aria-label="Edit">
-        <button type="button" class="tool" title="Undo (Ctrl+Z)" aria-label="Undo" [disabled]="editor.busy()" (click)="editor.undo()">↶</button>
-        <button type="button" class="tool" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" [disabled]="editor.busy()" (click)="editor.redo()">↷</button>
-        <select class="tool tool--add" aria-label="Add" [disabled]="editor.busy()" (change)="add($event)">
-            <option value="" selected disabled>+ Add…</option>
-            <optgroup label="Item">
-                @for (kind of currentKinds(); track kind.kind) {
-                    <option [value]="'item:' + kind.kind" [title]="kind.description">{{ kindLabel(kind.kind) }}</option>
-                }
-            </optgroup>
-            @for (section of furnitureSections(); track section.label) {
-                <optgroup [label]="section.label">
-                    @for (definition of section.definitions; track definition.id) {
-                        <option [value]="'custom:' + definition.id" [title]="definition.description">{{ definition.name }}</option>
-                    }
-                </optgroup>
-            }
-            @if (editor.models().length > 0) {
-                <optgroup label="Products (3D models)">
-                    @for (model of editor.models(); track model.id) {
-                        <option [value]="'model:' + model.id" [title]="model.description">{{ model.name }}</option>
-                    }
-                </optgroup>
-            }
-            <optgroup label="Building">
-                <option value="wall">Wall</option>
-                @for (kind of structureKinds(); track kind.kind) {
-                    <option [value]="'item:' + kind.kind" [title]="kind.description">{{ kindLabel(kind.kind) }}</option>
-                }
-                @for (type of openingTypes; track type[0]) {
-                    <option [value]="'opening:' + type[0]" [disabled]="selectedWall() === null">{{ type[1] }} in selected wall</option>
-                }
-                <option value="room">Room</option>
-                <option value="stair">Stairs</option>
-                <option value="void">Void in the floor</option>
-                <option value="railing">Railing</option>
-                <option value="roof">Roof over the floor</option>
-                <option value="roofWindow" [disabled]="selectedPitchedRoof() === null">Roof window in selected roof</option>
-                <option value="plot">Plot boundary</option>
-                <option value="section" title="A cut through the building for the section drawings (Export)">Section line</option>
-            </optgroup>
-        </select>
-        <button
-            type="button"
-            class="tool"
-            title="Duplicate (Ctrl+D)"
-            [disabled]="selected() === null || selected()?.kind === 'variantSet' || editor.busy()"
-            (click)="editor.duplicateSelected()"
-        >
-            Copy
-        </button>
-        <button type="button" class="tool tool--danger" title="Delete (Del)" [disabled]="selected() === null || editor.busy()" (click)="editor.deleteSelected()">
-            Delete
-        </button>
-    </div>
-    <div class="toolbar toolbar--tools" role="toolbar" aria-label="Drawing tools">
-        @for (option of tools; track option.tool) {
+@if (editor.picked().length > 0) {
+    <aside class="inspector" aria-label="Picked items">
+        <header class="head">
+            <span class="head__icon"><fd-icon name="group" /></span>
+            <span class="head__title">
+                <strong>{{ editor.picked().length }} {{ editor.picked().length === 1 ? 'item' : 'items' }} picked</strong>
+                <span>Shift+click to pick more</span>
+            </span>
+            <button type="button" class="icon-button" title="Stop picking (Esc)" aria-label="Stop picking" (click)="editor.select(null)">
+                <fd-icon name="close" [size]="16" />
+            </button>
+        </header>
+        <div class="body body--padded">
+            <div class="group-form">
+                <input #groupName class="input input--compact" aria-label="Group name" value="Group" (keydown.enter)="groupPicked(groupName.value)" />
+                <button type="button" class="btn btn--primary btn--small" [disabled]="editor.busy()" (click)="groupPicked(groupName.value)">
+                    <fd-icon name="group" [size]="15" /> Group
+                </button>
+            </div>
+            <p class="hint">A grouped item adds its whole group; Shift+click a picked one to drop it, Esc to stop.</p>
+        </div>
+    </aside>
+} @else if (selected(); as s) {
+    <aside class="inspector" [attr.aria-label]="s.label">
+        <header class="head">
+            <span class="head__icon"><fd-icon [name]="s.icon" /></span>
+            <span class="head__title">
+                <strong>{{ s.name }}</strong>
+                <span>{{ s.label }} · #{{ s.element['id'] }}</span>
+            </span>
+            <button type="button" class="icon-button" title="Deselect (Esc)" aria-label="Deselect" (click)="editor.select(null)">
+                <fd-icon name="close" [size]="16" />
+            </button>
+        </header>
+        <div class="actions" role="toolbar" aria-label="Element">
             <button
                 type="button"
-                class="tool tool--toggle"
-                [class.tool--active]="editor.tool() === option.tool"
-                [attr.aria-pressed]="editor.tool() === option.tool"
-                [title]="option.title"
-                (click)="editor.setTool(option.tool)"
+                class="icon-button"
+                title="Duplicate (Ctrl+D)"
+                aria-label="Duplicate"
+                [disabled]="s.kind === 'variantSet' || editor.busy()"
+                (click)="editor.duplicateSelected()"
             >
-                {{ option.label }}
+                <fd-icon name="copy" [size]="16" />
             </button>
-        }
-    </div>
-    @if (editor.tool() === 'drawWalls') {
-        @let draft = editor.wallDraft();
-        <div class="draft" aria-label="New walls">
-            <label class="draft__field">
-                <span>Type</span>
-                <select class="input input--compact" [value]="draft.type" (change)="setDraft('type', $event)">
-                    @for (type of wallTypes; track type) {
-                        <option [value]="type">{{ type }}</option>
-                    }
-                </select>
-            </label>
-            <label class="draft__field">
-                <span>Thickness</span>
-                <input class="input input--compact" type="number" min="10" max="2000" step="10" [value]="draft.thickness" (change)="setDraft('thickness', $event)" />
-            </label>
-            <label class="draft__field">
-                <span>Height</span>
-                <input class="input input--compact" type="number" min="100" max="20000" step="10" [value]="draft.height" (change)="setDraft('height', $event)" />
-            </label>
-        </div>
-    }
-</section>
-
-<section class="panel__section panel__section--inspector">
-    @if (editor.picked().length > 0) {
-        <h2 class="section-title">{{ editor.picked().length }} {{ editor.picked().length === 1 ? 'item' : 'items' }} picked</h2>
-        <div class="group-form">
-            <input #groupName class="input input--compact" aria-label="Group name" value="Group" (keydown.enter)="groupPicked(groupName.value)" />
-            <button type="button" class="tool" [disabled]="editor.busy()" (click)="groupPicked(groupName.value)">Group</button>
-        </div>
-        <p class="hint">Shift+click more items (a grouped one adds its whole group); Shift+click a picked one to drop it, Esc to stop.</p>
-    } @else if (selected(); as s) {
-        <h2 class="section-title">{{ s.label }} <span class="section-title__id">#{{ s.element['id'] }}</span></h2>
-        <fd-inspector
-            [kind]="s.kind"
-            [element]="s.element"
-            [materials]="scene().materials"
-            [rooms]="scene().rooms"
-            [groups]="groups()"
-            [definitions]="editor.definitions()"
-            [sceneDefinitions]="scene().definitions ?? []"
-            [models]="editor.models()"
-            [sceneModels]="scene().models ?? []"
-            [images]="editor.images()"
-            [disabled]="editor.busy()"
-            (fieldChange)="onFieldChange($event)"
-            (imagesRefresh)="editor.loadImages()"
-        />
-        @if (s.kind === 'group') {
-            <ul class="members">
-                @for (item of groupMembers(); track item.id) {
-                    <li>
-                        <button type="button" class="members__item" (click)="selectItem(item)">{{ item.name }}</button>
-                    </li>
-                } @empty {
-                    <li class="hint">No items (add some with an item's Group field).</li>
-                }
-            </ul>
-            <div class="toolbar">
-                <button type="button" class="tool" title="Keep the items, drop the group" [disabled]="editor.busy()" (click)="editor.ungroupSelected()">
-                    Ungroup
+            @if (canTurn()) {
+                <button type="button" class="icon-button" title="Turn by 90° (R, Shift+R the other way)" aria-label="Turn" [disabled]="editor.busy()" (click)="turn()">
+                    <fd-icon name="rotate" [size]="16" />
                 </button>
-                @if (groupSet(); as set) {
-                    <span class="hint hint--inline">Variant of <button type="button" class="link" (click)="selectSet(set.id)">{{ set.name }}</button></span>
-                } @else {
-                    <button
-                        type="button"
-                        class="tool"
-                        title="Make this group the first of several alternatives (e.g. with / without an island)"
-                        [disabled]="editor.busy()"
-                        (click)="makeVariants(s.element)"
-                    >
-                        Make variants
-                    </button>
-                }
-            </div>
-            <p class="hint">Arrows nudge the group, R / Shift+R turn it; Delete removes it with its items. Double-click (or Alt+click) one of its items to edit just that one.</p>
-        }
-        @if (s.kind === 'variantSet') {
-            <p class="hint">
-                Switch and add variants under Variants. To decide for the shown variant, press Delete: the other variants go with their items
-                (can be undone).
-            </p>
-            <div class="toolbar">
-                <button type="button" class="tool tool--danger" [disabled]="editor.busy()" (click)="editor.deleteSelected()">Keep shown, drop others</button>
-            </div>
-        }
-    } @else {
-        <p class="hint">
-            Click an item, wall, door, window, room or the plot's ground to edit it; an item of a group selects the whole group (Alt+click or double-click
-            for just the item), Shift+click picks items to group them. In the Plan view drag items, groups, walls and doors / windows; a selected
-            wall's ends and a selected room's or plot's corners get handles (drag a midpoint for a new corner, double-click a corner to remove
-            it). Drags snap to the grid and to nearby corners; Shift moves in 1 mm steps without snapping, Esc cancels.
-        </p>
-    }
-</section>
-
-<section class="panel__section">
-    <h2 class="section-title">Activity</h2>
-    <fd-activity [changes]="editor.changes()" />
-</section>
+            }
+            @if (s.kind === 'group') {
+                <button type="button" class="icon-button" title="Ungroup: keep the items, drop the group" aria-label="Ungroup" [disabled]="editor.busy()" (click)="editor.ungroupSelected()">
+                    <fd-icon name="ungroup" [size]="16" />
+                </button>
+            }
+            <span class="actions__spacer"></span>
+            <button type="button" class="icon-button icon-button--danger" title="Delete (Del)" aria-label="Delete" [disabled]="editor.busy()" (click)="editor.deleteSelected()">
+                <fd-icon name="trash" [size]="16" />
+            </button>
+        </div>
+        <div class="body">
+            <fd-inspector
+                [kind]="s.kind"
+                [element]="s.element"
+                [materials]="scene().materials"
+                [rooms]="scene().rooms"
+                [groups]="groups()"
+                [definitions]="editor.definitions()"
+                [sceneDefinitions]="scene().definitions ?? []"
+                [models]="editor.models()"
+                [sceneModels]="scene().models ?? []"
+                [images]="editor.images()"
+                [disabled]="editor.busy()"
+                (fieldChange)="onFieldChange($event)"
+                (imagesRefresh)="editor.loadImages()"
+            />
+            @if (s.kind === 'group') {
+                <section class="extra">
+                    <h3 class="extra__title">Items</h3>
+                    <ul class="members">
+                        @for (item of groupMembers(); track item.id) {
+                            <li>
+                                <button type="button" class="members__item" (click)="selectItem(item)">{{ item.name }}</button>
+                            </li>
+                        } @empty {
+                            <li class="hint">No items (add some with an item's Group field).</li>
+                        }
+                    </ul>
+                    @if (groupSet(); as set) {
+                        <p class="hint">Variant of <button type="button" class="link" (click)="selectSet(set.id)">{{ set.name }}</button></p>
+                    } @else {
+                        <button
+                            type="button"
+                            class="btn btn--small"
+                            title="Make this group the first of several alternatives (e.g. with / without an island)"
+                            [disabled]="editor.busy()"
+                            (click)="makeVariants(s.element)"
+                        >
+                            <fd-icon name="variants" [size]="15" /> Make variants
+                        </button>
+                    }
+                    <p class="hint">Double-click (or Alt+click) one of its items to edit just that one.</p>
+                </section>
+            }
+            @if (s.kind === 'variantSet') {
+                <section class="extra">
+                    <p class="hint">Switch and add variants in the Variants panel. To decide for the shown variant, drop the others with their items (can be undone).</p>
+                    <button type="button" class="btn btn--small btn--danger" [disabled]="editor.busy()" (click)="editor.deleteSelected()">Keep shown, drop others</button>
+                </section>
+            }
+        </div>
+        <footer class="keys">
+            <span><kbd>←</kbd><kbd>→</kbd> nudge</span>
+            <span><kbd>Shift</kbd> × 10</span>
+            <span><kbd>Ctrl</kbd>+<kbd>D</kbd> copy</span>
+            <span><kbd>Del</kbd> delete</span>
+            <span><kbd>Esc</kbd> deselect</span>
+        </footer>
+    </aside>
+}

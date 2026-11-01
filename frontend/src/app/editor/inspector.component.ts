@@ -1,13 +1,22 @@
+import {NgTemplateOutlet} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
 import {ProjectFile} from '@app/models/project';
 import {Group, Material, Room, SceneDefinition, SceneModel, SpotHeight} from '@app/models/scene';
+import {IconComponent} from '@app/shared/icon/icon.component';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CustomParamsComponent} from './custom-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
 import {SpotHeightsComponent} from './spot-heights.component';
+
+/** A titled group of the inspector's fields (untitled: an element with one group). */
+interface FieldSection {
+    title: string | null;
+    folded: boolean;
+    fields: FieldDef[];
+}
 
 export interface FieldChange {
     key: string;
@@ -20,7 +29,7 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
-    imports: [CustomParamsComponent, SpotHeightsComponent],
+    imports: [CustomParamsComponent, SpotHeightsComponent, IconComponent, NgTemplateOutlet],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,11 +56,23 @@ export class InspectorComponent {
     /** The image picker of a Custom item was opened: the host may refresh `images`. */
     public readonly imagesRefresh = output<void>();
 
-    protected readonly fields = computed(() =>
-        ElementFields[this.kind()]
-            .filter((def) => def.when?.(this.element()) ?? true)
-            .map((def) => (def.labelOf === undefined ? def : {...def, label: def.labelOf(this.element())})),
-    );
+    /**
+     * The element's fields in their groups: a field with a `section` starts one, the fields up to the next go in it; a
+     * group whose fields all do not apply to the element is left out.
+     */
+    protected readonly sections = computed((): FieldSection[] => {
+        const element = this.element();
+        const sections: FieldSection[] = [];
+        for (const def of ElementFields[this.kind()]) {
+            if (def.section !== undefined || sections.length === 0) {
+                sections.push({title: def.section ?? null, folded: def.folded ?? false, fields: []});
+            }
+            if (def.when?.(element) ?? true) {
+                sections[sections.length - 1].fields.push(def.labelOf === undefined ? def : {...def, label: def.labelOf(element)});
+            }
+        }
+        return sections.filter((section) => section.fields.length > 0);
+    });
     protected readonly errors = signal<Record<string, string>>({});
     /**
      * The definitions to pick from, with the item's own first when it is not among them (deleted, another library), or a
@@ -81,6 +102,11 @@ export class InspectorComponent {
         const id = this.element()['definitionId'];
         return (this.sceneDefinitions().find((d) => d.id === id) ?? this.definitions().find((d) => d.id === id))?.definition ?? null;
     });
+
+    /** The template context's fields, typed. */
+    protected asFields(fields: unknown): FieldDef[] {
+        return fields as FieldDef[];
+    }
 
     protected value(def: FieldDef): string {
         return formatFieldValue(def, this.element()[def.key]);

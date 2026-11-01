@@ -1,5 +1,23 @@
-<div class="fields">
-    @for (def of fields(); track def.key + ':' + def.type) {
+@for (section of sections(); track section.title) {
+    @if (section.title === null) {
+        <div class="fields fields--plain">
+            <ng-container *ngTemplateOutlet="fieldList; context: {$implicit: section.fields}" />
+        </div>
+    } @else {
+        <details class="section" [open]="!section.folded">
+            <summary class="section__title">
+                {{ section.title }}
+                <fd-icon class="section__chevron" name="chevronDown" [size]="16" />
+            </summary>
+            <div class="fields">
+                <ng-container *ngTemplateOutlet="fieldList; context: {$implicit: section.fields}" />
+            </div>
+        </details>
+    }
+}
+
+<ng-template #fieldList let-fields>
+    @for (def of asFields(fields); track def.key + ':' + def.type) {
         <div class="field" [class.field--half]="def.half">
             <label class="field__label" [for]="'field-' + def.key">
                 {{ def.label }}
@@ -106,4 +124,4 @@
             }
         </div>
     }
-</div>
+</ng-template>

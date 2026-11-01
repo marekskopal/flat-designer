@@ -48,7 +48,7 @@ const GuestNameKey = 'fd.guestName';
         SunTimeComponent,
     ],
     templateUrl: './shared-viewer-page.component.html',
-    styleUrl: '../viewer-page/viewer-page.component.scss',
+    styleUrl: './shared-viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {'(document:keydown)': 'onKeydown($event)'},
 })
