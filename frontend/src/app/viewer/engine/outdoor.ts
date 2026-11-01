@@ -57,17 +57,48 @@ function buildFence(item: Item, materials: MaterialLibrary, ground: GroundAlong)
     if (item.params['gate'] === true) {
         return buildSlidingGate(item, materials);
     }
-    const group = new THREE.Group();
-    const metal = materials.get(item.materialId);
-    const panelLength = typeof item.params['panelLength'] === 'number' ? item.params['panelLength'] : 2500;
-    const baseBoard = typeof item.params['baseBoard'] === 'number' ? item.params['baseBoard'] : 0;
-    const boards = item.params['style'] === 'Boards';
     const follow: FenceFollow = item.params['follow'] === 'Rake' || item.params['follow'] === 'Step' ? item.params['follow'] : 'Level';
+    const run: FenceRun = {
+        length: item.width,
+        height: item.height,
+        panelLength: typeof item.params['panelLength'] === 'number' ? item.params['panelLength'] : 2500,
+        baseBoard: typeof item.params['baseBoard'] === 'number' ? item.params['baseBoard'] : 0,
+        boards: item.params['style'] === 'Boards',
+        follow,
+        material: materials.get(item.materialId),
+    };
+    return buildFenceRun(run, materials, ground);
+}
+
+/** A straight run of fence: its length along x (centred on 0), height, bays, look and how it meets the ground. */
+export interface FenceRun {
+    length: number;
+    height: number;
+    panelLength: number;
+    /** mm of concrete base board under mesh panels. */
+    baseBoard: number;
+    /** Vertical boards on two rails; else welded mesh panels. */
+    boards: boolean;
+    follow: FenceFollow;
+    material: THREE.Material;
+    /** Leaves out the post at its start or end, where another run's stands (a fence railing's corners); default both. */
+    posts?: {first: boolean; last: boolean};
+}
+
+/**
+ * A run of fence along x, from −length / 2 to length / 2: posts every `panelLength` (at least one bay) and the panels or
+ * boards between them, standing on `ground` (mm at x) unless it is level. A `Fence` item is one; a fence railing along a
+ * polyline (FD-100) one per stretch, their end posts meeting at its corners.
+ */
+export function buildFenceRun(run: FenceRun, materials: MaterialLibrary, ground: GroundAlong = Level): THREE.Group {
+    const group = new THREE.Group();
+    const metal = run.material;
+    const {panelLength, baseBoard, boards, follow} = run;
     const g = follow === 'Level' ? Level : ground;
     const mesh = boards ? null : weldedMeshMaterial(metal);
 
-    const length = item.width;
-    const height = item.height;
+    const length = run.length;
+    const height = run.height;
     const count = Math.max(1, Math.round(length / panelLength));
     const span = length / count;
     const postAt = (i: number): number => -length / 2 + i * span;
@@ -76,6 +107,9 @@ function buildFence(item: Item, materials: MaterialLibrary, ground: GroundAlong)
     const bayBase = (i: number): GroundAlong => (follow === 'Step' ? (): number => bayLevels[i] : g);
 
     for (let i = 0; i <= count; i++) {
+        if ((i === 0 && run.posts?.first === false) || (i === count && run.posts?.last === false)) {
+            continue;
+        }
         const x = postAt(i);
         // A post reaches the higher of the bays it holds.
         const bottom = g(x);

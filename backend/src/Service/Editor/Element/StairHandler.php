@@ -236,7 +236,7 @@ final readonly class StairHandler implements ElementHandler
 			'structureMaterialId' => $structureMaterialId,
 			'rise' => $ownRise,
 			'baseZ' => $fields->raw('baseZ') === null ? 0 : $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ),
-			'railingStyle' => $fields->nullableEnum('railingStyle', RailingStyleEnum::class)?->value,
+			'railingStyle' => self::railingStyle($fields)?->value,
 			'railingMaterialId' => $railingMaterialId,
 			'wallHandrail' => self::wallHandrail($fields)->value,
 			'voidLiningMaterialId' => $voidLiningMaterialId,
@@ -349,6 +349,17 @@ final readonly class StairHandler implements ElementHandler
 	public function label(array $state): string
 	{
 		return sprintf('stairs "%s"', is_string($state['name'] ?? null) ? $state['name'] : '?');
+	}
+
+	/** A stair's railing infill; a fence's (FD-100) stands on the ground, not along nosings. */
+	private static function railingStyle(FieldReader $fields): ?RailingStyleEnum
+	{
+		$style = $fields->nullableEnum('railingStyle', RailingStyleEnum::class);
+		if ($style?->isFence() === true) {
+			throw EditException::invalid(sprintf('A stair\'s railing cannot be a fence (%s).', $style->value));
+		}
+
+		return $style;
 	}
 
 	/** Missing in changes logged before wall handrails (FD-90): none. */

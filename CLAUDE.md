@@ -393,7 +393,7 @@ format is the text in `FurnitureTools::Format`.
   quantities (`RoomFaceUnderRoof`) bend where they cross a level. Turning the wall round turns the slope and the base
   round too, as the finishes (`WallBase::turnedRound()`), and a wall on the ground moved along it keeps its sills on
   it. Garden walls take the wall's `materialId` (exposed concrete, stone).
-- Fences (`Fence` items, `outdoor.ts`): `params.style` `Mesh` (welded mesh over an optional `baseBoard`, the default) or
+- Fences (`Fence` items, `outdoor.ts`; a fence along a polyline is a railing, FD-100): `params.style` `Mesh` (welded mesh over an optional `baseBoard`, the default) or
   `Boards` (vertical boards on two rails); `follow` `Rake` (the panels run with the ground) or `Step` (each bay level
   over the highest ground under it) stands the fence on the ground (`standsOnGround()` in `items.ts`: `onGround` or
   `fenceFollows()`; the sheets take `itemsOverFloor()`; the ground along its width comes from `ItemAssets.plots`); `gate: true` makes it one sliding leaf of boards on a track, `open` (0–1)
@@ -483,6 +483,12 @@ format is the text in `FurnitureTools::Format`.
   stretch (`railingColliders()`), the plan PDF draws a thin line. The editor's Draw railing tool (key B, `drawRailing`)
   reuses the wall run (typed lengths, snapping; no arcs) and creates it with `EditorStore.drawRailing()`. The balcony
   railing definition stays a definition (one straight run).
+- Fences along polylines (FD-100) are railings: `style` `Mesh` or `Boards` (`RailingStyleEnum::isFence()`, TS
+  `isFenceStyle()`; no handrail, no spacing; a stair's `railingStyle` may not be one) and `follow` (`Level` at `baseZ`,
+  `Rake` / `Step` on the plots' ground, `RailingFollowEnum`; another style is stored level). `buildRailing(railing,
+  materials, plots)` draws each stretch as the `Fence` item's run (`buildFenceRun()` in `outdoor.ts`, posts at most
+  `postSpacing` apart, one post at each corner: `FenceRun.posts`), the ground under it from `groundAt()`; a plot change
+  rebuilds the fences on the ground; the sections stand them on the ground (stepped bays for `Step`). Draw one with the Draw railing tool and set its style. Gates stay `Fence` items.
 - Stairs: `railingStyle` (null: posts and a handrail, as before) fills the `railing` sides with `buildRailRun()` in
   `railingMaterialId` (null: the structure's); `wallHandrail` (None, Left, Right, Both) adds a rail on brackets
   `WallRailOffset` in from that side (`buildWallHandrail()`, `offsetLine()`), `RailHeight` over the nosings.

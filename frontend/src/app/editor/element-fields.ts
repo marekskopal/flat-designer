@@ -1,4 +1,5 @@
 import {OpeningType, RailingStyle} from '@app/models/scene';
+import {isFenceStyle} from '@app/viewer/engine/railings';
 import {hasVerges, roofRidgeHeight, RoofShapeFields} from '@app/viewer/engine/roof-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {stairRisers} from '@app/viewer/engine/stairs';
@@ -69,6 +70,12 @@ export interface FieldDef {
 
 /** A railing's infill (FD-90), a stair's too. */
 const RailingStyles: readonly RailingStyle[] = ['Balusters', 'Rods', 'Glass', 'Panel', 'Cable'];
+/** A railing's infill may make it a fence (FD-100); a stair's may not. */
+const RailingAndFenceStyles: readonly RailingStyle[] = [...RailingStyles, 'Mesh', 'Boards'];
+const RailingStyleLabels: Readonly<Record<string, string>> = {Mesh: 'Fence: welded mesh', Boards: 'Fence: boards'};
+/** What a railing without a material looks like, by style (`railings.ts`): steel, a fence's timber or dark grey mesh. */
+const RailingDefaultLooks: Readonly<Record<string, string>> = {Boards: 'timber', Mesh: 'dark grey'};
+const isFence = (railing: Record<string, unknown>): boolean => isFenceStyle(railing['style'] as RailingStyle);
 
 const StairShapeLabels: Readonly<Record<string, string>> = {
     Straight: 'Straight',
@@ -481,7 +488,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     railing: [
         {key: 'name', label: 'Name', type: 'text'},
-        {key: 'style', label: 'Infill', type: 'select', options: RailingStyles, half: true},
+        {key: 'style', label: 'Infill', type: 'select', options: RailingAndFenceStyles, optionLabels: RailingStyleLabels, half: true},
         {
             key: 'handrail',
             label: 'Handrail',
@@ -489,6 +496,16 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             options: ['Round', 'Square', 'Flat', 'None'],
             optionLabels: {Flat: 'Flat cap'},
             half: true,
+            when: (railing) => !isFence(railing),
+        },
+        {
+            key: 'follow',
+            label: 'On the ground',
+            type: 'select',
+            options: ['Level', 'Rake', 'Step'],
+            optionLabels: {Level: 'No: level at its base', Rake: 'Raking with it', Step: 'Stepping per bay'},
+            half: true,
+            when: isFence,
         },
         {key: 'height', label: 'Height', type: 'int', unit: 'mm', half: true},
         {key: 'baseZ', label: 'Base (+ above, − below the floor)', type: 'int', unit: 'mm', half: true},
@@ -500,10 +517,17 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             unit: 'mm',
             nullable: true,
             half: true,
-            when: (railing) => railing['style'] !== 'Glass' && railing['style'] !== 'Panel',
+            when: (railing) => railing['style'] !== 'Glass' && railing['style'] !== 'Panel' && !isFence(railing),
         },
         {key: 'postSpacing', label: 'Posts at most', type: 'int', unit: 'mm', half: true},
-        {key: 'materialId', label: 'Material (empty: steel)', type: 'material', nullable: true, half: true},
+        {
+            key: 'materialId',
+            label: 'Material (empty: steel)',
+            labelOf: (railing) => `Material (empty: ${RailingDefaultLooks[railing['style'] as string] ?? 'steel'})`,
+            type: 'material',
+            nullable: true,
+            half: true,
+        },
         {
             key: 'infillMaterialId',
             label: 'Infill material',

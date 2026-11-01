@@ -6,6 +6,7 @@ namespace FlatDesigner\Service\Project;
 
 use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
+use FlatDesigner\Model\Entity\Enum\RailingFollowEnum;
 use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\FloorVoid;
@@ -55,6 +56,8 @@ final readonly class SnapshotVoidRestorer
 			);
 			$railing->baseZ = $data->nullableInt('baseZ') ?? 0;
 			$railing->spacing = $data->nullableInt('spacing');
+			// Missing in snapshots taken before fences (FD-100): level.
+			$railing->follow = RailingFollowEnum::tryFrom($data->nullableString('follow') ?? '') ?? RailingFollowEnum::Level;
 			$railing->createdAt = new DateTimeImmutable();
 			$railing->updatedAt = $railing->createdAt;
 			$this->railingRepository->persist($railing);

@@ -195,7 +195,7 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
         parts.chimneysBelow,
     );
     for (const railing of scene.railings ?? []) {
-        addRailing(parts, railing, materials);
+        addRailing(parts, railing, materials, scene.plots ?? []);
     }
     for (const floorVoid of scene.voids ?? []) {
         addVoid(parts, floorVoid);
@@ -246,8 +246,8 @@ export function buildBuilding(scene: Scene, materials: MaterialLibrary): Buildin
 }
 
 /** Builds a railing into the building. */
-export function addRailing(parts: BuildingParts, railing: Railing, materials: MaterialLibrary): THREE.Group {
-    const group = buildRailing(railing, materials);
+export function addRailing(parts: BuildingParts, railing: Railing, materials: MaterialLibrary, plots: readonly Plot[] = []): THREE.Group {
+    const group = buildRailing(railing, materials, plots);
     parts.railings.set(railing.id, group);
     parts.root.add(group);
     return group;

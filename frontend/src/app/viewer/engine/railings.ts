@@ -1,9 +1,11 @@
-import {HandrailProfile, Railing, RailingStyle} from '@app/models/scene';
+import {HandrailProfile, Plot, Railing, RailingStyle} from '@app/models/scene';
 import * as THREE from 'three';
 
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
+import {buildFenceRun} from './outdoor';
 import {MM, Vec2, WallCollider, wallFrame} from './plan-geometry';
+import {groundAt} from './terrain';
 
 /** mm, a railing's posts (a stair's are thinner, `PostSize` in `stairs.ts`). */
 export const RailingPost = 40;
@@ -29,6 +31,12 @@ export const BracketSpacing = 1000;
 const ColliderHalf = 30;
 
 const SteelColor = '#8d9092';
+/** A fence without a material: untreated timber boards, or dark grey mesh. */
+const TimberColor = '#a8784a';
+const MeshColor = '#383b3e';
+
+/** A fence's infill (FD-100): drawn as a `Fence` item's runs, without a handrail. */
+export const isFenceStyle = (style: RailingStyle | null): boolean => style === 'Mesh' || style === 'Boards';
 
 /** The clear gap between balusters, or the pitch of rods and cables, mm (`RailingStyleEnum::defaultSpacing()`). */
 export function railingSpacing(style: RailingStyle, spacing: number | null): number {
@@ -54,12 +62,18 @@ export interface RailLook {
 
 /**
  * A railing (FD-90) in its group: the posts, handrail and infill along its points at `baseZ`, tagged `railingId` for
- * picking, merged. The group stands at the plan origin, so a drag moves it by its position.
+ * picking, merged. The group stands at the plan origin, so a drag moves it by its position. A fence (FD-100) is a run of
+ * fence per stretch, on the ground of the `plots` when it follows it.
  */
-export function buildRailing(railing: Railing, materials: MaterialLibrary): THREE.Group {
+export function buildRailing(railing: Railing, materials: MaterialLibrary, plots: readonly Plot[] = []): THREE.Group {
     const group = new THREE.Group();
     group.name = `railing:${railing.name}`;
     group.userData = {railingId: railing.id};
+    if (isFenceStyle(railing.style)) {
+        addFence(group, railing, materials, plots);
+        mergeStatic(group);
+        return group;
+    }
     group.position.y = railing.baseZ * MM;
     const material = railing.materialId === null ? materials.plain(SteelColor, 0.35, 0.8) : materials.get(railing.materialId);
     const infill =
@@ -86,6 +100,41 @@ export function buildRailing(railing: Railing, materials: MaterialLibrary): THRE
     );
     mergeStatic(group);
     return group;
+}
+
+/**
+ * A fence railing's stretches, each a straight run of fence (`buildFenceRun()`) turned along it: at `baseZ`, or on the
+ * plots' ground with `follow` (`groundAt()` under each point of the stretch). Its posts stand at most `postSpacing`
+ * apart, one at each corner (a closed run's last stretch ends on the first one's post).
+ */
+function addFence(group: THREE.Group, railing: Railing, materials: MaterialLibrary, plots: readonly Plot[]): void {
+    const follow = railing.follow ?? 'Level';
+    const boards = railing.style === 'Boards';
+    const fallback = boards ? materials.plain(TimberColor, 0.8, 0) : materials.plain(MeshColor, 0.5, 0.3);
+    const material = railing.materialId !== null ? materials.get(railing.materialId) : fallback;
+    const points = railing.points;
+    const closed = points.length > 2 && points[0][0] === points[points.length - 1][0] && points[0][1] === points[points.length - 1][1];
+    points.slice(1).forEach(([x1, y1], i) => {
+        const [x0, y0] = points[i];
+        const length = Math.hypot(x1 - x0, y1 - y0);
+        if (length < 1) {
+            return;
+        }
+        const bays = Math.ceil(length / railing.postSpacing);
+        const dir = {x: (x1 - x0) / length, y: (y1 - y0) / length};
+        const middle = {x: (x0 + x1) / 2, y: (y0 + y1) / 2};
+        const ground = (along: number): number => groundAt(plots, middle.x + dir.x * along, middle.y + dir.y * along);
+        const posts = {first: i === 0, last: !(closed && i === points.length - 2)};
+        const look = {length, height: railing.height, panelLength: length / bays, baseBoard: 0, boards, follow, material, posts};
+        const run = buildFenceRun(look, materials, ground);
+        if (follow === 'Level') {
+            run.position.y = railing.baseZ * MM;
+        }
+        run.position.x = middle.x * MM;
+        run.position.z = -middle.y * MM;
+        run.rotation.y = Math.atan2(dir.y, dir.x);
+        group.add(run);
+    });
 }
 
 /**

@@ -9,6 +9,7 @@ use FlatDesigner\Dto\RailingDto;
 use FlatDesigner\Model\Entity\AEntity;
 use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
 use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
+use FlatDesigner\Model\Entity\Enum\RailingFollowEnum;
 use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Entity\Floor;
 use FlatDesigner\Model\Entity\Railing;
@@ -62,7 +63,7 @@ final readonly class RailingHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['name', 'points', 'height', 'baseZ', 'style', 'spacing', 'postSpacing', 'handrail', 'materialId', 'infillMaterialId'];
+		return ['name', 'points', 'height', 'baseZ', 'style', 'spacing', 'postSpacing', 'handrail', 'materialId', 'infillMaterialId', 'follow'];
 	}
 
 	/** @return list<string> */
@@ -84,6 +85,7 @@ final readonly class RailingHandler implements ElementHandler
 			'handrail' => HandrailProfileEnum::Round->value,
 			'materialId' => null,
 			'infillMaterialId' => null,
+			'follow' => RailingFollowEnum::Level->value,
 		];
 	}
 
@@ -112,18 +114,32 @@ final readonly class RailingHandler implements ElementHandler
 		$this->materialResolver->resolve($materialId);
 		$this->materialResolver->resolve($infillMaterialId);
 
+		$style = $fields->enum('style', RailingStyleEnum::class);
+
 		return [
 			'name' => $fields->string('name', 255),
 			'points' => self::points($fields->raw('points')),
 			'height' => $fields->int('height', self::MinHeight, self::MaxHeight),
 			'baseZ' => $fields->int('baseZ', -self::MaxBaseZ, self::MaxBaseZ),
-			'style' => $fields->enum('style', RailingStyleEnum::class)->value,
+			'style' => $style->value,
 			'spacing' => $fields->nullableInt('spacing', self::MinSpacing, self::MaxSpacing),
 			'postSpacing' => $fields->int('postSpacing', self::MinPostSpacing, self::MaxPostSpacing),
 			'handrail' => $fields->enum('handrail', HandrailProfileEnum::class)->value,
 			'materialId' => $materialId,
 			'infillMaterialId' => $infillMaterialId,
+			'follow' => self::follow($fields, $style)->value,
 		];
+	}
+
+	/**
+	 * Only a fence stands on the ground (FD-100): another railing is level at its base, whatever is asked. Missing in
+	 * changes logged before fences: level.
+	 */
+	private static function follow(FieldReader $fields, RailingStyleEnum $style): RailingFollowEnum
+	{
+		$follow = $fields->raw('follow') === null ? RailingFollowEnum::Level : $fields->enum('follow', RailingFollowEnum::class);
+
+		return $style->isFence() ? $follow : RailingFollowEnum::Level;
 	}
 
 	public function create(Floor $floor, array $state): Railing
@@ -209,6 +225,7 @@ final readonly class RailingHandler implements ElementHandler
 		$railing->handrail = $fields->enum('handrail', HandrailProfileEnum::class);
 		$railing->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$railing->infillMaterial = $this->materialResolver->resolve($fields->nullableId('infillMaterialId'));
+		$railing->follow = $fields->enum('follow', RailingFollowEnum::class);
 		$this->railingRepository->persist($railing);
 	}
 

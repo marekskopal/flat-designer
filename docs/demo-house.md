@@ -431,7 +431,8 @@ with the architect's plan. These remain, each logged as a task where it is a gap
   1 m tall. Now its top is at −300, 600 mm over the ground, and the spot heights that raised the ground behind it are gone.
 - **FD-99** (done) No fan-shaped steps: the steps round the dry-stone wall were left out. Now a `Curved` stair of three
   risers (450 mm, stepping-slab concrete) follows the wall's south-west face, concentric with it.
-- **FD-100** Fences are straight items: each boundary is four 10 m items.
+- **FD-100** (done) Fences were straight items: the boundaries were four 10 m items. Now the north and south fences are
+  one fence railing each (larch boards, raking with the ground); the sliding gate stays a Fence item.
 - **FD-101** Flat roofs are rectangles: the garage roof leaves slivers along the skewed south wall.
 - **FD-54** Saved views have no lens, so photo 19 shows only the shower wall instead of the whole bathroom.
 - The fire does not flicker (FD-93), and the bath is rounded rather than oval.

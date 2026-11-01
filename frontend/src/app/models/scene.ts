@@ -124,7 +124,11 @@ export type StairTurn = 'Left' | 'Right';
 export type StairConstruction = 'Solid' | 'Stringers' | 'Open';
 export type StairRailing = 'None' | 'Left' | 'Right' | 'Both';
 /** A railing's infill between its posts (FD-90). */
-export type RailingStyle = 'Balusters' | 'Rods' | 'Glass' | 'Panel' | 'Cable';
+/** A railing's infill; `Mesh` and `Boards` make it a fence (FD-100). */
+export type RailingStyle = 'Balusters' | 'Rods' | 'Glass' | 'Panel' | 'Cable' | 'Mesh' | 'Boards';
+
+/** How a railing (a fence) meets the ground (FD-100): level at `baseZ`, or on the plots' ground raking or stepping. */
+export type RailingFollow = 'Level' | 'Rake' | 'Step';
 export type HandrailProfile = 'Round' | 'Square' | 'Flat' | 'None';
 
 /**
@@ -176,6 +180,8 @@ export interface Railing {
     materialId: number | null;
     /** A glass pane's or panel's; null: clear glass, or the railing's material. */
     infillMaterialId: number | null;
+    /** Missing in older versions: level. */
+    follow?: RailingFollow;
 }
 
 /** The floor above (`VoidsAboveDto`): its level `rise` mm up, its slab and its voids, which cut this floor's ceilings. */

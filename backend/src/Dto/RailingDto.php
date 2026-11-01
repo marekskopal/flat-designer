@@ -26,6 +26,7 @@ final readonly class RailingDto
 		public string $handrail,
 		public ?int $materialId,
 		public ?int $infillMaterialId,
+		public string $follow = 'Level',
 	) {
 	}
 
@@ -43,6 +44,7 @@ final readonly class RailingDto
 			handrail: $railing->handrail->value,
 			materialId: $railing->material?->id,
 			infillMaterialId: $railing->infillMaterial?->id,
+			follow: $railing->follow->value,
 		);
 	}
 }

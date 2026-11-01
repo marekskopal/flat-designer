@@ -884,6 +884,11 @@ export class ViewerEngine {
             roomsCutBy(scene.rooms, polygons).forEach((id) => voidRooms.add(id));
         }
         const railings = diffById(previous.railings ?? [], scene.railings ?? []);
+        // A fence on the ground is drawn anew when the plots change.
+        if (plotsChanged) {
+            const onGround = (scene.railings ?? []).filter((r) => (r.follow ?? 'Level') !== 'Level' && !railings.changed.includes(r));
+            railings.changed.push(...onGround);
+        }
         for (const id of [...railings.removed, ...railings.changed.map((r) => r.id)]) {
             const group = parts.railings.get(id);
             if (group !== undefined) {
@@ -891,7 +896,7 @@ export class ViewerEngine {
                 parts.railings.delete(id);
             }
         }
-        railings.changed.forEach((railing) => addRailing(parts, railing, materials));
+        railings.changed.forEach((railing) => addRailing(parts, railing, materials, scene.plots ?? []));
         const sections = diffById(previous.sections ?? [], scene.sections ?? []);
         for (const id of [...sections.removed, ...sections.changed.map((l) => l.id)]) {
             const group = parts.sections.get(id);

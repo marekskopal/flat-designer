@@ -6,6 +6,7 @@ namespace FlatDesigner\Model\Entity;
 
 use DateTimeImmutable;
 use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
+use FlatDesigner\Model\Entity\Enum\RailingFollowEnum;
 use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
 use FlatDesigner\Model\Repository\RailingRepository;
 use MarekSkopal\ORM\Attribute\Column;
@@ -32,6 +33,10 @@ class Railing extends AEntity
 	/** mm, the balusters' clear gap or the rods' and cables' pitch; null: the style's (`RailingStyleEnum::defaultSpacing()`). */
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $spacing = null;
+
+	/** Level at `baseZ`, or on the plots' ground raking or stepping with it (FD-100). */
+	#[ColumnEnum(enum: RailingFollowEnum::class)]
+	public RailingFollowEnum $follow = RailingFollowEnum::Level;
 
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]

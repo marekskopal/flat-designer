@@ -1,5 +1,5 @@
 import {levelText} from '@app/core/level-text';
-import {isOutdoorRoom, Material, Opening, PlanPoint, Plot, Room, Scene, Stair, Wall, WallFinish} from '@app/models/scene';
+import {isOutdoorRoom, Material, Opening, PlanPoint, Plot, Railing, Room, Scene, Stair, Wall, WallFinish} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Polygon, Ring} from 'polygon-clipping';
 
 import {isSiteWall} from './building';
@@ -18,6 +18,7 @@ import {
     wallJoints,
     WindowFrameBar,
 } from './plan-geometry';
+import {isFenceStyle} from './railings';
 import {gutterOffset, roofDownpipes, roofGutters} from './rainwater';
 import {roofPlanes, roofRidgeHeight, roofToPlan, roofVerticalThickness, roofWindowLayouts} from './roof-geometry';
 import {
@@ -277,17 +278,36 @@ class ViewCollector {
             }
         }
         this.site = false;
+        const plots = scene.plots ?? [];
         for (const railing of scene.railings ?? []) {
-            railing.points.slice(1).forEach((point, i) => {
-                const [a, b] = this.clipSegment(toVec(railing.points[i]), toVec(point));
-                if (a !== null && b !== null) {
-                    const bottom = e + railing.baseZ;
-                    const top = bottom + railing.height;
-                    const style = railing.style === 'Glass' || railing.style === 'Panel' ? ThinGlass : ThinLine;
-                    this.push([a, b], [rectangle(this.u(a), this.u(b), bottom, top, style)]);
-                }
-            });
+            this.railing(railing, plots, e);
         }
+    }
+
+    /**
+     * A railing's stretches: bands `height` high from its base, a fence on the ground (FD-100) standing on it at each end
+     * (Rake), or in level bays over the highest ground under each (Step, as `buildFenceRun()`).
+     */
+    private railing(railing: Railing, plots: readonly Plot[], e: number): void {
+        const follow = isFenceStyle(railing.style) ? (railing.follow ?? 'Level') : 'Level';
+        const ground = (q: Vec2): number => e + (follow === 'Level' ? railing.baseZ : groundAt(plots, q.x, q.y));
+        const style = railing.style === 'Glass' || railing.style === 'Panel' ? ThinGlass : ThinLine;
+        railing.points.slice(1).forEach((point, i) => {
+            const [start, end] = [toVec(railing.points[i]), toVec(point)];
+            const length = Math.hypot(end.x - start.x, end.y - start.y);
+            const bays = follow === 'Step' ? Math.max(1, Math.ceil(length / railing.postSpacing)) : 1;
+            for (let k = 0; k < bays; k++) {
+                const [a, b] = this.clipSegment(lerp(start, end, k / bays), lerp(start, end, (k + 1) / bays));
+                if (a === null || b === null) {
+                    continue;
+                }
+                const groundAt3 = [k, k + 0.5, k + 1].map((t) => ground(lerp(start, end, t / bays)));
+                const level = Math.max(...groundAt3);
+                const [ba, bb] = follow === 'Step' ? [level, level] : [ground(a), ground(b)];
+                const outline = [p(this.u(a), ba), p(this.u(b), bb), p(this.u(b), bb + railing.height), p(this.u(a), ba + railing.height)];
+                this.push([a, b], [{points: outline, closed: true, style}]);
+            }
+        });
     }
 
     /** The building's extent on the plane: its walls, slabs and roofs (not the ground nor what stands on the site). */

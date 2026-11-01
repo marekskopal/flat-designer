@@ -119,6 +119,25 @@ final class FloorVoidAndRailingTest extends EditorTestCase
 		self::assertSame($round, $this->create('railings', ['points' => $round])['points']);
 	}
 
+	public function testAFenceIsARailingOnTheGround(): void
+	{
+		// A board fence along a bent boundary, raking with the ground (FD-100).
+		$fence = $this->create(
+			'railings',
+			['points' => [[0, 0], [10000, 0], [12000, 4000]], 'style' => 'Boards', 'height' => 1600, 'postSpacing' => 2500, 'follow' => 'Rake'],
+		);
+		self::assertSame(['Boards', 'Rake', null], [$fence['style'], $fence['follow'], $fence['spacing']]);
+		self::assertSame('Level', $this->create('railings', ['points' => [[0, 0], [1000, 0]]])['follow']);
+		self::assertSame(422, $this->edit('PATCH', 'railings', self::id($fence), ['follow' => 'Slope'])->getStatusCode());
+		// Only a fence stands on the ground: a glass railing stays level at its base.
+		self::assertSame(
+			'Level',
+			$this->create('railings', ['points' => [[0, 0], [1000, 0]], 'style' => 'Glass', 'follow' => 'Step'])['follow'],
+		);
+		// A stair's railing is no fence.
+		self::assertSame(422, $this->edit('POST', 'stairs', null, ['railingStyle' => 'Mesh'])->getStatusCode());
+	}
+
 	public function testRejectsARailingWithoutALine(): void
 	{
 		foreach ([[[0, 0]], [[0, 0], [5, 5]], [[0, 0], [1000, 'x']]] as $points) {

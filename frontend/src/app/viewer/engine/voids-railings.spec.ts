@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 
-import {FloorVoid, Material, PlanPoint, Railing, Room, Scene, Stair} from '@app/models/scene';
+import {FloorVoid, Material, PlanPoint, Plot, Railing, Room, Scene, Stair} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
@@ -224,6 +224,42 @@ describe('railings (FD-90)', () => {
         const glass = buildRailing(railing({style: 'Glass', handrail: 'None', baseZ: 450}), materials);
         expect(glass.position.y).toBeCloseTo(0.45);
         expect(meshes(glass).some((m) => m.material === materials.byCode('glass'))).toBe(true);
+    });
+
+    it('make a fence along a polyline, standing on a sloping plot with follow (FD-100)', () => {
+        // The ground falls 0.2 mm per mm eastwards: from 0 at x 0 to −1000 at x 5000.
+        const plot = {
+            id: 1,
+            name: 'Plot',
+            polygon: [[-1000, -5000], [9000, -5000], [9000, 5000], [-1000, 5000]],
+            area: 100,
+            groundMaterialId: null,
+            groundLevel: 0,
+            terrain: [[-1000, -5000, 200], [9000, -5000, -1800], [9000, 5000, -1800], [-1000, 5000, 200]],
+        } as unknown as Plot;
+        const fence = railing({points: [[0, 0], [5000, 0], [5000, 3000]], style: 'Boards', height: 1600, postSpacing: 2500, follow: 'Rake'});
+        const box = bounds(buildRailing(fence, materials, [plot]));
+        // Down the slope to −1000 at the corner and along the level stretch north of it, 1600 high over the ground.
+        expect(box.min.y).toBeCloseTo(-1000, -1);
+        expect(box.max.y).toBeCloseTo(1600, -1);
+        expect(Math.round(box.max.x - box.min.x)).toBeGreaterThan(5000);
+        // Level, it stands at its base on its own.
+        const level = buildRailing({...fence, follow: 'Level', baseZ: 300}, materials, [plot]);
+        expect(bounds(level).min.y).toBeCloseTo(300, -1);
+    });
+
+    it('stand one fence post at each corner, a closed run\'s too', () => {
+        // Mesh panels have a material of their own: the fence's material left is the posts.
+        const steel = materials.get(1);
+        const posts = (points: PlanPoint[]): number =>
+            meshes(buildRailing(railing({points, style: 'Mesh', postSpacing: 3000, materialId: 1}), materials))
+                .filter((m) => m.material === steel)
+                .reduce((sum, m) => sum + m.geometry.getAttribute('position').count, 0);
+        const corners: PlanPoint[] = [[0, 0], [2000, 0], [2000, 2000], [0, 2000]];
+        expect(posts(corners)).toBeGreaterThan(0);
+        expect(posts([...corners, [0, 0]])).toBe(posts(corners));
+        // A stretch longer than the spacing gets posts at most that far apart: 3700 mm takes two bays at 3000.
+        expect(posts([[0, 0], [3700, 0]])).toBe((posts([[0, 0], [2000, 0]]) / 2) * 3);
     });
 
     it('block the walker along every stretch', () => {
