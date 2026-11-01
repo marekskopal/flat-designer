@@ -282,6 +282,7 @@ class ViewCollector {
         for (const railing of scene.railings ?? []) {
             this.railing(railing, plots, e);
         }
+        this.site = false;
     }
 
     /**
@@ -290,6 +291,8 @@ class ViewCollector {
      */
     private railing(railing: Railing, plots: readonly Plot[], e: number): void {
         const follow = isFenceStyle(railing.style) ? (railing.follow ?? 'Level') : 'Level';
+        // A fence stands out on the site: drawn within the building's extent, not widening it (as garden walls).
+        this.site = isFenceStyle(railing.style);
         const ground = (q: Vec2): number => e + (follow === 'Level' ? railing.baseZ : groundAt(plots, q.x, q.y));
         const style = railing.style === 'Glass' || railing.style === 'Panel' ? ThinGlass : ThinLine;
         railing.points.slice(1).forEach((point, i) => {

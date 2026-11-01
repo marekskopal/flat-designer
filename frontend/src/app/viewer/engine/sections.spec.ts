@@ -113,6 +113,31 @@ describe('building drawings', () => {
         expect(view.marks.map((m) => m.level)).toEqual([0]);
     });
 
+    it('draws a fence out on the site without widening the drawing', () => {
+        const fenced: Scene = {
+            ...house(),
+            railings: [
+                {
+                    id: 1,
+                    name: 'Fence',
+                    points: [
+                        [-20000, -3000],
+                        [26000, -3000],
+                    ],
+                    height: 1600,
+                    baseZ: 0,
+                    style: 'Boards',
+                    spacing: null,
+                    postSpacing: 2500,
+                    handrail: 'None',
+                    materialId: null,
+                    infillMaterialId: null,
+                },
+            ],
+        };
+        expect(buildingView([fenced], facadePlane('South')).bounds).toEqual(buildingView([house()], facadePlane('South')).bounds);
+    });
+
     it('stacks the floors at their elevations, the slab between them', () => {
         const view = buildingView([house(2850, 1), house()], facadePlane('South'));
         expect(view.bounds.maxV).toBeCloseTo(2850 + 2600);
