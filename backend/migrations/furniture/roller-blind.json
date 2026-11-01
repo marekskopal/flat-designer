@@ -3,6 +3,7 @@
  "description": "A fabric roller blind on a tube, rolled down by a percentage.",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 1200,
    "depth": 60,

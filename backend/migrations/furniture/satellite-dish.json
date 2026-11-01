@@ -3,6 +3,7 @@
  "description": "Satellite dish on a mast with its arm and LNB, the dish leaning back; fix the mast to a chimney or a wall.",
  "definition": {
   "format": 1,
+  "catalogue": "roof",
   "size": {
    "width": 700,
    "depth": 500,

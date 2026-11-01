@@ -3,6 +3,7 @@
  "description": "Curtains on a rod: one panel or a pair, drawn open by a percentage (folds gather towards the sides).",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 1600,
    "depth": 120,

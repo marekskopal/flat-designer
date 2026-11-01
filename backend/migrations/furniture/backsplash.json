@@ -3,6 +3,7 @@
  "description": "Wall panel between worktop and wall cabinets, cut to the item.",
  "definition": {
   "format": 1,
+  "catalogue": "kitchen",
   "size": {
    "width": 1200,
    "depth": 16,

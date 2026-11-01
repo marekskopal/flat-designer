@@ -3,6 +3,7 @@
  "description": "Solid wood table: a top of boards along the width, legs tapered on the inside and an apron between them.",
  "definition": {
   "format": 1,
+  "catalogue": "tables",
   "size": {
    "width": 1320,
    "depth": 700,

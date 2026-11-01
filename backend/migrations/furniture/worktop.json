@@ -3,6 +3,7 @@
  "description": "Worktop slab on the base cabinets, cut to the item (z = the cabinet height).",
  "definition": {
   "format": 1,
+  "catalogue": "kitchen",
   "size": {
    "width": 1200,
    "depth": 600,

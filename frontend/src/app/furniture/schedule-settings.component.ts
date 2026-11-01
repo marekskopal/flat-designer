@@ -1,13 +1,14 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 import {CategoryLabels, ElectricalCategory} from '@app/models/electrical-schedule';
-import {FurnitureDefinitionBody} from '@app/models/furniture';
+import {CatalogueLabels, FurnitureCatalogue, FurnitureDefinitionBody} from '@app/models/furniture';
 import {scheduleCount} from '@app/viewer/engine/electrical';
 
-import {countParameters, toggledValue, valueParameters, withCategory, withCount, withValues} from './schedule-settings';
+import {countParameters, toggledValue, valueParameters, withCatalogue, withCategory, withCount, withValues} from './schedule-settings';
 
 /**
- * The definition's `category` and `schedule` settings for the electrical schedule (FD-64), picked above its JSON: what
- * its items count as, the int parameter multiplying an item and the parameters the schedule lists. A change emits the
+ * The definition's settings picked above its JSON: its `catalogue` (where the Add library files it, FD-107), and its
+ * `category` and `schedule` settings for the electrical schedule (FD-64): what its items count as, the int parameter
+ * multiplying an item and the parameters the schedule lists. A change emits the
  * whole definition, which the editor writes back into the JSON.
  */
 @Component({
@@ -21,6 +22,7 @@ export class ScheduleSettingsComponent {
     public readonly readOnly = input(false);
     public readonly bodyChange = output<FurnitureDefinitionBody>();
 
+    protected readonly catalogues = Object.entries(CatalogueLabels) as [FurnitureCatalogue, string][];
     protected readonly categories = Object.entries(CategoryLabels) as [ElectricalCategory, string][];
     protected readonly countOptions = computed(() => countParameters(this.body()));
     /** What an older definition without settings counts by (a socket's gangs, `scheduleCount()`); null once it has them. */
@@ -28,6 +30,11 @@ export class ScheduleSettingsComponent {
     protected readonly valueOptions = computed(() => valueParameters(this.body()));
     /** The parameters the schedule lists: all of them without `schedule.values`. */
     protected readonly listed = computed(() => new Set(this.body().schedule?.values ?? this.valueOptions().map((p) => p.key)));
+
+    protected setCatalogue(event: Event): void {
+        const value = (event.target as HTMLSelectElement).value;
+        this.bodyChange.emit(withCatalogue(this.body(), value === '' ? null : (value as FurnitureCatalogue)));
+    }
 
     protected setCategory(event: Event): void {
         const value = (event.target as HTMLSelectElement).value;

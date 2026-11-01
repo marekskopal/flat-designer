@@ -3,6 +3,7 @@
  "description": "Round wall mirror in a frame; the diameter is the smaller of the item's width and height.",
  "definition": {
   "format": 1,
+  "catalogue": "bathroom",
   "size": {
    "width": 600,
    "depth": 30,

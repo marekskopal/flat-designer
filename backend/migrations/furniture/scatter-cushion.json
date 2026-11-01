@@ -3,6 +3,7 @@
  "description": "A plump cushion for a sofa or a bed, leaning back by lean degrees.",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 450,
    "depth": 180,

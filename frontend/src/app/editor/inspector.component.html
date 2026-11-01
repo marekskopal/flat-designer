@@ -37,12 +37,32 @@
                     </select>
                 }
                 @case ('material') {
-                    <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">
-                        <option value="" [selected]="value(def) === ''">—</option>
-                        @for (material of materials(); track material.id) {
-                            <option [value]="material.id" [selected]="'' + material.id === value(def)">{{ material.name }}</option>
-                        }
-                    </select>
+                    <fd-material-picker
+                        [inputId]="'field-' + def.key"
+                        [materials]="materials()"
+                        [value]="materialId(def)"
+                        [nullable]="def.nullable ?? false"
+                        [disabled]="disabled()"
+                        (picked)="commitValue(def, $event)"
+                    />
+                }
+                @case ('finishes') {
+                    <fd-finish-bands
+                        [bands]="element()[def.key]"
+                        [nullable]="def.nullable ?? false"
+                        [materials]="materials()"
+                        [disabled]="disabled()"
+                        (bandsChange)="commitValue(def, $event)"
+                    />
+                }
+                @case ('points') {
+                    <fd-points
+                        [points]="element()[def.key]"
+                        [min]="def.minPoints ?? 3"
+                        [closed]="!def.openRun"
+                        [disabled]="disabled()"
+                        (pointsChange)="commitValue(def, $event)"
+                    />
                 }
                 @case ('definition') {
                     <select [id]="'field-' + def.key" class="input input--compact" [disabled]="disabled()" (change)="commit(def, $event)">

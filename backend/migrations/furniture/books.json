@@ -3,6 +3,7 @@
  "description": "A row of books on a shelf: spines of varying width, height, depth and colour (fixed per item; change variety for another row).",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 600,
    "depth": 220,

@@ -9,6 +9,7 @@
     "rockers"
    ]
   },
+  "catalogue": "electrical",
   "size": {
    "width": 80,
    "depth": 10,

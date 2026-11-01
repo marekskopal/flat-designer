@@ -3,6 +3,7 @@
  "description": "Round side, coffee or dining table: a round top on a pedestal with a foot disc, or on four legs.",
  "definition": {
   "format": 1,
+  "catalogue": "tables",
   "size": {
    "width": 560,
    "depth": 560,

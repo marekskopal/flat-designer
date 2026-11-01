@@ -3,6 +3,7 @@
  "description": "A round upholstered pouf with softly rounded edges; as a footstool 450 across and 420 high, a smaller one 380 × 380 (set the item's size).",
  "definition": {
   "format": 1,
+  "catalogue": "seating",
   "size": {
    "width": 450,
    "depth": 450,

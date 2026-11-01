@@ -184,17 +184,23 @@
                     <button type="button" class="icon-button" aria-label="Undo" data-tip="Undo (Ctrl+Z)" [disabled]="editor.busy()" (click)="editor.undo()">
                         <fd-icon name="undo" />
                     </button>
-                    <button type="button" class="icon-button" aria-label="Redo" data-tip="Redo (Ctrl+Shift+Z)" [disabled]="editor.busy()" (click)="editor.redo()">
+                    <button type="button" class="icon-button actions__redo" aria-label="Redo" data-tip="Redo (Ctrl+Shift+Z)" [disabled]="editor.busy()" (click)="editor.redo()">
                         <fd-icon name="redo" />
                     </button>
                     <span class="separator"></span>
                 }
-                <button type="button" class="btn btn--ghost" data-tip="A link to this floor as shown" [disabled]="sharing() !== null" (click)="sharing.set('form')">
-                    <fd-icon name="share" [size]="16" /> Share
+                <button type="button" class="btn btn--ghost" aria-label="Share" data-tip="A link to this floor as shown" [disabled]="sharing() !== null" (click)="sharing.set('form')">
+                    <fd-icon name="share" [size]="16" /> <span class="actions__label">Share</span>
                 </button>
-                <button type="button" class="btn btn--primary" [attr.data-tip]="editor.enabled() ? 'Back to viewing (E)' : 'Edit this floor (E)'" (click)="toggleEdit()">
+                <button
+                    type="button"
+                    class="btn btn--primary"
+                    [attr.aria-label]="editor.enabled() ? 'Done' : 'Edit'"
+                    [attr.data-tip]="editor.enabled() ? 'Back to viewing (E)' : 'Edit this floor (E)'"
+                    (click)="toggleEdit()"
+                >
                     <fd-icon [name]="editor.enabled() ? 'check' : 'pencil'" [size]="16" />
-                    {{ editor.enabled() ? 'Done' : 'Edit' }}
+                    <span class="actions__label">{{ editor.enabled() ? 'Done' : 'Edit' }}</span>
                 </button>
             </div>
         }
@@ -414,6 +420,32 @@
                 </div>
             }
         </aside>
+    } @else if (selectionCard(); as card) {
+        <aside class="float room-card" [attr.aria-label]="card.name">
+            <header class="room-card__head">
+                <span class="room-card__icon"><fd-icon [name]="card.icon" /></span>
+                <span class="room-card__title">
+                    <strong>{{ card.name }}</strong>
+                    <span>{{ card.label }}</span>
+                </span>
+                <button type="button" class="icon-button" aria-label="Deselect" (click)="editor.select(null)">
+                    <fd-icon name="close" [size]="16" />
+                </button>
+            </header>
+            @if (card.facts.length > 0) {
+                <dl class="card-facts">
+                    @for (fact of card.facts; track fact.label) {
+                        <dt>{{ fact.label }}</dt>
+                        <dd>{{ fact.value }}</dd>
+                    }
+                </dl>
+            }
+            @if (canEdit()) {
+                <div class="room-card__foot">
+                    <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> Edit</button>
+                </div>
+            }
+        </aside>
     }
 
     <!-- Hint for the tool at hand. -->
@@ -502,7 +534,7 @@
         @if (editor.enabled()) {
             <span class="separator"></span>
             <button type="button" class="add" [class.add--open]="menu() === 'add'" [attr.aria-expanded]="menu() === 'add'" (click)="toggleMenu('add')">
-                <fd-icon name="plus" /> Add
+                <fd-icon name="plus" /> <span class="add__label">Add</span>
             </button>
         }
         <span class="separator"></span>
@@ -590,6 +622,20 @@
                         </label>
                     </section>
                 }
+                <!-- The dock leaves its wall cut slider out on narrow screens. -->
+                <section class="display__section display__cut">
+                    <h3 class="display__title">Wall cut</h3>
+                    <label class="line">
+                        <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" aria-label="Wall cut height" />
+                        <b class="cut__value">
+                            @if (sectionHeight(); as h) {
+                                {{ h / 1000 | number: '1.2-2' }} m
+                            } @else {
+                                off
+                            }
+                        </b>
+                    </label>
+                </section>
                 <section class="display__section">
                     <h3 class="display__title">Light</h3>
                     <div class="line">

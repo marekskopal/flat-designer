@@ -3,6 +3,7 @@
  "description": "Upholstered sofa: a base on legs, seat and back cushions per seat, and optional arms.",
  "definition": {
   "format": 1,
+  "catalogue": "seating",
   "size": {
    "width": 2100,
    "depth": 900,

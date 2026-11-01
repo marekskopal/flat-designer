@@ -3,6 +3,7 @@
  "description": "A walk-in shower: a fixed glass panel along the front from a wall profile, a rain head on a rod from the ceiling, a mixer on the back wall and a linear drain along it. Set the height to the ceiling.",
  "definition": {
   "format": 1,
+  "catalogue": "bathroom",
   "size": {
    "width": 1200,
    "depth": 900,

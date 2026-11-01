@@ -3,6 +3,7 @@
  "description": "Fixed glass panel of a walk-in shower with a wall profile on one side.",
  "definition": {
   "format": 1,
+  "catalogue": "bathroom",
   "size": {
    "width": 1000,
    "depth": 30,

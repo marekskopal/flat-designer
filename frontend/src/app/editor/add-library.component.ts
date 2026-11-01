@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, signal, viewChild} from '@angular/core';
-import {FurnitureDefinition} from '@app/models/furniture';
+import {CatalogueLabels, FurnitureCatalogue, FurnitureDefinition} from '@app/models/furniture';
 import {OpeningType, Roof, Room, Scene, Wall} from '@app/models/scene';
 import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
@@ -52,6 +52,33 @@ const KindIcons: Readonly<Record<string, IconName>> = {
     Beam: 'column',
     Chimney: 'column',
 };
+
+const CatalogueIcons: Record<FurnitureCatalogue, IconName> = {
+    kitchen: 'cabinet',
+    storage: 'cabinet',
+    seating: 'chair',
+    tables: 'table',
+    bedroom: 'bed',
+    bathroom: 'bath',
+    lighting: 'bulb',
+    electrical: 'plug',
+    decor: 'image',
+    building: 'column',
+    outdoor: 'tree',
+    roof: 'roof',
+};
+
+/** Where a definition is filed: its `catalogue`, else by its electrical category (lights, the rest), else none (Other). */
+function catalogueOf(definition: FurnitureDefinition): FurnitureCatalogue | null {
+    const body = definition.definition;
+    if (body.catalogue !== undefined) {
+        return body.catalogue;
+    }
+    if (body.category === undefined) {
+        return null;
+    }
+    return body.category === 'light' ? 'lighting' : 'electrical';
+}
 
 /** One thing the library adds: `choice` says what (`item:<kind>`, `custom:<id>`, `model:<id>`, `wall`, `opening:<type>`, …). */
 interface AddEntry {
@@ -232,34 +259,28 @@ export class AddLibraryComponent {
                 groups: [{label: 'Fittings & appliances', note: null, entries: kinds.filter((k) => !k.structural).map(kindEntry)}],
             },
         ];
-        const definitions = this.editor.definitions();
-        const definitionEntry = (d: FurnitureDefinition): AddEntry => ({
-            choice: `custom:${d.id}`,
-            label: d.name,
-            icon: d.definition.category === undefined ? 'cabinet' : d.definition.category === 'light' ? 'bulb' : 'plug',
-            description: d.description,
-            blocked: null,
+        const definitionEntry = (d: FurnitureDefinition): AddEntry => {
+            const catalogue = catalogueOf(d);
+            const icon = catalogue === null ? 'box' : CatalogueIcons[catalogue];
+            return {choice: `custom:${d.id}`, label: d.name, icon, description: d.description, blocked: null};
+        };
+        // The catalogue's furniture by where it is filed, in the catalogues' order, then what is filed nowhere.
+        const global = this.editor.definitions().filter((d) => d.scope === 'global');
+        for (const [catalogue, label] of Object.entries(CatalogueLabels) as [FurnitureCatalogue, string][]) {
+            const entries = global.filter((d) => catalogueOf(d) === catalogue).map(definitionEntry);
+            categories.push({key: `furniture-${catalogue}`, label, icon: CatalogueIcons[catalogue], groups: [{label, note: null, entries}]});
+        }
+        categories.push({
+            key: 'furniture-other',
+            label: 'Other furniture',
+            icon: 'box',
+            groups: [{label: 'Other furniture', note: null, entries: global.filter((d) => catalogueOf(d) === null).map(definitionEntry)}],
         });
-        const furniture = definitions.filter((d) => d.scope === 'global');
-        const catalogue = furniture.filter((d) => d.definition.category === undefined).map(definitionEntry);
-        const electrical = furniture.filter((d) => d.definition.category !== undefined).map(definitionEntry);
+        const own = this.editor.definitions().filter((d) => d.scope !== 'global');
         const models = this.editor.models().map(
             (m): AddEntry => ({choice: `model:${m.id}`, label: m.name, icon: 'box', description: m.description, blocked: null}),
         );
-        const own = definitions.filter((d) => d.scope !== 'global');
         categories.push(
-            {
-                key: 'furniture',
-                label: 'Furniture',
-                icon: 'chair',
-                groups: [{label: 'Catalogue', note: null, entries: catalogue}],
-            },
-            {
-                key: 'electrical',
-                label: 'Lights & sockets',
-                icon: 'bulb',
-                groups: [{label: 'Lights, sockets, switches', note: null, entries: electrical}],
-            },
             {
                 key: 'own',
                 label: 'My furniture',
@@ -269,12 +290,7 @@ export class AddLibraryComponent {
                     {label: 'My library', note: null, entries: own.filter((d) => d.scope === 'user').map(definitionEntry)},
                 ],
             },
-            {
-                key: 'models',
-                label: '3D products',
-                icon: 'box',
-                groups: [{label: '3D products', note: null, entries: models}],
-            },
+            {key: 'models', label: '3D products', icon: 'box', groups: [{label: '3D products', note: null, entries: models}]},
         );
         return categories
             .map((c) => ({...c, groups: c.groups.filter((g) => g.entries.length > 0)}))

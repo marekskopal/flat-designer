@@ -74,7 +74,8 @@ export function buildFacades(
  * (`exterior`) over the whole face; none otherwise (the wall's material shows, or with `[]` the bare wall).
  */
 export function facadeBands(wall: Wall, side: 'Left' | 'Right', exterior: number | null): WallFinish[] {
-    const own = side === 'Left' ? wall.leftFinishes : wall.rightFinishes;
+    // Walls from before own bands (an older version's snapshot, a share link of one) have none: as null.
+    const own = (side === 'Left' ? wall.leftFinishes : wall.rightFinishes) ?? null;
     if (own !== null && own.length > 0) {
         return own;
     }

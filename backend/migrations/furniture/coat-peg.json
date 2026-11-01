@@ -3,6 +3,7 @@
  "description": "Round wooden peg out of the wall behind, as thick as the item's width or height, optionally with a knob at the end and angled up.",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 25,
    "depth": 60,

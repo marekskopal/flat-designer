@@ -25,10 +25,22 @@ describe('element fields', () => {
     });
 
     it('round-trips JSON fields', () => {
-        const polygon = [[0, 0], [3000, 0], [3000, 2000]];
-        const def = field('polygon', 'room');
-        expect(parseFieldValue(def, formatFieldValue(def, polygon))).toEqual({ok: true, value: polygon});
-        expect(parseFieldValue(def, '[[0,0]')).toEqual({ok: false, error: 'Invalid JSON.'});
+        const downpipes = [{edge: 'Front', along: 1200}];
+        const def = field('downpipes', 'roof');
+        expect(parseFieldValue(def, formatFieldValue(def, downpipes))).toEqual({ok: true, value: downpipes});
+        expect(parseFieldValue(def, '[{')).toEqual({ok: false, error: 'Invalid JSON.'});
+        expect(parseFieldValue(def, '')).toEqual({ok: true, value: null});
+    });
+
+    it('edits outlines, railing points and finish bands with their own editors, not JSON', () => {
+        expect(['room', 'plot', 'void'].map((kind) => field('polygon', kind as 'room').type)).toEqual(['points', 'points', 'points']);
+        expect(field('points', 'railing')).toMatchObject({type: 'points', minPoints: 2, openRun: true});
+        expect([field('wallFinishes', 'room'), field('leftFinishes', 'wall'), field('rightFinishes', 'wall')].map((f) => f.type)).toEqual([
+            'finishes',
+            'finishes',
+            'finishes',
+        ]);
+        expect(field('leftFinishes', 'wall').nullable).toBe(true);
     });
 
     it('reads checkbox flags', () => {
@@ -49,7 +61,5 @@ describe('element fields', () => {
         expect(wallFaceName(east, 'Right')).toBe('South face');
         expect(wallFaceName({startX: 0, startY: 3000, endX: 0, endY: 0}, 'Left')).toBe('East face');
         expect(wallFaceName({startX: 0, startY: 0, endX: 3000, endY: 3000}, 'Left')).toBe('North-west face');
-        expect(parseFieldValue(field('leftFinishes', 'wall'), '')).toEqual({ok: true, value: null});
-        expect(parseFieldValue(field('leftFinishes', 'wall'), '[]')).toEqual({ok: true, value: []});
     });
 });

@@ -3,6 +3,7 @@
  "description": "Built-in wardrobe: carcass, closed interior, plinth, and sliding doors on two tracks in aluminium frames, any of them a mirror.",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 2400,
    "depth": 600,

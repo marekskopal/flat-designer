@@ -10,6 +10,7 @@
     "kelvin"
    ]
   },
+  "catalogue": "lighting",
   "size": {
    "width": 600,
    "depth": 600,

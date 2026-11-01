@@ -3,6 +3,7 @@
  "description": "Solid wood chair: a seat of two boards narrowing to the back, legs tapered on the inside, aprons, and a back of two posts and two rails leaning back by the rake (5°; s5 / c5 are its sine and cosine, as expressions have no trigonometry — change all three together).",
  "definition": {
   "format": 1,
+  "catalogue": "seating",
   "size": {
    "width": 400,
    "depth": 395,

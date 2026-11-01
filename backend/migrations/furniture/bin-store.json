@@ -3,6 +3,7 @@
  "description": "A concrete bin store: a back, two ends and a roof slab, with a grey steel door per bin.",
  "definition": {
   "format": 1,
+  "catalogue": "outdoor",
   "size": {
    "width": 2400,
    "depth": 900,

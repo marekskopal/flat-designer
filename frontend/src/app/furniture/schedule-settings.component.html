@@ -1,5 +1,14 @@
 <div class="schedule">
     <label class="field">
+        <span class="field__label">Catalogue (the editor's Add library)</span>
+        <select class="input" [disabled]="readOnly()" (change)="setCatalogue($event)">
+            <option value="" [selected]="!body().catalogue">Other</option>
+            @for (catalogue of catalogues; track catalogue[0]) {
+                <option [value]="catalogue[0]" [selected]="body().catalogue === catalogue[0]">{{ catalogue[1] }}</option>
+            }
+        </select>
+    </label>
+    <label class="field">
         <span class="field__label">Electrical schedule</span>
         <select class="input" [disabled]="readOnly()" (change)="setCategory($event)">
             <option value="" [selected]="!body().category">Not counted</option>

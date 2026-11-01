@@ -3,6 +3,7 @@
  "description": "A venetian blind: a head rail and slats tilted by an angle, let down by a percentage.",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 1200,
    "depth": 50,

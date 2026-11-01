@@ -224,6 +224,14 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		yield 'part name too long' => [$definition, 'parts[1].name: Must be a string of at most 255 characters.'];
 
 		$definition = self::Definition;
+		$definition['catalogue'] = 'garage';
+
+		yield 'unknown catalogue' => [
+			$definition,
+			'catalogue: Must be one of kitchen, storage, seating, tables, bedroom, bathroom, lighting, electrical, decor, building, outdoor, roof.',
+		];
+
+		$definition = self::Definition;
 		$definition['schedule'] = ['count' => 't'];
 
 		yield 'schedule settings without a category' => [$definition, 'schedule: Needs a category.'];
@@ -273,6 +281,16 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 
 		self::assertSame(201, $response->getStatusCode());
 		self::assertStringContainsString('"schedule":{"count":"t","values":["t"]}', (string) $response->getBody());
+	}
+
+	public function testTheCatalogueIsStored(): void
+	{
+		$definition = self::Definition;
+		$definition['catalogue'] = 'storage';
+		$response = $this->create(Fixture::createUser(), ['definition' => $definition]);
+
+		self::assertSame(201, $response->getStatusCode());
+		self::assertStringContainsString('"catalogue":"storage"', (string) $response->getBody());
 	}
 
 	public function testValidateWithoutSaving(): void

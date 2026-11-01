@@ -3,6 +3,7 @@
  "description": "Round clothes rail along the width: between two sides on end flanges, hung from the board above on two drops, or held out from the wall behind on two brackets.",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 800,
    "depth": 50,

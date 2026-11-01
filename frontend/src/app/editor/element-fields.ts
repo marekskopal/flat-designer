@@ -8,7 +8,7 @@ import {isCustom} from './custom-params';
 
 /**
  * `definition`: the furniture definition of a Custom item; `custom`: the form generated from that definition (parameter
- * values, slot materials).
+ * values, slot materials); `finishes`: finish bands `[{materialId, bottom, top}]`; `points`: plan points `[[x, y], …]`.
  */
 export type FieldType =
     | 'int'
@@ -22,7 +22,9 @@ export type FieldType =
     | 'definition'
     | 'model'
     | 'custom'
-    | 'spots';
+    | 'spots'
+    | 'finishes'
+    | 'points';
 
 /** Opening types in the order of the inspector and the Add menu. */
 export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
@@ -70,6 +72,9 @@ export interface FieldDef {
     section?: string;
     /** The group this field starts is shown folded at first. */
     folded?: boolean;
+    /** `points`: the fewest it may keep (3, an outline), and whether they run open (a railing's) rather than round. */
+    minPoints?: number;
+    openRun?: boolean;
 }
 
 /** A railing's infill (FD-90), a stair's too. */
@@ -230,15 +235,15 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {
             key: 'leftFinishes',
             label: 'Left face finishes',
-            labelOf: (wall) => `${wallFaceName(wall, 'Left')} finishes [{materialId, bottom, top}] (JSON, empty: the room's)`,
-            type: 'json',
+            labelOf: (wall) => `${wallFaceName(wall, 'Left')} finishes`,
+            type: 'finishes',
             nullable: true,
         },
         {
             key: 'rightFinishes',
             label: 'Right face finishes',
-            labelOf: (wall) => `${wallFaceName(wall, 'Right')} finishes [{materialId, bottom, top}] (JSON, empty: the room's)`,
-            type: 'json',
+            labelOf: (wall) => `${wallFaceName(wall, 'Right')} finishes`,
+            type: 'finishes',
             nullable: true,
         },
     ],
@@ -424,7 +429,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {section: 'Ground', key: 'groundMaterialId', label: 'Ground (empty: lawn)', type: 'material', nullable: true},
         {key: 'groundLevel', label: 'Ground level (+ above, − below the floor)', type: 'int', unit: 'mm'},
         {key: 'terrain', label: 'Spot heights (sloping ground)', type: 'spots'},
-        {section: 'Boundary', folded: true, key: 'polygon', label: 'Boundary [[x, y], …] (JSON)', type: 'json'},
+        {section: 'Boundary', folded: true, key: 'polygon', label: 'Boundary corners', type: 'points'},
     ],
     stair: [
         {section: 'General', key: 'name', label: 'Name', type: 'text'},
@@ -499,7 +504,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         {section: 'General', key: 'name', label: 'Name', type: 'text'},
         {section: 'Lining', key: 'liningMaterialId', label: 'Edge lining (empty: none)', type: 'material', nullable: true, half: true},
         {key: 'liningDepth', label: 'Lining depth (empty: to the ceilings below)', type: 'int', unit: 'mm', nullable: true, half: true},
-        {section: 'Outline', folded: true, key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
+        {section: 'Outline', folded: true, key: 'polygon', label: 'Outline corners', type: 'points'},
     ],
     railing: [
         {section: 'General', key: 'name', label: 'Name', type: 'text'},
@@ -552,7 +557,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             half: true,
             when: (railing) => railing['style'] === 'Glass' || railing['style'] === 'Panel',
         },
-        {section: 'Points', folded: true, key: 'points', label: 'Points [[x, y], …] (JSON)', type: 'json'},
+        {section: 'Points', folded: true, key: 'points', label: 'Points', type: 'points', minPoints: 2, openRun: true},
     ],
     section: [
         {section: 'General', key: 'name', label: 'Name (A: Section A–A)', type: 'text'},
@@ -665,8 +670,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             when: (room) => room['skirtingHeight'] != null,
         },
         {key: 'soffitMaterialId', label: 'Slab soffit where it overhangs (empty: façade)', type: 'material', nullable: true},
-        {section: 'Outline', folded: true, key: 'polygon', label: 'Outline [[x, y], …] (JSON)', type: 'json'},
-        {section: 'Wall finishes', key: 'wallFinishes', label: 'Wall finishes [{materialId, bottom, top}] (JSON)', type: 'json'},
+        {section: 'Outline', folded: true, key: 'polygon', label: 'Outline corners', type: 'points'},
+        {section: 'Wall finishes', key: 'wallFinishes', label: 'Bands', type: 'finishes'},
         {section: 'Tiling', folded: true, key: 'tileOriginX', label: 'Tile joints cross at x', type: 'int', unit: 'mm', nullable: true, half: true},
         {key: 'tileOriginY', label: 'Tile joints cross at y', type: 'int', unit: 'mm', nullable: true, half: true},
         {key: 'floorAngle', label: 'Floor laid at', type: 'int', unit: '°', half: true},

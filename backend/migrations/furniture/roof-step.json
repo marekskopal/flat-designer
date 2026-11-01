@@ -3,6 +3,7 @@
  "description": "Walkway step for a pitched roof: a grating tread on two side brackets, levelled for the roof's pitch. Place it with onRoof, its front down the slope.",
  "definition": {
   "format": 1,
+  "catalogue": "roof",
   "size": {
    "width": 420,
    "depth": 250,

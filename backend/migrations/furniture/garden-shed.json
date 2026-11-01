@@ -3,6 +3,7 @@
  "description": "A timber garden shed with a gable roof, the ridge along its width: clad walls (the gables in boards stepping up to the ridge), a door in the front and roof planes overhanging all round. The height is to the ridge.",
  "definition": {
   "format": 1,
+  "catalogue": "outdoor",
   "size": {
    "width": 2500,
    "depth": 2000,

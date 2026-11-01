@@ -26,6 +26,7 @@ import {AddLibraryComponent} from '@app/editor/add-library.component';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
+import {elementFacts, findElement, KindIcons, KindLabels} from '@app/editor/element-kinds';
 import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {WallDraftComponent} from '@app/editor/wall-draft.component';
@@ -515,12 +516,27 @@ export class ViewerPageComponent {
         }
         return this.editor.enabled() ? this.editor.tool() : 'select';
     });
-    /** The right-hand panel is shown: the inspector while editing with something selected, else a room's card. */
+    /** The right-hand panel is shown: the inspector while editing with something selected, else the selection's card. */
     protected readonly inspectorOpen = computed(() => {
         if (this.editor.enabled()) {
             return this.editor.selection() !== null || this.editor.picked().length > 0;
         }
-        return this.roomInfo() !== null;
+        return this.roomInfo() !== null || this.selectionCard() !== null;
+    });
+    /** Viewing, what is selected other than a room: its kind, name and a few measures. */
+    protected readonly selectionCard = computed(() => {
+        const selection = this.editor.selection();
+        const scene = this.viewedScene();
+        if (selection === null || selection.kind === 'room' || scene === null) {
+            return null;
+        }
+        const element = findElement(scene, selection.kind, selection.id);
+        if (element === null) {
+            return null;
+        }
+        const label = KindLabels[selection.kind];
+        const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : label;
+        return {label, name, icon: KindIcons[selection.kind], facts: elementFacts(scene, selection.kind, element)};
     });
     /** The selected room as the viewer's card shows it: its area, clear height, perimeter and finishes. */
     protected readonly roomInfo = computed(() => {
@@ -661,6 +677,13 @@ export class ViewerPageComponent {
         effect(() => {
             if (this.editor.enabled()) {
                 untracked(() => this.variantOverride.set(null));
+            }
+        });
+        // On a phone the panel and the inspector share the screen's bottom: the inspector, opened by a selection, wins.
+        const phone = window.matchMedia('(max-width: 640px)');
+        effect(() => {
+            if (this.inspectorOpen() && phone.matches) {
+                untracked(() => this.panel.set(null));
             }
         });
         // The editor's panels and the Add library go with edit mode.

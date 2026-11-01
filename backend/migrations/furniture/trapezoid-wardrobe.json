@@ -3,6 +3,7 @@
  "description": "Hinged wardrobe whose top is a trapezoid: a straight end and one end slanted along a diagonal wall (backWidth at the back, W at the doors), with a hat shelf and hanging rail or shelves, on a plinth.",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 1200,
    "depth": 600,

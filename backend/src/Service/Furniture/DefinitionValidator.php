@@ -11,14 +11,14 @@ use FlatDesigner\Service\Editor\Element\State;
 /**
  * Checks a furniture definition before it is saved: what `DefinitionEvaluator` reads (by evaluating it at its default
  * `size` with the parameter defaults), plus what only matters for storing and drawing it — no unknown keys, a `size`,
- * known part types with valid options, existing material codes as slot defaults, a known `category` with valid `schedule` settings and the size limit.
+ * known part types with valid options, existing material codes as slot defaults, a known `catalogue`, a known `category` with valid `schedule` settings and the size limit.
  */
 final readonly class DefinitionValidator
 {
 	/** What the `definition` TEXT column holds. */
 	public const int MaxBytes = 65535;
 
-	private const array Keys = ['format', 'category', 'schedule', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
+	private const array Keys = ['format', 'catalogue', 'category', 'schedule', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
 
 	private const array ParameterKeys = ['key', 'label', 'type', 'default'];
 
@@ -50,6 +50,7 @@ final readonly class DefinitionValidator
 			throw new DefinitionException(DefinitionErrorEnum::Limit, 'definition', sprintf('At most %d bytes of JSON.', self::MaxBytes));
 		}
 		self::checkKeys($definition, self::Keys, '');
+		self::checkCatalogue($definition['catalogue'] ?? null);
 		self::checkCategory($definition['category'] ?? null);
 		[$width, $depth, $height] = self::size($definition['size'] ?? null);
 
@@ -102,6 +103,16 @@ final readonly class DefinitionValidator
 		}
 
 		return [$mm[0], $mm[1], $mm[2]];
+	}
+
+	private static function checkCatalogue(mixed $catalogue): void
+	{
+		if ($catalogue !== null && (!is_string($catalogue) || DefinitionCatalogueEnum::tryFrom($catalogue) === null)) {
+			throw DefinitionException::invalid(
+				'catalogue',
+				sprintf('Must be one of %s.', implode(', ', DefinitionCatalogueEnum::values())),
+			);
+		}
 	}
 
 	private static function checkCategory(mixed $category): void
