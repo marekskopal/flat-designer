@@ -81,13 +81,27 @@ const shoot = async (file) => {
     console.log(`  ${path}`);
 };
 
-/** Hides the plan underlay if the page shows it (it is a display option, not part of a saved view). */
+/**
+ * Hides the plan underlay if the floor has one shown (it is a display option, not part of a saved view): its toggle in
+ * the dock's Display popover, which is closed again.
+ */
 const hideUnderlay = async () => {
-    const underlay = page.getByLabel('Plan underlay');
-    if ((await underlay.count()) > 0 && (await underlay.isChecked())) {
-        await underlay.uncheck();
-        await page.waitForTimeout(300);
+    await page.getByRole('button', {name: 'Display options'}).click();
+    // The popover renders after the click: wait for it before looking for the toggle.
+    await page.locator('.display').waitFor();
+    const underlay = page.locator('.display .toggle', {hasText: 'Underlay'});
+    if ((await underlay.count()) > 0 && (await underlay.evaluate((toggle) => toggle.classList.contains('toggle--on')))) {
+        await underlay.click();
     }
+    await page.keyboard.press('Escape');
+    await calm();
+};
+
+/** No tooltip or focus ring left over from the clicks: the mouse on an empty stretch of the rail, nothing focused. */
+const calm = async () => {
+    await page.mouse.move(28, 600);
+    await page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+    await page.waitForTimeout(300);
 };
 
 console.log(`Saved views of project ${projectId}:`);
@@ -105,19 +119,22 @@ if (viewsOnly) {
     process.exit(0);
 }
 
-// The editor: a room picked in the sidebar's list (which frames it), then edit mode with its inspector. It starts from
-// the first saved view, so that the models and pictures have loaded.
+// The editor: a room picked in the rail's Rooms panel (which frames it), then edit mode with its inspector, the panel
+// closed. It starts from the first saved view, so that the models and pictures have loaded.
 if (views.length > 0) {
     console.log('Editor:');
     await page.goto(`${base}/projects/${projectId}/floors/${views[0].floorId}?view=${views[0].id}`);
     await page.waitForSelector('fd-viewer-page[data-view-ready]', {timeout: 120000});
     await hideUnderlay();
+    await page.getByRole('button', {name: 'Rooms & areas'}).click();
     const rooms = page.locator('button.room');
     const room = editorRoom ? rooms.filter({hasText: editorRoom}).first() : rooms.first();
-    // A DOM click: the panel's footer may cover the row at the bottom of the scrolled list.
+    // A DOM click: the row may be below the panel's scrolled-to part.
     await room.evaluate((button) => button.click());
+    await page.locator('.flyout').getByRole('button', {name: 'Close'}).click();
     await page.getByRole('button', {name: 'Edit', exact: true}).click();
     await page.waitForSelector('fd-inspector');
+    await calm();
     await page.waitForTimeout(1500);
     await shoot('editor');
 }

@@ -728,10 +728,12 @@ format is the text in `FurnitureTools::Format`.
 - Capture PNG: `ViewerEngine.capture()` renders 1600 × 1000 at 2× in the presentation quality, off the visible size
   and without the panel inset, and downloads it or saves it as a project file. Room labels are HTML, so they are not
   in it.
-- `make screenshots PROJECT=… EMAIL=… PASSWORD=… [VIEWS=… ROOM=…]` (`frontend/scripts/screenshots.mjs`, Playwright)
-  writes the saved views of the project whose name starts with `VIEWS`, the editor with `ROOM`'s inspector open, the
-  project page, cut list, furniture library, furniture editor and a share link to `docs/screenshots/`, with the app's
-  UI and the plan underlay hidden; `VIEWS_ONLY=1` writes the views alone. With `cwebp` on the PATH it saves WebP 1600 px
+- `make screenshots PROJECT=… [EMAIL=… PASSWORD=…] [VIEWS=… ROOM=…]` (`frontend/scripts/screenshots.mjs`, Playwright;
+  the login defaults to `SCREENSHOTS_EMAIL` / `SCREENSHOTS_PASSWORD` from `.env`, as for `make benchmark`, and the
+  recipes are silent so it is not printed) writes the saved views of the project whose name starts with `VIEWS`, the
+  editor with `ROOM`'s inspector open, the project page, cut list, furniture library, furniture editor and a share link
+  to `docs/screenshots/`, with the plan underlay hidden (Display popover) and no tooltip or focus left from its clicks;
+  `VIEWS_ONLY=1` writes the views alone. With `cwebp` on the PATH it saves WebP 1600 px
   wide. The README tour uses the demo flat's "Tour · …" views and the demo house's "House tour · …" views (project 13
   locally, `VIEWS_ONLY=1`), plus its first floor's plan PDF and section B–B rendered from the exports
   (`house-plan.webp`, `house-section.webp`); keep the unlicensed poster and plan, and the house's source drawings and
