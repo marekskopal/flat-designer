@@ -827,11 +827,13 @@ format is the text in `FurnitureTools::Format`.
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
   definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside
   every room go under a room with `id` null). Rows group one definition with the same `schedule.values` at the same
-  `z`, their `units` summing `schedule.count`; the totals give the sockets' `outlets` and the data sockets'
-  `dataPorts`. PHP only.
+  `z`, their `units` summing `schedule.count` (`DefinitionSchedule::units()`); the totals give the sockets' `outlets`
+  and the data sockets' `dataPorts`. The rows are PHP only; what an item counts as is twinned by `scheduleUnits()` in
+  `electrical.ts` (the plan's gang marks, the PDF legend), kept identical by `backend/tests/fixtures/electrical-units.json`.
+  **Always change both twins and add a fixture case in the same change.**
 - Electrical plan (FD-64, plan in `docs/electrical-plan.md`): `viewer/engine/electrical.ts` (framework-free) gives the
-  points (`electricalPoints()`: wall points on the middle of the item's front edge, facing out; lights at the centre;
-  hidden variants left out) and their symbols as unit-frame polylines in two sets, `Iec` and `Csn`
+  points (`electricalPoints()`: wall points on the middle of the item's back edge, the wall face, facing out; lights at
+  the centre; hidden variants left out; `hasElectricalPoints()` only tells whether there are any) and their symbols as unit-frame polylines in two sets, `Iec` and `Csn`
   (`ElectricalSymbolSets`, `symbolPolylines()`). The user picks the set on the account page (`users.electrical_symbols`,
   `UserDto::$electricalSymbols`, `PATCH /api/current-user`); share guests get the owner's (`SharedViewDto`). The
   Display toggle "Electrical (Plan)" (shown when the floor has points; `electrical` in saved views and share links)
@@ -839,7 +841,8 @@ format is the text in `FurnitureTools::Format`.
   no depth test, not pickable, the wall points' elevations as CSS2D labels; hidden while items are previewed, and
   from an item drag until the edit comes back or `restore()` puts them back). `planSheet(scene, info, symbols)` is the
   electrical plan PDF (Export → Electrical PDF): the furniture faint without names or dimensions, the symbols, the
-  elevations and a legend with the counts in a strip `planLayout(bounds, reserved)` keeps above the title band.
+  elevations (each at the first free spot round its symbol, never left out) and a legend with the counts in a strip
+  `planLayout(bounds, reserved)` keeps above the title band (shrunk to fit, every category with its plain symbol).
 - Quantities and cost: `Service/Quantities/QuantitiesService` (REST `…/quantities`, MCP `get_quantities`, page
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without

@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, inject, input, signal} fro
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {Scene} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
-import {electricalPoints} from '@app/viewer/engine/electrical';
+import {hasElectricalPoints} from '@app/viewer/engine/electrical';
 import {elevationSheets} from '@app/viewer/engine/elevations';
 import {planSheet, roomScheduleSheets} from '@app/viewer/engine/plan-drawing';
 import {facadeSheets, SectionCut, sectionSheets} from '@app/viewer/engine/sections';
@@ -125,7 +125,7 @@ export class ExportComponent {
     public readonly electricalSymbols = input<ElectricalSymbols>('Iec');
 
     /** The floor has electrical points: the electrical plan is offered. */
-    protected readonly hasElectrical = computed(() => electricalPoints(this.scene()).length > 0);
+    protected readonly hasElectrical = computed(() => hasElectricalPoints(this.scene()));
 
     private readonly alerts = inject(AlertService);
     protected readonly busy = signal(false);

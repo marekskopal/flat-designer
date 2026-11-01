@@ -213,7 +213,17 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
         return true;
     };
     const symbols = electrical === undefined ? [] : points.flatMap((point) => electricalShapes(point, electrical, s));
-    const elevations = points.flatMap((point) => elevationLabel(point, s)).filter(free);
+    // A wall point's elevation is what the electrician needs: it takes the first free spot round its symbol, else the
+    // first one anyway (overlapping beats leaving it out).
+    const elevations = points.flatMap((point): Label[] => {
+        const spots = elevationLabels(point, s);
+        const spot = spots.find(free);
+        if (spot !== undefined || spots.length === 0) {
+            return spot === undefined ? [] : [spot];
+        }
+        taken.push(labelBox(spots[0], toPaper));
+        return [spots[0]];
+    });
     const dimensions = electrical === undefined ? dimensionLabels(scene, s).filter(free) : [];
     const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s)).filter(free);
     const itemLabels = electrical === undefined ? items.flatMap((item) => itemLabel(item, s)).filter(free) : [];
@@ -252,6 +262,9 @@ const SymbolPaper = 3.6;
 /** The strip above the title band the electrical plan keeps for its legend, paper mm. */
 const LegendBand = 6;
 const ElevationText = 1.7;
+/** The legend's symbol and text size, paper mm, before it is shrunk to fit the width. */
+const LegendSymbol = 2.8;
+const LegendText = 2.2;
 
 /** An item outlined faintly under the electrical symbols; columns and chimneys stay filled. */
 function faintItemShape(item: Item): Shape {
@@ -265,52 +278,66 @@ function electricalShapes(point: ElectricalPoint, symbols: ElectricalSymbols, sc
     return symbolPolylines(point, symbols, SymbolPaper * scale).map((polyline) => ({...polyline, style}));
 }
 
-/** A wall point's elevation just past its symbol; none for lights. */
-function elevationLabel(point: ElectricalPoint, scale: number): Label[] {
+/**
+ * Where a wall point's elevation may go, best first: just past its symbol, further out, then beside the symbol's tip
+ * on either side along the wall; none for lights.
+ */
+function elevationLabels(point: ElectricalPoint, scale: number): Label[] {
     if (!isWallMounted(point)) {
         return [];
     }
-    const reach = SymbolPaper * scale * 1.15;
-    return [
-        {
-            at: {x: point.at.x + point.out.x * reach, y: point.at.y + point.out.y * reach},
-            lines: [{text: elevationText(point), size: ElevationText, color: Muted}],
-        },
+    const unit = SymbolPaper * scale;
+    const along = {x: -point.out.y, y: point.out.x};
+    const spots: [number, number][] = [
+        [1.15, 0],
+        [1.6, 0],
+        [0.6, 1],
+        [0.6, -1],
+        [2.05, 0],
     ];
+    return spots.map(([out, side]) => ({
+        at: {
+            x: point.at.x + (point.out.x * out + along.x * side) * unit,
+            y: point.at.y + (point.out.y * out + along.y * side) * unit,
+        },
+        lines: [{text: elevationText(point), size: ElevationText, color: Muted}],
+    }));
 }
 
 /**
  * The legend in the strip `planLayout()` keeps above the title band: each category on the floor with its symbol and
- * count (a socket's outlets, a data socket's ports in brackets), in one row. A symbol is drawn as on the plan, facing
- * north, its plan frame flipped onto the paper.
+ * count (a socket's outlets, a data socket's ports in brackets), in one row, smaller where it would not fit, so no
+ * category is left out. A symbol is drawn as on the plan, facing north, its plan frame flipped onto the paper: the
+ * category's plain symbol (one gang, a single switch), not that of the first point.
  */
 function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoint[], symbols: ElectricalSymbols): string {
-    const baseline = layout.height - Margin - TitleBand - 1.8;
-    const right = layout.width - Margin - Padding;
-    const size = 2.8;
-    const parts: string[] = [];
-    let x = Margin + Padding;
-    for (const category of Object.keys(CategoryLabels) as ElectricalCategory[]) {
+    const entries = (Object.keys(CategoryLabels) as ElectricalCategory[]).flatMap((category) => {
         const of = points.filter((p) => p.category === category);
         if (of.length === 0) {
-            continue;
+            return [];
         }
         const units = of.reduce((sum, p) => sum + p.units, 0);
         const counted = (category === 'socket' || category === 'data') && units !== of.length;
-        const label = `${CategoryLabels[category]} ${of.length}${counted ? ` (${units})` : ''}`;
-        const width = size + 1.5 + textWidth(label, 2.2) + 4;
-        if (x + width > right) {
-            break;
-        }
+        return [{category, label: `${CategoryLabels[category]} ${of.length}${counted ? ` (${units})` : ''}`}];
+    });
+    const room = layout.width - 2 * (Margin + Padding);
+    const natural = entries.reduce((sum, e) => sum + LegendSymbol + 1.5 + textWidth(e.label, LegendText) + 4, 0);
+    const k = Math.min(1, room / natural);
+    const size = LegendSymbol * k;
+    const fontSize = LegendText * k;
+    const baseline = layout.height - Margin - TitleBand - 1.8;
+    const parts: string[] = [];
+    let x = Margin + Padding;
+    for (const {category, label} of entries) {
         // The symbol's foot on the baseline, reaching up (a light centred on the text).
-        const anchor = {x: x + size / 2, y: category === 'light' ? baseline - 0.9 : baseline + 0.4};
-        const sample: ElectricalPoint = {...of[0], at: {x: 0, y: 0}, out: {x: 0, y: 1}, units: Math.min(of[0].units, 1)};
+        const anchor = {x: x + size / 2, y: category === 'light' ? baseline - 0.9 * k : baseline + 0.4 * k};
+        const sample: ElectricalPoint = {itemId: 0, category, at: {x: 0, y: 0}, out: {x: 0, y: 1}, z: 0, units: 1, values: {}};
         for (const polyline of symbolPolylines(sample, symbols, size)) {
             const onPaper = polyline.points.map((p) => ({x: anchor.x + p.x, y: anchor.y - p.y}));
             parts.push(path(onPaper, polyline.closed, {stroke: CategoryColors[category], width: 0.2}));
         }
-        parts.push(text({x: x + size + 1.5, y: baseline}, label, 2.2));
-        x += width;
+        parts.push(text({x: x + size + 1.5 * k, y: baseline}, label, fontSize));
+        x += (LegendSymbol + 1.5 + textWidth(label, LegendText) + 4) * k;
     }
     return parts.join('');
 }

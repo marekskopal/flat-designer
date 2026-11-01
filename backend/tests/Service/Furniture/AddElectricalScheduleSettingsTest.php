@@ -19,7 +19,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * The tagged seeds lose their schedule settings and get them back, the rest of the JSON unchanged; a library copy of
- * the socket gets its count, an untagged one nothing.
+ * the socket gets its count, an untagged one nothing; a seed an admin has changed gets only the settings its parameters
+ * still allow.
  */
 #[CoversClass(AddElectricalScheduleSettingsMigration::class)]
 final class AddElectricalScheduleSettingsTest extends IntegrationTestCase
@@ -59,6 +60,39 @@ final class AddElectricalScheduleSettingsTest extends IntegrationTestCase
 		$copies = self::definitions($pdo, 'user_id IS NOT NULL');
 		self::assertSame(['count' => 'gangs'], JsonDecoder::decodeObject($copies['My socket'])['schedule'] ?? null);
 		self::assertArrayNotHasKey('schedule', JsonDecoder::decodeObject($copies['My untagged socket']));
+	}
+
+	public function testLeavesOutTheParametersAnAdminRemoved(): void
+	{
+		$pdo = Fixture::service(DatabaseInterface::class)->getPdo();
+		FurnitureSeeds::insert($pdo, SeedLightingCatalogueMigration::Files);
+		$migration = self::migration();
+		$migration->down();
+
+		$downlight = JsonDecoder::decodeObject(self::definitions($pdo, 'user_id IS NULL')['Downlight, recessed round']);
+		self::assertIsArray($downlight['parameters']);
+		$downlight['parameters'] = array_values(array_filter(
+			$downlight['parameters'],
+			static fn (mixed $p): bool => !is_array($p) || ($p['key'] ?? null) !== 'angle',
+		));
+		$socket = JsonDecoder::decodeObject(self::definitions($pdo, 'user_id IS NULL')['Socket outlet (Schuko)']);
+		self::assertIsArray($socket['parameters']);
+		$socket['parameters'] = array_values(array_filter(
+			$socket['parameters'],
+			static fn (mixed $p): bool => !is_array($p) || ($p['key'] ?? null) !== 'gangs',
+		));
+		$update = FurnitureSeeds::prepare($pdo, 'UPDATE furniture_definitions SET definition = ? WHERE name = ? AND user_id IS NULL');
+		$update->execute([json_encode($downlight), 'Downlight, recessed round']);
+		$update->execute([json_encode($socket), 'Socket outlet (Schuko)']);
+
+		$migration->up();
+
+		$seeded = self::definitions($pdo, 'user_id IS NULL');
+		self::assertSame(
+			['values' => ['lumens', 'kelvin']],
+			JsonDecoder::decodeObject($seeded['Downlight, recessed round'])['schedule'] ?? null,
+		);
+		self::assertArrayNotHasKey('schedule', JsonDecoder::decodeObject($seeded['Socket outlet (Schuko)']));
 	}
 
 	/** @return array<string, string> the stored JSON by name */

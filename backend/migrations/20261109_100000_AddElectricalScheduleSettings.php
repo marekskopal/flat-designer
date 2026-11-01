@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Migrations;
 
 use FlatDesigner\Service\Furniture\DefinitionEncoder;
+use FlatDesigner\Service\Furniture\DefinitionSchedule;
 use FlatDesigner\Service\Furniture\DefinitionValidator;
 use FlatDesigner\Service\Furniture\FurnitureSeeds;
 use FlatDesigner\Service\Json\JsonDecoder;
@@ -13,7 +14,8 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 /**
  * The tagged definitions get the `schedule` settings the electrical schedule now reads (FD-64) instead of counting a
  * parameter `gangs` by name. The global seeds get their files' settings, patched in place, so an admin's later edits
- * stay (a fresh database gets the files already). Copies in libraries and projects tagged `socket` with an int `gangs`,
+ * stay (a fresh database gets the files already); a parameter an admin has removed or retyped since is left out of
+ * them, as `DefinitionSchedule::check()` would refuse every later save. Copies in libraries and projects tagged `socket` with an int `gangs`,
  * or `data` with an int `ports`, get only `count`, so their rows list the values they did; untagged ones stay as they
  * are.
  */
@@ -42,7 +44,8 @@ final class AddElectricalScheduleSettingsMigration extends Migration
 			if (isset($definition['schedule']) || !is_string($definition['category'] ?? null)) {
 				return null;
 			}
-			$schedule = $global && $name !== null ? self::Seeds[$name] ?? null : null;
+			$seed = $global && $name !== null ? self::Seeds[$name] ?? null : null;
+			$schedule = $seed === null ? null : self::applicable($definition, $seed);
 			if ($schedule === null) {
 				$count = self::Counts[$definition['category']] ?? null;
 				$counted = array_filter(
@@ -66,6 +69,41 @@ final class AddElectricalScheduleSettingsMigration extends Migration
 				? array_diff_key($definition, ['schedule' => true])
 				: null,
 		);
+	}
+
+	/**
+	 * The seed's settings as far as the definition still has their parameters: `count` an int one, `values` int, bool
+	 * or select ones; null when nothing is left.
+	 *
+	 * @param array<mixed> $definition
+	 * @param array{count?: string, values?: list<string>} $seed
+	 * @return array<string, mixed>|null
+	 */
+	private static function applicable(array $definition, array $seed): ?array
+	{
+		$types = [];
+		foreach (DefinitionValidator::list($definition, 'parameters') as $parameter) {
+			if (is_string($parameter['key'] ?? null) && is_string($parameter['type'] ?? null)) {
+				$types[$parameter['key']] = $parameter['type'];
+			}
+		}
+		$schedule = [];
+		if (isset($seed['count']) && ($types[$seed['count']] ?? null) === 'int') {
+			$schedule['count'] = $seed['count'];
+		}
+		if (isset($seed['values'])) {
+			$values = array_values(
+				array_filter(
+					$seed['values'],
+					static fn (string $key): bool => in_array($types[$key] ?? null, DefinitionSchedule::ValueTypes, true),
+				),
+			);
+			if ($values !== []) {
+				$schedule['values'] = $values;
+			}
+		}
+
+		return $schedule === [] ? null : $schedule;
 	}
 
 	/**

@@ -1,10 +1,22 @@
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+
 import {ElectricalCategory, ElectricalSymbols} from '@app/models/electrical-schedule';
 import {FurnitureDefinitionBody} from '@app/models/furniture';
 import {Item, Scene} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
-import {buildElectrical, electricalPoints, ElectricalSymbolSets, elevationText, symbolPolylines, SymbolSize} from './electrical';
+import {
+    buildElectrical,
+    electricalPoints,
+    ElectricalSymbolSets,
+    elevationText,
+    hasElectricalPoints,
+    scheduleUnits,
+    symbolPolylines,
+    SymbolSize,
+} from './electrical';
 
 const definition = (category: ElectricalCategory | undefined, extra: Partial<FurnitureDefinitionBody> = {}): FurnitureDefinitionBody => ({
     format: 1,
@@ -48,10 +60,10 @@ const scene = (items: Item[]): Scene =>
     }) as unknown as Scene;
 
 describe('electrical points', () => {
-    it('puts a wall point on its front edge facing out, a light at its centre', () => {
+    it('puts a wall point on its back edge (the wall face) facing out, a light at its centre', () => {
         const [wall, light] = electricalPoints(scene([item(1, 1, {rotation: 90}), item(2, 2, {z: 2500})]));
-        // Turned 90° the front faces east.
-        expect(wall.at.x).toBeCloseTo(1005);
+        // Turned 90° the front faces east, so the back (on the wall) is 5 mm west of the centre.
+        expect(wall.at.x).toBeCloseTo(995);
         expect(wall.at.y).toBeCloseTo(2000);
         expect(wall.out.x).toBeCloseTo(1);
         expect(wall.out.y).toBeCloseTo(0);
@@ -77,6 +89,15 @@ describe('electrical points', () => {
         const items = [item(1, 3), item(2, 1, {kind: 'Model' as Item['kind']}), item(3, 1, {groupId: 10}), item(4, 1)];
         expect(electricalPoints(scene(items)).map((p) => p.itemId)).toEqual([4]);
         expect(electricalPoints({items: [item(1, 1)]} as unknown as Scene)).toEqual([]);
+    });
+
+    it('tells whether the floor shows any point, as the points do', () => {
+        const cases = [[], [item(1, 3)], [item(2, 1, {kind: 'Model' as Item['kind']})], [item(3, 1, {groupId: 10})], [item(1, 3), item(4, 2)]];
+        for (const items of cases) {
+            expect(hasElectricalPoints(scene(items))).toBe(electricalPoints(scene(items)).length > 0);
+        }
+        expect(hasElectricalPoints(scene([item(4, 2)]))).toBe(true);
+        expect(hasElectricalPoints({items: [item(1, 1)]} as unknown as Scene)).toBe(false);
     });
 });
 
@@ -128,5 +149,16 @@ describe('electrical symbols', () => {
         const group = buildElectrical(points, 'Csn');
         expect(group.children.filter((c) => c instanceof THREE.LineSegments)).toHaveLength(2);
         expect(group.children.filter((c) => c.type === 'Object3D' && 'element' in c)).toHaveLength(1);
+    });
+});
+
+/** Shared with the backend twin (`DefinitionScheduleUnitsTest`): what an item counts as. */
+const fixture = JSON.parse(readFileSync(resolve(process.cwd(), '../backend/tests/fixtures/electrical-units.json'), 'utf8')) as {
+    cases: {name: string; definition: Omit<FurnitureDefinitionBody, 'format' | 'parts'>; given: Record<string, unknown>; units: number}[];
+};
+
+describe('scheduleUnits (shared fixture)', () => {
+    it.each(fixture.cases)('$name', (testCase) => {
+        expect(scheduleUnits({format: 1, parts: [], ...testCase.definition}, testCase.given)).toBe(testCase.units);
     });
 });
