@@ -1,7 +1,7 @@
-FROM node:24.22.1-alpine AS build
+FROM node:24.22.2-alpine AS build
 WORKDIR /app
 
-RUN npm install -g pnpm@12.15.0
+RUN npm install -g pnpm@12.16.1
 ENV PNPM_STRICT_DEP_BUILDS=false
 
 COPY ./package.json ./pnpm-lock.yaml* ./.npmrc ./pnpm-workspace.yaml ./
