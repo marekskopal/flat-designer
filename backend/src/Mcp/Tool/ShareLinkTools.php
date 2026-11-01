@@ -87,6 +87,7 @@ final readonly class ShareLinkTools
 	 * @param bool $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700); null = no cut
 	 * @param bool $dimensions show the dimension lines of the rooms in the top view at the start
+	 * @param bool $electrical show the electrical symbols (lights, sockets, switches, …) in the top view at the start
 	 * @param bool $night start at night: no daylight, the flat lit by its lights
 	 * @param int|null $sunMonth with `sunHour`: the sun on the 21st of this month (1–12), from the project's location and north
 	 *   angle (update_project); null = the default afternoon sun
@@ -116,6 +117,7 @@ final readonly class ShareLinkTools
 		bool $labels = true,
 		?int $sectionHeight = null,
 		bool $dimensions = false,
+		bool $electrical = false,
 		bool $night = false,
 		?int $sunMonth = null,
 		?float $sunHour = null,
@@ -135,6 +137,7 @@ final readonly class ShareLinkTools
 			'labels' => $labels,
 			'sectionHeight' => $sectionHeight,
 			'dimensions' => $dimensions,
+			'electrical' => $electrical,
 			'night' => $night,
 			'sun' => SunTimeDto::fields($sunMonth, $sunHour),
 			'presentation' => $presentation,
@@ -160,6 +163,7 @@ final readonly class ShareLinkTools
 	 * @param bool|null $labels show room labels at the start
 	 * @param int|null $sectionHeight wall cut at the start, mm above the floor (900–2700)
 	 * @param bool|null $dimensions show the dimension lines in the top view at the start
+	 * @param bool|null $electrical show the electrical symbols in the top view at the start
 	 * @param bool|null $night start at night (lit by the flat's lights)
 	 * @param int|null $sunMonth the sun on the 21st of this month (1–12); with `sunHour`, or alone to keep the link's hour
 	 * @param float|null $sunHour clock time on site of the sun, 0–24; alone, the link's month stays
@@ -190,6 +194,7 @@ final readonly class ShareLinkTools
 		?bool $labels = null,
 		?int $sectionHeight = null,
 		?bool $dimensions = null,
+		?bool $electrical = null,
 		?bool $night = null,
 		?int $sunMonth = null,
 		?float $sunHour = null,
@@ -213,6 +218,7 @@ final readonly class ShareLinkTools
 				'labels' => $labels,
 				'sectionHeight' => $sectionHeight,
 				'dimensions' => $dimensions,
+				'electrical' => $electrical,
 				'night' => $night,
 				'sun' => SunTimeDto::fields($sunMonth, $sunHour, is_array($current['sun'] ?? null) ? $current['sun'] : null),
 				'presentation' => $presentation,

@@ -1,4 +1,4 @@
-import {ElectricalCategory} from '@app/models/electrical-schedule';
+import {DefinitionScheduleSettings, ElectricalCategory} from '@app/models/electrical-schedule';
 /**
  * Furniture definitions (format 1): a custom piece of furniture as parameters and parts whose position and size are
  * expressions (see docs/furniture-definitions-plan.md and `viewer/engine/custom`). Lengths are mm; the frame has its
@@ -65,6 +65,8 @@ export interface FurnitureDefinitionBody {
     format: 1;
     /** What the electrical schedule counts the items as; the evaluators do not read it. */
     category?: ElectricalCategory;
+    /** What the electrical schedule counts and lists (with a category); the evaluators do not read it. */
+    schedule?: DefinitionScheduleSettings;
     /** Size of a new item (mm). */
     size?: {width: number; depth: number; height: number};
     parameters?: DefinitionParameter[];

@@ -19,6 +19,7 @@ export interface ShareSource {
     labels: boolean;
     sectionHeight: number | null;
     dimensions: boolean;
+    electrical?: boolean;
     night?: boolean;
     sun?: SunTime | null;
     presentation?: boolean;
@@ -100,7 +101,8 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
             @if (link() === null) {
                 <p class="field__hint">
                     Creating the link saves a version of the project: guests see this floor as it is now, later edits do not
-                    reach them. The display (ceilings, roof, labels, wall cut, dimensions, night, sun time, quality, all floors) and the
+                    reach them. The display (ceilings, roof, labels, wall cut, dimensions, electrical symbols, night, sun time, quality, all
+                    floors) and the
                     shown variants are kept too.
                 </p>
             }
@@ -292,6 +294,7 @@ export class ShareLinkFormComponent {
             labels: display.labels,
             sectionHeight: display.sectionHeight,
             dimensions: display.dimensions,
+            electrical: display.electrical ?? false,
             night: display.night ?? false,
             sun: display.sun ?? null,
             presentation: display.presentation ?? false,

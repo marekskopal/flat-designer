@@ -42,12 +42,13 @@ final class SavedViewControllerTest extends EditorTestCase
 		$updated = $this->request('PUT', $this->viewPath($view['id']), [
 			'floorId' => $this->floor->id,
 			'name' => 'Plan',
-			'settings' => ['view' => 'top', 'dimensions' => true, 'roofs' => false],
+			'settings' => ['view' => 'top', 'dimensions' => true, 'roofs' => false, 'electrical' => true],
 		], $this->user);
 		self::assertSame(200, $updated->getStatusCode());
 		$updatedSettings = $this->jsonBody($updated)['settings'];
 		self::assertIsArray($updatedSettings);
 		self::assertFalse($updatedSettings['roofs']);
+		self::assertTrue($updatedSettings['electrical']);
 		$listed = $this->jsonList($this->request('GET', $this->viewsPath(), authenticatedAs: $this->user));
 		self::assertCount(1, $listed);
 		self::assertIsArray($listed[0]['settings']);

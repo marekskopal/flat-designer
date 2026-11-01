@@ -37,6 +37,7 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		$switch = $this->seeded('Light switch (rocker)');
 		$downlight = $this->seeded('Downlight, recessed round');
 		$data = $this->seeded('Data socket (RJ45)');
+		$pendant = $this->seeded('Pendant, bare bulb');
 
 		// Two double sockets above the worktop and a single one at skirting height, against the kitchen's north and south walls.
 		foreach ([1000, 1500] as $x) {
@@ -46,6 +47,9 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		// The kitchen's switch stands in the hall's outline but is linked to the kitchen.
 		$this->point($switch, 4100, 5, 1050, roomId: $kitchen);
 		$this->point($downlight, 5000, 1500, 2500);
+		// Pendants differing only in what the schedule does not list (`sag`) share a row.
+		$this->point($pendant, 4500, 1000, 1800, ['sag' => 60]);
+		$this->point($pendant, 5500, 1000, 1800, ['sag' => 200]);
 		// Outside every room.
 		$this->point($data, 8000, 8000, 300);
 		// Not counted: a box, and a socket of the hidden variant.
@@ -72,15 +76,22 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 			[
 				['socket', 'Socket outlet (Schuko)', ['gangs' => 1], 300, 1, 1],
 				['socket', 'Socket outlet (Schuko)', ['gangs' => 2], 1100, 2, 4],
-				['switch', 'Light switch (rocker)', ['rockers' => 'single'], 1050, 1, 0],
+				['switch', 'Light switch (rocker)', ['rockers' => 'single'], 1050, 1, 1],
 			],
 			self::rows($kitchenRow['rows']),
 		);
+		self::assertSame(
+			[
+				['light', 'Downlight, recessed round', ['lumens' => 550, 'kelvin' => 3000, 'angle' => 70], 2500, 1, 1],
+				['light', 'Pendant, bare bulb', ['lumens' => 400, 'kelvin' => 2200], 1800, 2, 2],
+			],
+			self::rows($hallRow['rows']),
+		);
 		self::assertEquals(self::totals(sockets: 3, outlets: 5, switches: 1), $kitchenRow['totals']);
-		self::assertEquals(self::totals(lights: 1), $hallRow['totals']);
+		self::assertEquals(self::totals(lights: 3), $hallRow['totals']);
 		self::assertSame('Not in a room', $outside['name']);
-		self::assertEquals(self::totals(dataSockets: 1), $outside['totals']);
-		$total = self::totals(lights: 1, sockets: 3, outlets: 5, switches: 1, dataSockets: 1);
+		self::assertEquals(self::totals(dataSockets: 1, dataPorts: 2), $outside['totals']);
+		$total = self::totals(lights: 3, sockets: 3, outlets: 5, switches: 1, dataSockets: 1, dataPorts: 2);
 		self::assertEquals($total, $floor['totals']);
 		self::assertEquals($total, $schedule['totals']);
 
@@ -110,6 +121,19 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		$schedule = $this->schedule(false);
 
 		self::assertEquals(self::totals(sockets: 1, outlets: 1), $schedule['totals']);
+
+		// Without schedule settings (older JSON) a socket counts its int `gangs`, as before them.
+		$older = [...$definition, 'parameters' => [['key' => 'gangs', 'type' => 'int', 'default' => 1]]];
+		$response = $this->request(
+			'POST',
+			Routes::FurnitureDefinitions->value,
+			['name' => 'Old socket', 'definition' => $older],
+			$this->user,
+		);
+		self::assertSame(201, $response->getStatusCode(), (string) $response->getBody());
+		$this->point(self::id($this->jsonBody($response)), 2000, 1000, 300, ['gangs' => 3]);
+		self::assertEquals(self::totals(sockets: 2, outlets: 4), $this->schedule(false)['totals']);
+
 		$definition['category'] = 'heating';
 		$invalid = $this->request(
 			'POST',
@@ -148,7 +172,7 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		return $definition->id ?? self::fail(sprintf('No seeded definition "%s".', $name));
 	}
 
-	/** @return list<array{mixed, mixed, mixed, mixed, mixed, mixed}> category, name, values, z, count, outlets */
+	/** @return list<array{mixed, mixed, mixed, mixed, mixed, mixed}> category, name, values, z, count, units */
 	private static function rows(mixed $rows): array
 	{
 		self::assertIsList($rows);
@@ -156,7 +180,7 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		return array_map(static function (mixed $row): array {
 			self::assertIsArray($row);
 
-			return [$row['category'], $row['name'], $row['values'], $row['z'], $row['count'], $row['outlets']];
+			return [$row['category'], $row['name'], $row['values'], $row['z'], $row['count'], $row['units']];
 		}, $rows);
 	}
 
@@ -167,9 +191,10 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		int $outlets = 0,
 		int $switches = 0,
 		int $dataSockets = 0,
+		int $dataPorts = 0,
 		int $plumbingPoints = 0,
 	): array {
-		return compact('lights', 'sockets', 'outlets', 'switches', 'dataSockets', 'plumbingPoints');
+		return compact('lights', 'sockets', 'outlets', 'switches', 'dataSockets', 'dataPorts', 'plumbingPoints');
 	}
 
 	/** @return array<string, mixed> */

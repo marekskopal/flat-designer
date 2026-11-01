@@ -44,7 +44,7 @@
                         @for (room of floor.rooms; track room.id) {
                             <tr [class.outdoor]="room.outdoor || room.ancillary">
                                 <td>
-                                    <span class="code">{{ room.code.replace('H1/', '') }}</span>
+                                    <span class="code">{{ roomCodeText(room.code) }}</span>
                                     {{ room.name }}
                                 </td>
                                 <td class="num">{{ room.area | number: '1.2-2' }}</td>

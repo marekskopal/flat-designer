@@ -42,6 +42,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		'comments' => 'read',
 		'allFloors' => false,
 		'roofs' => false,
+		'electrical' => true,
 	];
 
 	public function testCreatingALinkSavesAVersionAndGuestsSeeIt(): void
@@ -85,6 +86,11 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		);
 		self::assertIsList($view['scene']['walls']);
 		self::assertCount(1, $view['scene']['walls']);
+		self::assertSame('Iec', $view['electricalSymbols']);
+
+		// The guest draws the electrical plan with the owner's symbols.
+		$this->request('PATCH', Routes::CurrentUser->value, ['electricalSymbols' => 'Csn'], $user);
+		self::assertSame('Csn', $this->jsonBody($this->request('GET', self::sharePath($token)))['electricalSymbols']);
 	}
 
 	public function testAllFloorsLinksShowTheFloorsBelowAndAbove(): void
@@ -227,7 +233,8 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		self::assertSame(200, $updated->getStatusCode());
 		$body = $this->jsonBody($updated);
 		self::assertSame('Renamed', $body['name']);
-		// Without the flags (a link from before dimension lines, the night view, the quality and stacked floors), they are
+		// Without the flags (a link from before dimension lines, the night view, the quality, stacked floors and the
+		// electrical plan), they are
 		// off; exports are allowed, comments hidden and roofs shown.
 		self::assertSame(
 			[
@@ -240,6 +247,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 				'comments' => 'hidden',
 				'allFloors' => false,
 				'roofs' => true,
+				'electrical' => false,
 			],
 			$body['settings'],
 		);

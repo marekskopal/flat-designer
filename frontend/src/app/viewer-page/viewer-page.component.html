@@ -6,6 +6,8 @@
     [roofsVisible]="roofsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
+    [electricalVisible]="electricalVisible()"
+    [electricalSymbols]="electricalSymbols()"
     [night]="night()"
     [lightsOn]="lightsOn()"
     [sunTime]="sunTime()"
@@ -244,7 +246,7 @@
     @if (viewedScene(); as s) {
         <section class="panel__section" [hidden]="editor.enabled() || walking()">
             <h2 class="section-title">Export</h2>
-            <fd-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" [glb]="exportGlb" [building]="building" />
+            <fd-export [scene]="s" [projectName]="project()?.name ?? ''" [address]="project()?.address ?? null" [glb]="exportGlb" [building]="building" [electricalSymbols]="electricalSymbols()" />
         </section>
     }
 
@@ -273,6 +275,12 @@
             <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
             <span>Dimensions (Plan)</span>
         </label>
+        @if (hasElectrical()) {
+            <label class="toggle">
+                <input type="checkbox" [checked]="electricalVisible()" (change)="electricalVisible.set(!electricalVisible())" />
+                <span>Electrical (Plan)</span>
+            </label>
+        }
         <label class="toggle">
             <input type="checkbox" [checked]="commentsVisible()" (change)="commentsVisible.set(!commentsVisible())" />
             <span>Comment pins</span>
@@ -340,7 +348,7 @@
                 @for (room of rooms(); track room.id) {
                     <li>
                         <button type="button" class="room" [class.selected]="selectedRoomId() === room.id" (click)="selectRoom(room)">
-                            <span class="room__code">{{ room.code.replace('H1/', '') }}</span>
+                            <span class="room__code">{{ roomCodeText(room.code) }}</span>
                             <span class="room__name">{{ room.name }}</span>
                             <span class="room__area">{{ room.area | number: '1.1-1' }} m²</span>
                         </button>

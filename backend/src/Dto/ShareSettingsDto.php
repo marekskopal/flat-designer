@@ -17,7 +17,8 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * renders in the presentation quality) and whether the guest may download the
  * exports (`exports`: the plan as PDF or SVG, the wall elevations, the 3D model as glTF), and whether the guest sees the
  * floor's open review comments or may also write them (`comments`), and whether the floors under the shared one are drawn
- * below it (`allFloors`), and whether the roofs show at the start (`roofs`). Stored as JSON in
+ * below it (`allFloors`), and whether the roofs show at the start (`roofs`), and whether the plan starts with the
+ * electrical symbols (`electrical`, FD-64). Stored as JSON in
  * `ShareLink::$settings`.
  */
 final readonly class ShareSettingsDto implements ArrayFactoryInterface
@@ -38,6 +39,7 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 		public ShareCommentsEnum $comments = ShareCommentsEnum::Hidden,
 		public bool $allFloors = false,
 		public bool $roofs = true,
+		public bool $electrical = false,
 	) {
 	}
 
@@ -68,6 +70,8 @@ final readonly class ShareSettingsDto implements ArrayFactoryInterface
 			allFloors: array_key_exists('allFloors', $data) && BodyReader::bool($data, 'allFloors'),
 			// Links saved before the roofs show them.
 			roofs: !array_key_exists('roofs', $data) || BodyReader::bool($data, 'roofs'),
+			// Nor those saved before the electrical plan.
+			electrical: array_key_exists('electrical', $data) && BodyReader::bool($data, 'electrical'),
 		);
 	}
 

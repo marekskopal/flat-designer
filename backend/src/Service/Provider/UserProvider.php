@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Provider;
 
 use DateTimeImmutable;
+use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Entity\User;
 use FlatDesigner\Model\Repository\UserRepository;
@@ -44,9 +45,14 @@ final readonly class UserProvider
 		return $user;
 	}
 
-	public function updateName(User $user, string $name): User
+	/** The fields a user changes on their own account, persisted once; null leaves one as it is, none persists nothing. */
+	public function updateProfile(User $user, ?string $name, ?ElectricalSymbolsEnum $symbols): User
 	{
-		$user->name = $name;
+		if ($name === null && $symbols === null) {
+			return $user;
+		}
+		$user->name = $name ?? $user->name;
+		$user->electricalSymbols = $symbols ?? $user->electricalSymbols;
 		$user->updatedAt = new DateTimeImmutable();
 		$this->userRepository->persist($user);
 

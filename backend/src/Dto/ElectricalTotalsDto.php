@@ -6,7 +6,7 @@ namespace FlatDesigner\Dto;
 
 use FlatDesigner\Service\Furniture\DefinitionCategoryEnum;
 
-/** Counts of the electrical schedule per category, plus the sockets' outlets (their gangs). */
+/** Counts of the electrical schedule per category, plus the sockets' outlets and the data sockets' ports (their units). */
 final readonly class ElectricalTotalsDto
 {
 	public function __construct(
@@ -15,6 +15,7 @@ final readonly class ElectricalTotalsDto
 		public int $outlets,
 		public int $switches,
 		public int $dataSockets,
+		public int $dataPorts,
 		public int $plumbingPoints,
 	) {
 	}
@@ -25,13 +26,17 @@ final readonly class ElectricalTotalsDto
 		$count = static fn (DefinitionCategoryEnum $category): int => array_sum(
 			array_map(static fn (ElectricalRowDto $r): int => $r->category === $category ? $r->count : 0, $rows),
 		);
+		$units = static fn (DefinitionCategoryEnum $category): int => array_sum(
+			array_map(static fn (ElectricalRowDto $r): int => $r->category === $category ? $r->units : 0, $rows),
+		);
 
 		return new self(
 			lights: $count(DefinitionCategoryEnum::Light),
 			sockets: $count(DefinitionCategoryEnum::Socket),
-			outlets: array_sum(array_map(static fn (ElectricalRowDto $r): int => $r->outlets, $rows)),
+			outlets: $units(DefinitionCategoryEnum::Socket),
 			switches: $count(DefinitionCategoryEnum::Switch),
 			dataSockets: $count(DefinitionCategoryEnum::Data),
+			dataPorts: $units(DefinitionCategoryEnum::Data),
 			plumbingPoints: $count(DefinitionCategoryEnum::Plumbing),
 		);
 	}
@@ -39,7 +44,7 @@ final readonly class ElectricalTotalsDto
 	/** @param list<self> $totals */
 	public static function sum(array $totals): self
 	{
-		$sum = new self(0, 0, 0, 0, 0, 0);
+		$sum = new self(0, 0, 0, 0, 0, 0, 0);
 		foreach ($totals as $t) {
 			$sum = new self(
 				lights: $sum->lights + $t->lights,
@@ -47,6 +52,7 @@ final readonly class ElectricalTotalsDto
 				outlets: $sum->outlets + $t->outlets,
 				switches: $sum->switches + $t->switches,
 				dataSockets: $sum->dataSockets + $t->dataSockets,
+				dataPorts: $sum->dataPorts + $t->dataPorts,
 				plumbingPoints: $sum->plumbingPoints + $t->plumbingPoints,
 			);
 		}

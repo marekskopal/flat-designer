@@ -124,6 +124,37 @@ describe('planLayout', () => {
 });
 
 describe('planSheet', () => {
+    it('draws the electrical plan: symbols, wall points\' elevations and a legend, the furniture without names', () => {
+        const socket = {
+            id: 7,
+            name: 'Socket',
+            updatedAt: '',
+            definition: {
+                format: 1 as const,
+                category: 'socket' as const,
+                schedule: {count: 'gangs'},
+                parameters: [{key: 'gangs', type: 'int' as const, default: 1}],
+                parts: [],
+            },
+        };
+        const points = [
+            item(1, {definitionId: 7, x: 1000, y: 5, z: 300, width: 151, depth: 10, rotation: 180, params: {values: {gangs: 2}}}),
+            item(2, {definitionId: 7, x: 3000, y: 5, z: 1100, width: 80, depth: 10, rotation: 180}),
+        ];
+        const floor = scene({items: [...points, item(3, {name: 'Sofa', y: 2500})], definitions: [socket]});
+
+        const electrical = planSheet(floor, info, 'Csn');
+        const labels = texts(electrical.svg);
+        expect(labels).toEqual(expect.arrayContaining(['+0.300', '+1.100', 'Socket 2 (3)']));
+        expect(labels).not.toContain('Sofa');
+        expect(labels.some((t) => t.startsWith('Electrical plan · 1:'))).toBe(true);
+        expect(electrical.svg).toContain('stroke="#c0392b"');
+        // The plain plan is unchanged.
+        const plan = texts(planSheet(floor, info).svg);
+        expect(plan).toContain('Sofa');
+        expect(plan).not.toContain('+1.100');
+    });
+
     it('marks a section line: its dash-dot cut and the name at both arrows', () => {
         const line = {id: 1, name: 'A', startX: -1000, startY: 1500, endX: 5000, endY: 1500, depth: null};
         const sheet = planSheet(scene({sections: [line]}), info);
