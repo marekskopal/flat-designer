@@ -71,7 +71,38 @@ const Functions: Readonly<Record<string, FunctionDef>> = {
     share: {arity: [2, 3], apply: ([l, total, gap], c) => share(list(l, c), number(total, c), gap === undefined ? 0 : number(gap, c), c)},
     offsets: {arity: [1, 2], apply: ([l, gap], c) => offsets(list(l, c), gap === undefined ? 0 : number(gap, c), c)},
     hash: {arity: [1, 2], apply: ([n, seed]) => hash(uint32(n), uint32(seed === undefined ? 0 : seed, 1))},
+    sqrt: {arity: [1, 1], apply: ([x], c) => sqrt(number(x, c))},
+    hypot: {arity: [2, 2], apply: ([a, b], c) => finite(Math.hypot(number(a, c), number(b, c)))},
+    sin: {arity: [1, 1], apply: ([x], c) => snap(Math.sin(radians(number(x, c))))},
+    cos: {arity: [1, 1], apply: ([x], c) => snap(Math.cos(radians(number(x, c))))},
+    tan: {arity: [1, 1], apply: ([x], c) => tan(number(x, c))},
+    atan2: {arity: [2, 2], apply: ([y, x], c) => snap((Math.atan2(number(y, c), number(x, c)) / Math.PI) * 180)},
 };
+
+/** Degrees to radians, in the PHP twin's order of operations. */
+const radians = (degrees: number): number => finite((degrees / 180) * Math.PI);
+
+/**
+ * Rounded to a multiple of 1e-12 (half away from zero, as the twin), so that the twins agree although their maths
+ * libraries differ in the last bits, and `cos(90)` is 0.
+ */
+const snap = (value: number): number => finite(roundHalfAway(value * 1e12) / 1e12);
+
+/** The rounded sine over the rounded cosine, so 90° (cosine 0) is refused. */
+function tan(degrees: number): number {
+    const cos = snap(Math.cos(radians(degrees)));
+    if (cos === 0) {
+        throw new ExpressionError('divisionByZero', 'Function "tan" of an odd multiple of 90°.');
+    }
+    return snap(snap(Math.sin(radians(degrees))) / cos);
+}
+
+function sqrt(value: number): number {
+    if (value < 0) {
+        throw new ExpressionError('type', 'Function "sqrt" needs a number of 0 or more.');
+    }
+    return Math.sqrt(value);
+}
 
 /**
  * A fixed pseudo-random number from 0 up to (not including) 1 for whole numbers `n` and `seed` (rounded half away from

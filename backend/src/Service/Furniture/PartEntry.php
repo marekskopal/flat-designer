@@ -162,7 +162,8 @@ final readonly class PartEntry
 	}
 
 	/**
-	 * The tilt pivot (`tiltY`, `tiltZ`), written next to the part's `y` / `z`, moved into the item's frame like them.
+	 * The tilt and turn pivots (`tiltY`, `tiltZ`, `turnX`, `turnZ`), written next to the part's `x` / `y` / `z`, moved
+	 * into the item's frame like them.
 	 *
 	 * @param array<string, mixed> $props
 	 * @param array{int, int, int} $offset
@@ -170,7 +171,7 @@ final readonly class PartEntry
 	 */
 	private static function placed(array $props, array $offset): array
 	{
-		foreach (['tiltY' => 1, 'tiltZ' => 2] as $key => $axis) {
+		foreach (['tiltY' => 1, 'tiltZ' => 2, 'turnX' => 0, 'turnZ' => 2] as $key => $axis) {
 			if (is_int($props[$key] ?? null) || is_float($props[$key] ?? null)) {
 				$props[$key] += $offset[$axis];
 			}

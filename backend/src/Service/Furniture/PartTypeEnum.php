@@ -74,9 +74,18 @@ enum PartTypeEnum: string
 	/**
 	 * Every visible part may lean back by `tilt` degrees (−90 to 90; positive tips its top towards the back) around a
 	 * line along x at `tiltY` / `tiltZ` (mm, the item's frame; default the part's bottom-back edge), e.g. the back posts
-	 * of a chair. It changes the drawing only, not the cut list.
+	 * of a chair, and then turn by `turn` degrees (−90 to 90, counter-clockwise seen from above) around a vertical line
+	 * at `turnX` / `turnZ` (default the part's back-left edge), e.g. a wardrobe's slanted end panel. They change the
+	 * drawing only, not the cut list.
 	 */
-	private const array Tilt = ['tilt' => 'angle', 'tiltY' => 'coordinate', 'tiltZ' => 'coordinate'];
+	private const array Pose = [
+		'tilt' => 'angle',
+		'tiltY' => 'coordinate',
+		'tiltZ' => 'coordinate',
+		'turn' => 'angle',
+		'turnX' => 'coordinate',
+		'turnZ' => 'coordinate',
+	];
 
 	private const array KindErrors = [
 		'mm' => 'Must be a whole number of mm above 0.',
@@ -182,23 +191,23 @@ enum PartTypeEnum: string
 				'shade' => 'fraction',
 				'backWidth' => 'mm',
 				'taper' => ['both', 'left', 'right'],
-			] + self::Tilt,
+			] + self::Pose,
 			self::Front => [
 				'kind' => ['door', 'drawer'],
 				'handle' => ['horizontal', 'vertical', 'none'],
 				'handleSide' => ['left', 'right'],
 				'grain' => self::Grain,
 				'edges' => 'sides',
-			] + self::Tilt,
-			self::Cylinder => ['axis' => ['x', 'y', 'z'], 'radius' => 'number'] + self::Tilt,
-			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Tilt,
-			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Tilt,
-			self::Glass => self::Tilt,
-			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Tilt,
-			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Tilt,
-			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Tilt,
-			self::Cushion => ['radius' => 'number'] + self::Tilt,
-			self::Picture => ['image' => 'image'] + self::Tilt,
+			] + self::Pose,
+			self::Cylinder => ['axis' => ['x', 'y', 'z'], 'radius' => 'number'] + self::Pose,
+			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Pose,
+			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Pose,
+			self::Glass => self::Pose,
+			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Pose,
+			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Pose,
+			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Pose,
+			self::Cushion => ['radius' => 'number'] + self::Pose,
+			self::Picture => ['image' => 'image'] + self::Pose,
 			self::Light => [
 				'kind' => ['point', 'spot'],
 				'lumens' => 'number',

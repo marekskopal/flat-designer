@@ -2187,6 +2187,104 @@
    ]
   },
   {
+   "name": "a turn pivot inside an assembly moves with it; the angle and length come from atan2 and hypot",
+   "size": {
+    "width": 1690,
+    "depth": 700,
+    "height": 2000
+   },
+   "definition": {
+    "format": 1,
+    "parameters": [
+     {
+      "key": "backWidth",
+      "label": "Back",
+      "type": "int",
+      "default": 1220,
+      "min": 300,
+      "max": 3000,
+      "unit": "mm"
+     }
+    ],
+    "derived": {
+     "s": "W - backWidth",
+     "slant": "round(hypot(D, s))",
+     "angle": "round(atan2(s, D) * 1000) / 1000"
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "x": "i * 100",
+      "y": 0,
+      "z": "i * 50",
+      "w": "W",
+      "h": "H",
+      "d": "D",
+      "repeat": {
+       "count": 2
+      },
+      "parts": [
+       {
+        "type": "board",
+        "name": "Slanted side",
+        "x": "W - 19",
+        "y": 0,
+        "z": "D - slant",
+        "w": 19,
+        "h": "H",
+        "d": "slant",
+        "turn": {
+         "expr": "-angle"
+        },
+        "turnX": {
+         "expr": "W"
+        },
+        "turnZ": {
+         "expr": "D"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "parts": [
+    {
+     "name": "Slanted side",
+     "type": "board",
+     "index": null,
+     "x": 1671,
+     "y": 0,
+     "z": -143,
+     "w": 19,
+     "h": 2000,
+     "d": 843,
+     "material": null,
+     "props": {
+      "turn": -33.879,
+      "turnX": 1690,
+      "turnZ": 700
+     }
+    },
+    {
+     "name": "Slanted side",
+     "type": "board",
+     "index": null,
+     "x": 1771,
+     "y": 0,
+     "z": -93,
+     "w": 19,
+     "h": 2000,
+     "d": 843,
+     "material": null,
+     "props": {
+      "turn": -33.879,
+      "turnX": 1790,
+      "turnZ": 750
+     }
+    }
+   ]
+  },
+  {
    "name": "int value above max",
    "definition": {
     "format": 1,

@@ -200,6 +200,11 @@ format is the text in `FurnitureTools::Format`.
   and `FurnitureSeeds` reads them. Both test suites build them, and `custom/parity.spec.ts` checks the sample project's
   definitions (kitchen cabinets, worktop, backsplash, wardrobe, chair, table, panel) against what the removed built-in
   kinds drew (`custom/parity-reference.json`, recorded before they went).
+- Slanted parts (FD-57): every part may `turn` (degrees counter-clockwise seen from above, ±90) about a vertical line at
+  `turnX` / `turnZ` (default its back-left edge; moved with an assembly like the tilt pivot), after its `tilt`, and the
+  expressions have `sqrt`, `hypot`, `sin` / `cos` / `tan` (degrees) and `atan2` (giving degrees). The global `Trapezoid
+  wardrobe` (`SeedTrapezoidWardrobeMigration`) is built on them: a slanted end panel turned along the diagonal, the
+  horizontal boards tapered with `backWidth` / `taper`. Plans and elevations still draw the item's box (FD-103).
 - Per-copy variety: `hash(n, seed?)` gives a fixed pseudo-random 0 ≤ x < 1 (32-bit integer mixing, identical in both
   twins), and a part's `material` may be `{"expr": …}` choosing a slot per copy, e.g. book spines.
 - Pictures: a parameter of type `image` (no default) holds the id of an image file of the item's project, and a

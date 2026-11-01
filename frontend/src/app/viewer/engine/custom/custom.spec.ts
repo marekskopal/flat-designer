@@ -229,6 +229,20 @@ describe('new part types and options', () => {
         expect(around.position.y).toBeCloseTo(0.45);
         expect(around.position.z).toBeCloseTo(0.01 - 0.2);
     });
+
+    it('turns a part about its back-left edge or a given vertical line, after leaning it back', () => {
+        const side = {type: 'board', x: 100, y: 0, z: 50, w: 20, h: 400, d: 200, turn: -30};
+        const [turned] = build(body([side])).children;
+        expect(turned.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-30));
+        expect(turned.position.x).toBeCloseTo(0.1 - 0.3);
+        expect(turned.position.z).toBeCloseTo(0.05 - 0.2);
+        const [around] = build(body([{...side, turnX: 120, turnZ: 250}])).children;
+        expect(around.position.x).toBeCloseTo(0.12 - 0.3);
+        expect(around.position.z).toBeCloseTo(0.25 - 0.2);
+        const [both] = build(body([{...side, tilt: 5}])).children;
+        expect(both.rotation.y).toBeCloseTo(THREE.MathUtils.degToRad(-30));
+        expect(both.children[0].rotation.x).toBeCloseTo(-THREE.MathUtils.degToRad(5));
+    });
 });
 
 describe('partMaterial', () => {

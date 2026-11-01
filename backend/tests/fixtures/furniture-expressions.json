@@ -536,7 +536,7 @@
    "error": "unknownVariable"
   },
   {
-   "expression": "sqrt(4)",
+   "expression": "cbrt(4)",
    "error": "unknownFunction"
   },
   {
@@ -544,7 +544,7 @@
    "error": "unknownFunction"
   },
   {
-   "expression": "false && sqrt(4)",
+   "expression": "false && cbrt(4)",
    "error": "unknownFunction"
   },
   {
@@ -882,6 +882,130 @@
   {
    "expression": "hash(W * W * W * W * W * W)",
    "error": "type"
+  },
+  {
+   "expression": "sqrt(2 * 8)",
+   "result": 4
+  },
+  {
+   "expression": "sqrt(0)",
+   "result": 0
+  },
+  {
+   "expression": "sqrt(-1)",
+   "error": "type"
+  },
+  {
+   "expression": "sqrt('a')",
+   "error": "type"
+  },
+  {
+   "expression": "sqrt()",
+   "error": "arity"
+  },
+  {
+   "expression": "hypot(D, 400)",
+   "result": 500
+  },
+  {
+   "expression": "hypot(-3, 4)",
+   "result": 5
+  },
+  {
+   "expression": "hypot(3)",
+   "error": "arity"
+  },
+  {
+   "expression": "sin(30)",
+   "result": 0.5
+  },
+  {
+   "expression": "sin(-90)",
+   "result": -1
+  },
+  {
+   "expression": "cos(60)",
+   "result": 0.5
+  },
+  {
+   "expression": "cos(180)",
+   "result": -1
+  },
+  {
+   "expression": "tan(45)",
+   "result": 1
+  },
+  {
+   "expression": "tan(-45)",
+   "result": -1
+  },
+  {
+   "expression": "atan2(1, 1)",
+   "result": 45
+  },
+  {
+   "expression": "atan2(D, 0)",
+   "result": 90
+  },
+  {
+   "expression": "atan2(-1, -1)",
+   "result": -135
+  },
+  {
+   "expression": "atan2(0, 0)",
+   "result": 0
+  },
+  {
+   "expression": "round(atan2(470, 700) * 1000) / 1000",
+   "result": 33.879
+  },
+  {
+   "expression": "atan2(1)",
+   "error": "arity"
+  },
+  {
+   "expression": "atan2(null, 1)",
+   "error": "null"
+  },
+  {
+   "expression": "tan(atan2(3, 4)) * 4",
+   "result": 3
+  },
+  {
+   "expression": "floor(tan(atan2(3, 4)) * 4)",
+   "result": 3
+  },
+  {
+   "expression": "atan2(1, 1) == 45",
+   "result": true
+  },
+  {
+   "expression": "cos(90) == 0",
+   "result": true
+  },
+  {
+   "expression": "sin(180) == 0",
+   "result": true
+  },
+  {
+   "expression": "cos(270)",
+   "result": 0
+  },
+  {
+   "expression": "sin(150) == 0.5",
+   "result": true
+  },
+  {
+   "expression": "tan(90)",
+   "error": "divisionByZero"
+  },
+  {
+   "expression": "tan(-270)",
+   "error": "divisionByZero"
+  },
+  {
+   "expression": "sin(W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W * W) * 0 == 0",
+   "result": true
   }
  ]
 }

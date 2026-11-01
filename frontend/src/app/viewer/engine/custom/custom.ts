@@ -80,7 +80,7 @@ export function buildCustomItemBody(
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
-            const mesh = tilted(buildPart(part, item, material, materials, pictures, room, roofs), part);
+            const mesh = posed(buildPart(part, item, material, materials, pictures, room, roofs), part);
             mesh.name = `part:${part.name}`;
             mesh.userData['partName'] = part.name;
             mesh.position.x -= (item.width / 2) * MM;
@@ -340,22 +340,32 @@ function buildSlidingDoor(part: ResolvedPart, profile: THREE.Material, infill: T
 
 /**
  * The part leant back by `tilt` degrees (top towards the back) around a line along x at `tiltY` / `tiltZ` (mm, the
- * item's parts frame; default the part's bottom-back edge).
+ * item's parts frame; default the part's bottom-back edge), then turned by `turn` degrees (counter-clockwise seen from
+ * above) around a vertical line at `turnX` / `turnZ` (default the part's back-left edge).
  */
-function tilted(object: THREE.Object3D, part: ResolvedPart): THREE.Object3D {
-    const tilt = part.props['tilt'];
-    if (typeof tilt !== 'number' || tilt === 0) {
-        return object;
+function posed(object: THREE.Object3D, part: ResolvedPart): THREE.Object3D {
+    const number = (key: string, fallback: number): number => (typeof part.props[key] === 'number' ? part.props[key] : fallback);
+    const tilt = number('tilt', 0);
+    const turn = number('turn', 0);
+    let result = object;
+    if (tilt !== 0) {
+        result = pivoted(result, new THREE.Vector3(0, number('tiltY', part.y), number('tiltZ', part.z)));
+        result.rotation.x = -THREE.MathUtils.degToRad(tilt);
     }
-    const y = typeof part.props['tiltY'] === 'number' ? part.props['tiltY'] : part.y;
-    const z = typeof part.props['tiltZ'] === 'number' ? part.props['tiltZ'] : part.z;
-    const pivot = new THREE.Group();
-    pivot.position.set(0, y * MM, z * MM);
-    pivot.rotation.x = -THREE.MathUtils.degToRad(tilt);
-    object.position.y -= y * MM;
-    object.position.z -= z * MM;
-    pivot.add(object);
-    return pivot;
+    if (turn !== 0) {
+        result = pivoted(result, new THREE.Vector3(number('turnX', part.x), 0, number('turnZ', part.z)));
+        result.rotation.y = THREE.MathUtils.degToRad(turn);
+    }
+    return result;
+}
+
+/** The object in a group at the pivot (mm, the parts frame), to be turned about it. */
+function pivoted(object: THREE.Object3D, pivot: THREE.Vector3): THREE.Group {
+    const group = new THREE.Group();
+    group.position.copy(pivot).multiplyScalar(MM);
+    object.position.sub(group.position);
+    group.add(object);
+    return group;
 }
 
 /**

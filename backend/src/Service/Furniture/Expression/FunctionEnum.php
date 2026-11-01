@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace FlatDesigner\Service\Furniture\Expression;
 
 use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use const M_PI;
 
 /**
  * Functions of the expression language. The number functions take and return numbers (`round` rounds half away from
- * zero); the list functions are in `ListFunctions`.
+ * zero; `sin`, `cos`, `tan` take degrees and `atan2(y, x)` gives them, e.g. a slanted panel's angle, rounded to 1e-12 so
+ * that the twins agree although their maths libraries differ in the last bits, and `cos(90)` is 0); the list functions
+ * are in `ListFunctions`.
  *
  * @phpstan-import-type Value from Values
  */
@@ -28,15 +31,21 @@ enum FunctionEnum: string
 	case Share = 'share';
 	case Offsets = 'offsets';
 	case Hash = 'hash';
+	case Sqrt = 'sqrt';
+	case Hypot = 'hypot';
+	case Sin = 'sin';
+	case Cos = 'cos';
+	case Tan = 'tan';
+	case Atan2 = 'atan2';
 
 	/** @return array{int, int|null} the least and most arguments (null = any number) */
 	public function arity(): array
 	{
 		return match ($this) {
 			self::Min, self::Max => [1, null],
-			self::Round, self::Floor, self::Ceil, self::Abs, self::Len, self::Sum => [1, 1],
+			self::Round, self::Floor, self::Ceil, self::Abs, self::Len, self::Sum, self::Sqrt, self::Sin, self::Cos, self::Tan => [1, 1],
 			self::Clamp => [3, 3],
-			self::Contains, self::Field => [2, 2],
+			self::Contains, self::Field, self::Hypot, self::Atan2 => [2, 2],
 			self::Share => [2, 3],
 			self::Offsets, self::Hash => [1, 2],
 		};
@@ -85,6 +94,12 @@ enum FunctionEnum: string
 			self::Share => ListFunctions::share($list(0), $number(1), array_key_exists(2, $arguments) ? $number(2) : 0.0),
 			self::Offsets => ListFunctions::offsets($list(0), array_key_exists(1, $arguments) ? $number(1) : 0.0),
 			self::Hash => self::hash($number(0), array_key_exists(1, $arguments) ? $number(1) : 0.0),
+			self::Sqrt => self::sqrt($number(0)),
+			self::Hypot => Values::finite(hypot($number(0), $number(1))),
+			self::Sin => self::snap(sin(self::radians($number(0)))),
+			self::Cos => self::snap(cos(self::radians($number(0)))),
+			self::Tan => self::tan($number(0)),
+			self::Atan2 => self::snap(atan2($number(0), $number(1)) / M_PI * 180),
 		};
 	}
 
@@ -100,6 +115,38 @@ enum FunctionEnum: string
 		$x = self::multiply($x ^ ($x >> 15), 0x846CA68B);
 
 		return ($x ^ ($x >> 16)) / 4294967296;
+	}
+
+	/** Degrees to radians, in the twin's order of operations. */
+	private static function radians(float $degrees): float
+	{
+		return Values::finite($degrees / 180 * M_PI);
+	}
+
+	/** Rounded to a multiple of 1e-12 (half away from zero, as the twin). */
+	private static function snap(float $value): float
+	{
+		return Values::finite(round($value * 1e12) / 1e12);
+	}
+
+	/** The rounded sine over the rounded cosine, so 90° (cosine 0) is refused. */
+	private static function tan(float $degrees): float
+	{
+		$cos = self::snap(cos(self::radians($degrees)));
+		if ($cos === 0.0) {
+			throw new ExpressionException(ExpressionErrorEnum::DivisionByZero, 'Function "tan" of an odd multiple of 90°.');
+		}
+
+		return self::snap(self::snap(sin(self::radians($degrees))) / $cos);
+	}
+
+	private static function sqrt(float $value): float
+	{
+		if ($value < 0) {
+			throw new ExpressionException(ExpressionErrorEnum::Type, 'Function "sqrt" needs a number of 0 or more.');
+		}
+
+		return sqrt($value);
 	}
 
 	/** The whole number (plus `$add`) modulo 2^32. */

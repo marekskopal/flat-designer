@@ -430,12 +430,17 @@ function checkCopies(count: number, path: string): void {
     }
 }
 
-/** The tilt pivot (`tiltY`, `tiltZ`), written next to the part's `y` / `z`, moved into the item's frame like them. */
+/**
+ * The tilt and turn pivots (`tiltY`, `tiltZ`, `turnX`, `turnZ`), written next to the part's `x` / `y` / `z`, moved into
+ * the item's frame like them.
+ */
 function placed(props: Record<string, unknown>, offset: [number, number, number]): Record<string, unknown> {
     const moved = {...props};
     for (const [key, axis] of [
         ['tiltY', 1],
         ['tiltZ', 2],
+        ['turnX', 0],
+        ['turnZ', 2],
     ] as const) {
         const value = moved[key];
         if (typeof value === 'number') {

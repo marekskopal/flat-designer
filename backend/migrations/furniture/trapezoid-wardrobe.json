@@ -1,0 +1,348 @@
+{
+ "name": "Trapezoid wardrobe",
+ "description": "Hinged wardrobe whose top is a trapezoid: a straight end and one end slanted along a diagonal wall (backWidth at the back, W at the doors), with a hat shelf and hanging rail or shelves, on a plinth.",
+ "definition": {
+  "format": 1,
+  "size": {
+   "width": 1200,
+   "depth": 600,
+   "height": 2200
+  },
+  "parameters": [
+   {
+    "key": "backWidth",
+    "label": "Width at the back",
+    "type": "int",
+    "default": 900,
+    "min": 300,
+    "unit": "mm"
+   },
+   {
+    "key": "slantSide",
+    "label": "Slanted end",
+    "type": "select",
+    "options": [
+     "right",
+     "left"
+    ],
+    "default": "right"
+   },
+   {
+    "key": "doors",
+    "label": "Doors",
+    "type": "int",
+    "default": 2,
+    "min": 1,
+    "max": 4
+   },
+   {
+    "key": "interior",
+    "label": "Interior",
+    "type": "select",
+    "options": [
+     "rail",
+     "shelves"
+    ],
+    "default": "rail"
+   },
+   {
+    "key": "shelves",
+    "label": "Shelves",
+    "type": "int",
+    "default": 4,
+    "min": 1,
+    "max": 10
+   },
+   {
+    "key": "handle",
+    "label": "Handle",
+    "type": "select",
+    "options": [
+     "vertical",
+     "horizontal",
+     "none"
+    ],
+    "default": "vertical"
+   },
+   {
+    "key": "plinth",
+    "label": "Plinth",
+    "type": "int",
+    "default": 80,
+    "min": 0,
+    "max": 200,
+    "unit": "mm"
+   },
+   {
+    "key": "t",
+    "label": "Carcass board",
+    "type": "int",
+    "default": 18,
+    "min": 12,
+    "max": 30,
+    "unit": "mm"
+   },
+   {
+    "key": "ft",
+    "label": "Door thickness",
+    "type": "int",
+    "default": 19,
+    "min": 12,
+    "max": 40,
+    "unit": "mm"
+   },
+   {
+    "key": "gap",
+    "label": "Gap around doors",
+    "type": "int",
+    "default": 3,
+    "min": 0,
+    "max": 10,
+    "unit": "mm"
+   },
+   {
+    "key": "recess",
+    "label": "Plinth recess",
+    "type": "int",
+    "default": 50,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "mirrored": "slantSide == 'left'",
+   "carcassD": "D - ft",
+   "s": "max(W - backWidth, 0)",
+   "slant": "round(hypot(carcassD, s))",
+   "angle": "atan2(s, carcassD)",
+   "inset": "round(t * s / carcassD)",
+   "tl": "round(t * hypot(carcassD, s) / carcassD)",
+   "innerBack": "W - s - tl - t",
+   "innerW": "innerBack + s",
+   "sr": "round(s * recess / carcassD)",
+   "plinthW": "W - 4 - sr",
+   "shelfD": "carcassD - 20",
+   "shelfW": "innerBack + round(s * shelfD / carcassD)",
+   "hatY": "H - t - 320",
+   "railZ": "round(carcassD / 2)",
+   "railW": "innerBack + round(s * railZ / carcassD)",
+   "pitch": "(H - plinth - 2 * t) / (shelves + 1)"
+  },
+  "materialSlots": [
+   {
+    "key": "carcass",
+    "label": "Carcass"
+   },
+   {
+    "key": "fronts",
+    "label": "Doors"
+   },
+   {
+    "key": "rail",
+    "label": "Hanging rail",
+    "default": "aluminium-brushed"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "x": "mirrored ? W - t : 0",
+    "y": "plinth",
+    "z": 0,
+    "w": "t",
+    "h": "H - plinth",
+    "d": "carcassD",
+    "material": "carcass",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Slanted side",
+    "x": "mirrored ? 0 : W - t",
+    "y": "plinth",
+    "z": "carcassD - slant",
+    "w": "t",
+    "h": "H - plinth",
+    "d": "slant - inset",
+    "material": "carcass",
+    "edges": [
+     "front"
+    ],
+    "turn": {
+     "expr": "mirrored ? -angle : angle"
+    },
+    "turnX": {
+     "expr": "mirrored ? 0 : W"
+    },
+    "turnZ": {
+     "expr": "carcassD"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Bottom",
+    "x": "mirrored ? W - (t) - (innerW) : t",
+    "y": "plinth",
+    "z": 0,
+    "w": "innerW",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ],
+    "backWidth": {
+     "expr": "innerBack"
+    },
+    "taper": {
+     "expr": "mirrored ? 'left' : 'right'"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": "mirrored ? W - (t) - (innerW) : t",
+    "y": "H - t",
+    "z": 0,
+    "w": "innerW",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ],
+    "backWidth": {
+     "expr": "innerBack"
+    },
+    "taper": {
+     "expr": "mirrored ? 'left' : 'right'"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "mirrored ? W - (t) - (innerBack) : t",
+    "y": "plinth + t",
+    "z": 0,
+    "w": "innerBack",
+    "h": "H - plinth - 2*t",
+    "d": 4,
+    "material": "carcass"
+   },
+   {
+    "type": "board",
+    "name": "Plinth",
+    "when": "plinth > 0",
+    "x": "mirrored ? W - (2) - (plinthW) : 2",
+    "y": 0,
+    "z": 0,
+    "w": "plinthW",
+    "h": "plinth",
+    "d": "carcassD - recess",
+    "material": "carcass",
+    "grain": "horizontal",
+    "shade": 0.3,
+    "backWidth": {
+     "expr": "W - s - 4"
+    },
+    "taper": {
+     "expr": "mirrored ? 'left' : 'right'"
+    }
+   },
+   {
+    "type": "board",
+    "name": "Hat shelf",
+    "when": "interior == 'rail'",
+    "x": "mirrored ? W - (t) - (shelfW) : t",
+    "y": "hatY",
+    "z": 0,
+    "w": "shelfW",
+    "h": "t",
+    "d": "shelfD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ],
+    "backWidth": {
+     "expr": "innerBack"
+    },
+    "taper": {
+     "expr": "mirrored ? 'left' : 'right'"
+    }
+   },
+   {
+    "type": "cylinder",
+    "name": "Hanging rail",
+    "when": "interior == 'rail'",
+    "x": "mirrored ? W - (t) - (railW) : t",
+    "y": "hatY - 70",
+    "z": "railZ - 12",
+    "w": "railW",
+    "h": 25,
+    "d": 25,
+    "material": "rail",
+    "axis": "x"
+   },
+   {
+    "type": "board",
+    "name": "Shelf",
+    "when": "interior == 'shelves'",
+    "repeat": {
+     "count": "shelves"
+    },
+    "x": "mirrored ? W - (t) - (shelfW) : t",
+    "y": "plinth + t + round((i + 1) * pitch - t / 2)",
+    "z": 0,
+    "w": "shelfW",
+    "h": "t",
+    "d": "shelfD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ],
+    "backWidth": {
+     "expr": "innerBack"
+    },
+    "taper": {
+     "expr": "mirrored ? 'left' : 'right'"
+    }
+   },
+   {
+    "type": "front",
+    "name": "Door",
+    "repeat": {
+     "count": "doors",
+     "as": "k"
+    },
+    "x": "k * W / doors + gap / 2",
+    "y": "plinth + gap / 2",
+    "z": "carcassD",
+    "w": "W / doors - gap",
+    "h": "H - plinth - gap",
+    "d": "ft",
+    "material": "fronts",
+    "edges": [
+     "left",
+     "right",
+     "bottom",
+     "top"
+    ],
+    "kind": "door",
+    "handle": {
+     "expr": "handle"
+    },
+    "handleSide": {
+     "expr": "doors == 1 ? (mirrored ? 'left' : 'right') : (k < doors / 2 ? 'right' : 'left')"
+    }
+   }
+  ]
+ }
+}

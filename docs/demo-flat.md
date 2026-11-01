@@ -166,7 +166,7 @@ Legend: **have** = an existing kind, definition, material or opening option. **F
 | Wall safe | master | Box (have) |
 | Single beds 900 × 2000 | bedrooms 2 and 3 | Bed frame (have) + **FD-28** |
 | Small desks or bedside tables 450 × 450 | bedrooms 2 and 3 | Desk (have) / **FD-28** |
-| Wardrobes 980 × 520 and a trapezoid one 700 deep | bedrooms 2 and 3 | tall cabinet definition (have); trapezoid **FD-28** |
+| Wardrobes 980 × 520 and a trapezoid one 700 deep | bedrooms 2 and 3 | tall cabinet definition (have); the trapezoid one is the Trapezoid wardrobe (FD-57) |
 | Three-seat sofa 2100 × 850 | living | **FD-28** |
 | Round side tables Ø 560 and Ø 450 | living | **FD-28** (round top) |
 | Butterfly (BKF) chair, leather | living | **FD-29** |
@@ -232,7 +232,6 @@ in the comparison and fixed. These mismatches remain, each logged as a task:
 - **FD-53** Missing product models: vessel basin, black taps, close-coupled WC, rain shower, extractor, Cesca and
   butterfly chairs, TMM lamp. Stand-ins are named "… stand-in".
 - **FD-56** The dropped ceiling's curved edge is a polyline shared with the floor edge.
-- **FD-57** Bedroom 3's trapezoid wardrobe is a rectangle.
 - **FD-55** Under `make dev`, live updates do not arrive (the dev proxy has no Mercure route).
 
 The open variant stacks the sliding leaves at both ends of the run in front of the end cabinets. The real panels
