@@ -8,6 +8,7 @@
     [pictureFetcher]="pictureFetcher"
     [ceilingsVisible]="ceilingsVisible()"
     [roofsVisible]="roofsVisible()"
+    [frontsOpen]="frontsOpen()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
     [electricalVisible]="electricalVisible()"
@@ -266,6 +267,15 @@
                             </button>
                             <button type="button" class="toggle" [class.toggle--on]="roofsVisible()" (click)="roofsVisible.set(!roofsVisible())">
                                 <fd-icon name="roof" /> Roof
+                            </button>
+                            <button
+                                type="button"
+                                class="toggle"
+                                title="Doors and drawers of the cupboards open"
+                                [class.toggle--on]="frontsOpen()"
+                                (click)="frontsOpen.set(!frontsOpen())"
+                            >
+                                <fd-icon name="cabinet" /> Open fronts
                             </button>
                             <button type="button" class="toggle" [class.toggle--on]="labelsVisible()" (click)="labelsVisible.set(!labelsVisible())">
                                 <fd-icon name="tag" /> Labels

@@ -268,6 +268,33 @@ format is the text in `FurnitureTools::Format`.
   the shown Custom items. Board and front parts are listed by material, thickness, length along the grain, width and
   banded edges; other parts are listed separately, with area and banding totals per material.
 
+## Openable fronts (FD-106)
+
+- The plan is `docs/openable-fronts-plan.md`. A `front` part opens in the viewer by `opens`: `swing` (a door's default,
+  on its `hinge` edge, default the side away from `handleSide`, `angle` default 105), `slide` (a drawer's default,
+  `travel` mm out, default ¾ of its reach into the item), `lift` (a flap turning up about its top edge), `fold` (a
+  bi-fold flap folding `foldAt` below its top, at most half way; the cut list lists its two panels, `FoldingFront`, twin
+  `foldPanels()`), `parallel` (rising `travel` upright, default its height + 10) or `none`; `softClose` damps the
+  closing. They change the drawing only (`PartTypeEnum::Motion`).
+- An `assembly` with `opens` (not `fold`) moves all its parts as one leaf, e.g. a drawer front with its drawer box: the
+  evaluator twins give each part `props.leaf` (`{key, box, …the assembly's options}`, `MovingLeaf` / `leafKey()`, the
+  key the entry paths with copy indices), and a part inside one may not open on its own (`opens` other than `none`;
+  fixture cases). A front too low to fold in two lifts whole.
+- Viewer (`viewer/engine/custom/fronts.ts`, framework-free): `buildCustomItemBody()` puts each front (keyed by its leaf
+  key, else `front:<n>`) in a group tagged `front` (its `FrontSpec`, so `mergeStatic()` merges it on its own) with
+  pivots tagged `frontPivot` (`main`, or a bi-fold's `upper` / `lower`) on the motion's axis; `setFrontPose()` poses
+  them. `FrontStates` (session only, by item id and key, kept across rebuilds; with every front open, fronts of items
+  built later open too) moves each front with a speed: opening speeds up and brakes, closing bangs shut with a small
+  rebound, or with `softClose` slows exponentially over the last 50 mm / 12° (`advance()`).
+- `ViewerEngine`: the tick advances them (`refreshShadows()`); E, the centre click and a tap in the walk use the door or
+  front in reach (`usableAt()`, `DoorAim.target`; fronts of the shown floor only); in view mode a click on a front of
+  the selected item (or of the selected group's) toggles it; `setFrontsOpen()` (the Display toggle "Open fronts", not kept by views or share links),
+  `itemFrontsOpen()` / `setItemFrontsOpen()` (the selection card's button, for an item or a group). The furniture editor's preview toggles a
+  front by a click and has Open fronts. Plans and elevations draw the closed box; the glTF export the current pose.
+- Seeds (`AddOpenableFrontsMigration`, `down()` writes back `furniture/before-openable-fronts`): the kitchen cabinets,
+  sideboard, bedside table and vanity have drawers with boxes, shelves behind doors and a `softClose` parameter; the wall
+  and tall cabinets' fronts may be `liftUp`, `bifold` or `parallelLift`.
+
 ## Item builders
 
 - `viewer/engine/items.ts` dispatches to `custom/custom.ts`, `models.ts`, `kitchen.ts`, `sanitary.ts`, `outdoor.ts` and

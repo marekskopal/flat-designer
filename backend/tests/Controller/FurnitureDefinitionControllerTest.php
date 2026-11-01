@@ -378,7 +378,10 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 				['expr' => "'up'"],
 				'parts[0].parts[0].handleSide: Must be one of "left", "right".',
 			],
-			'an option of an assembly' => [['parts', 0, 'grain'], 'vertical', 'parts[0].grain: An assembly part has no option "grain".'],
+			'an option of an assembly' => [['parts', 0, 'grain'], 'vertical', 'parts[0].grain: An assembly part has no option "grain"'],
+			'an assembly does not fold' => [['parts', 0, 'opens'], 'fold', 'parts[0].opens: Must be one of "swing", "slide", "lift", "parallel", "none".'],
+			'an opening angle out of range' => [['parts', 0, 'parts', 0, 'angle'], 200, 'parts[0].parts[0].angle: Must be degrees from 1 to 180.'],
+			'an unknown hinge' => [['parts', 0, 'parts', 0, 'hinge'], 'top', 'parts[0].parts[0].hinge: Must be one of "left", "right".'],
 			'an unknown option written as an expression' => [
 				['parts', 0, 'parts', 0, 'grian'],
 				['expr' => "'vertical'"],

@@ -18,14 +18,14 @@ final readonly class FurnitureSeeds
 	public const string Directory = __DIR__ . '/../../../migrations/furniture';
 
 	/**
-	 * @param list<string> $files names in `Directory`
+	 * @param list<string> $files names in `$directory`
 	 * @return list<array{name: string, description: string, definition: string}> the definition as stored JSON
 	 */
-	public static function read(array $files): array
+	public static function read(array $files, string $directory = self::Directory): array
 	{
 		$seeds = [];
 		foreach ($files as $file) {
-			$seed = self::decode($file);
+			$seed = self::decode($file, $directory);
 			$name = $seed['name'] ?? null;
 			$description = $seed['description'] ?? null;
 			$definition = $seed['definition'] ?? null;
@@ -55,18 +55,19 @@ final readonly class FurnitureSeeds
 	/**
 	 * Writes the files' current definitions and descriptions over the seeded rows of their names (global, created by no
 	 * one), for a migration that changed seeds an earlier one inserted (a fresh database gets the new file from that one
-	 * already). Admins' rows of the same name are left alone, and a seed whose row an admin deleted stays deleted.
+	 * already). Admins' rows of the same name are left alone, and a seed whose row an admin deleted stays deleted. A
+	 * migration's `down()` may write the earlier files back from another `$directory`.
 	 *
 	 * @param list<string> $files
 	 */
-	public static function update(PDO $pdo, array $files): void
+	public static function update(PDO $pdo, array $files, string $directory = self::Directory): void
 	{
 		$statement = self::prepare(
 			$pdo,
 			'UPDATE furniture_definitions SET description = ?, definition = ?, updated_at = ?
 			WHERE user_id IS NULL AND project_id IS NULL AND created_by_id IS NULL AND name = ? AND deleted_at IS NULL',
 		);
-		foreach (self::read($files) as $seed) {
+		foreach (self::read($files, $directory) as $seed) {
 			$statement->execute([$seed['description'], $seed['definition'], date('Y-m-d H:i:s'), $seed['name']]);
 		}
 	}
@@ -92,9 +93,9 @@ final readonly class FurnitureSeeds
 	}
 
 	/** @return array<string, mixed> */
-	private static function decode(string $file): array
+	private static function decode(string $file, string $directory = self::Directory): array
 	{
-		$path = self::Directory . '/' . $file;
+		$path = $directory . '/' . $file;
 		if (!is_file($path)) {
 			throw new RuntimeException(sprintf('Furniture seed %s is missing.', $file));
 		}

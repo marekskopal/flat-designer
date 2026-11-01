@@ -4,6 +4,7 @@
     [scene]="viewedScene()"
     [ceilingsVisible]="ceilingsVisible()"
     [roofsVisible]="roofsVisible()"
+    [frontsOpen]="frontsOpen()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
     [electricalVisible]="electricalVisible()"
@@ -41,6 +42,7 @@
     (walkFloorChanged)="walkedFloorId.set($event)"
     (walkthroughLocked)="walkLocked.set($event)"
     (walkthroughAim)="doorAim.set($event)"
+    (frontsChanged)="frontsTick.update(bump)"
     [walkFloorHandler]="walkToFloor"
     [comments]="commentPins()"
     [activeCommentId]="activeCommentId()"
@@ -440,9 +442,22 @@
                     }
                 </dl>
             }
-            @if (canEdit()) {
+            @if (canEdit() || cardFronts() !== null) {
                 <div class="room-card__foot">
-                    <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> Edit</button>
+                    @if (cardFronts() !== null) {
+                        <button
+                            type="button"
+                            class="btn btn--small"
+                            title="Or click a front of the selected item"
+                            [attr.aria-pressed]="cardFronts()"
+                            (click)="toggleCardFronts(!cardFronts())"
+                        >
+                            <fd-icon name="cabinet" [size]="15" /> {{ cardFronts() ? 'Close fronts' : 'Open fronts' }}
+                        </button>
+                    }
+                    @if (canEdit()) {
+                        <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> Edit</button>
+                    }
                 </div>
             }
         </aside>
@@ -575,6 +590,15 @@
                         </button>
                         <button type="button" class="toggle" [class.toggle--on]="roofsVisible()" (click)="roofsVisible.set(!roofsVisible())">
                             <fd-icon name="roof" /> Roof
+                        </button>
+                        <button
+                            type="button"
+                            class="toggle"
+                            title="Doors and drawers of the cupboards open"
+                            [class.toggle--on]="frontsOpen()"
+                            (click)="frontsOpen.set(!frontsOpen())"
+                        >
+                            <fd-icon name="cabinet" /> Open fronts
                         </button>
                         <button type="button" class="toggle" [class.toggle--on]="labelsVisible()" (click)="labelsVisible.set(!labelsVisible())">
                             <fd-icon name="tag" /> Labels

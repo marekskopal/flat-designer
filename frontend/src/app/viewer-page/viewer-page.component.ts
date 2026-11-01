@@ -383,6 +383,10 @@ export class ViewerPageComponent {
     protected readonly toolStatus = signal<ToolStatus | null>(null);
     protected readonly ceilingsVisible = signal(false);
     protected readonly roofsVisible = signal(true);
+    /** Every cupboard front open (FD-106): session only, not in saved views or share links. */
+    protected readonly frontsOpen = signal(false);
+    /** Bumped when fronts open or close or the floor is built, for `cardFronts`. */
+    protected readonly frontsTick = signal(0);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
     protected readonly electricalVisible = signal(false);
@@ -537,6 +541,24 @@ export class ViewerPageComponent {
         const label = KindLabels[selection.kind];
         const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : label;
         return {label, name, icon: KindIcons[selection.kind], facts: elementFacts(scene, selection.kind, element)};
+    });
+    /** The items on the card: the selected item, or the selected group's. */
+    private readonly cardItemIds = computed((): number[] => {
+        const selection = this.editor.selection();
+        if (this.selectionCard() === null) {
+            return [];
+        }
+        if (selection?.kind === 'item') {
+            return [selection.id];
+        }
+        const items = this.viewedScene()?.items ?? [];
+        return selection?.kind === 'group' ? items.filter((i) => i.groupId === selection.id).map((i) => i.id) : [];
+    });
+    /** The fronts of the card's items, viewing: null when they have none that open, else whether any is open. */
+    protected readonly cardFronts = computed(() => {
+        this.frontsTick();
+        const ids = this.cardItemIds();
+        return ids.length === 0 ? null : this.viewer().itemFrontsOpen(ids);
     });
     /** The selected room as the viewer's card shows it: its area, clear height, perimeter and finishes. */
     protected readonly roomInfo = computed(() => {
@@ -1209,6 +1231,14 @@ export class ViewerPageComponent {
             this.appliedViewKey = null;
         }
         this.builtFloorId.set(scene.floor.id);
+        this.frontsTick.update((n) => n + 1);
+    }
+
+    protected readonly bump = (n: number): number => n + 1;
+
+    /** Opens or closes the fronts of the card's items. */
+    protected toggleCardFronts(open: boolean): void {
+        this.viewer().setItemFrontsOpen(this.cardItemIds(), open);
     }
 }
 

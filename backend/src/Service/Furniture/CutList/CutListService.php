@@ -106,7 +106,9 @@ final readonly class CutListService
 		foreach ($parts as $part) {
 			$material = self::partMaterial($part, $item, $params, $slots, $byCode, $all);
 			if (in_array($part->type, self::BoardTypes, true)) {
-				$list->addBoard($material?->id, $material->name ?? 'No material', $part, $item->name);
+				foreach (FoldingFront::panels($part) as $panel) {
+					$list->addBoard($material?->id, $material->name ?? 'No material', $panel, $item->name);
+				}
 			} else {
 				$list->addOther($material?->id, $material->name ?? 'No material', $part, $item->name);
 			}

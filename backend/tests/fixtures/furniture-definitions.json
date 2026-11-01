@@ -10766,6 +10766,439 @@
      }
     }
    ]
+  },
+  {
+   "name": "an opening assembly moves its parts as one leaf, keyed by its copy; a front opens on its own, one inside opens none",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 600,
+     "depth": 560,
+     "height": 720
+    },
+    "parameters": [
+     {
+      "key": "drawers",
+      "label": "Drawers",
+      "type": "int",
+      "default": 2,
+      "min": 1,
+      "max": 4
+     },
+     {
+      "key": "soft",
+      "label": "Soft close",
+      "type": "bool",
+      "default": true
+     }
+    ],
+    "materialSlots": [
+     {
+      "key": "carcass",
+      "label": "Carcass"
+     },
+     {
+      "key": "fronts",
+      "label": "Fronts"
+     }
+    ],
+    "parts": [
+     {
+      "type": "front",
+      "name": "Door",
+      "x": 0,
+      "y": "H / 2",
+      "z": "D - 19",
+      "w": "W",
+      "h": "H / 2",
+      "d": 19,
+      "material": "fronts",
+      "kind": "door",
+      "opens": "swing",
+      "hinge": "right",
+      "angle": 95
+     },
+     {
+      "type": "assembly",
+      "name": "Drawer",
+      "repeat": {
+       "count": "drawers"
+      },
+      "x": 0,
+      "y": "i * H / 2 / drawers",
+      "z": 0,
+      "w": "W",
+      "h": "H / 2 / drawers",
+      "d": "D",
+      "opens": "slide",
+      "travel": 400,
+      "softClose": {
+       "expr": "soft"
+      },
+      "parts": [
+       {
+        "type": "front",
+        "name": "Drawer front",
+        "x": 0,
+        "y": 0,
+        "z": "AD - 19",
+        "w": "AW",
+        "h": "AH - 4",
+        "d": 19,
+        "material": "fronts",
+        "kind": "drawer",
+        "opens": "none"
+       },
+       {
+        "type": "assembly",
+        "name": "Box",
+        "x": 20,
+        "y": 10,
+        "z": 20,
+        "w": "AW - 40",
+        "h": "AH - 60",
+        "d": "AD - 60",
+        "parts": [
+         {
+          "type": "board",
+          "name": "Box side",
+          "repeat": {
+           "count": 2,
+           "as": "s"
+          },
+          "x": "s * (AW - 16)",
+          "y": 0,
+          "z": 0,
+          "w": 16,
+          "h": "AH",
+          "d": "AD",
+          "material": "carcass"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 600,
+    "depth": 560,
+    "height": 720
+   },
+   "values": {
+    "soft": false
+   },
+   "parts": [
+    {
+     "name": "Door",
+     "type": "front",
+     "index": null,
+     "x": 0,
+     "y": 360,
+     "z": 541,
+     "w": 600,
+     "h": 360,
+     "d": 19,
+     "material": "fronts",
+     "props": {
+      "kind": "door",
+      "opens": "swing",
+      "hinge": "right",
+      "angle": 95
+     }
+    },
+    {
+     "name": "Drawer front",
+     "type": "front",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 541,
+     "w": 600,
+     "h": 176,
+     "d": 19,
+     "material": "fronts",
+     "props": {
+      "kind": "drawer",
+      "opens": "none",
+      "leaf": {
+       "key": "parts[1]#0",
+       "box": [
+        0,
+        0,
+        0,
+        600,
+        180,
+        560
+       ],
+       "opens": "slide",
+       "travel": 400,
+       "softClose": false
+      }
+     }
+    },
+    {
+     "name": "Box side",
+     "type": "board",
+     "index": 0,
+     "x": 20,
+     "y": 10,
+     "z": 20,
+     "w": 16,
+     "h": 120,
+     "d": 500,
+     "material": "carcass",
+     "props": {
+      "leaf": {
+       "key": "parts[1]#0",
+       "box": [
+        0,
+        0,
+        0,
+        600,
+        180,
+        560
+       ],
+       "opens": "slide",
+       "travel": 400,
+       "softClose": false
+      }
+     }
+    },
+    {
+     "name": "Box side",
+     "type": "board",
+     "index": 1,
+     "x": 564,
+     "y": 10,
+     "z": 20,
+     "w": 16,
+     "h": 120,
+     "d": 500,
+     "material": "carcass",
+     "props": {
+      "leaf": {
+       "key": "parts[1]#0",
+       "box": [
+        0,
+        0,
+        0,
+        600,
+        180,
+        560
+       ],
+       "opens": "slide",
+       "travel": 400,
+       "softClose": false
+      }
+     }
+    },
+    {
+     "name": "Drawer front",
+     "type": "front",
+     "index": null,
+     "x": 0,
+     "y": 180,
+     "z": 541,
+     "w": 600,
+     "h": 176,
+     "d": 19,
+     "material": "fronts",
+     "props": {
+      "kind": "drawer",
+      "opens": "none",
+      "leaf": {
+       "key": "parts[1]#1",
+       "box": [
+        0,
+        180,
+        0,
+        600,
+        180,
+        560
+       ],
+       "opens": "slide",
+       "travel": 400,
+       "softClose": false
+      }
+     }
+    },
+    {
+     "name": "Box side",
+     "type": "board",
+     "index": 0,
+     "x": 20,
+     "y": 190,
+     "z": 20,
+     "w": 16,
+     "h": 120,
+     "d": 500,
+     "material": "carcass",
+     "props": {
+      "leaf": {
+       "key": "parts[1]#1",
+       "box": [
+        0,
+        180,
+        0,
+        600,
+        180,
+        560
+       ],
+       "opens": "slide",
+       "travel": 400,
+       "softClose": false
+      }
+     }
+    },
+    {
+     "name": "Box side",
+     "type": "board",
+     "index": 1,
+     "x": 564,
+     "y": 190,
+     "z": 20,
+     "w": 16,
+     "h": 120,
+     "d": 500,
+     "material": "carcass",
+     "props": {
+      "leaf": {
+       "key": "parts[1]#1",
+       "box": [
+        0,
+        180,
+        0,
+        600,
+        180,
+        560
+       ],
+       "opens": "slide",
+       "travel": 400,
+       "softClose": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "an assembly that opens none moves nothing, so its front may open",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 400,
+     "depth": 300,
+     "height": 400
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Slot",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": "D",
+      "opens": "none",
+      "parts": [
+       {
+        "type": "front",
+        "name": "Flap",
+        "x": 0,
+        "y": 0,
+        "z": "AD - 18",
+        "w": "AW",
+        "h": "AH",
+        "d": 18,
+        "opens": "fold",
+        "foldAt": 150,
+        "softClose": true
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 400,
+    "depth": 300,
+    "height": 400
+   },
+   "parts": [
+    {
+     "name": "Flap",
+     "type": "front",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 282,
+     "w": 400,
+     "h": 400,
+     "d": 18,
+     "material": null,
+     "props": {
+      "opens": "fold",
+      "foldAt": 150,
+      "softClose": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "a part of an opening assembly cannot open on its own",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 400,
+     "depth": 300,
+     "height": 400
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Drawer",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": "D",
+      "opens": "slide",
+      "parts": [
+       {
+        "type": "board",
+        "name": "Bottom",
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "w": "AW",
+        "h": 10,
+        "d": "AD"
+       },
+       {
+        "type": "front",
+        "name": "Front",
+        "x": 0,
+        "y": 0,
+        "z": "AD - 18",
+        "w": "AW",
+        "h": "AH",
+        "d": 18,
+        "opens": "swing"
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 400,
+    "depth": 300,
+    "height": 400
+   },
+   "error": {
+    "code": "invalid",
+    "path": "parts[0].parts[1].opens"
+   }
   }
  ]
 }

@@ -88,11 +88,13 @@ final readonly class PartEntry
 
 	/**
 	 * Adds the parts of this entry for the variables, its box shifted by the offset (mm) of the assemblies around it.
+	 * `$trail` is the copy path of the assemblies around it, `$leaf` the moving assembly it is in (`MovingLeaf`).
 	 *
 	 * @param array<string, Value> $variables
 	 * @param array{int, int, int} $offset
+	 * @param array<string, mixed>|null $leaf
 	 */
-	public function resolve(array $variables, array $offset, PartCollector $collector): void
+	public function resolve(array $variables, array $offset, PartCollector $collector, string $trail = '', ?array $leaf = null): void
 	{
 		$copies = $this->repeat === null ? [[null, $variables]] : $this->repeat->copies($variables);
 		foreach ($copies as [$index, $scope]) {
@@ -101,17 +103,13 @@ final readonly class PartEntry
 			}
 
 			$mm = $this->geometry($scope);
-			$x = $offset[0] + $mm['x'];
-			$y = $offset[1] + $mm['y'];
-			$z = $offset[2] + $mm['z'];
+			$at = [$offset[0] + $mm['x'], $offset[1] + $mm['y'], $offset[2] + $mm['z']];
 			if ($this->type === self::Assembly) {
-				$inner = ['AW' => (float) $mm['w'], 'AH' => (float) $mm['h'], 'AD' => (float) $mm['d']] + $scope;
-				foreach ($this->children as $child) {
-					$child->resolve($inner, [$x, $y, $z], $collector);
-				}
+				$this->resolveChildren($scope, $mm, $at, MovingLeaf::key($trail, $this->path, $index), $leaf, $collector);
 				continue;
 			}
 
+			[$x, $y, $z] = $at;
 			$collector->add(new ResolvedPart(
 				name: $this->name,
 				type: $this->type,
@@ -123,7 +121,7 @@ final readonly class PartEntry
 				h: $mm['h'],
 				d: $mm['d'],
 				material: $this->material($scope),
-				props: self::placed($this->options->evaluate($scope), $offset),
+				props: MovingLeaf::attach(self::placed($this->options->evaluate($scope), $offset), $leaf, $this->path),
 				path: $this->path,
 			));
 		}
@@ -178,6 +176,23 @@ final readonly class PartEntry
 		}
 
 		return $props;
+	}
+
+	/**
+	 * The parts of an assembly's copy at `$at`, moving with it when it opens.
+	 *
+	 * @param array<string, Value> $scope
+	 * @param array{x: int, y: int, z: int, w: int, h: int, d: int} $mm
+	 * @param array{int, int, int} $at
+	 * @param array<string, mixed>|null $leaf
+	 */
+	private function resolveChildren(array $scope, array $mm, array $at, string $key, ?array $leaf, PartCollector $collector): void
+	{
+		$inner = ['AW' => (float) $mm['w'], 'AH' => (float) $mm['h'], 'AD' => (float) $mm['d']] + $scope;
+		$moving = MovingLeaf::of($key, [...$at, $mm['w'], $mm['h'], $mm['d']], $this->options->evaluate($scope), $leaf, $this->path);
+		foreach ($this->children as $child) {
+			$child->resolve($inner, $at, $collector, $key, $moving);
+		}
 	}
 
 	/**

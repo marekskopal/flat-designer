@@ -1,6 +1,6 @@
 {
  "name": "Bedside table",
- "description": "Small cabinet on four tapered legs with a top, a drawer (or an open shelf) and a back.",
+ "description": "Small cabinet on four tapered legs with a top, a drawer with its box (or an open shelf) and a back. softClose damps the drawer's closing.",
  "definition": {
   "format": 1,
   "catalogue": "bedroom",
@@ -24,11 +24,18 @@
     "min": 0,
     "max": 350,
     "unit": "mm"
+   },
+   {
+    "key": "softClose",
+    "label": "Soft close",
+    "type": "bool",
+    "default": true
    }
   ],
   "derived": {
    "t": "18",
-   "body": "H - legHeight"
+   "body": "H - legHeight",
+   "dh": "min(160, body - 2 * t - 4)"
   },
   "materialSlots": [
    {
@@ -104,19 +111,95 @@
     "material": "body"
    },
    {
-    "type": "front",
-    "name": "Drawer front",
+    "type": "assembly",
+    "name": "Drawer",
     "when": "drawer",
     "x": "t + 2",
-    "y": "H - t - 2 - min(160, body - 2 * t - 4)",
-    "z": "D - t",
+    "y": "H - t - 2 - dh",
+    "z": 10,
     "w": "W - 2 * t - 4",
-    "h": "min(160, body - 2 * t - 4)",
-    "d": "t",
-    "material": "front",
-    "kind": "drawer",
-    "handle": "none",
-    "grain": "horizontal"
+    "h": "dh",
+    "d": "D - 10",
+    "opens": "slide",
+    "softClose": {
+     "expr": "softClose"
+    },
+    "parts": [
+     {
+      "type": "front",
+      "name": "Drawer front",
+      "x": 0,
+      "y": 0,
+      "z": "AD - t",
+      "w": "AW",
+      "h": "AH",
+      "d": "t",
+      "material": "front",
+      "kind": "drawer",
+      "handle": "none",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Drawer side",
+      "repeat": {
+       "count": 2,
+       "as": "s"
+      },
+      "x": "s == 0 ? 10 : AW - 10 - 16",
+      "y": 15,
+      "z": 10,
+      "w": 16,
+      "h": "max(AH - 40, 30)",
+      "d": "AD - t - 10",
+      "material": "body",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Drawer bottom",
+      "x": "10 + 16",
+      "y": 15,
+      "z": 10,
+      "w": "AW - 2 * 10 - 32",
+      "h": 8,
+      "d": "AD - t - 10",
+      "material": "body",
+      "grain": "horizontal"
+     },
+     {
+      "type": "board",
+      "name": "Drawer back",
+      "x": "10 + 16",
+      "y": 23,
+      "z": 10,
+      "w": "AW - 2 * 10 - 32",
+      "h": "max(AH - 48, 22)",
+      "d": 16,
+      "material": "body",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Drawer inner front",
+      "x": "10 + 16",
+      "y": 23,
+      "z": "AD - t - 16",
+      "w": "AW - 2 * 10 - 32",
+      "h": "max(AH - 48, 22)",
+      "d": 16,
+      "material": "body",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     }
+    ]
    },
    {
     "type": "taperedLeg",
