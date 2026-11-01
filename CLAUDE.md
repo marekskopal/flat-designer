@@ -683,8 +683,11 @@ format is the text in `FurnitureTools::Format`.
 - `make screenshots PROJECT=… EMAIL=… PASSWORD=… [VIEWS=… ROOM=…]` (`frontend/scripts/screenshots.mjs`, Playwright)
   writes the saved views of the project whose name starts with `VIEWS`, the editor with `ROOM`'s inspector open, the
   project page, cut list, furniture library, furniture editor and a share link to `docs/screenshots/`, with the app's
-  UI and the plan underlay hidden. With `cwebp` on the PATH it saves WebP 1600 px wide. The README tour uses the demo
-  flat's "Tour · …" views; keep the unlicensed poster and plan out of them.
+  UI and the plan underlay hidden; `VIEWS_ONLY=1` writes the views alone. With `cwebp` on the PATH it saves WebP 1600 px
+  wide. The README tour uses the demo flat's "Tour · …" views and the demo house's "House tour · …" views (project 13
+  locally, `VIEWS_ONLY=1`), plus its first floor's plan PDF and section B–B rendered from the exports
+  (`house-plan.webp`, `house-section.webp`); keep the unlicensed poster and plan, and the house's source drawings and
+  photos, out of them.
 
 ## Review comments
 

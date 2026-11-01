@@ -433,6 +433,16 @@ with the architect's plan. These remain, each logged as a task where it is a gap
 - **FD-101** Flat roofs are rectangles: the garage roof leaves slivers along the skewed south wall.
 - **FD-54** Saved views have no lens, so photo 19 shows only the shower wall instead of the whole bathroom.
 - The fire does not flicker (FD-93), and the bath is rounded rather than oval.
+- The ground floor's plan PDF takes in the whole plot (40 m of garden), so it comes out at 1:500; the README shows the
+  first floor's.
+
+### README tour (FD-96)
+
+Six saved views named "House tour · 01 …" to "06 …" (garden façade at 9:30 on 21 June, all floors cut at the first
+floor, the roof, the attic, on the stairs, the living room at night), captured with
+`make screenshots PROJECT=13 VIEWS="House tour ·" VIEWS_ONLY=1`, and the first floor's plan PDF and section B–B (section
+lines A and B on the first floor) rendered from the exports to `docs/screenshots/house-plan.webp` and
+`house-section.webp`.
 
 ## Gaps → tasks
 
