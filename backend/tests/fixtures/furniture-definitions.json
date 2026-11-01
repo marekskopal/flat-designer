@@ -1357,7 +1357,7 @@
    ]
   },
   {
-   "name": "the schedule's category and settings are not read by the evaluator",
+   "name": "the catalogue, the schedule's category and its settings are not read by the evaluator",
    "size": {
     "width": 80,
     "depth": 10,
@@ -1372,6 +1372,7 @@
       "gangs"
      ]
     },
+    "catalogue": "electrical",
     "parameters": [
      {
       "key": "gangs",

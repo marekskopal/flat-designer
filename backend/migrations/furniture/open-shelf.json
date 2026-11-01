@@ -3,6 +3,7 @@
  "description": "Bookcase of boards between two sides, with an optional thin back panel.",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 800,
    "depth": 300,

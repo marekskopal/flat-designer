@@ -3,6 +3,7 @@
  "description": "A freestanding bath with rounded walls; with mixer, a floor-standing mixer stands at one end inside the item (the bath 250 shorter), its spout reaching over the rim and rising above the item's height.",
  "definition": {
   "format": 1,
+  "catalogue": "bathroom",
   "size": {
    "width": 1950,
    "depth": 780,

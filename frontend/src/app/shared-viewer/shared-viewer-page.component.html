@@ -18,7 +18,7 @@
     [presentation]="presentation()"
     [measuring]="measuring()"
     [sectionHeight]="sectionHeight()"
-    [insetLeft]="walking() || panelHidden() ? 0 : panelInset"
+    [insetLeft]="walking() ? 0 : railWidth"
     (loaded)="onLoaded()"
     (walkthroughEnded)="onWalkthroughEnded()"
     (walkthroughLocked)="walkLocked.set($event)"
@@ -31,12 +31,6 @@
     (commentPicked)="selectComment($event, false)"
     (commentPlaced)="placeComment($event)"
 />
-
-@if (measureStatus(); as status) {
-    @if (!walking()) {
-        <fd-measure-hud [status]="status" />
-    }
-}
 
 @if (walking() && touchWalk) {
     <fd-walk-pad [viewer]="viewerRef" />
@@ -56,184 +50,294 @@
     @if (walkLocked()) {
         <span class="walk-crosshair" [class.walk-crosshair--door]="doorAim() !== null" aria-hidden="true"></span>
     }
-} @else if (walkPrompt()) {
-    <button type="button" class="walk-start" [class.walk-start--centered]="panelHidden()" (click)="startWalkthrough()">
-        Start the walk-through
-    </button>
-}
+} @else {
+    @if (walkPrompt()) {
+        <button type="button" class="walk-start" (click)="startWalkthrough()">Start the walk-through</button>
+    }
 
-@if (panelHidden() && !walking()) {
-    <button type="button" class="panel-show" aria-label="Show the panel" (click)="panelHidden.set(false)">
-        <span class="panel-show__name">{{ shared()?.name ?? 'Flat Designer' }}</span>
-        <span class="panel-show__hint">Show</span>
-    </button>
-}
-
-<aside class="panel" [class.panel--hidden]="walking() || panelHidden()">
-    <header class="panel__header">
-        <span class="eyebrow">{{ shared()?.projectName ?? 'Flat Designer' }}</span>
-        @if (shared(); as s) {
-            <div class="title-row">
-                <h1 class="title">{{ s.name }}</h1>
-                <button type="button" class="share-button" aria-label="Hide the panel" (click)="panelHidden.set(true)">Hide</button>
-            </div>
-            <p class="subtitle">{{ s.scene.floor.name }} · shared view</p>
-        } @else if (error()) {
-            <h1 class="title">Not available</h1>
-            <p class="error">{{ error() }}</p>
-        } @else {
-            <h1 class="title">Loading…</h1>
-        }
-    </header>
-
-    @if (settings(); as settings) {
-        @if (views().length > 1 || views().includes('top')) {
-            <section class="panel__section">
-                <h2 class="section-title">View</h2>
-                @if (views().length > 1) {
-                    <div class="segmented" role="group" aria-label="Camera view">
-                        @for (view of views(); track view) {
-                            <button type="button" [class.active]="activeView() === view" (click)="setView(view)">
-                                {{ viewLabels[view] }}
-                            </button>
-                        }
-                    </div>
+    <!-- Left rail: the panels the link offers, one open at a time. -->
+    <nav class="rail" aria-label="Panels">
+        @for (item of railItems(); track item.key) {
+            <button
+                type="button"
+                class="rail__button"
+                [class.rail__button--active]="panel() === item.key"
+                [attr.aria-pressed]="panel() === item.key"
+                [attr.aria-label]="item.label"
+                [attr.data-tip]="item.label"
+                (click)="togglePanel(item.key)"
+            >
+                <fd-icon [name]="item.icon" />
+                @if (item.badge > 0) {
+                    <span class="rail__badge">{{ item.badge }}</span>
                 }
-                @if (views().includes('top')) {
-                    <button
-                        type="button"
-                        class="measure-toggle"
-                        [class.measure-toggle--on]="measuring()"
-                        [attr.aria-pressed]="measuring()"
-                        title="Measure a distance in the plan (D)"
-                        (click)="toggleMeasuring()"
-                    >
-                        Measure <kbd>D</kbd>
+            </button>
+        }
+    </nav>
+
+    <!-- Top bar: what is shared, the views the link allows, back to how it opens. -->
+    <div class="bar">
+        <div class="float crumb">
+            @if (shared(); as s) {
+                <span class="crumb__project" [title]="s.projectName">{{ s.projectName }}</span>
+                <span class="crumb__separator">/</span>
+                <span class="crumb__floor crumb__floor--static" [title]="s.scene.floor.name">{{ s.name }}</span>
+                <span class="crumb__version">Shared view</span>
+            } @else if (error()) {
+                <span class="crumb__floor crumb__floor--error" [title]="error()">Not available</span>
+            } @else {
+                <span class="crumb__floor crumb__floor--static">Loading…</span>
+            }
+        </div>
+
+        <span class="bar__spacer"></span>
+
+        @if (views().length > 1) {
+            <div class="float segmented" role="group" aria-label="Camera view">
+                @for (view of views(); track view) {
+                    <button type="button" [class.active]="activeView() === view" [attr.data-tip]="viewLabels[view]" (click)="setView(view)">
+                        <fd-icon [name]="viewIcons[view]" [size]="16" />
+                        <span class="segmented__label">{{ viewLabels[view] }}</span>
                     </button>
                 }
-            </section>
+            </div>
         }
 
-        @if (commentAccess() !== 'hidden') {
-            <section class="panel__section">
-                <h2 class="section-title">Comments</h2>
-                @if (commentAccess() === 'write') {
-                    <label class="field guest-name">
-                        <span class="field__label">Your name</span>
-                        <input
-                            class="input"
-                            type="text"
-                            maxlength="100"
-                            placeholder="Shown with your comments"
-                            [value]="guestName()"
-                            (input)="setGuestName($event)"
+        <span class="bar__spacer"></span>
+
+        @if (settings()) {
+            <div class="float actions">
+                <button type="button" class="btn btn--ghost" aria-label="Reset to the shared view" data-tip="Back to how the link opens" (click)="resetToShared()">
+                    <fd-icon name="refresh" [size]="16" /> <span class="actions__label">Reset view</span>
+                </button>
+            </div>
+        }
+    </div>
+
+    <!-- The panel picked in the rail. -->
+    @if (panel(); as open) {
+        <section class="float flyout" [attr.aria-label]="panelTitle()">
+            <header class="flyout__head">
+                <h2 class="flyout__title">{{ panelTitle() }}</h2>
+                <button type="button" class="icon-button" aria-label="Close" (click)="panel.set(null)">
+                    <fd-icon name="close" [size]="16" />
+                </button>
+            </header>
+            <div class="flyout__body">
+                @switch (open) {
+                    @case ('comments') {
+                        @if (commentAccess() === 'write') {
+                            <label class="field guest-name">
+                                <span class="field__label">Your name</span>
+                                <input
+                                    class="input"
+                                    type="text"
+                                    maxlength="100"
+                                    placeholder="Shown with your comments"
+                                    [value]="guestName()"
+                                    (input)="setGuestName($event)"
+                                />
+                            </label>
+                            @if (guestName().trim() === '') {
+                                <p class="field__hint guest-name">Enter your name to add comments.</p>
+                            }
+                        }
+                        <fd-comments
+                            [comments]="comments()"
+                            [activeId]="activeCommentId()"
+                            [canWrite]="canComment()"
+                            [canResolve]="false"
+                            [picking]="commenting()"
+                            [placing]="commentPoint() !== null"
+                            [busy]="commentBusy()"
+                            (opened)="selectComment($event, true)"
+                            (pick)="pickCommentPoint($event)"
+                            (action)="onCommentAction($event)"
                         />
-                    </label>
-                    @if (guestName().trim() === '') {
-                        <p class="field__hint guest-name">Enter your name to add comments.</p>
+                    }
+                    @case ('variants') {
+                        @if (scene(); as s) {
+                            <fd-variants [scene]="s" [local]="true" (switched)="switchVariant($event)" />
+                        }
+                    }
+                    @case ('export') {
+                        @if (scene(); as s) {
+                            <fd-export
+                                [scene]="s"
+                                [projectName]="shared()?.projectName ?? ''"
+                                [glb]="exportGlb"
+                                [building]="building"
+                                [electricalSymbols]="electricalSymbols()"
+                            />
+                        }
                     }
                 }
-                <fd-comments
-                    [comments]="comments()"
-                    [activeId]="activeCommentId()"
-                    [canWrite]="canComment()"
-                    [canResolve]="false"
-                    [picking]="commenting()"
-                    [placing]="commentPoint() !== null"
-                    [busy]="commentBusy()"
-                    (opened)="selectComment($event, true)"
-                    (pick)="pickCommentPoint($event)"
-                    (action)="onCommentAction($event)"
-                />
-            </section>
-        }
-
-        @if (hasVariants() && scene(); as s) {
-            <section class="panel__section">
-                <h2 class="section-title">Variants</h2>
-                <fd-variants [scene]="s" [local]="true" (switched)="switchVariant($event)" />
-            </section>
-        }
-
-        <section class="panel__section">
-            <h2 class="section-title">Display</h2>
-            <label class="toggle">
-                <input type="checkbox" [checked]="ceilingsVisible()" (change)="ceilingsVisible.set(!ceilingsVisible())" />
-                <span>Ceilings</span>
-            </label>
-            <label class="toggle">
-                <input type="checkbox" [checked]="roofsVisible()" (change)="roofsVisible.set(!roofsVisible())" />
-                <span>Roof</span>
-            </label>
-            <label class="toggle">
-                <input type="checkbox" [checked]="labelsVisible()" (change)="labelsVisible.set(!labelsVisible())" />
-                <span>Room labels</span>
-            </label>
-            <label class="toggle">
-                <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
-                <span>Dimensions (Plan)</span>
-            </label>
-            @if (hasElectrical()) {
-                <label class="toggle">
-                    <input type="checkbox" [checked]="electricalVisible()" (change)="electricalVisible.set(!electricalVisible())" />
-                    <span>Electrical (Plan)</span>
-                </label>
-            }
-            @if (commentAccess() !== 'hidden') {
-                <label class="toggle">
-                    <input type="checkbox" [checked]="commentsVisible()" (change)="commentsVisible.set(!commentsVisible())" />
-                    <span>Comment pins</span>
-                </label>
-            }
-            <label class="toggle">
-                <input type="checkbox" [checked]="night()" (change)="toggleNight()" />
-                <span>Night</span>
-            </label>
-            <label class="toggle">
-                <input type="checkbox" [checked]="lightsOn()" (change)="toggleLights()" />
-                <span>Lights on</span>
-            </label>
-            @if (hasLocation()) {
-                <fd-sun-time [(time)]="sunTime" />
-            }
-            <label class="toggle">
-                <input type="checkbox" [checked]="presentation()" (change)="presentation.set(!presentation())" />
-                <span>Presentation quality</span>
-            </label>
-            <label class="slider">
-                <span class="slider__label">
-                    Wall cut
-                    <span class="slider__value">
-                        @if (sectionHeight(); as h) {
-                            {{ h / 1000 | number: '1.2-2' }} m
-                        } @else {
-                            off
-                        }
-                    </span>
-                </span>
-                <input
-                    type="range"
-                    [min]="sectionMin"
-                    [max]="sectionMax"
-                    step="50"
-                    [value]="sectionSlider()"
-                    (input)="onSectionInput($event)"
-                    aria-label="Wall cut height"
-                />
-            </label>
+            </div>
         </section>
-
-        @if (settings.exports !== false && scene(); as s) {
-            <section class="panel__section">
-                <h2 class="section-title">Export</h2>
-                <fd-export [scene]="s" [projectName]="shared()?.projectName ?? ''" [glb]="exportGlb" [building]="building" [electricalSymbols]="electricalSymbols()" />
-            </section>
-        }
-
-        <section class="panel__section">
-            <button type="button" class="reset" (click)="resetToShared()">Reset to the shared view</button>
-        </section>
-
-        <footer class="panel__footer panel__footer--end">Drag to orbit · right-drag to pan · scroll to zoom</footer>
     }
-</aside>
+
+    <!-- Hint for the tool at hand. -->
+    @if (statusHint(); as hint) {
+        <div class="status" role="status">{{ hint }}</div>
+    }
+
+    @if (measureStatus(); as status) {
+        <div class="hud-slot">
+            <fd-measure-hud [status]="status" />
+        </div>
+    }
+
+    <!-- Bottom dock: measure and comment (as the link allows), the wall cut and the display options. -->
+    @if (settings()) {
+        <div class="float dock" role="toolbar" aria-label="Tools" data-menu>
+            <button
+                type="button"
+                class="tool"
+                [class.tool--active]="!measuring() && !commenting()"
+                aria-label="Look around"
+                data-tip="Look around (V)"
+                (click)="selectTool()"
+            >
+                <fd-icon name="pointer" />
+                <span class="tool__key">V</span>
+            </button>
+            @if (views().includes('top') || canComment()) {
+                <span class="separator"></span>
+            }
+            @if (views().includes('top')) {
+                <button
+                    type="button"
+                    class="tool"
+                    [class.tool--active]="measuring()"
+                    [attr.aria-pressed]="measuring()"
+                    aria-label="Measure"
+                    data-tip="Measure in the plan (D)"
+                    (click)="toggleMeasuring()"
+                >
+                    <fd-icon name="ruler" />
+                    <span class="tool__key">D</span>
+                </button>
+            }
+            @if (commentAccess() === 'write') {
+                <button
+                    type="button"
+                    class="tool"
+                    [class.tool--active]="commenting()"
+                    [attr.aria-pressed]="commenting()"
+                    aria-label="Comment"
+                    [attr.data-tip]="canComment() ? 'Pin a comment (C)' : 'Enter your name in Comments to add one'"
+                    (click)="startComment()"
+                >
+                    <fd-icon name="comment" />
+                    <span class="tool__key">C</span>
+                </button>
+            }
+            <span class="separator"></span>
+            <label class="cut" data-tip="Wall cut height">
+                <fd-icon name="cut" [size]="16" />
+                <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" aria-label="Wall cut height" />
+                <b class="cut__value">
+                    @if (sectionHeight(); as h) {
+                        {{ h / 1000 | number: '1.2-2' }} m
+                    } @else {
+                        off
+                    }
+                </b>
+            </label>
+            <button
+                type="button"
+                class="tool"
+                [class.tool--active]="menu() === 'display'"
+                [attr.aria-expanded]="menu() === 'display'"
+                aria-label="Display options"
+                data-tip="Display options"
+                (click)="toggleMenu('display')"
+            >
+                <fd-icon name="eye" />
+            </button>
+
+            @if (menu() === 'display') {
+                <div class="float popover display" role="dialog" aria-label="Display options">
+                    <section class="display__section">
+                        <h3 class="display__title">Show</h3>
+                        <div class="toggles">
+                            <button type="button" class="toggle" [class.toggle--on]="ceilingsVisible()" (click)="ceilingsVisible.set(!ceilingsVisible())">
+                                <fd-icon name="ceiling" /> Ceilings
+                            </button>
+                            <button type="button" class="toggle" [class.toggle--on]="roofsVisible()" (click)="roofsVisible.set(!roofsVisible())">
+                                <fd-icon name="roof" /> Roof
+                            </button>
+                            <button type="button" class="toggle" [class.toggle--on]="labelsVisible()" (click)="labelsVisible.set(!labelsVisible())">
+                                <fd-icon name="tag" /> Labels
+                            </button>
+                            <button
+                                type="button"
+                                class="toggle"
+                                title="Dimension lines, in the plan"
+                                [class.toggle--on]="dimensionsVisible()"
+                                (click)="dimensionsVisible.set(!dimensionsVisible())"
+                            >
+                                <fd-icon name="dimensions" /> Dimensions
+                            </button>
+                            @if (hasElectrical()) {
+                                <button
+                                    type="button"
+                                    class="toggle"
+                                    title="Lights, sockets and switches, in the plan"
+                                    [class.toggle--on]="electricalVisible()"
+                                    (click)="electricalVisible.set(!electricalVisible())"
+                                >
+                                    <fd-icon name="plug" /> Electrical
+                                </button>
+                            }
+                            @if (commentAccess() !== 'hidden') {
+                                <button type="button" class="toggle" [class.toggle--on]="commentsVisible()" (click)="commentsVisible.set(!commentsVisible())">
+                                    <fd-icon name="pin" /> Comments
+                                </button>
+                            }
+                        </div>
+                    </section>
+                    <section class="display__section display__cut">
+                        <h3 class="display__title">Wall cut</h3>
+                        <label class="line">
+                            <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" aria-label="Wall cut height" />
+                            <b class="cut__value">
+                                @if (sectionHeight(); as h) {
+                                    {{ h / 1000 | number: '1.2-2' }} m
+                                } @else {
+                                    off
+                                }
+                            </b>
+                        </label>
+                    </section>
+                    <section class="display__section">
+                        <h3 class="display__title">Light</h3>
+                        <div class="line">
+                            <span class="mini-segmented" role="group" aria-label="Time of day">
+                                <button type="button" [class.active]="!night()" (click)="setNight(false)"><fd-icon name="sun" [size]="15" /> Day</button>
+                                <button type="button" [class.active]="night()" (click)="setNight(true)"><fd-icon name="moon" [size]="15" /> Night</button>
+                            </span>
+                            <label class="line__label">
+                                <fd-icon name="bulb" [size]="16" /> Lamps
+                                <input type="checkbox" class="switch" [checked]="lightsOn()" (change)="toggleLights()" />
+                            </label>
+                        </div>
+                        @if (hasLocation()) {
+                            <fd-sun-time [(time)]="sunTime" />
+                        }
+                    </section>
+                    <section class="display__section">
+                        <h3 class="display__title">Quality</h3>
+                        <div class="line">
+                            <span class="line__label"><fd-icon name="sparkle" [size]="16" /> Rendering</span>
+                            <span class="mini-segmented" role="group" aria-label="Render quality">
+                                <button type="button" [class.active]="!presentation()" (click)="presentation.set(false)">Fast</button>
+                                <button type="button" [class.active]="presentation()" (click)="presentation.set(true)">Presentation</button>
+                            </span>
+                        </div>
+                    </section>
+                </div>
+            }
+        </div>
+    }
+}

@@ -3,6 +3,7 @@
  "description": "A print, poster or photo (a project image) in a frame with an optional mount; hangs on the wall, or leans against it by lean degrees (then give the item enough depth).",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 700,
    "depth": 30,

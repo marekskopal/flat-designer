@@ -3,6 +3,7 @@
  "description": "Base cabinet on a recessed plinth: carcass boards, fronts stacked from the bottom (doors, drawers, appliances), blind corners. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge).",
  "definition": {
   "format": 1,
+  "catalogue": "kitchen",
   "size": {
    "width": 600,
    "depth": 580,

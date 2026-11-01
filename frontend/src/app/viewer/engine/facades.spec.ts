@@ -137,6 +137,11 @@ describe('buildFacades', () => {
         expect(facadeBands({...box()[0], materialId: 2}, 'Right', 1)).toEqual([]);
         expect(facadeBands({...box()[0], rightFinishes: []}, 'Right', 1)).toEqual([]);
         expect(facadeBands({...box()[0], type: 'Interior'}, 'Right', 1)).toEqual([]);
+        // A wall from a snapshot older than the bands has no field at all: as null, not a crash.
+        const older = {...box()[0]} as Partial<ReturnType<typeof box>[0]>;
+        delete older.leftFinishes;
+        delete older.rightFinishes;
+        expect(facadeBands(older as ReturnType<typeof box>[0], 'Right', 1)).toEqual([{materialId: 1, bottom: 0, top: 100000}]);
         const group = buildFacades({walls: box(), rooms: [room], exteriorMaterialId: 1}, materials);
         expect(meshesOf(group, 'render').length).toBeGreaterThan(0);
     });

@@ -3,6 +3,7 @@
  "description": "Small cabinet on four tapered legs with a top, a drawer (or an open shelf) and a back.",
  "definition": {
   "format": 1,
+  "catalogue": "bedroom",
   "size": {
    "width": 450,
    "depth": 400,

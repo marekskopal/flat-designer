@@ -158,12 +158,17 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     it: a rail of panels on the left (one open at a time: rooms, saved views, variants, comments, export; activity and
     the underlay while editing), the floor menu, 3D / Plan / Walk, Share and Edit on top, the tools in a dock at the
     bottom (drawing tools, measure, comment, Add, the wall cut, the Display popover), a level picker for the floors, and
-    the selection on the right. Icons are `fd-icon` (`shared/icon`, Lucide-style paths; add one to `Icons`). The shared
-    viewer keeps the old side panel (its own stylesheet).
+    the selection on the right (viewing, a card: a room's area and finishes, else `elementFacts()` of
+    `editor/element-kinds.ts`). Icons are `fd-icon` (`shared/icon`, Lucide-style paths; add one to `Icons`). The shared
+    viewer uses the same layout and stylesheet (its rail: comments, variants, export). On phones (≤ 640 px) the top bar
+    keeps icons, the panels and the inspector are bottom sheets (a selection closes the panel), and the Display popover
+    takes the wall cut.
   - `EditorPanelComponent` is the inspector panel (shown with a selection) and holds the editing shortcuts;
     `AddLibraryComponent` is the Add library (categories, search), `WallDraftComponent` the Draw walls options.
   - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. A field's `section` starts
-    a collapsible group (`folded` starts it closed). `when` limits a field
+    a collapsible group (`folded` starts it closed). Materials are picked with swatches (`MaterialPickerComponent`),
+    finish bands edited as rows (`finishes`, `FinishBandsComponent`: a wall face's null / own / `[]`), outlines and
+    railing points as a table of corners (`points`, `PointsComponent`, `minPoints`, `openRun`). `when` limits a field
     to certain elements, e.g. the `custom` form of Custom items.
 - Engine picking: builders tag objects with `itemId` / `openingId` / `wallId` / `roomId` in `userData`
   (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
@@ -189,6 +194,10 @@ format is the text in `FurnitureTools::Format`.
 - The expression language and the definition evaluator exist twice: in PHP (`Service/Furniture`) and in TS
   (`viewer/engine/custom`). The shared fixtures `backend/tests/fixtures/furniture-{expressions,definitions}.json` keep
   them identical. **Always change both twins and add a fixture case in the same change.**
+- A definition's optional `catalogue` (`DefinitionCatalogueEnum`: kitchen, storage, seating, tables, bedroom, bathroom,
+  lighting, electrical, decor, building, outdoor, roof; after `format`, `category` and `schedule` in the JSON) files it
+  in the editor's Add library (none: Other; a tagged one without it under lighting or electrical); the evaluators do
+  not read it. The furniture editor picks it above the JSON; the seed files carry theirs (`AddFurnitureCatalogue`).
 - `FurnitureDefinition` rows (`/api/furniture-definitions`, soft-deleted) are global (`user` / `project` null, only
   admins write them), part of a user's library, or a project's own. The access rules are in
   `FurnitureDefinitionProvider`.

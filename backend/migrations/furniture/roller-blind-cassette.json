@@ -3,6 +3,7 @@
  "description": "An interior roller blind in a box above large glazing: the cassette at the item's top, the blind let down by a percentage of the height below it. Set the item over the glazing, its top at the head.",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 2400,
    "depth": 120,

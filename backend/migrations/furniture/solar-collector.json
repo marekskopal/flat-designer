@@ -3,6 +3,7 @@
  "description": "Flat-plate solar collector: an aluminium frame round a dark absorber under glass. Place it with onRoof, on a roof or a chimney.",
  "definition": {
   "format": 1,
+  "catalogue": "roof",
   "size": {
    "width": 1150,
    "depth": 2050,

@@ -184,6 +184,7 @@ $inspector-width: 320px;
 
 .crumb {
     display: flex;
+    flex: 0 1 auto;
     align-items: center;
     gap: 2px;
     min-width: 0;
@@ -215,6 +216,9 @@ $inspector-width: 320px;
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     padding: 6px 10px;
     border: 0;
     border-radius: $radius-10;
@@ -661,6 +665,24 @@ $inspector-width: 320px;
     border-radius: 4px;
 }
 
+.card-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px $space-16;
+    margin: 0;
+    padding: $space-12 $space-16;
+    font-size: $font-size-13;
+
+    dt {
+        color: $color-text-muted;
+    }
+
+    dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
 .room-card__foot {
     padding: 0 $space-16 $space-16;
 }
@@ -838,6 +860,15 @@ $inspector-width: 320px;
 
     &:last-child {
         border-bottom: 0;
+    }
+}
+
+.display__cut {
+    display: none;
+
+    input {
+        flex: 1;
+        accent-color: $color-accent;
     }
 }
 
@@ -1076,6 +1107,44 @@ $inspector-width: 320px;
     }
 }
 
+// ---------- Share links (the guest page uses this stylesheet too) ----------
+
+// The link's name in the breadcrumb, not a menu.
+.crumb__floor--static {
+    cursor: default;
+
+    &:hover {
+        background: transparent;
+    }
+}
+
+// A link opening in the walk: the walk needs a click to capture the mouse.
+.walk-start {
+    position: absolute;
+    left: calc(50% + #{$rail-width} / 2);
+    top: 50%;
+    z-index: 12;
+    transform: translate(-50%, -50%);
+    padding: 12px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: $color-accent;
+    box-shadow: $shadow-panel;
+    font-size: $font-size-14;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+}
+
+// The name a guest signs comments with.
+.guest-name {
+    margin-bottom: $space-8;
+}
+
+.field__hint.guest-name {
+    margin-top: 0;
+}
+
 // ---------- Narrow screens ----------
 
 @media (max-width: 900px) {
@@ -1084,6 +1153,10 @@ $inspector-width: 320px;
     .crumb__separator,
     .cut {
         display: none;
+    }
+
+    .display__cut {
+        display: block;
     }
 
     .dock.shifted,
@@ -1111,6 +1184,46 @@ $inspector-width: 320px;
 }
 
 @media (max-width: 640px) {
+    // Phones: the top bar's buttons keep only their icons, the dock gets tighter.
+    .actions__label,
+    .actions__editing,
+    .actions__redo,
+    .add__label {
+        display: none;
+    }
+
+    .actions .btn {
+        padding: 6px 9px;
+    }
+
+    .segmented button {
+        padding: 6px 8px;
+    }
+
+    .bar {
+        gap: $space-4;
+    }
+
+    .tool {
+        width: 34px;
+    }
+
+    .tool__key {
+        display: none;
+    }
+
+    .add {
+        padding: 0 9px;
+    }
+
+    // Centred over the dock, which is centred in what the rail leaves of the screen.
+    .display {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(320px, calc(100vw - #{$rail-width} - 2 * #{$space-8}));
+    }
+
     .flyout {
         left: calc(#{$rail-width} + #{$space-8});
         right: $space-8;

@@ -22,7 +22,8 @@
 
     @media (max-width: 640px) {
         top: auto;
-        left: $space-8;
+        bottom: calc(76px + env(safe-area-inset-bottom));
+        left: calc(56px + #{$space-8});
         right: $space-8;
         width: auto;
         height: 55dvh;

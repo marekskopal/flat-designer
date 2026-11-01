@@ -9,6 +9,9 @@ import {ElementKind} from '@app/viewer/engine/selection';
 
 import {CustomParamsComponent} from './custom-params.component';
 import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
+import {FinishBandsComponent} from './finish-bands.component';
+import {MaterialPickerComponent} from './material-picker.component';
+import {PointsComponent} from './points.component';
 import {SpotHeightsComponent} from './spot-heights.component';
 
 /** A titled group of the inspector's fields (untitled: an element with one group). */
@@ -29,7 +32,15 @@ export interface FieldChange {
  */
 @Component({
     selector: 'fd-inspector',
-    imports: [CustomParamsComponent, SpotHeightsComponent, IconComponent, NgTemplateOutlet],
+    imports: [
+        CustomParamsComponent,
+        SpotHeightsComponent,
+        IconComponent,
+        NgTemplateOutlet,
+        MaterialPickerComponent,
+        FinishBandsComponent,
+        PointsComponent,
+    ],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -106,6 +117,12 @@ export class InspectorComponent {
     /** The template context's fields, typed. */
     protected asFields(fields: unknown): FieldDef[] {
         return fields as FieldDef[];
+    }
+
+    /** A material field's id, null for none. */
+    protected materialId(def: FieldDef): number | null {
+        const value = this.element()[def.key];
+        return typeof value === 'number' ? value : null;
     }
 
     protected value(def: FieldDef): string {

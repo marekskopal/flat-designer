@@ -3,6 +3,7 @@
  "description": "Platform bed of boards with a mattress, duvet and pillows, an optional headboard and a throw at the foot.",
  "definition": {
   "format": 1,
+  "catalogue": "bedroom",
   "size": {
    "width": 1600,
    "depth": 2100,

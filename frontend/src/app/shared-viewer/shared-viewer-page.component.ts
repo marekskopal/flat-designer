@@ -13,6 +13,7 @@ import {CommentService} from '@app/services/comment.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {StorageService} from '@app/services/storage.service';
+import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {hasElectricalPoints} from '@app/viewer/engine/electrical';
 import {MeasureStatus} from '@app/viewer/engine/measure';
@@ -31,6 +32,11 @@ const SectionMax = 2700;
 /** Where the guest's name for comments is kept (localStorage). */
 const GuestNameKey = 'fd.guestName';
 
+/** The panels of the rail a link may offer. */
+type PanelKey = 'comments' | 'variants' | 'export';
+
+const PanelTitles: Record<PanelKey, string> = {comments: 'Comments', variants: 'Variants', export: 'Export'};
+
 /**
  * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
  * decides which views are offered, the one it opens in, the 3D camera and the starting display; variants can be
@@ -48,19 +54,31 @@ const GuestNameKey = 'fd.guestName';
         ExportComponent,
         CommentsComponent,
         SunTimeComponent,
+        IconComponent,
     ],
     templateUrl: './shared-viewer-page.component.html',
-    styleUrl: './shared-viewer-page.component.scss',
+    // The viewer page's layout: the rail, the top bar, the dock and their panels.
+    styleUrl: '../viewer-page/viewer-page.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    host: {'(document:keydown)': 'onKeydown($event)'},
+    host: {'(document:keydown)': 'onKeydown($event)', '(document:pointerdown)': 'onDocumentPointerDown($event)'},
 })
 export class SharedViewerPageComponent {
     public readonly token = input.required<string>();
 
-    protected readonly panelInset = 332;
+    /** The rail's width, so the 3D view frames the model beside it. */
+    protected readonly railWidth = 56;
     protected readonly sectionMin = SectionMin;
     protected readonly sectionMax = SectionMax;
     protected readonly viewLabels = ShareViewLabels;
+    protected readonly viewIcons: Record<ShareView, IconName> = {overview: 'cube', top: 'plan', walkthrough: 'walk'};
+    /** The rail's panel shown beside it. */
+    protected readonly panel = signal<PanelKey | null>(null);
+    protected readonly panelTitle = computed(() => {
+        const panel = this.panel();
+        return panel === null ? '' : PanelTitles[panel];
+    });
+    /** The open popover of the dock. */
+    protected readonly menu = signal<'display' | null>(null);
 
     private readonly shares = inject(ShareService);
     private readonly modelAssets = inject(ModelAssetService);
@@ -106,8 +124,6 @@ export class SharedViewerPageComponent {
     protected readonly doorAim = signal<DoorAim | null>(null);
     /** The link opens in the walk, which needs a click to capture the mouse: a button asks for it. */
     protected readonly walkPrompt = signal(false);
-    /** The guest hid the panel to see more of the floor (on a phone it covers the lower part of the screen). */
-    protected readonly panelHidden = signal(false);
     protected readonly ceilingsVisible = signal(false);
     protected readonly roofsVisible = signal(true);
     protected readonly labelsVisible = signal(true);
@@ -157,6 +173,31 @@ export class SharedViewerPageComponent {
     protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
     /** The guest may write once the link allows it and they have given a name. */
     protected readonly canComment = computed(() => this.commentAccess() === 'write' && this.guestName().trim() !== '');
+    /** The rail's buttons: the panels the link offers. */
+    protected readonly railItems = computed((): {key: PanelKey; label: string; icon: IconName; badge: number}[] => {
+        const items: {key: PanelKey; label: string; icon: IconName; badge: number}[] = [];
+        if (this.commentAccess() !== 'hidden') {
+            const open = this.comments().filter((c) => c.parentId === null && !c.resolved).length;
+            items.push({key: 'comments', label: 'Comments', icon: 'comment', badge: open});
+        }
+        if (this.hasVariants()) {
+            items.push({key: 'variants', label: 'Variants', icon: 'variants', badge: 0});
+        }
+        if (this.settings()?.exports !== false && this.scene() !== null) {
+            items.push({key: 'export', label: 'Export drawings & 3D', icon: 'download', badge: 0});
+        }
+        return items;
+    });
+    /** The status line: what the tool at hand does. */
+    protected readonly statusHint = computed((): string | null => {
+        if (this.settings() === null || this.measureStatus() !== null || this.menu() !== null || this.walkPrompt()) {
+            return null;
+        }
+        if (this.commenting()) {
+            return 'Click a surface to pin a comment there · Esc cancels';
+        }
+        return this.activeView() === 'top' ? 'Drag to pan · scroll to zoom' : 'Drag to orbit · right-drag to pan · scroll to zoom';
+    });
 
     private readonly viewer = viewChild.required(ViewerComponent);
     /** The shown floor as a binary glTF, for the exports. */
@@ -288,7 +329,13 @@ export class SharedViewerPageComponent {
         if (this.walking() || target?.closest('input, textarea, select') != null || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
-        if (event.key === 'd' || event.key === 'D') {
+        if (event.key === 'Escape' && this.menu() !== null) {
+            this.menu.set(null);
+            return;
+        }
+        if (event.key === 'v' || event.key === 'V') {
+            this.selectTool();
+        } else if (event.key === 'd' || event.key === 'D') {
             event.preventDefault();
             this.toggleMeasuring();
         } else if ((event.key === 'c' || event.key === 'C') && this.canComment()) {
@@ -298,6 +345,43 @@ export class SharedViewerPageComponent {
             this.pickCommentPoint(false);
         } else if (event.key === 'Escape' && this.measuring()) {
             this.measuring.set(false);
+        }
+    }
+
+    protected togglePanel(key: PanelKey): void {
+        this.panel.set(this.panel() === key ? null : key);
+    }
+
+    protected toggleMenu(key: 'display'): void {
+        this.menu.set(this.menu() === key ? null : key);
+    }
+
+    /** A press outside the popover and its button closes it. */
+    protected onDocumentPointerDown(event: PointerEvent): void {
+        const target = event.target as HTMLElement | null;
+        if (this.menu() !== null && target?.closest('[data-menu]') == null) {
+            this.menu.set(null);
+        }
+    }
+
+    /** V: back to looking around, from the measure or comment tool. */
+    protected selectTool(): void {
+        this.measuring.set(false);
+        this.pickCommentPoint(false);
+    }
+
+    /** The comment tool, or the Comments panel first when the guest has not given a name yet. */
+    protected startComment(): void {
+        if (this.canComment()) {
+            this.pickCommentPoint(!this.commenting());
+        } else {
+            this.panel.set('comments');
+        }
+    }
+
+    protected setNight(night: boolean): void {
+        if (this.night() !== night) {
+            this.toggleNight();
         }
     }
 
@@ -313,10 +397,14 @@ export class SharedViewerPageComponent {
     protected placeComment(point: CommentPoint): void {
         this.commenting.set(false);
         this.commentPoint.set(point);
+        this.panel.set('comments');
     }
 
     protected selectComment(id: number | null, focus: boolean): void {
         this.activeCommentId.set(id);
+        if (id !== null) {
+            this.panel.set('comments');
+        }
         const comment = this.comments().find((c) => c.id === id);
         if (focus && comment !== undefined) {
             this.viewer().focusPoint(comment);

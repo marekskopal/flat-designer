@@ -61,8 +61,41 @@ export interface DefinitionPart {
     [prop: string]: unknown;
 }
 
+/** Where the editor's Add library files a definition (`DefinitionCatalogueEnum`); none: Other. */
+export type FurnitureCatalogue =
+    | 'kitchen'
+    | 'storage'
+    | 'seating'
+    | 'tables'
+    | 'bedroom'
+    | 'bathroom'
+    | 'lighting'
+    | 'electrical'
+    | 'decor'
+    | 'building'
+    | 'outdoor'
+    | 'roof';
+
+/** The catalogues in the Add library's order. */
+export const CatalogueLabels: Readonly<Record<FurnitureCatalogue, string>> = {
+    kitchen: 'Kitchen',
+    storage: 'Storage',
+    seating: 'Seating',
+    tables: 'Tables',
+    bedroom: 'Bedroom',
+    bathroom: 'Bathroom',
+    lighting: 'Lighting',
+    electrical: 'Sockets & services',
+    decor: 'Decor',
+    building: 'Built-ins',
+    outdoor: 'Outdoor',
+    roof: 'On the roof',
+};
+
 export interface FurnitureDefinitionBody {
     format: 1;
+    /** Where the editor's Add library files it; the evaluators do not read it. */
+    catalogue?: FurnitureCatalogue;
     /** What the electrical schedule counts the items as; the evaluators do not read it. */
     category?: ElectricalCategory;
     /** What the electrical schedule counts and lists (with a category); the evaluators do not read it. */

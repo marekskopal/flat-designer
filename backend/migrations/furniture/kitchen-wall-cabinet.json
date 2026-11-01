@@ -3,6 +3,7 @@
  "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts.",
  "definition": {
   "format": 1,
+  "catalogue": "kitchen",
   "size": {
    "width": 600,
    "depth": 350,

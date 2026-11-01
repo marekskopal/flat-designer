@@ -3,6 +3,7 @@
  "description": "Solid wood desk: a top on two panel sides, with an optional modesty panel at the back.",
  "definition": {
   "format": 1,
+  "catalogue": "tables",
   "size": {
    "width": 1400,
    "depth": 700,

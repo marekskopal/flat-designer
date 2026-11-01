@@ -3,6 +3,7 @@
  "description": "A long wall-hung vanity: a cabinet of handleless drawers under a solid-surface top with one or two vessel basins and wall-mounted spouts. Its elevation is the cabinet's bottom (about 400).",
  "definition": {
   "format": 1,
+  "catalogue": "bathroom",
   "size": {
    "width": 1800,
    "depth": 500,

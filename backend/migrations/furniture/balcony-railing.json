@@ -3,6 +3,7 @@
  "description": "Wrought-iron balcony railing of round bar: posts at the ends, top and bottom rails and balusters.",
  "definition": {
   "format": 1,
+  "catalogue": "building",
   "size": {
    "width": 2000,
    "depth": 40,

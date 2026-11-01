@@ -3,6 +3,7 @@
  "description": "A built-in bench along a wall: an oak seat on a closed base with a recessed plinth, and upholstered back panels on the wall above it.",
  "definition": {
   "format": 1,
+  "catalogue": "seating",
   "size": {
    "width": 3000,
    "depth": 450,

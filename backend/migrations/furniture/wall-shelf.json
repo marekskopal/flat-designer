@@ -3,6 +3,7 @@
  "description": "Boards stacked on two metal rods; hang it with the item elevation (z).",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 1000,
    "depth": 250,

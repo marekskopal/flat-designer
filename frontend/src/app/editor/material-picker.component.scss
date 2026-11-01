@@ -1,0 +1,121 @@
+@use 'variables' as *;
+
+:host {
+    display: block;
+    min-width: 0;
+}
+
+.trigger {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    padding: 0 6px 0 3px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-6;
+    background: #fff;
+    font-size: $font-size-13;
+    color: $color-text;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        border-color: $color-text-muted;
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: default;
+    }
+
+    fd-icon {
+        color: $color-text-subtle;
+    }
+}
+
+.trigger__name,
+.option__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trigger__name--empty,
+.option__name--empty {
+    color: $color-text-muted;
+}
+
+.swatch {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    background-position: center;
+    background-size: cover;
+}
+
+// No material: a diagonal stroke through an empty box.
+.swatch--empty {
+    background: linear-gradient(135deg, transparent 46%, $color-border-strong 46%, $color-border-strong 54%, transparent 54%), #fff;
+}
+
+.list {
+    margin-top: 4px;
+    border: 1px solid $color-border-strong;
+    border-radius: $radius-10;
+    background: $color-surface-solid;
+    box-shadow: 0 1px 2px rgba(35, 33, 30, 0.08), 0 4px 12px rgba(35, 33, 30, 0.08);
+    overflow: hidden;
+}
+
+.search {
+    width: 100%;
+    padding: 7px 10px;
+    border: 0;
+    border-bottom: 1px solid $color-border;
+    outline: 0;
+    background: transparent;
+    font-size: $font-size-13;
+}
+
+.options {
+    max-height: 240px;
+    padding: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: $space-8;
+    width: 100%;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: $radius-6;
+    background: transparent;
+    font-size: $font-size-13;
+    color: $color-text;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        background: $color-surface-muted;
+    }
+}
+
+.option--selected,
+.option--selected:hover {
+    background: $color-accent-soft;
+}
+
+.empty {
+    margin: $space-8;
+    font-size: $font-size-12;
+    color: $color-text-muted;
+}

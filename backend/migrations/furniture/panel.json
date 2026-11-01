@@ -3,6 +3,7 @@
  "description": "One board cut to the item: a back panel, niche side or soffit board.",
  "definition": {
   "format": 1,
+  "catalogue": "building",
   "size": {
    "width": 600,
    "depth": 18,

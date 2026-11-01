@@ -3,6 +3,7 @@
  "description": "A rug with rounded corners, or round (its diameter the smaller of width and depth), with an optional border in a second colour.",
  "definition": {
   "format": 1,
+  "catalogue": "decor",
   "size": {
    "width": 2000,
    "depth": 1400,

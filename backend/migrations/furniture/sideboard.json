@@ -3,6 +3,7 @@
  "description": "Low cabinet with doors (handles at the meeting edges), an optional row of drawers above them, on a plinth or legs.",
  "definition": {
   "format": 1,
+  "catalogue": "storage",
   "size": {
    "width": 1600,
    "depth": 450,

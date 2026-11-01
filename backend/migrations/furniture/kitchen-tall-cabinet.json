@@ -3,6 +3,7 @@
  "description": "Tall cabinet or appliance column on a plinth: fronts stacked from the bottom, with oven and microwave fronts. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge).",
  "definition": {
   "format": 1,
+  "catalogue": "kitchen",
   "size": {
    "width": 600,
    "depth": 600,

@@ -1,5 +1,5 @@
 import {ElectricalCategory} from '@app/models/electrical-schedule';
-import {DefinitionParameter, FurnitureDefinitionBody} from '@app/models/furniture';
+import {DefinitionParameter, FurnitureCatalogue, FurnitureDefinitionBody} from '@app/models/furniture';
 
 /** Parameter types the electrical schedule lists (`DefinitionSchedule::ValueTypes`). */
 const ValueTypes = new Set<DefinitionParameter['type']>(['int', 'bool', 'select']);
@@ -69,8 +69,21 @@ function withSchedule(body: FurnitureDefinitionBody, schedule: NonNullable<Furni
     return reorder(Object.keys(schedule).length === 0 ? rest : {...rest, schedule});
 }
 
-/** `format`, `category` and `schedule` first, the other keys in their order. */
+/** The definition filed in the catalogue (after `format`, `category` and `schedule`, as in the seed files); null takes it out (Other). */
+export function withCatalogue(body: FurnitureDefinitionBody, catalogue: FurnitureCatalogue | null): FurnitureDefinitionBody {
+    const rest = {...body};
+    delete rest.catalogue;
+    return reorder(catalogue === null ? rest : {...rest, catalogue});
+}
+
+/** `format`, `category`, `schedule` and `catalogue` first, the other keys in their order. */
 function reorder(body: FurnitureDefinitionBody): FurnitureDefinitionBody {
-    const {format, category, schedule, ...rest} = body;
-    return {format, ...(category === undefined ? {} : {category}), ...(schedule === undefined ? {} : {schedule}), ...rest};
+    const {format, catalogue, category, schedule, ...rest} = body;
+    return {
+        format,
+        ...(category === undefined ? {} : {category}),
+        ...(schedule === undefined ? {} : {schedule}),
+        ...(catalogue === undefined ? {} : {catalogue}),
+        ...rest,
+    };
 }

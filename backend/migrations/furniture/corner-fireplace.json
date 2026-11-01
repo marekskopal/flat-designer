@@ -3,6 +3,7 @@
  "description": "A corner fireplace: a glass-fronted firebox at one end of a black stone plinth (glass on the front and on its open end), logs stacked on the plinth beside it, and an oak-veneered hood box up to the ceiling with a slatted grille at the top. The fire is a warm light (lit with the lights on) over glowing embers on the firebox floor. Set the height to the ceiling.",
  "definition": {
   "format": 1,
+  "catalogue": "building",
   "size": {
    "width": 1400,
    "depth": 650,

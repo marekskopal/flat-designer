@@ -3,6 +3,7 @@
  "description": "Bed with a headboard at the back, rails, slats and feet, optionally with the mattress.",
  "definition": {
   "format": 1,
+  "catalogue": "bedroom",
   "size": {
    "width": 1600,
    "depth": 2100,

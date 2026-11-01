@@ -3,6 +3,7 @@
  "description": "Clay vent tile with its hood and cap, laid among the roof tiles: place it with onRoof on the roof, its front down the slope.",
  "definition": {
   "format": 1,
+  "catalogue": "roof",
   "size": {
    "width": 300,
    "depth": 420,
