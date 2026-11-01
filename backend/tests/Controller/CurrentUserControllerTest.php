@@ -35,6 +35,25 @@ final class CurrentUserControllerTest extends IntegrationTestCase
 		self::assertSame(422, $this->request('PATCH', Routes::CurrentUser->value, ['name' => ''], $user)->getStatusCode());
 	}
 
+	public function testPatchSetsTheElectricalSymbols(): void
+	{
+		$user = Fixture::createUser('jane@example.com', 'Jane');
+		self::assertSame(
+			'Iec',
+			$this->jsonBody($this->request('GET', Routes::CurrentUser->value, authenticatedAs: $user))['electricalSymbols'],
+		);
+
+		$response = $this->request('PATCH', Routes::CurrentUser->value, ['electricalSymbols' => 'Csn'], $user);
+
+		self::assertSame(200, $response->getStatusCode());
+		self::assertSame(['Jane', 'Csn'], [$this->jsonBody($response)['name'], $this->jsonBody($response)['electricalSymbols']]);
+		self::assertSame(
+			'Csn',
+			$this->jsonBody($this->request('GET', Routes::CurrentUser->value, authenticatedAs: $user))['electricalSymbols'],
+		);
+		self::assertSame(400, $this->request('PATCH', Routes::CurrentUser->value, ['electricalSymbols' => 'Din'], $user)->getStatusCode());
+	}
+
 	public function testPasswordChangeRevokesOldTokensAndReturnsNewOnes(): void
 	{
 		$user = Fixture::createUser('jane@example.com');

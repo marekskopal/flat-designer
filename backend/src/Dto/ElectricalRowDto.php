@@ -8,8 +8,10 @@ use FlatDesigner\Service\Furniture\DefinitionCategoryEnum;
 use stdClass;
 
 /**
- * Points of one room alike: the same definition with the same parameter values (int, bool and select ones, defaults
- * filled in) at the same elevation `z` (mm, the item's bottom edge). `outlets` sums a socket's `gangs` (one without).
+ * Points of one room alike: the same definition with the same parameter values (the int, bool and select ones its
+ * `schedule.values` lists, all of them without; defaults filled in) at the same elevation `z` (mm, the item's bottom
+ * edge). `units` sums the parameter its `schedule.count` names (a socket's gangs, a data socket's ports), 1 per item
+ * without.
  */
 final readonly class ElectricalRowDto
 {
@@ -24,7 +26,7 @@ final readonly class ElectricalRowDto
 		public array|stdClass $values,
 		public int $z,
 		public int $count,
-		public int $outlets,
+		public int $units,
 		public array $itemIds,
 	) {
 	}

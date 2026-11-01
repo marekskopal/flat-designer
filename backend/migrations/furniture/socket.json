@@ -4,6 +4,12 @@
  "definition": {
   "format": 1,
   "category": "socket",
+  "schedule": {
+   "count": "gangs",
+   "values": [
+    "gangs"
+   ]
+  },
   "size": {
    "width": 80,
    "depth": 10,

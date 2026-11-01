@@ -30,7 +30,7 @@
                             <tr class="room">
                                 <th colspan="4" scope="rowgroup">
                                     @if (room.code !== null) {
-                                        <span class="code">{{ room.code.replace('H1/', '') }}</span>
+                                        <span class="code">{{ roomCodeText(room.code) }}</span>
                                     }
                                     {{ room.name }}
                                     <span class="room-totals">{{ totalsSummary(room.totals) }}</span>

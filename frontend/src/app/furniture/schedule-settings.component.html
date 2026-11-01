@@ -1,0 +1,38 @@
+<div class="schedule">
+    <label class="field">
+        <span class="field__label">Electrical schedule</span>
+        <select class="input" [disabled]="readOnly()" (change)="setCategory($event)">
+            <option value="" [selected]="!body().category">Not counted</option>
+            @for (category of categories; track category[0]) {
+                <option [value]="category[0]" [selected]="body().category === category[0]">{{ category[1] }}</option>
+            }
+        </select>
+    </label>
+    @if (body().category) {
+        <label class="field">
+            <span class="field__label">Count by</span>
+            <select class="input" [disabled]="readOnly()" (change)="setCount($event)">
+                <option value="" [selected]="!body().schedule?.count">{{ defaultCount() === null ? 'Each item once' : 'Default (' + defaultCount() + ')' }}</option>
+                @for (parameter of countOptions(); track parameter.key) {
+                    <option [value]="parameter.key" [selected]="body().schedule?.count === parameter.key">{{ parameter.label ?? parameter.key }}</option>
+                }
+            </select>
+        </label>
+        @if (valueOptions().length > 0) {
+            <fieldset class="values">
+                <legend class="field__label">Listed values</legend>
+                @for (parameter of valueOptions(); track parameter.key) {
+                    <label class="toggle">
+                        <input
+                            type="checkbox"
+                            [checked]="listed().has(parameter.key)"
+                            [disabled]="readOnly()"
+                            (change)="toggleValue(parameter.key, $event)"
+                        />
+                        <span>{{ parameter.label ?? parameter.key }}</span>
+                    </label>
+                }
+            </fieldset>
+        }
+    }
+</div>

@@ -24,6 +24,9 @@
                         <tr>
                             <td class="table__strong">
                                 <a [routerLink]="['/furniture', definition.id]">{{ definition.name }}</a>
+                                @if (definition.definition.category; as category) {
+                                    <span class="badge badge--category" title="Counted in the electrical schedule">{{ categoryLabels[category] }}</span>
+                                }
                                 @if (definition.scope === 'user' && project() !== null && definition.userName) {
                                     <span class="badge">{{ definition.userName }}</span>
                                 }

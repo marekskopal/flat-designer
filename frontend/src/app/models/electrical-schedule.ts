@@ -1,18 +1,44 @@
 /** What a furniture definition's items count as in the electrical schedule (its `category`). */
 export type ElectricalCategory = 'light' | 'socket' | 'switch' | 'data' | 'plumbing';
 
+/** The categories in the schedule's order, with their names. */
+export const CategoryLabels: Record<ElectricalCategory, string> = {
+    light: 'Light',
+    socket: 'Socket',
+    switch: 'Switch',
+    data: 'Data',
+    plumbing: 'Plumbing',
+};
+
+/** The symbol set of the electrical plan, a user setting (FD-64): IEC 60617 or as Czech plans draw them (ČSN). */
+export type ElectricalSymbols = 'Iec' | 'Csn';
+
+export const ElectricalSymbolsLabels: Record<ElectricalSymbols, string> = {
+    Iec: 'IEC 60617',
+    Csn: 'ČSN (Czech)',
+};
+
+/**
+ * A definition's settings for the electrical schedule, beside its `category` (`DefinitionSchedule`): `count` names an
+ * int parameter multiplying the item, `values` the int, bool and select parameters it lists (all without).
+ */
+export interface DefinitionScheduleSettings {
+    count?: string;
+    values?: string[];
+}
+
 /** Points of one room alike: one definition, the same parameter values, the same elevation. Mirrors `ElectricalRowDto`. */
 export interface ElectricalRow {
     category: ElectricalCategory;
     definitionId: number;
     name: string;
-    /** The int, bool and select parameters, defaults filled in (a socket's gangs, a switch's rockers). */
+    /** The int, bool and select parameters its `schedule.values` lists (all without), defaults filled in. */
     values: Record<string, number | boolean | string>;
     /** mm, the items' bottom edge. */
     z: number;
     count: number;
-    /** A socket's gangs times its count; 0 for other categories. */
-    outlets: number;
+    /** The sum of the parameter its `schedule.count` names (a socket's gangs, a data socket's ports); 1 per item without. */
+    units: number;
     itemIds: number[];
 }
 
@@ -22,6 +48,7 @@ export interface ElectricalTotals {
     outlets: number;
     switches: number;
     dataSockets: number;
+    dataPorts: number;
     plumbingPoints: number;
 }
 

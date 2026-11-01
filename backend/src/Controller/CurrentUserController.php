@@ -43,13 +43,14 @@ final readonly class CurrentUserController
 		$user = $this->requestService->getUser($request);
 		$dto = $this->requestService->getRequestBodyDto($request, CurrentUserUpdateDto::class);
 
+		$name = null;
 		if ($dto->name !== null) {
 			$name = UserFieldValidator::normalizeName($dto->name);
 			if ($name === null) {
 				return new ErrorResponse('Name is required.', 422);
 			}
-			$user = $this->userProvider->updateName($user, $name);
 		}
+		$user = $this->userProvider->updateProfile($user, $name, $dto->electricalSymbols);
 
 		return new JsonResponse(UserDto::fromEntity($user));
 	}

@@ -6,6 +6,8 @@
     [roofsVisible]="roofsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
+    [electricalVisible]="electricalVisible()"
+    [electricalSymbols]="electricalSymbols()"
     [night]="night()"
     [lightsOn]="lightsOn()"
     [sunTime]="sunTime()"
@@ -247,7 +249,7 @@
                             @for (room of rooms(); track room.id) {
                                 <li>
                                     <button type="button" class="room" [class.selected]="selectedRoomId() === room.id" (click)="selectRoom(room)">
-                                        <span class="room__code">{{ room.code.replace('H1/', '') }}</span>
+                                        <span class="room__code">{{ roomCodeText(room.code) }}</span>
                                         <span class="room__name">{{ room.name }}</span>
                                         <span class="room__area">{{ room.area | number: '1.1-1' }} m²</span>
                                     </button>
@@ -311,6 +313,7 @@
                                 [address]="project()?.address ?? null"
                                 [glb]="exportGlb"
                                 [building]="building"
+                                [electricalSymbols]="electricalSymbols()"
                             />
                         }
                     }
@@ -372,7 +375,7 @@
                 <span class="room-card__icon"><fd-icon name="rooms" /></span>
                 <span class="room-card__title">
                     <strong>{{ info.room.name }}</strong>
-                    <span>{{ info.room.type }} · {{ info.room.code.replace('H1/', '') }}</span>
+                    <span>{{ info.room.type }} · {{ roomCodeText(info.room.code) }}</span>
                 </span>
                 <button type="button" class="icon-button" aria-label="Deselect" (click)="editor.select(null)">
                     <fd-icon name="close" [size]="16" />
@@ -553,6 +556,17 @@
                         >
                             <fd-icon name="dimensions" /> Dimensions
                         </button>
+                        @if (hasElectrical()) {
+                            <button
+                                type="button"
+                                class="toggle"
+                                title="Lights, sockets and switches, in the plan"
+                                [class.toggle--on]="electricalVisible()"
+                                (click)="electricalVisible.set(!electricalVisible())"
+                            >
+                                <fd-icon name="plug" /> Electrical
+                            </button>
+                        }
                         <button type="button" class="toggle" [class.toggle--on]="commentsVisible()" (click)="commentsVisible.set(!commentsVisible())">
                             <fd-icon name="pin" /> Comments
                         </button>

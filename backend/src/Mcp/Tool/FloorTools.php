@@ -82,9 +82,10 @@ final readonly class FloorTools
 		name: 'get_electrical_schedule',
 		description: 'Electrical schedule of a project, or of one floor with floorId, for the electrician: per room the lights, '
 			. 'sockets, switches, data sockets and plumbing points (Custom items whose furniture definition has a category; '
-			. 'shown variants only), each row the points of one definition with the same parameter values (e.g. gangs) at the '
-			. 'same elevation z (mm, bottom edge), with the counts per category and the sockets\' outlets per room, floor and '
-			. 'project. An item belongs to its roomId, otherwise to the room holding its footprint centre; points outside every '
+			. 'shown variants only), each row the points of one definition with the same parameter values (e.g. gangs; the '
+			. 'definition\'s schedule.values) at the same elevation z (mm, bottom edge) and their units (the sum of the parameter '
+			. 'its schedule.count names, else 1 each), with the counts per category, the sockets\' outlets and the data sockets\' '
+			. 'ports per room, floor and project. An item belongs to its roomId, otherwise to the room holding its footprint centre; points outside every '
 			. 'room are listed under a room with id null.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]

@@ -4,6 +4,12 @@
  "definition": {
   "format": 1,
   "category": "light",
+  "schedule": {
+   "values": [
+    "lumens",
+    "kelvin"
+   ]
+  },
   "size": {
    "width": 1500,
    "depth": 60,

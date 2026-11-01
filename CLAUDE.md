@@ -154,8 +154,16 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - `EditorStore` is provided per viewer page. It holds the selection and edit mode and makes the API calls, sending
     the scene revision as `If-Match`. `scene-patch.ts` patches the returned element into the scene and falls back to a
     reload.
-  - `EditorPanelComponent` has the toolbar, the Add menu and the shortcuts.
-  - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. `when` limits a field
+  - Layout of the viewer page (mockup `docs/ui/viewer-layout.html`): the 3D view fills it and the controls float over
+    it: a rail of panels on the left (one open at a time: rooms, saved views, variants, comments, export; activity and
+    the underlay while editing), the floor menu, 3D / Plan / Walk, Share and Edit on top, the tools in a dock at the
+    bottom (drawing tools, measure, comment, Add, the wall cut, the Display popover), a level picker for the floors, and
+    the selection on the right. Icons are `fd-icon` (`shared/icon`, Lucide-style paths; add one to `Icons`). The shared
+    viewer keeps the old side panel (its own stylesheet).
+  - `EditorPanelComponent` is the inspector panel (shown with a selection) and holds the editing shortcuts;
+    `AddLibraryComponent` is the Add library (categories, search), `WallDraftComponent` the Draw walls options.
+  - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. A field's `section` starts
+    a collapsible group (`folded` starts it closed). `when` limits a field
     to certain elements, e.g. the `custom` form of Custom items.
 - Engine picking: builders tag objects with `itemId` / `openingId` / `wallId` / `roomId` in `userData`
   (`selection.ts`). In edit mode with the camera looking down, items, walls and openings can be dragged, and the
@@ -230,7 +238,7 @@ format is the text in `FurnitureTools::Format`.
   (same ids), then `ConvertBuiltInFurniture` the rest in every project, the saved versions and the change log, and
   `RemoveBuiltInFurnitureKinds` dropped them from `items.kind`. `BuiltInFurnitureConverter` (params to values) and
   `BuiltInItemConverter` (scene JSON) are kept only for these migrations.
-- UI: the Add menu's "Furniture —" groups; the inspector's `definition` / `custom` fields (`CustomParamsComponent`
+- UI: the Add library's Furniture, Lights & sockets and My furniture categories; the inspector's `definition` / `custom` fields (`CustomParamsComponent`
   generates a form from the definition's parameters and slots; `EditorStore.definitions`); `/furniture` (the library,
   `?projectId=`); and `/furniture/:id` (a JSON editor with `FurniturePreview`, a framework-free one-item scene in
   `viewer/engine/custom/preview.ts`).
@@ -656,6 +664,12 @@ format is the text in `FurnitureTools::Format`.
   plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge. Their definitions
   carry a `category` (`DefinitionCategoryEnum`: light, socket, switch, data, plumbing; checked by `DefinitionValidator`,
   not read by the evaluators) for the electrical schedule. Lights count only by this tag, not by their `light` parts.
+  With it, `schedule` (FD-64, `DefinitionSchedule`, TS `DefinitionScheduleSettings`; checked, not read by the
+  evaluators) says what the schedule counts and lists: `count` an int parameter multiplying the item (a socket's
+  `gangs`, a data socket's `ports`; 1 without), `values` the int/bool/select parameters it groups by and shows (all
+  without). A definition with no `schedule` at all (older JSON in versions and share links) counts a socket's int
+  `gangs` and a data socket's int `ports` (`DefinitionSchedule::Defaults`, TS `scheduleCount()`). The furniture editor sets both above the JSON (`ScheduleSettingsComponent`), the library shows the
+  category; `AddElectricalScheduleSettings` gave the seeds theirs and tagged copies their `count`.
 
 ## Render quality
 
@@ -812,8 +826,20 @@ format is the text in `FurnitureTools::Format`.
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
   definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside
-  every room go under a room with `id` null). Rows group one definition with the same int/bool/select values at the
-  same `z`; a socket's `gangs` parameter counts its outlets. PHP only.
+  every room go under a room with `id` null). Rows group one definition with the same `schedule.values` at the same
+  `z`, their `units` summing `schedule.count`; the totals give the sockets' `outlets` and the data sockets'
+  `dataPorts`. PHP only.
+- Electrical plan (FD-64, plan in `docs/electrical-plan.md`): `viewer/engine/electrical.ts` (framework-free) gives the
+  points (`electricalPoints()`: wall points on the middle of the item's front edge, facing out; lights at the centre;
+  hidden variants left out) and their symbols as unit-frame polylines in two sets, `Iec` and `Csn`
+  (`ElectricalSymbolSets`, `symbolPolylines()`). The user picks the set on the account page (`users.electrical_symbols`,
+  `UserDto::$electricalSymbols`, `PATCH /api/current-user`); share guests get the owner's (`SharedViewDto`). The
+  Display toggle "Electrical (Plan)" (shown when the floor has points; `electrical` in saved views and share links)
+  draws them over the top view like the dimension lines (`ViewerEngine.setElectricalVisible()`, `buildElectrical()`:
+  no depth test, not pickable, the wall points' elevations as CSS2D labels; hidden while items are previewed, and
+  from an item drag until the edit comes back or `restore()` puts them back). `planSheet(scene, info, symbols)` is the
+  electrical plan PDF (Export → Electrical PDF): the furniture faint without names or dimensions, the symbols, the
+  elevations and a legend with the counts in a strip `planLayout(bounds, reserved)` keeps above the title band.
 - Quantities and cost: `Service/Quantities/QuantitiesService` (REST `…/quantities`, MCP `get_quantities`, page
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without

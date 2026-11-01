@@ -436,7 +436,7 @@ final class McpServerTest extends IntegrationTestCase
 		$electrical = $this->client->call('get_electrical_schedule', ['projectId' => $this->project->id]);
 		self::assertIsArray($electrical);
 		self::assertEquals(
-			['lights' => 0, 'sockets' => 0, 'outlets' => 0, 'switches' => 0, 'dataSockets' => 0, 'plumbingPoints' => 0],
+			['lights' => 0, 'sockets' => 0, 'outlets' => 0, 'switches' => 0, 'dataSockets' => 0, 'dataPorts' => 0, 'plumbingPoints' => 0],
 			$electrical['totals'],
 		);
 

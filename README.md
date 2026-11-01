@@ -26,7 +26,10 @@ windows. A measure tool snaps to wall ends, corners and faces, and a calibrated 
 
 The project page lists each room's net area, perimeter, clear height and volume, with indoor and outdoor totals.
 Below it, the electrical schedule lists for the electrician each room's lights, sockets (with their gangs), switches,
-data sockets and plumbing points with their elevations. Floors, versions, share links and project files are managed
+data sockets (with their ports) and plumbing points with their elevations. A definition's category and what the
+schedule counts and lists are set in the furniture editor. In the viewer the Display toggle "Electrical (Plan)" draws
+the points as symbols over the plan (IEC 60617 or Czech ČSN, chosen on the account page), and Export → Electrical PDF
+prints them with their elevations and a legend. Floors, versions, share links and project files are managed
 here too.
 
 ### Eye-level views and the walkthrough

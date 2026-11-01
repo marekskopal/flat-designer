@@ -1,5 +1,6 @@
 import {levelText} from '@app/core/level-text';
 import {localDate} from '@app/core/local-date';
+import {CategoryLabels, ElectricalCategory, ElectricalSymbols} from '@app/models/electrical-schedule';
 import {
     FloorVoid,
     isAncillaryRoom,
@@ -19,6 +20,7 @@ import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
 import {isChimney, sceneChimneys} from './chimneys';
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
+import {CategoryColors, ElectricalPoint, electricalPoints, elevationText, isWallMounted, symbolPolylines} from './electrical';
 import {itemsOverFloor} from './items';
 import {
     Bounds,
@@ -97,6 +99,8 @@ const IndoorFill = '#ffffff';
 /** A property line: long dash, dot (paper mm). */
 const PlotDash = '6 1.2 0.6 1.2';
 const OutdoorFill = '#edf2e6';
+/** Furniture under the electrical symbols. */
+const FaintItem = '#c9c3b8';
 
 /** A polygon or polyline in plan mm. */
 interface Shape {
@@ -140,12 +144,12 @@ export interface PlanLayout {
  * `PlanScales` that fits, landscape or portrait, whichever needs the smaller one (landscape for a wide plan on a tie).
  * A plan too large for all of them gets the next scale in hundreds.
  */
-export function planLayout(bounds: Bounds): PlanLayout {
+export function planLayout(bounds: Bounds, reserved = 0): PlanLayout {
     const planWidth = Math.max(bounds.maxX - bounds.minX, 1);
     const planHeight = Math.max(bounds.maxY - bounds.minY, 1);
     const fit = (width: number, height: number): PlanLayout => {
         const areaWidth = width - 2 * (Margin + Padding);
-        const areaHeight = height - 2 * (Margin + Padding) - TitleBand;
+        const areaHeight = height - 2 * (Margin + Padding) - TitleBand - reserved;
         const scale =
             PlanScales.find((s) => planWidth / s <= areaWidth && planHeight / s <= areaHeight) ??
             Math.ceil(Math.max(planWidth / areaWidth, planHeight / areaHeight) / 100) * 100;
@@ -163,14 +167,22 @@ export function planLayout(bounds: Bounds): PlanLayout {
     return planWidth >= planHeight ? landscape : portrait;
 }
 
-/** The floor plan on one A4 page, with the title block, a scale bar and a north arrow. */
-export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number} {
+/**
+ * The floor plan on one A4 page, with the title block, a scale bar and a north arrow. With `electrical` (a symbol set)
+ * it is the electrical plan (FD-64): the furniture outlined faintly without names or dimensions, the electrical
+ * points' symbols over it with the wall points' elevations, and a legend in the title band.
+ */
+export function planSheet(scene: Scene, info: SheetInfo, electrical?: ElectricalSymbols): Sheet & {scale: number} {
     const hidden = hiddenItemIds(scene);
     const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
     const rooms = scene.rooms.map(roomShape);
     const plots = (scene.plots ?? []).map(plotShape);
     const contours = (scene.plots ?? []).flatMap(contourShapes);
-    const itemShapes = items.map(itemShape);
+    const points = electrical === undefined ? [] : electricalPoints(scene);
+    const electricalIds = new Set(points.map((p) => p.itemId));
+    const itemShapes = items
+        .filter((item) => !electricalIds.has(item.id))
+        .map((item) => (electrical === undefined ? itemShape(item) : faintItemShape(item)));
     const walls = wallShapes(scene.walls, scene.roofs ?? []);
     const openings = scene.walls.flatMap((wall) => openingShapes(wall, scene.roofs ?? []));
     const stairs = stairPlanShapes(scene);
@@ -184,7 +196,7 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
     // The section lines reach a little past the walls: the plan takes them in.
     drawn.push(...cuts);
     const bounds = shapeBounds(drawn);
-    const layout = planLayout(bounds);
+    const layout = planLayout(bounds, electrical === undefined ? 0 : LegendBand);
     const s = layout.scale;
     const toPaper = (p: Vec2): Vec2 => ({x: layout.origin.x + (p.x - bounds.minX) / s, y: layout.origin.y + (bounds.maxY - p.y) / s});
     const crosses = (scene.plots ?? []).flatMap((plot) => spotHeightCrosses(plot, s));
@@ -200,11 +212,13 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
         taken.push(box);
         return true;
     };
-    const dimensions = dimensionLabels(scene, s).filter(free);
+    const symbols = electrical === undefined ? [] : points.flatMap((point) => electricalShapes(point, electrical, s));
+    const elevations = points.flatMap((point) => elevationLabel(point, s)).filter(free);
+    const dimensions = electrical === undefined ? dimensionLabels(scene, s).filter(free) : [];
     const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s)).filter(free);
-    const itemLabels = items.flatMap((item) => itemLabel(item, s)).filter(free);
+    const itemLabels = electrical === undefined ? items.flatMap((item) => itemLabel(item, s)).filter(free) : [];
     const sections = (scene.sections ?? []).flatMap((section) => sectionMarks(section, s));
-    const labels = [...sections, ...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions];
+    const labels = [...sections, ...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions, ...elevations];
 
     const body = [
         ...[
@@ -221,14 +235,84 @@ export function planSheet(scene: Scene, info: SheetInfo): Sheet & {scale: number
                 ...openings,
                 ...itemShapes,
                 ...chimneysBelow,
+                ...symbols,
             ],
             ...labels.flatMap((l) => l.shapes ?? []),
         ].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
-        planBandSvg(layout, info, scene.location?.northAngle ?? 0),
+        planBandSvg(layout, info, scene.location?.northAngle ?? 0, electrical === undefined ? 'Floor plan' : 'Electrical plan'),
+        ...(electrical === undefined ? [] : [electricalLegendSvg(layout, points, electrical)]),
     ];
     return {width: layout.width, height: layout.height, scale: s, svg: sheetSvg(layout.width, layout.height, body)};
+}
+
+/** A symbol's size on the electrical plan, paper mm a unit. */
+const SymbolPaper = 3.6;
+/** The strip above the title band the electrical plan keeps for its legend, paper mm. */
+const LegendBand = 6;
+const ElevationText = 1.7;
+
+/** An item outlined faintly under the electrical symbols; columns and chimneys stay filled. */
+function faintItemShape(item: Item): Shape {
+    return item.kind === 'Column' || isChimney(item)
+        ? itemShape(item)
+        : {points: itemFootprint(item), closed: true, style: {stroke: FaintItem, width: 0.12}};
+}
+
+function electricalShapes(point: ElectricalPoint, symbols: ElectricalSymbols, scale: number): Shape[] {
+    const style: Style = {stroke: CategoryColors[point.category], width: 0.22};
+    return symbolPolylines(point, symbols, SymbolPaper * scale).map((polyline) => ({...polyline, style}));
+}
+
+/** A wall point's elevation just past its symbol; none for lights. */
+function elevationLabel(point: ElectricalPoint, scale: number): Label[] {
+    if (!isWallMounted(point)) {
+        return [];
+    }
+    const reach = SymbolPaper * scale * 1.15;
+    return [
+        {
+            at: {x: point.at.x + point.out.x * reach, y: point.at.y + point.out.y * reach},
+            lines: [{text: elevationText(point), size: ElevationText, color: Muted}],
+        },
+    ];
+}
+
+/**
+ * The legend in the strip `planLayout()` keeps above the title band: each category on the floor with its symbol and
+ * count (a socket's outlets, a data socket's ports in brackets), in one row. A symbol is drawn as on the plan, facing
+ * north, its plan frame flipped onto the paper.
+ */
+function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoint[], symbols: ElectricalSymbols): string {
+    const baseline = layout.height - Margin - TitleBand - 1.8;
+    const right = layout.width - Margin - Padding;
+    const size = 2.8;
+    const parts: string[] = [];
+    let x = Margin + Padding;
+    for (const category of Object.keys(CategoryLabels) as ElectricalCategory[]) {
+        const of = points.filter((p) => p.category === category);
+        if (of.length === 0) {
+            continue;
+        }
+        const units = of.reduce((sum, p) => sum + p.units, 0);
+        const counted = (category === 'socket' || category === 'data') && units !== of.length;
+        const label = `${CategoryLabels[category]} ${of.length}${counted ? ` (${units})` : ''}`;
+        const width = size + 1.5 + textWidth(label, 2.2) + 4;
+        if (x + width > right) {
+            break;
+        }
+        // The symbol's foot on the baseline, reaching up (a light centred on the text).
+        const anchor = {x: x + size / 2, y: category === 'light' ? baseline - 0.9 : baseline + 0.4};
+        const sample: ElectricalPoint = {...of[0], at: {x: 0, y: 0}, out: {x: 0, y: 1}, units: Math.min(of[0].units, 1)};
+        for (const polyline of symbolPolylines(sample, symbols, size)) {
+            const onPaper = polyline.points.map((p) => ({x: anchor.x + p.x, y: anchor.y - p.y}));
+            parts.push(path(onPaper, polyline.closed, {stroke: CategoryColors[category], width: 0.2}));
+        }
+        parts.push(text({x: x + size + 1.5, y: baseline}, label, 2.2));
+        x += width;
+    }
+    return parts.join('');
 }
 
 /**
@@ -1060,7 +1144,7 @@ function perimeter(room: Pick<Room, 'polygon'>): number {
 // --- Page furniture (paper mm) ---
 
 /** The band under the plan: a scale bar and a north arrow at the left, the title block at the right. */
-function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number): string {
+function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number, caption: string): string {
     const top = layout.height - Margin - TitleBand;
     const left = Margin + Padding;
     const parts: string[] = [];
@@ -1080,7 +1164,7 @@ function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number): s
     // North arrow: true north, turned from the plan's y axis by the site's north angle.
     parts.push(northArrowSvg({x: left + barLength + 16, y: top + 14}, northAngle));
 
-    parts.push(titleBlockSvg(layout.width, layout.height, info, `Floor plan · 1:${layout.scale} (A4)`));
+    parts.push(titleBlockSvg(layout.width, layout.height, info, `${caption} · 1:${layout.scale} (A4)`));
     return parts.join('');
 }
 

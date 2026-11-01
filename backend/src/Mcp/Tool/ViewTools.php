@@ -66,6 +66,7 @@ final readonly class ViewTools
 	 * @param bool $labels show room labels
 	 * @param int|null $sectionHeight wall cut, mm above the floor (900–2700); null = none
 	 * @param bool $dimensions dimension lines (plan view)
+	 * @param bool $electrical electrical symbols at the lights, sockets, switches, data sockets and plumbing points (plan view)
 	 * @param bool $night after dark: no daylight
 	 * @param bool|null $lightsOn the flat's lights; null = on at night, off by day
 	 * @param int|null $sunMonth with `sunHour`: the sun on the 21st of this month (1–12), from the project's location and north
@@ -92,6 +93,7 @@ final readonly class ViewTools
 		bool $labels = true,
 		?int $sectionHeight = null,
 		bool $dimensions = false,
+		bool $electrical = false,
 		bool $night = false,
 		?bool $lightsOn = null,
 		?int $sunMonth = null,
@@ -110,6 +112,7 @@ final readonly class ViewTools
 			'labels' => $labels,
 			'sectionHeight' => $sectionHeight,
 			'dimensions' => $dimensions,
+			'electrical' => $electrical,
 			'night' => $night,
 			'lightsOn' => $lightsOn,
 			'sun' => SunTimeDto::fields($sunMonth, $sunHour),

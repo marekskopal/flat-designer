@@ -6,6 +6,7 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {ExportComponent} from '@app/export/export.component';
 import {commentPinsOf} from '@app/models/comment';
+import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {hasSiteLocation, Scene, SunTime} from '@app/models/scene';
 import {ShareView, ShareViewLabels} from '@app/models/share';
 import {CommentService} from '@app/services/comment.service';
@@ -13,6 +14,7 @@ import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {StorageService} from '@app/services/storage.service';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
+import {electricalPoints} from '@app/viewer/engine/electrical';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {isSunDown} from '@app/viewer/engine/sun';
@@ -110,6 +112,14 @@ export class SharedViewerPageComponent {
     protected readonly roofsVisible = signal(true);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
+    protected readonly electricalVisible = signal(false);
+    /** The project owner's symbol set for the electrical plan. */
+    protected readonly electricalSymbols = computed<ElectricalSymbols>(() => this.shared()?.electricalSymbols ?? 'Iec');
+    /** The floor has lights, sockets, switches, … to draw (the Display toggle shows only then). */
+    protected readonly hasElectrical = computed(() => {
+        const scene = this.scene();
+        return scene !== null && electricalPoints(scene).length > 0;
+    });
     /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
     protected readonly night = signal(false);
     private readonly lightsChoice = signal<boolean | null>(null);
@@ -185,6 +195,7 @@ export class SharedViewerPageComponent {
         this.roofsVisible.set(settings.roofs ?? true);
         this.labelsVisible.set(settings.labels);
         this.dimensionsVisible.set(settings.dimensions);
+        this.electricalVisible.set(settings.electrical ?? false);
         this.night.set(settings.night ?? false);
         this.presentation.set(settings.presentation ?? false);
         this.sunTime.set(settings.sun ?? null);

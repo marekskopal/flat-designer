@@ -222,6 +222,33 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		$definition['parts'][1]['name'] = str_repeat('x', 256);
 
 		yield 'part name too long' => [$definition, 'parts[1].name: Must be a string of at most 255 characters.'];
+
+		$definition = self::Definition;
+		$definition['schedule'] = ['count' => 't'];
+
+		yield 'schedule settings without a category' => [$definition, 'schedule: Needs a category.'];
+
+		$definition['category'] = 'socket';
+		$definition['schedule'] = ['count' => 'gangs'];
+
+		yield 'schedule count not a parameter' => [$definition, 'schedule.count: Must be the key of an int parameter.'];
+
+		$definition['parameters'][] = ['key' => 'open', 'type' => 'bool', 'default' => true];
+		$definition['schedule'] = ['count' => 'open'];
+
+		yield 'schedule count not an int' => [$definition, 'schedule.count: Must be the key of an int parameter.'];
+
+		$definition['schedule'] = ['values' => ['t', 'open', 't']];
+
+		yield 'schedule value listed twice' => [$definition, 'schedule.values[2]: Listed twice.'];
+
+		$definition['schedule'] = ['values' => ['t', 'colour']];
+
+		yield 'schedule value not a parameter' => [$definition, 'schedule.values[1]: Must be the key of a int, bool, select parameter.'];
+
+		$definition['schedule'] = ['count' => 't', 'circuit' => 1];
+
+		yield 'unknown schedule key' => [$definition, 'schedule.circuit: Unknown key; known: count, values.'];
 	}
 
 	/**
@@ -235,6 +262,17 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 
 		self::assertSame(422, $response->getStatusCode());
 		self::assertStringStartsWith($message, self::stringField($this->jsonBody($response)['message']));
+	}
+
+	public function testScheduleSettingsAreStored(): void
+	{
+		$definition = self::Definition;
+		$definition['category'] = 'socket';
+		$definition['schedule'] = ['count' => 't', 'values' => ['t']];
+		$response = $this->create(Fixture::createUser(), ['definition' => $definition]);
+
+		self::assertSame(201, $response->getStatusCode());
+		self::assertStringContainsString('"schedule":{"count":"t","values":["t"]}', (string) $response->getBody());
 	}
 
 	public function testValidateWithoutSaving(): void

@@ -19,6 +19,9 @@
                 <span class="field__label">Description</span>
                 <input class="input" [value]="description()" [readOnly]="readOnly()" (input)="description.set(text($event))" />
             </label>
+            @if (body(); as b) {
+                <fd-schedule-settings [body]="b" [readOnly]="readOnly()" (bodyChange)="setBody($event)" />
+            }
             <label class="field field--grow">
                 <span class="field__label">
                     Definition (JSON)

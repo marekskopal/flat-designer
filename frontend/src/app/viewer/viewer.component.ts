@@ -13,6 +13,7 @@ import {
     untracked,
     viewChild,
 } from '@angular/core';
+import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {PlanPoint, Room, Scene, SunTime} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
 import {environment} from '@environments/environment';
@@ -72,6 +73,9 @@ export class ViewerComponent {
     public readonly labelsVisible = input(true);
     /** Dimension lines along the room edges, in the top view. */
     public readonly dimensionsVisible = input(false);
+    /** Electrical symbols at the lights, sockets, switches, … in the top view, from the set `electricalSymbols`. */
+    public readonly electricalVisible = input(false);
+    public readonly electricalSymbols = input<ElectricalSymbols>('Iec');
     /** After dark: no daylight. */
     public readonly night = input(false);
     /** The flat's lights (light parts, LED strips) are on. */
@@ -215,6 +219,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setRoofsVisible(this.roofsVisible()));
         effect(() => this.engine()?.setLabelsVisible(this.labelsVisible()));
         effect(() => this.engine()?.setDimensionsVisible(this.dimensionsVisible()));
+        effect(() => this.engine()?.setElectricalVisible(this.electricalVisible(), this.electricalSymbols()));
         effect(() => this.engine()?.setLighting(this.night(), this.lightsOn()));
         effect(() => this.engine()?.setSunTime(this.sunTime()));
         effect(() => this.engine()?.setQuality(this.presentation() ? 'presentation' : 'fast'));

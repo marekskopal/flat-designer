@@ -4,6 +4,7 @@ import {ChangeDetectionStrategy, Component, effect, inject, OnInit, signal} from
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
+import {ElectricalSymbols, ElectricalSymbolsLabels} from '@app/models/electrical-schedule';
 import {McpClient} from '@app/models/mcp-client';
 import {AlertService} from '@app/services/alert.service';
 import {AuthenticationService} from '@app/services/authentication.service';
@@ -35,7 +36,9 @@ export class AccountComponent implements OnInit {
 
     protected readonly profileForm = this.fb.group({
         name: ['', Validators.required],
+        electricalSymbols: this.fb.control<ElectricalSymbols>('Iec'),
     });
+    protected readonly symbolSets = Object.entries(ElectricalSymbolsLabels) as [ElectricalSymbols, string][];
 
     protected readonly passwordForm = this.fb.group({
         currentPassword: ['', Validators.required],
@@ -46,7 +49,7 @@ export class AccountComponent implements OnInit {
         effect(() => {
             const user = this.currentUser.currentUser();
             if (user !== null && this.profileForm.pristine) {
-                this.profileForm.setValue({name: user.name});
+                this.profileForm.setValue({name: user.name, electricalSymbols: user.electricalSymbols});
             }
         });
     }
@@ -74,7 +77,7 @@ export class AccountComponent implements OnInit {
         }
         this.savingProfile.set(true);
         try {
-            await this.currentUser.updateName(this.profileForm.getRawValue().name);
+            await this.currentUser.update(this.profileForm.getRawValue());
             this.profileForm.markAsPristine();
             this.alerts.success('Profile saved.');
         } catch {
