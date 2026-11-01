@@ -688,7 +688,10 @@ format is the text in `FurnitureTools::Format`.
   the same name) / `delete_view`): a named view of one floor. `settings` (`SavedViewSettingsDto`) holds the view mode
   (`overview` or `top`; an eye-level shot is a 3D camera at eye height, and saving during a walk keeps it as one), the
   camera, the display options (night, lights, quality) and the variant per set. Views are not elements: no revision,
-  no undo. They go with their floor; snapshots carry them (`views`, `SnapshotViewRestorer`), and a restore remaps
+  no undo. A camera may have a lens (FD-54, `ShareCameraDto::$focalLength`, 10–200 mm on 35 mm film across the view's
+  longer side, `lensFov()` in `viewer/engine/lens.ts`; null is the standard 45° vertical `OrbitFov`): `setCameraPose()`
+  applies it (tweening the field of view), `setLens()` sets it (the View section's Lens select, 3D only; the page
+  gives the plan the standard lens, as a wide one only distorts it); a walk has its own, which a view saved during it keeps as its focal length. They go with their floor; snapshots carry them (`views`, `SnapshotViewRestorer`), and a restore remaps
   their floor, sets and groups.
 - The viewer page's Saved views section applies, saves, replaces and deletes views. A view's variants are shown
   locally (`variantOverride`, until the scene's next revision); the project's active variants do not change.

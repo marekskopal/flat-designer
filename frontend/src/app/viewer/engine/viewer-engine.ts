@@ -16,7 +16,7 @@ import {
     Underlay,
     Wall,
 } from '@app/models/scene';
-import {CameraPoint, CameraPose} from '@app/models/share';
+import {CameraPoint, CameraPose, MaxFocalLength, MinFocalLength} from '@app/models/share';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -63,6 +63,7 @@ import {
 import {buildGhost, disposeGhost, GhostFloor} from './ghost';
 import {exportTree, toGlb} from './gltf-export';
 import {buildItem, ItemAssets, standsOnGround} from './items';
+import {fovFocalLength, lensFov} from './lens';
 import {applyFixtureLights} from './lights';
 import {MaterialLibrary} from './materials';
 import {measureClick, Measurement, MeasureStatus, measureStatus, NoMeasurement, snapMeasurePoint} from './measure';
@@ -147,6 +148,9 @@ interface CameraTween {
     fromTarget: THREE.Vector3;
     toPosition: THREE.Vector3;
     toTarget: THREE.Vector3;
+    /** The vertical field of view (degrees) at the start and the end. */
+    fromFov: number;
+    toFov: number;
     start: number;
     duration: number;
 }
@@ -470,6 +474,8 @@ export class ViewerEngine {
     private bounds: Bounds = {minX: 0, minY: 0, maxX: 1, maxY: 1};
     private insetLeft = 0;
     private tween: CameraTween | null = null;
+    /** The orbit camera's lens, a focal length in mm on 35 mm film (`lens.ts`); null is the standard `OrbitFov`. */
+    private lens: number | null = null;
     /** Floor currently shown; reloading the same floor (a live update) keeps the camera where it is. */
     private loadedFloorId: number | null = null;
     private sceneData: Scene | null = null;
@@ -1647,7 +1653,8 @@ export class ViewerEngine {
                 this.moveCamera(new THREE.Vector3(center.x - width * 1.1, Math.max(width, depth) * 0.95, center.z + depth * 0.7), center, animate);
                 break;
             case 'top': {
-                const halfFov = THREE.MathUtils.degToRad(this.camera.fov / 2);
+                // The field of view the camera ends with, which a running tween or a new lens may not have reached yet.
+                const halfFov = THREE.MathUtils.degToRad(this.orbitFov() / 2);
                 const distance = Math.max(depth / 2 / Math.tan(halfFov), width / 2 / (Math.tan(halfFov) * this.camera.aspect)) * 1.12;
                 this.moveCamera(new THREE.Vector3(center.x, distance, center.z + 0.001), center, animate);
                 break;
@@ -1656,19 +1663,38 @@ export class ViewerEngine {
     }
 
     /**
-     * The camera in plan mm (where a tween is heading, if one runs), e.g. to save it in a share link or a view. During a
-     * walk it is the walker's eye, looking 2 m ahead: the same shot as a 3D view.
+     * The camera in plan mm (where a tween is heading, if one runs) with its lens, e.g. to save it in a share link or a
+     * view. During a walk it is the walker's eye, looking 2 m ahead, through the walk's wider lens: the same shot as a
+     * 3D view.
      */
     public cameraPose(): CameraPose {
         const toPlan = (v: THREE.Vector3): CameraPoint => ({x: Math.round(v.x / MM), y: Math.round(-v.z / MM), z: Math.round(v.y / MM)});
         if (this.walkthrough !== null) {
             const ahead = this.camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(2).add(this.camera.position);
-            return {position: toPlan(this.camera.position), target: toPlan(ahead)};
+            const focalLength = Math.round(fovFocalLength(this.camera.fov, this.camera.aspect));
+            return {
+                position: toPlan(this.camera.position),
+                target: toPlan(ahead),
+                focalLength: THREE.MathUtils.clamp(focalLength, MinFocalLength, MaxFocalLength),
+            };
         }
         return {
             position: toPlan(this.tween?.toPosition ?? this.camera.position),
             target: toPlan(this.tween?.toTarget ?? this.controls.target),
+            focalLength: this.lens,
         };
+    }
+
+    /**
+     * The orbit camera's lens, a focal length in mm on 35 mm film across the view's longer side; null is the standard
+     * view. The camera keeps its place, so a shorter lens shows more around the same point. A walk keeps its own lens
+     * and the orbit camera takes this one back after it.
+     */
+    public setLens(focalLength: number | null): void {
+        this.invalidate();
+        this.lens = focalLength;
+        this.applyLens();
+        this.camera.updateProjectionMatrix();
     }
 
     /**
@@ -1785,6 +1811,10 @@ export class ViewerEngine {
         this.renderer.setSize(width, height, false);
         this.camera.aspect = width / height;
         this.camera.clearViewOffset();
+        if (this.walkthrough === null) {
+            // The lens at the image's aspect, even while a tween is still turning the field of view towards it.
+            this.camera.fov = this.orbitFov();
+        }
         this.camera.updateProjectionMatrix();
         this.presentation?.setSize(width, height, pixelRatio);
         this.stillFrames = true;
@@ -1800,8 +1830,10 @@ export class ViewerEngine {
         return blob;
     }
 
+    /** Moves the camera to `pose`, with its lens (the standard one when it has none). */
     public setCameraPose(pose: CameraPose, animate = true): void {
         this.invalidate();
+        this.lens = pose.focalLength ?? null;
         const toScene = (p: CameraPoint): THREE.Vector3 => new THREE.Vector3(p.x * MM, p.z * MM, -p.y * MM);
         this.moveCamera(toScene(pose.position), toScene(pose.target), animate);
     }
@@ -1995,7 +2027,7 @@ export class ViewerEngine {
         for (const layer of this.stackLayers) {
             layer.leafStates.reset(layer.scene.walls, true);
         }
-        this.camera.fov = OrbitFov;
+        this.camera.fov = this.orbitFov();
         this.camera.updateProjectionMatrix();
         // Orbit around a point ahead of the walker, so the hand-over does not jerk the view.
         const ahead = this.camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize().multiplyScalar(2);
@@ -2391,6 +2423,8 @@ export class ViewerEngine {
             this.tween = null;
             this.camera.position.copy(position);
             this.controls.target.copy(target);
+            this.applyLens();
+            this.camera.updateProjectionMatrix();
             this.controls.update();
             this.controls.enableDamping = true;
             return;
@@ -2400,9 +2434,28 @@ export class ViewerEngine {
             fromTarget: this.controls.target.clone(),
             toPosition: position,
             toTarget: target,
+            fromFov: this.camera.fov,
+            toFov: this.walkthrough === null ? this.orbitFov() : this.camera.fov,
             start: performance.now(),
             duration: TweenDuration,
         };
+    }
+
+    /** The orbit camera's vertical field of view (degrees): its lens at the present aspect, else `OrbitFov`. */
+    private orbitFov(): number {
+        return this.lens === null ? OrbitFov : lensFov(this.lens, this.camera.aspect);
+    }
+
+    /** Sets the orbit camera's field of view to its lens (a running tween heads for it); the caller updates the projection. */
+    private applyLens(): void {
+        if (this.walkthrough !== null) {
+            return;
+        }
+        if (this.tween !== null) {
+            this.tween.toFov = this.orbitFov();
+            return;
+        }
+        this.camera.fov = this.orbitFov();
     }
 
     /** The shadow maps are redrawn with the next frame. */
@@ -2476,6 +2529,10 @@ export class ViewerEngine {
             const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
             this.camera.position.lerpVectors(this.tween.fromPosition, this.tween.toPosition, k);
             this.controls.target.lerpVectors(this.tween.fromTarget, this.tween.toTarget, k);
+            if (this.tween.fromFov !== this.tween.toFov) {
+                this.camera.fov = THREE.MathUtils.lerp(this.tween.fromFov, this.tween.toFov, k);
+                this.camera.updateProjectionMatrix();
+            }
             if (t >= 1) {
                 this.tween = null;
                 this.controls.enableDamping = true;
@@ -2565,6 +2622,7 @@ export class ViewerEngine {
         } else {
             this.camera.clearViewOffset();
         }
+        this.applyLens();
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
         this.presentation?.setSize(width, height, this.renderer.getPixelRatio());

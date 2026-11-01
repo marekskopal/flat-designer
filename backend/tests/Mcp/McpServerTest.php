@@ -501,7 +501,11 @@ final class McpServerTest extends IntegrationTestCase
 	public function testManagesShareLinks(): void
 	{
 		$projectId = $this->project->id;
-		$camera = ['position' => ['x' => 1000, 'y' => -2000, 'z' => 5000], 'target' => ['x' => 3000, 'y' => 2000, 'z' => 0]];
+		$camera = [
+			'position' => ['x' => 1000, 'y' => -2000, 'z' => 5000],
+			'target' => ['x' => 3000, 'y' => 2000, 'z' => 0],
+			'focalLength' => 16,
+		];
 		$link = $this->client->call('create_share_link', [
 			'projectId' => $projectId,
 			'floorId' => Fixture::firstFloor($this->project)->id,

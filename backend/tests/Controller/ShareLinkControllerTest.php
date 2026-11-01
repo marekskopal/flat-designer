@@ -26,7 +26,11 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 	private const array Settings = [
 		'views' => ['overview', 'top'],
 		'initialView' => 'overview',
-		'camera' => ['position' => ['x' => -2000, 'y' => -3000, 'z' => 6000], 'target' => ['x' => 4000, 'y' => 5000, 'z' => 0]],
+		'camera' => [
+			'position' => ['x' => -2000, 'y' => -3000, 'z' => 6000],
+			'target' => ['x' => 4000, 'y' => 5000, 'z' => 0],
+			'focalLength' => 24,
+		],
 		'ceilings' => false,
 		'labels' => true,
 		'sectionHeight' => 1300,
@@ -345,6 +349,7 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		yield 'walk only' => [['views' => ['walkthrough'], 'initialView' => 'walkthrough', 'camera' => null], 422];
 		yield 'wall cut too low' => [['sectionHeight' => 100], 422];
 		yield 'camera not an object' => [['camera' => 'front'], 400];
+		yield 'lens too wide' => [['camera' => [...self::Settings['camera'], 'focalLength' => 9]], 422];
 	}
 
 	/** @return array<string, mixed> */

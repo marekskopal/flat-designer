@@ -339,6 +339,11 @@ export class ViewerComponent {
         this.engine()?.setCameraPose(pose, animate);
     }
 
+    /** The 3D camera's lens, a focal length in mm on 35 mm film; null is the standard view. */
+    public setLens(focalLength: number | null): void {
+        this.engine()?.setLens(focalLength);
+    }
+
     public focusRoom(room: Room): void {
         this.engine()?.focusRoom(room);
     }

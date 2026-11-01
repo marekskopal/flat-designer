@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FlatDesigner\Mcp\Tool;
 
+use FlatDesigner\Dto\ShareCameraDto;
 use FlatDesigner\Dto\ShareLinkDto;
 use FlatDesigner\Dto\ShareLinkInputDto;
 use FlatDesigner\Dto\ShareSettingsDto;
@@ -37,12 +38,22 @@ final readonly class ShareLinkTools
 		'required' => ['x', 'y', 'z'],
 	];
 
+	public const array FocalLengthSchema = [
+		'type' => ['integer', 'null'],
+		'description' => 'the lens: focal length in mm on 35 mm film (as a photo\'s EXIF gives it), '
+			. ShareCameraDto::MinFocalLength . '–' . ShareCameraDto::MaxFocalLength . ', e.g. 16 for a wide-angle interior '
+			. 'photo; null = the standard view (45° vertical, about 27 mm on a 16:10 capture)',
+		'minimum' => ShareCameraDto::MinFocalLength,
+		'maximum' => ShareCameraDto::MaxFocalLength,
+		'default' => null,
+	];
+
 	public const array CameraSchema = [
 		'type' => ['object', 'null'],
 		'description' => 'where the 3D view starts, plan mm (z = height above the floor): camera position and the point it looks at, '
 			. 'e.g. {"position": {"x": 1500, "y": -2500, "z": 5500}, "target": {"x": 4500, "y": 3000, "z": 500}}; '
 			. 'needs "overview" among the views',
-		'properties' => ['position' => self::PointSchema, 'target' => self::PointSchema],
+		'properties' => ['position' => self::PointSchema, 'target' => self::PointSchema, 'focalLength' => self::FocalLengthSchema],
 		'required' => ['position', 'target'],
 		'default' => null,
 	];

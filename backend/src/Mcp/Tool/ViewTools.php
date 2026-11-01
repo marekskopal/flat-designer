@@ -26,7 +26,7 @@ final readonly class ViewTools
 		'description' => 'the 3D camera, plan mm (z = height above the floor): position and the point it looks at, e.g. an '
 			. 'eye-level shot {"position": {"x": 1200, "y": 900, "z": 1630}, "target": {"x": 4200, "y": 3500, "z": 1300}}; '
 			. 'null = the default framing of the floor',
-		'properties' => ['position' => ShareLinkTools::PointSchema, 'target' => ShareLinkTools::PointSchema],
+		'properties' => ['position' => ShareLinkTools::PointSchema, 'target' => ShareLinkTools::PointSchema, 'focalLength' => ShareLinkTools::FocalLengthSchema],
 		'required' => ['position', 'target'],
 		'default' => null,
 	];

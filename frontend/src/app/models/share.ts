@@ -12,10 +12,16 @@ export interface CameraPoint {
     z: number;
 }
 
-/** 3D camera: where it stands and the point it looks at. */
+/** The lenses a camera may have, focal lengths in mm on 35 mm film (`ShareCameraDto`). */
+export const MinFocalLength = 10;
+export const MaxFocalLength = 200;
+
+/** 3D camera: where it stands, the point it looks at and its lens. */
 export interface CameraPose {
     position: CameraPoint;
     target: CameraPoint;
+    /** Focal length in mm on 35 mm film across the view's longer side; null or missing is the standard view. */
+    focalLength?: number | null;
 }
 
 /** What a share link's guests may do with the floor's review comments. */

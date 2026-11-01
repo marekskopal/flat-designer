@@ -148,6 +148,21 @@
     }
 }
 
+.lens {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-8;
+    margin-top: $space-8;
+    font-size: $font-size-13;
+
+    .input {
+        width: auto;
+        padding: 4px 8px;
+        font-size: $font-size-13;
+    }
+}
+
 .measure-toggle--on {
     border-color: $color-accent;
     background: $color-surface-solid;

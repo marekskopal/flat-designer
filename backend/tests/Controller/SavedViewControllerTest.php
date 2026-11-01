@@ -69,6 +69,32 @@ final class SavedViewControllerTest extends EditorTestCase
 		self::assertSame(422, $this->save(['name' => '  ', 'settings' => ['view' => 'overview']])->getStatusCode());
 		self::assertSame(422, $this->save(['settings' => ['view' => 'overview', 'sun' => ['month' => 13, 'hour' => 12]]])->getStatusCode());
 		self::assertSame(422, $this->save(['settings' => ['view' => 'overview', 'sun' => ['month' => 6, 'hour' => 25]]])->getStatusCode());
+		self::assertSame(
+			422,
+			$this->save(['settings' => ['view' => 'overview', 'camera' => [...self::Camera, 'focalLength' => 8]]])->getStatusCode(),
+		);
+		self::assertSame(
+			422,
+			$this->save(['settings' => ['view' => 'overview', 'camera' => [...self::Camera, 'focalLength' => 300]]])->getStatusCode(),
+		);
+	}
+
+	public function testKeepsTheCameraLens(): void
+	{
+		$created = $this->save(['settings' => ['view' => 'overview', 'camera' => [...self::Camera, 'focalLength' => 16]]]);
+		self::assertSame(201, $created->getStatusCode(), (string) $created->getBody());
+		$settings = $this->jsonBody($created)['settings'];
+		self::assertIsArray($settings);
+		self::assertIsArray($settings['camera']);
+		self::assertSame(16, $settings['camera']['focalLength']);
+
+		// Cameras saved before it have none: the standard view.
+		$plain = $this->jsonBody(
+			$this->save(['name' => 'Plain', 'settings' => ['view' => 'overview', 'camera' => self::Camera]]),
+		)['settings'];
+		self::assertIsArray($plain);
+		self::assertIsArray($plain['camera']);
+		self::assertNull($plain['camera']['focalLength']);
 	}
 
 	public function testKeepsTheSunTime(): void

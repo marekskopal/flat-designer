@@ -183,6 +183,17 @@
                 </button>
             }
         </div>
+        @if (activeView() === 'overview') {
+            <label class="lens" title="The camera's lens: a shorter one shows more from the same place, as a wide-angle photo does">
+                <span>Lens</span>
+                <select class="input" aria-label="Camera lens" (change)="changeLens($event)">
+                    <option value="" [selected]="lens() === null">Standard</option>
+                    @for (focalLength of lensChoices(); track focalLength) {
+                        <option [value]="focalLength" [selected]="lens() === focalLength">{{ focalLength }} mm</option>
+                    }
+                </select>
+            </label>
+        }
         @if (!walking()) {
             <button
                 type="button"

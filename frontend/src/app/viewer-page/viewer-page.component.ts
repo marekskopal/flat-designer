@@ -60,6 +60,8 @@ import {CaptureTarget, SavedViewsComponent} from './saved-views.component';
 /** Section heights offered by the slider (mm); the top value means "no cut". */
 const SectionMin = 900;
 const SectionMax = 2700;
+/** The lenses offered for the 3D camera, mm on 35 mm film: from an ultra-wide to a standard lens. */
+const LensChoices = [14, 16, 20, 24, 28, 35, 50];
 
 /** Camera presets plus the first-person walkthrough. */
 type ViewMode = ViewPreset | 'walkthrough';
@@ -330,6 +332,13 @@ export class ViewerPageComponent {
     protected readonly hasLocation = computed(() => hasSiteLocation(this.viewedScene()));
     /** Presentation quality, for screenshots: slower, so off while working. */
     protected readonly presentation = signal(false);
+    /** The 3D camera's lens (mm on 35 mm film), null the standard one; set here or by an applied view. */
+    protected readonly lens = signal<number | null>(null);
+    /** The lenses offered, with an applied view's own if it is none of them. */
+    protected readonly lensChoices = computed(() => {
+        const lens = this.lens();
+        return lens === null || LensChoices.includes(lens) ? LensChoices : [...LensChoices, lens].sort((a, b) => a - b);
+    });
     /** The measure tool (top view only); an edit tool turns it off and the other way round. */
     protected readonly measuring = signal(false);
     protected readonly measureStatus = signal<MeasureStatus | null>(null);
@@ -562,7 +571,20 @@ export class ViewerPageComponent {
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
         this.sectionSlider.set(mode === 'top' ? PlanCutHeight : SectionMax);
+        this.syncLens();
         this.viewer().setView(mode, animate);
+    }
+
+    /** The lens goes to the engine for the 3D views; the plan keeps the standard one, as a wide lens only distorts it. */
+    private syncLens(): void {
+        this.viewer().setLens(this.activeView() === 'top' ? null : this.lens());
+    }
+
+    protected changeLens(event: Event): void {
+        const value = (event.target as HTMLSelectElement).value;
+        const lens = value === '' ? null : Number(value);
+        this.lens.set(lens);
+        this.syncLens();
     }
 
     private startWalkthrough(): void {
@@ -593,6 +615,7 @@ export class ViewerPageComponent {
         this.walkLocked.set(false);
         this.doorAim.set(null);
         this.activeView.set('overview');
+        this.syncLens();
         this.labelsVisible.set(true);
         this.ceilingsVisible.set(false);
         this.sectionSlider.set(SectionMax);
@@ -743,6 +766,7 @@ export class ViewerPageComponent {
         this.roofsVisible.set(false);
         this.labelsVisible.set(true);
         this.activeView.set('overview');
+        this.syncLens();
         this.viewer().focusRoom(room);
     }
 
@@ -823,6 +847,9 @@ export class ViewerPageComponent {
             this.viewer().endWalkthrough();
         }
         this.measuring.set(false);
+        // The lens first: the view is framed for it.
+        const camera = settings.view === 'overview' ? settings.camera : null;
+        this.lens.set(camera?.focalLength ?? null);
         this.setView(settings.view, false);
         this.ceilingsVisible.set(settings.ceilings);
         this.roofsVisible.set(settings.roofs ?? true);
@@ -836,8 +863,8 @@ export class ViewerPageComponent {
         this.allFloors.set(settings.allFloors ?? false);
         const hasVariants = Object.keys(settings.variants).length > 0;
         this.variantOverride.set(scene !== null && hasVariants ? {revision: scene.revision ?? -1, variants: settings.variants} : null);
-        if (settings.view === 'overview' && settings.camera !== null) {
-            this.viewer().setCameraPose(settings.camera, false);
+        if (camera !== null) {
+            this.viewer().setCameraPose(camera, false);
         }
         void this.markReadyWhenLoaded();
     }
