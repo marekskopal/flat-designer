@@ -9,7 +9,7 @@ enum DefinitionCategoryEnum: string
 {
 	/** A light fitting: pendant, downlight, the light source of a lamp. */
 	case Light = 'light';
-	/** A power socket; an int parameter `gangs` counts its outlets. */
+	/** A power socket; the parameter its `schedule.count` names (`gangs`) counts its outlets. */
 	case Socket = 'socket';
 	case Switch = 'switch';
 	/** A network or TV socket. */

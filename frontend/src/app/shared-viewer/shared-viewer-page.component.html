@@ -10,6 +10,8 @@
     [roofsVisible]="roofsVisible()"
     [labelsVisible]="labelsVisible()"
     [dimensionsVisible]="dimensionsVisible()"
+    [electricalVisible]="electricalVisible()"
+    [electricalSymbols]="electricalSymbols()"
     [night]="night()"
     [lightsOn]="lightsOn()"
     [sunTime]="sunTime()"
@@ -171,6 +173,12 @@
                 <input type="checkbox" [checked]="dimensionsVisible()" (change)="dimensionsVisible.set(!dimensionsVisible())" />
                 <span>Dimensions (Plan)</span>
             </label>
+            @if (hasElectrical()) {
+                <label class="toggle">
+                    <input type="checkbox" [checked]="electricalVisible()" (change)="electricalVisible.set(!electricalVisible())" />
+                    <span>Electrical (Plan)</span>
+                </label>
+            }
             @if (commentAccess() !== 'hidden') {
                 <label class="toggle">
                     <input type="checkbox" [checked]="commentsVisible()" (change)="commentsVisible.set(!commentsVisible())" />
@@ -218,7 +226,7 @@
         @if (settings.exports !== false && scene(); as s) {
             <section class="panel__section">
                 <h2 class="section-title">Export</h2>
-                <fd-export [scene]="s" [projectName]="shared()?.projectName ?? ''" [glb]="exportGlb" [building]="building" />
+                <fd-export [scene]="s" [projectName]="shared()?.projectName ?? ''" [glb]="exportGlb" [building]="building" [electricalSymbols]="electricalSymbols()" />
             </section>
         }
 

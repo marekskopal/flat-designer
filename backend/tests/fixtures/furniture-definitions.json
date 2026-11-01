@@ -1357,7 +1357,7 @@
    ]
   },
   {
-   "name": "the schedule's category is not read by the evaluator",
+   "name": "the schedule's category and settings are not read by the evaluator",
    "size": {
     "width": 80,
     "depth": 10,
@@ -1366,7 +1366,20 @@
    "definition": {
     "format": 1,
     "category": "socket",
-    "parameters": [],
+    "schedule": {
+     "count": "gangs",
+     "values": [
+      "gangs"
+     ]
+    },
+    "parameters": [
+     {
+      "key": "gangs",
+      "label": "Gangs",
+      "type": "int",
+      "default": 2
+     }
+    ],
     "parts": [
      {
       "type": "board",

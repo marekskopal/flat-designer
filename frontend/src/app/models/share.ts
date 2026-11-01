@@ -1,3 +1,4 @@
+import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {Scene, SunTime} from '@app/models/scene';
 
 // Mirrors the backend DTOs (FlatDesigner\Dto\Share*).
@@ -40,6 +41,8 @@ export interface ShareSettings {
     sectionHeight: number | null;
     /** Dimension lines of the rooms in the top view. */
     dimensions: boolean;
+    /** Electrical symbols in the top view (FD-64); missing in links saved before them, which hide them. */
+    electrical?: boolean;
     /** Opens after dark, lit by the flat's lights; missing in links saved before the night view. */
     night?: boolean;
     /** The sun at a clock time on site; null or missing (older links): the default afternoon sun. */
@@ -95,6 +98,8 @@ export interface SharedView {
     stack?: Scene[];
     /** With `settings.allFloors`, the floors above the shared one, for a walk over all floors (FD-102); missing in older answers. */
     above?: Scene[];
+    /** The project owner's symbol set for the electrical plan (FD-64); missing in older answers. */
+    electricalSymbols?: ElectricalSymbols;
 }
 
 export const ShareViewLabels: Record<ShareView, string> = {overview: '3D', top: 'Plan', walkthrough: 'Walk'};

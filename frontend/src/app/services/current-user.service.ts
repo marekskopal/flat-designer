@@ -1,6 +1,6 @@
 import {HttpClient} from '@angular/common/http';
 import {computed, inject, Injectable, signal} from '@angular/core';
-import {User} from '@app/models/user';
+import {CurrentUserUpdate, User} from '@app/models/user';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
 
@@ -23,8 +23,8 @@ export class CurrentUserService {
         return this.currentUser() ?? this.load();
     }
 
-    public async updateName(name: string): Promise<User> {
-        const user = await firstValueFrom(this.http.patch<User>(`${environment.apiUrl}/current-user`, {name}));
+    public async update(update: CurrentUserUpdate): Promise<User> {
+        const user = await firstValueFrom(this.http.patch<User>(`${environment.apiUrl}/current-user`, update));
         this.currentUser.set(user);
         return user;
     }

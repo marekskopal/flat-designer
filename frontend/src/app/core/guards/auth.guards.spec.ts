@@ -8,7 +8,15 @@ import {afterEach, describe, expect, it} from 'vitest';
 
 import {adminGuard, authGuard, guestGuard} from './auth.guards';
 
-const user: User = {id: 1, email: 'jane@example.com', name: 'Jane', role: 'User', lastLoginAt: null, createdAt: '2026-10-17T00:00:00+00:00'};
+const user: User = {
+    id: 1,
+    email: 'jane@example.com',
+    name: 'Jane',
+    role: 'User',
+    lastLoginAt: null,
+    createdAt: '2026-10-17T00:00:00+00:00',
+    electricalSymbols: 'Iec',
+};
 
 function setup(options: {loggedIn: boolean; user?: User | Error}): Router {
     TestBed.configureTestingModule({

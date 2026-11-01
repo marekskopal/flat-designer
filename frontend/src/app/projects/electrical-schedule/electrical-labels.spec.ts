@@ -12,7 +12,7 @@ describe('electrical labels', () => {
             values: {gangs: 2, usb: true, colour: 'white'},
             z: 1100,
             count: 2,
-            outlets: 4,
+            units: 4,
             itemIds: [1, 2],
         };
         expect(rowValues(row)).toBe('gangs 2 · usb yes · colour white');
@@ -20,11 +20,11 @@ describe('electrical labels', () => {
     });
 
     it('sums up the non-zero counts', () => {
-        expect(totalsSummary({lights: 1, sockets: 3, outlets: 5, switches: 2, dataSockets: 0, plumbingPoints: 1})).toBe(
-            '1 light · 3 sockets (5 outlets) · 2 switches · 1 plumbing point',
+        expect(totalsSummary({lights: 1, sockets: 3, outlets: 5, switches: 2, dataSockets: 1, dataPorts: 2, plumbingPoints: 1})).toBe(
+            '1 light · 3 sockets (5 outlets) · 2 switches · 1 data socket (2 ports) · 1 plumbing point',
         );
         // A socket definition whose gangs are 0 has no outlets to show.
-        expect(totalsSummary({lights: 0, sockets: 1, outlets: 0, switches: 0, dataSockets: 0, plumbingPoints: 0})).toBe('1 socket');
-        expect(totalsSummary({lights: 0, sockets: 0, outlets: 0, switches: 0, dataSockets: 0, plumbingPoints: 0})).toBe('');
+        expect(totalsSummary({lights: 0, sockets: 1, outlets: 0, switches: 0, dataSockets: 0, dataPorts: 0, plumbingPoints: 0})).toBe('1 socket');
+        expect(totalsSummary({lights: 0, sockets: 0, outlets: 0, switches: 0, dataSockets: 0, dataPorts: 0, plumbingPoints: 0})).toBe('');
     });
 });

@@ -21,6 +21,8 @@ import {AlertService} from '@app/services/alert.service';
 import {FurnitureService} from '@app/services/furniture.service';
 import {FurniturePreview} from '@app/viewer/engine/custom/preview';
 
+import {ScheduleSettingsComponent} from './schedule-settings.component';
+
 type Parsed = {ok: true; body: FurnitureDefinitionBody} | {ok: false; error: string};
 
 /**
@@ -30,7 +32,7 @@ type Parsed = {ok: true; body: FurnitureDefinitionBody} | {ok: false; error: str
  */
 @Component({
     selector: 'fd-furniture-editor',
-    imports: [CustomParamsComponent, RouterLink],
+    imports: [CustomParamsComponent, RouterLink, ScheduleSettingsComponent],
     templateUrl: './furniture-editor.component.html',
     styleUrl: './furniture-editor.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -120,6 +122,11 @@ export class FurnitureEditorComponent implements OnDestroy {
         this.tryDepth.set(size?.depth ?? 400);
         this.tryHeight.set(size?.height ?? 900);
         this.tryParams.set({});
+    }
+
+    /** A definition changed by the pickers, written back as formatted JSON. */
+    protected setBody(body: FurnitureDefinitionBody): void {
+        this.json.set(JSON.stringify(body, null, 2));
     }
 
     protected format(): void {

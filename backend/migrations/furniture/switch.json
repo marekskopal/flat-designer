@@ -4,6 +4,11 @@
  "definition": {
   "format": 1,
   "category": "switch",
+  "schedule": {
+   "values": [
+    "rockers"
+   ]
+  },
   "size": {
    "width": 80,
    "depth": 10,

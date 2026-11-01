@@ -656,6 +656,12 @@ format is the text in `FurnitureTools::Format`.
   plumbing point. Wall accessories stand on the wall face, their elevation being the bottom edge. Their definitions
   carry a `category` (`DefinitionCategoryEnum`: light, socket, switch, data, plumbing; checked by `DefinitionValidator`,
   not read by the evaluators) for the electrical schedule. Lights count only by this tag, not by their `light` parts.
+  With it, `schedule` (FD-64, `DefinitionSchedule`, TS `DefinitionScheduleSettings`; checked, not read by the
+  evaluators) says what the schedule counts and lists: `count` an int parameter multiplying the item (a socket's
+  `gangs`, a data socket's `ports`; 1 without), `values` the int/bool/select parameters it groups by and shows (all
+  without). A definition with no `schedule` at all (older JSON in versions and share links) counts a socket's int
+  `gangs` and a data socket's int `ports` (`DefinitionSchedule::Defaults`, TS `scheduleCount()`). The furniture editor sets both above the JSON (`ScheduleSettingsComponent`), the library shows the
+  category; `AddElectricalScheduleSettings` gave the seeds theirs and tagged copies their `count`.
 
 ## Render quality
 
@@ -812,8 +818,20 @@ format is the text in `FurnitureTools::Format`.
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
   definition has a `category`, in the item's `roomId` or else the room holding its footprint centre (points outside
-  every room go under a room with `id` null). Rows group one definition with the same int/bool/select values at the
-  same `z`; a socket's `gangs` parameter counts its outlets. PHP only.
+  every room go under a room with `id` null). Rows group one definition with the same `schedule.values` at the same
+  `z`, their `units` summing `schedule.count`; the totals give the sockets' `outlets` and the data sockets'
+  `dataPorts`. PHP only.
+- Electrical plan (FD-64, plan in `docs/electrical-plan.md`): `viewer/engine/electrical.ts` (framework-free) gives the
+  points (`electricalPoints()`: wall points on the middle of the item's front edge, facing out; lights at the centre;
+  hidden variants left out) and their symbols as unit-frame polylines in two sets, `Iec` and `Csn`
+  (`ElectricalSymbolSets`, `symbolPolylines()`). The user picks the set on the account page (`users.electrical_symbols`,
+  `UserDto::$electricalSymbols`, `PATCH /api/current-user`); share guests get the owner's (`SharedViewDto`). The
+  Display toggle "Electrical (Plan)" (shown when the floor has points; `electrical` in saved views and share links)
+  draws them over the top view like the dimension lines (`ViewerEngine.setElectricalVisible()`, `buildElectrical()`:
+  no depth test, not pickable, the wall points' elevations as CSS2D labels; hidden while items are previewed, and
+  from an item drag until the edit comes back or `restore()` puts them back). `planSheet(scene, info, symbols)` is the
+  electrical plan PDF (Export → Electrical PDF): the furniture faint without names or dimensions, the symbols, the
+  elevations and a legend with the counts in a strip `planLayout(bounds, reserved)` keeps above the title band.
 - Quantities and cost: `Service/Quantities/QuantitiesService` (REST `…/quantities`, MCP `get_quantities`, page
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without

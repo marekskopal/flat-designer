@@ -9,6 +9,7 @@ use FlatDesigner\Dto\SharedViewDto;
 use FlatDesigner\Dto\ShareLinkDto;
 use FlatDesigner\Dto\ShareLinkInputDto;
 use FlatDesigner\Dto\ShareSettingsDto;
+use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
 use FlatDesigner\Model\Entity\Enum\ShareViewEnum;
 use FlatDesigner\Model\Entity\ModelAsset;
 use FlatDesigner\Model\Entity\Project;
@@ -159,6 +160,7 @@ final readonly class ShareLinkProvider
 			scene: $scene,
 			stack: $settings->allFloors ? $below : [],
 			above: $walksAll ? $above : [],
+			electricalSymbols: $link->project->owner->electricalSymbols ?? ElectricalSymbolsEnum::Iec,
 		);
 	}
 

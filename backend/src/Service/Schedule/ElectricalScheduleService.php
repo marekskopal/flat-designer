@@ -18,6 +18,7 @@ use FlatDesigner\Model\Entity\Project;
 use FlatDesigner\Model\Repository\FloorRepository;
 use FlatDesigner\Service\Editor\Geometry\PlanMath;
 use FlatDesigner\Service\Furniture\DefinitionCategoryEnum;
+use FlatDesigner\Service\Furniture\DefinitionSchedule;
 use FlatDesigner\Service\Furniture\DefinitionValidator;
 use FlatDesigner\Service\Json\JsonDecoder;
 use FlatDesigner\Service\Provider\SceneProvider;
@@ -27,13 +28,11 @@ use const JSON_THROW_ON_ERROR;
 /**
  * Electrical schedule of a project or a floor (working copy, shown variants only): the Custom items whose definition has
  * a `category`, per room — the item's `roomId`, otherwise the room whose outline holds its footprint centre — grouped
- * by definition, parameter values and elevation, with the counts per category.
+ * by definition, parameter values and elevation, with the counts per category. The definition's `schedule` settings
+ * (`DefinitionSchedule`) say which values count and which parameter multiplies an item.
  */
 final readonly class ElectricalScheduleService
 {
-	/** Parameter types whose values tell points apart (a socket's gangs, a switch's rockers). */
-	private const array ValueTypes = ['int', 'bool', 'select'];
-
 	private const string Unassigned = 'Not in a room';
 
 	public function __construct(private SceneProvider $sceneProvider, private FloorRepository $floorRepository)
@@ -70,13 +69,13 @@ final readonly class ElectricalScheduleService
 			if ($item->kind !== ItemKindEnum::Custom || isset($hidden[$item->id]) || $definition === null) {
 				continue;
 			}
-			[$name, $body, $category] = $definition;
-			$values = self::values($body, $item);
+			[$name, $body, $category, $schedule] = $definition;
+			$given = self::given($item);
+			$values = self::values($body, $given, $schedule);
 			$roomId = self::roomOf($item, $outlines);
 			$key = sprintf('%s|%d|%d|%s', $category->value, $definitionId, $item->z, json_encode($values, JSON_THROW_ON_ERROR));
 			$row = $rows[$roomId][$key] ?? null;
-			$gangs = $values['gangs'] ?? 1;
-			$outlets = $category === DefinitionCategoryEnum::Socket ? (is_int($gangs) ? $gangs : 1) : 0;
+			$units = self::units($body, $given, $schedule);
 			$rows[$roomId][$key] = new ElectricalRowDto(
 				category: $category,
 				definitionId: $definitionId,
@@ -84,7 +83,7 @@ final readonly class ElectricalScheduleService
 				values: $values === [] ? new stdClass() : $values,
 				z: $item->z,
 				count: ($row->count ?? 0) + 1,
-				outlets: ($row->outlets ?? 0) + $outlets,
+				units: ($row->units ?? 0) + $units,
 				itemIds: [...$row->itemIds ?? [], $item->id],
 			);
 		}
@@ -110,7 +109,7 @@ final readonly class ElectricalScheduleService
 	/**
 	 * The scene's definitions that have a category, by id.
 	 *
-	 * @return array<int, array{string, array<mixed>, DefinitionCategoryEnum}> name, body, category
+	 * @return array<int, array{string, array<mixed>, DefinitionCategoryEnum, DefinitionSchedule}> name, body, category, settings
 	 */
 	private static function definitions(SceneDto $scene): array
 	{
@@ -119,7 +118,7 @@ final readonly class ElectricalScheduleService
 			$body = JsonDecoder::decodeObject(json_encode($definition->definition, JSON_THROW_ON_ERROR));
 			$category = DefinitionCategoryEnum::of($body);
 			if ($category !== null) {
-				$definitions[$definition->id] = [$definition->name, $body, $category];
+				$definitions[$definition->id] = [$definition->name, $body, $category, DefinitionSchedule::of($body)];
 			}
 		}
 
@@ -146,20 +145,33 @@ final readonly class ElectricalScheduleService
 		);
 	}
 
-	/**
-	 * The item's values of the definition's int, bool and select parameters, the defaults filled in.
-	 *
-	 * @param array<mixed> $definition
-	 * @return array<string, int|bool|string>
-	 */
-	private static function values(array $definition, ItemDto $item): array
+	/** @return array<mixed> the item's `params.values` */
+	private static function given(ItemDto $item): array
 	{
 		$params = is_array($item->params) ? $item->params : [];
-		$given = is_array($params['values'] ?? null) ? $params['values'] : [];
+
+		return is_array($params['values'] ?? null) ? $params['values'] : [];
+	}
+
+	/**
+	 * The item's values of the definition's int, bool and select parameters that `schedule.values` lists (all of them
+	 * without), the defaults filled in, in the definition's order.
+	 *
+	 * @param array<mixed> $definition
+	 * @param array<mixed> $given
+	 * @return array<string, int|bool|string>
+	 */
+	private static function values(array $definition, array $given, DefinitionSchedule $schedule): array
+	{
 		$values = [];
 		foreach (DefinitionValidator::list($definition, 'parameters') as $parameter) {
 			$key = $parameter['key'] ?? null;
-			if (!is_string($key) || !in_array($parameter['type'] ?? null, self::ValueTypes, true)) {
+			if (
+				!is_string($key)
+				|| !in_array($parameter['type'] ?? null, DefinitionSchedule::ValueTypes, true)
+				|| $schedule->values !== null
+				&& !in_array($key, $schedule->values, true)
+			) {
 				continue;
 			}
 			$value = $given[$key] ?? $parameter['default'] ?? null;
@@ -169,6 +181,29 @@ final readonly class ElectricalScheduleService
 		}
 
 		return $values;
+	}
+
+	/**
+	 * What the item counts as: the value of the int parameter `schedule.count` names (its default when not given; at
+	 * least 0), 1 without.
+	 *
+	 * @param array<mixed> $definition
+	 * @param array<mixed> $given
+	 */
+	private static function units(array $definition, array $given, DefinitionSchedule $schedule): int
+	{
+		if ($schedule->count === null) {
+			return 1;
+		}
+		foreach (DefinitionValidator::list($definition, 'parameters') as $parameter) {
+			if (($parameter['key'] ?? null) === $schedule->count) {
+				$value = $given[$schedule->count] ?? $parameter['default'] ?? null;
+
+				return is_int($value) ? max(0, $value) : 1;
+			}
+		}
+
+		return 1;
 	}
 
 	/**

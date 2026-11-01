@@ -77,6 +77,18 @@ button, input, textarea, select {
     white-space: nowrap;
 }
 
+.electrical-label {
+    padding: 0 2px;
+    border-radius: 3px;
+    background: rgba(252, 251, 248, 0.82);
+    font-size: 9px;
+    line-height: 12px;
+    color: #4a4640;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
 .measure-label {
     padding: 2px 6px;
     border-radius: $radius-6;

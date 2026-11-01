@@ -1,3 +1,5 @@
+import {roomCodeText} from '@app/core/room-code';
+import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {
     FloorVoid,
     isOutdoorRoom,
@@ -47,6 +49,7 @@ import {changedDefinitionIds, definitionLibrary} from './custom/custom';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, sagittaToward, snapDrawPoint, ToolStatus} from './drawing';
+import {buildElectrical, electricalPoints} from './electrical';
 import {buildFacades} from './facades';
 import {
     BenchmarkOptions,
@@ -386,6 +389,16 @@ export class ViewerEngine {
     private dimensionsVisible = false;
     /** The shown dimensions belong to an earlier state of the floor; rebuilt when next shown. */
     private dimensionsStale = true;
+    /** Electrical symbols at the tagged items (FD-64), shown in the top view when turned on; built like the dimensions. */
+    private electrical: THREE.Group | null = null;
+    private electricalVisible = false;
+    private electricalSymbols: ElectricalSymbols = 'Iec';
+    private electricalStale = true;
+    /**
+     * Items were dragged: their symbols would stay behind, so the overlay hides until the edit comes back (`load()`) or
+     * the items are put back (`restore()`).
+     */
+    private electricalHeld = false;
     /** The measure tool: on in any top view (edit mode or not), a click places the points. */
     private measuring = false;
     private measurement: Measurement = NoMeasurement;
@@ -667,6 +680,8 @@ export class ViewerEngine {
         this.roomFaces = null;
         this.updateDrawing();
         this.dimensionsStale = true;
+        this.electricalStale = true;
+        this.electricalHeld = false;
         this.updateMeasure();
     }
 
@@ -682,6 +697,20 @@ export class ViewerEngine {
         this.dimensions = buildDimensions(roomDimensions(scene.rooms, scene.walls));
         this.scene.add(this.dimensions);
         this.dimensionsStale = false;
+    }
+
+    private removeElectrical(): void {
+        this.electrical?.traverse((o) => disposeLine(o));
+        this.electrical?.removeFromParent();
+        this.electrical = null;
+    }
+
+    /** The electrical symbols of the shown items, built when they are first shown after a load or a variant switch. */
+    private updateElectrical(scene: Scene): void {
+        this.removeElectrical();
+        this.electrical = buildElectrical(electricalPoints(scene), this.electricalSymbols);
+        this.scene.add(this.electrical);
+        this.electricalStale = false;
     }
 
     /** Hides the items of variants that are not shown; switching a variant rebuilds nothing. */
@@ -1476,6 +1505,16 @@ export class ViewerEngine {
         this.dimensionsVisible = visible;
     }
 
+    /** Electrical symbols at the tagged items in the top view (FD-64), drawn from the set `symbols`. */
+    public setElectricalVisible(visible: boolean, symbols: ElectricalSymbols): void {
+        this.invalidate();
+        this.electricalVisible = visible;
+        if (symbols !== this.electricalSymbols) {
+            this.electricalSymbols = symbols;
+            this.electricalStale = true;
+        }
+    }
+
     /**
      * The measure tool: in a top view, clicks place two points and the distance between them is shown
      * (snapping to wall ends, face corners and faces; Shift measures freely). Independent of edit mode and its
@@ -2187,6 +2226,7 @@ export class ViewerEngine {
         this.clearStack();
         this.clearContent();
         this.removeDimensions();
+        this.removeElectrical();
         this.setUnderlay(null, null);
         this.setGhost(null);
         this.modelLibrary?.dispose();
@@ -2401,7 +2441,7 @@ export class ViewerEngine {
         const height = room.ceilingHeight === null ? '' : ` · h ${(room.ceilingHeight / 1000).toFixed(2)} m`;
         // The floor's voids (FD-90) are taken off the area, as the room schedule does.
         const area = netRoomArea(room, voids);
-        meta.textContent = `${room.code.replace('H1/', '')} · ${area.toFixed(1)} m²${height}`;
+        meta.textContent = `${roomCodeText(room.code)} · ${area.toFixed(1)} m²${height}`;
         element.append(name, meta);
 
         const label = new CSS2DObject(element);
@@ -2549,6 +2589,15 @@ export class ViewerEngine {
             if (this.dimensions.visible) {
                 alignDimensionLabels(this.dimensions, this.camera, this.container.clientWidth, this.container.clientHeight);
             }
+        }
+        if (this.electricalVisible && topDown && this.electricalStale && this.sceneData !== null) {
+            this.updateElectrical(this.sceneData);
+        }
+        if ((this.drag?.kind === 'item' || this.drag?.kind === 'group') && this.drag.moved) {
+            this.electricalHeld = true;
+        }
+        if (this.electrical !== null) {
+            this.electrical.visible = this.electricalVisible && topDown && !this.electricalHeld && this.preview === null;
         }
         if (this.underlay !== null) {
             this.underlay.visible = this.underlayVisible && topDown;
@@ -3187,6 +3236,8 @@ export class ViewerEngine {
 
     /** Puts a dragged element back where the scene has it. */
     private restore(drag: Drag): void {
+        this.electricalHeld = false;
+        this.invalidate();
         const members =
             drag.kind === 'item' || drag.kind === 'stair'
                 ? [{item: drag.kind === 'item' ? drag.item : drag.stair, object: drag.object}]

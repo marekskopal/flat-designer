@@ -12,6 +12,14 @@
                 <span class="field__label">Name</span>
                 <input class="input" type="text" formControlName="name" autocomplete="name" />
             </label>
+            <label class="field">
+                <span class="field__label">Electrical plan symbols</span>
+                <select class="input" formControlName="electricalSymbols">
+                    @for (set of symbolSets; track set[0]) {
+                        <option [value]="set[0]">{{ set[1] }}</option>
+                    }
+                </select>
+            </label>
             <div class="form__actions">
                 <button type="submit" class="btn btn--primary" [disabled]="profileForm.invalid || profileForm.pristine || savingProfile()">
                     Save

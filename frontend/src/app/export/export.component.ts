@@ -1,6 +1,8 @@
-import {ChangeDetectionStrategy, Component, inject, input, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, signal} from '@angular/core';
+import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {Scene} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
+import {electricalPoints} from '@app/viewer/engine/electrical';
 import {elevationSheets} from '@app/viewer/engine/elevations';
 import {planSheet, roomScheduleSheets} from '@app/viewer/engine/plan-drawing';
 import {facadeSheets, SectionCut, sectionSheets} from '@app/viewer/engine/sections';
@@ -14,7 +16,8 @@ const DownloadSpacing = 400;
 
 /**
  * The viewer panel's exports of the floor as shown (its variants): the plan on A4 as a PDF, with the room schedule on
- * the following page, or the plan page alone as an SVG; the rooms' wall elevations as a PDF; and the 3D model as glTF
+ * the following page, or the plan page alone as an SVG; the electrical plan (FD-64, when the floor has electrical points);
+ * the rooms' wall elevations as a PDF; and the 3D model as glTF
  * (`glb`, made by the viewer). The building drawings (FD-94) take the shown floor with the floors below it (`building`):
  * the façades on A3 and a section along each of their section lines, as a PDF or SVG files (one per sheet).
  */
@@ -37,6 +40,17 @@ const DownloadSpacing = 400;
             >
                 Elevations PDF
             </button>
+            @if (hasElectrical()) {
+                <button
+                    type="button"
+                    class="btn btn--ghost"
+                    [disabled]="busy()"
+                    title="The plan with the lights, sockets, switches, data sockets and plumbing points and their elevations, for the electrician"
+                    (click)="exportElectrical()"
+                >
+                    Electrical PDF
+                </button>
+            }
             <button
                 type="button"
                 class="btn btn--ghost"
@@ -107,6 +121,11 @@ export class ExportComponent {
     public readonly glb = input.required<() => Promise<Blob>>();
     /** The building for its drawings: the shown floor's scene with the floors below it (any order). */
     public readonly building = input<() => Promise<readonly Scene[]>>(() => Promise.resolve([this.scene()]));
+    /** The symbol set of the electrical plan (the user's, a share guest's owner's). */
+    public readonly electricalSymbols = input<ElectricalSymbols>('Iec');
+
+    /** The floor has electrical points: the electrical plan is offered. */
+    protected readonly hasElectrical = computed(() => electricalPoints(this.scene()).length > 0);
 
     private readonly alerts = inject(AlertService);
     protected readonly busy = signal(false);
@@ -116,6 +135,13 @@ export class ExportComponent {
         await this.export(async () => {
             const blob = await sheetsPdf([planSheet(this.scene(), info), ...roomScheduleSheets(this.scene(), info)]);
             downloadBlob(blob, this.filename('plan.pdf'));
+        });
+    }
+
+    protected async exportElectrical(): Promise<void> {
+        await this.export(async () => {
+            const blob = await sheetsPdf([planSheet(this.scene(), this.info(), this.electricalSymbols())]);
+            downloadBlob(blob, this.filename('electrical.pdf'));
         });
     }
 

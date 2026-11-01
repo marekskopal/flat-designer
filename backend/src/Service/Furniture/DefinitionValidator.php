@@ -11,14 +11,14 @@ use FlatDesigner\Service\Editor\Element\State;
 /**
  * Checks a furniture definition before it is saved: what `DefinitionEvaluator` reads (by evaluating it at its default
  * `size` with the parameter defaults), plus what only matters for storing and drawing it — no unknown keys, a `size`,
- * known part types with valid options, existing material codes as slot defaults, a known `category` and the size limit.
+ * known part types with valid options, existing material codes as slot defaults, a known `category` with valid `schedule` settings and the size limit.
  */
 final readonly class DefinitionValidator
 {
 	/** What the `definition` TEXT column holds. */
 	public const int MaxBytes = 65535;
 
-	private const array Keys = ['format', 'category', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
+	private const array Keys = ['format', 'category', 'schedule', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
 
 	private const array ParameterKeys = ['key', 'label', 'type', 'default'];
 
@@ -59,6 +59,7 @@ final readonly class DefinitionValidator
 		foreach (self::list($definition, 'parameters') as $index => $parameter) {
 			self::checkParameter($parameter, sprintf('parameters[%d]', $index));
 		}
+		DefinitionSchedule::check($definition);
 		$slots = self::list($definition, 'materialSlots');
 		$codes = $slots === [] ? [] : array_map(
 			static fn (Material $material): string => $material->code,

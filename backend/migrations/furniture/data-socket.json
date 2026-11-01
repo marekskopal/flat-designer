@@ -4,6 +4,12 @@
  "definition": {
   "format": 1,
   "category": "data",
+  "schedule": {
+   "count": "ports",
+   "values": [
+    "ports"
+   ]
+  },
   "size": {
    "width": 80,
    "depth": 10,

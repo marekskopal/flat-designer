@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FlatDesigner\Model\Entity;
 
 use DateTimeImmutable;
+use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
 use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
 use FlatDesigner\Model\Repository\UserRepository;
 use MarekSkopal\ORM\Attribute\Column;
@@ -15,7 +16,7 @@ use MarekSkopal\ORM\Enum\Type;
 /**
  * Account signing in with email + password (bcrypt). `tokenVersion` is embedded in every issued JWT;
  * bumping it (password change) revokes all tokens issued before. `failedLoginAttempts` and
- * `lockedUntil` drive the sign-in backoff.
+ * `lockedUntil` drive the sign-in backoff. `electricalSymbols` picks the electrical plan's symbol set (FD-64).
  */
 #[Entity(repositoryClass: UserRepository::class)]
 class User extends AEntity
@@ -31,6 +32,9 @@ class User extends AEntity
 
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $lastLoginAt = null;
+
+	#[ColumnEnum(enum: ElectricalSymbolsEnum::class, default: ElectricalSymbolsEnum::Iec)]
+	public ElectricalSymbolsEnum $electricalSymbols = ElectricalSymbolsEnum::Iec;
 
 	public function __construct(
 		#[Column(type: Type::String)]

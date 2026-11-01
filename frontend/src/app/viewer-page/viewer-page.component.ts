@@ -19,6 +19,7 @@ import {Router, RouterLink} from '@angular/router';
 import {CommentAction, CommentsComponent} from '@app/comments/comments.component';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
+import {roomCodeText} from '@app/core/room-code';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
@@ -27,12 +28,14 @@ import {VariantsComponent} from '@app/editor/variants.component';
 import {downloadBlob, safeFilename} from '@app/export/download';
 import {ExportComponent} from '@app/export/export.component';
 import {Comment, commentPinsOf} from '@app/models/comment';
+import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {ProjectUpdate} from '@app/models/realtime';
 import {SavedView, SavedViewSettings} from '@app/models/saved-view';
 import {hasSiteLocation, isOutdoorRoom, PlanPoint, Room, RoomType, Scene, SunTime} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
 import {AlertService} from '@app/services/alert.service';
 import {CommentService} from '@app/services/comment.service';
+import {CurrentUserService} from '@app/services/current-user.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
@@ -40,6 +43,7 @@ import {SavedViewService} from '@app/services/saved-view.service';
 import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {ToolStatus} from '@app/viewer/engine/drawing';
+import {electricalPoints} from '@app/viewer/engine/electrical';
 import {GhostFloor} from '@app/viewer/engine/ghost';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
@@ -115,6 +119,7 @@ export class ViewerPageComponent {
     /** Panel width plus its margins, so the 3D view frames the model beside it. */
     protected readonly panelInset = 332;
     protected readonly sectionMin = SectionMin;
+    protected readonly roomCodeText = roomCodeText;
     protected readonly sectionMax = SectionMax;
     protected readonly views: ViewOption[] = [
         {mode: 'overview', label: '3D'},
@@ -129,6 +134,7 @@ export class ViewerPageComponent {
     // Quietly: a saved version may show a file deleted since, and then the picture stays plain.
     protected readonly pictureFetcher = (fileId: number): Promise<Blob> => this.projects.downloadFile(this.projectId(), fileId, {quiet: true});
     private readonly projects = inject(ProjectService);
+    private readonly currentUser = inject(CurrentUserService);
     private readonly alerts = inject(AlertService);
 
     /** Kept while another floor loads, so the switch does not flash an empty view. */
@@ -320,6 +326,14 @@ export class ViewerPageComponent {
     protected readonly roofsVisible = signal(true);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);
+    protected readonly electricalVisible = signal(false);
+    /** The signed-in user's symbol set for the electrical plan. */
+    protected readonly electricalSymbols = computed<ElectricalSymbols>(() => this.currentUser.currentUser()?.electricalSymbols ?? 'Iec');
+    /** The floor has lights, sockets, switches, … to draw (the Display toggle shows only then). */
+    protected readonly hasElectrical = computed(() => {
+        const scene = this.viewedScene();
+        return scene !== null && electricalPoints(scene).length > 0;
+    });
     /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
     protected readonly night = signal(false);
     private readonly lightsChoice = signal<boolean | null>(null);
@@ -372,6 +386,7 @@ export class ViewerPageComponent {
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
+            electrical: this.electricalVisible(),
             night: this.night(),
             sun: this.sunTime(),
             presentation: this.presentation(),
@@ -856,6 +871,7 @@ export class ViewerPageComponent {
         this.labelsVisible.set(settings.labels);
         this.sectionSlider.set(settings.sectionHeight ?? SectionMax);
         this.dimensionsVisible.set(settings.dimensions);
+        this.electricalVisible.set(settings.electrical ?? false);
         this.night.set(settings.night);
         this.lightsChoice.set(settings.lightsOn);
         this.sunTime.set(settings.sun ?? null);
@@ -901,6 +917,7 @@ export class ViewerPageComponent {
             labels: this.labelsVisible(),
             sectionHeight: this.sectionHeight(),
             dimensions: this.dimensionsVisible(),
+            electrical: this.electricalVisible(),
             night: this.night(),
             lightsOn: this.lightsChoice(),
             sun: this.sunTime(),

@@ -16,6 +16,7 @@ final readonly class UserDto
 		public string $role,
 		public ?string $lastLoginAt,
 		public string $createdAt,
+		public string $electricalSymbols,
 	) {
 	}
 
@@ -28,6 +29,7 @@ final readonly class UserDto
 			role: $user->role->value,
 			lastLoginAt: $user->lastLoginAt?->format(DATE_ATOM),
 			createdAt: $user->createdAt->format(DATE_ATOM),
+			electricalSymbols: $user->electricalSymbols->value,
 		);
 	}
 }
