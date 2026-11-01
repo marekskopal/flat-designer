@@ -52,6 +52,8 @@ final readonly class SnapshotStairRestorer
 			);
 			// Snapshots taken before outdoor stairs (FD-87): to the next floor, from the floor's level.
 			$stair->rise = $data->nullableInt('rise');
+			// Missing in snapshots taken before curved stairs (FD-99).
+			$stair->innerRadius = $data->nullableInt('innerRadius');
 			$stair->baseZ = $data->nullableInt('baseZ') ?? 0;
 			// Before railing styles and wall handrails (FD-90): posts and a handrail, no wall rail, an unlined void.
 			$stair->railingStyle = RailingStyleEnum::tryFrom($data->nullableString('railingStyle') ?? '');

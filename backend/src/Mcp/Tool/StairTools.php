@@ -40,13 +40,14 @@ final readonly class StairTools
 	 * @param int|null $rotation degrees counter-clockwise of the walking-up direction of the first flight: 0 walks up north (+y),
 	 *   90 west, 180 south, 270 east (default 0)
 	 * @param string|null $shape "Straight" (default) | "LShaped" (two flights round a quarter landing) | "UShaped" (two flights
-	 *   round a half landing, side by side) | "Spiral" (round a centre column)
+	 *   round a half landing, side by side) | "Spiral" (round a centre column) | "Curved" (one flight curving round a centre,
+	 *   its treads wider at the outer edge: fan-shaped steps round a curved wall; innerRadius from the centre, turn its way)
 	 * @param int|null $width mm, a flight's width, 600–3000 (default 900); a spiral's diameter, 1200–4000 (default 1600)
 	 * @param int|null $going mm, a tread's depth, 200–350 (default 270)
 	 * @param int|null $risers number of risers, 2–60; null (default) counts them from the rise
 	 * @param int|null $firstFlight L and U: risers up to the landing; null (default) halves them
-	 * @param string|null $turn "Left" (default) | "Right": which way an L or U stair turns at its landing, or a spiral winds,
-	 *   walking up
+	 * @param string|null $turn "Left" (default) | "Right": which way an L or U stair turns at its landing, or a spiral winds
+	 *   or a curved flight curves, walking up
 	 * @param int|null $gap U: mm between the two flights, 0–1000 (default 100)
 	 * @param string|null $construction "Solid" (a concrete flight, default) | "Stringers" (treads between two side boards) |
 	 *   "Open" (floating treads on a spine)
@@ -56,6 +57,8 @@ final readonly class StairTools
 	 * @param int|null $structureMaterialId the flight, stringers or spine, from list_materials (default concrete grey)
 	 * @param int|null $rise a rise of its own, mm (100–6000): the stair does not climb to the next floor (garden or deck steps); default none
 	 * @param int|null $baseZ where its first riser stands, mm above (+) or below (−) the floor's level (default 0)
+	 * @param int|null $innerRadius Curved: mm from the centre it curves round to the flight's inner edge, 300–20000 (default 1500);
+	 *   the walking line runs in the middle of the width, the going measured along it
 	 * @param string|null $railingStyle the railing's infill, as add_railing's style: "Balusters" | "Rods" | "Glass" | "Panel" |
 	 *   "Cable"; default none: posts and a handrail only
 	 * @param int|null $railingMaterialId the railing's, from list_materials (default the structure's)
@@ -85,6 +88,7 @@ final readonly class StairTools
 		?int $structureMaterialId = null,
 		?int $rise = null,
 		?int $baseZ = null,
+		?int $innerRadius = null,
 		?string $railingStyle = null,
 		?int $railingMaterialId = null,
 		?string $wallHandrail = null,
@@ -112,6 +116,7 @@ final readonly class StairTools
 				'structureMaterialId' => $structureMaterialId,
 				'rise' => $rise,
 				'baseZ' => $baseZ,
+				'innerRadius' => $innerRadius,
 				'railingStyle' => $railingStyle,
 				'railingMaterialId' => $railingMaterialId,
 				'wallHandrail' => $wallHandrail,
@@ -121,7 +126,7 @@ final readonly class StairTools
 	}
 
 	/**
-	 * @param string|null $shape "Straight" | "LShaped" | "UShaped" | "Spiral" (a spiral's width is its diameter, 1200–4000;
+	 * @param string|null $shape "Straight" | "LShaped" | "UShaped" | "Spiral" | "Curved" (a spiral's width is its diameter, 1200–4000;
 	 *   a shape change keeps the width where the new shape allows it, else takes the shape's default)
 	 * @param int|null $rotation degrees counter-clockwise of the walking-up direction (0 = north)
 	 * @param int|null $risers number of risers (clear it to count them from the rise)
@@ -130,6 +135,8 @@ final readonly class StairTools
 	 *   "railingMaterialId", "voidLiningMaterialId"
 	 * @param int|null $rise a rise of its own, mm (100–6000): the stair does not climb to the next floor (garden or deck steps); default none
 	 * @param int|null $baseZ where its first riser stands, mm above (+) or below (−) the floor's level (default 0)
+	 * @param int|null $innerRadius Curved: mm from the centre it curves round to the flight's inner edge, 300–20000 (default 1500);
+	 *   the walking line runs in the middle of the width, the going measured along it
 	 * @param string|null $railingStyle the railing's infill, as add_railing's style: "Balusters" | "Rods" | "Glass" | "Panel" |
 	 *   "Cable"; default none: posts and a handrail only
 	 * @param int|null $railingMaterialId the railing's, from list_materials (default the structure's)
@@ -160,6 +167,7 @@ final readonly class StairTools
 		?int $structureMaterialId = null,
 		?int $rise = null,
 		?int $baseZ = null,
+		?int $innerRadius = null,
 		?string $railingStyle = null,
 		?int $railingMaterialId = null,
 		?string $wallHandrail = null,
@@ -190,6 +198,7 @@ final readonly class StairTools
 					'structureMaterialId' => $structureMaterialId,
 					'rise' => $rise,
 					'baseZ' => $baseZ,
+					'innerRadius' => $innerRadius,
 					'railingStyle' => $railingStyle,
 					'railingMaterialId' => $railingMaterialId,
 					'wallHandrail' => $wallHandrail,

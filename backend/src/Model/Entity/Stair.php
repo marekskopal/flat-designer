@@ -38,6 +38,10 @@ class Stair extends AEntity
 	#[Column(type: Type::Int)]
 	public int $baseZ = 0;
 
+	/** A curved flight's inner edge, mm from the centre it curves round (FD-99); null for the other shapes. */
+	#[Column(type: Type::Int, nullable: true)]
+	public ?int $innerRadius = null;
+
 	/** The railing's infill (FD-90); null: posts and a handrail only. */
 	#[ColumnEnum(enum: RailingStyleEnum::class, nullable: true)]
 	public ?RailingStyleEnum $railingStyle = null;

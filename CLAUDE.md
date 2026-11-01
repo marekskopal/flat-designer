@@ -415,8 +415,13 @@ format is the text in `FurnitureTools::Format`.
 - The plan is `docs/stairs-plan.md`. A `Stair` (`stairs`, element type `Stair`, `StairHandler` through `SceneEditor`:
   undo, change log; REST `…/stairs`, MCP `add_stair` / `update_stair` / `delete_stair`) belongs to the floor it starts
   on and climbs to the next one up. (x, y) is the middle of the first step's front edge and `rotation` the walking-up
-  direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights)
-  or Spiral (`width` is then the diameter); `firstFlight` is the risers up to the landing (null halves them), `turn`
+  direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights),
+  Spiral (`width` is then the diameter) or Curved (FD-99: one flight curving round a centre, ring-sector treads from
+  `innerRadius` out to `innerRadius + width`, the walking line in the middle of the width, `turn` the way it curves;
+  `curvedLayout()`, sharing `ringSteps()` with the spiral; fan-shaped garden steps round a curved wall; it turns 330° at
+  most and keeps 100 mm treads at its inner edge, checked when its radius, width, going or risers change; it is Solid
+  (blocks down to its base, never walked under, cut so in the sections) or Open, a stringer stair made curved becoming
+  Solid; other shapes keep `innerRadius`); `firstFlight` is the risers up to the landing (null halves them), `turn`
   the way it turns or winds. Also `going`, `construction` (Solid, Stringers, Open), `railing` and two materials.
 - The rise comes from the floors (`StairRise`): the next floor up's elevation minus the floor's (`above()`: the lowest
   of the higher levels), or the tallest wall plus the slab a floor stacked on it would get (`FloorStack::defaultSlab()`)
@@ -437,7 +442,8 @@ format is the text in `FurnitureTools::Format`.
   landings, every tread with its top, the footprint, the walking line and the handrail paths (`RailHeight` over the
   nosings; the outer rail runs round the landing); `stairRisers()` / `stairFirstFlight()` twin the backend's rules.
   `buildStair()` draws it in a group at (x, y) tagged `stairId` (merged; a solid flight is the sawtooth over a sloping
-  soffit, with a section-fill twin; stringers get tread and riser boards; a spiral is wedge treads round a pole).
+  soffit, with a section-fill twin; stringers get tread and riser boards; a spiral is wedge treads round a pole; a
+  curved flight's treads are solid blocks down to its base, or boards, without stringers).
   `BuildingParts.stairs` holds them; `buildStairsBelow()` draws `stairsBelow` under the floor, untagged and not
   pickable (`parts.stairsBelow`, hidden while the stack draws that floor). The voids are `sceneVoids()`: the floor
   below's footprints are cut out of the slab and the room floors, the floor's own out of its flat ceilings (vaults stay

@@ -75,6 +75,34 @@ final class StairTest extends EditorTestCase
 		self::assertSame(1400, $back['width']);
 	}
 
+	public function testACurvedFlightHasAnInnerRadiusAndStaysWalkable(): void
+	{
+		// Fan-shaped garden steps: their own rise, round a centre 2.5 m from their inner edge.
+		$curved = $this->create('stairs', ['shape' => 'Curved', 'rise' => 600, 'innerRadius' => 2500, 'turn' => 'Right']);
+		self::assertSame(['Curved', 2500, 'Right'], [$curved['shape'], $curved['innerRadius'], $curved['turn']]);
+		self::assertSame(1500, $this->create('stairs', ['shape' => 'Curved', 'rise' => 600])['innerRadius']);
+		self::assertSame(422, $this->edit('PATCH', 'stairs', self::id($curved), ['innerRadius' => 100])->getStatusCode());
+		// Another shape keeps the radius, so going back finds it.
+		$this->edit('PATCH', 'stairs', self::id($curved), ['shape' => 'Straight']);
+		$back = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($curved), ['shape' => 'Curved']))['element'];
+		self::assertIsArray($back);
+		self::assertSame(2500, $back['innerRadius']);
+
+		// A storey (16 risers, 350 deep) round a 300 mm centre would wind past itself (401°); 3 m wide round it, the inner
+		// treads vanish.
+		$winding = ['shape' => 'Curved', 'rise' => 3000, 'risers' => 16, 'going' => 350, 'innerRadius' => 300, 'width' => 900];
+		self::assertSame(422, $this->edit('POST', 'stairs', body: $winding)->getStatusCode());
+		$shallow = ['shape' => 'Curved', 'rise' => 600, 'innerRadius' => 300, 'width' => 3000];
+		self::assertSame(422, $this->edit('POST', 'stairs', body: $shallow)->getStatusCode());
+
+		// No stringers round a curve: asked for, refused; a stringer stair made curved becomes solid.
+		self::assertSame(422, $this->edit('PATCH', 'stairs', self::id($curved), ['construction' => 'Stringers'])->getStatusCode());
+		$stringers = $this->create('stairs', ['construction' => 'Stringers', 'rise' => 600]);
+		$made = $this->jsonBody($this->edit('PATCH', 'stairs', self::id($stringers), ['shape' => 'Curved']))['element'];
+		self::assertIsArray($made);
+		self::assertSame(['Curved', 'Solid'], [$made['shape'], $made['construction']]);
+	}
+
 	public function testAMezzanineOnTheSameLevelSharesNoStairs(): void
 	{
 		$this->create('stairs', []);
@@ -202,7 +230,10 @@ final class StairTest extends EditorTestCase
 		self::assertSame(3000, $ground['stairRise']);
 		self::assertIsList($ground['stairs']);
 		self::assertIsArray($ground['stairs'][0]);
-		self::assertSame(['UShaped', 200], [$ground['stairs'][0]['shape'], $ground['stairs'][0]['gap']]);
+		self::assertSame(
+			['UShaped', 200, null],
+			[$ground['stairs'][0]['shape'], $ground['stairs'][0]['gap'], $ground['stairs'][0]['innerRadius']],
+		);
 		$first = $scene($upper->id);
 		self::assertIsArray($first['stairsBelow']);
 		self::assertSame([$this->floor->id, 3000], [$first['stairsBelow']['floorId'], $first['stairsBelow']['rise']]);

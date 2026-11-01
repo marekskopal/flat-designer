@@ -1,5 +1,5 @@
 import {levelText} from '@app/core/level-text';
-import {isOutdoorRoom, Material, Opening, PlanPoint, Plot, Room, Scene, Wall, WallFinish} from '@app/models/scene';
+import {isOutdoorRoom, Material, Opening, PlanPoint, Plot, Room, Scene, Stair, Wall, WallFinish} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Polygon, Ring} from 'polygon-clipping';
 
 import {isSiteWall} from './building';
@@ -263,12 +263,15 @@ class ViewCollector {
             const geometry = stairGeometry(stair, scene.stairRise ?? 0);
             const base = e + (stair.rise == null ? 0 : (stair.baseZ ?? 0));
             this.site = stair.rise != null;
+            // A curved solid flight's treads are blocks down to its base; the others show a riser.
+            const blocks = isBlockStair(stair);
             for (const tread of geometry.treads) {
                 const points = this.clipPolygon(tread.outline);
                 if (points.length >= 3) {
                     const us = points.map((p) => this.u(p));
                     const top = base + tread.top;
-                    const step = rectangle(Math.min(...us), Math.max(...us), top - geometry.riser, top, {fill: PlainWall, stroke: Line, width: Thin});
+                    const bottom = blocks ? base : top - geometry.riser;
+                    const step = rectangle(Math.min(...us), Math.max(...us), bottom, top, {fill: PlainWall, stroke: Line, width: Thin});
                     this.push(points, [step]);
                 }
             }
@@ -789,6 +792,9 @@ export function lighten(colour: string, amount = 0.6): string {
     return `#${mix((value >> 16) & 255)}${mix((value >> 8) & 255)}${mix(value & 255)}`;
 }
 
+/** A curved solid flight, whose treads are solid blocks down to its base (`buildStair()`). */
+const isBlockStair = (stair: Stair): boolean => stair.shape === 'Curved' && stair.construction === 'Solid';
+
 /** Plots of all floors with their floor's elevation (their ground counts from it). */
 function floorPlots(floors: readonly Scene[]): {plots: Plot[]; e: number}[] {
     return floors.filter((s) => (s.plots ?? []).length > 0).map((s) => ({plots: s.plots ?? [], e: s.floor.elevation}));
@@ -921,7 +927,7 @@ function sectionCutShapes(floors: readonly Scene[], cut: SectionCut, plane: View
                 }
             });
         });
-        // Stair treads (a solid flight down a riser and its waist).
+        // Stair treads (a solid flight down a riser and its waist, a curved solid one's blocks down to its base).
         for (const stair of scene.stairs ?? []) {
             const geometry = stairGeometry(stair, scene.stairRise ?? 0);
             const base = e + (stair.rise == null ? 0 : (stair.baseZ ?? 0));
@@ -929,7 +935,7 @@ function sectionCutShapes(floors: readonly Scene[], cut: SectionCut, plane: View
             for (const tread of [...geometry.treads, ...geometry.landings]) {
                 for (const [from, to] of lineInRing(cut.start, dir, tread.outline).map(clamp(length)).filter(nonEmpty)) {
                     const top = base + tread.top;
-                    shapes.push(rectangle(from, to, top - depth, top, filled));
+                    shapes.push(rectangle(from, to, isBlockStair(stair) ? base : top - depth, top, filled));
                 }
             }
         }

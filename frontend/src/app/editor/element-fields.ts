@@ -75,6 +75,7 @@ const StairShapeLabels: Readonly<Record<string, string>> = {
     LShaped: 'L (quarter landing)',
     UShaped: 'U (half landing)',
     Spiral: 'Spiral',
+    Curved: 'Curved (fan-shaped steps)',
 };
 const hasLanding = (stair: Record<string, unknown>): boolean => stair['shape'] === 'LShaped' || stair['shape'] === 'UShaped';
 
@@ -430,7 +431,15 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             type: 'select',
             options: ['Left', 'Right'],
             half: true,
-            when: (stair) => hasLanding(stair) || stair['shape'] === 'Spiral',
+            when: (stair) => hasLanding(stair) || stair['shape'] === 'Spiral' || stair['shape'] === 'Curved',
+        },
+        {
+            key: 'innerRadius',
+            label: 'Inner edge from the centre',
+            type: 'int',
+            unit: 'mm',
+            half: true,
+            when: (stair) => stair['shape'] === 'Curved',
         },
         {key: 'gap', label: 'Gap between the flights', type: 'int', unit: 'mm', half: true, when: (stair) => stair['shape'] === 'UShaped'},
         {

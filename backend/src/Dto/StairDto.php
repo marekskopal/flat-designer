@@ -35,6 +35,7 @@ final readonly class StairDto
 		public ?int $railingMaterialId = null,
 		public string $wallHandrail = 'None',
 		public ?int $voidLiningMaterialId = null,
+		public ?int $innerRadius = null,
 	) {
 	}
 
@@ -59,6 +60,7 @@ final readonly class StairDto
 			structureMaterialId: $stair->structureMaterial?->id,
 			rise: $stair->rise,
 			baseZ: $stair->baseZ,
+			innerRadius: $stair->innerRadius,
 			railingStyle: $stair->railingStyle?->value,
 			railingMaterialId: $stair->railingMaterial?->id,
 			wallHandrail: $stair->wallHandrail->value,

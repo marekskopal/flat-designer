@@ -119,7 +119,7 @@ export interface Plot {
     terrain?: SpotHeight[];
 }
 
-export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral';
+export type StairShape = 'Straight' | 'LShaped' | 'UShaped' | 'Spiral' | 'Curved';
 export type StairTurn = 'Left' | 'Right';
 export type StairConstruction = 'Solid' | 'Stringers' | 'Open';
 export type StairRailing = 'None' | 'Left' | 'Right' | 'Both';
@@ -230,6 +230,8 @@ export interface Stair {
     wallHandrail?: StairRailing;
     /** Boards lining the void it cuts through the floor above; null or missing: none. */
     voidLiningMaterialId?: number | null;
+    /** A curved flight's inner edge, mm from the centre it curves round (FD-99); null for the other shapes, absent in older versions. */
+    innerRadius?: number | null;
 }
 
 export type RoofShape = 'Gable' | 'Hip' | 'Shed' | 'Flat';
