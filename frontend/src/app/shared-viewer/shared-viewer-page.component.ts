@@ -14,7 +14,7 @@ import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {StorageService} from '@app/services/storage.service';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
-import {electricalPoints} from '@app/viewer/engine/electrical';
+import {hasElectricalPoints} from '@app/viewer/engine/electrical';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {PlanCutHeight} from '@app/viewer/engine/plan-drawing';
 import {isSunDown} from '@app/viewer/engine/sun';
@@ -118,7 +118,7 @@ export class SharedViewerPageComponent {
     /** The floor has lights, sockets, switches, … to draw (the Display toggle shows only then). */
     protected readonly hasElectrical = computed(() => {
         const scene = this.scene();
-        return scene !== null && electricalPoints(scene).length > 0;
+        return scene !== null && hasElectricalPoints(scene);
     });
     /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
     protected readonly night = signal(false);

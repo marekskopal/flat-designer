@@ -75,7 +75,7 @@ final readonly class ElectricalScheduleService
 			$roomId = self::roomOf($item, $outlines);
 			$key = sprintf('%s|%d|%d|%s', $category->value, $definitionId, $item->z, json_encode($values, JSON_THROW_ON_ERROR));
 			$row = $rows[$roomId][$key] ?? null;
-			$units = self::units($body, $given, $schedule);
+			$units = $schedule->units($body, $given);
 			$rows[$roomId][$key] = new ElectricalRowDto(
 				category: $category,
 				definitionId: $definitionId,
@@ -181,29 +181,6 @@ final readonly class ElectricalScheduleService
 		}
 
 		return $values;
-	}
-
-	/**
-	 * What the item counts as: the value of the int parameter `schedule.count` names (its default when not given; at
-	 * least 0), 1 without.
-	 *
-	 * @param array<mixed> $definition
-	 * @param array<mixed> $given
-	 */
-	private static function units(array $definition, array $given, DefinitionSchedule $schedule): int
-	{
-		if ($schedule->count === null) {
-			return 1;
-		}
-		foreach (DefinitionValidator::list($definition, 'parameters') as $parameter) {
-			if (($parameter['key'] ?? null) === $schedule->count) {
-				$value = $given[$schedule->count] ?? $parameter['default'] ?? null;
-
-				return is_int($value) ? max(0, $value) : 1;
-			}
-		}
-
-		return 1;
 	}
 
 	/**

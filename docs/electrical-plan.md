@@ -80,16 +80,16 @@ Pendants that differ only in `sag`, `bulb` or `shadow` then share a row.
 - `electricalPoints(scene)`: one point per shown Custom item whose definition has a category (`hiddenItemIds()` hides
   the other variants). Each point has the item id, category, the plan point, the outward direction, `z`, the
   multiplier (the `count` value) and a short label.
-  - Wall-mounted points (socket, switch, data, plumbing) sit at the middle of the item's front edge and face out of
-    its front (rotation 0 faces −y).
+  - Wall-mounted points (socket, switch, data, plumbing) sit at the middle of the item's back edge, on the wall face
+    (FD-108), and face out of its front (rotation 0 faces −y).
   - Lights sit at the footprint centre.
 - `symbolPolylines(point, set, size)`: the set's unit-size polylines (lines, not text, `ElectricalSymbolSets`) placed in
   plan mm (see Symbol sets).
 - `buildElectrical(points, set)` (engine): one `LineSegments` per category colour at the floor, outside the pickable
   `content` (clicks still pick the item) and without a depth test, so neither the wall cut nor the furniture hides them;
   the 3D items are not dimmed. A CSS2D label with the elevation (`levelText()`, `+1.100` above the floor) sits beside
-  each wall-mounted point. The viewer shows every label; the PDF leaves out those that would overlap text placed
-  before them.
+  each wall-mounted point. The viewer shows every label; the PDF puts each at the first of a few spots round its
+  symbol that is free of the text placed before it, else at the first anyway, so no elevation is lost (FD-108).
 - `ViewerEngine.setElectricalVisible(visible, set)` works like `setDimensionsVisible()`: built lazily, marked stale on `load()`,
   rebuilt when next shown, visible only while `isTopDown()`. It calls `invalidate()`; it casts no shadow.
 - Display toggle "Electrical (Plan)" on both viewer pages (shown only when the floor has points), kept as `electrical` (missing: off) by `SavedViewSettingsDto`,
@@ -118,7 +118,8 @@ Pendants that differ only in `sag`, `bulb` or `shadow` then share a row.
 - `planSheet(scene, info, symbols)`: the plan sheet with a symbol set is the electrical plan. The walls and openings are
   drawn as usual, the items as thin grey footprints without names, the room names and no dimensions. Over them go the
   symbols at a fixed paper size (3.6 mm a unit) and the elevation beside each wall point.
-- A legend in a 6 mm strip `planLayout()` keeps above the title band (one row, symbols drawn as on the plan), lists each category on
+- A legend in a 6 mm strip `planLayout()` keeps above the title band (one row, shrunk to fit the width so no category
+  drops out; each category's plain symbol, one gang and a single switch), lists each category on
   the floor with its symbol and count, a socket's outlets and a data socket's ports in brackets. It is computed from
   the points, so share guests get it without an endpoint.
 - `ExportComponent` adds the item when the scene has electrical points. `ShareSettingsDto.exports` gates it as it does

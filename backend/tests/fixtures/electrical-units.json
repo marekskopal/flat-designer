@@ -1,0 +1,77 @@
+{
+    "description": "What an electrical item counts as (FD-64): DefinitionSchedule::of(definition)->units(definition, given) in PHP, scheduleUnits(definition, given) in electrical.ts. Run by DefinitionScheduleUnitsTest and electrical.spec.ts.",
+    "cases": [
+        {
+            "name": "count names a parameter the item gives",
+            "definition": {"category": "socket", "schedule": {"count": "gangs"}, "parameters": [{"key": "gangs", "type": "int", "default": 1}]},
+            "given": {"gangs": 3},
+            "units": 3
+        },
+        {
+            "name": "the default when the item does not give it",
+            "definition": {"category": "socket", "schedule": {"count": "gangs"}, "parameters": [{"key": "gangs", "type": "int", "default": 2}]},
+            "given": {},
+            "units": 2
+        },
+        {
+            "name": "no count: each item once",
+            "definition": {"category": "switch", "schedule": {"values": ["rockers"]}, "parameters": [{"key": "rockers", "type": "select", "default": "single"}]},
+            "given": {"rockers": "double"},
+            "units": 1
+        },
+        {
+            "name": "settings without count leave the default parameter alone",
+            "definition": {"category": "socket", "schedule": {"values": ["gangs"]}, "parameters": [{"key": "gangs", "type": "int", "default": 1}]},
+            "given": {"gangs": 4},
+            "units": 1
+        },
+        {
+            "name": "no settings: a socket counts its int gangs (older JSON)",
+            "definition": {"category": "socket", "parameters": [{"key": "gangs", "type": "int", "default": 1}]},
+            "given": {"gangs": 2},
+            "units": 2
+        },
+        {
+            "name": "no settings: a data socket counts its int ports",
+            "definition": {"category": "data", "parameters": [{"key": "ports", "type": "int", "default": 2}]},
+            "given": {},
+            "units": 2
+        },
+        {
+            "name": "no settings: gangs that are not an int are not counted",
+            "definition": {"category": "socket", "parameters": [{"key": "gangs", "type": "select", "options": ["1", "2"], "default": "2"}]},
+            "given": {"gangs": "2"},
+            "units": 1
+        },
+        {
+            "name": "no settings: a light counts once",
+            "definition": {"category": "light", "parameters": [{"key": "gangs", "type": "int", "default": 3}]},
+            "given": {},
+            "units": 1
+        },
+        {
+            "name": "count names a parameter the definition lacks",
+            "definition": {"category": "socket", "schedule": {"count": "gangs"}, "parameters": []},
+            "given": {"gangs": 3},
+            "units": 1
+        },
+        {
+            "name": "a value that is no whole number counts once",
+            "definition": {"category": "socket", "schedule": {"count": "gangs"}, "parameters": [{"key": "gangs", "type": "int", "default": 1}]},
+            "given": {"gangs": "2"},
+            "units": 1
+        },
+        {
+            "name": "a negative value counts as none",
+            "definition": {"category": "socket", "schedule": {"count": "gangs"}, "parameters": [{"key": "gangs", "type": "int", "default": 1}]},
+            "given": {"gangs": -2},
+            "units": 0
+        },
+        {
+            "name": "zero gangs",
+            "definition": {"category": "socket", "schedule": {"count": "gangs"}, "parameters": [{"key": "gangs", "type": "int", "default": 1}]},
+            "given": {"gangs": 0},
+            "units": 0
+        }
+    ]
+}

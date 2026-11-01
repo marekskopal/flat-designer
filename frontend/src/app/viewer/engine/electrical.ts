@@ -16,7 +16,7 @@ import {hiddenItemIds} from './variants';
 export interface ElectricalPoint {
     itemId: number;
     category: ElectricalCategory;
-    /** Plan mm: the middle of a wall point's front edge (on the wall face), a light's footprint centre. */
+    /** Plan mm: the middle of a wall point's back edge (on the wall face), a light's footprint centre. */
     at: Vec2;
     /** Unit vector in plan, out of the item's front. */
     out: Vec2;
@@ -48,9 +48,13 @@ export const CategoryColors: Record<ElectricalCategory, string> = {
 /** Categories whose points stand on a wall face (their symbol starts there); lights sit at their centre. */
 const WallMounted = new Set<ElectricalCategory>(['socket', 'switch', 'data', 'plumbing']);
 
+/** The scene's definitions that have a category, by id. */
+const categorized = (scene: Scene): Map<number, FurnitureDefinitionBody> =>
+    new Map((scene.definitions ?? []).filter((d) => d.definition.category !== undefined).map((d) => [d.id, d.definition]));
+
 /** The shown points of the floor, in the items' order. */
 export function electricalPoints(scene: Scene): ElectricalPoint[] {
-    const definitions = new Map((scene.definitions ?? []).filter((d) => d.definition.category !== undefined).map((d) => [d.id, d.definition]));
+    const definitions = categorized(scene);
     const hidden = hiddenItemIds(scene);
     const points: ElectricalPoint[] = [];
     for (const item of scene.items) {
@@ -64,23 +68,53 @@ export function electricalPoints(scene: Scene): ElectricalPoint[] {
         for (const parameter of definition.parameters ?? []) {
             values[parameter.key] = given[parameter.key] ?? parameter.default;
         }
-        const count = scheduleCount(definition);
-        const units = count === null ? 1 : values[count];
         const angle = (item.rotation * Math.PI) / 180;
-        // The front faces −y at rotation 0, turned counter-clockwise.
+        // The front faces −y at rotation 0, turned counter-clockwise; a wall point's back stands on the wall face.
         const out = {x: Math.sin(angle), y: -Math.cos(angle)};
-        const offset = WallMounted.has(category) ? item.depth / 2 : 0;
+        const offset = WallMounted.has(category) ? -item.depth / 2 : 0;
         points.push({
             itemId: item.id,
             category,
             at: {x: item.x + out.x * offset, y: item.y + out.y * offset},
             out,
             z: item.z,
-            units: typeof units === 'number' && Number.isInteger(units) ? Math.max(0, units) : 1,
+            units: scheduleUnits(definition, given),
             values,
         });
     }
     return points;
+}
+
+/**
+ * Whether the floor shows any electrical point (the Display toggle and the export offer the plan then): as
+ * `electricalPoints(scene).length > 0`, but stopping at the first one without building the points.
+ */
+export function hasElectricalPoints(scene: Scene): boolean {
+    const definitions = categorized(scene);
+    if (definitions.size === 0) {
+        return false;
+    }
+    const used = scene.items.filter((item) => item.kind === 'Custom' && item.definitionId !== null && definitions.has(item.definitionId));
+    if (used.length === 0) {
+        return false;
+    }
+    const hidden = hiddenItemIds(scene);
+    return used.some((item) => !hidden.has(item.id));
+}
+
+/**
+ * What an item counts as: the value of the int parameter `scheduleCount()` names, its default when the item does not
+ * give it (at least 0; 1 when it is no whole number), 1 without one. The twin of `DefinitionSchedule::units()`, kept
+ * identical by `backend/tests/fixtures/electrical-units.json`.
+ */
+export function scheduleUnits(definition: FurnitureDefinitionBody, given: Record<string, unknown>): number {
+    const count = scheduleCount(definition);
+    const parameter = count === null ? undefined : (definition.parameters ?? []).find((p) => p.key === count);
+    if (count === null || parameter === undefined) {
+        return 1;
+    }
+    const value = given[count] ?? parameter.default;
+    return typeof value === 'number' && Number.isInteger(value) ? Math.max(0, value) : 1;
 }
 
 /** category → the int parameter counted when a definition has no `schedule` settings (`DefinitionSchedule::Defaults`). */

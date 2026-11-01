@@ -47,6 +47,30 @@ final readonly class DefinitionSchedule
 	}
 
 	/**
+	 * What an item counts as (FD-64): the value of the int parameter `count` names, its default when the item does not
+	 * give it (at least 0; 1 when it is no int), 1 without `count`. The twin is `scheduleUnits()` in the frontend's
+	 * `electrical.ts`, kept identical by `tests/fixtures/electrical-units.json`.
+	 *
+	 * @param array<mixed> $definition
+	 * @param array<mixed> $given the item's `params.values`
+	 */
+	public function units(array $definition, array $given): int
+	{
+		if ($this->count === null) {
+			return 1;
+		}
+		foreach (DefinitionValidator::list($definition, 'parameters') as $parameter) {
+			if (($parameter['key'] ?? null) === $this->count) {
+				$value = $given[$this->count] ?? $parameter['default'] ?? null;
+
+				return is_int($value) ? max(0, $value) : 1;
+			}
+		}
+
+		return 1;
+	}
+
+	/**
 	 * Throws `DefinitionException` unless the settings come with a `category`, `count` names an int parameter and
 	 * `values` lists distinct int, bool or select parameters.
 	 *

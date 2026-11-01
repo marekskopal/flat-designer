@@ -155,6 +155,44 @@ describe('planSheet', () => {
         expect(plan).not.toContain('+1.100');
     });
 
+    it('keeps every elevation of crowded wall points, and every category in the legend with its plain symbol', () => {
+        const parameters = [{key: 'rockers', type: 'select' as const, default: 'single', options: ['single', 'double']}];
+        const body = (category: 'socket' | 'switch' | 'data' | 'plumbing' | 'light'): {format: 1; category: typeof category; parts: []} => ({
+            format: 1,
+            category,
+            parts: [],
+        });
+        const definitions = [
+            {id: 1, name: 'Switch', updatedAt: '', definition: {...body('switch'), parameters}},
+            {id: 2, name: 'Socket', updatedAt: '', definition: body('socket')},
+            {id: 3, name: 'Data', updatedAt: '', definition: body('data')},
+            {id: 4, name: 'Plumbing', updatedAt: '', definition: body('plumbing')},
+            {id: 5, name: 'Light', updatedAt: '', definition: body('light')},
+        ];
+        // Five wall points side by side, 60 mm apart: their labels cannot all go just past the symbols.
+        const wallPoints = [1, 2, 3, 4, 1].map((definitionId, i) =>
+            item(10 + i, {
+                definitionId,
+                x: 1000 + i * 60,
+                y: 5,
+                z: 300 + i * 100,
+                width: 50,
+                depth: 10,
+                rotation: 180,
+                params: {values: {rockers: 'double'}},
+            }),
+        );
+        const floor = scene({items: [...wallPoints, item(20, {definitionId: 5, x: 2000, y: 2000, z: 2500})], definitions});
+
+        const sheet = planSheet(floor, info, 'Iec');
+        const labels = texts(sheet.svg);
+        expect(labels).toEqual(expect.arrayContaining(['+0.300', '+0.400', '+0.500', '+0.600', '+0.700']));
+        expect(labels).toEqual(expect.arrayContaining(['Light 1', 'Socket 1', 'Switch 2', 'Data 1', 'Plumbing 1']));
+        // The two switches are double ones (circle, stem, two strokes with their ticks: 6 paths each); the legend's is the
+        // plain single one (4 paths), not a copy of the first.
+        expect(sheet.svg.split('stroke="#2a62b8"').length - 1).toBe(2 * 6 + 4);
+    });
+
     it('marks a section line: its dash-dot cut and the name at both arrows', () => {
         const line = {id: 1, name: 'A', startX: -1000, startY: 1500, endX: 5000, endY: 1500, depth: null};
         const sheet = planSheet(scene({sections: [line]}), info);

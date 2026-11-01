@@ -48,7 +48,7 @@ import {ShareLinkFormComponent, ShareSource} from '@app/share/share-link-form.co
 import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {EditorTool, ToolStatus} from '@app/viewer/engine/drawing';
-import {electricalPoints} from '@app/viewer/engine/electrical';
+import {hasElectricalPoints} from '@app/viewer/engine/electrical';
 import {GhostFloor} from '@app/viewer/engine/ghost';
 import {MeasureStatus} from '@app/viewer/engine/measure';
 import {decodeImage} from '@app/viewer/engine/pictures';
@@ -390,7 +390,7 @@ export class ViewerPageComponent {
     /** The floor has lights, sockets, switches, … to draw (the Display toggle shows only then). */
     protected readonly hasElectrical = computed(() => {
         const scene = this.viewedScene();
-        return scene !== null && electricalPoints(scene).length > 0;
+        return scene !== null && hasElectricalPoints(scene);
     });
     /** After dark; the lights follow it (on at night, or once the sun time has it set) until switched by hand. */
     protected readonly night = signal(false);
