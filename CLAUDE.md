@@ -381,7 +381,9 @@ format is the text in `FurnitureTools::Format`.
 - Site walls (FD-87): a wall's top may slope, `heightEnd` being its height at the end (`height` at the start, both
   against the floor's level), and its bottom lie on a base (`baseStart` → `baseEnd`) or follow the ground (`onGround`,
   the plots' `groundAt()`; PHP `Ground` with `Terrain`). The backend twins are `WallTop` (with `heightEnd`) and
-  `WallBottom` (`WallBase` checks the top stands 50 mm over the base and keeps the openings' sills on the bottom, when an
+  `WallBottom` (`WallBase` checks the top stands 50 mm over the base, or on the ground over the ground at the wall's ends
+  when its top, line or `onGround` changes, so the top may lie below the floor's level, FD-98; a wall on the floor's
+  level is at least `MinHeight` (100) high; and it keeps the openings' sills on the bottom, when an
   opening is placed anew or the wall gets a new base); the viewer's are `wallTopAt(wall, roofs, frame)` and
   `wallBottomAt()` (`under-roof.ts`). Such a wall is built like one under roofs (`profiledWallPiece()`: `profileRuns()`
   with a bottom per station, `curvedPrismAt()` with per-point bottoms; on the ground the faces are densified every

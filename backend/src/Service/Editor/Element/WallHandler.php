@@ -127,14 +127,14 @@ final readonly class WallHandler implements ElementHandler
 			// Missing in changes logged before walls could curve.
 			'sagitta' => WallCurve::read($fields),
 			'thickness' => $fields->int('thickness', 10, 2000),
-			'height' => $fields->int('height', 100, State::MaxSize),
+			'height' => (int) WallBase::readTop($fields, 'height'),
 			'materialId' => $materialId,
 			'leftFinishes' => $this->faceFinishes($fields->raw('leftFinishes'), 'leftFinishes'),
 			'rightFinishes' => $this->faceFinishes($fields->raw('rightFinishes'), 'rightFinishes'),
 			// Missing in changes logged before roofs.
 			'upToRoof' => $fields->bool('upToRoof'),
 			// Missing in changes logged before site walls: level, on the floor.
-			'heightEnd' => $fields->nullableInt('heightEnd', 100, State::MaxSize),
+			'heightEnd' => WallBase::readTop($fields, 'heightEnd'),
 			'baseStart' => WallBase::read($fields, 'baseStart'),
 			'baseEnd' => WallBase::read($fields, 'baseEnd'),
 			'onGround' => $fields->bool('onGround'),
@@ -162,6 +162,7 @@ final readonly class WallHandler implements ElementHandler
 			throw EditException::invalid(sprintf('A wall must be at least %d mm long.', self::MinLength));
 		}
 		WallCurve::check($line);
+		$this->wallBase->checkOverGround($normalized, $line, $floor->id, $currentWall);
 
 		$normalized['openingOffsets'] = $currentWall === null ? [] : self::offsetList(
 			$this->openingOffsets($currentWall, $normalized, $length, $fields->raw('openingOffsets')),
@@ -342,12 +343,12 @@ final readonly class WallHandler implements ElementHandler
 		$wall->endY = $fields->int('endY', -State::CoordinateLimit, State::CoordinateLimit);
 		$wall->sagitta = $fields->int('sagitta', -State::CoordinateLimit, State::CoordinateLimit);
 		$wall->thickness = $fields->int('thickness', 10, 2000);
-		$wall->height = $fields->int('height', 100, State::MaxSize);
+		$wall->height = (int) WallBase::readTop($fields, 'height');
 		$wall->material = $this->materialResolver->resolve($fields->nullableId('materialId'));
 		$wall->leftFinishes = WallFinishBands::encodeFace($fields->raw('leftFinishes'));
 		$wall->rightFinishes = WallFinishBands::encodeFace($fields->raw('rightFinishes'));
 		$wall->upToRoof = $fields->bool('upToRoof');
-		$wall->heightEnd = $fields->nullableInt('heightEnd', 100, State::MaxSize);
+		$wall->heightEnd = WallBase::readTop($fields, 'heightEnd');
 		$wall->baseStart = $fields->int('baseStart', -WallBase::Limit, WallBase::Limit);
 		$wall->baseEnd = $fields->int('baseEnd', -WallBase::Limit, WallBase::Limit);
 		$wall->onGround = $fields->bool('onGround');

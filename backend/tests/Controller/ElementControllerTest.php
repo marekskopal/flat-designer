@@ -699,6 +699,39 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($wall), ['onGround' => true])->getStatusCode());
 	}
 
+	public function testAGardenWallsTopMayLieBelowTheFloorsLevel(): void
+	{
+		// A wall on the floor's level keeps 100 mm at least.
+		self::assertSame(
+			422,
+			$this->edit(
+				'POST',
+				'walls',
+				body: ['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'height' => 50],
+			)->getStatusCode(),
+		);
+
+		// On a base 1.5 m down, its top 600 over it: −900 against the floor.
+		$based = $this->create(
+			'walls',
+			['startX' => 0, 'startY' => 0, 'endX' => 3000, 'endY' => 0, 'height' => -900, 'baseStart' => -1500, 'baseEnd' => -1500],
+		);
+		self::assertSame(-900, $based['height']);
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($based), ['height' => -1480])->getStatusCode());
+
+		// On ground 1 m below the floor, 600 high, and not sunk into it.
+		$this->create('plots', ['polygon' => [[-5000, 5000], [10000, 5000], [10000, 15000], [-5000, 15000]], 'groundLevel' => -1000]);
+		$garden = $this->create(
+			'walls',
+			['startX' => 0, 'startY' => 8000, 'endX' => 3000, 'endY' => 8000, 'height' => -400, 'onGround' => true],
+		);
+		self::assertSame([-400, true], [$garden['height'], $garden['onGround']]);
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($garden), ['height' => -980])->getStatusCode());
+		self::assertSame(422, $this->edit('PATCH', 'walls', self::id($garden), ['heightEnd' => -1200])->getStatusCode());
+		// Renaming it does not look at the ground again.
+		self::assertSame(200, $this->edit('PATCH', 'walls', self::id($garden), ['name' => 'Garden wall'])->getStatusCode());
+	}
+
 	public function testAWallOnTheGroundMovedUphillKeepsItsOpeningsOnIt(): void
 	{
 		// The ground rises 0.1 mm per mm northwards.

@@ -46,7 +46,7 @@ final readonly class WallTools
 	 * @param int|null $heightEnd a sloping top: its height at the end, from `height` at the start in a straight line (a garden wall down a drive); null keeps it level
 	 * @param int|null $baseStart the wall's bottom at the start, mm above (+) or below (−) the floor's level (default 0)
 	 * @param int|null $baseEnd the bottom at the end (default 0); openings' sills stay on or above it
-	 * @param bool|null $onGround true: the bottom follows the ground of the floor's plots instead (a retaining or garden wall on a slope); heights stay against the floor's level
+	 * @param bool|null $onGround true: the bottom follows the ground of the floor's plots instead (a retaining or garden wall on a slope); heights stay against the floor's level, and the top may lie below it where the ground is lower still (at least 50 mm over the ground at the wall's ends; over a base the same; a wall on the floor's level is at least 100 mm)
 	 */
 	#[McpTool(
 		name: 'add_wall',
@@ -157,7 +157,7 @@ final readonly class WallTools
 	 * @param int|null $heightEnd a sloping top: its height at the end, from `height` at the start in a straight line (a garden wall down a drive); null keeps it level
 	 * @param int|null $baseStart the wall's bottom at the start, mm above (+) or below (−) the floor's level (default 0)
 	 * @param int|null $baseEnd the bottom at the end (default 0); openings' sills stay on or above it
-	 * @param bool|null $onGround true: the bottom follows the ground of the floor's plots instead (a retaining or garden wall on a slope); heights stay against the floor's level
+	 * @param bool|null $onGround true: the bottom follows the ground of the floor's plots instead (a retaining or garden wall on a slope); heights stay against the floor's level, and the top may lie below it where the ground is lower still (at least 50 mm over the ground at the wall's ends; over a base the same; a wall on the floor's level is at least 100 mm)
 	 * @param list<string>|null $clear fields to set to none: "materialId"; "leftFinishes", "rightFinishes" (the face takes the room's bands again);
 	 *   "heightEnd" (a level top again)
 	 */

@@ -427,7 +427,8 @@ east façade with the oriel, the north gable with the fence on the slope, the ki
 fireplace with its logs, the stacked stairs and the oriel's corner glazing. The exported first-floor plan lines up
 with the architect's plan. These remain, each logged as a task where it is a gap:
 
-- **FD-98** A wall's top cannot lie below its floor's level, so the dry-stone wall down the garden is about 1 m tall.
+- **FD-98** (done) A wall's top could not lie below its floor's level, so the dry-stone wall down the garden was about
+  1 m tall. Now its top is at −300, 600 mm over the ground, and the spot heights that raised the ground behind it are gone.
 - **FD-99** No fan-shaped steps: the steps round the dry-stone wall are left out.
 - **FD-100** Fences are straight items: each boundary is four 10 m items.
 - **FD-101** Flat roofs are rectangles: the garage roof leaves slivers along the skewed south wall.

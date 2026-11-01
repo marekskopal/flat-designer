@@ -15,15 +15,20 @@ use FlatDesigner\Service\Editor\Geometry\WallLine;
 
 /**
  * A wall's bottom (FD-87): on a base (`baseStart` → `baseEnd`) or on the ground of the floor's plots (`onGround`).
- * Its top stands over the base, and the openings' sills on the bottom.
+ * Its top stands over the base (or the ground at its ends), and the openings' sills on the bottom. The top may lie below
+ * the floor's level where the bottom is lower still (FD-98: a garden wall down the slope); a wall on the floor's level
+ * is at least `MinHeight` high.
  */
 final readonly class WallBase
 {
 	/** How far a wall's bottom may lie above or below the floor's level, mm (as a plot's ground). */
 	public const int Limit = 10000;
 
-	/** The least a wall's top stands over its base at its ends, mm. */
+	/** The least a wall's top stands over its base, or the ground, at its ends, mm. */
 	private const int MinOverBase = 50;
+
+	/** The least height of a wall on the floor's level, mm. */
+	public const int MinHeight = 100;
 
 	public function __construct(private PlotRepository $plotRepository)
 	{
@@ -35,8 +40,17 @@ final readonly class WallBase
 		return $fields->raw($key) === null ? 0 : $fields->int($key, -self::Limit, self::Limit);
 	}
 
+	/** A top field (`height`, `heightEnd`): from as low as a bottom may lie (`Limit` under the floor's level). */
+	public static function readTop(FieldReader $fields, string $key): ?int
+	{
+		return $key === 'height'
+			? $fields->int($key, -self::Limit, State::MaxSize)
+			: $fields->nullableInt($key, -self::Limit, State::MaxSize);
+	}
+
 	/**
-	 * A wall on a base keeps its top over it at both ends; on the ground, the viewer stops it at its top.
+	 * A wall on the floor's level is at least `MinHeight` high; one on a base keeps its top over it at both ends (on the
+	 * ground, `checkOverGround()` looks at the ground).
 	 *
 	 * @param array{height: int, heightEnd: int|null, baseStart: int, baseEnd: int, onGround: bool, ...} $state
 	 */
@@ -45,8 +59,16 @@ final readonly class WallBase
 		if ($state['onGround']) {
 			return;
 		}
-		$overStart = $state['height'] - $state['baseStart'];
-		$overEnd = ($state['heightEnd'] ?? $state['height']) - $state['baseEnd'];
+		$top = [$state['height'], $state['heightEnd'] ?? $state['height']];
+		if ($state['baseStart'] === 0 && $state['baseEnd'] === 0) {
+			if (min($top) < self::MinHeight) {
+				throw EditException::invalid(sprintf('A wall on the floor\'s level must be at least %d mm high.', self::MinHeight));
+			}
+
+			return;
+		}
+		$overStart = $top[0] - $state['baseStart'];
+		$overEnd = $top[1] - $state['baseEnd'];
 		if (min($overStart, $overEnd) < self::MinOverBase) {
 			throw EditException::invalid(
 				sprintf('The wall\'s top must stand at least %d mm over its base at both ends.', self::MinOverBase),
@@ -73,6 +95,31 @@ final readonly class WallBase
 		}
 
 		return [$height, $heightEnd, $baseStart, $baseEnd];
+	}
+
+	/**
+	 * A wall on the ground keeps its top over the ground at both ends; checked only when its top, its line or its being on
+	 * the ground changes (a plot changed since does not block renaming or undoing it).
+	 *
+	 * @param array{height: int, heightEnd: int|null, onGround: bool, startX: int, startY: int, endX: int, endY: int, sagitta: int, ...} $state
+	 */
+	public function checkOverGround(array $state, WallLine $line, int $floorId, ?Wall $current): void
+	{
+		if (!$state['onGround']) {
+			return;
+		}
+		$fields = ['height', 'heightEnd', 'onGround', 'startX', 'startY', 'endX', 'endY', 'sagitta'];
+		if ($current !== null && array_all($fields, fn (string $key): bool => $state[$key] === $current->{$key})) {
+			return;
+		}
+		$bottom = new WallBottom($line, 0, 0, Ground::of($this->plotRepository->findByFloor($floorId)));
+		$overStart = $state['height'] - $bottom->at(0.0);
+		$overEnd = ($state['heightEnd'] ?? $state['height']) - $bottom->at($line->length());
+		if (min($overStart, $overEnd) < self::MinOverBase) {
+			throw EditException::invalid(
+				sprintf('The wall\'s top must stand at least %d mm over the ground at both ends.', self::MinOverBase),
+			);
+		}
 	}
 
 	/** An opening placed anew on the wall stands on its bottom. */
