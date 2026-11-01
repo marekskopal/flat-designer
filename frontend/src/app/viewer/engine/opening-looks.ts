@@ -10,6 +10,18 @@ export interface PanelRect {
     height: number;
 }
 
+/** A door hinge's barrel, both halves (mm), and how far the outer hinges' joints lie from the leaf's bottom and top (FD-105). */
+export const HingeKnuckle = 120;
+export const HingeInset = 250;
+/** A leaf taller than this hangs on a third hinge, in the middle (mm). */
+export const ThirdHingeAbove = 2100;
+
+/** Where a door leaf `height` mm tall has its hinges (the joints of their halves), mm up from its bottom (FD-105). */
+export function hingeHeights(height: number): number[] {
+    const inset = Math.min(HingeInset, height / 4);
+    return height > ThirdHingeAbove ? [inset, height / 2, height - inset] : [inset, height - inset];
+}
+
 /** Stiles (the vertical edge pieces) and top / middle rails of a panelled or glazed leaf, and its taller bottom rail, mm. */
 export const LeafStile = 110;
 export const LeafRail = 110;

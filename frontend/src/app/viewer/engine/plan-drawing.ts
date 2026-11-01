@@ -36,6 +36,7 @@ import {
     polygonCentroid,
     RollerDrum,
     SquareEnds,
+    swungLeaf,
     Vec2,
     WallEnds,
     WallFrame,
@@ -844,17 +845,16 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
 
 /** A swinging leaf opened square into its side, and the arc its free edge sweeps. */
 function swingShapes(frame: WallFrame, leaf: Leaf): Shape[] {
-    const hinge = pointOnWall(frame, leaf.along, leaf.across);
-    const closed = {x: frame.dir.x * leaf.closed, y: frame.dir.y * leaf.closed};
-    const open = {x: frame.normal.x * leaf.swing, y: frame.normal.y * leaf.swing};
+    // Square open, turned about its pin (FD-105); the arc is the free edge's way round the pin.
+    const {start, dir, normal} = swungLeaf(frame, leaf, Math.PI / 2);
     const at = (along: number, across: number): Vec2 => ({
-        x: hinge.x + open.x * along + closed.x * across,
-        y: hinge.y + open.y * along + closed.y * across,
+        x: start.x + dir.x * along + normal.x * across,
+        y: start.y + dir.y * along + normal.y * across,
     });
     const t = leaf.thickness / 2;
     const arc = Array.from({length: 25}, (_, i) => {
-        const angle = (i / 24) * (Math.PI / 2);
-        return at(leaf.width * Math.sin(angle), leaf.width * Math.cos(angle));
+        const free = swungLeaf(frame, leaf, (i / 24) * (Math.PI / 2));
+        return {x: free.start.x + free.dir.x * leaf.width, y: free.start.y + free.dir.y * leaf.width};
     });
     return [
         {points: [at(0, -t), at(leaf.width, -t), at(leaf.width, t), at(0, t)], closed: true, style: OutlineStyle},

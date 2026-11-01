@@ -13,6 +13,7 @@ import {
     isSimplePolygon,
     leafCollider,
     leafColliders,
+    LeafOpenAngle,
     moveWallEnds,
     openingFitsCurve,
     openingLeaves,
@@ -24,6 +25,7 @@ import {
     slideOpening,
     snapPoint,
     snapToGrid,
+    swungLeaf,
     tangentAt,
     tileGrid,
     tileOrigin,
@@ -318,12 +320,46 @@ describe('door leaves', () => {
     const collide = (point: {x: number; y: number}, openness: number): {x: number; y: number} =>
         collideCircle(point, radius, [...wallColliders([wall]), ...leafColliders([wall], () => openness)]);
 
-    it('hangs a door leaf on its hinge, flush with the face it swings to', () => {
-        expect(openingLeaves(door, 200)).toEqual([
-            {openingId: 1, index: 0, motion: 'swing', along: 1050, across: 80, closed: 1, swing: 1, travel: 0, width: 800, thickness: 40},
-        ]);
+    it('hangs a rebated door leaf on its hinges, its lip in the frame\'s rebate flush with the face it swings to', () => {
+        // The stops 50 in from the edges, the core 3 clear of them, the lip 13 over them; the lining 10 proud of the wall.
+        expect(openingLeaves(door, 200)).toEqual([{
+            openingId: 1,
+            index: 0,
+            motion: 'swing',
+            along: 1040,
+            across: 90,
+            closed: 1,
+            swing: 1,
+            travel: 0,
+            width: 820,
+            thickness: 40,
+            pin: {back: 2, out: 27},
+            lip: {from: 0, to: 820, coreFrom: 13, coreTo: 807, top: 13, thickness: 15},
+        }]);
         const mirrored = openingLeaves({...door, hinge: 'End', side: 'Right'}, 200)[0];
-        expect([mirrored.along, mirrored.across, mirrored.closed, mirrored.swing]).toEqual([1850, -80, -1, -1]);
+        expect([mirrored.along, mirrored.across, mirrored.closed, mirrored.swing]).toEqual([1860, -90, -1, -1]);
+    });
+
+    it('hangs an unrebated leaf on the hinge edge of its swing face', () => {
+        const [flush] = openingLeaves({...door, frameStyle: 'Flush'}, 200);
+        expect([flush.along, flush.across, flush.width, flush.pin, flush.lip]).toEqual([1050, 80, 800, {back: 0, out: 20}, undefined]);
+        // A leaf filling the opening leaves no room for a rebate.
+        expect(openingLeaves({...door, leafWidth: 880}, 200)[0].lip).toBeUndefined();
+    });
+
+    it('turns a leaf about its pin, clear of the jamb', () => {
+        const frame = wallFrame(wall);
+        const [leaf] = openingLeaves(door, 200);
+        const pin = {x: leaf.along - leaf.pin!.back, y: leaf.across + leaf.pin!.out};
+        for (const open of [0, 0.25, 0.5, 1]) {
+            const {start, dir, normal} = swungLeaf(frame, leaf, open * LeafOpenAngle);
+            // The hinge edge's point keeps its distance from the pin.
+            expect(Math.hypot(start.x - pin.x, start.y - pin.y)).toBeCloseTo(Math.hypot(leaf.pin!.back, leaf.pin!.out));
+            // The back corner of the hinge edge never reaches into the jamb's rebate (x < 1038).
+            const corner = {x: start.x - normal.x * 20, y: start.y - normal.y * 20};
+            expect(corner.x).toBeGreaterThanOrEqual(1040 - 1e-9);
+            expect(dir.x).toBeCloseTo(Math.cos(open * LeafOpenAngle));
+        }
     });
 
     it('gives a walkable French window two sashes on its jambs and other windows none', () => {
@@ -338,7 +374,7 @@ describe('door leaves', () => {
     it('blocks the doorway with a closed leaf', () => {
         const p = collide({x: 1450, y: 0}, 0);
         expect(p.x).toBeCloseTo(1450);
-        expect(p.y).toBeCloseTo(60 - radius);
+        expect(p.y).toBeCloseTo(70 - radius);
     });
 
     it('leaves the doorway free when open', () => {
@@ -362,10 +398,18 @@ describe('door leaves', () => {
 describe('door kinds', () => {
     const at = (type: Opening['type'], fields: Partial<Opening> = {}): Opening => ({...opening(1000, 1400, 2020), id: 1, type, ...fields});
 
-    it('hangs a double door on both jambs, the hinge leaf as wide as leafWidth', () => {
-        expect(openingLeaves(at('DoubleDoor'), 200).map((l) => [l.along, l.closed, l.width])).toEqual([[1050, 1, 650], [2350, -1, 650]]);
+    it('hangs a double door on both jambs, the hinge leaf leafWidth between the stops and lapping over the other', () => {
+        const leaves = openingLeaves(at('DoubleDoor'), 200);
+        expect(leaves.map((l) => [l.along, l.closed, l.width])).toEqual([[1040, 1, 671.5], [2360, -1, 658.5]]);
+        // The active leaf's lip runs 13 past its core over the other's, whose lip stops 2 short of it: 12 short of its core's edge.
+        expect(leaves.map((l) => [l.lip?.coreTo, l.lip?.to])).toEqual([[658.5, 671.5], [658.5, 646.5]]);
+        // A leaf taking the whole space between the stops hangs alone, its core 3 clear of both.
+        const alone = openingLeaves(at('DoubleDoor', {leafWidth: 1300}), 200);
+        expect(alone.map((l) => [l.index, l.along, l.width, l.lip?.coreTo])).toEqual([[0, 1040, 1320, 1307]]);
+        expect(openingLeaves(at('DoubleDoor', {leafWidth: 1300, hinge: 'End'}), 200).map((l) => [l.index, l.along])).toEqual([[1, 2360]]);
         const uneven = openingLeaves(at('DoubleDoor', {leafWidth: 900, hinge: 'End', side: 'Right'}), 200);
-        expect(uneven.map((l) => [l.width, l.across, l.swing])).toEqual([[400, -80, -1], [900, -80, -1]]);
+        expect(uneven.map((l) => [l.width, l.across, l.swing])).toEqual([[408.5, -90, -1], [921.5, -90, -1]]);
+        expect(openingLeaves(at('DoubleDoor', {frameStyle: 'None'}), 200).map((l) => [l.along, l.width])).toEqual([[1050, 650], [2350, 650]]);
     });
 
     it('slides a sliding door in front of its side face and a pocket door inside the wall, towards the hinge', () => {

@@ -561,6 +561,20 @@ export const SlidingDoorGap = 15;
 /** Frame bar around a French window; its sashes hinge on the inside of it (mm). */
 export const WindowFrameBar = 70;
 export const SashThickness = 60;
+/**
+ * A rebated room door (FD-105): a leaf's lip overlaps the frame by `LipOverlap` on its swing face, `LipThickness` of its
+ * thickness, in the frame's rebate; gaps round the core (to the stops) and round the lip (to the rebate), mm.
+ */
+export const LipOverlap = 13;
+export const LipThickness = 15;
+export const CoreGap = 3;
+export const LipGap = 2;
+/** How far a door's lining stands proud of each wall face, and its casings' width and thickness (`Architrave`), mm. */
+export const LiningProud = 10;
+export const ArchitraveWidth = 70;
+export const ArchitraveThickness = 15;
+/** A door hinge's barrel: its radius, which puts the hinge axis that far in front of the leaf's swing face (mm). */
+export const HingeBarrelRadius = 7;
 /** How far a door leaf or sash opens, radians. */
 export const LeafOpenAngle = (80 * Math.PI) / 180;
 /** A window's frame depth, also that of a door's frame set in from the outer face (`inset`), mm: the PHP `OpeningClearances::InsetFrameDepth`. */
@@ -636,6 +650,96 @@ export interface Leaf {
     travel: number;
     width: number;
     thickness: number;
+    /** A swinging door leaf's hinge axis (FD-105); without it, the leaf turns about (`along`, `across`). */
+    pin?: LeafPin;
+    /** A rebated door leaf's lip (FD-105). */
+    lip?: LeafLip;
+}
+
+/** A hinge axis off a leaf's hinge-edge point (`along`, `across`): `back` mm away from the leaf, `out` mm towards `swing`. */
+export interface LeafPin {
+    back: number;
+    out: number;
+}
+
+/**
+ * A rebated leaf (FD-105), mm along the leaf from its hinge edge: the core, the full thickness, from `coreFrom` to `coreTo`
+ * and as high as the leaf less `top`; the lip, the `thickness` on the swing face, from `from` to `to` and up to the top.
+ */
+export interface LeafLip {
+    from: number;
+    to: number;
+    coreFrom: number;
+    coreTo: number;
+    top: number;
+    thickness: number;
+}
+
+/**
+ * The rebated frame of a room door (FD-105): a `Door` or `DoubleDoor` with a `Lining` or `Architrave` frame. `stop` is
+ * how far each jamb's stop reaches in from the opening's edge (the head's down from its top), `rebate` how far its
+ * rebate, `overlap` the leaves' lip over the stops (mm). Across the wall (+ towards `normal`): `front` is the frame's
+ * face on the swing side (an `Architrave`'s casing included), where the leaves' face lies, and `back` the other face.
+ * Null for any other door, and when the leaf leaves no room for a rebate.
+ */
+export interface DoorRebate {
+    stop: number;
+    head: number;
+    rebate: number;
+    overlap: number;
+    front: number;
+    back: number;
+}
+
+export function doorRebate(opening: Opening, wallThickness: number): DoorRebate | null {
+    const style = opening.frameStyle ?? 'Lining';
+    if ((opening.type !== 'Door' && opening.type !== 'DoubleDoor') || (style !== 'Lining' && style !== 'Architrave')) {
+        return null;
+    }
+    const stop = opening.type === 'Door' ? (opening.width - doorLeafWidth(opening)) / 2 : DoorFrameWidth;
+    // At least 15 mm of the jamb stays outside the rebate.
+    const overlap = Math.min(LipOverlap, stop - 15);
+    if (overlap <= 0) {
+        return null;
+    }
+    const swing = opening.side === 'Right' ? -1 : 1;
+    const band = frameBand(opening, wallThickness);
+    const depth = band.depth + (opening.inset == null ? 2 * LiningProud : 0);
+    const casing = style === 'Architrave' && opening.inset == null ? ArchitraveThickness : 0;
+    return {
+        stop,
+        head: DoorFrameWidth,
+        rebate: stop - overlap + CoreGap - LipGap,
+        overlap,
+        front: band.centre + swing * (depth / 2 + casing),
+        back: band.centre - swing * depth / 2,
+    };
+}
+
+/** The width of a single door's leaf: `leafWidth`, else the opening less a frame on each side (mm). */
+function doorLeafWidth(opening: Opening): number {
+    return opening.leafWidth ?? opening.width - 2 * DoorFrameWidth;
+}
+
+/**
+ * Where a swinging leaf lies `angle` radians open (plan mm): the point (`along`, `across`) of its hinge edge turned about
+ * its pin, and the way it runs from there.
+ */
+export function swungLeaf(frame: WallFrame, leaf: Leaf, angle: number): {start: Vec2; dir: Vec2; normal: Vec2} {
+    const d0 = {x: frame.dir.x * leaf.closed, y: frame.dir.y * leaf.closed};
+    const s0 = {x: frame.normal.x * leaf.swing, y: frame.normal.y * leaf.swing};
+    const [cos, sin] = [Math.cos(angle), Math.sin(angle)];
+    const dir = {x: d0.x * cos + s0.x * sin, y: d0.y * cos + s0.y * sin};
+    // The leaf's swing side, turned with it.
+    const side = {x: s0.x * cos - d0.x * sin, y: s0.y * cos - d0.y * sin};
+    const base = pointOnWall(frame, leaf.along, leaf.across);
+    const {back, out} = leaf.pin ?? {back: 0, out: 0};
+    const pin = {x: base.x - d0.x * back + s0.x * out, y: base.y - d0.y * back + s0.y * out};
+    return {
+        start: {x: pin.x + dir.x * back - side.x * out, y: pin.y + dir.y * back - side.y * out},
+        dir,
+        normal: {x: -dir.y, y: dir.x},
+    };
 }
 
 /** Doorways of every kind, passages included. */
@@ -669,7 +773,11 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
     const flush = band.centre + swing * (band.depth / 2 - DoorLeafThickness / 2);
     switch (opening.type) {
         case 'Door': {
-            const width = opening.leafWidth ?? opening.width - 2 * DoorFrameWidth;
+            const rebate = doorRebate(opening, wallThickness);
+            if (rebate !== null) {
+                return rebatedLeaves(opening, rebate, base);
+            }
+            const width = doorLeafWidth(opening);
             const clearance = (opening.width - width) / 2;
             return [{
                 ...base,
@@ -679,10 +787,16 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
                 closed: towardsEnd ? -1 : 1,
                 width,
                 thickness: DoorLeafThickness,
+                pin: FaceHinge,
             }];
         }
-        case 'DoubleDoor':
-            return doubleLeaves(opening, base, flush, DoorFrameWidth, DoorLeafThickness);
+        case 'DoubleDoor': {
+            const rebate = doorRebate(opening, wallThickness);
+            if (rebate !== null) {
+                return rebatedLeaves(opening, rebate, base);
+            }
+            return doubleLeaves(opening, base, flush, DoorFrameWidth, DoorLeafThickness).map((leaf) => ({...leaf, pin: FaceHinge}));
+        }
         case 'GarageDoor':
             return garageLeaves(opening, wallThickness, base);
         case 'SlidingDoor':
@@ -735,6 +849,60 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
 }
 
 type LeafBase = Pick<Leaf, 'openingId' | 'index' | 'swing' | 'travel'>;
+
+/** An unrebated door leaf turns about the hinge edge of its swing face, so it clears the frame (FD-105). */
+const FaceHinge: LeafPin = {back: 0, out: DoorLeafThickness / 2};
+
+/**
+ * The leaves of a rebated door (FD-105): each core `CoreGap` clear of the stops, its lip over them. A double door's
+ * leaves meet `CoreGap` apart, and the one on `hinge` (`leafWidth` between the stops, half by default) laps over the
+ * other with its lip, as it opens first. Each turns about its hinges' axis, just off its lip's edge in front of its face.
+ */
+function rebatedLeaves(opening: Opening, rebate: DoorRebate, base: LeafBase): Leaf[] {
+    const {stop, overlap} = rebate;
+    const left = opening.offset + stop;
+    const right = opening.offset + opening.width - stop;
+    const across = rebate.front - base.swing * (DoorLeafThickness / 2);
+    const pin = {back: LipGap, out: DoorLeafThickness / 2 + HingeBarrelRadius};
+    const top = overlap;
+    // A leaf hung at `hinge` (a stop's face), its core running `core` mm from `CoreGap` off it, its lip past the free edge.
+    const leaf = (index: number, hinge: number, closed: 1 | -1, core: number, freeLip: number): Leaf & {lip: LeafLip} => {
+        const coreTo = overlap + core;
+        return {
+            ...base,
+            index,
+            motion: 'swing',
+            along: hinge + closed * (CoreGap - overlap),
+            across,
+            closed,
+            width: Math.max(coreTo, coreTo + freeLip),
+            thickness: DoorLeafThickness,
+            pin,
+            lip: {from: 0, to: coreTo + freeLip, coreFrom: overlap, coreTo, top, thickness: LipThickness},
+        };
+    };
+    if (opening.type === 'Door') {
+        const core = right - left - 2 * CoreGap;
+        return opening.hinge === 'End' ? [leaf(0, right, -1, core, overlap)] : [leaf(0, left, 1, core, overlap)];
+    }
+    const space = right - left;
+    const active = Math.max(0, Math.min(opening.leafWidth ?? space / 2, space));
+    const startActive = opening.hinge !== 'End';
+    const meeting = left + (startActive ? active : space - active);
+    if (meeting <= left || meeting >= right) {
+        // One leaf takes the whole space, hung on the jamb it reaches from.
+        const core = space - 2 * CoreGap;
+        return meeting >= right ? [leaf(0, left, 1, core, overlap)] : [leaf(1, right, -1, core, overlap)];
+    }
+    // The cores meet `CoreGap` apart; the active leaf's lip laps over the other's core, whose lip stops `LipGap` short
+    // of it.
+    const lap = (isActive: boolean): number => (isActive ? overlap : -(overlap - CoreGap + LipGap));
+    const coreAt = (from: number, to: number): number => to - from - CoreGap - CoreGap / 2;
+    return [
+        leaf(0, left, 1, coreAt(left, meeting), lap(startActive)),
+        leaf(1, right, -1, coreAt(meeting, right), lap(!startActive)),
+    ].filter((l) => l.lip.coreTo > l.lip.coreFrom);
+}
 
 /** Two leaves hinged on the jambs `frame` in from the opening's edges, the one on `hinge` `leafWidth` wide (half by default). */
 function doubleLeaves(opening: Opening, base: LeafBase, across: number, frame: number, thickness: number): Leaf[] {
@@ -801,10 +969,17 @@ function liftSlidePanes(opening: Opening, wallThickness: number, base: LeafBase)
  * 0 closed … 1 open: the angle of a swinging leaf over `LeafOpenAngle`, the way of a sliding one along `travel`.
  */
 export function leafCollider(frame: WallFrame, leaf: Leaf, open: number): WallCollider {
-    const angle = leaf.motion === 'swing' ? open * LeafOpenAngle : 0;
-    const along = leaf.closed * Math.cos(angle);
-    const across = leaf.swing * Math.sin(angle);
-    const dir = {x: frame.dir.x * along + frame.normal.x * across, y: frame.dir.y * along + frame.normal.y * across};
+    if (leaf.motion === 'swing') {
+        const {start, dir, normal} = swungLeaf(frame, leaf, open * LeafOpenAngle);
+        return {
+            frame: {start, dir, normal, length: leaf.width, angle: Math.atan2(dir.y, dir.x)},
+            from: 0,
+            to: leaf.width,
+            halfThickness: leaf.thickness / 2,
+        };
+    }
+    const along = leaf.closed;
+    const dir = {x: frame.dir.x * along, y: frame.dir.y * along};
     const hinge = leaf.motion === 'slide' ? leaf.along + open * leaf.travel : leaf.along;
     return {
         frame: {
