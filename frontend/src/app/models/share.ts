@@ -87,6 +87,8 @@ export interface SharedView {
     scene: Scene;
     /** With `settings.allFloors`: the scenes of the floors under the shared one, lowest first. Missing in older servers. */
     stack?: Scene[];
+    /** With `settings.allFloors`, the floors above the shared one, for a walk over all floors (FD-102); missing in older answers. */
+    above?: Scene[];
 }
 
 export const ShareViewLabels: Record<ShareView, string> = {overview: '3D', top: 'Plan', walkthrough: 'Walk'};

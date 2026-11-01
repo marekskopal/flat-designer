@@ -18,6 +18,9 @@ export interface ContextFloor {
     items: Map<number, THREE.Object3D>;
     /** Its roofs, which follow the Display's Roof toggle like the shown floor's. */
     roofs: THREE.Group;
+    /** Its doors: as outside a walk, or opened and closed by the walker of a walk over all floors (FD-102). */
+    leafStates: LeafStates;
+    leaves: THREE.Object3D[];
 }
 
 /**
@@ -35,11 +38,12 @@ export function buildContextFloor(scene: Scene, materials: MaterialLibrary, asse
     // The floor below draws its own stairs in the stack, so the copies coming up through this one would double them.
     parts.stairsBelow.visible = false;
     group.add(parts.root);
-    const leaves = new LeafStates();
-    leaves.reset(scene.walls);
-    leaves.apply(leafObjects(parts.root));
+    const leafStates = new LeafStates();
+    leafStates.reset(scene.walls);
+    const leaves = leafObjects(parts.root);
+    leafStates.apply(leaves);
 
-    const layer: ContextFloor = {scene, group, items: new Map(), roofs: parts.roofBodies};
+    const layer: ContextFloor = {scene, group, items: new Map(), roofs: parts.roofBodies, leafStates, leaves};
     rebuildContextItems(layer, () => true, materials, assets, () => undefined);
     return layer;
 }

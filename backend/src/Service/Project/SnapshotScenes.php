@@ -18,12 +18,13 @@ use stdClass;
 final class SnapshotScenes
 {
 	/**
-	 * The scene of a floor and those of the floors under it (of a lower level), lowest first, from one decode.
+	 * The scene of a floor, those of the floors under it (of a lower level) and, with `$withAbove`, those above it (of a
+	 * higher one), lowest first, from one decode.
 	 *
 	 * @param Closure(): SnapshotReader $read the snapshot read as arrays, for stacking an older one's floors
-	 * @return array{scene: ?stdClass, below: list<stdClass>}
+	 * @return array{scene: ?stdClass, below: list<stdClass>, above: list<stdClass>}
 	 */
-	public static function of(mixed $data, int $floorId, Closure $read): array
+	public static function of(mixed $data, int $floorId, Closure $read, bool $withAbove = false): array
 	{
 		if (!$data instanceof stdClass || !is_array($data->floors ?? null)) {
 			throw new InvalidSnapshotException('Snapshot has no floors.');
@@ -34,7 +35,10 @@ final class SnapshotScenes
 		foreach ($floors as $floor) {
 			$level = $floor['id'] === $floorId ? $floor['level'] : $level;
 		}
-		$chosen = array_filter($floors, fn (array $f): bool => $level !== null && ($f['level'] < $level || $f['id'] === $floorId));
+		if ($level === null) {
+			return ['scene' => null, 'below' => [], 'above' => []];
+		}
+		$chosen = array_filter($floors, fn (array $f): bool => $withAbove || $f['level'] < $level || $f['id'] === $floorId);
 		usort($chosen, fn (array $a, array $b): int => $a['level'] <=> $b['level']);
 		// An older snapshot's floors are stacked once, for all the scenes that need it.
 		$stack = null;
@@ -51,7 +55,7 @@ final class SnapshotScenes
 		}
 		$stairs = new SnapshotStairs($floors, $sceneFloors);
 
-		$result = ['scene' => null, 'below' => []];
+		$result = ['scene' => null, 'below' => [], 'above' => []];
 		foreach ($chosen as $f) {
 			$scene = clone $f['entry'];
 			$id = $f['id'];
@@ -64,8 +68,10 @@ final class SnapshotScenes
 			$scene->chimneyFloors = self::chimneyFloors($floors, $sceneFloors, $id);
 			if ($id === $floorId) {
 				$result['scene'] = $scene;
-			} else {
+			} elseif ($f['level'] < $level) {
 				$result['below'][] = $scene;
+			} else {
+				$result['above'][] = $scene;
 			}
 		}
 

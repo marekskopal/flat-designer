@@ -94,6 +94,8 @@ export class ViewerComponent {
     public readonly ghost = input<GhostFloor | null>(null);
     /** All floors: the scenes of the floors to draw under this one (null: this floor only). */
     public readonly stack = input<readonly Scene[] | null>(null);
+    /** The project's other floors, for a walk over all of them (FD-102; null: the walk stays on this floor). */
+    public readonly walkFloors = input<readonly Scene[] | null>(null);
     /** With `measuring`: the two points clicked next calibrate the underlay (`calibrated`). */
     public readonly calibrating = input(false);
     /** Section plane height in mm; null shows everything. */
@@ -133,6 +135,8 @@ export class ViewerComponent {
     public readonly selected = output<SelectEvent>();
     /** The walkthrough ended (Esc); the camera returns to the overview. */
     public readonly walkthroughEnded = output();
+    /** In a walk over all floors, the walker reached another floor: its id. */
+    public readonly walkFloorChanged = output<number>();
     /** Whether the walkthrough has the mouse captured. */
     public readonly walkthroughLocked = output<boolean>();
     /** The door the walker looks at (within reach) and whether it is open; null when none. */
@@ -169,6 +173,7 @@ export class ViewerComponent {
             engine.onWalkthroughLock = (locked): void => this.walkthroughLocked.emit(locked);
             engine.onWalkthroughAim = (aim): void => this.walkthroughAim.emit(aim);
             engine.onWalkthroughFloor = (step): number | null => this.walkFloorHandler()(step);
+            engine.onWalkFloorChange = (floorId): void => this.walkFloorChanged.emit(floorId);
             engine.onDrawWalls = (points, closed, sagittas): Promise<boolean> => this.drawWallsHandler()(points, closed, sagittas);
             engine.onDrawRailing = (points): Promise<boolean> => this.drawRailingHandler()(points);
             engine.onDetectRoom = (point): void => this.roomDetect.emit(point);
@@ -231,6 +236,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setUnderlayVisible(this.underlayVisible()));
         effect(() => this.engine()?.setGhost(this.ghost()));
         effect(() => this.engine()?.setStack(this.stack()));
+        effect(() => this.engine()?.setWalkFloors(this.walkFloors()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));

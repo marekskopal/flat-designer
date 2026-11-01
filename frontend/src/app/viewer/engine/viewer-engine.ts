@@ -40,6 +40,7 @@ import {
     hasFaceFinishes,
     roofSurroundings,
 } from './building';
+import {buildingLevels, floorAt, floorColliders, otherFloors, WalkFloor, walkFloors} from './building-walk';
 import {buildChimneysBelow, chimneyStretches, isChimney, sceneChimneys} from './chimneys';
 import {CommentPin, CommentPins, CommentPoint, commentPointOf} from './comments';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
@@ -305,6 +306,8 @@ export class ViewerEngine {
      * floor, and the walk carries on there), null when there is none.
      */
     public onWalkthroughFloor: (step: 1 | -1) => number | null = () => null;
+    /** In a walk over all floors, the walker reached another floor (by a stair, or PageUp / PageDown): its id. */
+    public onWalkFloorChange: (floorId: number) => void = () => undefined;
     /** A run of walls was drawn (centre-line points); resolves true when added. Until then the run stays on screen. */
     public onDrawWalls: (points: PlanPoint[], closed: boolean, sagittas: number[] | null) => Promise<boolean> = () => Promise.resolve(false);
     /** A railing was drawn (its points; a closed one repeats the first); resolves true when added. Until then it stays on screen. */
@@ -397,6 +400,15 @@ export class ViewerEngine {
     /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
     private stackScenes: readonly Scene[] | null = null;
     private stackLayers: ContextFloor[] = [];
+    /**
+     * A walk over all floors (FD-102): the project's other floors (`setWalkFloors()`), drawn during a walk above and below
+     * the shown one; with them the walker walks onto every floor (`walkWorld`) and is on `walkFloorId` (null: no such walk).
+     */
+    private walkScenes: readonly Scene[] | null = null;
+    private walkWorld: WalkFloor[] | null = null;
+    private walkFloorId: number | null = null;
+    /** A walk over all floors ended on this other floor, which the page loads next: the view moves with its level. */
+    private walkEndedOn: number | null = null;
     /** Where the walker stood when they asked for another floor, and which: the walk goes on there once it is loaded. */
     /** The floor the walker asked for (PageUp / PageDown, or the end of a stair), until it loads. */
     private floorWalk: number | null = null;
@@ -590,18 +602,23 @@ export class ViewerEngine {
         if (this.loadedFloorId !== scene.floor.id) {
             this.floorWalk = null;
         }
+        // A walk over all floors that ended on this floor left the camera at its place against this floor's level.
+        const walkedHere = this.walkEndedOn === scene.floor.id;
+        if (this.loadedFloorId !== scene.floor.id) {
+            this.walkEndedOn = null;
+        }
         if (this.loadedFloorId !== scene.floor.id && walkTo === null) {
             if (this.walkthrough !== null) {
                 this.stopWalkthrough(false);
+                this.walkEndedOn = null;
                 this.onWalkthroughEnd();
             }
             if (previous !== null && this.loadedFloorId !== null) {
                 // Another floor of the project keeps the view as it was turned. With all floors shown they stay where
-                // they are on the screen: the view moves with the shown floor's level.
-                if (this.stackScenes !== null) {
-                    const dy = floorOffset(previous, scene) * MM;
-                    this.camera.position.y += dy;
-                    this.controls.target.y += dy;
+                // they are on the screen: the view moves with the shown floor's level (after a walk that ended on this
+                // floor it already has).
+                if (this.stackScenes !== null && !walkedHere) {
+                    this.shiftView(floorOffset(previous, scene) * MM);
                 }
                 this.controls.update();
             } else {
@@ -622,15 +639,13 @@ export class ViewerEngine {
         }
         this.leafStates.apply(this.leaves);
         this.refreshShadows();
-        this.walkthrough?.setColliders(sceneColliders(scene, this.walkStairs));
         // On a floor walked onto, the walker's height carries over against the new floor's level.
         const level = walkTo === null || previous === null ? undefined : (this.walkthrough?.level() ?? 0) - floorOffset(scene, previous);
-        this.walkthrough?.setFloorLevels(floorLevels(scene, this.walkStairs), level);
+        this.applyWalkPhysics(level);
         if (walkTo !== null) {
             this.stairArrival = true;
             this.stairCheck = null;
         }
-        this.updateLeafColliders();
         if (walkTo !== null) {
             this.walkthrough?.moveTo(walkTo.position, walkTo.yaw);
         }
@@ -1821,7 +1836,16 @@ export class ViewerEngine {
             this.leafStates.setOpen(start.openingId, true, false);
         }
         this.leafStates.apply(this.leaves);
-        this.updateLeafColliders();
+        for (const layer of this.stackLayers) {
+            layer.leafStates.closeAll();
+            layer.leafStates.apply(layer.leaves);
+        }
+        // With the other floors at hand, they are drawn and walked on too.
+        this.walkFloorId = this.sceneData.floor.id;
+        if (this.walkScenes !== null) {
+            this.rebuildStack();
+        }
+        this.applyWalkPhysics();
         this.refreshShadows();
         walkthrough.lock();
     }
@@ -1832,10 +1856,65 @@ export class ViewerEngine {
      */
     public walkToFloor(step: 1 | -1): void {
         const walkthrough = this.walkthrough;
+        if (walkthrough !== null && this.walkWorld !== null) {
+            this.walkToBuildingFloor(walkthrough, this.walkWorld, step);
+            return;
+        }
         const floorId = walkthrough === null ? null : this.onWalkthroughFloor(step);
         if (walkthrough !== null && floorId !== null) {
             this.floorWalk = floorId;
         }
+    }
+
+    /**
+     * PageUp / PageDown in a walk over all floors: the walker stands on the next floor up or down at the same plan point
+     * if it lies in one of its rooms (else where a walk of it starts), at its level; nothing without such a floor.
+     */
+    private walkToBuildingFloor(walkthrough: Walkthrough, world: readonly WalkFloor[], step: 1 | -1): void {
+        const index = world.indexOf(floorAt(world, walkthrough.level())) + step;
+        const floor = world[index];
+        if (floor === undefined) {
+            return;
+        }
+        const start = this.floorWalkStart(floor.scene, walkthrough.where());
+        walkthrough.setFloorLevels(buildingLevels(world), floor.offset);
+        walkthrough.moveTo(start.position, start.yaw);
+        this.trackWalkFloor(walkthrough);
+    }
+
+    /** In a walk over all floors, tells the page when the walker's height takes them onto another floor. */
+    private trackWalkFloor(walkthrough: Walkthrough): void {
+        if (this.walkWorld === null) {
+            return;
+        }
+        const floorId = floorAt(this.walkWorld, walkthrough.level()).scene.floor.id;
+        if (floorId !== this.walkFloorId) {
+            this.walkFloorId = floorId;
+            this.onWalkFloorChange(floorId);
+        }
+    }
+
+    /**
+     * The walker's colliders and what is underfoot: the shown floor's, or in a walk over all floors every floor's
+     * (`walkFloors()`), each within its band of heights; `level` carries the walker's height over (a floor walked onto).
+     */
+    private applyWalkPhysics(level?: number): void {
+        const walkthrough = this.walkthrough;
+        const scene = this.sceneData;
+        if (walkthrough === null || scene === null) {
+            return;
+        }
+        if (this.walkScenes === null) {
+            this.walkWorld = null;
+            walkthrough.setColliders(sceneColliders(scene, this.walkStairs));
+            walkthrough.setFloorLevels(floorLevels(scene, this.walkStairs), level);
+        } else {
+            const world = walkFloors(scene, this.stackLayers.map((l) => l.scene));
+            this.walkWorld = world;
+            walkthrough.setColliders(world.flatMap((floor) => floorColliders(floor, sceneColliders(floor.scene, floor.stairs))));
+            walkthrough.setFloorLevels(buildingLevels(world), level);
+        }
+        this.updateLeafColliders();
     }
 
     /**
@@ -1894,8 +1973,23 @@ export class ViewerEngine {
         this.walkthrough = null;
         this.floorWalk = null;
         this.setAim(null);
-        // Back to the display state: doors open, French windows closed.
+        // Back to the display state: doors open, French windows closed; the floors above the shown one go.
         this.leafStates.reset(this.sceneData?.walls ?? [], true);
+        // Ended on another floor, the camera takes the walker's place against the shown floor's level: the floors above
+        // go, and the page may show the walked floor next (`walkEndedOn`), drawn where the shown one is.
+        const walked = this.walkWorld?.find((f) => f.scene.floor.id === this.walkFloorId && f.offset !== 0) ?? null;
+        if (walked !== null) {
+            this.shiftView(-walked.offset * MM);
+        }
+        this.walkEndedOn = walked?.scene.floor.id ?? null;
+        if (this.walkWorld !== null) {
+            this.walkWorld = null;
+            this.rebuildStack();
+        }
+        this.walkFloorId = null;
+        for (const layer of this.stackLayers) {
+            layer.leafStates.reset(layer.scene.walls, true);
+        }
         this.camera.fov = OrbitFov;
         this.camera.updateProjectionMatrix();
         // Orbit around a point ahead of the walker, so the hand-over does not jerk the view.
@@ -1903,6 +1997,17 @@ export class ViewerEngine {
         this.controls.target.copy(this.camera.position).add(ahead);
         this.controls.enabled = true;
         this.setView('overview', animate);
+    }
+
+    /** Moves the view up (+) or down by `dy` metres, a camera flight under way included. */
+    private shiftView(dy: number): void {
+        this.camera.position.y += dy;
+        this.controls.target.y += dy;
+        if (this.tween !== null) {
+            for (const point of [this.tween.fromPosition, this.tween.toPosition, this.tween.fromTarget, this.tween.toTarget]) {
+                point.y += dy;
+            }
+        }
     }
 
     /** Start of a walk: inside the entrance; without one, the middle of the largest indoor room (or the view centre). */
@@ -2117,11 +2222,44 @@ export class ViewerEngine {
         this.rebuildStack();
     }
 
-    /** Draws the floors under the shown one: those drawn already from the same scene stay, the others anew. */
+    /**
+     * The project's other floors for a walk over all floors (FD-102): during a walk they are drawn above and below the
+     * shown one and walked on, the stairs carrying on from floor to floor. Null (or none yet) walks the shown floor only,
+     * another floor being loaded by the page (`onWalkthroughFloor`).
+     */
+    public setWalkFloors(scenes: readonly Scene[] | null): void {
+        this.invalidate();
+        if (this.walkthrough !== null && this.walkScenes !== null && (scenes === null || scenes.length === 0)) {
+            // A walk keeps the floors it walks on while the page reloads them; they go when it ends.
+            return;
+        }
+        this.walkScenes = scenes === null || scenes.length === 0 ? null : scenes;
+        if (this.sceneData !== null && this.walkScenes !== null) {
+            const pictures = new Set(this.pictureLibrary?.sync(this.stackPictures(this.sceneData)) ?? []);
+            const models = new Set(this.modelLibrary?.sync(this.stackModels(this.sceneData)) ?? []);
+            const showsModel = (item: Item): boolean => item.kind === 'Model' && item.modelId != null && models.has(item.modelId);
+            this.rebuildStackItems((item) => this.showsPicture(item, pictures) || showsModel(item));
+        }
+        if (this.walkthrough !== null) {
+            this.rebuildStack();
+            this.applyWalkPhysics();
+        }
+    }
+
+    /**
+     * Draws the floors under the shown one (in a walk over all floors, all the others): those drawn already from the same
+     * scene stay, the others anew.
+     */
     private rebuildStack(): void {
         const shown = this.sceneData;
         const materials = this.materials;
-        const wanted = shown === null || materials === null ? [] : floorsBelow(this.stackScenes ?? [], shown);
+        const walking = this.walkthrough !== null && this.walkScenes !== null;
+        const wanted =
+            shown === null || materials === null
+                ? []
+                : walking
+                  ? otherFloors([...(this.walkScenes ?? []), ...(this.stackScenes ?? [])], shown)
+                  : floorsBelow(this.stackScenes ?? [], shown);
         const kept = new Map(
             this.stackLayers
                 .filter((layer) => wanted.some((scene) => scene.floor.id === layer.scene.floor.id && sameJson(scene, layer.scene)))
@@ -2129,8 +2267,14 @@ export class ViewerEngine {
         );
         this.stackLayers.filter((layer) => !kept.has(layer.scene.floor.id)).forEach((layer) => this.disposeObject(layer.group));
         this.stackLayers = wanted.map((scene) => {
+            const fresh = !kept.has(scene.floor.id);
             const layer = kept.get(scene.floor.id) ?? buildContextFloor(scene, materials as MaterialLibrary, this.itemAssets(scene));
             layer.roofs.visible = this.roofsVisible;
+            if (fresh && walking) {
+                // A floor joining a walk has its doors closed, as every floor's are when a walk starts.
+                layer.leafStates.closeAll();
+                layer.leafStates.apply(layer.leaves);
+            }
             this.scene.add(layer.group);
             return layer;
         });
@@ -2178,11 +2322,11 @@ export class ViewerEngine {
 
     /** The models the shown floor and the stack draw, so the library keeps them all. */
     private stackModels(scene: Scene): number[] {
-        return [scene, ...(this.stackScenes ?? [])].flatMap((s) => (s.models ?? []).map((m) => m.id));
+        return [scene, ...(this.stackScenes ?? []), ...(this.walkScenes ?? [])].flatMap((s) => (s.models ?? []).map((m) => m.id));
     }
 
     private stackPictures(scene: Scene): number[] {
-        return [scene, ...(this.stackScenes ?? [])].flatMap((s) => s.pictures ?? []);
+        return [scene, ...(this.stackScenes ?? []), ...(this.walkScenes ?? [])].flatMap((s) => s.pictures ?? []);
     }
 
     /** The sun towards its direction at the clock time, its shadow camera covering the plan. */
@@ -2287,8 +2431,17 @@ export class ViewerEngine {
         const now = performance.now();
         const dt = (now - this.lastFrame) / 1000;
         this.lastFrame = now;
-        if (this.leafStates.update(dt)) {
+        let leavesMoved = this.leafStates.update(dt);
+        if (leavesMoved) {
             this.leafStates.apply(this.leaves);
+        }
+        for (const layer of this.stackLayers) {
+            if (layer.leafStates.update(dt)) {
+                layer.leafStates.apply(layer.leaves);
+                leavesMoved = true;
+            }
+        }
+        if (leavesMoved) {
             this.updateLeafColliders();
             this.refreshShadows();
         }
@@ -2299,7 +2452,11 @@ export class ViewerEngine {
         this.moving = moving;
         if (this.walkthrough !== null) {
             this.walkthrough.update(dt);
-            this.followStairs(this.walkthrough);
+            if (this.walkWorld === null) {
+                this.followStairs(this.walkthrough);
+            } else {
+                this.trackWalkFloor(this.walkthrough);
+            }
             this.updateAim();
             this.renderMain();
             // Labels are not rendered in the walk; their last positions would float over the view.
@@ -3784,14 +3941,38 @@ export class ViewerEngine {
 
     /** The door or walkable French window within reach at a screen point (NDC), unless something else is in front. */
     private doorAt(ndc: THREE.Vector2): number | null {
-        const selection = selectionOf(this.pickAt(ndc, DoorReach)?.object ?? null);
-        return selection?.kind === 'opening' && this.leafStates.has(selection.id) ? selection.id : null;
+        // In a walk over all floors, the doors of the other floors too (the shown floor's first, as `pickAt()` would).
+        let hit = this.pickAt(ndc, DoorReach);
+        // The floor the walker is on, when it is another one: its doors are those within reach.
+        const world = this.walkWorld;
+        const floorId = world === null || this.walkthrough === null ? null : floorAt(world, this.walkthrough.level()).scene.floor.id;
+        const layer = floorId === null ? undefined : this.stackLayers.find((l) => l.scene.floor.id === floorId);
+        if (layer !== undefined) {
+            this.raycaster.setFromCamera(ndc, this.camera);
+            this.raycaster.far = DoorReach;
+            const others = this.raycaster.intersectObject(layer.group, true).find((h) => isVisible(h.object));
+            this.raycaster.far = Infinity;
+            if (others !== undefined && (hit === undefined || others.distance < hit.distance)) {
+                hit = others;
+            }
+        }
+        const selection = selectionOf(hit?.object ?? null);
+        return selection?.kind === 'opening' && this.doorStates(selection.id) !== null ? selection.id : null;
+    }
+
+    /** The door states holding an opening: the shown floor's, or another floor's in a walk over all floors. */
+    private doorStates(openingId: number): LeafStates | null {
+        if (this.leafStates.has(openingId)) {
+            return this.leafStates;
+        }
+        return this.walkWorld === null ? null : (this.stackLayers.find((l) => l.leafStates.has(openingId))?.leafStates ?? null);
     }
 
     /** Opens or closes a door (nothing for null). */
     private toggleDoor(openingId: number | null): void {
-        if (openingId !== null) {
-            this.leafStates.toggle(openingId);
+        const states = openingId === null ? null : this.doorStates(openingId);
+        if (openingId !== null && states !== null) {
+            states.toggle(openingId);
             this.updateAim();
         }
     }
@@ -3799,7 +3980,8 @@ export class ViewerEngine {
     /** Follows the door at the centre of the walker's view. */
     private updateAim(): void {
         const openingId = this.doorAt(new THREE.Vector2(0, 0));
-        this.setAim(openingId === null ? null : {openingId, open: this.leafStates.isOpen(openingId)});
+        const states = openingId === null ? null : this.doorStates(openingId);
+        this.setAim(openingId === null || states === null ? null : {openingId, open: states.isOpen(openingId)});
     }
 
     private setAim(aim: DoorAim | null): void {
@@ -3811,9 +3993,21 @@ export class ViewerEngine {
 
     /** The walker bumps into door leaves and sashes as they are swung now. */
     private updateLeafColliders(): void {
-        if (this.walkthrough !== null && this.sceneData !== null) {
-            this.walkthrough.setLeafColliders(leafColliders(this.sceneData.walls, (id) => this.leafStates.swing(id)));
+        if (this.walkthrough === null || this.sceneData === null) {
+            return;
         }
+        if (this.walkWorld === null) {
+            this.walkthrough.setLeafColliders(leafColliders(this.sceneData.walls, (id) => this.leafStates.swing(id)));
+            return;
+        }
+        const states = new Map(this.stackLayers.map((l) => [l.scene.floor.id, l.leafStates]));
+        states.set(this.sceneData.floor.id, this.leafStates);
+        this.walkthrough.setLeafColliders(
+            this.walkWorld.flatMap((floor) => {
+                const doors = states.get(floor.scene.floor.id) ?? this.leafStates;
+                return floorColliders(floor, leafColliders(floor.scene.walls, (id) => doors.swing(id)));
+            }),
+        );
     }
 
     private toNdc(event: MouseEvent): THREE.Vector2 {

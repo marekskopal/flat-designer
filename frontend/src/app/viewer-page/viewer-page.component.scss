@@ -387,6 +387,12 @@
     color: $color-text;
 }
 
+// The floor the walker is on, in a walk over all floors.
+.walk-hint__floor {
+    font-size: $font-size-13;
+    color: $color-text;
+}
+
 // Where E and clicks aim during the walk; grows into a ring over a door within reach.
 .walk-crosshair {
     position: absolute;

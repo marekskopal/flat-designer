@@ -52,6 +52,28 @@ const MaxSlope = Math.tan(THREE.MathUtils.degToRad(35));
  * sloping ground does where it is steeper than `MaxSlope`. Keeps only the outlines and levels, not the scene.
  */
 export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>, stairs: readonly StairPath[] = []): FloorLevels {
+    const surface = floorSurface(scene, stairs);
+    const levels: FloorLevels = (point, near) => surface.stair(point, near) ?? surface.room(point) ?? surface.ground(point) ?? 0;
+    if (surface.tooSteep !== undefined) {
+        levels.tooSteep = surface.tooSteep;
+    }
+    return levels;
+}
+
+/**
+ * What a floor has underfoot, each mm against its level or null where it has none: its stairs (`stairSpot()`), its rooms
+ * (the smallest holding the point; a garden, path or driveway on a sloping plot follows the ground) and the ground of its
+ * plots; and, on sloping ground, whether a step is too steep. `floorLevels()` takes them in this order, and so does a
+ * walk over all floors (`buildingLevels()`), the ground of any floor's plots counting on every floor.
+ */
+export interface FloorSurface {
+    stair: (point: Vec2, near?: number) => number | null;
+    room: (point: Vec2) => number | null;
+    ground: (point: Vec2) => number | null;
+    tooSteep?: (from: Vec2, to: Vec2) => boolean;
+}
+
+export function floorSurface(scene: Pick<Scene, 'rooms' | 'plots'>, stairs: readonly StairPath[] = []): FloorSurface {
     const plots = scene.plots ?? [];
     type Level = {polygon: PlanPoint[]; level: number; terrain: Terrain | null};
     const rooms: (Level & {area: number})[] = scene.rooms
@@ -62,18 +84,28 @@ export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>, stairs: reado
             area: Math.abs(polygonSignedArea(r.polygon)),
         }))
         .sort((a, b) => a.area - b.area);
-    const all: Level[] = [...rooms, ...plots.map((p): Level => ({polygon: p.polygon, level: 0, terrain: plotTerrain(p)}))];
+    const grounds = plots.map((p): Level => ({polygon: p.polygon, level: 0, terrain: plotTerrain(p)}));
+    const all: Level[] = [...rooms, ...grounds];
     const under = (point: Vec2): Level | undefined => all.find((o) => pointInPolygon(point, o.polygon));
-    const height = (o: Level | undefined, point: Vec2): number =>
-        o === undefined ? 0 : o.level + (o.terrain === null ? 0 : terrainAt(o.terrain, point.x, point.y));
-    const levels: FloorLevels = (point, near) => {
-        const spot = stairs.length === 0 ? null : stairSpot(stairs, point, near);
-        return spot !== null ? spot.path.offset + spot.height : height(under(point), point);
+    const height = (o: Level, point: Vec2): number => o.level + (o.terrain === null ? 0 : terrainAt(o.terrain, point.x, point.y));
+    const surface: FloorSurface = {
+        stair: (point, near) => {
+            const spot = stairs.length === 0 ? null : stairSpot(stairs, point, near);
+            return spot === null ? null : spot.path.offset + spot.height;
+        },
+        room: (point) => {
+            const room = rooms.find((o) => pointInPolygon(point, o.polygon));
+            return room === undefined ? null : height(room, point);
+        },
+        ground: (point) => {
+            const ground = grounds.find((o) => pointInPolygon(point, o.polygon));
+            return ground === undefined ? null : height(ground, point);
+        },
     };
     if (plots.some(hasTerrain)) {
         // Between two points on sloping ground (the plot's, or a garden draped on it); a step onto or off a flat floor
         // is a step, which never blocks.
-        levels.tooSteep = (from, to): boolean => {
+        surface.tooSteep = (from, to): boolean => {
             const a = under(from);
             const b = under(to);
             if (a?.terrain == null || b?.terrain == null || (stairs.length > 0 && stairSpot(stairs, to) !== null)) {
@@ -83,7 +115,7 @@ export function floorLevels(scene: Pick<Scene, 'rooms' | 'plots'>, stairs: reado
             return run > 0 && Math.abs(height(b, to) - height(a, from)) > MaxSlope * run;
         };
     }
-    return levels;
+    return surface;
 }
 
 /**

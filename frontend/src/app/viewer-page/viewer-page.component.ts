@@ -202,6 +202,42 @@ export class ViewerPageComponent {
         },
         {equal: (a, b) => a.up?.id === b.up?.id && a.up?.name === b.up?.name && a.down === b.down},
     );
+    /** In a walk over all floors (FD-102), the floor the walker is on; null: this one. */
+    protected readonly walkedFloorId = signal<number | null>(null);
+    /** The floor a walk started on: ending it on another one shows that one, unless the page moved on meanwhile. */
+    private walkStartFloorId: number | null = null;
+    /** The floor the walker is on and those next above and below it, for the walk's hint and floor buttons. */
+    protected readonly walkPlace = computed(() => {
+        const floors = this.floors();
+        const current = floors.find((f) => f.id === (this.walkedFloorId() ?? this.floorId()));
+        if (current === undefined) {
+            return {floor: null, up: null, down: null};
+        }
+        const above = floors.filter((f) => f.level > current.level);
+        const below = floors.filter((f) => f.level < current.level);
+        return {
+            floor: current,
+            up: above.length === 0 ? null : above.reduce((a, b) => (b.level < a.level ? b : a)),
+            down: below.length === 0 ? null : below.reduce((a, b) => (b.level > a.level ? b : a)),
+        };
+    });
+    /** The project's other floors while walking (from the same version as this floor): the walk goes over all of them. */
+    private readonly walkData = resource({
+        params: () => {
+            const floorIds = this.floors()
+                .filter((f) => f.id !== this.floorId())
+                .map((f) => f.id);
+            return !this.walking() || floorIds.length === 0 ? undefined : {projectId: this.projectId(), floorIds, versionId: this.version()};
+        },
+        // Quietly: without them the walk stays on this floor, the page loading another one at its stairs.
+        loader: async ({params}) => {
+            const loads = params.floorIds.map((id) => this.projects.getScene(params.projectId, id, params.versionId, {quiet: true}));
+            return (await Promise.allSettled(loads)).flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
+        },
+    });
+    protected readonly walkScenes = computed<readonly Scene[] | null>(() =>
+        this.walking() && this.walkData.hasValue() ? this.walkData.value() : null,
+    );
     /** The floor below this one (the highest level under it), whose walls can be traced in the top view. */
     protected readonly floorBelow = computed(() => this.walkFloors().down);
     /** Shows the floor below by hand on this floor; null follows edit mode. */
@@ -503,6 +539,9 @@ export class ViewerPageComponent {
             if (update.floorId === null || this.floorsUnder().some((f) => f.id === update.floorId)) {
                 this.stackData.reload();
             }
+            if (this.walking() && update.floorId !== this.floorId()) {
+                this.walkData.reload();
+            }
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
                 const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
@@ -536,12 +575,20 @@ export class ViewerPageComponent {
         this.activeView.set('walkthrough');
         this.walkLocked.set(false);
         this.walking.set(true);
+        this.walkStartFloorId = this.floorId();
         // Synchronously within the click: the pointer lock needs the user gesture.
         this.viewer().startWalkthrough();
     }
 
     /** Esc: the engine flies back to the overview, the panel returns with its settings. */
     protected onWalkthroughEnded(): void {
+        // A walk over all floors that ended on another floor goes on showing that one (not when the walk ended because
+        // another floor was picked).
+        const walked = this.walkedFloorId();
+        this.walkedFloorId.set(null);
+        if (walked !== null && walked !== this.floorId() && this.floorId() === this.walkStartFloorId) {
+            void this.router.navigate(['/projects', this.projectId(), 'floors', walked], {queryParamsHandling: 'preserve'});
+        }
         this.walking.set(false);
         this.walkLocked.set(false);
         this.doorAim.set(null);

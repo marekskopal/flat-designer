@@ -80,6 +80,11 @@ export class SharedViewerPageComponent {
         const shared = this.shared();
         return shared?.settings.allFloors === true ? (shared.stack ?? []) : null;
     });
+    /** The other floors of the link's version, when it draws all floors: a walk goes over all of them. */
+    protected readonly walkFloors = computed<readonly Scene[] | null>(() => {
+        const shared = this.shared();
+        return shared?.settings.allFloors === true ? [...(shared.stack ?? []), ...(shared.above ?? [])] : null;
+    });
     protected readonly error = computed(() => {
         const error = this.data.error();
         if (error === undefined) {

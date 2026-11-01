@@ -56,8 +56,10 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (`floorPoints()`, `stackGround()`); the model and picture libraries keep the stack's assets. A slab lies under its
   floor's rooms (not gardens, paths, driveways) and wall footprints, extruded and merged (`buildSlab()`), so an upper
   slab roofs only what it covers. Saved views and share links keep it as `allFloors`; a share link with it serves the
-  floors below in `SharedViewDto::$stack` (`ProjectSnapshotService::getScenesBelow()`, `SnapshotScenes`) and their
-  models and pictures (`SharedAssetIds::below()`). The glTF export holds the shown floor only.
+  floors below in `SharedViewDto::$stack` and, when it offers the walk too, those above in `$above` (for the walk,
+  FD-102; `ProjectSnapshotService::getFloorScenes()` with `$withAbove`, `SnapshotScenes`) and their models and pictures
+  (`SharedAssetIds::others()`).
+  The glTF export holds the shown floor only.
 - Item rotation is in degrees counter-clockwise; 0 means the front faces south (−y). Cabinet-local frame: x along the
   width, y up, +z out of the front.
 - Walls are centre lines with a thickness. Openings are offsets along the centre line from the wall start. `hinge` is
@@ -728,11 +730,28 @@ format is the text in `FurnitureTools::Format`.
   - `leafColliders()`: each door leaf or French window sash as a thin wall at its current angle, or its current
     position along the wall for a sliding or pocket leaf (`Leaf.motion`).
   - Items do not block.
-- Between floors (FD-73): PageUp / PageDown (the walk pad's floor buttons on touch) ask the page for the next floor up
-  or down (`walkFloorHandler`); it navigates there, and `load()` of that floor keeps the walk going
-  (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`): the walker stands at the same plan point if it lies in one of
-  the floor's rooms, else where a walk of the floor starts, with its doors closed as at a walk's start. Any other
-  floor change ends the walk. Share links have one floor, so guests cannot.
+- All floors at once (FD-102): the viewer page loads the project's other floors while walking (`walkData`, the same
+  version) and passes them as `walkFloors` (`ViewerEngine.setWalkFloors()`; a share link with `allFloors` its `stack`
+  and `above`; a null during a walk is ignored). During the walk `rebuildStack()` draws all of them as context floors
+  (above the shown one too), each with its own `leafStates`, so their doors open and close (`doorAt()` picks them,
+  `doorStates()` finds the floor). `building-walk.ts` (framework-free) walks them in the shown floor's frame:
+  `walkFloors()` gives each a band of walker heights from `BandBelow` (600) under its level to as far under the next
+  one's; `floorColliders()` moves a floor's colliders (walls, stairs, railings, voids, door leaves) by its offset and
+  keeps them within its band (`WallCollider.levels`); `buildingLevels()` reads what is underfoot on the band's floor
+  (`floorSurface()`: its stairs, then its rooms) and else the ground of any floor's plots (sloping ground stops only the
+  walker on the plot's floor). A floor's band starts under its lowest room (sunken ones), above the floor below's level;
+  two floors at one elevation share no band. So a stair's ramp carries on from floor to floor, with no switch.
+  `onWalkFloorChange` tells the page the floor the walker is on (the walk's hint names it; `walkPlace` for the floor
+  buttons). Ending the walk on another floor moves the camera to the walker's place against the shown floor's level
+  (`shiftView()`), and the page navigates to that floor unless it moved on meanwhile (`walkStartFloorId`); its `load()`
+  then leaves the view as it is (`walkEndedOn`). PageUp / PageDown stand the walker on the next floor in the engine
+  (`walkToBuildingFloor()`); E opens the doors of the walker's floor (`doorAt()` raycasts only that layer). Drawing all three floors of the demo house costs about 0.7 ms of CPU a
+  frame more than the shown floor alone.
+- Between floors without the others loaded (FD-73; a share link without `allFloors`, or before they load): PageUp /
+  PageDown (the walk pad's floor buttons on touch) ask the page for the next floor up or down (`walkFloorHandler`); it
+  navigates there, and `load()` of that floor keeps the walk going (`ViewerEngine.walkToFloor()`, `Walkthrough.moveTo()`):
+  the walker stands at the same plan point if it lies in one of the floor's rooms, else where a walk of the floor
+  starts, with its doors closed as at a walk's start. Any other floor change ends the walk.
 - Stairs (FD-78, `stairs.ts`): `stairPaths()` are the floor's own stairs and those coming up through it (`stairsBelow`,
   under the floor by their rise), laid out once per `load()` (`walkStairs`) for the colliders and `floorLevels()`. Over
   one, the eye follows the walking line (`stairSpot()`, a smooth ramp; where lines pass beside or over one another, a
@@ -747,7 +766,8 @@ format is the text in `FurnitureTools::Format`.
   (`headroomCrossing()`), unless deep in a stairwell below; `stairSpot()` takes no stair over a step above the walker. Within `StairLanding` of the top, or of the
   bottom of a stair from below, `ViewerEngine.followStairs()` walks to the next floor as PageUp / PageDown do; the
   walker keeps the spot they have reached when it loads, and no further floor until they leave the landing zone
-  (`stairArrival`). While climbing, the floor above is not drawn until it loads.
+  (`stairArrival`). While climbing, the floor above is not drawn until it loads. In a walk over all floors (FD-102) none
+  of this is needed: the stairs are walked across the floors' bands.
 - Doors open and close for the session only. `openingLeaves()` is the leaf geometry shared by `building.ts` (pivots
   tagged `userData.leaf`, posed by `setLeafPose()`) and the colliders, and `LeafStates` (`doors.ts`) animates them. E, a click at the view centre
   (`DoorReach`) or a tap toggles the door in view.

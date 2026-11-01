@@ -141,11 +141,16 @@ final readonly class ShareLinkProvider
 		if ($link === null) {
 			return null;
 		}
-		['scene' => $scene, 'below' => $below] = $this->snapshotService->getFloorScenes($link->version->snapshot, $link->floorId);
+		$settings = self::readSettings($link);
+		$walksAll = self::walksAllFloors($settings);
+		['scene' => $scene, 'below' => $below, 'above' => $above] = $this->snapshotService->getFloorScenes(
+			$link->version->snapshot,
+			$link->floorId,
+			$walksAll,
+		);
 		if ($scene === null) {
 			return null;
 		}
-		$settings = self::readSettings($link);
 
 		return new SharedViewDto(
 			name: $link->name,
@@ -153,6 +158,7 @@ final readonly class ShareLinkProvider
 			settings: $settings,
 			scene: $scene,
 			stack: $settings->allFloors ? $below : [],
+			above: $walksAll ? $above : [],
 		);
 	}
 
@@ -175,6 +181,15 @@ final readonly class ShareLinkProvider
 		return $file !== null && $this->fileProvider->isImage($file) ? $file : null;
 	}
 
+	/**
+	 * Whether a link's guests walk over all floors (FD-102): it draws all floors and offers the walk, so it serves the
+	 * floors above the shared one too; without the walk they stay out, as before.
+	 */
+	private static function walksAllFloors(ShareSettingsDto $settings): bool
+	{
+		return $settings->allFloors && in_array(ShareViewEnum::Walkthrough, $settings->views, true);
+	}
+
 	/** The link of a token while it works (known, not expired); null otherwise. */
 	public function activeLink(string $token): ?ShareLink
 	{
@@ -184,7 +199,7 @@ final readonly class ShareLinkProvider
 	}
 
 	/**
-	 * The link and the ids of the models and pictures its floor draws (with `allFloors`, also the floors under it),
+	 * The link and the ids of the models and pictures its floor draws (with `allFloors`, also the floors under and above it),
 	 * without decoding the snapshot each time.
 	 *
 	 * @return array{ShareLink, array{models: list<int>, pictures: list<int>}}|null
@@ -202,10 +217,16 @@ final readonly class ShareLinkProvider
 			fn (): ?stdClass => $this->snapshotService->getFloorScene($version->snapshot, $link->floorId),
 		);
 		if ($ids !== null && self::readSettings($link)->allFloors) {
-			$below = $this->assetIds->below(
+			$walksAll = self::walksAllFloors(self::readSettings($link));
+			$below = $this->assetIds->others(
 				$version->id,
 				$link->floorId,
-				fn (): array => $this->snapshotService->getFloorScenes($version->snapshot, $link->floorId)['below'],
+				$walksAll,
+				function () use ($version, $link, $walksAll): array {
+					$scenes = $this->snapshotService->getFloorScenes($version->snapshot, $link->floorId, $walksAll);
+
+					return [...$scenes['below'], ...$scenes['above']];
+				},
 			);
 			$ids = ['models' => [...$ids['models'], ...$below['models']], 'pictures' => [...$ids['pictures'], ...$below['pictures']]];
 		}
