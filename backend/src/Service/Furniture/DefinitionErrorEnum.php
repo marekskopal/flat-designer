@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /** Why a definition could not be evaluated, besides expression errors (codes of tests/fixtures/furniture-definitions.json). */
 enum DefinitionErrorEnum: string

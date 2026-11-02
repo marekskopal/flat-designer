@@ -46,7 +46,7 @@ import {groundAt, plotAt} from './terrain';
 import {clipRing, FloorRoofs, HeightAt, roofBreaks, roofPlaneParts, wallBottomAt, wallHeightAt, wallTopAt} from './under-roof';
 
 /**
- * The building drawings (FD-94): façade elevations and sections through all the floors given, framework-free, from the
+ * The building drawings: façade elevations and sections through all the floors given, framework-free, from the
  * geometry the viewer builds with. A drawing looks along a view plane: plan points project to `u` along its `right`
  * axis (left to right on paper), heights are levels against ±0.000 (a floor's elevation plus its own heights), and
  * `depth` runs along `look` into the drawing. The building is collected as groups (a wall face with its openings and
@@ -286,7 +286,7 @@ class ViewCollector {
     }
 
     /**
-     * A railing's stretches: bands `height` high from its base, a fence on the ground (FD-100) standing on it at each end
+     * A railing's stretches: bands `height` high from its base, a fence on the ground standing on it at each end
      * (Rake), or in level bays over the highest ground under each (Step, as `buildFenceRun()`).
      */
     private railing(railing: Railing, plots: readonly Plot[], e: number): void {

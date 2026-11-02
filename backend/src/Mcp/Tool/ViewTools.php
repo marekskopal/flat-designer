@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\SavedViewDto;
-use FlatDesigner\Dto\SavedViewInputDto;
-use FlatDesigner\Dto\SavedViewSettingsDto;
-use FlatDesigner\Dto\SunTimeDto;
-use FlatDesigner\Model\Entity\SavedView;
-use FlatDesigner\Service\Project\SavedViewProvider;
+use Izbik\Dto\SavedViewDto;
+use Izbik\Dto\SavedViewInputDto;
+use Izbik\Dto\SavedViewSettingsDto;
+use Izbik\Dto\SunTimeDto;
+use Izbik\Model\Entity\SavedView;
+use Izbik\Service\Project\SavedViewProvider;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;

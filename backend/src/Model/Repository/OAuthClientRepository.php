@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\OAuthClient;
+use Izbik\Model\Entity\OAuthClient;
 
 /** @extends ARepository<OAuthClient> */
 final class OAuthClientRepository extends ARepository

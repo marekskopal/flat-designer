@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Mcp\McpUserContext;
-use FlatDesigner\Mcp\Server\FlatDesignerServer;
-use FlatDesigner\Mcp\Session\DatabaseSessionLock;
-use FlatDesigner\Mcp\Session\DatabaseSessionStore;
-use FlatDesigner\OAuth\AuthorizationService;
-use FlatDesigner\OAuth\ClientService;
-use FlatDesigner\OAuth\DiscoveryUrl;
-use FlatDesigner\OAuth\Exception\OAuthException;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Actor\ActorContext;
+use Izbik\Mcp\McpUserContext;
+use Izbik\Mcp\Server\IzbikServer;
+use Izbik\Mcp\Session\DatabaseSessionLock;
+use Izbik\Mcp\Session\DatabaseSessionStore;
+use Izbik\OAuth\AuthorizationService;
+use Izbik\OAuth\ClientService;
+use Izbik\OAuth\DiscoveryUrl;
+use Izbik\OAuth\Exception\OAuthException;
+use Izbik\Response\ErrorResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Actor\ActorContext;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;
@@ -41,7 +41,7 @@ final readonly class McpController
 		private ClientService $clientService,
 		private McpUserContext $userContext,
 		private ActorContext $actorContext,
-		private FlatDesignerServer $server,
+		private IzbikServer $server,
 		private DatabaseInterface $database,
 	) {
 	}

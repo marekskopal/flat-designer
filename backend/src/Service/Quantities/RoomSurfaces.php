@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
-use FlatDesigner\Dto\FloorVoidDto;
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Editor\Geometry\RoofCover;
-use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
-use FlatDesigner\Service\Editor\Geometry\Spans;
-use FlatDesigner\Service\Editor\Geometry\WallFaceSpans;
-use FlatDesigner\Service\Schedule\VoidArea;
+use Izbik\Dto\FloorVoidDto;
+use Izbik\Dto\RoomDto;
+use Izbik\Dto\WallDto;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Editor\Geometry\RoofCover;
+use Izbik\Service\Editor\Geometry\RoomUnderRoof;
+use Izbik\Service\Editor\Geometry\Spans;
+use Izbik\Service\Editor\Geometry\WallFaceSpans;
+use Izbik\Service\Schedule\VoidArea;
 use const M_PI;
 
 /**
  * The surfaces of one room as the viewer draws them, in mm² (or mm for skirting), per surface and material:
  *
- * - the floor in the floor material, less the floor's voids (FD-90);
+ * - the floor in the floor material, less the floor's voids;
  * - wall finish bands along the wall faces on the room's edges (`WallFaceSpans`), up to the wall's top, without openings:
  *   the face's own bands (`WallDto::finishesOn()`) or else the room's;
  * - the rest of those wall faces up to the ceiling in the wall's material (paint), without bands and openings; open-air
@@ -30,7 +30,7 @@ use const M_PI;
  * - skirting along the walls, except doorways.
  *
  * Wall faces outside every room (the façade) are not counted. A wall between two rooms counts once for each. Under the
- * floor's roofs (FD-38) a flat ceiling slopes where they come lower, so it counts along the slope (`RoomUnderRoof`), and
+ * floor's roofs a flat ceiling slopes where they come lower, so it counts along the slope (`RoomUnderRoof`), and
  * the bands and paint stop at it (`RoomFaceUnderRoof`).
  */
 final class RoomSurfaces

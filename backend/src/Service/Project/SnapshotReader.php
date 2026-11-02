@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Project\Exception\InvalidSnapshotException;
 use RuntimeException;
 use Throwable;
 use const JSON_THROW_ON_ERROR;

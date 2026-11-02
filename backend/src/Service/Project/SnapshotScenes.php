@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use Closure;
-use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
+use Izbik\Service\Project\Exception\InvalidSnapshotException;
 use stdClass;
 
 /**
@@ -62,7 +62,7 @@ final class SnapshotScenes
 			$scene->floor = $sceneFloors[$id];
 			$scene->materials = $data->materials ?? [];
 			$scene->location = $data->location ?? null;
-			// Missing in snapshots taken before façades (FD-88).
+			// Missing in snapshots taken before façades.
 			$scene->exteriorMaterialId = $data->exteriorMaterialId ?? null;
 			$stairs->addTo($scene, $f);
 			$scene->chimneyFloors = self::chimneyFloors($floors, $sceneFloors, $id);
@@ -79,7 +79,7 @@ final class SnapshotScenes
 	}
 
 	/**
-	 * A scene's `chimneyFloors` (FD-91), as `SceneProvider` derives them from the rows: the other floors with roofs or
+	 * A scene's `chimneyFloors`, as `SceneProvider` derives them from the rows: the other floors with roofs or
 	 * chimneys, their levels against this one's; none in a snapshot without chimneys.
 	 *
 	 * @param list<array{entry: stdClass, floor: stdClass, id: int, level: int}> $floors

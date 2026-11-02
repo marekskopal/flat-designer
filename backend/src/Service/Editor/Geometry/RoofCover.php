@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * Roof junctions (FD-38): the parts in plan of the planes of a floor's roofs where each is the top, its underside the
+ * Roof junctions: the parts in plan of the planes of a floor's roofs where each is the top, its underside the
  * highest of the roofs over the point (as `RoofGeometry::undersideOf()` takes it), so roofs meeting form valleys. They
  * cover the roofs' outlines once, each a convex piece with its plane's underside, for the measures under and on the
  * roofs. Twin of `roofPlaneParts()` (`viewer/engine/under-roof.ts`), which draws them, kept alike by the junction cases

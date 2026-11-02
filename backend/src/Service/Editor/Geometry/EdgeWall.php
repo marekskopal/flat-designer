@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
 
 /**
  * How a wall lies along a room edge a → b: the side of it whose face is on the edge and, for a curved wall, where the

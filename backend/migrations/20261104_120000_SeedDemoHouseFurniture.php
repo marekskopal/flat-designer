@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Migrations;
 
 use Closure;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 use PDO;
 
 /**
- * The demo house's furniture (FD-93): a corner fireplace, a bench with an upholstered back, a pouf, an oak linear pendant,
+ * The demo house's furniture: a corner fireplace, a bench with an upholstered back, a pouf, an oak linear pendant,
  * square ceiling and linear wall lights, a vanity with vessel basins, a walk-in rain shower, a freestanding bath, a bin
  * store, a garden shed, stepping slabs and a roller blind in a cassette. The kitchen cabinets get an optional plinth
  * grille (`plinthVent`); their rows are rewritten from the files, which a fresh database already seeds so.

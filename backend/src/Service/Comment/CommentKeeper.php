@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\CommentRepository;
-use FlatDesigner\Service\Project\FloorMatcher;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\CommentRepository;
+use Izbik\Service\Project\FloorMatcher;
 
 /**
  * Carries the review comments over a version restore. They are not in snapshots: a restore replaces the floors (and

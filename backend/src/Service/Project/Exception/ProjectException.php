@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project\Exception;
+namespace Izbik\Service\Project\Exception;
 
 /** Rejected project change; the code is the HTTP status (422 invalid input by default, 409 conflict). */
 final class ProjectException extends \RuntimeException

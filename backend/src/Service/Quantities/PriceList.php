@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
-use FlatDesigner\Dto\MaterialPriceDto;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Dto\MaterialPriceDto;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
 
 /** A project's prices by material, and by surface for the surfaces' default looks. */
 final readonly class PriceList

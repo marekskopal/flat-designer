@@ -119,17 +119,17 @@ export interface BuildingParts {
     sectionMaterial: THREE.Material;
     /** The façade bands on the wall faces outside every room (`buildFacades()`). */
     facades: THREE.Group;
-    /** Railings keyed by railing id (FD-90). */
+    /** Railings keyed by railing id. */
     railings: Map<number, THREE.Group>;
     /** The voids' top-view outlines keyed by void id, in `voidOutlines`, shown in the top view only. */
     voids: Map<number, THREE.Group>;
     voidOutlines: THREE.Group;
-    /** The section lines keyed by id (FD-94), in `sectionLines`, shown in the top view only. */
+    /** The section lines keyed by id, in `sectionLines`, shown in the top view only. */
     sections: Map<number, THREE.Group>;
     sectionLines: THREE.Group;
     /** The linings of the voids through and over the floor (`buildVoidLinings()`). */
     voidLinings: THREE.Group;
-    /** The chimneys of the floors below rising through this floor (`buildChimneysBelow()`, FD-91). */
+    /** The chimneys of the floors below rising through this floor (`buildChimneysBelow()`). */
     chimneysBelow: THREE.Group;
 }
 
@@ -279,7 +279,7 @@ export function addVoid(parts: BuildingParts, floorVoid: FloorVoid): THREE.Group
 }
 
 /**
- * What the floor's roofs take of it (FD-91): the chimneys passing through them and the ground their downpipes end on,
+ * What the floor's roofs take of it: the chimneys passing through them and the ground their downpipes end on,
  * the floor's plots or, without any, the project's datum (±0.000).
  */
 export function roofSurroundings(scene: Scene): RoofSurroundings {
@@ -360,7 +360,7 @@ export function addRoom(parts: BuildingParts, room: RoomParts, roomId: number): 
     }
 }
 
-/** A wall standing on a base or on the ground rather than on the floor (FD-87). */
+/** A wall standing on a base or on the ground rather than on the floor. */
 export function isSiteWall(wall: Pick<Wall, 'baseStart' | 'baseEnd' | 'onGround'>): boolean {
     return wall.onGround === true || (wall.baseStart ?? 0) !== 0 || (wall.baseEnd ?? 0) !== 0;
 }
@@ -374,7 +374,7 @@ const UnslabbedRooms: readonly Room['type'][] = ['Garden', 'Path', 'Driveway'];
  * roofs only what it covers. The outlines are extruded and merged into one mesh; where they overlap, their faces lie
  * inside the solid or coincide. The `voids` (the stairs coming up from the floor below) are cut out of every piece.
  * A room's piece is in its `soffitMaterialId`, else the project's façade material (`exterior`): its underside and edge
- * show where the floor overhangs the one below (an oriel, a balcony, FD-88); the rest is the plain slab.
+ * show where the floor overhangs the one below (an oriel, a balcony); the rest is the plain slab.
  */
 export function buildSlab(
     walls: readonly Wall[],
@@ -394,7 +394,7 @@ export function buildSlab(
         ...rooms
             .filter((r) => !UnslabbedRooms.includes(r.type))
             .map((r) => ({outline: r.polygon.map(([x, y]): Vec2 => ({x, y})), top: r.floorElevation ?? 0, material: soffit(r)})),
-        // A site wall (on a base or the ground, FD-87) has a footing of its own, not the floor's slab.
+        // A site wall (on a base or the ground) has a footing of its own, not the floor's slab.
         ...walls.filter((wall) => !isSiteWall(wall)).map((wall) => {
             const {left, right} = wallFaces(wall, joints.get(wall.id));
             return {outline: [...left, ...[...right].reverse()], top: 0, material: plain};
@@ -770,7 +770,7 @@ export function buildWall(
 const RevealBoard = 20;
 
 /**
- * The boards lining an opening's reveal (FD-88, `revealLining`): its jambs, its head and a window's sill across the
+ * The boards lining an opening's reveal (`revealLining`): its jambs, its head and a window's sill across the
  * whole wall, in the band of the outer face (opposite `side`) at the opening's middle height, else that face's façade
  * (`facadeBands()`). Null when the face has none. In the wall's coordinates, as the opening's parts are.
  */
@@ -835,7 +835,7 @@ function densified(outline: readonly Vec2[], step: number): Vec2[] {
 }
 
 /**
- * A piece of a wall under roofs or with a sloping top (`top`), or on a base or the ground (`bottom`), FD-87: its top
+ * A piece of a wall under roofs or with a sloping top (`top`), or on a base or the ground (`bottom`): its top
  * follows `top` (a piece reaching the wall's top) or is capped by it (a lower one: under a window, behind a niche); a
  * piece from the floor stands on `bottom`. Its outline (`wallOutline()`, densified on the ground) stood up in runs
  * (`profileRuns()`) up to the top over each point, never under the piece's bottom. Null when it is the piece as it is,
@@ -983,7 +983,7 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
         // Along a curved wall the edge is one of the pieces of its face: the bands' UVs run on along the arc.
         const faces = wallFacesAlongEdge(a, b, walls);
         const curved = faces.find((face) => (face.wall.sagitta ?? 0) !== 0);
-        // Under a wall with a sloping top (FD-87) the bands stop at it.
+        // Under a wall with a sloping top the bands stop at it.
         const sloping = faces.map((face) => wallHeightAt(face.wall, wallFrame(face.wall))).filter((h): h is HeightAt => h !== null);
         const wallCap: HeightAt | null = sloping.length === 0 ? null : (p): number => Math.min(...sloping.map((h) => h(p)));
 
@@ -1135,7 +1135,7 @@ export interface FinishSegment {
 export function finishSegments(room: Room, a: Vec2, b: Vec2, length: number, walls: readonly Wall[]): FinishSegment[] {
     const own = wallFacesAlongEdge(a, b, walls).flatMap((face): FinishSegment[] => {
         const bands = face.side === 'Left' ? face.wall.leftFinishes : face.wall.rightFinishes;
-        // Inside a room a face's bands start on its floor (a façade's plinth may reach below it, FD-88).
+        // Inside a room a face's bands start on its floor (a façade's plinth may reach below it).
         const onFloor = bands?.filter((band) => band.top > 0).map((band) => ({...band, bottom: Math.max(band.bottom, 0)}));
         return onFloor == null ? [] : [{from: face.from, to: face.to, bands: onFloor}];
     });
@@ -1172,7 +1172,7 @@ export function clipGap(gap: WallGap, bandBottom: number, bandTop: number, segme
     }];
 }
 
-/** The material of an opening's frame and sashes (FD-89): its own, else white for doors and anthracite for windows. */
+/** The material of an opening's frame and sashes: its own, else white for doors and anthracite for windows. */
 function frameMaterialOf(opening: Opening, materials: MaterialLibrary): THREE.Material {
     if (opening.frameMaterialId != null) {
         return materials.get(opening.frameMaterialId);
@@ -1180,7 +1180,7 @@ function frameMaterialOf(opening: Opening, materials: MaterialLibrary): THREE.Ma
     return materials.byCode(opening.type === 'Window' || isLiftSlide(opening) ? 'window-frame-anthracite' : 'door-white');
 }
 
-/** The material of a door's leaves (FD-89): its own, else the frame's. */
+/** The material of a door's leaves: its own, else the frame's. */
 function leafMaterialOf(opening: Opening, materials: MaterialLibrary): THREE.Material {
     return opening.leafMaterialId == null ? frameMaterialOf(opening, materials) : materials.get(opening.leafMaterialId);
 }
@@ -1205,7 +1205,7 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     // The door furniture's metal: handles, hinges, lock and strike plates.
     const handleMaterial = materials.plain('#2b2b2b', 0.35, 0.7);
     for (const leaf of openingLeaves(opening, wall.thickness)) {
-        // A sliding leaf covers the opening's head too; a rebated one reaches into the head's rebate (FD-105); the others
+        // A sliding leaf covers the opening's head too; a rebated one reaches into the head's rebate; the others
         // stop short of the frame head (and the floor).
         const leafHeight =
             opening.type === 'SlidingDoor'
@@ -1253,12 +1253,12 @@ function swingFace(leaf: Leaf): 1 | -1 {
     return leaf.swing * leaf.closed > 0 ? -1 : 1;
 }
 
-/** A door hinge's two halves (FD-105), each this long (m), and the shanks into the jamb and the leaf. */
+/** A door hinge's two halves, each this long (m), and the shanks into the jamb and the leaf. */
 const HingeHalf = HingeKnuckle / 2;
 const HingeShank = 0.012;
 
 /**
- * The hinges of a rebated leaf (FD-105): two-part barrel hinges on its axis, `hingeHeights()` up it. The upper half
+ * The hinges of a rebated leaf: two-part barrel hinges on its axis, `hingeHeights()` up it. The upper half
  * with its ball tip and a shank into the lip's edge turns with the leaf (`leaf`, for the pivot, whose origin is the
  * axis); the lower half with a shank into the jamb's rebate stays with the frame (`frame`, a group placed on the axis).
  */
@@ -1297,7 +1297,7 @@ function doorHinges(leaf: Leaf, height: number, material: THREE.Material): {leaf
     return {leaf: parts, frame};
 }
 
-/** A lock's faceplate on a rebated leaf's free edge, at the handle (FD-105), in the leaf's body frame. */
+/** A lock's faceplate on a rebated leaf's free edge, at the handle, in the leaf's body frame. */
 function lockFaceplate(leaf: Leaf, material: THREE.Material): THREE.Mesh {
     const lip = leaf.lip as NonNullable<Leaf['lip']>;
     const t = leaf.thickness * MM;
@@ -1311,7 +1311,7 @@ function lockFaceplate(leaf: Leaf, material: THREE.Material): THREE.Mesh {
 /** The lock's faceplate and strike plate, each this thick (m): in the `CoreGap` between the core and the stop, 1 mm apart. */
 const LockPlate = 0.001;
 
-/** The strike plate on a single rebated door's lock jamb (FD-105), on its stop facing the leaf's edge. */
+/** The strike plate on a single rebated door's lock jamb, on its stop facing the leaf's edge. */
 function strikePlate(opening: Opening, leaf: Leaf, rebate: DoorRebate, material: THREE.Material): THREE.Mesh {
     const stop = (leaf.closed > 0 ? opening.offset + opening.width - rebate.stop : opening.offset + rebate.stop) * MM;
     // Across: the middle of the core behind the lip, as the faceplate (plan across is local −z).
@@ -1361,7 +1361,7 @@ const BoardJoint = 0.006;
 const BoardRelief = 0.004;
 
 /**
- * The boards of a `Boarded` leaf `width` × `height` m (FD-89), `count` side by side running `direction`, with a narrow
+ * The boards of a `Boarded` leaf `width` × `height` m, `count` side by side running `direction`, with a narrow
  * joint between them, proud of a core `thickness` thick on both faces.
  */
 function boardedLeaf(
@@ -1400,7 +1400,7 @@ function doorLeaf(opening: Opening, leaf: Leaf, height: number, material: THREE.
     if (lip === undefined) {
         return leafSlab(opening, leaf.width * MM, height, leaf.thickness * MM, material, glass);
     }
-    // A rebated leaf (FD-105): the core by the leaf's style at its full thickness, as far as the lip covers it, and the
+    // A rebated leaf: the core by the leaf's style at its full thickness, as far as the lip covers it, and the
     // lip round it on the swing face (local z by `swingFace()`): along the hinge edge, the free edge and the top. Where
     // a double door's other leaf laps over this one's free edge, the core goes on there behind its face.
     const t = leaf.thickness * MM;
@@ -1502,7 +1502,7 @@ function doorFrame(opening: Opening, wallThickness: number, material: THREE.Mate
 }
 
 /**
- * A rebated room door's frame (FD-105): each jamb and the head a stop behind the leaf (the core closes against it) and
+ * A rebated room door's frame: each jamb and the head a stop behind the leaf (the core closes against it) and
  * a rebate on the swing face (the lip lies in it), plus an `Architrave`'s casings: on the swing face they make the
  * rebate's front, on the other face they run to the stop.
  */
@@ -1601,7 +1601,7 @@ const OutsideCladding = 0.015;
 
 /**
  * A frame bar's box across `depth` m centred on z = 0 (in a frame's own group): in `material`, with an outer face of
- * `outside` (a timber-aluminium frame, FD-89) `OutsideCladding` thick towards `exterior` (local z sign) when given.
+ * `outside` (a timber-aluminium frame) `OutsideCladding` thick towards `exterior` (local z sign) when given.
  */
 function frameBar(
     material: THREE.Material,
@@ -1636,7 +1636,7 @@ function cornerReach(opening: Opening, wall: Wall): number {
 
 /**
  * A window: frame, glazing divided by `mullions` and `transoms` (or a walkable window's sashes) and sill boards, in the
- * frame's material with an outside material on its outer face (FD-89), centred in the wall or set in by `inset`.
+ * frame's material with an outside material on its outer face, centred in the wall or set in by `inset`.
  * At a corner (`corners`), the frame runs on to the wall's end without a jamb and the glass meets the other
  * window's at the corner.
  */
@@ -1724,7 +1724,7 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
 }
 
 /**
- * A lift-and-slide door (FD-89, a `SlidingDoor` with `fixedPanes`): a frame round the opening across its band like a
+ * A lift-and-slide door (a `SlidingDoor` with `fixedPanes`): a frame round the opening across its band like a
  * window's, a threshold, and its panes as sashes on two tracks, the sliding one tagged as a leaf with a handle.
  */
 function buildLiftSlide(opening: Opening, wall: Wall, materials: MaterialLibrary): THREE.Group {
@@ -1761,7 +1761,7 @@ function buildLiftSlide(opening: Opening, wall: Wall, materials: MaterialLibrary
 const GarageTrackRadius = 0.12;
 
 /**
- * A garage door that lifts (FD-89): its leaf behind the opening on the garage's face, tagged as a leaf so
+ * A garage door that lifts: its leaf behind the opening on the garage's face, tagged as a leaf so
  * `setLeafPose()` lifts it. A sectional door's leaf is horizontal sections (tagged `section`) running on tracks up the
  * jambs and under the ceiling, an up-and-over door's one panel (tagged `tilt`) that tilts up, a roller door's slats
  * (tagged `roll`) rolling up into a drum above the opening. The faces follow `leafStyle` and `leafMaterialId`.
@@ -1963,7 +1963,7 @@ function buildSash(
 /**
  * The group a leaf or sash moves in: at its hinge (a sliding leaf's start edge) in the wall's local frame (x
  * along, −z towards the wall's left), tagged `userData.leaf` so `setLeafPose` can swing or slide it; a leaf with a
- * `pin` on its hinge axis (FD-105). Its parts go into `body`, built along +x from the hinge edge (the pivot itself
+ * `pin` on its hinge axis. Its parts go into `body`, built along +x from the hinge edge (the pivot itself
  * without a pin). `open` is 0 closed … 1 open.
  */
 function leafPivot(leaf: Leaf, open: number): {pivot: THREE.Group; body: THREE.Group} {
@@ -1975,7 +1975,7 @@ function leafPivot(leaf: Leaf, open: number): {pivot: THREE.Group; body: THREE.G
         setLeafPose(pivot, open);
         return {pivot, body: pivot};
     }
-    // On the hinge axis (FD-105), the leaf's body set back from it to its hinge edge's point.
+    // On the hinge axis, the leaf's body set back from it to its hinge edge's point.
     pivot.position.set((leaf.along - leaf.closed * pin.back) * MM, LeafFloorGap, -(leaf.across + leaf.swing * pin.out) * MM);
     const body = new THREE.Group();
     body.position.set(pin.back * MM, 0, -swingFace(leaf) * pin.out * MM);
@@ -1985,7 +1985,7 @@ function leafPivot(leaf: Leaf, open: number): {pivot: THREE.Group; body: THREE.G
 }
 
 /**
- * Lifts a garage door's leaf (FD-89) to `open` (0 … 1): a sectional door's sections run up the track and turn under the
+ * Lifts a garage door's leaf to `open` (0 … 1): a sectional door's sections run up the track and turn under the
  * ceiling into the garage, until the bottom one has rounded the bend; an up-and-over door's panel tilts about an axis a
  * third of the way up, which rises to the head, its top going into the garage; a roller door's slats roll up.
  */

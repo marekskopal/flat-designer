@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\OpeningRepository;
-use FlatDesigner\Model\Repository\RoofRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
+use Izbik\Dto\WallDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Wall;
+use Izbik\Model\Repository\OpeningRepository;
+use Izbik\Model\Repository\RoofRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\WallLine;
 
 /**
  * Walls, straight or curved (`sagitta`, `WallCurve`), with optional wall finish bands per face (`leftFinishes` / `rightFinishes`, `WallFinishBands`),
- * rising to the roofs over them with `upToRoof` (FD-38; the viewer cuts every wall at their underside). The state
+ * rising to the roofs over them with `upToRoof` (the viewer cuts every wall at their underside). The state
  * leaves out the openings (they are elements of their own) but keeps their offsets as `openingOffsets` ([{id, offset}]
  * by id): moving the start point shifts the offsets so the openings stay where they are on the plan, and undo restores
  * them exactly. A deleted wall hides its openings until undo brings it back.

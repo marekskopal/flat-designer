@@ -8,7 +8,7 @@ import {roofTopAt} from './roof-geometry';
 import {FloorRoofs} from './under-roof';
 
 /**
- * Chimneys (FD-91): a structural item standing on its floor and rising through the slabs and roofs of the floors above.
+ * Chimneys: a structural item standing on its floor and rising through the slabs and roofs of the floors above.
  * Its top is `params.aboveRoof` over the highest roof covering it passes (the roofs of its floor and the higher ones,
  * the scene's `roofs` and `chimneyFloors`), measured at its outline's corners and centre; without a roof over it, its
  * own height. Each floor draws the stretch passing through it: its own chimneys from their foot, those of the floors at

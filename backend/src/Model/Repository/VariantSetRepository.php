@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\VariantSet;
+use Izbik\Model\Entity\VariantSet;
 
 /** @extends ARepository<VariantSet> */
 final class VariantSetRepository extends ARepository

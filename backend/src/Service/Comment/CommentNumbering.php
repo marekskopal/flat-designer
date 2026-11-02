@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Model\Entity\Floor;
+use Izbik\Service\Project\Exception\ProjectException;
 use LogicException;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 

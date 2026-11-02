@@ -78,7 +78,7 @@ describe('buildRoof', () => {
         expect(flat.max.y).toBeCloseTo(2600 + 300 + 900, 0);
     });
 
-    it('turns a flat roof\'s end and its parapet with a skew (FD-101)', () => {
+    it('turns a flat roof\'s end and its parapet with a skew', () => {
         // Square, the roof and its parapet start at x 0; skewed 10°, one corner reaches 4000 · tan 10° = 705 mm further west.
         const flat: Roof = {...gable, shape: 'Flat', parapet: 900, thickness: 300, overhang: 0};
         expect(bounds(buildRoof(flat, materials, section)).min.x).toBeCloseTo(0, 0);
@@ -129,7 +129,7 @@ describe('resizeRoofByCorner', () => {
         expect(roofCorners({...turned, ...squashed})[2].y).toBeCloseTo(roofCorners(turned)[2].y, 0);
     });
 
-    it('keeps the skewed verges (FD-97): the opposite corner stays and the dragged one follows the pointer', () => {
+    it('keeps the skewed verges: the opposite corner stays and the dragged one follows the pointer', () => {
         const skewed: Roof = {...gable, x: 0, y: 0, rotation: 30, startSkew: 5, endSkew: -12};
         // The end verge at −12° runs from (5000 − 4000 · tan 12°) at the front to (5000 + 4000 · tan 12°) at the back.
         const corners = roofCorners({...skewed, rotation: 0});
@@ -147,7 +147,7 @@ describe('resizeRoofByCorner', () => {
     });
 });
 
-describe('a roof with skewed verges (FD-97)', () => {
+describe('a roof with skewed verges', () => {
     const skewed: Roof = {...gable, startSkew: 10, endSkew: 10, gutters: 'HalfRound'};
 
     it('draws its outline and eaves line as parallelograms in the top view', () => {

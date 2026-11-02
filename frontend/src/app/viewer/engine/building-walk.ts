@@ -5,7 +5,7 @@ import {StairPath,stairPaths} from './stairs';
 import {FloorLevels, FloorSurface,floorSurface} from './walkthrough';
 
 /**
- * A walk over all the floors of a building at once (FD-102): every floor's colliders and what is underfoot, in the
+ * A walk over all the floors of a building at once: every floor's colliders and what is underfoot, in the
  * shown floor's frame (heights against its level), so the walker climbs a stair onto the next floor without a switch.
  * Each floor holds a band of the walker's heights, from `BandBelow` under its level to as far under the next floor's:
  * its walls, stairs and doors stop the walker only within it (`WallCollider.levels`), and the floor whose band holds

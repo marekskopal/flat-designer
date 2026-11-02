@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /**
- * A definition's optional `schedule` settings for the electrical schedule (FD-64), beside its `category`; the evaluators
+ * A definition's optional `schedule` settings for the electrical schedule, beside its `category`; the evaluators
  * do not read them. `count` names an int parameter that multiplies the item (a socket's gangs, a data socket's ports),
  * and `values` the int, bool and select parameters that tell its points apart and that the schedule lists (null: all
  * of them). A definition without settings (older JSON: a version's snapshot, a share link's scene, a copy made before
@@ -47,7 +47,7 @@ final readonly class DefinitionSchedule
 	}
 
 	/**
-	 * What an item counts as (FD-64): the value of the int parameter `count` names, its default when the item does not
+	 * What an item counts as: the value of the int parameter `count` names, its default when the item does not
 	 * give it (at least 0; 1 when it is no int), 1 without `count`. The twin is `scheduleUnits()` in the frontend's
 	 * `electrical.ts`, kept identical by `tests/fixtures/electrical-units.json`.
 	 *

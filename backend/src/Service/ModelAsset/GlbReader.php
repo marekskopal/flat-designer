@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\ModelAsset;
+namespace Izbik\Service\ModelAsset;
 
 use JsonException;
 use const JSON_THROW_ON_ERROR;

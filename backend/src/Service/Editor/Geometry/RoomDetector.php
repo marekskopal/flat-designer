@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Service\Editor\Element\State;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\PolygonValidator;
+use Izbik\Service\Editor\Element\State;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\PolygonValidator;
 
 /**
  * The outline of the area enclosed by walls around a point: the inner faces of the walls (mitred corners

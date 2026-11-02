@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
-use FlatDesigner\Model\Repository\ProjectRepository;
+use Izbik\Model\Repository\ProjectRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
@@ -45,7 +45,7 @@ class Project extends AEntity
 	#[Column(type: Type::String, size: 64, nullable: true)]
 	public ?string $timeZone = null;
 
-	/** The façade of the exterior walls' outer faces nobody set a material or bands for (FD-88); null: the walls' own. */
+	/** The façade of the exterior walls' outer faces nobody set a material or bands for; null: the walls' own. */
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $exteriorMaterial = null;
 

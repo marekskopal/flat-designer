@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\FurnitureDefinitionController;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\FurnitureDefinitionController;
+use Izbik\Model\Entity\User;
+use Izbik\Route\Routes;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureDefinitionProvider;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Http\Message\ResponseInterface;

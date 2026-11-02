@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\ShareLink;
+use Izbik\Model\Entity\ShareLink;
 use const DATE_ATOM;
 
 /** A share link as its owner sees it; `url` is `{app}/s/{token}` (null when the app's base URL is not known). */

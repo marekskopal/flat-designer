@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Model\Entity\Enum\GarageDoorStyleEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Opening;
+use Izbik\Service\Editor\Exception\EditException;
 
 /**
- * What an opening needs of its wall across it and above it (FD-89): a frame set in from the outer face (`inset`) stays
+ * What an opening needs of its wall across it and above it: a frame set in from the outer face (`inset`) stays
  * within the wall, and a garage door lifting into the room needs headroom above its head for its tracks or drum
  * (`OpeningHead::check()` takes it).
  */

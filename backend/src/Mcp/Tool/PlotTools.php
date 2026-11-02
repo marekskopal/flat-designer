@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Service\Editor\ContourLines;
-use FlatDesigner\Service\Editor\Element\PlotHandler;
-use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Editor\SpotHeights;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Service\Editor\ContourLines;
+use Izbik\Service\Editor\Element\PlotHandler;
+use Izbik\Service\Editor\SceneEditor;
+use Izbik\Service\Editor\SpotHeights;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
 
-/** Plots: the boundary of the land around the building and its ground, flat or sloping (spot heights, FD-86). */
+/** Plots: the boundary of the land around the building and its ground, flat or sloping (spot heights). */
 final readonly class PlotTools
 {
 	private const array Clearable = ['groundMaterialId'];

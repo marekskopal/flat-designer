@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\RoomScheduleController;
-use FlatDesigner\Dto\RoomScheduleRowDto;
-use FlatDesigner\Dto\ScheduleTotalDto;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Schedule\RoomScheduleService;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\RoomScheduleController;
+use Izbik\Dto\RoomScheduleRowDto;
+use Izbik\Dto\ScheduleTotalDto;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Schedule\RoomScheduleService;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(RoomScheduleController::class)]

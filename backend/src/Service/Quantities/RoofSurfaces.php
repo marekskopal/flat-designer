@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
 use Closure;
-use FlatDesigner\Dto\MaterialDto;
-use FlatDesigner\Dto\RoofDto;
-use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Editor\Geometry\RoofCover;
-use FlatDesigner\Service\Editor\Geometry\RoofGutters;
-use FlatDesigner\Service\Editor\Geometry\RoofWindowGeometry;
+use Izbik\Dto\MaterialDto;
+use Izbik\Dto\RoofDto;
+use Izbik\Model\Entity\Enum\GutterProfileEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Editor\Geometry\RoofCover;
+use Izbik\Service\Editor\Geometry\RoofGutters;
+use Izbik\Service\Editor\Geometry\RoofWindowGeometry;
 
 /**
- * The surfaces of a floor's roofs as the viewer draws them (FD-38), in mm²: each roof's covering and soffit over the parts
+ * The surfaces of a floor's roofs as the viewer draws them, in mm²: each roof's covering and soffit over the parts
  * of its planes where it is the top (`RoofCover`), along the slope, without its windows. A roof without a covering
- * material has the viewer's default (clay tiles, a flat roof's membrane). Its gutters (`RoofGutters`, FD-91) count by the
+ * material has the viewer's default (clay tiles, a flat roof's membrane). Its gutters (`RoofGutters`) count by the
  * running metre along the runs, its downpipes from the gutter down to the ground under them, both in the gutter
  * material (titanium zinc without one).
  */

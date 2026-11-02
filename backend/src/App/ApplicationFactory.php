@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\App;
+namespace Izbik\App;
 
-use FlatDesigner\App\ServiceProvider\InfrastructureServiceProvider;
-use FlatDesigner\App\ServiceProvider\OrmServiceProvider;
-use FlatDesigner\Middleware\AuthorizationMiddleware;
-use FlatDesigner\Middleware\CorsMiddleware;
-use FlatDesigner\Route\Strategy\JsonStrategy;
-use FlatDesigner\Service\Dbal\DbContext;
+use Izbik\App\ServiceProvider\InfrastructureServiceProvider;
+use Izbik\App\ServiceProvider\OrmServiceProvider;
+use Izbik\Middleware\AuthorizationMiddleware;
+use Izbik\Middleware\CorsMiddleware;
+use Izbik\Route\Strategy\JsonStrategy;
+use Izbik\Service\Dbal\DbContext;
 use League\Container\Container;
 use League\Container\ReflectionContainer;
 use MarekSkopal\Router\Builder\RouterBuilder;

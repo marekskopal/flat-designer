@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Model\Entity\User;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Model\Entity\User;
 
 /** @extends ARepository<User> */
 final class UserRepository extends ARepository

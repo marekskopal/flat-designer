@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Dbal\ReconnectableDatabase;
-use FlatDesigner\Service\Furniture\BuiltInItemConverter;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Dbal\ReconnectableDatabase;
+use Izbik\Service\Furniture\BuiltInItemConverter;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use MarekSkopal\ORM\Migrations\Database\Provider\DatabaseProviderFactory;
 use MarekSkopal\ORM\Migrations\Database\Provider\DatabaseProviderInterface;
@@ -68,7 +68,7 @@ final class ConvertBuiltInFurnitureTest extends EditorTestCase
 			new ConvertBuiltInFurnitureMigration($this->databaseProvider())->up();
 		} finally {
 			$kinds->up();
-			// That migration's list predates later kinds (FD-91's Chimney): the column takes every kind there is now again.
+			// That migration's list predates later kinds (Chimney): the column takes every kind there is now again.
 			$all = implode(', ', array_map(static fn (ItemKindEnum $kind): string => "'" . $kind->value . "'", ItemKindEnum::cases()));
 			$pdo->exec('ALTER TABLE items MODIFY kind ENUM(' . $all . ') NOT NULL');
 		}

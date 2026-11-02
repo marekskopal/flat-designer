@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project\Exception;
+namespace Izbik\Service\Project\Exception;
 
 final class InvalidSnapshotException extends \RuntimeException
 {

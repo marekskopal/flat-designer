@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Request;
+namespace Izbik\Service\Request;
 
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /** Typed access to fields of a decoded JSON body, for `ArrayFactoryInterface::fromArray()`. */
 final readonly class BodyReader

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Enum\CommentAuthorEnum;
-use FlatDesigner\Service\Comment\CommentActor;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Enum\CommentAuthorEnum;
+use Izbik\Service\Comment\CommentActor;
 use const DATE_ATOM;
 
 /**

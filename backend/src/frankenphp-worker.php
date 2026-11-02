@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner;
+namespace Izbik;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use FlatDesigner\App\ApplicationFactory;
-use FlatDesigner\Mcp\McpUserContext;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\App\ApplicationFactory;
+use Izbik\Mcp\McpUserContext;
+use Izbik\Response\ErrorResponse;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 use Laminas\Diactoros\ServerRequestFactory;
 use Laminas\HttpHandlerRunner\Emitter\SapiEmitter;
 use Psr\Log\LoggerInterface;

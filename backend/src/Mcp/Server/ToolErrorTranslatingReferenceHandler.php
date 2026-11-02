@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Server;
+namespace Izbik\Mcp\Server;
 
 use MarekSkopal\ORM\Exception\ORMException;
 use Mcp\Capability\Registry\ElementReference;

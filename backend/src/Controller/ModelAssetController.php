@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\ModelAssetDto;
-use FlatDesigner\Dto\ModelAssetInputDto;
-use FlatDesigner\Model\Entity\ModelAsset;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\ModelAsset\ModelAssetException;
-use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Project\ShareLinkProvider;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\ModelAssetDto;
+use Izbik\Dto\ModelAssetInputDto;
+use Izbik\Model\Entity\ModelAsset;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ModelAssetRepository;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\ModelAsset\ModelAssetException;
+use Izbik\Service\ModelAsset\ModelAssetProvider;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\ShareLinkProvider;
+use Izbik\Service\Request\Exception\InvalidRequestException;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\StreamFactory;

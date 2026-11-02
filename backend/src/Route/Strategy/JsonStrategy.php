@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Route\Strategy;
+namespace Izbik\Route\Strategy;
 
-use FlatDesigner\Response\ErrorResponse;
+use Izbik\Response\ErrorResponse;
 use League\Route\Route;
 use Override;
 use Psr\Http\Message\ResponseFactoryInterface;

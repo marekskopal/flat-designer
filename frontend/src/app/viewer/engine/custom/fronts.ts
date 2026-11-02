@@ -4,7 +4,7 @@ import {MM} from '../plan-geometry';
 import {ResolvedPart} from './definition';
 
 /**
- * Openable fronts of custom furniture (FD-106). A `front` part opens by its `opens` option (a door swings, a drawer
+ * Openable fronts of custom furniture. A `front` part opens by its `opens` option (a door swings, a drawer
  * slides out by default), and an `assembly` with `opens` moves all its parts as one leaf (`props.leaf`, e.g. a drawer
  * front with its drawer box). The builder (`custom.ts`) puts each such front in a group tagged `userData.front`
  * (`FrontTag`, holding its `FrontSpec`) at the item's parts frame, with one pivot child (`userData.frontPivot`) on the

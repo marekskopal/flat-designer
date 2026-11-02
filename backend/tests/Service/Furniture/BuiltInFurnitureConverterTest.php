@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Furniture;
+namespace Izbik\Tests\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\BuiltInFurnitureConverter;
-use FlatDesigner\Service\Furniture\DefinitionEvaluator;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\BuiltInFurnitureConverter;
+use Izbik\Service\Furniture\DefinitionEvaluator;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

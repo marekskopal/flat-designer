@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
-/** The symbols a user's electrical plan overlay and PDF draw (FD-64). */
+/** The symbols a user's electrical plan overlay and PDF draw. */
 enum ElectricalSymbolsEnum: string
 {
 	/** IEC 60617, simplified. */

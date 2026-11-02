@@ -142,7 +142,7 @@ export function flightRun(flight: StairFlight, going: number): number {
  * over a half landing (`gap` between the flights); a spiral winds round a pole, `width` being its diameter.
  */
 export function stairGeometry(stair: Stair, floorRise: number): StairGeometry {
-    // A stair with a rise of its own (garden or deck steps, FD-87) climbs that, not to the next floor.
+    // A stair with a rise of its own (garden or deck steps) climbs that, not to the next floor.
     const rise = stair.rise ?? floorRise;
     const risers = stairRisers(rise, stair.risers);
     const riser = rise / risers;
@@ -294,7 +294,7 @@ function spiralLayout(stair: Stair, origin: Vec2, risers: number, riser: number)
 const DefaultInnerRadius = 1500;
 
 /**
- * One flight curving round a centre (FD-99: fan-shaped steps round a curved wall): ring-sector treads from
+ * One flight curving round a centre (fan-shaped steps round a curved wall): ring-sector treads from
  * `innerRadius` out to `innerRadius + width`, wider at the outer edge; the walking line in the middle of the width, the
  * going measured along it. (x, y) is the middle of the first riser and `rotation` the walking-up direction there; the
  * centre lies to the side it turns to (`turn`). A rail on either edge, its side as walking up.
@@ -457,7 +457,7 @@ function pointInOutline(point: Vec2, outline: readonly Vec2[]): boolean {
 /**
  * The voids over the floor (`own`: cut through the flat ceilings of its rooms: its stairs' footprints and the floor
  * above's voids) and through it (`below`: cut through its slab and room floors: the floor below's stairs coming up and
- * its own voids, FD-90).
+ * its own voids).
  */
 export interface SceneVoids {
     own: PlanPoint[][];
@@ -543,7 +543,7 @@ const SteelColor = '#4a4845';
 /**
  * The stair in 3D, in its own group at the stair's (x, y) so a drag moves it: the flights (a solid run with a sloping
  * soffit, stringers with treads and risers, or floating treads), the landings, the handrails with their posts (and the
- * `railingStyle` infill, FD-90, in `railingMaterialId`), the wall handrails, and a spiral's pole and wedge treads.
+ * `railingStyle` infill, in `railingMaterialId`), the wall handrails, and a spiral's pole and wedge treads.
  * Tagged `stairId` for picking; the solid parts have a section-fill twin for the wall cut. The group is merged
  * (`mergeStatic()`).
  */
@@ -804,7 +804,7 @@ function sectionTwin(mesh: THREE.Mesh, sectionMaterial: THREE.Material): THREE.M
     return twin;
 }
 
-// --- Walking the stairs (FD-78) ---
+// --- Walking the stairs ---
 
 /** mm of walking line from its end (going up) or its start (going down) where the walker goes on to the next floor. */
 export const StairLanding = 400;
@@ -816,7 +816,7 @@ const SpiralOpening = 0.75;
 /**
  * A stair the walker may walk on: its walking line and footprint in plan mm, and how far its floor lies under the
  * shown one (0 for the floor's own stairs, or their `baseZ`; −rise for those coming up from below). `below` marks the
- * latter, `free` the floor's own with a rise of their own (garden steps, FD-87), which lead to no other floor and are
+ * latter, `free` the floor's own with a rise of their own (garden steps), which lead to no other floor and are
  * open at both ends. `open` says whether a footprint edge (by its middle) is where the walker steps on (the floor's own
  * stairs) or off (those from below).
  */

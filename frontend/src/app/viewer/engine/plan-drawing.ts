@@ -170,7 +170,7 @@ export function planLayout(bounds: Bounds, reserved = 0): PlanLayout {
 
 /**
  * The floor plan on one A4 page, with the title block, a scale bar and a north arrow. With `electrical` (a symbol set)
- * it is the electrical plan (FD-64): the furniture outlined faintly without names or dimensions, the electrical
+ * it is the electrical plan: the furniture outlined faintly without names or dimensions, the electrical
  * points' symbols over it with the wall points' elevations, and a legend in the title band.
  */
 export function planSheet(scene: Scene, info: SheetInfo, electrical?: ElectricalSymbols): Sheet & {scale: number} {
@@ -346,7 +346,7 @@ function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoin
 /**
  * The room schedule of the floor on A4 portrait pages: area, perimeter, clear height and volume per room, with totals.
  * A room under the roofs (`roomUnderRoofs()`, as the backend's schedule) gets its clear height's range and its volume
- * under the slope, and a column its area with at least 1.2 m of headroom. The floor's voids (FD-90) are taken off the
+ * under the slope, and a column its area with at least 1.2 m of headroom. The floor's voids are taken off the
  * rooms' areas (`netRoomArea()`) and listed after them, in no total.
  */
 export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
@@ -382,7 +382,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
             ];
         });
     const voidRows = (scene.voids ?? []).map((v): string[] => ['', `${v.name} (void)`, v.area.toFixed(2), '', '', '', ...(underRoofs ? [''] : [])]);
-    // The living area, garages (indoor, unheated; FD-89) and open-air rooms, each totalled apart.
+    // The living area, garages (indoor, unheated) and open-air rooms, each totalled apart.
     const kind = (room: Pick<Room, 'type'>): string => (isOutdoor(room) ? 'Outdoor' : isAncillaryRoom(room) ? 'Garage' : 'Indoor');
     const total = (label: string): string[] | null => {
         const matching = measured.filter((m) => kind(m.room) === label);
@@ -511,7 +511,7 @@ function roofPlanShapes(roofs: FloorRoofs): Shape[] {
 }
 
 /**
- * The roofs' rainwater goods (FD-91): the gutters' outer edge dashed above the cut, and the downpipes, which the cut
+ * The roofs' rainwater goods: the gutters' outer edge dashed above the cut, and the downpipes, which the cut
  * passes, as small circles.
  */
 function rainwaterShapes(roofs: readonly Roof[]): Shape[] {
@@ -591,7 +591,7 @@ function plotShape(plot: Plot): Shape {
     return {points: plot.polygon.map(([x, y]) => ({x, y})), closed: true, style: {stroke: Ink, width: 0.35, dash: PlotDash}};
 }
 
-/** A void (FD-90): its outline crossed by its diagonals, as voids are drawn on plans. */
+/** A void: its outline crossed by its diagonals, as voids are drawn on plans. */
 function voidShapes(floorVoid: FloorVoid): Shape[] {
     const points = floorVoid.polygon.map(([x, y]) => ({x, y}));
     return [
@@ -600,8 +600,8 @@ function voidShapes(floorVoid: FloorVoid): Shape[] {
     ];
 }
 
-/** A railing (FD-90): a thin line along it. */
-/** A section line's dash-dot cut (FD-94). */
+/** A railing: a thin line along it. */
+/** A section line's dash-dot cut. */
 const SectionStyle: Style = {stroke: Ink, width: 0.35, dash: '5 1.2 0.8 1.2'};
 
 const sectionEnds = (section: SectionLine): Vec2[] => [
@@ -678,7 +678,7 @@ function cutStretches(
     slope: HeightAt | null = null,
 ): [number, number][] {
     const levels = [PlanCutHeight, 2 * piece.bottom, 2 * piece.top, wallHeight, piece.top];
-    // A sloping top (FD-87) bends where it crosses the cut, or where half of it does (a low wall's cut).
+    // A sloping top bends where it crosses the cut, or where half of it does (a low wall's cut).
     const slopes: HeightAt[] = slope === null ? [] : [slope, (p): number => slope(p) / 2];
     const spans: [number, number][] = [];
     const samples = wallSamples(frame, piece.from, piece.to);
@@ -822,7 +822,7 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
             }
             shapes.push(wallRect(frame, from, to, h, -h, OutlineStyle));
             if (opening.walkable !== true) {
-                // The glass where the frame stands across the wall (set in by `inset`, FD-89).
+                // The glass where the frame stands across the wall (set in by `inset`).
                 const centre = frameBand(opening, wall.thickness).centre;
                 shapes.push(
                     wallLine(frame, from, to, centre + GlassGap, ThinStyle),
@@ -845,7 +845,7 @@ function openingShapes(wall: Wall, roofs: FloorRoofs = []): Shape[] {
 
 /** A swinging leaf opened square into its side, and the arc its free edge sweeps. */
 function swingShapes(frame: WallFrame, leaf: Leaf): Shape[] {
-    // Square open, turned about its pin (FD-105); the arc is the free edge's way round the pin.
+    // Square open, turned about its pin; the arc is the free edge's way round the pin.
     const {start, dir, normal} = swungLeaf(frame, leaf, Math.PI / 2);
     const at = (along: number, across: number): Vec2 => ({
         x: start.x + dir.x * along + normal.x * across,
@@ -878,7 +878,7 @@ function slideShapes(frame: WallFrame, leaf: Leaf, opening: Opening): Shape[] {
 }
 
 /**
- * A lifting garage door (FD-89): the leaf closed behind the opening, and dashed where it goes overhead in the garage: a
+ * A lifting garage door: the leaf closed behind the opening, and dashed where it goes overhead in the garage: a
  * sectional door's as deep as it is high, an up-and-over door's two thirds in (and a third out over the drive), a
  * roller door's drum over the opening.
  */

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Service\Editor\Exception\EditException;
 
 /**
  * The `params` of a column or chimney (see ItemKindCatalog and the viewer's structure builder): `shape` must be one the

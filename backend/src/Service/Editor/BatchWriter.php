@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
 use Closure;
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ChangeOperationEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
-use FlatDesigner\Service\Editor\Element\State;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Project\ProjectRevisionService;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ChangeOperationEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\User;
+use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\Element\State;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Project\ProjectRevisionService;
 use MarekSkopal\ORM\ORM;
 
 /**

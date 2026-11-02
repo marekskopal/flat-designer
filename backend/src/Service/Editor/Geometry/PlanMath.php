@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
  * Plan geometry on float points (mm) for `RoomDetector` and the room measures, matching the helpers of the frontend twin.

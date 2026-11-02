@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
-use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
-use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
-use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
-use FlatDesigner\Model\Entity\Enum\StairTurnEnum;
-use FlatDesigner\Model\Repository\StairRepository;
+use Izbik\Model\Entity\Enum\RailingStyleEnum;
+use Izbik\Model\Entity\Enum\StairConstructionEnum;
+use Izbik\Model\Entity\Enum\StairRailingEnum;
+use Izbik\Model\Entity\Enum\StairShapeEnum;
+use Izbik\Model\Entity\Enum\StairTurnEnum;
+use Izbik\Model\Repository\StairRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -18,7 +18,7 @@ use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * A stair from its floor up to the next one (FD-37). (x, y) is the middle of the first step's front edge, plan mm, and
+ * A stair from its floor up to the next one. (x, y) is the middle of the first step's front edge, plan mm, and
  * `rotation` the walking-up direction of the first flight (degrees counter-clockwise, 0 walks up north, +y). The rise
  * is the floors' (`StairRise`); `risers` null splits it into as few steps as keep each at most 180 mm. `width` is a
  * flight's, or a spiral's diameter. The stair cuts a void through the floor above as large as its footprint.
@@ -30,7 +30,7 @@ class Stair extends AEntity
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
 
-	/** A rise of its own, mm (FD-87): the stair does not climb to the next floor (garden steps, deck steps); null: it does. */
+	/** A rise of its own, mm: the stair does not climb to the next floor (garden steps, deck steps); null: it does. */
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $rise = null;
 
@@ -38,11 +38,11 @@ class Stair extends AEntity
 	#[Column(type: Type::Int)]
 	public int $baseZ = 0;
 
-	/** A curved flight's inner edge, mm from the centre it curves round (FD-99); null for the other shapes. */
+	/** A curved flight's inner edge, mm from the centre it curves round; null for the other shapes. */
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $innerRadius = null;
 
-	/** The railing's infill (FD-90); null: posts and a handrail only. */
+	/** The railing's infill; null: posts and a handrail only. */
 	#[ColumnEnum(enum: RailingStyleEnum::class, nullable: true)]
 	public ?RailingStyleEnum $railingStyle = null;
 

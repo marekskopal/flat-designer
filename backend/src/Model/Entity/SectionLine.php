@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Repository\SectionLineRepository;
+use Izbik\Model\Repository\SectionLineRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * A section line (FD-94): a cut through the building drawn on a floor's plan, from start to end in plan mm, looking to
+ * A section line: a cut through the building drawn on a floor's plan, from start to end in plan mm, looking to
  * the left of start → end and `depth` mm deep (null: all that lies beyond). The building section is drawn from it.
  */
 #[Entity(repositoryClass: SectionLineRepository::class)]

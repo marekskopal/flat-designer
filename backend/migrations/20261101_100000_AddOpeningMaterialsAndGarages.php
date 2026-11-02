@@ -9,7 +9,7 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 use MarekSkopal\ORM\Migrations\Migration\Query\Enum\ReferenceOptionEnum;
 
 /**
- * Opening materials and garages (FD-89): an opening's frame, outside frame and leaf materials, boarded leaves
+ * Opening materials and garages: an opening's frame, outside frame and leaf materials, boarded leaves
  * (`board_direction`), the opening type `GarageDoor` with its `garage_door_style`, a lift-and-slide door's
  * `fixed_panes`, the frame's `inset` from the outer face, the room type `Garage` and its concrete floor.
  */

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\ModelAsset;
+use Izbik\Model\Entity\ModelAsset;
 use const DATE_ATOM;
 
 /**

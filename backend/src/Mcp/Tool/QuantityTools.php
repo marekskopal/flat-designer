@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\MaterialPriceDto;
-use FlatDesigner\Dto\MaterialPricesDto;
-use FlatDesigner\Dto\QuantitiesDto;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Service\Quantities\MaterialPriceService;
-use FlatDesigner\Service\Quantities\QuantitiesService;
+use Izbik\Dto\MaterialPriceDto;
+use Izbik\Dto\MaterialPricesDto;
+use Izbik\Dto\QuantitiesDto;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Service\Quantities\MaterialPriceService;
+use Izbik\Service\Quantities\QuantitiesService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;

@@ -8,7 +8,7 @@ use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Site walls and outdoor stairs (FD-87): a wall's top may slope to `walls.height_end` at its end, and its bottom lie
+ * Site walls and outdoor stairs: a wall's top may slope to `walls.height_end` at its end, and its bottom lie
  * at `base_start` / `base_end` or follow the ground (`on_ground`); a stair may have a `rise` of its own (it does not
  * climb to the next floor) and stand at `base_z`.
  */

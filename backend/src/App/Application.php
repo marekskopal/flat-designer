@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\App;
+namespace Izbik\App;
 
-use FlatDesigner\Service\Dbal\DbContext;
+use Izbik\Service\Dbal\DbContext;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 

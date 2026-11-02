@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
  * A stair's plan: one flight, two flights round a quarter landing (L) or a half landing (U), a spiral, or one flight
- * curving round a centre (FD-99: fan-shaped garden steps round a curved wall, `innerRadius` from it).
+ * curving round a centre (fan-shaped garden steps round a curved wall, `innerRadius` from it).
  */
 enum StairShapeEnum: string
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\VariantSet;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\VariantSet;
 
 /** A variant set; its variants are the groups with this `variantSetId`, of which `activeGroupId` is shown. */
 final readonly class VariantSetDto

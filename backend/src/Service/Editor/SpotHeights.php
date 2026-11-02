@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Exception\EditException;
 
 /**
- * A plot's terrain (FD-86): up to `MaxPoints` spot heights [x, y, z] in whole mm, at least `MinSpacing` apart in plan.
+ * A plot's terrain: up to `MaxPoints` spot heights [x, y, z] in whole mm, at least `MinSpacing` apart in plan.
  * `Terrain` triangulates them.
  */
 final readonly class SpotHeights

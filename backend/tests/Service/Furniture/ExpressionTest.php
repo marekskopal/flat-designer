@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Furniture;
+namespace Izbik\Tests\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\ExpressionException;
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
-use FlatDesigner\Service\Furniture\Expression\Parser;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\Expression\ExpressionException;
+use Izbik\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Parser;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversNamespace;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -19,7 +19,7 @@ use const JSON_THROW_ON_ERROR;
  *
  * @phpstan-import-type Value from Values
  */
-#[CoversNamespace('FlatDesigner\Service\Furniture\Expression')]
+#[CoversNamespace('Izbik\Service\Furniture\Expression')]
 final class ExpressionTest extends TestCase
 {
 	private const string Fixture = __DIR__ . '/../../fixtures/furniture-expressions.json';

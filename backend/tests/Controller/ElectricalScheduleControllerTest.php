@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ElectricalScheduleController;
-use FlatDesigner\Dto\ElectricalTotalsDto;
-use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Furniture\DefinitionCategoryEnum;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Schedule\ElectricalScheduleService;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\ElectricalScheduleController;
+use Izbik\Dto\ElectricalTotalsDto;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Furniture\DefinitionCategoryEnum;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Schedule\ElectricalScheduleService;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use Migrations\SeedLightingCatalogueMigration;
 use PHPUnit\Framework\Attributes\CoversClass;

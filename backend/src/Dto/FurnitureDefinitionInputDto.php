@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Service\Request\BodyReader;
 
 /**
  * Body of furniture definition create and update. `scope` (default `user`: the author's library) and `projectId` (for

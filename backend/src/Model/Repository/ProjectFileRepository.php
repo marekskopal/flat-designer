@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\ProjectFile;
+use Izbik\Model\Entity\ProjectFile;
 
 /** @extends ARepository<ProjectFile> */
 final class ProjectFileRepository extends ARepository

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Support;
+namespace Izbik\Tests\Support;
 
-use FlatDesigner\App\Application;
-use FlatDesigner\App\ApplicationFactory;
-use FlatDesigner\Mcp\McpUserContext;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Project\SharedAssetIds;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
-use FlatDesigner\Service\Storage\FileStorageInterface;
+use Izbik\App\Application;
+use Izbik\App\ApplicationFactory;
+use Izbik\Mcp\McpUserContext;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Project\SharedAssetIds;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Service\Storage\FileStorageInterface;
 use League\Container\Container;
 use PDO;
 use PDOException;
@@ -155,7 +155,8 @@ final class AppHarness
 	private static function recreateDatabase(): void
 	{
 		$database = (string) getenv('MYSQL_DATABASE');
-		if ($database === 'flat_designer') {
+		// `flat_designer` is the application database of installs from before the rename.
+		if (in_array($database, ['izbik', 'flat_designer'], true)) {
 			throw new \RuntimeException('Refusing to run tests against the application database; set TEST_MYSQL_DATABASE.');
 		}
 

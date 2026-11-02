@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Element\RoofDetails;
-use FlatDesigner\Service\Editor\ItemPlacement;
-use FlatDesigner\Service\Editor\StructureParamsValidator;
-use FlatDesigner\Service\Project\FloorProvider;
-use FlatDesigner\Service\Project\SnapshotScenes;
-use FlatDesigner\Service\Provider\SceneProvider;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Element\RoofDetails;
+use Izbik\Service\Editor\ItemPlacement;
+use Izbik\Service\Editor\StructureParamsValidator;
+use Izbik\Service\Project\FloorProvider;
+use Izbik\Service\Project\SnapshotScenes;
+use Izbik\Service\Provider\SceneProvider;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use const JSON_THROW_ON_ERROR;
 
-/** Chimneys, items on the roof and a roof's gutters, downpipes, snow guards and ridge (FD-91). */
+/** Chimneys, items on the roof and a roof's gutters, downpipes, snow guards and ridge. */
 #[CoversClass(RoofDetails::class)]
 #[CoversClass(StructureParamsValidator::class)]
 #[CoversClass(ItemPlacement::class)]

@@ -6,7 +6,7 @@ import {roofLocal, roofLocalOutline, roofPlanes, RoofShapeFields, roofsUnderside
 import {groundAt} from './terrain';
 
 /**
- * What stands under the roofs of a floor (FD-38): the walls' tops, cut by the roofs' underside or rising to it, and the
+ * What stands under the roofs of a floor: the walls' tops, cut by the roofs' underside or rising to it, and the
  * rooms' ceilings, sloping with it where it comes lower than their ceiling height. Heights are mm above the floor's level.
  * TS only: the backend checks openings against the roofs' underside (`RoofGeometry`), it draws nothing.
  *
@@ -33,7 +33,7 @@ const fractionAlong = (frame: WallFrame, p: Vec2): number => (frame.length > 0 ?
 
 /**
  * A wall's own top at a plan point, sloping straight from `height` at its start to `heightEnd` at its end along the
- * wall on `frame` (FD-87); null when it is level. Linear along any line, so `roofBreaks()` takes it as a slope.
+ * wall on `frame`; null when it is level. Linear along any line, so `roofBreaks()` takes it as a slope.
  */
 export function wallHeightAt(wall: Pick<Wall, 'height' | 'heightEnd'>, frame: WallFrame): HeightAt | null {
     const end = wall.heightEnd ?? null;
@@ -44,8 +44,8 @@ export function wallHeightAt(wall: Pick<Wall, 'height' | 'heightEnd'>, frame: Wa
 }
 
 /**
- * The top of a wall at a plan point: its height (with `heightEnd` sloping straight to it along the wall on `frame`,
- * FD-87), cut by the roofs' underside where that is lower, or with `upToRoof` the underside wherever a roof is over it.
+ * The top of a wall at a plan point: its height (with `heightEnd` sloping straight to it along the wall on `frame`),
+ * cut by the roofs' underside where that is lower, or with `upToRoof` the underside wherever a roof is over it.
  * Null without roofs and slope, as the wall is then its height everywhere. The twin is `WallTop`.
  */
 export function wallTopAt(wall: Pick<Wall, 'height' | 'upToRoof' | 'heightEnd'>, roofs: FloorRoofs, frame?: WallFrame): HeightAt | null {
@@ -68,7 +68,7 @@ export function wallTopAt(wall: Pick<Wall, 'height' | 'upToRoof' | 'heightEnd'>,
 }
 
 /**
- * The bottom of a wall at a plan point (FD-87): on the floor's level, on its base sloping from `baseStart` to `baseEnd`
+ * The bottom of a wall at a plan point: on the floor's level, on its base sloping from `baseStart` to `baseEnd`
  * along it, or with `onGround` on the ground of the `plots`. Null on the floor's level. The twin is `WallBottom` (which
  * reads the ground under the centre line; here each face stands on the ground beside it).
  */
@@ -144,7 +144,7 @@ const valueOf = (f: Linear, p: Vec2): number => f.k + f.g.x * p.x + f.g.y * p.y;
 /**
  * Where along the line p → q (0–1) a height under the roofs may bend or step: where the line crosses a roof's edge,
  * where two planes meet (a ridge, a hip, two roofs) and where a plane, or one of the `slopes` (heights linear along the
- * line: a wall's own sloping top or base, FD-87), reaches one of `levels` (a wall's height, a ceiling's) or another.
+ * line: a wall's own sloping top or base), reaches one of `levels` (a wall's height, a ceiling's) or another.
  * Ascending, with 0 and 1; more than needed is harmless, as a height is linear between them. The twin is `RoofBreaks`.
  */
 export function roofBreaks(p: Vec2, q: Vec2, roofs: FloorRoofs, levels: readonly number[], slopes: readonly HeightAt[] = []): number[] {
@@ -464,7 +464,7 @@ export function topStretches(p: Vec2, q: Vec2, roof: RoofShapeFields, others: Fl
 export const HeadroomHeight = 1200;
 
 /**
- * A room under the roofs (FD-38): its clear height's range (mm, from its floor to the ceiling, which is its height or
+ * A room under the roofs: its clear height's range (mm, from its floor to the ceiling, which is its height or
  * the roof's underside where that is lower, not less than 0), its volume (mm³, under that ceiling) and the area (mm²)
  * where the clear height is at least `HeadroomHeight`, and the ceiling's area (mm², its sloped parts along the slope).
  * Null for an open-air or vaulted room, or one no roof reaches. Measured on the roofs' underside itself, without

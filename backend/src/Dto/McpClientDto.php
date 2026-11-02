@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** An MCP client the user has authorized. */
 final readonly class McpClientDto

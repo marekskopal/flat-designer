@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /**
- * An assembly whose `opens` is not `none` moves as one leaf (FD-106), e.g. a drawer front with its drawer box: each of
+ * An assembly whose `opens` is not `none` moves as one leaf, e.g. a drawer front with its drawer box: each of
  * its parts gets `props.leaf`, `{key, box, …the assembly's options}` (the box in the item's frame), and none of them may
  * open on its own (an `opens` other than `none`). The TS twin is in frontend/src/app/viewer/engine/custom/definition.ts
  * (`leafKey()`, `opensAlone()`).

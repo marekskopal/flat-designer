@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ProjectFileController;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\CustomItemValidator;
-use FlatDesigner\Service\Furniture\ImageParameters;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\ProjectFileController;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\CustomItemValidator;
+use Izbik\Service\Furniture\ImageParameters;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /** Furniture showing a project image through an `image` parameter: the item's file, the scene's list, share guests. */

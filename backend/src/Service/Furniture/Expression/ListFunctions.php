@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Node\Values;
 
 /**
  * The list functions of the expression language. `share` and `offsets` lay sizes out in a row: front heights from the

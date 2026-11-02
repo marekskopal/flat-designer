@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Furniture;
+namespace Izbik\Tests\Service\Furniture;
 
-use FlatDesigner\Service\Dbal\ReconnectableDatabase;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Service\Dbal\ReconnectableDatabase;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use MarekSkopal\ORM\Migrations\Database\Provider\DatabaseProviderFactory;
 use Migrations\SeedDemoHouseFurnitureMigration;
 use PHPUnit\Framework\Attributes\CoversClass;
 
-/** The demo house's furniture migration (FD-93) adds its definitions and the cabinets' plinth grille, and takes both back. */
+/** The demo house's furniture migration adds its definitions and the cabinets' plinth grille, and takes both back. */
 #[CoversClass(FurnitureSeeds::class)]
 final class SeedDemoHouseFurnitureTest extends IntegrationTestCase
 {

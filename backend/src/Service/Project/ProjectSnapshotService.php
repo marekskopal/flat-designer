@@ -2,46 +2,46 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\FloorDto;
-use FlatDesigner\Dto\LocationDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
-use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
-use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Model\Entity\Item;
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\Room;
-use FlatDesigner\Model\Entity\VariantSet;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\ItemGroupRepository;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Model\Repository\OpeningRepository;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Model\Repository\VariantSetRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Comment\CommentKeeper;
-use FlatDesigner\Service\Editor\Element\ItemModelLink;
-use FlatDesigner\Service\Project\Exception\InvalidSnapshotException;
-use FlatDesigner\Service\Provider\SceneProvider;
+use Izbik\Dto\FloorDto;
+use Izbik\Dto\LocationDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\BoardDirectionEnum;
+use Izbik\Model\Entity\Enum\DoorFrameStyleEnum;
+use Izbik\Model\Entity\Enum\DoorHandleEnum;
+use Izbik\Model\Entity\Enum\DoorLeafStyleEnum;
+use Izbik\Model\Entity\Enum\GarageDoorStyleEnum;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Enum\OpeningHingeEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\RoomTypeEnum;
+use Izbik\Model\Entity\Enum\ShutterStyleEnum;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Model\Entity\Item;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Entity\Opening;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\Room;
+use Izbik\Model\Entity\VariantSet;
+use Izbik\Model\Entity\Wall;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\ItemGroupRepository;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Model\Repository\OpeningRepository;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Model\Repository\VariantSetRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Comment\CommentKeeper;
+use Izbik\Service\Editor\Element\ItemModelLink;
+use Izbik\Service\Project\Exception\InvalidSnapshotException;
+use Izbik\Service\Provider\SceneProvider;
 use JsonException;
 use stdClass;
 use const JSON_THROW_ON_ERROR;
@@ -266,7 +266,7 @@ final readonly class ProjectSnapshotService
 			$room->floorElevation = $data->nullableInt('floorElevation') ?? 0;
 			// Nor ceilings and skirting before they had their own fields.
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
-			// Snapshots taken before façades (FD-88) have none: the façade material.
+			// Snapshots taken before façades have none: the façade material.
 			$room->soffitMaterial = $materials[$data->nullableInt('soffitMaterialId') ?? 0] ?? null;
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
 			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
@@ -309,7 +309,7 @@ final readonly class ProjectSnapshotService
 			$wall->rightFinishes = $data->nullableFinishes('rightFinishes');
 			// Snapshots taken before roofs have no wall rising to one.
 			$wall->upToRoof = $data->raw('upToRoof') === true;
-			// Snapshots taken before site walls (FD-87): level, on the floor.
+			// Snapshots taken before site walls: level, on the floor.
 			$wall->heightEnd = $data->nullableInt('heightEnd');
 			$wall->baseStart = $data->nullableInt('baseStart') ?? 0;
 			$wall->baseEnd = $data->nullableInt('baseEnd') ?? 0;
@@ -350,11 +350,11 @@ final readonly class ProjectSnapshotService
 				$restored->shutters = ShutterStyleEnum::tryFrom($opening->nullableString('shutters') ?? '');
 				$restored->shutterMaterial = $materials[$opening->nullableInt('shutterMaterialId') ?? 0] ?? null;
 				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
-				// Snapshots taken before façades (FD-88): a bare reveal.
+				// Snapshots taken before façades: a bare reveal.
 				$restored->revealLining = $opening->raw('revealLining') === true;
 				// And before niches.
 				$restored->depth = $opening->nullableInt('depth');
-				// And before opening materials, garage doors, fixed panes and insets (FD-89).
+				// And before opening materials, garage doors, fixed panes and insets.
 				$restored->frameMaterial = $materials[$opening->nullableInt('frameMaterialId') ?? 0] ?? null;
 				$restored->outsideFrameMaterial = $materials[$opening->nullableInt('outsideFrameMaterialId') ?? 0] ?? null;
 				$restored->leafMaterial = $materials[$opening->nullableInt('leafMaterialId') ?? 0] ?? null;
@@ -449,7 +449,7 @@ final readonly class ProjectSnapshotService
 			// Snapshots taken before Custom items existed have no definition ids, before Model items no model ids.
 			$item->definition = $definitions[$data->nullableInt('definitionId') ?? 0] ?? null;
 			$item->model = $this->modelLink->forProject($floor->project, $data->nullableInt('modelId'));
-			// Snapshots taken before terrain (FD-86): on the floor's level.
+			// Snapshots taken before terrain: on the floor's level.
 			$item->onGround = $data->raw('onGround') === true;
 			$item->onRoof = $data->raw('onRoof') === true;
 			$this->itemRepository->persist($item);

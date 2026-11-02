@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\SavedView;
+use Izbik\Model\Entity\SavedView;
 use const DATE_ATOM;
 
 /** A saved view; `settings.variants` is an object of variant set id: group id. */

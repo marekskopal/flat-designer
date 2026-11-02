@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\MaterialPricesDto;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Quantities\MaterialPriceService;
-use FlatDesigner\Service\Quantities\QuantitiesService;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\MaterialPricesDto;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Quantities\MaterialPriceService;
+use Izbik\Service\Quantities\QuantitiesService;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use MarekSkopal\Router\Attribute\RoutePut;

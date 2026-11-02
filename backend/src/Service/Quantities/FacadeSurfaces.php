@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
-use FlatDesigner\Dto\OpeningDto;
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Dto\WallFinishDto;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Service\Editor\Geometry\FacadeSpans;
-use FlatDesigner\Service\Editor\Geometry\Ground;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\Spans;
-use FlatDesigner\Service\Editor\Geometry\WallBottom;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Editor\Geometry\WallTop;
+use Izbik\Dto\OpeningDto;
+use Izbik\Dto\RoomDto;
+use Izbik\Dto\WallDto;
+use Izbik\Dto\WallFinishDto;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Service\Editor\Geometry\FacadeSpans;
+use Izbik\Service\Editor\Geometry\Ground;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\Spans;
+use Izbik\Service\Editor\Geometry\WallBottom;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Editor\Geometry\WallTop;
 
 /**
- * A floor's façades (FD-88): the wall faces outside every room (`FacadeSpans`), per material, without the openings. A
+ * A floor's façades: the wall faces outside every room (`FacadeSpans`), per material, without the openings. A
  * face's own bands count where they lie between the wall's bottom (its base or the ground; on the floor, the lowest
  * band reaches below the floor's level, a plinth) and its top (sloping, or under the roofs); the rest of the face is in
  * the wall's material, or for an exterior wall without one the project's façade material. Summed strip by strip along

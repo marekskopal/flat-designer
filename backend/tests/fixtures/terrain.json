@@ -1,5 +1,5 @@
 {
-	"description": "Plot terrain from spot heights (FD-86): Terrain.php and viewer/engine/terrain.ts. heights are the ground at the queries, mm (±0.01); vertices and triangles count the spot heights plus the boundary corners and their triangulation.",
+	"description": "Plot terrain from spot heights: Terrain.php and viewer/engine/terrain.ts. heights are the ground at the queries, mm (±0.01); vertices and triangles count the spot heights plus the boundary corners and their triangulation.",
 	"cases": [
 		{
 			"name": "flat without spot heights",

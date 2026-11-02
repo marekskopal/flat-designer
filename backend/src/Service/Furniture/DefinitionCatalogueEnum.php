@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /**
- * Where a definition is filed in the editor's Add library (its optional `catalogue`, FD-107); the evaluators do not read
+ * Where a definition is filed in the editor's Add library (its optional `catalogue`); the evaluators do not read
  * it. Without one the definition goes under Other.
  */
 enum DefinitionCatalogueEnum: string

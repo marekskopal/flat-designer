@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Service\Editor\UndoService;
+use Izbik\Dto\EditResultDto;
+use Izbik\Service\Editor\UndoService;
 use Mcp\Capability\Attribute\McpTool;
 
 /** Undo/redo of this MCP client's own changes. */

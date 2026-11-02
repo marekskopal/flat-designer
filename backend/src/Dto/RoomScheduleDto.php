@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** The room schedule of a project or one floor (working copy): the floors' rooms and the indoor, ancillary and outdoor totals. */
 final readonly class RoomScheduleDto

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\ItemGroup;
 
 /** An item group; its members are the items with this `groupId`. A variant of the set `variantSetId`. */
 final readonly class GroupDto

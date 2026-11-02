@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\DefinitionEncoder;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\DefinitionEncoder;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * The global seeds get the `catalogue` their files now give them (FD-107: where the editor's Add library files them),
+ * The global seeds get the `catalogue` their files now give them (where the editor's Add library files them),
  * patched in place after `format` and the electrical `category` and `schedule`, as in the files, so an admin's later
  * edits stay; a fresh database gets the files already, and a seed that has a catalogue keeps it. Copies in libraries and
  * projects get none (they are listed apart).

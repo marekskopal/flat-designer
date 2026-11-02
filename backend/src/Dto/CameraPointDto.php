@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** A camera point in plan millimetres: x east, y north, z the elevation above the floor. */
 final readonly class CameraPointDto implements ArrayFactoryInterface

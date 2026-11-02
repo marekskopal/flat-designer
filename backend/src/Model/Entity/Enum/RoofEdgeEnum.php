@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
- * An eaves edge of a roof in its own frame (FD-91): the front (−t, where a shed rises from), the back, and a hip roof's
+ * An eaves edge of a roof in its own frame: the front (−t, where a shed rises from), the back, and a hip roof's
  * left (−s) and right sides.
  */
 enum RoofEdgeEnum: string

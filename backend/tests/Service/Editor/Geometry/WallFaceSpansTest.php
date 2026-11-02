@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Editor\Geometry;
+namespace Izbik\Tests\Service\Editor\Geometry;
 
-use FlatDesigner\Dto\OpeningDto;
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Service\Editor\Geometry\FacadeSpans;
-use FlatDesigner\Service\Editor\Geometry\Spans;
-use FlatDesigner\Service\Editor\Geometry\WallFaceSpans;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Dto\OpeningDto;
+use Izbik\Dto\WallDto;
+use Izbik\Model\Entity\Enum\DoorFrameStyleEnum;
+use Izbik\Model\Entity\Enum\DoorLeafStyleEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Service\Editor\Geometry\FacadeSpans;
+use Izbik\Service\Editor\Geometry\Spans;
+use Izbik\Service\Editor\Geometry\WallFaceSpans;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

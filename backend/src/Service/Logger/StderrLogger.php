@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Logger;
+namespace Izbik\Service\Logger;
 
 use Psr\Log\AbstractLogger;
 use Psr\Log\LogLevel;

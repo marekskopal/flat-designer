@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Middleware;
+namespace Izbik\Middleware;
 
-use FlatDesigner\Middleware\Exception\NotAuthorizedException;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Authentication\Exception\InvalidTokenException;
-use FlatDesigner\Service\Authentication\TokenService;
-use FlatDesigner\Service\Provider\UserProvider;
-use FlatDesigner\Service\Realtime\RealtimeOriginContext;
+use Izbik\Middleware\Exception\NotAuthorizedException;
+use Izbik\Route\Routes;
+use Izbik\Service\Authentication\Exception\InvalidTokenException;
+use Izbik\Service\Authentication\TokenService;
+use Izbik\Service\Provider\UserProvider;
+use Izbik\Service\Realtime\RealtimeOriginContext;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;

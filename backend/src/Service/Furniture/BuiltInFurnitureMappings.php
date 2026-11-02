@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /** The per-kind mappings of `BuiltInFurnitureConverter`: a built-in kind's params to its definition's values and back. */
 final readonly class BuiltInFurnitureMappings

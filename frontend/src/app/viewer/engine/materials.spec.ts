@@ -39,7 +39,7 @@ describe('herringbone', () => {
     });
 });
 
-describe('MaterialLibrary (FD-92)', () => {
+describe('MaterialLibrary', () => {
     const dto = (id: number, pattern: Material['pattern'], tileWidth: number | null, tileHeight: number | null): Material => ({
         id,
         code: `m${id}`,

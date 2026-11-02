@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Response;
+namespace Izbik\Response;
 
 final class NotAuthorizedResponse extends ErrorResponse
 {

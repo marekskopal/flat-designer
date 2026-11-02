@@ -66,7 +66,7 @@ jobs:
             - name: Boot the database
               run: docker compose up -d --wait db
 
-            # One-off backend container with the host vendor/ bind-mounted, database flat_designer_test.
+            # One-off backend container with the host vendor/ bind-mounted, database izbik_test.
             - name: Run PHPUnit
               run: make test-backend
 

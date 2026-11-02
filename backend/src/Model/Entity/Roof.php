@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
-use FlatDesigner\Model\Entity\Enum\RidgeStyleEnum;
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Model\Repository\RoofRepository;
+use Izbik\Model\Entity\Enum\GutterProfileEnum;
+use Izbik\Model\Entity\Enum\RidgeStyleEnum;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Model\Repository\RoofRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -16,7 +16,7 @@ use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * A roof over a floor (FD-38): a rectangle `width` × `depth` centred on (x, y), plan mm, turned by `rotation` (degrees
+ * A roof over a floor: a rectangle `width` × `depth` centred on (x, y), plan mm, turned by `rotation` (degrees
  * counter-clockwise; the ridge runs along the width, east–west at 0). The rectangle is the eaves line, where the roof's
  * underside is `eaveHeight` above the floor's level; the planes rise from it at `pitch` and reach `overhang` past it at
  * the eaves and `vergeOverhang` past the gables, whose verges `startSkew` / `endSkew` may turn. `thickness` is the rafters and covering, square to the slope. The
@@ -29,7 +29,7 @@ class Roof extends AEntity
 	#[Column(type: Type::Timestamp, nullable: true)]
 	public ?DateTimeImmutable $deletedAt = null;
 
-	/** Gutters along the eaves of a pitched roof (FD-91). */
+	/** Gutters along the eaves of a pitched roof. */
 	#[ColumnEnum(enum: GutterProfileEnum::class)]
 	public GutterProfileEnum $gutters = GutterProfileEnum::None;
 
@@ -49,8 +49,7 @@ class Roof extends AEntity
 	public RidgeStyleEnum $ridgeStyle = RidgeStyleEnum::Box;
 
 	/**
-	 * A gable's or shed's verge at the ridge's start (−s) and end, degrees counter-clockwise, 0 square to the ridge (FD-97,
-	 * `RoofSkew`).
+	 * A gable's or shed's verge at the ridge's start (−s) and end, degrees counter-clockwise, 0 square to the ridge (`RoofSkew`).
 	 */
 	#[Column(type: Type::Int)]
 	public int $startSkew = 0;

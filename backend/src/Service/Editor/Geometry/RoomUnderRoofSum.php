@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 use const INF;
 

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\SavedViewSettingsDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\SavedView;
-use FlatDesigner\Model\Entity\VariantSet;
-use FlatDesigner\Model\Repository\SavedViewRepository;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Dto\SavedViewSettingsDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\SavedView;
+use Izbik\Model\Entity\VariantSet;
+use Izbik\Model\Repository\SavedViewRepository;
+use Izbik\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
 
 /**

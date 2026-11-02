@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Project;
+use Izbik\Model\Entity\Project;
 
 /**
  * Where the project's building stands, for the viewer's sun: true north `northAngle` degrees clockwise from plan north

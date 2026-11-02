@@ -65,7 +65,7 @@ function meshesIn(root: THREE.Object3D, wanted: THREE.Material): THREE.Mesh[] {
     return found;
 }
 
-describe('frame band (FD-89)', () => {
+describe('frame band', () => {
     it('centres a window, spans the wall with a door lining, and sets a frame in from the outer face', () => {
         expect(frameBand(opening({type: 'Window'}), 300)).toEqual({centre: 0, depth: 80});
         expect(frameBand(opening({}), 300)).toEqual({centre: 0, depth: 300});
@@ -87,7 +87,7 @@ describe('frame band (FD-89)', () => {
     });
 });
 
-describe('lift-and-slide doors (FD-89)', () => {
+describe('lift-and-slide doors', () => {
     const door = opening({type: 'SlidingDoor', width: 3640, fixedPanes: 2, hinge: 'Start'});
 
     it('divides the opening into panes, the one away from the hinge sliding a pane towards it', () => {
@@ -119,7 +119,7 @@ describe('lift-and-slide doors (FD-89)', () => {
     });
 });
 
-describe('garage doors (FD-89)', () => {
+describe('garage doors', () => {
     const sectional = opening({type: 'GarageDoor', width: 2500, height: 2125, garageDoorStyle: 'Sectional', side: 'Left'});
 
     it('hangs one lifting leaf behind the opening on the garage side, overlapping it', () => {
@@ -180,7 +180,7 @@ describe('garage doors (FD-89)', () => {
     });
 });
 
-describe('opening materials and boarded leaves (FD-89)', () => {
+describe('opening materials and boarded leaves', () => {
     it('dresses the frame, the leaf and a window frame outside in their own materials', () => {
         const door = opening({frameMaterialId: 1, leafMaterialId: 2, leafStyle: 'Boarded', leafPanels: 6});
         const group = buildWall(wallWith([door]), materials, new THREE.MeshBasicMaterial());

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\CutList;
+namespace Izbik\Service\Furniture\CutList;
 
-use FlatDesigner\Service\Furniture\ResolvedPart;
+use Izbik\Service\Furniture\ResolvedPart;
 
 /**
- * A front with `opens: fold` (a bi-fold flap, FD-106) is cut as two panels: the upper one `foldAt` (default half its
+ * A front with `opens: fold` (a bi-fold flap) is cut as two panels: the upper one `foldAt` (default half its
  * height, at most half) less half the `Joint` between them, the lower one the rest. The viewer draws it alike
  * (`foldPanels()` in frontend/src/app/viewer/engine/custom/fronts.ts).
  */

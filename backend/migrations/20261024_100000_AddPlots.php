@@ -8,7 +8,7 @@ use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 use MarekSkopal\ORM\Migrations\Migration\Query\Enum\ReferenceOptionEnum;
 
-/** Plots (FD-39): the land a floor's building stands on, outlined in plan mm, with its ground's material. */
+/** Plots: the land a floor's building stands on, outlined in plan mm, with its ground's material. */
 final class AddPlotsMigration extends Migration
 {
 	private const array ElementTypes = ['Item', 'Wall', 'Opening', 'Room', 'Group', 'VariantSet'];

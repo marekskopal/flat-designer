@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /**
  * Body of a new comment: a thread pinned to a point (plan mm, `z` above the floor) or a reply (`parentId`, which takes

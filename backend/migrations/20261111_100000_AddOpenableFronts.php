@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Openable fronts (FD-106): the cabinets' drawers become assemblies that slide out with their drawer boxes, their doors
+ * Openable fronts: the cabinets' drawers become assemblies that slide out with their drawer boxes, their doors
  * get shelves behind them, and every front a `softClose` parameter; the wall and tall kitchen cabinets get lift-up,
  * bi-fold and parallel lift flaps. Their rows are rewritten from the files, which a fresh database already seeds so;
  * `down()` writes back the files as they were before (`furniture/before-openable-fronts`).

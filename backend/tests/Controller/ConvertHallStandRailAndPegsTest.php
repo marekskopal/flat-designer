@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Service\Dbal\ReconnectableDatabase;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Service\Dbal\ReconnectableDatabase;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use MarekSkopal\ORM\Migrations\Database\Provider\DatabaseProviderFactory;
 use Migrations\ConvertHallStandRailAndPegsMigration;

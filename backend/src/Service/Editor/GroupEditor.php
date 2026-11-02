@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Item;
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ItemGroupRepository;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Item;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ItemGroupRepository;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Service\Editor\Element\ElementHandler;
 
 /**
  * Operations on item groups that change several elements as one change (one revision, one undo step, logged

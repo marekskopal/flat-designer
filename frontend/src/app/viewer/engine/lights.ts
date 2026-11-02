@@ -4,7 +4,7 @@ import * as THREE from 'three';
  * The artificial lights of a scene (light parts of furniture definitions, LED strips): each three.js light is tagged
  * `userData.fixtureLight` with its intensity when on, and glowing bulbs are tagged `userData.bulb`. Switching them off
  * hides them, so the shaders (compiled per number of lights) leave them out: kept at intensity 0, every lit surface would
- * still loop over them, which cost about 70% of a frame of the demo flat (FD-58). Switching recompiles the shaders.
+ * still loop over them, which cost about 70% of a frame of the demo flat. Switching recompiles the shaders.
  */
 export interface FixtureLight {
     /** Intensity while the lights are on. */

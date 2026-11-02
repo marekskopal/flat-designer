@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Response;
+namespace Izbik\Response;
 
 final class ForbiddenResponse extends ErrorResponse
 {

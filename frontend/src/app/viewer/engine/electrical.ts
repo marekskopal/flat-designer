@@ -9,7 +9,7 @@ import {MM, Vec2} from './plan-geometry';
 import {hiddenItemIds} from './variants';
 
 /**
- * The electrical plan (FD-64): the points of the Custom items whose definition has a `category`, drawn as symbols over
+ * The electrical plan: the points of the Custom items whose definition has a `category`, drawn as symbols over
  * the plan by the viewer (`buildElectrical()`) and the electrical plan PDF from the same paths. A symbol is drawn in a
  * unit frame: the point at the origin, +y away from the wall (out of the item's front), about one unit across.
  */

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Plot;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Plot;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Json\JsonDecoder;
 
 /**
  * A plot as the scene serves it: its boundary (plan mm), area in m², ground material (null: a lawn), level (mm) and the

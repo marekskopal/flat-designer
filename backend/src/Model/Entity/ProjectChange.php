@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\ActorTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ChangeOperationEnum;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Repository\ProjectChangeRepository;
+use Izbik\Model\Entity\Enum\ActorTypeEnum;
+use Izbik\Model\Entity\Enum\ChangeOperationEnum;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Repository\ProjectChangeRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;

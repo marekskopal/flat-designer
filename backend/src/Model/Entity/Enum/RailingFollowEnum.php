@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
- * How a railing (a fence, FD-100) meets the ground: `Level` at its `baseZ`; `Rake` standing on the floor's plots' ground,
+ * How a railing (a fence) meets the ground: `Level` at its `baseZ`; `Rake` standing on the floor's plots' ground,
  * its panels running with it; `Step` with each bay level over the highest ground under it.
  */
 enum RailingFollowEnum: string

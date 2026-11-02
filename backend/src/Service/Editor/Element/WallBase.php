@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\PlotRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\Ground;
-use FlatDesigner\Service\Editor\Geometry\WallBottom;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
+use Izbik\Model\Entity\Opening;
+use Izbik\Model\Entity\Wall;
+use Izbik\Model\Repository\PlotRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\Ground;
+use Izbik\Service\Editor\Geometry\WallBottom;
+use Izbik\Service\Editor\Geometry\WallLine;
 
 /**
- * A wall's bottom (FD-87): on a base (`baseStart` → `baseEnd`) or on the ground of the floor's plots (`onGround`).
+ * A wall's bottom: on a base (`baseStart` → `baseEnd`) or on the ground of the floor's plots (`onGround`).
  * Its top stands over the base (or the ground at its ends), and the openings' sills on the bottom. The top may lie below
- * the floor's level where the bottom is lower still (FD-98: a garden wall down the slope); a wall on the floor's level
+ * the floor's level where the bottom is lower still (a garden wall down the slope); a wall on the floor's level
  * is at least `MinHeight` high.
  */
 final readonly class WallBase

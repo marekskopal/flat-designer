@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 
 /** Floors of a project; a project always keeps at least one. */

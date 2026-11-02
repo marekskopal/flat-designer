@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
 use RuntimeException;
 

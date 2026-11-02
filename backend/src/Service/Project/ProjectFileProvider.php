@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
 use finfo;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectFile;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FloorUnderlayRepository;
-use FlatDesigner\Model\Repository\ProjectFileRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Storage\FileStorageInterface;
-use FlatDesigner\Service\Storage\S3Config;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectFile;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FloorUnderlayRepository;
+use Izbik\Model\Repository\ProjectFileRepository;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Storage\FileStorageInterface;
+use Izbik\Service\Storage\S3Config;
 use Throwable;
 use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;

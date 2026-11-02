@@ -7,7 +7,7 @@ namespace Migrations;
 use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** A user's symbol set for the electrical plan (FD-64). */
+/** A user's symbol set for the electrical plan. */
 final class AddUserElectricalSymbolsMigration extends Migration
 {
 	public function up(): void

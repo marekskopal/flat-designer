@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Lights and electrics (FD-31): a bare-bulb pendant with a cable path along the ceiling, a recessed downlight, a light
+ * Lights and electrics: a bare-bulb pendant with a cable path along the ceiling, a recessed downlight, a light
  * source for the lamps of the model library, a Schuko socket, a rocker switch, a data socket and a plumbing point, with
  * the plastics, fabric cable and copper they use.
  */

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /** Reading the plain settings of a parameter definition (`min`, `max`, `options`, …). */
 final readonly class ParameterInput

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression\Node;
+namespace Izbik\Service\Furniture\Expression\Node;
 
 /** `&&` / `||` of booleans; the right side is evaluated only when needed. */
 final readonly class LogicalNode implements Node

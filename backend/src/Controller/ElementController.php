@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\SceneEditor;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RoutePatch;

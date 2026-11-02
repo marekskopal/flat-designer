@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\Comment;
+use Izbik\Model\Entity\Comment;
 
 /** @extends ARepository<Comment> */
 final class CommentRepository extends ARepository

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Provider\SceneProvider;
+use Izbik\Route\Routes;
+use Izbik\Service\Provider\SceneProvider;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use Psr\Http\Message\ResponseInterface;

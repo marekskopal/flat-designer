@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Schedule;
+namespace Izbik\Tests\Service\Schedule;
 
-use FlatDesigner\Dto\FloorVoidDto;
-use FlatDesigner\Service\Editor\Geometry\PolygonOverlap;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Schedule\VoidArea;
+use Izbik\Dto\FloorVoidDto;
+use Izbik\Service\Editor\Geometry\PolygonOverlap;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Schedule\VoidArea;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

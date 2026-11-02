@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\CustomItemValidator;
-use FlatDesigner\Service\Editor\Element\ItemHandler;
-use FlatDesigner\Service\Project\ProjectSnapshotService;
-use FlatDesigner\Service\Project\SnapshotDefinitionRestorer;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\CustomItemValidator;
+use Izbik\Service\Editor\Element\ItemHandler;
+use Izbik\Service\Project\ProjectSnapshotService;
+use Izbik\Service\Project\SnapshotDefinitionRestorer;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 

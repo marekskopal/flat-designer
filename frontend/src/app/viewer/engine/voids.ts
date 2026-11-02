@@ -10,7 +10,7 @@ import {stairGeometry,StairPath} from './stairs';
 import {FloorRoofs} from './under-roof';
 
 /**
- * A room's floor area less the voids through it (FD-90), m², as the backend's room schedule takes it (`VoidArea`): the
+ * A room's floor area less the voids through it, m², as the backend's room schedule takes it (`VoidArea`): the
  * voids are taken not to overlap one another.
  */
 export function netRoomArea(room: Pick<Room, 'area' | 'polygon'>, voids: readonly Pick<FloorVoid, 'polygon'>[]): number {
@@ -53,7 +53,7 @@ interface LiningBand {
 }
 
 /**
- * The linings of the voids through and over the floor (FD-90), in one merged group: the floor's own voids and the
+ * The linings of the voids through and over the floor, in one merged group: the floor's own voids and the
  * stairs coming up through it (`stairsBelow` with a `voidLiningMaterialId`) are lined through its slab, down to the
  * lining's depth; the floor above's voids (`voidsAbove`) and its own stairs' voids from this floor's ceilings up to
  * the slab above, below the depth a void's lining stops at. So each floor draws its part of the well, and the stack

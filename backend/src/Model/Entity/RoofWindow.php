@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
-use FlatDesigner\Model\Repository\RoofWindowRepository;
+use Izbik\Model\Entity\Enum\RoofWindowTypeEnum;
+use Izbik\Model\Repository\RoofWindowRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -14,7 +14,7 @@ use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * A window in a roof's plane (FD-38). Its centre lies `along` the ridge and `across` it (mm, + towards the back) from
+ * A window in a roof's plane. Its centre lies `along` the ridge and `across` it (mm, + towards the back) from
  * the roof's centre in plan, so it moves and turns with the roof; the plane under that point carries it, `width`
  * across the slope and `length` up it.
  */

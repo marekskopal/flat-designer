@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Support;
+namespace Izbik\Tests\Support;
 
-use FlatDesigner\Model\Entity\User;
+use Izbik\Model\Entity\User;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\StreamFactory;
 use Laminas\Diactoros\UploadedFile;

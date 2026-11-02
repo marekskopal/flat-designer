@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** The electrical schedule of a project or one floor (working copy, shown variants): points per room and the totals. */
 final readonly class ElectricalScheduleDto

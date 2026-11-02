@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
  * Mitres of walls whose end points meet in pairs, as the viewer draws them (`wallJoints()` in

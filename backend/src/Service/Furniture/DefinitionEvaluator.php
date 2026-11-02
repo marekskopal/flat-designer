@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Node\Values;
 
 /**
  * Turns a furniture definition (decoded JSON, format 1, see docs/furniture-definitions-plan.md) and an item's size and

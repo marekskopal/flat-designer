@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
 use DateTimeImmutable;
-use FlatDesigner\Service\Upload\UploadTicketService;
+use Izbik\Service\Upload\UploadTicketService;
 use RuntimeException;
 use const DATE_ATOM;
 

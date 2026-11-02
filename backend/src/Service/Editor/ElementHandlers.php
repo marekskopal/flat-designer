@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
-use FlatDesigner\Service\Editor\Element\FloorVoidHandler;
-use FlatDesigner\Service\Editor\Element\GroupHandler;
-use FlatDesigner\Service\Editor\Element\ItemHandler;
-use FlatDesigner\Service\Editor\Element\OpeningHandler;
-use FlatDesigner\Service\Editor\Element\PlotHandler;
-use FlatDesigner\Service\Editor\Element\RailingHandler;
-use FlatDesigner\Service\Editor\Element\RoofHandler;
-use FlatDesigner\Service\Editor\Element\RoofWindowHandler;
-use FlatDesigner\Service\Editor\Element\RoomHandler;
-use FlatDesigner\Service\Editor\Element\SectionLineHandler;
-use FlatDesigner\Service\Editor\Element\StairHandler;
-use FlatDesigner\Service\Editor\Element\VariantSetHandler;
-use FlatDesigner\Service\Editor\Element\WallHandler;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\Element\FloorVoidHandler;
+use Izbik\Service\Editor\Element\GroupHandler;
+use Izbik\Service\Editor\Element\ItemHandler;
+use Izbik\Service\Editor\Element\OpeningHandler;
+use Izbik\Service\Editor\Element\PlotHandler;
+use Izbik\Service\Editor\Element\RailingHandler;
+use Izbik\Service\Editor\Element\RoofHandler;
+use Izbik\Service\Editor\Element\RoofWindowHandler;
+use Izbik\Service\Editor\Element\RoomHandler;
+use Izbik\Service\Editor\Element\SectionLineHandler;
+use Izbik\Service\Editor\Element\StairHandler;
+use Izbik\Service\Editor\Element\VariantSetHandler;
+use Izbik\Service\Editor\Element\WallHandler;
 
 final readonly class ElementHandlers
 {

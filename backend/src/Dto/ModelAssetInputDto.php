@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
-use FlatDesigner\Service\Request\FormReader;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Service\Request\Exception\InvalidRequestException;
+use Izbik\Service\Request\FormReader;
 
 /**
  * A model's describing fields (the file comes separately): name, description and the credits of a third-party model.

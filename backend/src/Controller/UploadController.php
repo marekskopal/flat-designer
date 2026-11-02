@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\ModelAssetDto;
-use FlatDesigner\Dto\ProjectFileDto;
-use FlatDesigner\Model\Entity\ModelAsset;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\ModelAsset\ModelAssetException;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Upload\UploadTicketException;
-use FlatDesigner\Service\Upload\UploadTicketService;
+use Izbik\Dto\ModelAssetDto;
+use Izbik\Dto\ProjectFileDto;
+use Izbik\Model\Entity\ModelAsset;
+use Izbik\Response\ErrorResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\ModelAsset\ModelAssetException;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Upload\UploadTicketException;
+use Izbik\Service\Upload\UploadTicketService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RoutePut;
 use Psr\Http\Message\ResponseInterface;

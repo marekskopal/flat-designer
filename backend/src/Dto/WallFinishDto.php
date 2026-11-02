@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** Horizontal band of a wall finish (e.g. tiling) around a room, heights in mm above the floor. */
 final readonly class WallFinishDto

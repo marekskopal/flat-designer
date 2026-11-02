@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Json\JsonDecoder;
 use RuntimeException;
 use stdClass;
 use const JSON_THROW_ON_ERROR;

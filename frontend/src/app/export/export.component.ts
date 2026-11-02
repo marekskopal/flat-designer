@@ -16,9 +16,9 @@ const DownloadSpacing = 400;
 
 /**
  * The viewer panel's exports of the floor as shown (its variants): the plan on A4 as a PDF, with the room schedule on
- * the following page, or the plan page alone as an SVG; the electrical plan (FD-64, when the floor has electrical points);
+ * the following page, or the plan page alone as an SVG; the electrical plan (when the floor has electrical points);
  * the rooms' wall elevations as a PDF; and the 3D model as glTF
- * (`glb`, made by the viewer). The building drawings (FD-94) take the shown floor with the floors below it (`building`):
+ * (`glb`, made by the viewer). The building drawings take the shown floor with the floors below it (`building`):
  * the façades on A3 and a section along each of their section lines, as a PDF or SVG files (one per sheet).
  */
 @Component({

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** Body of a furniture definition check: the definition only. */
 final readonly class FurnitureValidationInputDto implements ArrayFactoryInterface

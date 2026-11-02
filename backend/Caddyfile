@@ -9,11 +9,11 @@
 :80 {
 	encode zstd gzip
 
-	# Mercure hub for live updates of projects (FlatDesigner\Service\Realtime). Tokens are Mercure
-	# protocol 1.0 access JWTs minted by the backend (MercureAccessToken) with iss "flat-designer" and aud
+	# Mercure hub for live updates of projects (Izbik\Service\Realtime). Tokens are Mercure
+	# protocol 1.0 access JWTs minted by the backend (MercureAccessToken) with iss "izbik" and aud
 	# set to the resource identifier below, which docker-entrypoint.sh derives from MERCURE_PUBLISH_URL.
 	mercure {
-		issuer flat-designer {
+		issuer izbik {
 			publisher {
 				jwt {$MERCURE_PUBLISHER_JWT_KEY} HS256
 			}

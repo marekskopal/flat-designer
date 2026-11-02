@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Project;
+namespace Izbik\Tests\Service\Project;
 
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\UnderlayService;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\UnderlayService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

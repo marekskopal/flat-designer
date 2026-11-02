@@ -2,7 +2,7 @@
 
 The demo project (FD-40) recreates a real flat over MCP only, from its published plan and photos. This file is the
 reference for the modelling (FD-45): dimensions, rooms, the photos' camera positions and an inventory of everything in
-the flat, mapped to what Flat Designer has or to the task that adds it.
+the flat, mapped to what Izbik has or to the task that adds it.
 
 ## Source
 
@@ -192,7 +192,7 @@ Legend: **have** = an existing kind, definition, material or opening option. **F
 
 ## Result (FD-45)
 
-The flat was modelled by Claude Code over the flat-designer MCP server only. The human part was creating the empty
+The flat was modelled by Claude Code over the izbik MCP server only. The human part was creating the empty
 project and importing the plan, photos and poster with `make import-files`. Positions came from the plan underlay,
 read with `get_project_file` and small local measuring scripts.
 

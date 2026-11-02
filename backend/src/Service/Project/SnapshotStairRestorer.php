@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
-use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
-use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
-use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
-use FlatDesigner\Model\Entity\Enum\StairTurnEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Entity\Stair;
-use FlatDesigner\Model\Repository\StairRepository;
+use Izbik\Model\Entity\Enum\RailingStyleEnum;
+use Izbik\Model\Entity\Enum\StairConstructionEnum;
+use Izbik\Model\Entity\Enum\StairRailingEnum;
+use Izbik\Model\Entity\Enum\StairShapeEnum;
+use Izbik\Model\Entity\Enum\StairTurnEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Entity\Stair;
+use Izbik\Model\Repository\StairRepository;
 
 /** Restores a floor's stairs from a snapshot. An enum value it does not know (a case renamed since) takes the default, as the openings' do. */
 final readonly class SnapshotStairRestorer
@@ -50,12 +50,12 @@ final readonly class SnapshotStairRestorer
 				treadMaterial: $materials[$data->nullableInt('treadMaterialId') ?? 0] ?? null,
 				structureMaterial: $materials[$data->nullableInt('structureMaterialId') ?? 0] ?? null,
 			);
-			// Snapshots taken before outdoor stairs (FD-87): to the next floor, from the floor's level.
+			// Snapshots taken before outdoor stairs: to the next floor, from the floor's level.
 			$stair->rise = $data->nullableInt('rise');
-			// Missing in snapshots taken before curved stairs (FD-99).
+			// Missing in snapshots taken before curved stairs.
 			$stair->innerRadius = $data->nullableInt('innerRadius');
 			$stair->baseZ = $data->nullableInt('baseZ') ?? 0;
-			// Before railing styles and wall handrails (FD-90): posts and a handrail, no wall rail, an unlined void.
+			// Before railing styles and wall handrails: posts and a handrail, no wall rail, an unlined void.
 			$stair->railingStyle = RailingStyleEnum::tryFrom($data->nullableString('railingStyle') ?? '');
 			$stair->railingMaterial = $materials[$data->nullableInt('railingMaterialId') ?? 0] ?? null;
 			$stair->wallHandrail = StairRailingEnum::tryFrom($data->nullableString('wallHandrail') ?? '') ?? StairRailingEnum::None;

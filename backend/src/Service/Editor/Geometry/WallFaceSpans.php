@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Dto\WallDto;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
 
 /**
  * Where a room edge runs along wall faces, and the openings on it. Twin of `wallSpansAlongEdge()`, `wallFacesAlongEdge()`,

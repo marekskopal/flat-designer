@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
  * Polygons cut by half-planes (Sutherland–Hodgman), for the roofs' measures (`RoofCover`). A polygon cut by a half-plane

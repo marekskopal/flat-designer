@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\Expression;
-use FlatDesigner\Service\Furniture\Expression\ExpressionErrorEnum;
-use FlatDesigner\Service\Furniture\Expression\ExpressionException;
-use FlatDesigner\Service\Furniture\Expression\Node\LiteralNode;
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
-use FlatDesigner\Service\Furniture\Expression\Parser;
-use FlatDesigner\Service\Furniture\Expression\RecordValue;
+use Izbik\Service\Furniture\Expression\Expression;
+use Izbik\Service\Furniture\Expression\ExpressionErrorEnum;
+use Izbik\Service\Furniture\Expression\ExpressionException;
+use Izbik\Service\Furniture\Expression\Node\LiteralNode;
+use Izbik\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Parser;
+use Izbik\Service\Furniture\Expression\RecordValue;
 
 /**
  * Expressions inside a definition: parsing and evaluating them with errors pointing at their path.

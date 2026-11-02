@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Realtime;
+namespace Izbik\Service\Realtime;
 
 use Firebase\JWT\JWT;
 use SensitiveParameter;
@@ -14,11 +14,11 @@ use SensitiveParameter;
  */
 final readonly class MercureAccessToken
 {
-	public const string Issuer = 'flat-designer';
+	public const string Issuer = 'izbik';
 	public const string ActionPublish = 'publish';
 	public const string ActionSubscribe = 'subscribe';
 
-	private const string ClientId = 'flat-designer-backend';
+	private const string ClientId = 'izbik-backend';
 	private const string Algorithm = 'HS256';
 	private const string AuthorizationDetailType = 'https://mercure.rocks/authorization-detail';
 

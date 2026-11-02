@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use FlatDesigner\Dto\FloorDto;
-use FlatDesigner\Dto\ProjectDto;
-use FlatDesigner\Dto\ProjectInputDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Model\Repository\ProjectVersionRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Dto\FloorDto;
+use Izbik\Dto\ProjectDto;
+use Izbik\Dto\ProjectInputDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Model\Repository\ModelAssetRepository;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Model\Repository\ProjectVersionRepository;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 use MarekSkopal\ORM\ORM;
 
 /** Projects and who may see them: the owner, and admins (all projects). */

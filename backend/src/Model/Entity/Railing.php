@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
-use FlatDesigner\Model\Entity\Enum\RailingFollowEnum;
-use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
-use FlatDesigner\Model\Repository\RailingRepository;
+use Izbik\Model\Entity\Enum\HandrailProfileEnum;
+use Izbik\Model\Entity\Enum\RailingFollowEnum;
+use Izbik\Model\Entity\Enum\RailingStyleEnum;
+use Izbik\Model\Repository\RailingRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -16,7 +16,7 @@ use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * A railing (FD-90): a balustrade along a polyline in plan mm (a void's or gallery's edge, a terrace, the top of a
+ * A railing: a balustrade along a polyline in plan mm (a void's or gallery's edge, a terrace, the top of a
  * retaining wall), `height` mm from its base at `baseZ` against the floor's level to the top of its handrail. Posts
  * stand at its corners and at most `postSpacing` apart; the `style` fills between them.
  */
@@ -34,7 +34,7 @@ class Railing extends AEntity
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $spacing = null;
 
-	/** Level at `baseZ`, or on the plots' ground raking or stepping with it (FD-100). */
+	/** Level at `baseZ`, or on the plots' ground raking or stepping with it. */
 	#[ColumnEnum(enum: RailingFollowEnum::class)]
 	public RailingFollowEnum $follow = RailingFollowEnum::Level;
 

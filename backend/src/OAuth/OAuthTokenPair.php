@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\OAuth;
+namespace Izbik\OAuth;
 
 final readonly class OAuthTokenPair
 {

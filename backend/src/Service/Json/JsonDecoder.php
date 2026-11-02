@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Json;
+namespace Izbik\Service\Json;
 
 use JsonException;
 use RuntimeException;

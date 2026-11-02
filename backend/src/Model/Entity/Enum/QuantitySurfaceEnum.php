@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /** What a quantity line covers (`QuantitiesService`); a price without a material is the price of the surface's default look. */
 enum QuantitySurfaceEnum: string
@@ -17,13 +17,13 @@ enum QuantitySurfaceEnum: string
 	case Skirting = 'Skirting';
 	/** Boards of the Custom furniture (the cut list). */
 	case Furniture = 'Furniture';
-	/** A roof's covering (tiles, slate, metal, membrane) over its planes, along the slope (FD-38). */
+	/** A roof's covering (tiles, slate, metal, membrane) over its planes, along the slope. */
 	case RoofCovering = 'RoofCovering';
 	/** The underside of a roof's planes, along the slope. */
 	case Soffit = 'Soffit';
-	/** The wall faces outside every room, per material: bands, else the wall's own or the project's façade (FD-88). */
+	/** The wall faces outside every room, per material: bands, else the wall's own or the project's façade. */
 	case Facade = 'Facade';
-	/** A roof's gutters along its eaves, by the running metre (FD-91). */
+	/** A roof's gutters along its eaves, by the running metre. */
 	case Gutter = 'Gutter';
 	/** The downpipes from a roof's gutters to the ground, by the running metre. */
 	case Downpipe = 'Downpipe';

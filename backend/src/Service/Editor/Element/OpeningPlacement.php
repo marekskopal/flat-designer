@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
+use Izbik\Model\Entity\Enum\OpeningHingeEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Opening;
+use Izbik\Model\Entity\Wall;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Geometry\WallLine;
 
 /**
  * Where an opening may sit along its wall. Besides the opening itself, a sliding or pocket door takes the

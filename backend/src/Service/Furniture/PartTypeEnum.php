@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 use const SORT_REGULAR;
 
@@ -21,7 +21,7 @@ enum PartTypeEnum: string
 	/** Door or drawer leaf with a handle, as on the kitchen cabinets; it opens as its `Motion` options say. */
 	case Front = 'front';
 	/**
-	 * A solid box not cut from sheet material (FD-93): stone, concrete, cast or solid metal, a solid timber bar, fabric;
+	 * A solid box not cut from sheet material: stone, concrete, cast or solid metal, a solid timber bar, fabric;
 	 * the cut list counts it among the other parts.
 	 */
 	case Block = 'block';
@@ -91,7 +91,7 @@ enum PartTypeEnum: string
 	];
 
 	/**
-	 * How a front, or an assembly moving as one leaf (a drawer with its box), opens in the viewer (FD-106): `opens`
+	 * How a front, or an assembly moving as one leaf (a drawer with its box), opens in the viewer: `opens`
 	 * swing (a door on its `hinge` edge, default the side away from `handleSide`), slide (a drawer, `travel` mm out),
 	 * lift (a flap turning up about its top edge), fold (a bi-fold flap folding `foldAt` mm below its top, at most half
 	 * way) or parallel (a flap rising `travel` mm upright), or none; `angle` is how far it turns (degrees) and `softClose`

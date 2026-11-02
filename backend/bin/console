@@ -5,11 +5,11 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use FlatDesigner\Command\AdminCreateCommand;
-use FlatDesigner\Command\FilesImportCommand;
-use FlatDesigner\Command\ModelsImportCommand;
-use FlatDesigner\Command\MigrationRunCommand;
-use FlatDesigner\Command\OrmSchemaDumpCommand;
+use Izbik\Command\AdminCreateCommand;
+use Izbik\Command\FilesImportCommand;
+use Izbik\Command\ModelsImportCommand;
+use Izbik\Command\MigrationRunCommand;
+use Izbik\Command\OrmSchemaDumpCommand;
 use Symfony\Component\Console\Application;
 
 $application = new Application();

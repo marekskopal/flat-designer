@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
-use FlatDesigner\Model\Entity\Enum\RailingFollowEnum;
-use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FloorVoid;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Entity\Railing;
-use FlatDesigner\Model\Repository\FloorVoidRepository;
-use FlatDesigner\Model\Repository\RailingRepository;
-use FlatDesigner\Service\Editor\Element\RailingHandler;
+use Izbik\Model\Entity\Enum\HandrailProfileEnum;
+use Izbik\Model\Entity\Enum\RailingFollowEnum;
+use Izbik\Model\Entity\Enum\RailingStyleEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FloorVoid;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Entity\Railing;
+use Izbik\Model\Repository\FloorVoidRepository;
+use Izbik\Model\Repository\RailingRepository;
+use Izbik\Service\Editor\Element\RailingHandler;
 use const JSON_THROW_ON_ERROR;
 
-/** Restores a floor's voids and railings (FD-90) from a snapshot; snapshots taken before them have none. */
+/** Restores a floor's voids and railings from a snapshot; snapshots taken before them have none. */
 final readonly class SnapshotVoidRestorer
 {
 	public function __construct(private FloorVoidRepository $voidRepository, private RailingRepository $railingRepository)
@@ -56,7 +56,7 @@ final readonly class SnapshotVoidRestorer
 			);
 			$railing->baseZ = $data->nullableInt('baseZ') ?? 0;
 			$railing->spacing = $data->nullableInt('spacing');
-			// Missing in snapshots taken before fences (FD-100): level.
+			// Missing in snapshots taken before fences: level.
 			$railing->follow = RailingFollowEnum::tryFrom($data->nullableString('follow') ?? '') ?? RailingFollowEnum::Level;
 			$railing->createdAt = new DateTimeImmutable();
 			$railing->updatedAt = $railing->createdAt;

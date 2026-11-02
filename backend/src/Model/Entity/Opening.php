@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
-use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
-use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
-use FlatDesigner\Model\Repository\OpeningRepository;
+use Izbik\Model\Entity\Enum\BoardDirectionEnum;
+use Izbik\Model\Entity\Enum\DoorFrameStyleEnum;
+use Izbik\Model\Entity\Enum\DoorHandleEnum;
+use Izbik\Model\Entity\Enum\DoorLeafStyleEnum;
+use Izbik\Model\Entity\Enum\GarageDoorStyleEnum;
+use Izbik\Model\Entity\Enum\OpeningHingeEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\ShutterStyleEnum;
+use Izbik\Model\Repository\OpeningRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -42,7 +42,7 @@ use MarekSkopal\ORM\Enum\Type;
  * `side`), folded back against the wall or `shuttersClosed`, in `shutterMaterial` (none: painted timber). A `Niche` is a
  * recess `depth` mm deep into the `side` face; the rest of the wall stays behind it.
  *
- * FD-89: `frameMaterial` dresses the frame and sashes, `outsideFrameMaterial` a window's outer face (timber-aluminium),
+ * `frameMaterial` dresses the frame and sashes, `outsideFrameMaterial` a window's outer face (timber-aluminium),
  * `leafMaterial` the door leaves (none: the defaults, white doors and anthracite windows). A `Boarded` leaf runs its
  * boards `boardDirection`. A `GarageDoor` opens by its `garageDoorStyle`; a `SlidingDoor` with `fixedPanes` is a
  * lift-and-slide door: the opening divided into that many fixed panes and one sliding over its neighbour towards
@@ -98,7 +98,7 @@ class Opening extends AEntity
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $depth = null;
 
-	/** The reveal (jambs and head across the wall) is lined with the outer face's band (FD-88: a clad façade). */
+	/** The reveal (jambs and head across the wall) is lined with the outer face's band (a clad façade). */
 	#[Column(type: Type::Boolean)]
 	public bool $revealLining = false;
 

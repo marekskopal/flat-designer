@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\ActorTypeEnum;
-use FlatDesigner\Model\Entity\ProjectChange;
+use Izbik\Model\Entity\Enum\ActorTypeEnum;
+use Izbik\Model\Entity\ProjectChange;
 use const DATE_ATOM;
 
 /** One entry of a project's activity list. */

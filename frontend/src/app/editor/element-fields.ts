@@ -42,7 +42,7 @@ export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
 const hasLeaf = (element: Record<string, unknown>): boolean =>
     element['type'] !== 'Window' && element['type'] !== 'Passage' && element['type'] !== 'Niche';
 
-/** Openings with a frame of their own (FD-89): not passages or niches. */
+/** Openings with a frame of their own: not passages or niches. */
 const framed = (element: Record<string, unknown>): boolean => element['type'] !== 'Passage' && element['type'] !== 'Niche';
 
 /** A window, or a lift-and-slide door (with fixed panes): glazing in a frame. */
@@ -77,9 +77,9 @@ export interface FieldDef {
     openRun?: boolean;
 }
 
-/** A railing's infill (FD-90), a stair's too. */
+/** A railing's infill, a stair's too. */
 const RailingStyles: readonly RailingStyle[] = ['Balusters', 'Rods', 'Glass', 'Panel', 'Cable'];
-/** A railing's infill may make it a fence (FD-100); a stair's may not. */
+/** A railing's infill may make it a fence; a stair's may not. */
 const RailingAndFenceStyles: readonly RailingStyle[] = [...RailingStyles, 'Mesh', 'Boards'];
 const RailingStyleLabels: Readonly<Record<string, string>> = {Mesh: 'Fence: welded mesh', Boards: 'Fence: boards'};
 /** What a railing without a material looks like, by style (`railings.ts`): steel, a fence's timber or dark grey mesh. */

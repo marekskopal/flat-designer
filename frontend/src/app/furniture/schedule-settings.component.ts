@@ -6,8 +6,8 @@ import {scheduleCount} from '@app/viewer/engine/electrical';
 import {countParameters, toggledValue, valueParameters, withCatalogue, withCategory, withCount, withValues} from './schedule-settings';
 
 /**
- * The definition's settings picked above its JSON: its `catalogue` (where the Add library files it, FD-107), and its
- * `category` and `schedule` settings for the electrical schedule (FD-64): what its items count as, the int parameter
+ * The definition's settings picked above its JSON: its `catalogue` (where the Add library files it), and its
+ * `category` and `schedule` settings for the electrical schedule: what its items count as, the int parameter
  * multiplying an item and the parameters the schedule lists. A change emits the
  * whole definition, which the editor writes back into the JSON.
  */

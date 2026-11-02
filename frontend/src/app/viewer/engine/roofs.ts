@@ -72,7 +72,7 @@ const SelectedOutlineColor = '#e07b00';
 /** mm either side of the dashed outline that a click picks the roof by in the top view. */
 const PickBand = 150;
 
-/** What a roof's details need of the floor (FD-91). */
+/** What a roof's details need of the floor. */
 export interface RoofSurroundings {
     /** The outlines of the chimneys the floor draws (`chimneyOutline()`), cut out of the roofs they pass. */
     chimneys?: readonly PlanPoint[][];
@@ -81,7 +81,7 @@ export interface RoofSurroundings {
 }
 
 /**
- * A roof (FD-38) in its own frame: a group at its centre, turned by its rotation, so a drag or turn moves the group. Each
+ * A roof in its own frame: a group at its centre, turned by its rotation, so a drag or turn moves the group. Each
  * plane is a slab `thickness` thick square to the slope: the covering on top, the soffit under it and along its edges
  * (fascia and verges); pitched roofs get caps along the ridge and hips (`ridgeStyle`), a flat one its parapet. Its
  * windows go through the slab (`buildRoofWindow()`, holes square to the slope cut in the plane), each tagged
@@ -89,7 +89,7 @@ export interface RoofSurroundings {
  * merged, with a section-fill twin per plane, so the wall cut shows a solid section. The planes are `roofLocalPlanes()`,
  * each without where one of `others` (the floor's other roofs) is higher (`roofPlaneParts()`): roofs that meet form
  * valleys, and the caps stop there too. The chimneys passing through are cut out of the planes (upright holes), and a
- * pitched roof has its gutters, downpipes and snow guards (FD-91, `buildRoofDetails()`).
+ * pitched roof has its gutters, downpipes and snow guards (`buildRoofDetails()`).
  */
 export function buildRoof(
     roof: Roof,
@@ -561,7 +561,7 @@ function capGeometry(style: NonNullable<Roof['ridgeStyle']>, length: number): TH
 }
 
 /**
- * A pitched roof's details (FD-91) in its group: the gutters along its eaves (`roofGutters()`, hung under the covering's
+ * A pitched roof's details in its group: the gutters along its eaves (`roofGutters()`, hung under the covering's
  * edge, in front of the fascia), the downpipes from them back to the walls and down to the ground (`roofDownpipes()`), and
  * `snowGuards` rows of two bars on brackets on each plane, from `SnowGuardFirst` inside the eaves line up, where the roof is
  * the top.
@@ -749,7 +749,7 @@ function snowGuard(from: THREE.Vector3, to: THREE.Vector3, material: THREE.Mater
 }
 
 /**
- * A flat roof's parapet: one wall round its outline (with the overhang; skewed ends follow, FD-101), between the outline
+ * A flat roof's parapet: one wall round its outline (with the overhang; skewed ends follow), between the outline
  * and the outline set `ParapetThickness` in (`insetOutline()`, mitred at the corners), from its top `height` mm up.
  */
 function parapetWalls(roof: Roof, bottom: number, height: number, material: THREE.Material): THREE.Mesh[] {
@@ -854,7 +854,7 @@ const CornerSigns: [number, number][] = [
 /** A roof's fields for the geometry, its heights left out (the corners do not read them). */
 const shapeOf = (roof: RoofRectangle): RoofShapeFields => ({...roof, eaveHeight: 0, pitch: 0, thickness: 0});
 
-/** The corners of a roof's eaves line in plan (mm), counter-clockwise from its front left; its verges turned by the skews (FD-97). */
+/** The corners of a roof's eaves line in plan (mm), counter-clockwise from its front left; its verges turned by the skews. */
 export function roofCorners(roof: RoofRectangle): Vec2[] {
     return roofLocalOutline(shapeOf(roof), false).map((corner) => roofToPlan(roof, corner.x, corner.y));
 }

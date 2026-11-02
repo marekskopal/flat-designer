@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\ShareCommentsEnum;
-use FlatDesigner\Model\Entity\Enum\ShareViewEnum;
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Model\Entity\Enum\ShareCommentsEnum;
+use Izbik\Model\Entity\Enum\ShareViewEnum;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /**
  * What a share link shows: the view modes the guest may switch between, the one it opens in, the 3D camera
@@ -18,7 +18,7 @@ use FlatDesigner\Service\Request\Exception\InvalidRequestException;
  * exports (`exports`: the plan as PDF or SVG, the wall elevations, the 3D model as glTF), and whether the guest sees the
  * floor's open review comments or may also write them (`comments`), and whether the floors under the shared one are drawn
  * below it (`allFloors`), and whether the roofs show at the start (`roofs`), and whether the plan starts with the
- * electrical symbols (`electrical`, FD-64). Stored as JSON in
+ * electrical symbols (`electrical`). Stored as JSON in
  * `ShareLink::$settings`.
  */
 final readonly class ShareSettingsDto implements ArrayFactoryInterface

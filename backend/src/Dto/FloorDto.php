@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Floor;
+use Izbik\Model\Entity\Floor;
 
 /** A floor: its storey order (`level`), finished floor level above ±0.000 (`elevation`) and the slab under it, mm. */
 final readonly class FloorDto

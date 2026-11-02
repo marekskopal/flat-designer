@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\DrawingController;
-use FlatDesigner\Dto\RoomDetectInputDto;
-use FlatDesigner\Dto\WallPolylineInputDto;
-use FlatDesigner\Service\Editor\BatchWriter;
-use FlatDesigner\Service\Editor\ChangeBatch;
-use FlatDesigner\Service\Editor\Drawing\RoomOutliner;
-use FlatDesigner\Service\Editor\Drawing\WallDrawer;
-use FlatDesigner\Service\Editor\Geometry\RoomDetector;
-use FlatDesigner\Service\Editor\UndoService;
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Tests\Support\EditorTestCase;
+use Izbik\Controller\DrawingController;
+use Izbik\Dto\RoomDetectInputDto;
+use Izbik\Dto\WallPolylineInputDto;
+use Izbik\Service\Editor\BatchWriter;
+use Izbik\Service\Editor\ChangeBatch;
+use Izbik\Service\Editor\Drawing\RoomOutliner;
+use Izbik\Service\Editor\Drawing\WallDrawer;
+use Izbik\Service\Editor\Geometry\RoomDetector;
+use Izbik\Service\Editor\UndoService;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Tests\Support\EditorTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(DrawingController::class)]

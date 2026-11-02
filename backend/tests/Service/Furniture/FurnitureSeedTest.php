@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Furniture;
+namespace Izbik\Tests\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use Migrations\SeedDecorCatalogueMigration;
 use Migrations\SeedDemoHouseFurnitureMigration;
 use Migrations\SeedFlat50FurnitureDefinitionsMigration;

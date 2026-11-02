@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ProjectFileController;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\ProjectFileProvider;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\ProjectFileController;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\ProjectFileProvider;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(ProjectFileController::class)]

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * A fuller global furniture catalogue for a furnished flat (FD-28): a sofa, a bed with bedding, a bedside table, a
+ * A fuller global furniture catalogue for a furnished flat: a sofa, a bed with bedding, a bedside table, a
  * round table, a walk-in shower screen, a round mirror and a balcony railing, with the fabrics and the wrought iron
  * they use. Upholstery is drawn with the `cushion` part.
  */

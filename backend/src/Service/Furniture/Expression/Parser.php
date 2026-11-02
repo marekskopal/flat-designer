@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
-use FlatDesigner\Service\Furniture\Expression\Node\BinaryNode;
-use FlatDesigner\Service\Furniture\Expression\Node\CallNode;
-use FlatDesigner\Service\Furniture\Expression\Node\ConditionalNode;
-use FlatDesigner\Service\Furniture\Expression\Node\IndexNode;
-use FlatDesigner\Service\Furniture\Expression\Node\LiteralNode;
-use FlatDesigner\Service\Furniture\Expression\Node\LogicalNode;
-use FlatDesigner\Service\Furniture\Expression\Node\MemberNode;
-use FlatDesigner\Service\Furniture\Expression\Node\Node;
-use FlatDesigner\Service\Furniture\Expression\Node\NullishNode;
-use FlatDesigner\Service\Furniture\Expression\Node\UnaryNode;
-use FlatDesigner\Service\Furniture\Expression\Node\VariableNode;
+use Izbik\Service\Furniture\Expression\Node\BinaryNode;
+use Izbik\Service\Furniture\Expression\Node\CallNode;
+use Izbik\Service\Furniture\Expression\Node\ConditionalNode;
+use Izbik\Service\Furniture\Expression\Node\IndexNode;
+use Izbik\Service\Furniture\Expression\Node\LiteralNode;
+use Izbik\Service\Furniture\Expression\Node\LogicalNode;
+use Izbik\Service\Furniture\Expression\Node\MemberNode;
+use Izbik\Service\Furniture\Expression\Node\Node;
+use Izbik\Service\Furniture\Expression\Node\NullishNode;
+use Izbik\Service\Furniture\Expression\Node\UnaryNode;
+use Izbik\Service\Furniture\Expression\Node\VariableNode;
 
 /**
  * Parses the expression language of furniture definitions (twin: frontend/src/app/viewer/engine/custom/expression.ts,

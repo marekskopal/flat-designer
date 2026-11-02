@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Session;
+namespace Izbik\Mcp\Session;
 
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use Mcp\Exception\SessionLockException;

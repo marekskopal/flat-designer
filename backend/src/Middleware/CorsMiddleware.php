@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Middleware;
+namespace Izbik\Middleware;
 
-use FlatDesigner\Service\Cors\CorsPolicy;
+use Izbik\Service\Cors\CorsPolicy;
 use Laminas\Diactoros\Response\EmptyResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;

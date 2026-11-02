@@ -7,7 +7,7 @@ namespace Migrations;
 use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** Section lines (FD-94): `section_lines`, a cut through the building drawn on a floor's plan, and its element type. */
+/** Section lines: `section_lines`, a cut through the building drawn on a floor's plan, and its element type. */
 final class AddSectionLinesMigration extends Migration
 {
 	private const array ElementTypes = ['Item', 'Wall', 'Opening', 'Room', 'Group', 'VariantSet', 'Plot', 'Stair', 'Roof', 'RoofWindow', 'FloorVoid', 'Railing'];

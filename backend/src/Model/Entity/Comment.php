@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\CommentAuthorEnum;
-use FlatDesigner\Model\Repository\CommentRepository;
+use Izbik\Model\Entity\Enum\CommentAuthorEnum;
+use Izbik\Model\Repository\CommentRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;

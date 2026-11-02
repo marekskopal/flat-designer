@@ -182,7 +182,7 @@ describe('chimneys', () => {
         expect(hitsRoof(split, 7000, 4000)).toBe(true);
     });
 
-    it('is drawn up its own storey in the stack and with others at the same level (FD-91 review)', () => {
+    it('is drawn up its own storey in the stack and with others at the same level', () => {
         const stretch = {bottom: 0, top: 2900, cap: false};
         const level = scene({chimneyFloors: [{floorId: 3, offset: 0, roofs: [gable], chimneys: [chimney({})]}]});
         const [same] = sceneChimneys(level);

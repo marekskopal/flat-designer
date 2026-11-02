@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Middleware\Exception;
+namespace Izbik\Middleware\Exception;
 
 final class NotAuthorizedException extends \RuntimeException
 {

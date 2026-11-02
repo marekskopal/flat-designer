@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /** The resolved parts of a definition, with the limits on part entries and parts counted across all nesting levels. */
 final class PartCollector

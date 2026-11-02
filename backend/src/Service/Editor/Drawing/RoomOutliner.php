@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Drawing;
+namespace Izbik\Service\Editor\Drawing;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\Geometry\RoomDetectErrorEnum;
-use FlatDesigner\Service\Editor\Geometry\RoomDetector;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Editor\SceneEditor;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Geometry\RoomDetectErrorEnum;
+use Izbik\Service\Editor\Geometry\RoomDetector;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Editor\SceneEditor;
 
 /** Rooms outlined by the walls around a point (`RoomDetector`). The caller has checked access to the floor's project. */
 final readonly class RoomOutliner

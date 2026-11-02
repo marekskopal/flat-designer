@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ElementController;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Element\ItemHandler;
-use FlatDesigner\Service\Editor\Element\OpeningHandler;
-use FlatDesigner\Service\Editor\Element\OpeningLook;
-use FlatDesigner\Service\Editor\Element\RoomCeiling;
-use FlatDesigner\Service\Editor\Element\RoomHandler;
-use FlatDesigner\Service\Editor\Element\StructureSize;
-use FlatDesigner\Service\Editor\Element\WallCurve;
-use FlatDesigner\Service\Editor\Element\WallHandler;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Editor\PolygonValidator;
-use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Editor\StructureParamsValidator;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\ElementController;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Element\ItemHandler;
+use Izbik\Service\Editor\Element\OpeningHandler;
+use Izbik\Service\Editor\Element\OpeningLook;
+use Izbik\Service\Editor\Element\RoomCeiling;
+use Izbik\Service\Editor\Element\RoomHandler;
+use Izbik\Service\Editor\Element\StructureSize;
+use Izbik\Service\Editor\Element\WallCurve;
+use Izbik\Service\Editor\Element\WallHandler;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Editor\PolygonValidator;
+use Izbik\Service\Editor\SceneEditor;
+use Izbik\Service\Editor\StructureParamsValidator;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use const JSON_THROW_ON_ERROR;
 

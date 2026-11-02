@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use FlatDesigner\Controller\RealtimeController;
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Realtime\MercureCookieIssuer;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\McpClient;
-use FlatDesigner\Tests\Support\OAuthFlow;
+use Izbik\Controller\RealtimeController;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Route\Routes;
+use Izbik\Service\Realtime\MercureCookieIssuer;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\McpClient;
+use Izbik\Tests\Support\OAuthFlow;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\StreamFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -37,7 +37,7 @@ final class RealtimeControllerTest extends EditorTestCase
 		self::assertSame('/.well-known/mercure', $this->jsonBody($response)['hubUrl']);
 		$cookie = $response->getHeaderLine('Set-Cookie');
 		self::assertStringContainsString('Path=/.well-known/mercure; HttpOnly; SameSite=Strict', $cookie);
-		$expected = ['flat-designer/projects/' . $this->project->id, 'flat-designer/projects/' . $other->id];
+		$expected = ['izbik/projects/' . $this->project->id, 'izbik/projects/' . $other->id];
 		sort($expected);
 		self::assertSame($expected, self::grantedTopics($cookie));
 
@@ -56,7 +56,7 @@ final class RealtimeControllerTest extends EditorTestCase
 
 		$updates = AppHarness::mercureHub()->updates;
 		self::assertCount(1, $updates);
-		self::assertSame(['flat-designer/projects/' . $this->project->id], $updates[0]->getTopics());
+		self::assertSame(['izbik/projects/' . $this->project->id], $updates[0]->getTopics());
 		self::assertTrue($updates[0]->isPrivate());
 		$message = AppHarness::mercureHub()->messages()[0];
 		self::assertSame($this->revision(), $message['revision']);
@@ -162,7 +162,7 @@ final class RealtimeControllerTest extends EditorTestCase
 		$claims = json_decode(json_encode($decoded, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
 		self::assertIsArray($claims);
 		self::assertSame('http://localhost/.well-known/mercure', $claims['aud']);
-		self::assertSame('flat-designer', $claims['iss']);
+		self::assertSame('izbik', $claims['iss']);
 		self::assertIsList($claims['authorization_details']);
 		self::assertIsArray($claims['authorization_details'][0]);
 		self::assertSame(['subscribe'], $claims['authorization_details'][0]['actions']);

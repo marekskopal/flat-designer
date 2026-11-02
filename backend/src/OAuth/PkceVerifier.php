@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\OAuth;
+namespace Izbik\OAuth;
 
 /** PKCE S256: the challenge is base64url(sha256(verifier)) without padding. */
 final readonly class PkceVerifier

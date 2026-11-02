@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Exception\EditException;
 
 final readonly class MaterialResolver
 {

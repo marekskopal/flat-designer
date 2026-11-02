@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** A hinged wardrobe with one end slanted along a diagonal wall, its top a trapezoid (FD-57). */
+/** A hinged wardrobe with one end slanted along a diagonal wall, its top a trapezoid. */
 final class SeedTrapezoidWardrobeMigration extends Migration
 {
 	public const array Files = ['trapezoid-wardrobe.json'];

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Entity\Plot;
-use FlatDesigner\Model\Repository\PlotRepository;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Entity\Plot;
+use Izbik\Model\Repository\PlotRepository;
 use const JSON_THROW_ON_ERROR;
 
 /** Restores a floor's plots from a snapshot. */
@@ -36,7 +36,7 @@ final readonly class SnapshotPlotRestorer
 			);
 			// Snapshots taken before plot levels have none.
 			$plot->groundLevel = $data->nullableInt('groundLevel') ?? 0;
-			// Before terrain (FD-86): flat.
+			// Before terrain: flat.
 			$terrain = $data->raw('terrain');
 			$plot->terrain = $terrain === null || $terrain === [] ? null : json_encode($terrain, JSON_THROW_ON_ERROR);
 			$plot->createdAt = new DateTimeImmutable();

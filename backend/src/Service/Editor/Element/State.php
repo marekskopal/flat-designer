@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\AEntity;
+use Izbik\Model\Entity\AEntity;
 use const JSON_THROW_ON_ERROR;
 
 /** Helpers shared by the element handlers. */

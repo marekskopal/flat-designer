@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Service\Editor\Element\SectionLineHandler;
-use FlatDesigner\Service\Project\SnapshotSectionRestorer;
-use FlatDesigner\Tests\Support\EditorTestCase;
+use Izbik\Service\Editor\Element\SectionLineHandler;
+use Izbik\Service\Project\SnapshotSectionRestorer;
+use Izbik\Tests\Support\EditorTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(SectionLineHandler::class)]

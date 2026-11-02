@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\UnderlayDto;
-use FlatDesigner\Dto\UnderlayInputDto;
-use FlatDesigner\Service\Project\UnderlayService;
+use Izbik\Dto\UnderlayDto;
+use Izbik\Dto\UnderlayInputDto;
+use Izbik\Service\Project\UnderlayService;
 use Mcp\Capability\Attribute\McpTool;
 
 /** The plan image under a floor's top view, which the user traces over in the editor and an agent can calibrate. */

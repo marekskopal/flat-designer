@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
- * A floor's façades (FD-88): the wall faces outside every room per material (m², without the openings) and their cost;
+ * A floor's façades: the wall faces outside every room per material (m², without the openings) and their cost;
  * `complete` is false when a line has no price.
  */
 final readonly class QuantityFacadeDto

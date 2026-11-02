@@ -9,7 +9,7 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
  * Patterns `Terrazzo` (stone chips in a light base, with slab joints when a tile size is set), `Brick` (bricks in
- * stretcher bond) and `Herringbone` (tiles laid at 45° in a herringbone), and the finishes of the demo flat (FD-40):
+ * stretcher bond) and `Herringbone` (tiles laid at 45° in a herringbone), and the finishes of the demo flat:
  * polished terrazzo slabs, handmade brick for Catalan vaults, charcoal glazed herringbone wall tiles, oak veneer for
  * built-ins and matt black fronts with a black compact worktop. All are drawn procedurally, no photo textures. Ids
  * are left to auto-increment; definitions and items pick the rows up by code.

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Authentication;
+namespace Izbik\Service\Authentication;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\UserRepository;
-use FlatDesigner\Service\Authentication\Exception\AccountLockedException;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\UserRepository;
+use Izbik\Service\Authentication\Exception\AccountLockedException;
 
 /** Locks an account for a growing period once failed sign-ins pass the threshold. */
 final readonly class LoginAttemptService

@@ -1,4 +1,4 @@
-# Flat Designer: analysis of inputs and open-source options
+# Izbik: analysis of inputs and open-source options
 
 Date: 2026-10-17
 

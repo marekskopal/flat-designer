@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Command;
+namespace Izbik\Command;
 
-use FlatDesigner\Service\Dbal\DbContext;
+use Izbik\Service\Dbal\DbContext;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 

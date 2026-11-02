@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\GutterProfileEnum;
-use FlatDesigner\Model\Entity\Enum\RidgeStyleEnum;
-use FlatDesigner\Model\Entity\Enum\RoofEdgeEnum;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Model\Entity\Enum\GutterProfileEnum;
+use Izbik\Model\Entity\Enum\RidgeStyleEnum;
+use Izbik\Model\Entity\Enum\RoofEdgeEnum;
+use Izbik\Model\Entity\Roof;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * A roof's details (FD-91): gutters along the eaves of a pitched roof with downpipes, rows of snow guards on its planes,
+ * A roof's details: gutters along the eaves of a pitched roof with downpipes, rows of snow guards on its planes,
  * and its ridge style. Like the parapet, a flat roof given anew gutters or snow guards is refused, and one that had them
  * leaves them behind. Downpipes lie on eaves edges (`RoofEdgeEnum`), `along` mm from the roof's centre line on the eaves
  * line (the edge's middle unless a verge is skewed); null puts them at the eaves' corners. Where they lie is checked when the list is given anew: a roof changed since keeps
@@ -22,7 +22,7 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class RoofDetails
 {
-	/** The fields of a state logged before FD-91, with their values then. */
+	/** The fields of a state logged before rainwater goods, snow guards and ridge styles, with their values then. */
 	public const array Defaults = ['gutters' => 'None', 'gutterMaterialId' => null, 'downpipes' => null, 'snowGuards' => 0, 'ridgeStyle' => 'Box'];
 
 	/** Rows of snow guards on a plane. */

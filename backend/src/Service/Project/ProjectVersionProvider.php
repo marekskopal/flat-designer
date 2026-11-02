@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectVersion;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ProjectChangeRepository;
-use FlatDesigner\Model\Repository\ProjectVersionRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectVersion;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ProjectChangeRepository;
+use Izbik\Model\Repository\ProjectVersionRepository;
+use Izbik\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
 
 /**

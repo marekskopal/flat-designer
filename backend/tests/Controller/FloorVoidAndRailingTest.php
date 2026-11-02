@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Element\FloorVoidHandler;
-use FlatDesigner\Service\Editor\Element\RailingHandler;
-use FlatDesigner\Service\Project\FloorProvider;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Element\FloorVoidHandler;
+use Izbik\Service\Editor\Element\RailingHandler;
+use Izbik\Service\Project\FloorProvider;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(FloorVoidHandler::class)]
@@ -121,7 +121,7 @@ final class FloorVoidAndRailingTest extends EditorTestCase
 
 	public function testAFenceIsARailingOnTheGround(): void
 	{
-		// A board fence along a bent boundary, raking with the ground (FD-100).
+		// A board fence along a bent boundary, raking with the ground.
 		$fence = $this->create(
 			'railings',
 			['points' => [[0, 0], [10000, 0], [12000, 4000]], 'style' => 'Boards', 'height' => 1600, 'postSpacing' => 2500, 'follow' => 'Rake'],

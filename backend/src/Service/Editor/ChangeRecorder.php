@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Model\Entity\Enum\ChangeOperationEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\ProjectChange;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ProjectChangeRepository;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
-use FlatDesigner\Service\Editor\Element\State;
+use Izbik\Model\Entity\Enum\ChangeOperationEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\ProjectChange;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ProjectChangeRepository;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\Element\State;
 use const JSON_THROW_ON_ERROR;
 
 /** Writes the change log; a new change drops the actor's redo history. */

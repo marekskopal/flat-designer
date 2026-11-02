@@ -305,7 +305,7 @@ function tileLayout(dto: MaterialDto): ImageLayout | null {
         };
     }
     if (dto.pattern === 'Planks') {
-        // Without a photo the planks are drawn at their size (FD-92): columns at least 2.4 m across, at least 3.6 m long.
+        // Without a photo the planks are drawn at their size: columns at least 2.4 m across, at least 3.6 m long.
         const columns = Math.max(8, Math.ceil(2400 / tileWidth));
         const rows = Math.max(1, Math.ceil(3600 / tileHeight));
         return {
@@ -476,7 +476,7 @@ function proceduralLayoutTexture(dto: MaterialDto, layout: ImageLayout): THREE.C
 }
 
 /**
- * Planks of a known size without a photo (FD-92): `columns` columns along the canvas height (texture v), each a random
+ * Planks of a known size without a photo: `columns` columns along the canvas height (texture v), each a random
  * staggered run of planks `rows` long, each plank its own shade of the wood, with dark joints along and across. The
  * plank cut by the bottom edge reappears at the top, so the patch tiles seamlessly.
  */
@@ -520,7 +520,7 @@ function drawSizedPlanks(
 }
 
 /**
- * Dry-stone walling, random coursed (FD-92): courses of 0.6–1.4 × `courseHeight`, filling the patch's height, of flat
+ * Dry-stone walling, random coursed: courses of 0.6–1.4 × `courseHeight`, filling the patch's height, of flat
  * stones 0.5–1.6 × `stoneLength` long, filling its width, with deep dark joints. Each stone is an irregular polygon in
  * its own shade with a lit top edge and a shaded bottom one; stones crossing the patch's side reappear at the other.
  */
@@ -675,7 +675,7 @@ function drawBricks(ctx: CanvasRenderingContext2D, rng: () => number, brickLengt
 }
 
 /**
- * Cast concrete showing its formwork (FD-92): panels or boards `pieceLength` along the wall (canvas x, texture u) by
+ * Cast concrete showing its formwork: panels or boards `pieceLength` along the wall (canvas x, texture u) by
  * `pieceHeight` up it, in rows from the bottom; each piece a slightly different grey with a fine speckle, a thin joint
  * round it, tie holes on a panel (taller than 300 mm) and a faint grain imprint along a board.
  */
@@ -716,7 +716,7 @@ function drawFormwork(ctx: CanvasRenderingContext2D, rng: () => number, pieceLen
 export const BeaverTailGauge = 0.4;
 
 /**
- * Beaver-tail clay tiles (FD-91): round-ended tiles `tileWidth` wide in half-bond rows `gauge` apart, the canvas's top
+ * Beaver-tail clay tiles: round-ended tiles `tileWidth` wide in half-bond rows `gauge` apart, the canvas's top
  * up the slope (the roof's UVs run v up it). A row's tails lie over the row below them, so the rows are drawn from the
  * eaves up, one beyond each edge so the patch tiles seamlessly; each tile its own shade with a darker rim.
  */

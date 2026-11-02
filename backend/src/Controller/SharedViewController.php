@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\ShareLinkProvider;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\ShareLinkProvider;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use Psr\Http\Message\ResponseInterface;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Exception;
+namespace Izbik\Service\Editor\Exception;
 
-use FlatDesigner\Model\Entity\ProjectChange;
+use Izbik\Model\Entity\ProjectChange;
 
 /** Raised inside the undo transaction; the change is closed after the rollback. */
 final class UndoConflictException extends \RuntimeException

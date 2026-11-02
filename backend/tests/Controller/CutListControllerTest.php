@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\CutListController;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Furniture\CutList\CutListAccumulator;
-use FlatDesigner\Service\Furniture\CutList\CutListService;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\CutListController;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Furniture\CutList\CutListAccumulator;
+use Izbik\Service\Furniture\CutList\CutListService;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(CutListController::class)]

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
  * Quantities and cost estimate of a project or one floor (working copy): the surfaces of each room, what to buy per
  * material (`materials`), the boards of the Custom furniture per material (`furniture`, from the cut list) and the
  * `total` of everything priced, in `currency`. `complete` is false when something has no price. Room costs count whole
  * pieces per room, the materials whole pieces for all rooms together, so the total may be a little less than the sum of
- * the rooms. `roofs` lists each roof's covering and soffit (FD-38), whose materials count in the totals too.
+ * the rooms. `roofs` lists each roof's covering and soffit, whose materials count in the totals too.
  */
 final readonly class QuantitiesDto
 {

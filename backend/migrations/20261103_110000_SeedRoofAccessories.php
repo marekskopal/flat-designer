@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Roof accessories (FD-91): a vent tile and a roof step to lay on the roof (items with `onRoof`), a flat-plate solar
+ * Roof accessories: a vent tile and a roof step to lay on the roof (items with `onRoof`), a flat-plate solar
  * collector and a satellite dish, with the absorber and white powder-coated metal they use.
  */
 final class SeedRoofAccessoriesMigration extends Migration

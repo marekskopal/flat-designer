@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** Shift of a group in mm and its turn in degrees counter-clockwise (about the group's footprint centre). */
 final readonly class GroupMoveDto implements ArrayFactoryInterface

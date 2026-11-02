@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Exception;
+namespace Izbik\Service\Editor\Exception;
 
 /**
  * Rejected edit; the code is the HTTP status: 404 element not found, 409 conflict (stale revision,

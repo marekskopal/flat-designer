@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
  * The planar graph of wall footprint edges for `RoomDetector`: every segment is split where another one

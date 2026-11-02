@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Upload;
+namespace Izbik\Service\Upload;
 
 use RuntimeException;
 

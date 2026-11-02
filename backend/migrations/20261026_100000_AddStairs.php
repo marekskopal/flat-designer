@@ -8,7 +8,7 @@ use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 use MarekSkopal\ORM\Migrations\Migration\Query\Enum\ReferenceOptionEnum;
 
-/** Stairs (FD-37): from their floor up to the next one, with the void they cut through it. */
+/** Stairs: from their floor up to the next one, with the void they cut through it. */
 final class AddStairsMigration extends Migration
 {
 	private const array ElementTypes = ['Item', 'Wall', 'Opening', 'Room', 'Group', 'VariantSet', 'Plot'];

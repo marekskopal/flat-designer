@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\VariantInputDto;
-use FlatDesigner\Dto\VariantSetInputDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\VariantEditor;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\VariantInputDto;
+use Izbik\Dto\VariantSetInputDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\VariantEditor;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RoutePost;
 use Psr\Http\Message\ResponseInterface;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Service\Project\FloorMatcher;
+use Izbik\Model\Entity\Floor;
+use Izbik\Service\Project\FloorMatcher;
 
 /**
  * The thread numbers of the restored floors during a version restore (`CommentKeeper`). A restored floor continues

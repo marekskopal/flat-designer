@@ -1,7 +1,7 @@
 {
     "name": "marekskopal/izbik",
     "type": "project",
-    "description": "Flat Designer – 3D viewer of a flat",
+    "description": "Izbik – 3D viewer of a flat",
     "license": "MIT",
     "require": {
         "php": ">=8.5",
@@ -42,12 +42,12 @@
     },
     "autoload": {
         "psr-4": {
-            "FlatDesigner\\": "src/"
+            "Izbik\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "FlatDesigner\\Tests\\": "tests/"
+            "Izbik\\Tests\\": "tests/"
         }
     },
     "scripts": {

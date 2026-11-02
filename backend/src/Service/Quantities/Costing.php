@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
-use FlatDesigner\Dto\CutListMaterialDto;
-use FlatDesigner\Dto\MaterialDto;
-use FlatDesigner\Dto\QuantityLineDto;
-use FlatDesigner\Dto\QuantityMaterialDto;
-use FlatDesigner\Model\Entity\Enum\MaterialPatternEnum;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Dto\CutListMaterialDto;
+use Izbik\Dto\MaterialDto;
+use Izbik\Dto\QuantityLineDto;
+use Izbik\Dto\QuantityMaterialDto;
+use Izbik\Model\Entity\Enum\MaterialPatternEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
 
 /**
  * Turns surfaces into quantities and costs with a project's prices. Materials with a tile size and a pattern laid in

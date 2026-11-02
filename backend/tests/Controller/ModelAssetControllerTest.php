@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ModelAssetController;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\Element\ItemModelLink;
-use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\Glb;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\ModelAssetController;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\Element\ItemModelLink;
+use Izbik\Service\ModelAsset\ModelAssetProvider;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\Glb;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(ModelAssetController::class)]

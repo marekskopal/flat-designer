@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Model\Repository\RoofRepository;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Roof;
+use Izbik\Model\Repository\RoofRepository;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
 
 /**
  * The size a new column or beam starts with in a room: a column reaches the room's ceiling, a beam hangs from it (a
  * chimney stands on its floor). A
  * vaulted ceiling counts at its springing, where its own beams start; under a roof sloping lower than the ceiling, the
- * roof's underside at the item's footprint centre counts (FD-38), unless it comes down to the room's floor (an
+ * roof's underside at the item's footprint centre counts, unless it comes down to the room's floor (an
  * overhang beside a raised room), where there is no room for a column anyway. A height or elevation the client gives wins.
  */
 final readonly class StructureSize

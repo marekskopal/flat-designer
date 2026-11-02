@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /**
  * Body of share link create and update. `floorId` (a floor of the working copy) is read on create only: the

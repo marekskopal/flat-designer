@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Realtime\MercureCookieIssuer;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Route\Routes;
+use Izbik\Service\Realtime\MercureCookieIssuer;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RoutePost;
 use Psr\Http\Message\ResponseInterface;

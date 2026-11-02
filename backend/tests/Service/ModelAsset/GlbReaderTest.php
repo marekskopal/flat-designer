@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\ModelAsset;
+namespace Izbik\Tests\Service\ModelAsset;
 
-use FlatDesigner\Service\ModelAsset\GlbReader;
-use FlatDesigner\Service\ModelAsset\GltfBounds;
-use FlatDesigner\Service\ModelAsset\Matrix4;
-use FlatDesigner\Service\ModelAsset\ModelAssetException;
-use FlatDesigner\Tests\Support\Glb;
+use Izbik\Service\ModelAsset\GlbReader;
+use Izbik\Service\ModelAsset\GltfBounds;
+use Izbik\Service\ModelAsset\Matrix4;
+use Izbik\Service\ModelAsset\ModelAssetException;
+use Izbik\Tests\Support\Glb;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

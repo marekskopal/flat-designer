@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {SpotHeight} from '@app/models/scene';
 
 /**
- * The spot heights of a plot's sloping ground (FD-86): x, y and the height of each, typed in place, and removed one by
+ * The spot heights of a plot's sloping ground: x, y and the height of each, typed in place, and removed one by
  * one. New ones are added by double-clicking the plot's ground in the top view, where they are also dragged.
  */
 @Component({

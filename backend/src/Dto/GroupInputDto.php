@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** A new item group: its name and the items to put in it (may be none). */
 final readonly class GroupInputDto implements ArrayFactoryInterface

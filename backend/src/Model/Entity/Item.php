@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Repository\ItemRepository;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Repository\ItemRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -39,12 +39,12 @@ class Item extends AEntity
 	#[ManyToOne(entityClass: ItemGroup::class, nullable: true)]
 	public ?ItemGroup $group = null;
 
-	/** `z` counts from the ground under the item's centre (its plot's terrain, FD-86) instead of the floor's level. */
+	/** `z` counts from the ground under the item's centre (its plot's terrain) instead of the floor's level. */
 	#[Column(type: Type::Boolean)]
 	public bool $onGround = false;
 
 	/**
-	 * The item lies on the roof (FD-91): `z` counts from the top of the floor's roof covering under its centre, and the
+	 * The item lies on the roof: `z` counts from the top of the floor's roof covering under its centre, and the
 	 * item takes the slope of the plane there (a solar panel, a vent tile, a roof step).
 	 */
 	#[Column(type: Type::Boolean)]

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\GroupController;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\BatchWriter;
-use FlatDesigner\Service\Editor\ChangeBatch;
-use FlatDesigner\Service\Editor\Element\GroupHandler;
-use FlatDesigner\Service\Editor\GroupEditor;
-use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Editor\UndoService;
-use FlatDesigner\Service\Project\ProjectSnapshotService;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\GroupController;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\BatchWriter;
+use Izbik\Service\Editor\ChangeBatch;
+use Izbik\Service\Editor\Element\GroupHandler;
+use Izbik\Service\Editor\GroupEditor;
+use Izbik\Service\Editor\SceneEditor;
+use Izbik\Service\Editor\UndoService;
+use Izbik\Service\Project\ProjectSnapshotService;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(GroupController::class)]

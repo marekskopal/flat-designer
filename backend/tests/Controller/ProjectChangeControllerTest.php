@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ProjectChangeController;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Editor\SceneEditor;
-use FlatDesigner\Service\Editor\UndoService;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\ProjectChangeController;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Editor\SceneEditor;
+use Izbik\Service\Editor\UndoService;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(ProjectChangeController::class)]

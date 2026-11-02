@@ -16,7 +16,7 @@ const FacadeStep = 250;
 const Whole = 100000;
 
 /**
- * The façade bands (FD-88) on the wall faces outside every indoor room (`facadeSpans()`): a face's own `leftFinishes`
+ * The façade bands on the wall faces outside every indoor room (`facadeSpans()`): a face's own `leftFinishes`
  * / `rightFinishes` along each stretch, or on an exterior wall without a material or bands the project's façade
  * material (`exteriorMaterialId`) over its whole height. A band stands `FacadeLining` off the face, cut by the
  * openings of the face (a niche only on its own), between the wall's bottom (a base, the ground; a band may start

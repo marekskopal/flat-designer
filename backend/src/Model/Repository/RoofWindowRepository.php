@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\RoofWindow;
+use Izbik\Model\Entity\RoofWindow;
 
 /** @extends ARepository<RoofWindow> */
 final class RoofWindowRepository extends ARepository

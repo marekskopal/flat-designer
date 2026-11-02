@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\RoofWindow;
+use Izbik\Model\Entity\RoofWindow;
 
 final readonly class RoofWindowDto
 {

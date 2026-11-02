@@ -76,7 +76,7 @@ export function titleBlockSvg(width: number, height: number, info: SheetInfo, ca
         line({x: blockLeft, y: top}, {x: blockLeft, y: bottom}, {stroke: Ink, width: 0.25}),
         text({x, y: top + 7}, truncate(info.projectName, 102, 4), 4, {bold: true}),
         text({x, y: top + 13}, truncate(floor, 102, 2.8), 2.8),
-        text({x, y: top + 19}, truncate(`${caption} · ${localDate(info.date)} · Flat Designer`, 102, 2.2), 2.2, {color: Muted}),
+        text({x, y: top + 19}, truncate(`${caption} · ${localDate(info.date)} · Izbik`, 102, 2.2), 2.2, {color: Muted}),
     ].join('');
 }
 

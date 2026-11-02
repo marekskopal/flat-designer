@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\CommentController;
-use FlatDesigner\Controller\SharedCommentController;
-use FlatDesigner\Dto\CommentDto;
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Comment\CommentActor;
-use FlatDesigner\Service\Comment\CommentKeeper;
-use FlatDesigner\Service\Comment\CommentNumbering;
-use FlatDesigner\Service\Comment\CommentProvider;
-use FlatDesigner\Service\Comment\GuestCommentLog;
-use FlatDesigner\Service\Comment\RestoredThreadNumbers;
-use FlatDesigner\Service\Comment\SharedComments;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\CommentController;
+use Izbik\Controller\SharedCommentController;
+use Izbik\Dto\CommentDto;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Comment\CommentActor;
+use Izbik\Service\Comment\CommentKeeper;
+use Izbik\Service\Comment\CommentNumbering;
+use Izbik\Service\Comment\CommentProvider;
+use Izbik\Service\Comment\GuestCommentLog;
+use Izbik\Service\Comment\RestoredThreadNumbers;
+use Izbik\Service\Comment\SharedComments;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Http\Message\ResponseInterface;
 

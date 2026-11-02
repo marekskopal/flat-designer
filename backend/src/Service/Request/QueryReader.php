@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Request;
+namespace Izbik\Service\Request;
 
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 use Psr\Http\Message\ServerRequestInterface;
 
 /** Typed access to query parameters (`?projectId=3`), the sibling of `BodyReader`. */

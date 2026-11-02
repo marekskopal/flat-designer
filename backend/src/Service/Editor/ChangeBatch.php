@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Dto\ChangeDto;
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\ProjectChange;
+use Izbik\Dto\ChangeDto;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\ProjectChange;
 
 /**
  * The changes one editor operation makes to several elements, under one revision. They share the `batch`

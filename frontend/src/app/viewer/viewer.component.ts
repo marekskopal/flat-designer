@@ -70,7 +70,7 @@ export class ViewerComponent {
     public readonly scene = input<Scene | null>(null);
     public readonly ceilingsVisible = input(false);
     public readonly roofsVisible = input(true);
-    /** Every front of the floor's cupboards open (FD-106); session only. */
+    /** Every front of the floor's cupboards open; session only. */
     public readonly frontsOpen = input(false);
     public readonly labelsVisible = input(true);
     /** Dimension lines along the room edges, in the top view. */
@@ -100,7 +100,7 @@ export class ViewerComponent {
     public readonly ghost = input<GhostFloor | null>(null);
     /** All floors: the scenes of the floors to draw under this one (null: this floor only). */
     public readonly stack = input<readonly Scene[] | null>(null);
-    /** The project's other floors, for a walk over all of them (FD-102; null: the walk stays on this floor). */
+    /** The project's other floors, for a walk over all of them (null: the walk stays on this floor). */
     public readonly walkFloors = input<readonly Scene[] | null>(null);
     /** With `measuring`: the two points clicked next calibrate the underlay (`calibrated`). */
     public readonly calibrating = input(false);
@@ -145,7 +145,7 @@ export class ViewerComponent {
     public readonly walkFloorChanged = output<number>();
     /** Whether the walkthrough has the mouse captured. */
     public readonly walkthroughLocked = output<boolean>();
-    /** A front of an item was opened or closed by a click (FD-106). */
+    /** A front of an item was opened or closed by a click. */
     public readonly frontsChanged = output();
     /** The door the walker looks at (within reach) and whether it is open; null when none. */
     public readonly walkthroughAim = output<DoorAim | null>();

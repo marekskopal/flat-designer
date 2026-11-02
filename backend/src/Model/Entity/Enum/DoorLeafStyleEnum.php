@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
  * Face of a door leaf: `Flush` a plain slab, `Panelled` raised panels stacked in a frame of stiles and rails,

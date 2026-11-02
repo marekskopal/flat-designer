@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\MaterialInputDto;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Material\MaterialException;
-use FlatDesigner\Service\Material\MaterialService;
+use Izbik\Dto\MaterialInputDto;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Material\MaterialException;
+use Izbik\Service\Material\MaterialService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;

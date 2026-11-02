@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Model\Repository\UserRepository;
+use Izbik\Model\Entity\Enum\ElectricalSymbolsEnum;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Model\Repository\UserRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -16,7 +16,7 @@ use MarekSkopal\ORM\Enum\Type;
 /**
  * Account signing in with email + password (bcrypt). `tokenVersion` is embedded in every issued JWT;
  * bumping it (password change) revokes all tokens issued before. `failedLoginAttempts` and
- * `lockedUntil` drive the sign-in backoff. `electricalSymbols` picks the electrical plan's symbol set (FD-64).
+ * `lockedUntil` drive the sign-in backoff. `electricalSymbols` picks the electrical plan's symbol set.
  */
 #[Entity(repositoryClass: UserRepository::class)]
 class User extends AEntity

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Furniture\DefinitionCategoryEnum;
+use Izbik\Service\Furniture\DefinitionCategoryEnum;
 use stdClass;
 
 /**

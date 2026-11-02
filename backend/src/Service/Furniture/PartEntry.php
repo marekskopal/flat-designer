@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\Expression;
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Expression;
+use Izbik\Service\Furniture\Expression\Node\Values;
 use LogicException;
 
 /**

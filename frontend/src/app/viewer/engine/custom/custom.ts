@@ -440,7 +440,7 @@ function pivoted(object: THREE.Object3D, pivot: THREE.Vector3): THREE.Group {
 
 /**
  * Clear glass; one per mesh, disposed with it (not one of the library's materials). Transparent rather than transmissive:
- * a transmissive material in view makes three.js render the whole scene a second time every frame (FD-58).
+ * a transmissive material in view makes three.js render the whole scene a second time every frame.
  */
 function glassMaterial(): THREE.Material {
     return new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transparent: true, opacity: 0.15, depthWrite: false});
@@ -465,7 +465,7 @@ function buildFront(part: ResolvedPart, item: Item, material: THREE.Material, ma
 }
 
 /**
- * Round rod or leg along `axis` (default y), as thick as the box's smaller side across it; `radius` (FD-93) rounds the
+ * Round rod or leg along `axis` (default y), as thick as the box's smaller side across it; `radius` rounds the
  * edges of its ends (a pouf, a vessel basin), at most half its length or thickness.
  */
 function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh {

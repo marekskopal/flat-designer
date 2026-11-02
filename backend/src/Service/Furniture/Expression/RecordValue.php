@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Node\Values;
 
 /**
  * A record of the expression language (an item of a list parameter, e.g. a front `{type, height}`); its fields are

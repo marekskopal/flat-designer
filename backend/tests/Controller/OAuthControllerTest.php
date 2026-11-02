@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\OAuthController;
-use FlatDesigner\OAuth\AuthorizationService;
-use FlatDesigner\OAuth\ClientService;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
-use FlatDesigner\Tests\Support\OAuthFlow;
+use Izbik\Controller\OAuthController;
+use Izbik\OAuth\AuthorizationService;
+use Izbik\OAuth\ClientService;
+use Izbik\Route\Routes;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
+use Izbik\Tests\Support\OAuthFlow;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(OAuthController::class)]

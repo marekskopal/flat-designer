@@ -8,7 +8,7 @@ use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Outdoor surfaces (FD-39): room types `Path` and `Driveway`, open-air like terraces and gardens, and their usual
+ * Outdoor surfaces: room types `Path` and `Driveway`, open-air like terraces and gardens, and their usual
  * finishes, concrete paving blocks and asphalt. Ids are left to auto-increment; they are picked up by code.
  */
 final class AddPathsAndDrivewaysMigration extends Migration

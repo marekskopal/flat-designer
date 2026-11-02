@@ -238,7 +238,7 @@ describe('ceilings under a roof', () => {
     });
 });
 
-describe('site walls (FD-87)', () => {
+describe('site walls', () => {
     // The wall's mesh height over a plan point, from a ray down onto it (and up from below for the bottom).
     const heightAt = (object: THREE.Object3D, x: number, y: number, from: 'above' | 'below'): number | null => {
         object.updateMatrixWorld(true);

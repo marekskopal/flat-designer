@@ -242,7 +242,7 @@ describe('roomElevationSheets', () => {
         expect(heads).not.toContain(4750);
     });
 
-    it('draws cladding boards along the wall and formwork from the edge\'s start (FD-92)', () => {
+    it('draws cladding boards along the wall and formwork from the edge\'s start', () => {
         const wide = {...room, polygon: [[0, 0], [4870, 0], [4870, 3000], [0, 3000]] as PlanPoint[]};
         const walls = (materialId: number): Wall[] => [
             wall(1, [-150, -150], [5020, -150], {leftFinishes: [{materialId, bottom: 0, top: 1000}]}),
@@ -289,7 +289,7 @@ describe('roomElevationSheets', () => {
         expect(sheet.svg).toContain(`M ${stile} `);
     });
 
-    it('draws the sections of a garage door and the joints of a boarded leaf (FD-89)', () => {
+    it('draws the sections of a garage door and the joints of a boarded leaf', () => {
         const garage: Opening = {...door, type: 'GarageDoor', offset: 300, width: 2500, height: 2125, garageDoorStyle: 'Sectional'};
         const thin = (o: Opening): number => {
             const [sheet] = roomElevationSheets(scene({walls: box({leftFinishes: [], openings: [o]})}), room, info);

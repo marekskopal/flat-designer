@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Command;
+namespace Izbik\Command;
 
-use FlatDesigner\App\ApplicationFactory;
+use Izbik\App\ApplicationFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

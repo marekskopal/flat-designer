@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Model\Entity\ProjectMaterialPrice;
-use FlatDesigner\Service\Quantities\PriceList;
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Model\Entity\ProjectMaterialPrice;
+use Izbik\Service\Quantities\PriceList;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /** A project's price of a material, or of a surface's default look (`surface`, without a material): per m² and per running metre. */
 final readonly class MaterialPriceDto implements ArrayFactoryInterface

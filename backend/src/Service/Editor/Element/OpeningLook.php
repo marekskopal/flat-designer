@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
-use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
-use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
+use Izbik\Model\Entity\Enum\BoardDirectionEnum;
+use Izbik\Model\Entity\Enum\DoorLeafStyleEnum;
+use Izbik\Model\Entity\Enum\GarageDoorStyleEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\ShutterStyleEnum;
+use Izbik\Model\Entity\Opening;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
 
 /**
  * How an opening looks, for `OpeningHandler`: the face of a door's leaves, a window's solid lower panel and exterior
  * shutters, the materials of the frame and leaves, a garage door's style and a lift-and-slide door's fixed panes
- * (FD-89). Fields that do not apply to the type get their defaults.
+ * . Fields that do not apply to the type get their defaults.
  */
 final readonly class OpeningLook
 {

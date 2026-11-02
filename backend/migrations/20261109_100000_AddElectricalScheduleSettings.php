@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\DefinitionEncoder;
-use FlatDesigner\Service\Furniture\DefinitionSchedule;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\DefinitionEncoder;
+use Izbik\Service\Furniture\DefinitionSchedule;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * The tagged definitions get the `schedule` settings the electrical schedule now reads (FD-64) instead of counting a
+ * The tagged definitions get the `schedule` settings the electrical schedule now reads instead of counting a
  * parameter `gangs` by name. The global seeds get their files' settings, patched in place, so an admin's later edits
  * stay (a fresh database gets the files already); a parameter an admin has removed or retyped since is left out of
  * them, as `DefinitionSchedule::check()` would refuse every later save. Copies in libraries and projects tagged `socket` with an int `gangs`,

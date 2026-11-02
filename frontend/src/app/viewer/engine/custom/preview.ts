@@ -36,7 +36,7 @@ export class FurniturePreview {
     private materials: MaterialLibrary | null = null;
     private object: THREE.Object3D | null = null;
     private framedSize = '';
-    /** The fronts as opened by a click or `setFrontsOpen()` (FD-106), kept across rebuilds. */
+    /** The fronts as opened by a click or `setFrontsOpen()`, kept across rebuilds. */
     private readonly fronts = new FrontStates();
     private readonly raycaster = new THREE.Raycaster();
     private readonly pointerDown = new THREE.Vector2();

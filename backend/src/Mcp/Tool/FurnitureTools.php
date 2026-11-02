@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\CutListDto;
-use FlatDesigner\Dto\FurnitureDefinitionDto;
-use FlatDesigner\Dto\FurnitureDefinitionInputDto;
-use FlatDesigner\Dto\FurnitureValidationDto;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Service\Furniture\CutList\CutListService;
-use FlatDesigner\Service\Furniture\DefinitionEvaluator;
-use FlatDesigner\Service\Furniture\DefinitionException;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Dto\CutListDto;
+use Izbik\Dto\FurnitureDefinitionDto;
+use Izbik\Dto\FurnitureDefinitionInputDto;
+use Izbik\Dto\FurnitureValidationDto;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Service\Furniture\CutList\CutListService;
+use Izbik\Service\Furniture\DefinitionEvaluator;
+use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureDefinitionProvider;
+use Izbik\Service\Json\JsonDecoder;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;

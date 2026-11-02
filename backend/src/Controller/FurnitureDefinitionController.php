@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\FurnitureDefinitionDto;
-use FlatDesigner\Dto\FurnitureDefinitionInputDto;
-use FlatDesigner\Dto\FurnitureScopeInputDto;
-use FlatDesigner\Dto\FurnitureValidationDto;
-use FlatDesigner\Dto\FurnitureValidationInputDto;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Furniture\DefinitionException;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
-use FlatDesigner\Service\Furniture\FurnitureException;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Request\QueryReader;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\FurnitureDefinitionDto;
+use Izbik\Dto\FurnitureDefinitionInputDto;
+use Izbik\Dto\FurnitureScopeInputDto;
+use Izbik\Dto\FurnitureValidationDto;
+use Izbik\Dto\FurnitureValidationInputDto;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Model\Entity\User;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureDefinitionProvider;
+use Izbik\Service\Furniture\FurnitureException;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Request\QueryReader;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;

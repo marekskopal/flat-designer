@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
 
 /**
  * One material on one surface of a room: `area` (m²) or, for skirting, `length` (running m); `pieces` of a tiled or

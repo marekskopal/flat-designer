@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
-use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
-use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
-use FlatDesigner\Model\Entity\Opening;
+use Izbik\Model\Entity\Enum\BoardDirectionEnum;
+use Izbik\Model\Entity\Enum\DoorFrameStyleEnum;
+use Izbik\Model\Entity\Enum\DoorHandleEnum;
+use Izbik\Model\Entity\Enum\DoorLeafStyleEnum;
+use Izbik\Model\Entity\Enum\GarageDoorStyleEnum;
+use Izbik\Model\Entity\Enum\OpeningHingeEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\ShutterStyleEnum;
+use Izbik\Model\Entity\Opening;
 
 final readonly class OpeningDto
 {

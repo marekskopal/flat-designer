@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Furniture\CutList\CutListService;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Furniture\CutList\CutListService;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use Psr\Http\Message\ResponseInterface;

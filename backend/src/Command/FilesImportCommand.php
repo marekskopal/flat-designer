@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Command;
+namespace Izbik\Command;
 
 use FilesystemIterator;
-use FlatDesigner\App\ApplicationFactory;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ProjectFileProvider;
+use Izbik\App\ApplicationFactory;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ProjectFileProvider;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;

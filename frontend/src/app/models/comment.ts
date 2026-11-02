@@ -1,4 +1,4 @@
-// Mirrors the backend DTOs (FlatDesigner\Dto\Comment*).
+// Mirrors the backend DTOs (Izbik\Dto\Comment*).
 
 /** Who wrote a comment: a user in the app, an agent over MCP or a share link's guest. */
 export type CommentAuthorType = 'User' | 'Agent' | 'Guest';

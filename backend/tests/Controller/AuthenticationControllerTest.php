@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\AuthenticationController;
-use FlatDesigner\Middleware\AuthorizationMiddleware;
-use FlatDesigner\Model\Repository\UserRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\AuthenticationController;
+use Izbik\Middleware\AuthorizationMiddleware;
+use Izbik\Model\Repository\UserRepository;
+use Izbik\Route\Routes;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(AuthenticationController::class)]

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Material;
+namespace Izbik\Service\Material;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\MaterialInputDto;
-use FlatDesigner\Model\Entity\Enum\MaterialPatternEnum;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Dto\MaterialInputDto;
+use Izbik\Model\Entity\Enum\MaterialPatternEnum;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 
 /**
  * Admins add and change materials of the global catalogue. Not an element change: no revision, no change log. The code

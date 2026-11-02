@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /** A moment to place the viewer's sun at: the 21st of `month` (1–12) at `hour` (0–24, fractional) clock time on site. */
 final readonly class SunTimeDto implements ArrayFactoryInterface

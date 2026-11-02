@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
-use FlatDesigner\Service\Furniture\Expression\RecordValue;
+use Izbik\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\RecordValue;
 
 /**
  * A parameter of a furniture definition: what an item may set in `params.values`. A list parameter holds records of

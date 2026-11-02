@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\RoofWindowDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Model\Entity\Enum\RoofWindowTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Model\Entity\RoofWindow;
-use FlatDesigner\Model\Repository\RoofRepository;
-use FlatDesigner\Model\Repository\RoofWindowRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Dto\RoofWindowDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Model\Entity\Enum\RoofWindowTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Roof;
+use Izbik\Model\Entity\RoofWindow;
+use Izbik\Model\Repository\RoofRepository;
+use Izbik\Model\Repository\RoofWindowRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
 use const M_PI;
 
 /**
- * Windows in a roof's planes (FD-38). A window stays on the roof it was created on (`roofId` is fixed) and is placed in
+ * Windows in a roof's planes. A window stays on the roof it was created on (`roofId` is fixed) and is placed in
  * the roof's frame, so it moves with the roof; `RoofWindowPlacement` keeps it inside its plane, clear of the others. The
  * placement is checked only when it is set anew: a roof change is not checked against its windows, so one the roof has
  * left behind is still renamed and undone (the viewer leaves it out).

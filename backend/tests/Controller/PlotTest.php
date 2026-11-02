@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Element\PlotHandler;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Element\PlotHandler;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use const JSON_THROW_ON_ERROR;
 

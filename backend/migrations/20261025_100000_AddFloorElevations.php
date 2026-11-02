@@ -8,7 +8,7 @@ use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Stacked floors (FD-36): `floors.elevation`, the finished floor level above the project datum, and
+ * Stacked floors: `floors.elevation`, the finished floor level above the project datum, and
  * `floors.slab_thickness`, the slab under the floor, both mm. Each project's floors are stacked from their levels and
  * tallest walls as `FloorStack::stack()` did when this was written: the floor nearest level 0 at the datum (a storey of
  * default walls per level above it), the others on the tallest wall of the floor below, or under the one above, plus a

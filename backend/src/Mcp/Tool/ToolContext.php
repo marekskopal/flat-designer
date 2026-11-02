@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Mcp\McpUserContext;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Project\ProjectProvider;
+use Izbik\Mcp\McpUserContext;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Project\ProjectProvider;
 use RuntimeException;
 
 /** Resolves what a tool call acts on, with the same access rules as the app (owner or admin). */

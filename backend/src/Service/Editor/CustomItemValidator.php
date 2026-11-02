@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Service\Editor\Element\MaterialResolver;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Furniture\DefinitionEvaluator;
-use FlatDesigner\Service\Furniture\DefinitionException;
-use FlatDesigner\Service\Furniture\ImageParameters;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Project\ProjectFileProvider;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Model\Entity\Project;
+use Izbik\Service\Editor\Element\MaterialResolver;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Furniture\DefinitionEvaluator;
+use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\ImageParameters;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Project\ProjectFileProvider;
 
 /**
  * The definition and `params` of a `Custom` item (see ItemKindCatalog): `values` for the definition's parameters,

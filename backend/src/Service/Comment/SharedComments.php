@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
-use FlatDesigner\Dto\CommentInputDto;
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\ShareLink;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Dto\CommentInputDto;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\ShareLink;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
 
 /**

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
-use FlatDesigner\Service\Request\BodyReader;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Model\Entity\Enum\ElectricalSymbolsEnum;
+use Izbik\Service\Request\BodyReader;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /** The fields a user changes on their own account; null leaves one as it is. */
 final readonly class CurrentUserUpdateDto implements ArrayFactoryInterface

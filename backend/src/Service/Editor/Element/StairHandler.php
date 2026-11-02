@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\StairDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
-use FlatDesigner\Model\Entity\Enum\StairConstructionEnum;
-use FlatDesigner\Model\Entity\Enum\StairRailingEnum;
-use FlatDesigner\Model\Entity\Enum\StairShapeEnum;
-use FlatDesigner\Model\Entity\Enum\StairTurnEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Stair;
-use FlatDesigner\Model\Repository\StairRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\StairRise;
+use Izbik\Dto\StairDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\RailingStyleEnum;
+use Izbik\Model\Entity\Enum\StairConstructionEnum;
+use Izbik\Model\Entity\Enum\StairRailingEnum;
+use Izbik\Model\Entity\Enum\StairShapeEnum;
+use Izbik\Model\Entity\Enum\StairTurnEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Stair;
+use Izbik\Model\Repository\StairRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\StairRise;
 
 /**
- * Stairs from their floor up to the next one (FD-37). Only the fields are checked here; the treads, landings and the
+ * Stairs from their floor up to the next one. Only the fields are checked here; the treads, landings and the
  * footprint are drawn by the viewer (`viewer/engine/stairs.ts`).
  */
 final readonly class StairHandler implements ElementHandler
@@ -42,7 +42,7 @@ final readonly class StairHandler implements ElementHandler
 
 	private const int MaxRisers = 60;
 
-	/** A rise of its own (FD-87): two risers at least (2 × 140 mm), at most a storey and a half, mm. */
+	/** A rise of its own: two risers at least (2 × 140 mm), at most a storey and a half, mm. */
 	private const int MinOwnRise = 2 * StairRise::MinRiser;
 
 	private const int MaxOwnRise = 6000;
@@ -57,7 +57,7 @@ final readonly class StairHandler implements ElementHandler
 
 	private const int DefaultSpiralDiameter = 1600;
 
-	/** mm, a curved flight's inner edge from its centre (FD-99). */
+	/** mm, a curved flight's inner edge from its centre. */
 	private const int MinInnerRadius = 300;
 
 	private const int MaxInnerRadius = 20000;
@@ -351,7 +351,7 @@ final readonly class StairHandler implements ElementHandler
 		return sprintf('stairs "%s"', is_string($state['name'] ?? null) ? $state['name'] : '?');
 	}
 
-	/** A stair's railing infill; a fence's (FD-100) stands on the ground, not along nosings. */
+	/** A stair's railing infill; a fence's stands on the ground, not along nosings. */
 	private static function railingStyle(FieldReader $fields): ?RailingStyleEnum
 	{
 		$style = $fields->nullableEnum('railingStyle', RailingStyleEnum::class);
@@ -362,7 +362,7 @@ final readonly class StairHandler implements ElementHandler
 		return $style;
 	}
 
-	/** Missing in changes logged before wall handrails (FD-90): none. */
+	/** Missing in changes logged before wall handrails: none. */
 	private static function wallHandrail(FieldReader $fields): StairRailingEnum
 	{
 		return $fields->raw('wallHandrail') === null ? StairRailingEnum::None : $fields->enum('wallHandrail', StairRailingEnum::class);

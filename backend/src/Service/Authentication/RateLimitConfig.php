@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Authentication;
+namespace Izbik\Service\Authentication;
 
 final readonly class RateLimitConfig
 {

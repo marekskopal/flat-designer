@@ -35,7 +35,7 @@ const SteelColor = '#8d9092';
 const TimberColor = '#a8784a';
 const MeshColor = '#383b3e';
 
-/** A fence's infill (FD-100): drawn as a `Fence` item's runs, without a handrail. */
+/** A fence's infill: drawn as a `Fence` item's runs, without a handrail. */
 export const isFenceStyle = (style: RailingStyle | null): boolean => style === 'Mesh' || style === 'Boards';
 
 /** The clear gap between balusters, or the pitch of rods and cables, mm (`RailingStyleEnum::defaultSpacing()`). */
@@ -61,8 +61,8 @@ export interface RailLook {
 }
 
 /**
- * A railing (FD-90) in its group: the posts, handrail and infill along its points at `baseZ`, tagged `railingId` for
- * picking, merged. The group stands at the plan origin, so a drag moves it by its position. A fence (FD-100) is a run of
+ * A railing in its group: the posts, handrail and infill along its points at `baseZ`, tagged `railingId` for
+ * picking, merged. The group stands at the plan origin, so a drag moves it by its position. A fence is a run of
  * fence per stretch, on the ground of the `plots` when it follows it.
  */
 export function buildRailing(railing: Railing, materials: MaterialLibrary, plots: readonly Plot[] = []): THREE.Group {

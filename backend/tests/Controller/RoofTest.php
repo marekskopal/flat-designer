@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Element\RoofHandler;
-use FlatDesigner\Service\Editor\Element\RoofWindowHandler;
-use FlatDesigner\Service\Editor\Element\RoofWindowPlacement;
-use FlatDesigner\Service\Editor\Element\StructureSize;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Element\RoofHandler;
+use Izbik\Service\Editor\Element\RoofWindowHandler;
+use Izbik\Service\Editor\Element\RoofWindowPlacement;
+use Izbik\Service\Editor\Element\StructureSize;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(RoofHandler::class)]

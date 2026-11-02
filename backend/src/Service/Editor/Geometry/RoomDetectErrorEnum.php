@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /** Why no room was found around a point (the codes are shared with the frontend twin). */
 enum RoomDetectErrorEnum: string

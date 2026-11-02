@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\UnderlayInputDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FloorUnderlay;
-use FlatDesigner\Model\Entity\ProjectFile;
-use FlatDesigner\Model\Repository\FloorUnderlayRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Dto\UnderlayInputDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FloorUnderlay;
+use Izbik\Model\Entity\ProjectFile;
+use Izbik\Model\Repository\FloorUnderlayRepository;
+use Izbik\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
 
 /**

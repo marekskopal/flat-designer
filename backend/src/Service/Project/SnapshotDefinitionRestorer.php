@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Furniture\FurnitureDefinitionProvider;
 
 /**
  * The furniture definitions of a restored version (`definitions` of its floors, see ProjectSnapshotService): the live

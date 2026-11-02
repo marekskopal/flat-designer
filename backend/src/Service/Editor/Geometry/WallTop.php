@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * The top of a wall under the roofs of its floor (FD-38): its height (sloping straight to `heightEnd` at its end, FD-87),
+ * The top of a wall under the roofs of its floor: its height (sloping straight to `heightEnd` at its end),
  * cut by the roofs' underside where that is lower, or with `upToRoof` the underside wherever a roof is over it (a gable). The viewer draws walls so (`wallTopAt()` in
  * `viewer/engine/under-roof.ts`), over both faces; here the lower face bounds the openings.
  */

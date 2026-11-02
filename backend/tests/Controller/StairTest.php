@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Service\Editor\Element\StairHandler;
-use FlatDesigner\Service\Editor\StairRise;
-use FlatDesigner\Service\Project\FloorProvider;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Service\Editor\Element\StairHandler;
+use Izbik\Service\Editor\StairRise;
+use Izbik\Service\Project\FloorProvider;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(StairHandler::class)]

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
-use FlatDesigner\Model\Entity\Floor;
+use Izbik\Model\Entity\Floor;
 
 /**
  * Finds the restored floor that stands for a floor of the working copy, for what a version restore carries over

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * The bottom of a wall (FD-87): on the floor's level, at `baseStart` sloping straight to `baseEnd`, or with `onGround`
+ * The bottom of a wall: on the floor's level, at `baseStart` sloping straight to `baseEnd`, or with `onGround`
  * the ground under its centre line (`Ground`). Openings stand on it: their sills may not be lower. The viewer draws
  * walls so (`wallBottomAt()` in `viewer/engine/under-roof.ts`).
  */

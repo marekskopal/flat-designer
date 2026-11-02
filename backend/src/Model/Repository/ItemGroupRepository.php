@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\ItemGroup;
 
 /** @extends ARepository<ItemGroup> */
 final class ItemGroupRepository extends ARepository

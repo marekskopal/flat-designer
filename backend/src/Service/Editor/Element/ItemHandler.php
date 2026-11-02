@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\ItemDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Model\Entity\Item;
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\Room;
-use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
-use FlatDesigner\Model\Repository\ItemGroupRepository;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
-use FlatDesigner\Service\Editor\CustomItemValidator;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\ItemPlacement;
-use FlatDesigner\Service\Editor\StructureParamsValidator;
-use FlatDesigner\Service\Furniture\FurnitureDefinitionProvider;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Dto\ItemDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Model\Entity\Item;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\Room;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
+use Izbik\Model\Repository\ItemGroupRepository;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Service\Editor\Catalog\ItemKindCatalog;
+use Izbik\Service\Editor\CustomItemValidator;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\ItemPlacement;
+use Izbik\Service\Editor\StructureParamsValidator;
+use Izbik\Service\Furniture\FurnitureDefinitionProvider;
+use Izbik\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
 
 final readonly class ItemHandler implements ElementHandler

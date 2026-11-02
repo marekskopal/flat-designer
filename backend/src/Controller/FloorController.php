@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\FloorDto;
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\FloorProvider;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Provider\SceneProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\FloorDto;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\FloorProvider;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Provider\SceneProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;

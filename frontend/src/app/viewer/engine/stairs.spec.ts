@@ -451,7 +451,7 @@ describe('walking the stairs', () => {
     });
 });
 
-describe('garden steps (FD-87)', () => {
+describe('garden steps', () => {
     const steps: Stair = {...stair, rise: 900, baseZ: -900};
 
     it('climb a rise of their own from their base, and cut no void', () => {

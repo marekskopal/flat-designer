@@ -1,4 +1,4 @@
-// Measures the rendering cost of a project's saved views (FD-58): each view is opened with `?view=…&stats`, and the
+// Measures the rendering cost of a project's saved views: each view is opened with `?view=…&stats`, and the
 // engine renders frames back to back in each scenario (fast / presentation quality, day / night with the lights on, and
 // presentation-moving: the plain frames rendered while the camera moves), waiting for the GPU after every frame, so
 // the times are what a frame costs rather than the display's refresh rate.

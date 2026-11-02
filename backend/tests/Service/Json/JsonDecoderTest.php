@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Json;
+namespace Izbik\Tests\Service\Json;
 
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;

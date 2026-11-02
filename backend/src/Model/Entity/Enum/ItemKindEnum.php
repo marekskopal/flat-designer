@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 enum ItemKindEnum: string
 {
@@ -24,7 +24,7 @@ enum ItemKindEnum: string
 	/** A structural downstand beam along its width; z is its soffit. */
 	case Beam = 'Beam';
 	/**
-	 * A structural chimney from the floor up through the slabs and roofs above (FD-91), square or round
+	 * A structural chimney from the floor up through the slabs and roofs above, square or round
 	 * (`params.shape`), its top `params.aboveRoof` over the highest roof it passes, with an optional cap (`params.cap`).
 	 */
 	case Chimney = 'Chimney';

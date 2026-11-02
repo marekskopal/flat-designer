@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /** What an upload ticket creates: a file of a project or a 3D model. */
 enum UploadKindEnum: string

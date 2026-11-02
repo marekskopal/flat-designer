@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Repository\PlotRepository;
+use Izbik\Model\Repository\PlotRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
@@ -26,7 +26,7 @@ class Plot extends AEntity
 	#[Column(type: Type::Int)]
 	public int $groundLevel = 0;
 
-	/** JSON `[[x, y, z], …]`: spot heights of a sloping ground (FD-86, `Terrain`); null: flat at `groundLevel`. */
+	/** JSON `[[x, y, z], …]`: spot heights of a sloping ground (`Terrain`); null: flat at `groundLevel`. */
 	#[Column(type: Type::Text, nullable: true)]
 	public ?string $terrain = null;
 

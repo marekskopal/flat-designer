@@ -1,4 +1,4 @@
-# Flat Designer
+# Izbik
 
 A web application for designing flats and houses in 3D. Projects consist of one or more floors with rooms,
 walls, doors and windows, finishes and furniture. Custom-made furniture is described as data: parametric
@@ -321,12 +321,16 @@ All settings are in `.env`. `.env.example` documents each variable. The most imp
 make install   # backend and frontend dependencies on the host
 make dev       # Angular dev server on http://localhost:4200, API proxied to the running stack
 make lint      # phpcs + phpstan (max level), eslint
-make test      # phpunit (separate flat_designer_test database), vitest
+make test      # phpunit (separate izbik_test database), vitest
 make reset-db  # drop the database and file volumes and re-seed
 ```
 
 Schema and seed data changes always go into a new migration in `backend/migrations/`. If you edit a migration
 that has already been applied, run `make reset-db`.
+
+Izbik was called Flat Designer before. A checkout from then keeps its data in the volumes of the `flat-designer`
+compose project: run `make down` with the old checkout, then `make migrate-volumes` once to copy them into the
+`izbik` ones. Its `.env` keeps working, as the database and storage credentials stay what they were.
 
 CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHPUnit, ESLint, Vitest and the frontend build.
 
@@ -366,7 +370,7 @@ Agent changes are logged under the client's name and appear live in open viewers
 Connect Claude Code:
 
 ```sh
-claude mcp add --transport http flat-designer http://localhost:4400/mcp
+claude mcp add --transport http izbik http://localhost:4400/mcp
 ```
 
 Approve the connection in the browser that opens. In claude.ai, add the URL as a custom connector (the app has

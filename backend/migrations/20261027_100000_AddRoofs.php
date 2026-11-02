@@ -9,7 +9,7 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 use MarekSkopal\ORM\Migrations\Migration\Query\Enum\ReferenceOptionEnum;
 
 /**
- * Roofs (FD-38): gable, hip, shed and flat roofs over a floor, the windows in them, walls rising to them
+ * Roofs: gable, hip, shed and flat roofs over a floor, the windows in them, walls rising to them
  * (`walls.up_to_roof`), and coverings for them. Material ids are left to auto-increment; they are picked up by code.
  */
 final class AddRoofsMigration extends Migration

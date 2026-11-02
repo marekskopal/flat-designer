@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\ShareCameraDto;
-use FlatDesigner\Dto\ShareLinkDto;
-use FlatDesigner\Dto\ShareLinkInputDto;
-use FlatDesigner\Dto\ShareSettingsDto;
-use FlatDesigner\Dto\SunTimeDto;
-use FlatDesigner\Model\Entity\ShareLink;
-use FlatDesigner\Service\Project\ShareLinkProvider;
+use Izbik\Dto\ShareCameraDto;
+use Izbik\Dto\ShareLinkDto;
+use Izbik\Dto\ShareLinkInputDto;
+use Izbik\Dto\ShareSettingsDto;
+use Izbik\Dto\SunTimeDto;
+use Izbik\Model\Entity\ShareLink;
+use Izbik\Service\Project\ShareLinkProvider;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;

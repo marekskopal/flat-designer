@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /** Delaunay triangulation of plan points for `Terrain`; the twin is `triangulate()` in `viewer/engine/terrain.ts`. */
 final readonly class Delaunay

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Furniture\DefinitionException;
-use FlatDesigner\Service\Furniture\ResolvedPart;
+use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\ResolvedPart;
 
 /**
  * Result of a furniture definition check: either `valid` with the parts at the default size and parameter values,

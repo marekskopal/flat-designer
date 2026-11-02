@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\SectionLine;
+use Izbik\Model\Entity\SectionLine;
 
 /** @extends ARepository<SectionLine> */
 final class SectionLineRepository extends ARepository

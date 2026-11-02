@@ -7,7 +7,7 @@ namespace Migrations;
 use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** Fences along polylines (FD-100): railing styles `Mesh` and `Boards`, and `follow` (Level, Rake, Step) on the ground. */
+/** Fences along polylines: railing styles `Mesh` and `Boards`, and `follow` (Level, Rake, Step) on the ground. */
 final class AddFenceRailingsMigration extends Migration
 {
 	private const array Styles = ['Balusters', 'Rods', 'Glass', 'Panel', 'Cable'];

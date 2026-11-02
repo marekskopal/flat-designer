@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Server;
+namespace Izbik\Mcp\Server;
 
 use Mcp\Capability\Registry\ReferenceHandler;
 use Mcp\Server;
@@ -16,7 +16,7 @@ use Psr\Log\LoggerInterface;
  * Tool arguments are validated with `EmptyObjectSchemaValidator`; the session lock serializes the requests of one
  * session.
  */
-final readonly class FlatDesignerServer
+final readonly class IzbikServer
 {
 	private const string Instructions = <<<'TEXT'
 		This server edits 3D designs of flats. A user has projects; a project has floors; a floor holds rooms
@@ -118,11 +118,7 @@ final readonly class FlatDesignerServer
 			->setDiscovery(basePath: dirname(__DIR__, 2), scanDirs: ['Mcp/Tool'])
 			// All tools on one page of tools/list: not every client follows `nextCursor` (the default page is 50).
 			->setPaginationLimit(self::PaginationLimit)
-			->setServerInfo(
-				name: 'flat-designer',
-				version: '1.0.0',
-				description: 'Flat Designer: edit floors, rooms, walls and furniture of flat projects',
-			)
+			->setServerInfo(name: 'izbik', version: '1.0.0', description: 'Izbik: edit floors, rooms, walls and furniture of flat projects')
 			->setInstructions(self::Instructions)
 			->setSession($sessionStore)
 			->setSessionLock($sessionLock)

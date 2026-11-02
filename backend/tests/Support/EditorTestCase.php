@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Support;
+namespace Izbik\Tests\Support;
 
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Route\Routes;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Route\Routes;
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\StreamFactory;
 use Psr\Http\Message\ResponseInterface;

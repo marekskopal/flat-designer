@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
  * The stairs of the floor below that come up through this one, with their rise: they cut their voids through this

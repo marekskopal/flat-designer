@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
-use FlatDesigner\Dto\QuantitiesDto;
-use FlatDesigner\Dto\QuantityFacadeDto;
-use FlatDesigner\Dto\QuantityLineDto;
-use FlatDesigner\Dto\QuantityMaterialDto;
-use FlatDesigner\Dto\QuantityRoofDto;
-use FlatDesigner\Dto\QuantityRoomDto;
-use FlatDesigner\Dto\RoofDto;
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\SceneDto;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Editor\Geometry\Ground;
-use FlatDesigner\Service\Editor\Geometry\RoofCover;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Furniture\CutList\CutListService;
-use FlatDesigner\Service\Provider\SceneProvider;
+use Izbik\Dto\QuantitiesDto;
+use Izbik\Dto\QuantityFacadeDto;
+use Izbik\Dto\QuantityLineDto;
+use Izbik\Dto\QuantityMaterialDto;
+use Izbik\Dto\QuantityRoofDto;
+use Izbik\Dto\QuantityRoomDto;
+use Izbik\Dto\RoofDto;
+use Izbik\Dto\RoomDto;
+use Izbik\Dto\SceneDto;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Editor\Geometry\Ground;
+use Izbik\Service\Editor\Geometry\RoofCover;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Furniture\CutList\CutListService;
+use Izbik\Service\Provider\SceneProvider;
 
 /**
  * Quantities and cost estimate of a project or a floor (working copy): the rooms' surfaces (`RoomSurfaces`, under the

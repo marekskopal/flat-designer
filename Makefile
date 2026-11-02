@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db env ssl-cert admin import-files import-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db migrate-volumes env ssl-cert admin import-files import-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -23,6 +23,17 @@ build:
 reset-db: env
 	docker compose down -v
 	docker compose up -d --build
+
+## Copy the database and file volumes of the old "flat-designer" compose project into the Izbik ones (run once, stack down)
+migrate-volumes:
+	@for pair in flat_designer_data:izbik_data flat_designer_files:izbik_files; do \
+		from=flat-designer_$${pair%%:*}; to=izbik_$${pair#*:}; \
+		if ! docker volume inspect $$from >/dev/null 2>&1; then echo "No $$from, skipped"; continue; fi; \
+		if docker volume inspect $$to >/dev/null 2>&1; then echo "$$to exists, skipped"; continue; fi; \
+		docker volume create $$to >/dev/null; \
+		docker run --rm -v $$from:/from -v $$to:/to alpine cp -a /from/. /to/; \
+		echo "Copied $$from to $$to"; \
+	done
 
 ## Create .env from .env.example and fill in random secrets (token and Mercure keys) that are empty
 env:
@@ -74,7 +85,7 @@ screenshots:
 		FD_PROJECT=$(PROJECT) FD_EMAIL='$(or $(EMAIL),$(SCREENSHOTS_EMAIL))' FD_PASSWORD='$(or $(PASSWORD),$(SCREENSHOTS_PASSWORD))' FD_VIEWS="$(VIEWS)" FD_VIEWS_ONLY="$(VIEWS_ONLY)" FD_ROOM="$(ROOM)" \
 		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) node scripts/screenshots.mjs
 
-## Measure the rendering cost of a project's saved views into frontend/benchmarks (needs the running stack, FD-58):
+## Measure the rendering cost of a project's saved views into frontend/benchmarks (needs the running stack):
 ## make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… [VIEWS="Tour ·"] [SCENARIOS=fast-day,…] [FRAMES=120] [RUNS=3]
 ## [BASELINE=frontend/benchmarks/….json] (compare results from the same machine only)
 benchmark:
@@ -95,10 +106,10 @@ dev:
 test: test-backend test-frontend
 
 ## Backend tests run in a one-off backend container (host vendor/ bind-mounted) against the stack's
-## MariaDB, in a separate `flat_designer_test` database created as root.
+## MariaDB, in a separate `izbik_test` database created as root.
 test-backend:
 	docker compose run --rm --no-deps --entrypoint "" -v ./backend:/app \
-		-e MYSQL_USER=root -e MYSQL_PASSWORD=$(MYSQL_ROOT_PASSWORD) -e TEST_MYSQL_DATABASE=flat_designer_test \
+		-e MYSQL_USER=root -e MYSQL_PASSWORD=$(MYSQL_ROOT_PASSWORD) -e TEST_MYSQL_DATABASE=izbik_test \
 		backend vendor/bin/phpunit
 
 test-frontend:

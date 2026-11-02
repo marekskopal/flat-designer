@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Dto\PlotDto;
-use FlatDesigner\Model\Entity\Plot;
+use Izbik\Dto\PlotDto;
+use Izbik\Model\Entity\Plot;
 
 /**
- * The ground of a floor's plots (FD-86): at a plan point, that of the first plot whose boundary holds it (`Terrain`),
+ * The ground of a floor's plots: at a plan point, that of the first plot whose boundary holds it (`Terrain`),
  * else the floor's level. The twin is `groundAt()` in `viewer/engine/terrain.ts`.
  */
 final readonly class Ground

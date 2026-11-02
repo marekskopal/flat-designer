@@ -6,7 +6,7 @@ const DroppableKeys: ReadonlySet<string> = new Set(['partName']);
 
 /**
  * Merges the plain meshes of an element (an item, a wall, a room's finishes) that share a material and shadow settings into
- * one mesh each, so the element draws in a few calls rather than one per part (FD-58). Objects the engine reads by their
+ * one mesh each, so the element draws in a few calls rather than one per part. Objects the engine reads by their
  * `userData` are left as they are: a mesh so tagged stays (a bulb, a picture face, a ceiling part, a model's shared mesh), and
  * a group so tagged is merged on its own (an opening in its wall, a door leaf, which swings as a whole). Mirrored meshes,
  * hidden objects and meshes with several materials stay too. The merged meshes are named after their parts. Returns how many

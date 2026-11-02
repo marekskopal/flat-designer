@@ -562,7 +562,7 @@ export const SlidingDoorGap = 15;
 export const WindowFrameBar = 70;
 export const SashThickness = 60;
 /**
- * A rebated room door (FD-105): a leaf's lip overlaps the frame by `LipOverlap` on its swing face, `LipThickness` of its
+ * A rebated room door: a leaf's lip overlaps the frame by `LipOverlap` on its swing face, `LipThickness` of its
  * thickness, in the frame's rebate; gaps round the core (to the stops) and round the lip (to the rebate), mm.
  */
 export const LipOverlap = 13;
@@ -607,7 +607,7 @@ export function rollerSlats(height: number): number {
 /**
  * Where an opening's frame lies across its wall (mm, + towards `normal`): its centre and depth. A window's frame is
  * `InsetFrameDepth` deep and a lift-and-slide door's `LiftSlideFrameDepth`, centred, or set in from the outer face
- * (opposite `side`) by `inset` (FD-89); a door's lining spans the wall.
+ * (opposite `side`) by `inset`; a door's lining spans the wall.
  */
 export function frameBand(opening: Pick<Opening, 'type' | 'side' | 'inset' | 'fixedPanes'>, wallThickness: number): {centre: number; depth: number} {
     const depth = isLiftSlide(opening) ? LiftSlideFrameDepth : opening.type === 'Window' || opening.inset != null ? InsetFrameDepth : wallThickness;
@@ -619,7 +619,7 @@ export function frameBand(opening: Pick<Opening, 'type' | 'side' | 'inset' | 'fi
     return {centre: 0, depth};
 }
 
-/** A sliding door with fixed panes beside its sliding one: a lift-and-slide door inside its opening (FD-89). */
+/** A sliding door with fixed panes beside its sliding one: a lift-and-slide door inside its opening. */
 export function isLiftSlide(opening: Pick<Opening, 'type' | 'fixedPanes'>): boolean {
     return opening.type === 'SlidingDoor' && (opening.fixedPanes ?? 0) > 0;
 }
@@ -633,7 +633,7 @@ export interface Leaf {
     openingId: number;
     /** Index of the leaf (0, 1) of a double door or French window; 0 otherwise. */
     index: number;
-    /** A lifting garage door's leaf goes up into the room (`lift` says how; FD-89). */
+    /** A lifting garage door's leaf goes up into the room (`lift` says how). */
     motion: 'swing' | 'slide' | 'lift';
     /** How a lifting leaf goes up: its garage door's style. */
     lift?: 'Sectional' | 'UpAndOver' | 'Roller';
@@ -650,9 +650,9 @@ export interface Leaf {
     travel: number;
     width: number;
     thickness: number;
-    /** A swinging door leaf's hinge axis (FD-105); without it, the leaf turns about (`along`, `across`). */
+    /** A swinging door leaf's hinge axis; without it, the leaf turns about (`along`, `across`). */
     pin?: LeafPin;
-    /** A rebated door leaf's lip (FD-105). */
+    /** A rebated door leaf's lip. */
     lip?: LeafLip;
 }
 
@@ -663,7 +663,7 @@ export interface LeafPin {
 }
 
 /**
- * A rebated leaf (FD-105), mm along the leaf from its hinge edge: the core, the full thickness, from `coreFrom` to `coreTo`
+ * A rebated leaf, mm along the leaf from its hinge edge: the core, the full thickness, from `coreFrom` to `coreTo`
  * and as high as the leaf less `top`; the lip, the `thickness` on the swing face, from `from` to `to` and up to the top.
  */
 export interface LeafLip {
@@ -676,7 +676,7 @@ export interface LeafLip {
 }
 
 /**
- * The rebated frame of a room door (FD-105): a `Door` or `DoubleDoor` with a `Lining` or `Architrave` frame. `stop` is
+ * The rebated frame of a room door: a `Door` or `DoubleDoor` with a `Lining` or `Architrave` frame. `stop` is
  * how far each jamb's stop reaches in from the opening's edge (the head's down from its top), `rebate` how far its
  * rebate, `overlap` the leaves' lip over the stops (mm). Across the wall (+ towards `normal`): `front` is the frame's
  * face on the swing side (an `Architrave`'s casing included), where the leaves' face lies, and `back` the other face.
@@ -850,11 +850,11 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
 
 type LeafBase = Pick<Leaf, 'openingId' | 'index' | 'swing' | 'travel'>;
 
-/** An unrebated door leaf turns about the hinge edge of its swing face, so it clears the frame (FD-105). */
+/** An unrebated door leaf turns about the hinge edge of its swing face, so it clears the frame. */
 const FaceHinge: LeafPin = {back: 0, out: DoorLeafThickness / 2};
 
 /**
- * The leaves of a rebated door (FD-105): each core `CoreGap` clear of the stops, its lip over them. A double door's
+ * The leaves of a rebated door: each core `CoreGap` clear of the stops, its lip over them. A double door's
  * leaves meet `CoreGap` apart, and the one on `hinge` (`leafWidth` between the stops, half by default) laps over the
  * other with its lip, as it opens first. Each turns about its hinges' axis, just off its lip's edge in front of its face.
  */
@@ -917,7 +917,7 @@ function doubleLeaves(opening: Opening, base: LeafBase, across: number, frame: n
 }
 
 /**
- * A garage door's leaves (FD-89), behind the opening on its `side` face (the garage's): a side-hinged door's two leaves
+ * A garage door's leaves, behind the opening on its `side` face (the garage's): a side-hinged door's two leaves
  * swinging into the garage, else one leaf overlapping the opening by `GarageOverlap` each side that lifts by its style.
  */
 function garageLeaves(opening: Opening, wallThickness: number, base: LeafBase): Leaf[] {
@@ -941,7 +941,7 @@ function garageLeaves(opening: Opening, wallThickness: number, base: LeafBase): 
 }
 
 /**
- * A lift-and-slide door's panes (FD-89): the opening inside the frame divided evenly, the fixed panes on the track away
+ * A lift-and-slide door's panes: the opening inside the frame divided evenly, the fixed panes on the track away
  * from `side` and the one at the end away from `hinge` on the track towards it, sliding a pane's width towards `hinge`.
  */
 function liftSlidePanes(opening: Opening, wallThickness: number, base: LeafBase): Leaf[] {

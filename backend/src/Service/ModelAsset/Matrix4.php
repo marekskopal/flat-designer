@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\ModelAsset;
+namespace Izbik\Service\ModelAsset;
 
 /** Column-major 4 × 4 matrices as glTF stores them, as flat lists of 16 floats. */
 final readonly class Matrix4

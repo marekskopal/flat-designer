@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Editor\Geometry;
+namespace Izbik\Tests\Service\Editor\Geometry;
 
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\RoofGutters;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\RoofGutters;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

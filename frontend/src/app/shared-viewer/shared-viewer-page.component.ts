@@ -126,7 +126,7 @@ export class SharedViewerPageComponent {
     protected readonly walkPrompt = signal(false);
     protected readonly ceilingsVisible = signal(false);
     protected readonly roofsVisible = signal(true);
-    /** Every cupboard front open (FD-106): session only. */
+    /** Every cupboard front open: session only. */
     protected readonly frontsOpen = signal(false);
     protected readonly labelsVisible = signal(true);
     protected readonly dimensionsVisible = signal(false);

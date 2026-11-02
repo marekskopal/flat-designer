@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** The price list of a project: its currency, the waste allowance for tiles and planks (%) and the prices. Also the body that replaces it. */
 final readonly class MaterialPricesDto implements ArrayFactoryInterface

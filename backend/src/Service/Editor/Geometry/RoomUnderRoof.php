@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * A room under the roofs (FD-38): its clear height's range (mm, from its floor to the ceiling, which is its height or the
+ * A room under the roofs: its clear height's range (mm, from its floor to the ceiling, which is its height or the
  * roof's underside where that is lower, not less than 0), its volume (mm³, under that ceiling) and the area (mm²) where
  * the clear height is at least `Headroom`, and the ceiling's area (mm², its sloped parts along the slope). Measured on the roofs' underside itself (the viewer keeps its sloped ceiling
  * 10 mm under it). Twin of `roomUnderRoofs()` (`viewer/engine/under-roof.ts`), kept identical by the room cases of

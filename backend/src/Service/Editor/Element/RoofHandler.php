@@ -2,31 +2,31 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\RoofDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\RoofRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Project\FloorStack;
+use Izbik\Dto\RoofDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Roof;
+use Izbik\Model\Entity\Wall;
+use Izbik\Model\Repository\RoofRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Project\FloorStack;
 use const INF;
 use const M_PI;
 use const PHP_INT_MAX;
 use const PHP_INT_MIN;
 
 /**
- * Roofs over a floor (FD-38). Only the fields are checked here; the planes are `RoofGeometry`, drawn by the viewer
+ * Roofs over a floor. Only the fields are checked here; the planes are `RoofGeometry`, drawn by the viewer
  * (`viewer/engine/roof-geometry.ts`). The state leaves out the windows (elements of their own, which move with the
  * roof); a deleted roof hides its windows until undo brings it back. A changed roof does not check its windows again:
  * the viewer leaves out one no longer on its roof.

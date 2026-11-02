@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
 use Closure;
 use DateTimeImmutable;
-use FlatDesigner\Dto\ChangeDto;
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectChange;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ProjectChangeRepository;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
-use FlatDesigner\Service\Editor\Element\State;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\Exception\UndoConflictException;
-use FlatDesigner\Service\Project\ProjectRevisionService;
+use Izbik\Dto\ChangeDto;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectChange;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ProjectChangeRepository;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\Element\State;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Exception\UndoConflictException;
+use Izbik\Service\Project\ProjectRevisionService;
 use JsonException;
 use MarekSkopal\ORM\ORM;
 use const JSON_THROW_ON_ERROR;

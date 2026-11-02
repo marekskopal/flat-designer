@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Model\Entity\Wall;
+use Izbik\Dto\WallDto;
+use Izbik\Model\Entity\Wall;
 use const M_PI;
 
 /**

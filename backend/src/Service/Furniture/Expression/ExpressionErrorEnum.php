@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
 /** Why an expression was rejected; the values are the codes of the shared fixture (tests/fixtures/furniture-expressions.json). */
 enum ExpressionErrorEnum: string

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** The electrical points of one room, or (`id` null) those of a floor outside every room. */
 final readonly class RoomElectricalDto

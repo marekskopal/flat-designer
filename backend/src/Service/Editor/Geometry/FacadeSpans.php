@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Dto\WallDto;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
 
-/** The wall faces outside every room (FD-88): where the façade bands and the façade quantities go. */
+/** The wall faces outside every room: where the façade bands and the façade quantities go. */
 final class FacadeSpans
 {
 	/**
-	 * The façades (FD-88): the stretches of each wall face that border no room, mm along the wall's centre line, within
+	 * The façades: the stretches of each wall face that border no room, mm along the wall's centre line, within
 	 * the face's own extent (mitred at the wall's joints: `WallJoints`). A face bordering an indoor room is covered where
 	 * one of the room's edges runs along it (`faces()`); the rest of it, and the faces along open-air rooms (a garden, a
 	 * terrace: the house's outer walls), is outside. Twin of `facadeSpans()` in `ceilings.ts`, kept

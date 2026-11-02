@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Request;
+namespace Izbik\Service\Request;
 
 /** Reading the fields of a form (multipart) body, where every field arrives as a string, like `BodyReader` does for JSON. */
 final readonly class FormReader

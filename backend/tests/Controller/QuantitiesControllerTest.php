@@ -2,29 +2,29 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\QuantitiesController;
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Model\Entity\FloorVoid;
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Repository\FloorVoidRepository;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\Element\State;
-use FlatDesigner\Service\Editor\Geometry\RoofGutters;
-use FlatDesigner\Service\Project\FloorProvider;
-use FlatDesigner\Service\Quantities\FacadeSurfaces;
-use FlatDesigner\Service\Quantities\MaterialPriceService;
-use FlatDesigner\Service\Quantities\PriceList;
-use FlatDesigner\Service\Quantities\QuantitiesService;
-use FlatDesigner\Service\Quantities\RoofSurfaces;
-use FlatDesigner\Service\Quantities\RoomFaceUnderRoof;
-use FlatDesigner\Service\Quantities\RoomSurfaces;
-use FlatDesigner\Tests\Support\AppHarness;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\QuantitiesController;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Model\Entity\FloorVoid;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Repository\FloorVoidRepository;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\Element\State;
+use Izbik\Service\Editor\Geometry\RoofGutters;
+use Izbik\Service\Project\FloorProvider;
+use Izbik\Service\Quantities\FacadeSurfaces;
+use Izbik\Service\Quantities\MaterialPriceService;
+use Izbik\Service\Quantities\PriceList;
+use Izbik\Service\Quantities\QuantitiesService;
+use Izbik\Service\Quantities\RoofSurfaces;
+use Izbik\Service\Quantities\RoomFaceUnderRoof;
+use Izbik\Service\Quantities\RoomSurfaces;
+use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Http\Message\ResponseInterface;
 use const JSON_THROW_ON_ERROR;
@@ -172,7 +172,7 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(12 * 0.14, $lines['Beams']['area'], 0.01);
 	}
 
-	/** A void through the floor (FD-90) takes its area off the flooring, one through the floor above off the ceiling. */
+	/** A void through the floor takes its area off the flooring, one through the floor above off the ceiling. */
 	public function testFloorVoidsAreLeftOutOfTheFloorAndTheCeiling(): void
 	{
 		$this->buildRoom(null);
@@ -241,7 +241,7 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertContains('Roof tiles, red clay (300 × 420)', array_column(self::rows($quantities['materials']), 'material'));
 	}
 
-	/** A gable's gutters run along both eaves with the overhangs, the downpipes at its corners down to the datum (FD-91). */
+	/** A gable's gutters run along both eaves with the overhangs, the downpipes at its corners down to the datum. */
 	public function testGuttersAndDownpipesCountByTheRunningMetre(): void
 	{
 		$this->create('roofs', [

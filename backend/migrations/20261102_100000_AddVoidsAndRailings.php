@@ -9,7 +9,7 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 use MarekSkopal\ORM\Migrations\Migration\Query\Enum\ReferenceOptionEnum;
 
 /**
- * Floor voids and railings (FD-90): `floor_voids` (a hole through a floor's slab, its edges lined), `railings` (a
+ * Floor voids and railings: `floor_voids` (a hole through a floor's slab, its edges lined), `railings` (a
  * polyline balustrade) and the stairs' railing look (`railing_style`, `railing_material_id`), wall handrails and the
  * lining of their voids.
  */

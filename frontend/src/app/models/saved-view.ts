@@ -13,7 +13,7 @@ export interface SavedViewSettings {
     labels: boolean;
     sectionHeight: number | null;
     dimensions: boolean;
-    /** Electrical symbols in the plan (FD-64); missing in views saved before them, which hide them. */
+    /** Electrical symbols in the plan; missing in views saved before them, which hide them. */
     electrical?: boolean;
     night: boolean;
     /** Null: the lights follow the night. */

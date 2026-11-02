@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\McpClientDto;
-use FlatDesigner\Model\Repository\OAuthAuthorizationRepository;
-use FlatDesigner\OAuth\AuthorizationService;
-use FlatDesigner\OAuth\ClientService;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\McpClientDto;
+use Izbik\Model\Repository\OAuthAuthorizationRepository;
+use Izbik\OAuth\AuthorizationService;
+use Izbik\OAuth\ClientService;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use MarekSkopal\Router\Attribute\RoutePost;

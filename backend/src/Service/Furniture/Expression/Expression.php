@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
-use FlatDesigner\Service\Furniture\Expression\Node\Node;
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Node\Node;
+use Izbik\Service\Furniture\Expression\Node\Values;
 
 /**
  * A parsed expression (see `Parser`); evaluate it as often as needed with different variables.

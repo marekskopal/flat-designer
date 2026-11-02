@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\MaterialPriceDto;
-use FlatDesigner\Dto\MaterialPricesDto;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectMaterialPrice;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Model\Repository\ProjectMaterialPriceRepository;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Dto\MaterialPriceDto;
+use Izbik\Dto\MaterialPricesDto;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectMaterialPrice;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Model\Repository\ProjectMaterialPriceRepository;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 
 /**
  * A project's price list for the quantities and cost estimate. It is not floor content: saving it bumps no revision

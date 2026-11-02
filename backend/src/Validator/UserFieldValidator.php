@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Validator;
+namespace Izbik\Validator;
 
 use const FILTER_VALIDATE_EMAIL;
 

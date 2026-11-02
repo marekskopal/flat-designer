@@ -2,7 +2,7 @@
 
 The demo house (FD-84) recreates a real family house over MCP only, from its published drawings and photos, as the demo
 flat did (`docs/demo-flat.md`). This file is the reference for the modelling (FD-95): levels, walls, rooms, openings,
-the photos' camera positions and an inventory of everything in the house, mapped to what Flat Designer has or to the
+the photos' camera positions and an inventory of everything in the house, mapped to what Izbik has or to the
 task that adds it.
 
 ## Source
@@ -373,7 +373,7 @@ Global definitions seeded by `SeedDemoHouseFurniture` (FD-93), and CC0 Poly Have
 
 ## Result (FD-95)
 
-The house was modelled by Claude Code over the flat-designer MCP server only (project "Family house Žebětín" on the
+The house was modelled by Claude Code over the izbik MCP server only (project "Family house Žebětín" on the
 local stack). The human part was creating the empty project and importing the drawings and photos with
 `make import-files DIR=source_files/demo-house/raw PROJECT=13`, and the CC0 models (FD-93) with `make import-models`.
 Positions came from the calibration above (wall faces, levels, openings, cameras); the furniture definitions' ids were

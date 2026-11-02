@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** Body of a comment update: the new text (author only) and/or whether its thread is resolved; null leaves it. */
 final readonly class CommentUpdateDto implements ArrayFactoryInterface

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Cors;
+namespace Izbik\Service\Cors;
 
 final readonly class CorsPolicy
 {

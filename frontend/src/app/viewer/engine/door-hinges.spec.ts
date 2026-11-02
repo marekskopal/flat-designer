@@ -67,7 +67,7 @@ function boxOf(list: readonly THREE.Mesh[]): THREE.Box3 {
     return new THREE.Box3(box.min.clone().divideScalar(MM), box.max.clone().divideScalar(MM));
 }
 
-describe('rebated room doors (FD-105)', () => {
+describe('rebated room doors', () => {
     const door = opening({});
 
     it('hangs a leaf on two hinges, three when it is tall', () => {

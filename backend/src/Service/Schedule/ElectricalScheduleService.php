@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Schedule;
+namespace Izbik\Service\Schedule;
 
-use FlatDesigner\Dto\ElectricalRowDto;
-use FlatDesigner\Dto\ElectricalScheduleDto;
-use FlatDesigner\Dto\ElectricalTotalsDto;
-use FlatDesigner\Dto\FloorElectricalDto;
-use FlatDesigner\Dto\ItemDto;
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\RoomElectricalDto;
-use FlatDesigner\Dto\SceneDto;
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Furniture\DefinitionCategoryEnum;
-use FlatDesigner\Service\Furniture\DefinitionSchedule;
-use FlatDesigner\Service\Furniture\DefinitionValidator;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Provider\SceneProvider;
+use Izbik\Dto\ElectricalRowDto;
+use Izbik\Dto\ElectricalScheduleDto;
+use Izbik\Dto\ElectricalTotalsDto;
+use Izbik\Dto\FloorElectricalDto;
+use Izbik\Dto\ItemDto;
+use Izbik\Dto\RoomDto;
+use Izbik\Dto\RoomElectricalDto;
+use Izbik\Dto\SceneDto;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Furniture\DefinitionCategoryEnum;
+use Izbik\Service\Furniture\DefinitionSchedule;
+use Izbik\Service\Furniture\DefinitionValidator;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Provider\SceneProvider;
 use stdClass;
 use const JSON_THROW_ON_ERROR;
 

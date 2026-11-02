@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\ExpressionErrorEnum;
-use FlatDesigner\Service\Furniture\Expression\ExpressionException;
+use Izbik\Service\Furniture\Expression\ExpressionErrorEnum;
+use Izbik\Service\Furniture\Expression\ExpressionException;
 use RuntimeException;
 
 /** A definition that cannot be evaluated; `path` points into the definition JSON (`parts[2].y`) or the values (`values.t`). */

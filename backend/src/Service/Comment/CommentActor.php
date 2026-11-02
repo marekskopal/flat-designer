@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Enum\CommentAuthorEnum;
-use FlatDesigner\Model\Entity\ShareLink;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Service\Actor\ActorContext;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Enum\CommentAuthorEnum;
+use Izbik\Model\Entity\ShareLink;
+use Izbik\Model\Entity\User;
+use Izbik\Service\Actor\ActorContext;
 
 /** Who reads or writes comments: a user in the app, an agent over MCP (its user plus the client) or a share link's guest. */
 final readonly class CommentActor

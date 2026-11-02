@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** Body of saved view create and update: its floor (of the working copy), name and settings. */
 final readonly class SavedViewInputDto implements ArrayFactoryInterface

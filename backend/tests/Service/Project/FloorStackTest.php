@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Project;
+namespace Izbik\Tests\Service\Project;
 
-use FlatDesigner\Service\Project\FloorStack;
+use Izbik\Service\Project\FloorStack;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

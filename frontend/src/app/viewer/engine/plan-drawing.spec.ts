@@ -453,7 +453,7 @@ describe('planSheet fixes from review', () => {
         expect(svg).toContain('stroke-dasharray');
     });
 
-    it('fills a chimney like the walls, its own and one coming up from below, and dashes the gutters with the downpipes round (FD-91)', () => {
+    it('fills a chimney like the walls, its own and one coming up from below, and dashes the gutters with the downpipes round', () => {
         const chimney = item(5, {kind: 'Chimney', name: 'Chimney', x: 1000, y: 1000, width: 450, depth: 450, height: 3000});
         const below = item(6, {...chimney, id: 6, x: 3000, y: 2000, params: {shape: 'round'}});
         const filled = (svg: string): number => wallPaths(svg).length;
@@ -537,7 +537,7 @@ describe('planSheet stairs', () => {
     });
 });
 
-describe('garage doors on the plan (FD-89)', () => {
+describe('garage doors on the plan', () => {
     const dashed = (o: Opening): number => (planSheet(scene({walls: box([o])}), info).svg.match(/stroke-dasharray/g) ?? []).length;
 
     it('dashes where a lifting door goes overhead, and draws a side-hinged one swinging', () => {
@@ -550,7 +550,7 @@ describe('garage doors on the plan (FD-89)', () => {
 });
 
 describe('roomScheduleSheets', () => {
-    it('totals a garage apart from the living area (FD-89)', () => {
+    it('totals a garage apart from the living area', () => {
         const rooms = [room({id: 1, code: '1.1', area: 20}), room({id: 2, code: '1.2', name: 'Double garage', type: 'Garage', area: 18})];
         const labels = texts(roomScheduleSheets(scene({rooms}), info)[0].svg);
         // The rows, then the totals: the living area and the garage apart.
@@ -609,7 +609,7 @@ describe('roomScheduleSheets', () => {
     });
 });
 
-describe('planSheet voids and railings (FD-90)', () => {
+describe('planSheet voids and railings', () => {
     const polygon: PlanPoint[] = [
         [3000, 1000],
         [5000, 1000],

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** A room to outline around the point (x, y), with any other room fields (name, code, type, …). */
 final readonly class RoomDetectInputDto implements ArrayFactoryInterface

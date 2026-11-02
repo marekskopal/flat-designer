@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\ChangeDto;
-use FlatDesigner\Dto\FloorDto;
-use FlatDesigner\Dto\FloorInputDto;
-use FlatDesigner\Dto\ProjectDto;
-use FlatDesigner\Dto\ProjectInputDto;
-use FlatDesigner\Dto\ProjectVersionDto;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectChange;
-use FlatDesigner\Model\Entity\ProjectVersion;
-use FlatDesigner\Model\Repository\ProjectChangeRepository;
-use FlatDesigner\Service\Project\FloorProvider;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Project\ProjectVersionProvider;
+use Izbik\Dto\ChangeDto;
+use Izbik\Dto\FloorDto;
+use Izbik\Dto\FloorInputDto;
+use Izbik\Dto\ProjectDto;
+use Izbik\Dto\ProjectInputDto;
+use Izbik\Dto\ProjectVersionDto;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectChange;
+use Izbik\Model\Entity\ProjectVersion;
+use Izbik\Model\Repository\ProjectChangeRepository;
+use Izbik\Service\Project\FloorProvider;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\ProjectVersionProvider;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 

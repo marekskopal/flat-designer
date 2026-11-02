@@ -269,7 +269,7 @@ export class ViewerPageComponent {
         },
         {equal: (a, b) => a.up?.id === b.up?.id && a.up?.name === b.up?.name && a.down === b.down},
     );
-    /** In a walk over all floors (FD-102), the floor the walker is on; null: this one. */
+    /** In a walk over all floors, the floor the walker is on; null: this one. */
     protected readonly walkedFloorId = signal<number | null>(null);
     /** The floor a walk started on: ending it on another one shows that one, unless the page moved on meanwhile. */
     private walkStartFloorId: number | null = null;
@@ -383,7 +383,7 @@ export class ViewerPageComponent {
     protected readonly toolStatus = signal<ToolStatus | null>(null);
     protected readonly ceilingsVisible = signal(false);
     protected readonly roofsVisible = signal(true);
-    /** Every cupboard front open (FD-106): session only, not in saved views or share links. */
+    /** Every cupboard front open: session only, not in saved views or share links. */
     protected readonly frontsOpen = signal(false);
     /** Bumped when fronts open or close or the floor is built, for `cardFronts`. */
     protected readonly frontsTick = signal(0);
@@ -477,7 +477,7 @@ export class ViewerPageComponent {
     protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
 
     protected readonly sectionHeight = computed(() => (this.sectionSlider() >= SectionMax ? null : this.sectionSlider()));
-    /** The floor's rooms, their areas less the floor's voids (FD-90). */
+    /** The floor's rooms, their areas less the floor's voids. */
     protected readonly rooms = computed(() => {
         const scene = this.scene();
         return (scene?.rooms ?? []).map((room) => ({...room, area: netRoomArea(room, scene?.voids ?? [])}));

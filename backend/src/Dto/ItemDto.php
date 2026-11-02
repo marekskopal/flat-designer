@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Item;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Item;
+use Izbik\Service\Json\JsonDecoder;
 use stdClass;
 
 final readonly class ItemDto
@@ -32,7 +32,7 @@ final readonly class ItemDto
 		public ?int $materialId,
 		public array|stdClass $params,
 		public bool $onGround = false,
-		/** `z` counts from the roof's top under the item's centre, and the item takes the plane's slope (FD-91). */
+		/** `z` counts from the roof's top under the item's centre, and the item takes the plane's slope. */
 		public bool $onRoof = false,
 	) {
 	}

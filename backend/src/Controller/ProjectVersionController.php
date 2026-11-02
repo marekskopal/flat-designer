@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\ProjectVersionDetailDto;
-use FlatDesigner\Dto\ProjectVersionDto;
-use FlatDesigner\Dto\ProjectVersionInputDto;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectVersion;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Project\ProjectSnapshotService;
-use FlatDesigner\Service\Project\ProjectVersionProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\ProjectVersionDetailDto;
+use Izbik\Dto\ProjectVersionDto;
+use Izbik\Dto\ProjectVersionInputDto;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectVersion;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\ProjectSnapshotService;
+use Izbik\Service\Project\ProjectVersionProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use MarekSkopal\Router\Attribute\RoutePost;

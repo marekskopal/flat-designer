@@ -7,7 +7,7 @@ namespace Migrations;
 use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** Skewed verges (FD-97): a gable's or shed's verge at the ridge's start and end turned by degrees, 0 square. */
+/** Skewed verges: a gable's or shed's verge at the ridge's start and end turned by degrees, 0 square. */
 final class AddRoofSkewsMigration extends Migration
 {
 	public function up(): void

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\ShareLink;
+use Izbik\Model\Entity\ShareLink;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 
 /**

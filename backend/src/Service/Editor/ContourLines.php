@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Exception\EditException;
 
-/** Contour lines read off a site plan, turned into a plot's spot heights (FD-86, MCP `set_terrain`). */
+/** Contour lines read off a site plan, turned into a plot's spot heights (MCP `set_terrain`). */
 final readonly class ContourLines
 {
 	/** The longest gap (mm) between the spot heights a contour line is sampled at. */

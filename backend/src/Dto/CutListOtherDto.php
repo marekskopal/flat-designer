@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** Identical parts that are not boards (legs, rods, glass, LEDs): their box `w` × `h` × `d` in mm. */
 final readonly class CutListOtherDto

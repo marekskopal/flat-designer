@@ -1,4 +1,4 @@
-# Flat Designer
+# Izbik
 
 A 3D designer for flats and houses. A project has 1..N floors with rooms, walls, openings and items. Custom-made
 furniture is stored as parametric furniture definitions. The app includes a viewer, an editor, a walkthrough, versions,
@@ -15,8 +15,8 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `docker-entrypoint.d/10-select-template.sh` picks the template at start. The backend reads the scheme from
   `X-Forwarded-Proto`.
 - `minio/` (a compose service only): S3-compatible storage for uploaded files.
-- `backend/`: FrankenPHP worker, PHP 8.5, `marekskopal/orm`, `marekskopal/router`, MariaDB. Namespace `FlatDesigner\`.
-  - Routes are in `FlatDesigner\Route\Routes`. The entrypoint runs `migration:run` before serving.
+- `backend/`: FrankenPHP worker, PHP 8.5, `marekskopal/orm`, `marekskopal/router`, MariaDB. Namespace `Izbik\`.
+  - Routes are in `Izbik\Route\Routes`. The entrypoint runs `migration:run` before serving.
   - Every route needs a Bearer access token, except `AuthorizationMiddleware::OpenRoutes` and the guest share read (`ShareRoutePattern`).
   - Controllers get the user from `RequestService::getUser()`. For missing permissions they answer 403, not 401
     (a 401 makes the frontend refresh the token or sign out).
@@ -1022,7 +1022,7 @@ format is the text in `FurnitureTools::Format`.
 
 - `ProjectRevisionService::bump()` marks the project in `ProjectUpdatePublisher`. The worker publishes after
   `frankenphp_finish_request()`, so only committed revisions are sent, to the private Mercure topic
-  `flat-designer/projects/{id}`.
+  `izbik/projects/{id}`.
 - Subscribers get a cookie from `/api/realtime/subscription` and listen on `/.well-known/mercure?match=<topic>`
   (Mercure protocol 1.0 uses `match`, not `topic`).
 - Project details (name, address, description) are not floor content: `ProjectProvider::update` sends `detailsChanged`
@@ -1059,6 +1059,8 @@ format is the text in `FurnitureTools::Format`.
 
 ## Code style
 
+- Never mention ukolio task numbers (`FD-…`) in code, comments, test names or fixtures; describe the feature instead.
+  Ticket numbers belong in commit messages, branch names and the docs.
 - PHP: tabs, the slevomat ruleset copied from ukolio, phpstan at max level.
 - TS: the eslint config from ukolio, explicit member accessibility and return types, max line length 150.
 
@@ -1071,6 +1073,6 @@ format is the text in `FurnitureTools::Format`.
 | `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |
-| `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `flat_designer_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
+| `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `izbik_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
 | `make benchmark PROJECT=… EMAIL=… PASSWORD=… [BASELINE=…]` | Time the rendering of a project's saved views (FD-58) |
 | `make reset-db` | Drop the database and file volumes and re-seed |

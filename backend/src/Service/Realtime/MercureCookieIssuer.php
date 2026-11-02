@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Realtime;
+namespace Izbik\Service\Realtime;
 
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Service\Project\ProjectProvider;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Service\Project\ProjectProvider;
 use SensitiveParameter;
 
 /**

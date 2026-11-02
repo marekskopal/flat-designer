@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Command;
+namespace Izbik\Command;
 
-use FlatDesigner\App\ApplicationFactory;
-use FlatDesigner\Dto\ModelAssetInputDto;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\ModelAsset\ModelAssetException;
-use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
+use Izbik\App\ApplicationFactory;
+use Izbik\Dto\ModelAssetInputDto;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\ModelAsset\ModelAssetException;
+use Izbik\Service\ModelAsset\ModelAssetProvider;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;

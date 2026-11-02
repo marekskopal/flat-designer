@@ -1,4 +1,4 @@
-name: flat-designer
+name: izbik
 
 services:
     proxy:
@@ -98,7 +98,7 @@ services:
         networks:
             - backend
         volumes:
-            - flat_designer_data:/var/lib/mysql
+            - izbik_data:/var/lib/mysql
 
     # S3-compatible storage for uploaded project files. Point S3_* at real S3 in production instead.
     minio:
@@ -114,12 +114,12 @@ services:
             # Admin console (log in with S3_ACCESS_KEY / S3_SECRET_KEY), loopback only.
             - "127.0.0.1:${MINIO_CONSOLE_PORT:-4401}:9001"
         volumes:
-            - flat_designer_files:/data
+            - izbik_files:/data
 
 networks:
     frontend:
     backend:
 
 volumes:
-    flat_designer_data:
-    flat_designer_files:
+    izbik_data:
+    izbik_files:

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\SectionLine;
+use Izbik\Model\Entity\SectionLine;
 
 /**
- * A section line as the scene serves it (FD-94): from start to end in plan mm, looking to the left of start → end,
+ * A section line as the scene serves it: from start to end in plan mm, looking to the left of start → end,
  * `depth` mm deep (null: all beyond).
  */
 final readonly class SectionLineDto

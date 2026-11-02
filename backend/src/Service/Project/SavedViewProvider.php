@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\SavedViewDto;
-use FlatDesigner\Dto\SavedViewInputDto;
-use FlatDesigner\Dto\SavedViewSettingsDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\SavedView;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\ItemGroupRepository;
-use FlatDesigner\Model\Repository\SavedViewRepository;
-use FlatDesigner\Model\Repository\VariantSetRepository;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Dto\SavedViewDto;
+use Izbik\Dto\SavedViewInputDto;
+use Izbik\Dto\SavedViewSettingsDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\SavedView;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\ItemGroupRepository;
+use Izbik\Model\Repository\SavedViewRepository;
+use Izbik\Model\Repository\VariantSetRepository;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Project\Exception\ProjectException;
 use const JSON_THROW_ON_ERROR;
 
 /** The saved views of a project: named views of its floors, e.g. for screenshots. They are not floor elements: no revision. */

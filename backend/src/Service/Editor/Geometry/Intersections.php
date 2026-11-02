@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
  * Where lines (a point and a unit direction) and circles meet, for the mitres of curved walls (`WallJoints`).

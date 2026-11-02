@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Mcp;
+namespace Izbik\Tests\Mcp;
 
-use FlatDesigner\Mcp\Tool\FurnitureTools;
-use FlatDesigner\Service\Furniture\PartTypeEnum;
+use Izbik\Mcp\Tool\FurnitureTools;
+use Izbik\Service\Furniture\PartTypeEnum;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

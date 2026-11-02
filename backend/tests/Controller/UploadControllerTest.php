@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
 use DateTimeImmutable;
-use FlatDesigner\Controller\UploadController;
-use FlatDesigner\Dto\ModelAssetInputDto;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Service\ModelAsset\ModelAssetException;
-use FlatDesigner\Service\Upload\UploadTicketService;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\Glb;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
-use FlatDesigner\Tests\Support\LimitedStream;
+use Izbik\Controller\UploadController;
+use Izbik\Dto\ModelAssetInputDto;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Repository\ModelAssetRepository;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Service\ModelAsset\ModelAssetException;
+use Izbik\Service\Upload\UploadTicketService;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\Glb;
+use Izbik\Tests\Support\IntegrationTestCase;
+use Izbik\Tests\Support\LimitedStream;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 

@@ -7,7 +7,7 @@ import {MM} from './plan-geometry';
 
 /**
  * The ground under an item along its width: at x mm from its centre (item-local), mm against the ground under the
- * centre. A fence that follows the ground (FD-87) stands on it.
+ * centre. A fence that follows the ground stands on it.
  */
 export type GroundAlong = (x: number) => number;
 
@@ -88,7 +88,7 @@ export interface FenceRun {
 /**
  * A run of fence along x, from −length / 2 to length / 2: posts every `panelLength` (at least one bay) and the panels or
  * boards between them, standing on `ground` (mm at x) unless it is level. A `Fence` item is one; a fence railing along a
- * polyline (FD-100) one per stretch, their end posts meeting at its corners.
+ * polyline one per stretch, their end posts meeting at its corners.
  */
 export function buildFenceRun(run: FenceRun, materials: MaterialLibrary, ground: GroundAlong = Level): THREE.Group {
     const group = new THREE.Group();

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
 use BackedEnum;
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Exception\EditException;
 
 /** Validating access to the fields of an element's state; every violation is a 422 naming the field. */
 final readonly class FieldReader

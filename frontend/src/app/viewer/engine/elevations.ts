@@ -249,7 +249,7 @@ function curvedFace(
  */
 function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along: readonly Wall[], roofs: FloorRoofs, straight: boolean): Vec2[] {
     if (room.ceilingHeight === null) {
-        // The tallest of the walls on the edge; one with a sloping top (FD-87) is followed along it.
+        // The tallest of the walls on the edge; one with a sloping top is followed along it.
         const slopes = along.map((w) => wallHeightAt(w, wallFrame(w))).filter((h): h is HeightAt => h !== null);
         if (slopes.length === 0) {
             const height = Math.max(0, ...along.map((w) => w.height)) || 2600;
@@ -714,7 +714,7 @@ function edgeOpenings(a: Vec2, dir: Vec2, length: number, edgeFaces: readonly {w
 /**
  * An opening seen from the room: cut out of the bands; a window with its frame, panes and solid panel; a door's leaves
  * with the dashed lines that point at the hinges (sliding ones with an arrow the way they open; a lift-and-slide door's
- * panes divided), boarded leaves with their joints; a garage door's sections or slats (FD-89); a niche shaded.
+ * panes divided), boarded leaves with their joints; a garage door's sections or slats; a niche shaded.
  * Its size (and sill) is written in it when it fits.
  */
 function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: number, z: number) => Vec2, s: number): string {

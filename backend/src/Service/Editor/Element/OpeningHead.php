@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Editor\Geometry\WallTop;
+use Izbik\Model\Entity\Opening;
+use Izbik\Model\Entity\Roof;
+use Izbik\Model\Entity\Wall;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Editor\Geometry\WallTop;
 use const PHP_INT_MAX;
 
 /**
- * An opening's head under the wall's top (FD-38): the wall's height, or under a roof the top `WallTop` gives over the
+ * An opening's head under the wall's top: the wall's height, or under a roof the top `WallTop` gives over the
  * opening. Checked when the opening is placed anew only, as the roof windows are, so a roof lowered since does not block
  * renaming or undoing the opening (`WallHandler` checks the heads again when the wall's shape or height changes).
  */

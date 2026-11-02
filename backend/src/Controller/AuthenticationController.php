@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\CredentialsDto;
-use FlatDesigner\Dto\RefreshTokenDto;
-use FlatDesigner\Dto\SignUpDto;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotAuthorizedResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Authentication\AuthenticationService;
-use FlatDesigner\Service\Authentication\Exception\AccountLockedException;
-use FlatDesigner\Service\Authentication\Exception\AuthenticationException;
-use FlatDesigner\Service\Authentication\Exception\InvalidTokenException;
-use FlatDesigner\Service\Authentication\TokenService;
-use FlatDesigner\Service\Provider\UserProvider;
-use FlatDesigner\Service\Request\RequestService;
-use FlatDesigner\Validator\PasswordValidator;
-use FlatDesigner\Validator\UserFieldValidator;
+use Izbik\Dto\CredentialsDto;
+use Izbik\Dto\RefreshTokenDto;
+use Izbik\Dto\SignUpDto;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotAuthorizedResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Authentication\AuthenticationService;
+use Izbik\Service\Authentication\Exception\AccountLockedException;
+use Izbik\Service\Authentication\Exception\AuthenticationException;
+use Izbik\Service\Authentication\Exception\InvalidTokenException;
+use Izbik\Service\Authentication\TokenService;
+use Izbik\Service\Provider\UserProvider;
+use Izbik\Service\Request\RequestService;
+use Izbik\Validator\PasswordValidator;
+use Izbik\Validator\UserFieldValidator;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RoutePost;
 use Psr\Http\Message\ResponseInterface;

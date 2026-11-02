@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * The ground of a plot from its spot heights (FD-86): their Delaunay triangulation, extended to the plot's boundary.
+ * The ground of a plot from its spot heights: their Delaunay triangulation, extended to the plot's boundary.
  * Each boundary corner takes the height the spot heights give it (inside their triangles, else at the nearest point of
  * their outline), and the spot heights and corners are triangulated together, so the surface covers the whole plot and
  * is planar in each triangle. Outside its triangles the ground has the height of the nearest point of their outline.

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Entity\VariantSet;
-use FlatDesigner\Model\Repository\ItemGroupRepository;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Entity\VariantSet;
+use Izbik\Model\Repository\ItemGroupRepository;
+use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\Exception\EditException;
 
 /**
  * Variant sets as batches (one revision, one undo step): making one of groups, adding a variant, switching

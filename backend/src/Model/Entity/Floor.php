@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Project\FloorStack;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Project\FloorStack;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;

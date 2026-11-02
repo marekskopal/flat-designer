@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\VariantSetController;
-use FlatDesigner\Dto\SceneDto;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\Element\VariantSetHandler;
-use FlatDesigner\Service\Editor\VariantEditor;
-use FlatDesigner\Service\Project\ProjectSnapshotService;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\VariantSetController;
+use Izbik\Dto\SceneDto;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\Element\VariantSetHandler;
+use Izbik\Service\Editor\VariantEditor;
+use Izbik\Service\Project\ProjectSnapshotService;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(VariantSetController::class)]

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
- * A roof's quantities (FD-38): its covering and soffit (m², along the slope, without its windows and where another roof
+ * A roof's quantities: its covering and soffit (m², along the slope, without its windows and where another roof
  * is higher), the number of its windows and the cost; `complete` is false when a line has no price.
  */
 final readonly class QuantityRoofDto

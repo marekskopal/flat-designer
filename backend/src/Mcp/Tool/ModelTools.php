@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\ModelAssetInputDto;
-use FlatDesigner\Model\Entity\ModelAsset;
-use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
-use FlatDesigner\Service\Upload\UploadTicketService;
+use Izbik\Dto\ModelAssetInputDto;
+use Izbik\Model\Entity\ModelAsset;
+use Izbik\Service\ModelAsset\ModelAssetProvider;
+use Izbik\Service\Upload\UploadTicketService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 use RuntimeException;

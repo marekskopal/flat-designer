@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Quantities;
+namespace Izbik\Service\Quantities;
 
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\WallDto;
-use FlatDesigner\Dto\WallFinishDto;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
-use FlatDesigner\Service\Editor\Geometry\RoofBreaks;
-use FlatDesigner\Service\Editor\Geometry\RoofCover;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\Spans;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
+use Izbik\Dto\RoomDto;
+use Izbik\Dto\WallDto;
+use Izbik\Dto\WallFinishDto;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Service\Editor\Geometry\RoofBreaks;
+use Izbik\Service\Editor\Geometry\RoofCover;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\Spans;
+use Izbik\Service\Editor\Geometry\WallLine;
 
 /**
- * A room's wall face under the roofs (FD-38): its bands and paint as `RoomSurfaces` counts them, up to a top that follows
+ * A room's wall face under the roofs: its bands and paint as `RoomSurfaces` counts them, up to a top that follows
  * the wall's top under the roofs (its height cut by their underside, or with `upToRoof` the underside) and the room's
  * ceiling. The top is piecewise linear along the face, and so is every height counted, between the openings' edges and
  * `RoofBreaks` at the heights the count turns on; each stretch is summed exactly from its ends.
@@ -51,7 +51,7 @@ final readonly class RoomFaceUnderRoof
 		}
 		$floor = (float) $room->floorElevation;
 		$length = max(sqrt(($b[0] - $a[0]) ** 2 + ($b[1] - $a[1]) ** 2), 1e-9);
-		// The wall's own top along the edge: level, or sloping to `heightEnd` at the wall's end (FD-87).
+		// The wall's own top along the edge: level, or sloping to `heightEnd` at the wall's end.
 		$wallHeight = self::wallHeight($face['wall'], $a, $b);
 		$top = static function (float $along) use ($cover, $a, $b, $length, $floor, $face, $wallTop, $wallHeight): float {
 			$t = $along / $length;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -29,7 +29,7 @@ final readonly class WallFinishBands
 
 	/**
 	 * Checked bands of a field; an empty list stays empty. A wall face's may start below the floor's level, down to
-	 * `-$below` (a façade's plinth over the slab's edge, FD-88); a room's start on its floor.
+	 * `-$below` (a façade's plinth over the slab's edge); a room's start on its floor.
 	 *
 	 * @return list<array{materialId: int, bottom: int, top: int}>
 	 */

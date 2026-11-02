@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\RoomDetectInputDto;
-use FlatDesigner\Dto\WallPolylineInputDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\Drawing\RoomOutliner;
-use FlatDesigner\Service\Editor\Drawing\WallDrawer;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\RoomDetectInputDto;
+use Izbik\Dto\WallPolylineInputDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\Drawing\RoomOutliner;
+use Izbik\Service\Editor\Drawing\WallDrawer;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RoutePost;
 use Psr\Http\Message\ResponseInterface;

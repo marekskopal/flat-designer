@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\BuiltInFurnitureConverter;
-use FlatDesigner\Service\Furniture\DefinitionEvaluator;
-use FlatDesigner\Service\Furniture\DefinitionException;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\BuiltInFurnitureConverter;
+use Izbik\Service\Furniture\DefinitionEvaluator;
+use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 use PDO;
 use const JSON_THROW_ON_ERROR;

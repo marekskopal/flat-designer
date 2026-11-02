@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\ProjectMaterialPrice;
+use Izbik\Model\Entity\ProjectMaterialPrice;
 
 /** @extends ARepository<ProjectMaterialPrice> */
 final class ProjectMaterialPriceRepository extends ARepository

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Authentication;
+namespace Izbik\Service\Authentication;
 
-use FlatDesigner\Dto\AuthenticationDto;
-use FlatDesigner\Dto\CredentialsDto;
-use FlatDesigner\Service\Authentication\Exception\AuthenticationException;
-use FlatDesigner\Service\Provider\UserProvider;
+use Izbik\Dto\AuthenticationDto;
+use Izbik\Dto\CredentialsDto;
+use Izbik\Service\Authentication\Exception\AuthenticationException;
+use Izbik\Service\Provider\UserProvider;
 
 final readonly class AuthenticationService
 {

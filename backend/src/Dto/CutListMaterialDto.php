@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** Totals of one board material: `area` of all its boards (m², one face) and `edgeLength` of their banded edges (m). */
 final readonly class CutListMaterialDto

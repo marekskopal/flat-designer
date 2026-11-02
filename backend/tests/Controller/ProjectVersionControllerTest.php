@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ProjectVersionController;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Model\Repository\StairRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Project\ProjectSnapshotService;
-use FlatDesigner\Service\Project\ProjectVersionProvider;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\ProjectVersionController;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Model\Repository\StairRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Project\ProjectSnapshotService;
+use Izbik\Service\Project\ProjectVersionProvider;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use const JSON_THROW_ON_ERROR;

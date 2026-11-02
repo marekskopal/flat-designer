@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Project;
+use Izbik\Model\Entity\Project;
 use const DATE_ATOM;
 
 final readonly class ProjectDto

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Response;
+namespace Izbik\Response;
 
 use Laminas\Diactoros\Response\JsonResponse;
 

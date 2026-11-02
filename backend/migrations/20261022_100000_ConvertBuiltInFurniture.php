@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Migrations;
 
 use DateTimeImmutable;
-use FlatDesigner\Service\Furniture\BuiltInFurnitureConverter;
-use FlatDesigner\Service\Furniture\BuiltInItemConverter;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\BuiltInFurnitureConverter;
+use Izbik\Service\Furniture\BuiltInItemConverter;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 use PDO;
 use RuntimeException;

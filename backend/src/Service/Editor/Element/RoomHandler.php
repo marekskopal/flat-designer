@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Room;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\PolygonValidator;
+use Izbik\Dto\RoomDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\RoomTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Room;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\PolygonValidator;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -26,7 +26,7 @@ final readonly class RoomHandler implements ElementHandler
 	/** How far a room's floor may lie above or below the floor's level, mm. */
 	private const int MaxFloorElevation = 3000;
 
-	/** The floor a new garage gets (FD-89). */
+	/** The floor a new garage gets. */
 	public const string GarageFloor = 'concrete-floor';
 
 	public function __construct(

@@ -1117,7 +1117,7 @@
    }
   },
   {
-   "name": "a gable with skewed verges (FD-97): the start turned 5°, the end −10°, so the planes are trapezoids",
+   "name": "a gable with skewed verges: the start turned 5°, the end −10°, so the planes are trapezoids",
    "roof": {
     "shape": "Gable",
     "x": 5000,
@@ -1335,7 +1335,7 @@
    }
   },
   {
-   "name": "a flat roof whose start end is skewed 5° over a skewed wall (FD-101): its outline a trapezoid, the corner beyond it uncovered",
+   "name": "a flat roof whose start end is skewed 5° over a skewed wall: its outline a trapezoid, the corner beyond it uncovered",
    "roof": {
     "shape": "Flat",
     "x": 0,

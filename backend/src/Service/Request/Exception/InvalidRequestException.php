@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Request\Exception;
+namespace Izbik\Service\Request\Exception;
 
 /** Malformed client input; the router's throwable handler turns the code into the response status. */
 final class InvalidRequestException extends \RuntimeException

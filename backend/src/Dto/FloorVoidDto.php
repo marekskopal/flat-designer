@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\FloorVoid;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\FloorVoid;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Json\JsonDecoder;
 
 /**
- * A floor void as the scene serves it (FD-90): its outline (plan mm), area in m², the lining's material (null: none)
+ * A floor void as the scene serves it: its outline (plan mm), area in m², the lining's material (null: none)
  * and depth (mm down from the floor's level; null: down to the ceilings below).
  */
 final readonly class FloorVoidDto

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression\Node;
+namespace Izbik\Service\Furniture\Expression\Node;
 
-use FlatDesigner\Service\Furniture\Expression\ExpressionErrorEnum;
-use FlatDesigner\Service\Furniture\Expression\ExpressionException;
+use Izbik\Service\Furniture\Expression\ExpressionErrorEnum;
+use Izbik\Service\Furniture\Expression\ExpressionException;
 
 /** Arithmetic and comparisons of numbers; `==` / `!=` compare two values of the same type, or anything with null. */
 final readonly class BinaryNode implements Node

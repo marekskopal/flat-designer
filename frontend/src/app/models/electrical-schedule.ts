@@ -10,7 +10,7 @@ export const CategoryLabels: Record<ElectricalCategory, string> = {
     plumbing: 'Plumbing',
 };
 
-/** The symbol set of the electrical plan, a user setting (FD-64): IEC 60617 or as Czech plans draw them (ČSN). */
+/** The symbol set of the electrical plan, a user setting: IEC 60617 or as Czech plans draw them (ČSN). */
 export type ElectricalSymbols = 'Iec' | 'Csn';
 
 export const ElectricalSymbolsLabels: Record<ElectricalSymbols, string> = {

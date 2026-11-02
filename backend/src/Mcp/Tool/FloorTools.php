@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\ElectricalScheduleDto;
-use FlatDesigner\Dto\RoomScheduleDto;
-use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
-use FlatDesigner\Service\Provider\SceneProvider;
-use FlatDesigner\Service\Schedule\ElectricalScheduleService;
-use FlatDesigner\Service\Schedule\RoomScheduleService;
+use Izbik\Dto\ElectricalScheduleDto;
+use Izbik\Dto\RoomScheduleDto;
+use Izbik\Service\Editor\Catalog\ItemKindCatalog;
+use Izbik\Service\Provider\SceneProvider;
+use Izbik\Service\Schedule\ElectricalScheduleService;
+use Izbik\Service\Schedule\RoomScheduleService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 

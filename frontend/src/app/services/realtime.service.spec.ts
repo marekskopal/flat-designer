@@ -66,7 +66,7 @@ describe('RealtimeService', () => {
     function subscribeHub(): void {
         TestBed.inject(HttpTestingController)
             .expectOne({method: 'POST', url: '/api/realtime/subscription'})
-            .flush({hubUrl: '/.well-known/mercure', topicPrefix: 'flat-designer/projects/'});
+            .flush({hubUrl: '/.well-known/mercure', topicPrefix: 'izbik/projects/'});
     }
 
     it('gets the hub cookie, then listens to the project topic', async () => {
@@ -77,7 +77,7 @@ describe('RealtimeService', () => {
         await settle();
 
         const source = FakeEventSource.instances[0];
-        expect(source.url).toBe('/.well-known/mercure?match=flat-designer%2Fprojects%2F7');
+        expect(source.url).toBe('/.well-known/mercure?match=izbik%2Fprojects%2F7');
         expect(source.init).toEqual({withCredentials: true});
 
         source.emit(update(7, 12));

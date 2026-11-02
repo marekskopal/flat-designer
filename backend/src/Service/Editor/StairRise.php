@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Project\FloorStack;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Wall;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Project\FloorStack;
 
 /**
  * How high a floor's stairs climb: from the floor to the next one up (the lowest level above it), or, without one

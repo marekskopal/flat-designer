@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\SharedViewDto;
-use FlatDesigner\Dto\ShareLinkDto;
-use FlatDesigner\Dto\ShareLinkInputDto;
-use FlatDesigner\Dto\ShareSettingsDto;
-use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
-use FlatDesigner\Model\Entity\Enum\ShareViewEnum;
-use FlatDesigner\Model\Entity\ModelAsset;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectFile;
-use FlatDesigner\Model\Entity\ShareLink;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Model\Repository\ShareLinkRepository;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Project\Exception\ProjectException;
+use Izbik\Dto\SharedViewDto;
+use Izbik\Dto\ShareLinkDto;
+use Izbik\Dto\ShareLinkInputDto;
+use Izbik\Dto\ShareSettingsDto;
+use Izbik\Model\Entity\Enum\ElectricalSymbolsEnum;
+use Izbik\Model\Entity\Enum\ShareViewEnum;
+use Izbik\Model\Entity\ModelAsset;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectFile;
+use Izbik\Model\Entity\ShareLink;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\ModelAssetRepository;
+use Izbik\Model\Repository\ShareLinkRepository;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Project\Exception\ProjectException;
 use MarekSkopal\ORM\ORM;
 use stdClass;
 use const JSON_THROW_ON_ERROR;
@@ -184,7 +184,7 @@ final readonly class ShareLinkProvider
 	}
 
 	/**
-	 * Whether a link's guests walk over all floors (FD-102): it draws all floors and offers the walk, so it serves the
+	 * Whether a link's guests walk over all floors: it draws all floors and offers the walk, so it serves the
 	 * floors above the shared one too; without the walk they stay out, as before.
 	 */
 	private static function walksAllFloors(ShareSettingsDto $settings): bool

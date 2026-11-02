@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Item;
-use FlatDesigner\Model\Entity\ModelAsset;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Item;
+use Izbik\Model\Entity\ModelAsset;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\ModelAssetRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\ModelAsset\ModelAssetProvider;
 
 /**
  * The 3D model of a `Model` item, for `ItemHandler`: required for that kind and usable in the floor's project (global,

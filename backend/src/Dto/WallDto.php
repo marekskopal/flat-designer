@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Model\Entity\Wall;
+use Izbik\Service\Json\JsonDecoder;
 
 final readonly class WallDto
 {

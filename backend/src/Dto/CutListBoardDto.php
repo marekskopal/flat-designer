@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
  * Identical boards: `length` runs along the grain, `width` across it, `thickness` the smallest side; `edges` are the

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor;
+namespace Izbik\Service\Editor;
 
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Exception\EditException;
 
 /** Room outlines: a simple polygon (no self-intersection) of 3..200 integer points with an area. */
 final readonly class PolygonValidator

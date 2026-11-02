@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
  * Turns a face of `FaceGraph` into a room polygon: (nearly) collinear vertices dropped, rounded to whole

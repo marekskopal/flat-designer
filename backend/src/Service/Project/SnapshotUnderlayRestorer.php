@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FloorUnderlay;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FloorUnderlayRepository;
-use FlatDesigner\Model\Repository\ProjectFileRepository;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FloorUnderlay;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FloorUnderlayRepository;
+use Izbik\Model\Repository\ProjectFileRepository;
 
 /** Restores a floor's underlay from a snapshot, while its file is still in the project (files are not in snapshots). */
 final readonly class SnapshotUnderlayRestorer

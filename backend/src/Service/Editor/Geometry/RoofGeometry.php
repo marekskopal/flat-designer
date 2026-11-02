@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Dto\RoofDto;
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Model\Entity\Roof;
+use Izbik\Dto\RoofDto;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Model\Entity\Roof;
 use const M_PI;
 
 /**
@@ -18,7 +18,7 @@ use const M_PI;
  * `pitch` inwards; past the eaves the planes go on down over the overhang. Every pitched roof's underside is the lowest
  * of its planes, so a point's height needs no lookup of the plane under it.
  *
- * A gable's or shed's verges, and a flat roof's ends (FD-101), may be skewed (FD-97): `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
+ * A gable's or shed's verges, and a flat roof's ends, may be skewed: `startSkew` / `endSkew` (degrees counter-clockwise, 0 square to the
  * ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on the eaves line, so the eaves line
  * and the outline are trapezoids (`localOutline()`), the overhang `vergeOverhang` square to the turned verge. The planes
  * and so the heights stay as they were; only where the roof reaches changes.

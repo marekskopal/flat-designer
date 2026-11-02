@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
-use FlatDesigner\Service\Editor\StairRise;
+use Izbik\Service\Editor\StairRise;
 use stdClass;
 
 /**
  * The stairs' part of a version's scene, derived from the snapshot's floors as `SceneProvider` derives it from the rows:
  * `stairRise` (`StairRise`), `stairsBelow` (the floor below's stairs with their rise) and `voidsAbove` (the floor above's
- * slab and voids, FD-90). Snapshots taken before stairs and voids have none.
+ * slab and voids). Snapshots taken before stairs and voids have none.
  */
 final readonly class SnapshotStairs
 {

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\SectionLine;
-use FlatDesigner\Model\Repository\SectionLineRepository;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\SectionLine;
+use Izbik\Model\Repository\SectionLineRepository;
 
-/** Restores a floor's section lines (FD-94) from a snapshot; snapshots taken before them have none. */
+/** Restores a floor's section lines from a snapshot; snapshots taken before them have none. */
 final readonly class SnapshotSectionRestorer
 {
 	public function __construct(private SectionLineRepository $lineRepository)

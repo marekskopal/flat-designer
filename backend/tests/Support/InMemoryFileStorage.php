@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Support;
+namespace Izbik\Tests\Support;
 
-use FlatDesigner\Service\Storage\FileStorageInterface;
+use Izbik\Service\Storage\FileStorageInterface;
 use RuntimeException;
 
 /** Stands in for S3 in tests; `objects` is inspectable. */

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\Expression;
-use FlatDesigner\Service\Furniture\Expression\ExpressionErrorEnum;
-use FlatDesigner\Service\Furniture\Expression\Node\Values;
+use Izbik\Service\Furniture\Expression\Expression;
+use Izbik\Service\Furniture\Expression\ExpressionErrorEnum;
+use Izbik\Service\Furniture\Expression\Node\Values;
 
 /**
  * The `repeat` of a part entry: `{count, as?}` gives the copy's index as `as` (default `i`), `{over, as?}` the list item

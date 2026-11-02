@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression\Node;
+namespace Izbik\Service\Furniture\Expression\Node;
 
-use FlatDesigner\Service\Furniture\Expression\RecordValue;
+use Izbik\Service\Furniture\Expression\RecordValue;
 
 /**
  * A node of a parsed expression; `evaluate()` throws ExpressionException for unknown variables and type errors.

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\MaterialPatternEnum;
-use FlatDesigner\Model\Entity\Material;
+use Izbik\Model\Entity\Enum\MaterialPatternEnum;
+use Izbik\Model\Entity\Material;
 
 final readonly class MaterialDto
 {

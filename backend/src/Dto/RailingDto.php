@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Railing;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Railing;
+use Izbik\Service\Json\JsonDecoder;
 
 /**
- * A railing as the scene serves it (FD-90): its polyline (plan mm), height over its base (`baseZ`, mm against the
+ * A railing as the scene serves it: its polyline (plan mm), height over its base (`baseZ`, mm against the
  * floor's level), infill style with its spacing (null: the style's), the posts' spacing, the handrail and materials.
  */
 final readonly class RailingDto

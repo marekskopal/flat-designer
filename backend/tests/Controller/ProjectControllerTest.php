@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\ProjectController;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\ProjectController;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use const JSON_THROW_ON_ERROR;
 

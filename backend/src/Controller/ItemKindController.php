@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Editor\Catalog\ItemKindCatalog;
+use Izbik\Route\Routes;
+use Izbik\Service\Editor\Catalog\ItemKindCatalog;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use Psr\Http\Message\ResponseInterface;

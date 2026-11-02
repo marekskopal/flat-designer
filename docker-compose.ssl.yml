@@ -1,4 +1,4 @@
-name: flat-designer
+name: izbik
 
 # Override that turns on HTTPS for the proxy. Enable it with COMPOSE_FILE in .env (see .env.example) or
 #   docker compose -f docker-compose.yml -f docker-compose.ssl.yml up -d

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Request;
+namespace Izbik\Service\Request;
 
-use FlatDesigner\Dto\ArrayFactoryInterface;
-use FlatDesigner\Middleware\AuthorizationMiddleware;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Request\Exception\InvalidRequestException;
+use Izbik\Dto\ArrayFactoryInterface;
+use Izbik\Middleware\AuthorizationMiddleware;
+use Izbik\Model\Entity\User;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Request\Exception\InvalidRequestException;
 use Psr\Http\Message\ServerRequestInterface;
 use RuntimeException;
 

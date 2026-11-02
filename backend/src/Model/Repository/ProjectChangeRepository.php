@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\ProjectChange;
+use Izbik\Model\Entity\ProjectChange;
 use MarekSkopal\ORM\Query\Select;
 
 /** @extends ARepository<ProjectChange> */

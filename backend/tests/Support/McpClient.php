@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Support;
+namespace Izbik\Tests\Support;
 
 use Laminas\Diactoros\ServerRequest;
 use Laminas\Diactoros\StreamFactory;

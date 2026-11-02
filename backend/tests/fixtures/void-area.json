@@ -1,5 +1,5 @@
 {
-  "description": "The area of a room's outline the floor voids take, mm² (FD-90). Twins: VoidArea (PHP, PolygonOverlap) and netRoomArea() (TS, polygon-clipping). Voids are taken not to overlap one another.",
+  "description": "The area of a room's outline the floor voids take, mm². Twins: VoidArea (PHP, PolygonOverlap) and netRoomArea() (TS, polygon-clipping). Voids are taken not to overlap one another.",
   "cases": [
     {
       "name": "a void inside the room",

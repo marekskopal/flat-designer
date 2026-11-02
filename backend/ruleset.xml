@@ -320,8 +320,8 @@
     <rule ref="SlevomatCodingStandard.Files.TypeNameMatchesFileName">
         <properties>
             <property name="rootNamespaces" type="array">
-                <element key="src" value="FlatDesigner"/>
-                <element key="tests" value="FlatDesigner\Tests"/>
+                <element key="src" value="Izbik"/>
+                <element key="tests" value="Izbik\Tests"/>
             </property>
         </properties>
         <exclude-pattern>migrations/</exclude-pattern>

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\FloorUnderlay;
+use Izbik\Model\Entity\FloorUnderlay;
 
 /** @extends ARepository<FloorUnderlay> */
 final class FloorUnderlayRepository extends ARepository

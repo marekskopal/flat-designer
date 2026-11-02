@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
-use FlatDesigner\Model\Entity\Room;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Enum\RoomTypeEnum;
+use Izbik\Model\Entity\Room;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Json\JsonDecoder;
 
 final readonly class RoomDto
 {

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Schedule;
+namespace Izbik\Service\Schedule;
 
-use FlatDesigner\Dto\FloorVoidDto;
-use FlatDesigner\Service\Editor\Geometry\PolygonOverlap;
+use Izbik\Dto\FloorVoidDto;
+use Izbik\Service\Editor\Geometry\PolygonOverlap;
 
 /**
- * How much of an outline the floor voids take (FD-90): a room's floor lost to a void through it, or a ceiling under the
+ * How much of an outline the floor voids take: a room's floor lost to a void through it, or a ceiling under the
  * voids of the floor above. Voids are taken not to overlap one another. The stairs' voids are the viewer's (their
  * footprints are TS only) and are not counted.
  */

@@ -12,7 +12,7 @@ const RoundSegments = 32;
 
 /**
  * Structural items in the item-local frame (bottom centre origin, x along the width, +z out of the front): a
- * `Column`, square or round (`params.shape`), a `Beam` along the width and a `Chimney` (FD-91), the stretch of it the
+ * `Column`, square or round (`params.shape`), a `Beam` along the width and a `Chimney`, the stretch of it the
  * floor draws (`chimney`: undefined its own height with its cap, null nothing). Like wall pieces, every mesh has an
  * inside-out twin in the section fill, so the section plane shows a solid cut. Returns null for other kinds.
  */

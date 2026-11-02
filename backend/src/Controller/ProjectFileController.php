@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\ProjectFileDto;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectFile;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ProjectFileProvider;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Project\ShareLinkProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\ProjectFileDto;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectFile;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ProjectFileProvider;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\ShareLinkProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\StreamFactory;

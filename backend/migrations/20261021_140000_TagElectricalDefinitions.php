@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\DefinitionEncoder;
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\DefinitionEncoder;
+use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * The global definitions of `SeedLightingCatalogue` get the `category` the electrical schedule counts them by (FD-50).
+ * The global definitions of `SeedLightingCatalogue` get the `category` the electrical schedule counts them by.
  * Patched in place, so an admin's later edits stay; on a fresh database the seed files already carry it. Copies in
  * libraries and projects are left as they are.
  */

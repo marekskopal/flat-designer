@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
-use FlatDesigner\Service\Furniture\ScopedAsset;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
+use Izbik\Service\Furniture\ScopedAsset;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;

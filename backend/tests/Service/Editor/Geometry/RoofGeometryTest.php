@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Editor\Geometry;
+namespace Izbik\Tests\Service\Editor\Geometry;
 
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Service\Editor\Geometry\ConvexClip;
-use FlatDesigner\Service\Editor\Geometry\RoofCover;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\RoofWindowGeometry;
-use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
-use FlatDesigner\Service\Editor\Geometry\RoomUnderRoofSum;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Service\Editor\Geometry\ConvexClip;
+use Izbik\Service\Editor\Geometry\RoofCover;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\RoofWindowGeometry;
+use Izbik\Service\Editor\Geometry\RoomUnderRoof;
+use Izbik\Service\Editor\Geometry\RoomUnderRoofSum;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

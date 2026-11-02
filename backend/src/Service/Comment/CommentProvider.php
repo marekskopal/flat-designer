@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Comment;
+namespace Izbik\Service\Comment;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\CommentDto;
-use FlatDesigner\Dto\CommentInputDto;
-use FlatDesigner\Dto\CommentUpdateDto;
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Enum\CommentAuthorEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\CommentRepository;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Dto\CommentDto;
+use Izbik\Dto\CommentInputDto;
+use Izbik\Dto\CommentUpdateDto;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Enum\CommentAuthorEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\CommentRepository;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 use MarekSkopal\ORM\ORM;
 
 /**

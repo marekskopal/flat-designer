@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Material;
+namespace Izbik\Service\Material;
 
 use RuntimeException;
 use Throwable;

@@ -11,7 +11,7 @@ import {Vec2} from './plan-geometry';
  * inwards; past the eaves the planes go on down over the overhang. Every pitched roof's underside is the lowest of its
  * planes, so a point's height needs no lookup of the plane under it.
  *
- * A gable's or shed's verges, and a flat roof's ends (FD-101), may be skewed (FD-97): `startSkew` / `endSkew` (degrees
+ * A gable's or shed's verges, and a flat roof's ends, may be skewed: `startSkew` / `endSkew` (degrees
  * counter-clockwise, 0 square to the ridge) turn the verge at the ridge's start (−s) or end (+s) about the ridge's end on
  * the eaves line, so the eaves line and the outline are trapezoids (`roofLocalOutline()`), the overhang (a gable's or
  * shed's `vergeOverhang`) square to the turned verge. The planes and so the heights stay as they were; only where the roof
@@ -51,10 +51,10 @@ export function roofSlope(roof: RoofShapeFields): number {
     return isPitched(roof) ? Math.tan((roof.pitch * Math.PI) / 180) : 0;
 }
 
-/** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed (FD-97). */
+/** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed. */
 export const hasVerges = (roof: Pick<Roof, 'shape'>): boolean => roof.shape === 'Gable' || roof.shape === 'Shed';
 
-/** Whether its ends may be skewed (`RoofShapeEnum::canSkew()`): a gable's or shed's verges, a flat roof's ends (FD-101). */
+/** Whether its ends may be skewed (`RoofShapeEnum::canSkew()`): a gable's or shed's verges, a flat roof's ends. */
 export const canSkew = (roof: Pick<Roof, 'shape'>): boolean => hasVerges(roof) || roof.shape === 'Flat';
 
 /**
@@ -337,7 +337,7 @@ export const RoofWindowMargin = 300;
 export type RoofWindowPlace = Pick<RoofWindow, 'along' | 'across' | 'width' | 'length'>;
 
 /**
- * Where a roof window lies (FD-38), in the roof's frame: on the plane under its centre, `width` across the slope and
+ * Where a roof window lies, in the roof's frame: on the plane under its centre, `width` across the slope and
  * `length` up it, so `length` · cos(pitch) deep in plan. `up` is up the slope and `side` across it to the left of up,
  * both unit vectors; `corners` go counter-clockwise from the low left (a corner may lie off the plane). Null on a flat
  * roof, or with the centre off the roof. Twin of `RoofWindowGeometry::corners()`.

@@ -9,7 +9,7 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
  * The patterns `Stone` (random coursed dry-stone walling) and `Formwork` (cast concrete showing its formwork panels or
- * boards, not laid in pieces) and the finishes of the demo house (FD-92): its façade (white
+ * boards, not laid in pieces) and the finishes of the demo house: its façade (white
  * silicate render, a grey plinth, horizontal larch cladding, exposed concrete, painted steel), interior (wide oak planks,
  * solid oak, white solid surface, quartzite tiles, black granite, oak-stained frames) and garden (larch decking, stepping
  * slabs, clay pavers, dry-stone walling, a lavender bed). All are drawn procedurally: the reference photos have no

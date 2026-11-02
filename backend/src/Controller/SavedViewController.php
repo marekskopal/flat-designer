@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\SavedViewDto;
-use FlatDesigner\Dto\SavedViewInputDto;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\SavedView;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Project\SavedViewProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\SavedViewDto;
+use Izbik\Dto\SavedViewInputDto;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\SavedView;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\SavedViewProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;

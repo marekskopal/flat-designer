@@ -6,25 +6,25 @@ export const appRoutes: Routes = [
     {
         path: 'login',
         canActivate: [guestGuard],
-        title: 'Sign in · Flat Designer',
+        title: 'Sign in · Izbik',
         loadComponent: async () => (await import('@app/authentication/login.component')).LoginComponent,
     },
     {
         path: 'sign-up',
         canActivate: [guestGuard],
-        title: 'Sign up · Flat Designer',
+        title: 'Sign up · Izbik',
         loadComponent: async () => (await import('@app/authentication/sign-up.component')).SignUpComponent,
     },
     {
         // OAuth consent for MCP clients; signs in inline, so no guard.
         path: 'oauth/authorize',
-        title: 'Connect · Flat Designer',
+        title: 'Connect · Izbik',
         loadComponent: async () => (await import('@app/oauth/oauth-authorize.component')).OAuthAuthorizeComponent,
     },
     {
         // A share link: a guest view of one floor, also for signed-in users (no guard).
         path: 's/:token',
-        title: 'Shared view · Flat Designer',
+        title: 'Shared view · Izbik',
         loadComponent: async () => (await import('@app/shared-viewer/shared-viewer-page.component')).SharedViewerPageComponent,
     },
     {
@@ -35,48 +35,48 @@ export const appRoutes: Routes = [
             {path: '', pathMatch: 'full', redirectTo: 'projects'},
             {
                 path: 'projects',
-                title: 'Projects · Flat Designer',
+                title: 'Projects · Izbik',
                 loadComponent: async () => (await import('@app/projects/projects.component')).ProjectsComponent,
             },
             {
                 path: 'projects/:projectId',
-                title: 'Project · Flat Designer',
+                title: 'Project · Izbik',
                 loadComponent: async () => (await import('@app/projects/project-detail.component')).ProjectDetailComponent,
             },
             {
                 path: 'projects/:projectId/cut-list',
-                title: 'Cut list · Flat Designer',
+                title: 'Cut list · Izbik',
                 loadComponent: async () => (await import('@app/projects/cut-list/cut-list.component')).CutListComponent,
             },
             {
                 path: 'projects/:projectId/quantities',
-                title: 'Quantities & cost · Flat Designer',
+                title: 'Quantities & cost · Izbik',
                 loadComponent: async () => (await import('@app/projects/quantities/quantities.component')).QuantitiesComponent,
             },
             {
                 path: 'projects/:projectId/floors/:floorId',
-                title: 'Flat Designer',
+                title: 'Izbik',
                 loadComponent: async () => (await import('@app/viewer-page/viewer-page.component')).ViewerPageComponent,
             },
             {
                 path: 'furniture',
-                title: 'Furniture · Flat Designer',
+                title: 'Furniture · Izbik',
                 loadComponent: async () => (await import('@app/furniture/furniture-library.component')).FurnitureLibraryComponent,
             },
             {
                 path: 'furniture/:definitionId',
-                title: 'Furniture · Flat Designer',
+                title: 'Furniture · Izbik',
                 loadComponent: async () => (await import('@app/furniture/furniture-editor.component')).FurnitureEditorComponent,
             },
             {
                 path: 'account',
-                title: 'Account · Flat Designer',
+                title: 'Account · Izbik',
                 loadComponent: async () => (await import('@app/account/account.component')).AccountComponent,
             },
             {
                 path: 'admin/users',
                 canActivate: [adminGuard],
-                title: 'Users · Flat Designer',
+                title: 'Users · Izbik',
                 loadComponent: async () => (await import('@app/admin/admin-users.component')).AdminUsersComponent,
             },
         ],

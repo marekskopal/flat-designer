@@ -1,5 +1,5 @@
 {
-    "description": "What an electrical item counts as (FD-64): DefinitionSchedule::of(definition)->units(definition, given) in PHP, scheduleUnits(definition, given) in electrical.ts. Run by DefinitionScheduleUnitsTest and electrical.spec.ts.",
+    "description": "What an electrical item counts as: DefinitionSchedule::of(definition)->units(definition, given) in PHP, scheduleUnits(definition, given) in electrical.ts. Run by DefinitionScheduleUnitsTest and electrical.spec.ts.",
     "cases": [
         {
             "name": "count names a parameter the item gives",

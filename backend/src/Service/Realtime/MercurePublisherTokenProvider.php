@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Realtime;
+namespace Izbik\Service\Realtime;
 
 use SensitiveParameter;
 use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
@@ -10,7 +10,7 @@ use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 /** A short-lived publisher JWT for every publish call, allowed to publish to any topic. */
 final readonly class MercurePublisherTokenProvider implements TokenProviderInterface
 {
-	private const string Subject = 'flat-designer-backend';
+	private const string Subject = 'izbik-backend';
 	private const int TtlSeconds = 60;
 
 	public function __construct(#[SensitiveParameter] private string $key, private string $audience)

@@ -1,4 +1,4 @@
-// Mirrors FlatDesigner\Dto\ChangeDto, EditResultDto and the item kind catalogue.
+// Mirrors Izbik\Dto\ChangeDto, EditResultDto and the item kind catalogue.
 
 export interface Change {
     id: number;

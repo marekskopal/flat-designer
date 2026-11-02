@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Admin;
+namespace Izbik\Service\Admin;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\AdminUserUpdateDto;
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ModelAssetRepository;
-use FlatDesigner\Model\Repository\ProjectRepository;
-use FlatDesigner\Model\Repository\UserRepository;
-use FlatDesigner\Service\Admin\Exception\AdminUserException;
-use FlatDesigner\Service\Project\ProjectFileProvider;
-use FlatDesigner\Validator\UserFieldValidator;
+use Izbik\Dto\AdminUserUpdateDto;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ModelAssetRepository;
+use Izbik\Model\Repository\ProjectRepository;
+use Izbik\Model\Repository\UserRepository;
+use Izbik\Service\Admin\Exception\AdminUserException;
+use Izbik\Service\Project\ProjectFileProvider;
+use Izbik\Validator\UserFieldValidator;
 
 /** User management for admins. Guards against locking everyone out (last admin, self-delete). */
 final readonly class AdminUserService

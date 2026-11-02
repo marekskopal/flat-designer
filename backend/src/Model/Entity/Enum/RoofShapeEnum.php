@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
  * A roof over a rectangle: two planes meeting at a ridge with gables at its ends, four planes rising from all the eaves
@@ -21,13 +21,13 @@ enum RoofShapeEnum: string
 		return $this !== self::Flat;
 	}
 
-	/** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed (FD-97). */
+	/** Its ends along the ridge are verges (gables, a shed's sides), which may be skewed. */
 	public function hasVerges(): bool
 	{
 		return $this === self::Gable || $this === self::Shed;
 	}
 
-	/** Whether its ends may be skewed (FD-97): a gable's or shed's verges, a flat roof's ends over a skewed wall (FD-101). */
+	/** Whether its ends may be skewed: a gable's or shed's verges, a flat roof's ends over a skewed wall. */
 	public function canSkew(): bool
 	{
 		return $this->hasVerges() || $this === self::Flat;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\ModelAsset;
+namespace Izbik\Service\ModelAsset;
 
 /**
  * The size of a glTF scene: the bounding box of its default scene from the `min` / `max` that every `POSITION` accessor

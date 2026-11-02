@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\RoofWindow;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\RoofWindowGeometry;
+use Izbik\Model\Entity\RoofWindow;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\RoofWindowGeometry;
 use const M_PI;
 
 /**
- * Where a roof window may go (FD-38): on a pitched plane, its frame `Margin` inside the plane's outline in plan (clear of
+ * Where a roof window may go: on a pitched plane, its frame `Margin` inside the plane's outline in plan (clear of
  * the eaves, verges, ridge and hips; `RoofWindowGeometry::fits()`, twinned in the viewer) and not overlapping another
  * window of that plane. The window lies `width` across the slope and `length` up it, so in plan it is
  * `length` · cos(pitch) deep.

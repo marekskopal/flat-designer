@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-/** A floor void in the room schedule (FD-90): listed with the rooms, its area (m²) taken off theirs and in no total. */
+/** A floor void in the room schedule: listed with the rooms, its area (m²) taken off theirs and in no total. */
 final readonly class VoidScheduleRowDto
 {
 	public function __construct(public int $id, public string $name, public float $area)

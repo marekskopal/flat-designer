@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Stair;
+use Izbik\Model\Entity\Stair;
 
 /**
  * A stair as the scene serves it, its fields only: the rise (and so the riser height) comes from the floors, as the

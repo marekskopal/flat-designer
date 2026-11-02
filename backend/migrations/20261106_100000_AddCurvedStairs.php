@@ -7,7 +7,7 @@ namespace Migrations;
 use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** Curved stairs (FD-99): the shape `Curved` and its `inner_radius`, a flight curving round a centre. */
+/** Curved stairs: the shape `Curved` and its `inner_radius`, a flight curving round a centre. */
 final class AddCurvedStairsMigration extends Migration
 {
 	private const array Shapes = ['Straight', 'LShaped', 'UShaped', 'Spiral'];

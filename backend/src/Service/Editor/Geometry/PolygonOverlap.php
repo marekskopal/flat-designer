@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * The area two simple polygons share (FD-90: a floor void over a room). The second polygon is split into triangles (ear
+ * The area two simple polygons share (a floor void over a room). The second polygon is split into triangles (ear
  * clipping), and the first is cut by each of them (`ConvexClip`, right for a concave first polygon too).
  *
  * @phpstan-import-type Point from PlanMath

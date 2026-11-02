@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\WallTypeEnum;
-use FlatDesigner\Model\Repository\WallRepository;
+use Izbik\Model\Entity\Enum\WallTypeEnum;
+use Izbik\Model\Repository\WallRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -35,11 +35,11 @@ class Wall extends AEntity
 	#[Column(type: Type::Text, nullable: true)]
 	public ?string $rightFinishes = null;
 
-	/** The wall rises to the underside of the roofs over it (a gable) instead of stopping at its `height` (FD-38). */
+	/** The wall rises to the underside of the roofs over it (a gable) instead of stopping at its `height`. */
 	#[Column(type: Type::Boolean)]
 	public bool $upToRoof = false;
 
-	/** The top's height at the wall's end; null: `height` all along, else a straight slope from `height` (FD-87). */
+	/** The top's height at the wall's end; null: `height` all along, else a straight slope from `height`. */
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $heightEnd = null;
 

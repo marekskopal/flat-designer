@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Roof;
+use Izbik\Service\Json\JsonDecoder;
 
 /**
  * A roof as the scene serves it, with its windows (elements of their own, as a wall's openings are), and its rainwater
- * goods, snow guards and ridge (FD-91).
+ * goods, snow guards and ridge.
  */
 final readonly class RoofDto
 {

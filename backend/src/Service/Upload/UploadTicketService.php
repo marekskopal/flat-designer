@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Upload;
+namespace Izbik\Service\Upload;
 
 use Closure;
 use DateTimeImmutable;
-use FlatDesigner\Dto\ModelAssetInputDto;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Entity\Enum\UploadKindEnum;
-use FlatDesigner\Model\Entity\ModelAsset;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\ProjectFile;
-use FlatDesigner\Model\Entity\UploadTicket;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\UploadTicketRepository;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\ModelAsset\ModelAssetProvider;
-use FlatDesigner\Service\Project\ProjectFileProvider;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Storage\S3Config;
+use Izbik\Dto\ModelAssetInputDto;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Entity\Enum\UploadKindEnum;
+use Izbik\Model\Entity\ModelAsset;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\ProjectFile;
+use Izbik\Model\Entity\UploadTicket;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\UploadTicketRepository;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\ModelAsset\ModelAssetProvider;
+use Izbik\Service\Project\ProjectFileProvider;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Storage\S3Config;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use Throwable;
 use const JSON_FORCE_OBJECT;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
- * How a garage door opens (FD-89): `Sectional` horizontal panels running up and back under the ceiling on tracks,
+ * How a garage door opens: `Sectional` horizontal panels running up and back under the ceiling on tracks,
  * `UpAndOver` one leaf tilting up to lie under the ceiling, `SideHinged` two leaves hinged on the jambs, `Roller` a
  * curtain of slats rolling up into a drum above the opening.
  */

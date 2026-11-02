@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** Body of project create and update; update replaces all fields (the site fields and the façade left out are 0 / none). */
 final readonly class ProjectInputDto implements ArrayFactoryInterface
@@ -18,7 +18,7 @@ final readonly class ProjectInputDto implements ArrayFactoryInterface
 		public ?float $latitude = null,
 		public ?float $longitude = null,
 		public ?string $timeZone = null,
-		/** The default façade material (FD-88). */
+		/** The default façade material. */
 		public ?int $exteriorMaterialId = null,
 	) {
 	}

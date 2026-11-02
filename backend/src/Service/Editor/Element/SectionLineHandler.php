@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\SectionLineDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\SectionLine;
-use FlatDesigner\Model\Repository\SectionLineRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
+use Izbik\Dto\SectionLineDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\SectionLine;
+use Izbik\Model\Repository\SectionLineRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
 
 /**
- * Section lines (FD-94): cuts through the building drawn on a floor's plan, looking to the left of start → end. A new
+ * Section lines: cuts through the building drawn on a floor's plan, looking to the left of start → end. A new
  * one runs west to east through the middle of the floor's walls, a metre past them, looking north, named by the next
  * letter not taken on the floor.
  */

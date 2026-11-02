@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
-use FlatDesigner\Service\Project\Exception\ProjectException;
 use GdImage;
+use Izbik\Service\Project\Exception\ProjectException;
 
 /**
  * Images of project files as an agent gets them over MCP: optionally cropped to a region, scaled down to fit

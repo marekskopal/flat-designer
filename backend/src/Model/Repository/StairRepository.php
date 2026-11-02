@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\Stair;
+use Izbik\Model\Entity\Stair;
 
 /** @extends ARepository<Stair> */
 final class StairRepository extends ARepository

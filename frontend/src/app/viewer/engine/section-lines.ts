@@ -11,7 +11,7 @@ const ArrowHead = 180;
 const PickHalf = 150;
 
 /**
- * A section line in the top view (FD-94): the cut as a dash-dot line, with an arrow at either end pointing the way it
+ * A section line in the top view: the cut as a dash-dot line, with an arrow at either end pointing the way it
  * looks (to the left of start → end), drawn over the plan without a depth test; an undrawn band along it picks it.
  * Tagged `sectionId`; `planOnly` keeps it out of exports.
  */

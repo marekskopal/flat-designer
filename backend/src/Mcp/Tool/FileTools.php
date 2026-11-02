@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\ProjectFileDto;
-use FlatDesigner\Model\Entity\ProjectFile;
-use FlatDesigner\Service\Project\ImagePreviewService;
-use FlatDesigner\Service\Project\ProjectFileProvider;
-use FlatDesigner\Service\Upload\UploadTicketService;
+use Izbik\Dto\ProjectFileDto;
+use Izbik\Model\Entity\ProjectFile;
+use Izbik\Service\Project\ImagePreviewService;
+use Izbik\Service\Project\ProjectFileProvider;
+use Izbik\Service\Upload\UploadTicketService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\Content\ImageContent;
 use Mcp\Schema\Content\TextContent;

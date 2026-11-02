@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\GroupDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\ItemGroup;
-use FlatDesigner\Model\Entity\VariantSet;
-use FlatDesigner\Model\Repository\ItemGroupRepository;
-use FlatDesigner\Model\Repository\VariantSetRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
+use Izbik\Dto\GroupDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\ItemGroup;
+use Izbik\Model\Entity\VariantSet;
+use Izbik\Model\Repository\ItemGroupRepository;
+use Izbik\Model\Repository\VariantSetRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
 
 /**
  * Item groups: a name and, for a variant, its variant set. Membership is the items' `groupId`; moving,

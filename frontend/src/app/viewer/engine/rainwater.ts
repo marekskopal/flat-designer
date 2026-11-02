@@ -5,7 +5,7 @@ import {roofDownpipeSpan, roofHalfExtent, roofLocal, roofLocalOutline, RoofShape
 import {FloorRoofs, topStretches} from './under-roof';
 
 /**
- * A roof's rainwater goods (FD-91): its gutters run along the outer edge of the overhang at the eaves (a gable's front
+ * A roof's rainwater goods: its gutters run along the outer edge of the overhang at the eaves (a gable's front
  * and back, a shed's front, a hip's four sides), where the roof is the top (`topStretches()`: stopping where another roof
  * of the floor is higher, as the caps do), and its downpipes stand `DownpipeOffset` off the eaves line, the walls' outer
  * face. Without a list (null) the downpipes stand `CornerInset` in from the ends of the front and back eaves; a downpipe whose outlet

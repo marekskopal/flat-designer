@@ -2,34 +2,34 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Schedule;
+namespace Izbik\Service\Schedule;
 
-use FlatDesigner\Dto\FloorScheduleDto;
-use FlatDesigner\Dto\FloorVoidDto;
-use FlatDesigner\Dto\RoomDto;
-use FlatDesigner\Dto\RoomScheduleDto;
-use FlatDesigner\Dto\RoomScheduleRowDto;
-use FlatDesigner\Dto\ScheduleTotalDto;
-use FlatDesigner\Dto\VoidScheduleRowDto;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FloorVoid;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Model\Entity\Room;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\FloorVoidRepository;
-use FlatDesigner\Model\Repository\RoofRepository;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Service\Editor\Geometry\RoofCover;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\RoomUnderRoof;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Dto\FloorScheduleDto;
+use Izbik\Dto\FloorVoidDto;
+use Izbik\Dto\RoomDto;
+use Izbik\Dto\RoomScheduleDto;
+use Izbik\Dto\RoomScheduleRowDto;
+use Izbik\Dto\ScheduleTotalDto;
+use Izbik\Dto\VoidScheduleRowDto;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FloorVoid;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\Roof;
+use Izbik\Model\Entity\Room;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\FloorVoidRepository;
+use Izbik\Model\Repository\RoofRepository;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Service\Editor\Geometry\RoofCover;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\RoomUnderRoof;
+use Izbik\Service\Json\JsonDecoder;
 
 /**
  * Room schedule of a project or a floor: area, perimeter, clear height and volume per room, the indoor (living), ancillary
  * (garages: indoor, unheated) and outdoor totals.
  * A room under the floor's roofs gets its clear height's range, its volume under the slope and its area with headroom
- * (`RoomUnderRoof`). The floor's voids (FD-90) are listed apart and taken off the areas of the rooms they cut.
+ * (`RoomUnderRoof`). The floor's voids are listed apart and taken off the areas of the rooms they cut.
  */
 final readonly class RoomScheduleService
 {

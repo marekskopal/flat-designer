@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Editor\Geometry;
+namespace Izbik\Tests\Service\Editor\Geometry;
 
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Editor\Geometry\PlanMath;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

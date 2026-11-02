@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Model\Entity\Material;
-use FlatDesigner\Model\Repository\MaterialRepository;
-use FlatDesigner\Service\Editor\Element\State;
+use Izbik\Model\Entity\Material;
+use Izbik\Model\Repository\MaterialRepository;
+use Izbik\Service\Editor\Element\State;
 
 /**
  * Checks a furniture definition before it is saved: what `DefinitionEvaluator` reads (by evaluating it at its default

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Actor;
+namespace Izbik\Service\Actor;
 
-use FlatDesigner\Model\Entity\Enum\ActorTypeEnum;
+use Izbik\Model\Entity\Enum\ActorTypeEnum;
 
 /**
  * Who is making the current request's changes: a person in the app (default) or an agent connected

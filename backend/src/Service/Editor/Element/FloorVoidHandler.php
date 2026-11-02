@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\FloorVoidDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\FloorVoid;
-use FlatDesigner\Model\Repository\FloorVoidRepository;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\PolygonValidator;
+use Izbik\Dto\FloorVoidDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\FloorVoid;
+use Izbik\Model\Repository\FloorVoidRepository;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\PolygonValidator;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * Floor voids (FD-90): holes through the floor's slab and room floors, open to the floor below (whose ceilings they cut),
+ * Floor voids: holes through the floor's slab and room floors, open to the floor below (whose ceilings they cut),
  * their edges lined with `liningMaterialId`.
  */
 final readonly class FloorVoidHandler implements ElementHandler

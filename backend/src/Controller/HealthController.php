@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Route\Routes;
+use Izbik\Route\Routes;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use MarekSkopal\Router\Attribute\RouteGet;

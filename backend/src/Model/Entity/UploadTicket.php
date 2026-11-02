@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\UploadKindEnum;
-use FlatDesigner\Model\Repository\UploadTicketRepository;
+use Izbik\Model\Entity\Enum\UploadKindEnum;
+use Izbik\Model\Repository\UploadTicketRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;

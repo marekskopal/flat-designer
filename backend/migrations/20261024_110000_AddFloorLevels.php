@@ -8,7 +8,7 @@ use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Levels (FD-39): `rooms.floor_elevation` raises or lowers a room's floor against the floor's level (a terrace a step
+ * Levels: `rooms.floor_elevation` raises or lowers a room's floor against the floor's level (a terrace a step
  * down, a raised deck), `plots.ground_level` the ground of a plot. Both mm, 0 keeps them where they were.
  */
 final class AddFloorLevelsMigration extends Migration

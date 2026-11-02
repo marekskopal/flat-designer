@@ -276,7 +276,7 @@ type Drag = DragBase &
 type RoofRectangle = Pick<Roof, 'x' | 'y' | 'width' | 'depth'>;
 
 /**
- * The door (or walkable French window), or the front of a cupboard (FD-106), the walker looks at: `target` names it
+ * The door (or walkable French window), or the front of a cupboard, the walker looks at: `target` names it
  * (`opening:<id>`, `front:<itemId>:<key>`), `open` whether it is open or opening.
  */
 export interface DoorAim {
@@ -315,7 +315,7 @@ export class ViewerEngine {
     public onWalkthroughLock: (locked: boolean) => void = () => undefined;
     /** The walker started or stopped looking at a door (or walkable French window) within reach, or it opened / closed. */
     public onWalkthroughAim: (aim: DoorAim | null) => void = () => undefined;
-    /** A front of an item was opened or closed by a click (FD-106), for the selection card. */
+    /** A front of an item was opened or closed by a click, for the selection card. */
     public onFrontsChange: () => void = () => undefined;
     /**
      * The walker asks for the floor above (+1) or below (−1); the id of the floor the page goes to (it then loads that
@@ -398,7 +398,7 @@ export class ViewerEngine {
     private dimensionsVisible = false;
     /** The shown dimensions belong to an earlier state of the floor; rebuilt when next shown. */
     private dimensionsStale = true;
-    /** Electrical symbols at the tagged items (FD-64), shown in the top view when turned on; built like the dimensions. */
+    /** Electrical symbols at the tagged items, shown in the top view when turned on; built like the dimensions. */
     private electrical: THREE.Group | null = null;
     private electricalVisible = false;
     private electricalSymbols: ElectricalSymbols = 'Iec';
@@ -427,7 +427,7 @@ export class ViewerEngine {
     private stackScenes: readonly Scene[] | null = null;
     private stackLayers: ContextFloor[] = [];
     /**
-     * A walk over all floors (FD-102): the project's other floors (`setWalkFloors()`), drawn during a walk above and below
+     * A walk over all floors: the project's other floors (`setWalkFloors()`), drawn during a walk above and below
      * the shown one; with them the walker walks onto every floor (`walkWorld`) and is on `walkFloorId` (null: no such walk).
      */
     private walkScenes: readonly Scene[] | null = null;
@@ -463,7 +463,7 @@ export class ViewerEngine {
     /** The door in view during a walk, as last reported to `onWalkthroughAim`. */
     private aim: DoorAim | null = null;
     private aimed: Usable | null = null;
-    /** How far the fronts of the shown floor's items are open (FD-106), session only. */
+    /** How far the fronts of the shown floor's items are open, session only. */
     private readonly frontStates = new FrontStates();
     private selection: Selection | null = null;
     private editMode = false;
@@ -798,7 +798,7 @@ export class ViewerEngine {
         // The ground: items standing on it and rooms, whose floor or edge follows it, go with a changed plot.
         const plots = diffById(previous.plots ?? [], scene.plots ?? []);
         const plotsChanged = plots.removed.length > 0 || plots.changed.length > 0;
-        // The chimneys (FD-91) reach over the roofs, of this floor and the others, up to the next floor's level; the roofs
+        // The chimneys reach over the roofs, of this floor and the others, up to the next floor's level; the roofs
         // are cut round them and their downpipes end on the ground.
         const stackChanged =
             !sameJson(previous.chimneyFloors ?? [], scene.chimneyFloors ?? []) ||
@@ -910,7 +910,7 @@ export class ViewerEngine {
             parts.root.add(parts.stairsBelow);
             roomsCutBy(scene.rooms, [...sceneVoids(previous).below, ...voids.below]).forEach((id) => voidRooms.add(id));
         }
-        // The voids (FD-90): a changed one cuts the slab and the room floors anew, a changed void above the ceilings.
+        // The voids: a changed one cuts the slab and the room floors anew, a changed void above the ceilings.
         const floorVoids = diffById(previous.voids ?? [], scene.voids ?? []);
         const voidsChanged = floorVoids.removed.length > 0 || floorVoids.changed.length > 0;
         if (voidsChanged) {
@@ -1048,7 +1048,7 @@ export class ViewerEngine {
             this.labels.set(room.id, label);
             content.add(label);
         }
-        // The façades: the wall faces outside the rooms, cut by the roofs, standing on the ground (FD-88).
+        // The façades: the wall faces outside the rooms, cut by the roofs, standing on the ground.
         if (
             wallsChanged ||
             roofsChanged ||
@@ -1362,7 +1362,7 @@ export class ViewerEngine {
         this.refreshShadows();
     }
 
-    /** Opens or closes every front of the floor's items (FD-106), animated; fronts of items built later follow. */
+    /** Opens or closes every front of the floor's items, animated; fronts of items built later follow. */
     public setFrontsOpen(open: boolean): void {
         if (open !== this.frontStates.everyOpen) {
             this.frontStates.setAll(open, this.items);
@@ -1550,7 +1550,7 @@ export class ViewerEngine {
         this.dimensionsVisible = visible;
     }
 
-    /** Electrical symbols at the tagged items in the top view (FD-64), drawn from the set `symbols`. */
+    /** Electrical symbols at the tagged items in the top view, drawn from the set `symbols`. */
     public setElectricalVisible(visible: boolean, symbols: ElectricalSymbols): void {
         this.invalidate();
         this.electricalVisible = visible;
@@ -2346,7 +2346,7 @@ export class ViewerEngine {
     }
 
     /**
-     * The project's other floors for a walk over all floors (FD-102): during a walk they are drawn above and below the
+     * The project's other floors for a walk over all floors: during a walk they are drawn above and below the
      * shown one and walked on, the stairs carrying on from floor to floor. Null (or none yet) walks the shown floor only,
      * another floor being loaded by the page (`onWalkthroughFloor`).
      */
@@ -2485,7 +2485,7 @@ export class ViewerEngine {
         const meta = document.createElement('span');
         meta.className = 'room-label__meta';
         const height = room.ceilingHeight === null ? '' : ` · h ${(room.ceilingHeight / 1000).toFixed(2)} m`;
-        // The floor's voids (FD-90) are taken off the area, as the room schedule does.
+        // The floor's voids are taken off the area, as the room schedule does.
         const area = netRoomArea(room, voids);
         meta.textContent = `${roomCodeText(room.code)} · ${area.toFixed(1)} m²${height}`;
         element.append(name, meta);
@@ -3166,7 +3166,7 @@ export class ViewerEngine {
         }
         const hit = this.pick(event);
         const picked = selectionOf(hit?.object ?? null);
-        // In view mode a click on a front of the selected item (or of an item of the selected group) opens or closes it (FD-106).
+        // In view mode a click on a front of the selected item (or of an item of the selected group) opens or closes it.
         const front = frontOf(hit?.object ?? null);
         if (!this.editMode && front !== null && picked?.kind === 'item' && this.isSelectedItem(picked.id)) {
             this.use({kind: 'front', itemId: picked.id, front});

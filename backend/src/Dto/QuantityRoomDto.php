@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** The surfaces of one room and their cost: `complete` is false when a line has no price (its cost is left out). */
 final readonly class QuantityRoomDto

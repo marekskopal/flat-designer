@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Catalog;
+namespace Izbik\Service\Editor\Catalog;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
 
 /**
  * What every item kind is, the size and elevation a new one starts with, and the `params` the viewer

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** Everything the viewer needs to build one floor. All lengths are millimetres. */
 final readonly class SceneDto
@@ -18,12 +18,12 @@ final readonly class SceneDto
 	 * @param list<SceneDefinitionDto> $definitions the furniture definitions of the Custom items
 	 * @param list<SceneModelDto> $models the 3D models of the Model items
 	 * @param list<StairDto> $stairs
-	 * @param list<FloorVoidDto> $voids holes through the floor (FD-90)
+	 * @param list<FloorVoidDto> $voids holes through the floor
 	 * @param list<RailingDto> $railings
 	 * @param list<RoofDto> $roofs with their windows
 	 * @param list<int> $pictures the project files the Custom items show as pictures (their `image` parameters)
 	 * @param list<ChimneyFloorDto> $chimneyFloors
-	 * @param list<SectionLineDto> $sections the building sections drawn on this floor's plan (FD-94)
+	 * @param list<SectionLineDto> $sections the building sections drawn on this floor's plan
 	 */
 	public function __construct(
 		public FloorDto $floor,
@@ -50,14 +50,14 @@ final readonly class SceneDto
 		public ?StairsBelowDto $stairsBelow = null,
 		/** The roofs over this floor; their heights count from its level. */
 		public array $roofs = [],
-		/** The project's default façade material (FD-88). */
+		/** The project's default façade material. */
 		public ?int $exteriorMaterialId = null,
 		public array $voids = [],
 		public array $railings = [],
 		/** The floor above with its voids, which cut this floor's ceilings; null without a floor above. */
 		public ?VoidsAboveDto $voidsAbove = null,
 		/**
-		 * The project's other floors with roofs or chimneys, when it has a chimney (FD-91): the chimneys' tops follow the
+		 * The project's other floors with roofs or chimneys, when it has a chimney: the chimneys' tops follow the
 		 * highest roof over them, and those of the floors below rise through this one. Empty without a chimney.
 		 */
 		public array $chimneyFloors = [],

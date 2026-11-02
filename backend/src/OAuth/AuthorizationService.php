@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\OAuth;
+namespace Izbik\OAuth;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\OAuthAuthorization;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\OAuthAuthorizationRepository;
-use FlatDesigner\OAuth\Exception\OAuthException;
+use Izbik\Model\Entity\OAuthAuthorization;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\OAuthAuthorizationRepository;
+use Izbik\OAuth\Exception\OAuthException;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 
 /**

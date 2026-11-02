@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
 
 /**
  * What to buy of one material: `area` (m²) and `length` (running m: skirting, or edge banding of furniture boards),

@@ -1,6 +1,6 @@
 import {Floor} from '@app/models/scene';
 
-// Mirrors the backend DTOs (FlatDesigner\Dto\Project*).
+// Mirrors the backend DTOs (Izbik\Dto\Project*).
 
 export interface Project {
     id: number;
@@ -14,7 +14,7 @@ export interface Project {
     longitude: number | null;
     /** IANA name the sun's clock time is read in; null: local solar time. */
     timeZone: string | null;
-    /** The façade of the exterior walls' outer faces nobody set (FD-88); null: the walls' own material. */
+    /** The façade of the exterior walls' outer faces nobody set; null: the walls' own material. */
     exteriorMaterialId?: number | null;
     ownerId: number | null;
     ownerName: string | null;

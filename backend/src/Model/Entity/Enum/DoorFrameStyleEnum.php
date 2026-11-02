@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity\Enum;
+namespace Izbik\Model\Entity\Enum;
 
 /**
  * Frame of a doorway: `Lining` slightly proud of both wall faces, `Architrave` a lining with casing boards on both

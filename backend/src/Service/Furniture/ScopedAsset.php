@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
 
 /** Something global, in a user's library or a project's own (a furniture definition, a 3D model): `ScopePolicy` rules it. */
 interface ScopedAsset

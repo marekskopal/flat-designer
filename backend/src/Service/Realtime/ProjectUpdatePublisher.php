@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Realtime;
+namespace Izbik\Service\Realtime;
 
-use FlatDesigner\Model\Entity\Enum\ActorTypeEnum;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Model\Repository\ProjectChangeRepository;
-use FlatDesigner\Model\Repository\ProjectRepository;
+use Izbik\Model\Entity\Enum\ActorTypeEnum;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Model\Repository\ProjectChangeRepository;
+use Izbik\Model\Repository\ProjectRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -31,7 +31,7 @@ use const JSON_THROW_ON_ERROR;
  */
 final class ProjectUpdatePublisher
 {
-	public const string TopicPrefix = 'flat-designer/projects/';
+	public const string TopicPrefix = 'izbik/projects/';
 
 	/** @var array<int, int> project id => newest revision bumped in the current request */
 	private array $changed = [];

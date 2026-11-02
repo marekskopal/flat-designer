@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller\Admin;
+namespace Izbik\Controller\Admin;
 
-use FlatDesigner\Dto\AdminUserUpdateDto;
-use FlatDesigner\Dto\UserDto;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\ForbiddenResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Admin\AdminUserService;
-use FlatDesigner\Service\Admin\Exception\AdminUserException;
-use FlatDesigner\Service\Provider\UserProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\AdminUserUpdateDto;
+use Izbik\Dto\UserDto;
+use Izbik\Model\Entity\User;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\ForbiddenResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Admin\AdminUserService;
+use Izbik\Service\Admin\Exception\AdminUserException;
+use Izbik\Service\Provider\UserProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Editor\Geometry;
+namespace Izbik\Tests\Service\Editor\Geometry;
 
-use FlatDesigner\Service\Editor\Geometry\Delaunay;
-use FlatDesigner\Service\Editor\Geometry\Terrain;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Editor\Geometry\Delaunay;
+use Izbik\Service\Editor\Geometry\Terrain;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

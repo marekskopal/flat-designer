@@ -138,7 +138,7 @@ const TransmissionOpacity = 0.15;
 
 /**
  * Turns the transmissive materials of a model into transparent ones: a transmissive material in view makes three.js render
- * the whole scene a second time every frame, for a refraction a thin glass hardly shows (FD-58).
+ * the whole scene a second time every frame, for a refraction a thin glass hardly shows.
  */
 export function withoutTransmission(root: THREE.Object3D): THREE.Object3D {
     root.traverse((o) => {

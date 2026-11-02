@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Route;
+namespace Izbik\Route;
 
 enum Routes: string
 {

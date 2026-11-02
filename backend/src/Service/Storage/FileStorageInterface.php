@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Storage;
+namespace Izbik\Service\Storage;
 
 /** Object storage for uploaded files (S3 in the stack, in-memory in tests). */
 interface FileStorageInterface

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
-use FlatDesigner\Service\Request\BodyReader;
+use Izbik\Service\Request\BodyReader;
 
 /** A new variant of a set: a copy of the variant `fromGroupId`, or empty; `groupId` alone switches to a variant. */
 final readonly class VariantInputDto implements ArrayFactoryInterface

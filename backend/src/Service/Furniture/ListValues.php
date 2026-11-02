@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\Expression\RecordValue;
+use Izbik\Service\Furniture\Expression\RecordValue;
 
 /**
  * The value of a list parameter: a list of objects, each checked against the parameter's fields into a record (a

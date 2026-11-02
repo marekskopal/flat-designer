@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
-use FlatDesigner\Model\Entity\Enum\MaterialPatternEnum;
-use FlatDesigner\Model\Repository\MaterialRepository;
+use Izbik\Model\Entity\Enum\MaterialPatternEnum;
+use Izbik\Model\Repository\MaterialRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;

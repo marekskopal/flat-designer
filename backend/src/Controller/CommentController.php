@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\CommentDto;
-use FlatDesigner\Dto\CommentInputDto;
-use FlatDesigner\Dto\CommentUpdateDto;
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Response\OkResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Comment\CommentActor;
-use FlatDesigner\Service\Comment\CommentProvider;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\CommentDto;
+use Izbik\Dto\CommentInputDto;
+use Izbik\Dto\CommentUpdateDto;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Project;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Response\OkResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Comment\CommentActor;
+use Izbik\Service\Comment\CommentProvider;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;

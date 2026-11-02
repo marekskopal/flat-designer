@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /**
- * Where along a line in plan a height under the roofs may bend or step (FD-38): where the line crosses a roof's edge,
+ * Where along a line in plan a height under the roofs may bend or step: where the line crosses a roof's edge,
  * where two planes meet (a ridge, a hip, two roofs) and where a plane reaches one of the given levels. Between two
  * breaks every such height is linear, so a sum over the line is exact with the ends of each stretch. Twin of
  * `roofBreaks()` (`viewer/engine/under-roof.ts`).
@@ -21,7 +21,7 @@ final readonly class RoofBreaks
 	 * @param Point $p
 	 * @param Point $q
 	 * @param list<float> $levels heights (mm above the floor's level)
-	 * @param list<array{float, float}> $slopes heights sloping straight from p to q (a wall's sloping top, FD-87)
+	 * @param list<array{float, float}> $slopes heights sloping straight from p to q (a wall's sloping top)
 	 * @return list<float>
 	 */
 	public static function along(array $roofs, array $p, array $q, array $levels, array $slopes = []): array

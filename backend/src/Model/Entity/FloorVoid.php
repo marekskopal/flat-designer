@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Repository\FloorVoidRepository;
+use Izbik\Model\Repository\FloorVoidRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Attribute\ManyToOne;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * A hole through a floor (FD-90): an outline in plan mm cut out of the floor's slab and room floors and out of the
+ * A hole through a floor: an outline in plan mm cut out of the floor's slab and room floors and out of the
  * ceilings of the floor below, open to it (a gallery's void, a double-height hall). Its edges may be lined.
  */
 #[Entity(repositoryClass: FloorVoidRepository::class)]

@@ -2,33 +2,33 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\OpeningDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\BoardDirectionEnum;
-use FlatDesigner\Model\Entity\Enum\DoorFrameStyleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorHandleEnum;
-use FlatDesigner\Model\Entity\Enum\DoorLeafStyleEnum;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\GarageDoorStyleEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningHingeEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningSideEnum;
-use FlatDesigner\Model\Entity\Enum\OpeningTypeEnum;
-use FlatDesigner\Model\Entity\Enum\ShutterStyleEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Opening;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Model\Entity\Wall;
-use FlatDesigner\Model\Repository\OpeningRepository;
-use FlatDesigner\Model\Repository\RoofRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Editor\Geometry\WallTop;
+use Izbik\Dto\OpeningDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\BoardDirectionEnum;
+use Izbik\Model\Entity\Enum\DoorFrameStyleEnum;
+use Izbik\Model\Entity\Enum\DoorHandleEnum;
+use Izbik\Model\Entity\Enum\DoorLeafStyleEnum;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\GarageDoorStyleEnum;
+use Izbik\Model\Entity\Enum\OpeningHingeEnum;
+use Izbik\Model\Entity\Enum\OpeningSideEnum;
+use Izbik\Model\Entity\Enum\OpeningTypeEnum;
+use Izbik\Model\Entity\Enum\ShutterStyleEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Opening;
+use Izbik\Model\Entity\Roof;
+use Izbik\Model\Entity\Wall;
+use Izbik\Model\Repository\OpeningRepository;
+use Izbik\Model\Repository\RoofRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Editor\Geometry\WallTop;
 
 /**
  * Doors, passages and windows. An opening stays on the wall it was created on (`wallId` is fixed); it must
@@ -36,7 +36,7 @@ use FlatDesigner\Service\Editor\Geometry\WallTop;
  * pocket door also needs the wall beside it, towards `hinge`, free for its open leaf (a pocket door a wall
  * thick enough for the pocket, a niche one thicker than its `depth`). Only a window down to the floor can be `walkable`, with one or two sashes. Leaf
  * styles are for doors with a leaf; a solid lower panel and shutters for windows; materials, garage doors, fixed panes
- * and the frame's inset (FD-89) in `OpeningLook` and `OpeningPlacement`.
+ * and the frame's inset in `OpeningLook` and `OpeningPlacement`.
  */
 final readonly class OpeningHandler implements ElementHandler
 {

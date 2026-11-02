@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use Closure;
-use FlatDesigner\Service\Editor\Element\WallHandler;
+use Izbik\Service\Editor\Element\WallHandler;
 use stdClass;
 
 /**

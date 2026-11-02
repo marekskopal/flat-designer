@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
 use DateTimeImmutable;
-use FlatDesigner\Controller\SharedViewController;
-use FlatDesigner\Controller\ShareLinkController;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\ShareLinkRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\ShareLinkProvider;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\SharedViewController;
+use Izbik\Controller\ShareLinkController;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\ShareLinkRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\ShareLinkProvider;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use const DATE_ATOM;

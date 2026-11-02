@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\CommentDto;
-use FlatDesigner\Dto\CommentInputDto;
-use FlatDesigner\Dto\CommentUpdateDto;
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Service\Actor\ActorContext;
-use FlatDesigner\Service\Comment\CommentActor;
-use FlatDesigner\Service\Comment\CommentProvider;
+use Izbik\Dto\CommentDto;
+use Izbik\Dto\CommentInputDto;
+use Izbik\Dto\CommentUpdateDto;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Project;
+use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Comment\CommentActor;
+use Izbik\Service\Comment\CommentProvider;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;

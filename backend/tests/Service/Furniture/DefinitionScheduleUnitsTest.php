@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Furniture;
+namespace Izbik\Tests\Service\Furniture;
 
-use FlatDesigner\Service\Furniture\DefinitionSchedule;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Furniture\DefinitionSchedule;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 use const M_PI;
 
 /**
- * Where a roof window lies on its roof (FD-38) and whether it fits its plane. Twin of `roofWindowCorners()` /
+ * Where a roof window lies on its roof and whether it fits its plane. Twin of `roofWindowCorners()` /
  * `roofWindowFits()` in `viewer/engine/roof-geometry.ts`, kept identical by `tests/fixtures/roof-geometry.json`.
  *
  * @phpstan-import-type Point from PlanMath

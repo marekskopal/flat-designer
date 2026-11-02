@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Editor\Geometry;
+namespace Izbik\Tests\Service\Editor\Geometry;
 
-use FlatDesigner\Service\Editor\Geometry\FaceGraph;
-use FlatDesigner\Service\Editor\Geometry\OutlineCleaner;
-use FlatDesigner\Service\Editor\Geometry\PlanMath;
-use FlatDesigner\Service\Editor\Geometry\RoomDetectErrorEnum;
-use FlatDesigner\Service\Editor\Geometry\RoomDetector;
-use FlatDesigner\Service\Editor\Geometry\WallJoints;
-use FlatDesigner\Service\Editor\Geometry\WallLine;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Service\Editor\Geometry\FaceGraph;
+use Izbik\Service\Editor\Geometry\OutlineCleaner;
+use Izbik\Service\Editor\Geometry\PlanMath;
+use Izbik\Service\Editor\Geometry\RoomDetectErrorEnum;
+use Izbik\Service\Editor\Geometry\RoomDetector;
+use Izbik\Service\Editor\Geometry\WallJoints;
+use Izbik\Service\Editor\Geometry\WallLine;
+use Izbik\Service\Json\JsonDecoder;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

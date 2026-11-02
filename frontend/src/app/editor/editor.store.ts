@@ -112,7 +112,7 @@ export class EditorStore {
         return result?.change != null;
     }
 
-    /** Adds a drawn railing (FD-90) in the default look; resolves true when it was added. */
+    /** Adds a drawn railing in the default look; resolves true when it was added. */
     public async drawRailing(points: PlanPoint[]): Promise<boolean> {
         const result = await this.run((c) => this.api.create(c.projectId(), c.floorId(), 'railing', {points}, revisionOf(c)));
         return result?.change != null;

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\FurnitureDefinitionDto;
-use FlatDesigner\Dto\FurnitureDefinitionInputDto;
-use FlatDesigner\Model\Entity\Enum\FurnitureScopeEnum;
-use FlatDesigner\Model\Entity\FurnitureDefinition;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\FurnitureDefinitionRepository;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Dto\FurnitureDefinitionDto;
+use Izbik\Dto\FurnitureDefinitionInputDto;
+use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 
 /**
  * Furniture definitions and who may use them. Reading: global ones everyone; a user's library its owner and admins; a

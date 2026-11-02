@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression\Node;
+namespace Izbik\Service\Furniture\Expression\Node;
 
 final readonly class UnaryNode implements Node
 {

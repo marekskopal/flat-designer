@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
 /** Stretches [from, to] along a line (mm), as `mergeSpans()` / `subtractSpans()` in the viewer's `ceilings.ts`. */
 final class Spans

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\PlotDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Plot;
-use FlatDesigner\Model\Repository\PlotRepository;
-use FlatDesigner\Model\Repository\RoomRepository;
-use FlatDesigner\Model\Repository\WallRepository;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\PolygonValidator;
-use FlatDesigner\Service\Editor\SpotHeights;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Dto\PlotDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Plot;
+use Izbik\Model\Repository\PlotRepository;
+use Izbik\Model\Repository\RoomRepository;
+use Izbik\Model\Repository\WallRepository;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\PolygonValidator;
+use Izbik\Service\Editor\SpotHeights;
+use Izbik\Service\Json\JsonDecoder;
 use const JSON_THROW_ON_ERROR;
 
-/** Plots: the boundary of the land around the building, the ground's material and level, and its spot heights (FD-86). */
+/** Plots: the boundary of the land around the building, the ground's material and level, and its spot heights. */
 final readonly class PlotHandler implements ElementHandler
 {
 	/** A plot may reach further from the floor's origin than a room (`State::CoordinateLimit`): a kilometre, mm. */

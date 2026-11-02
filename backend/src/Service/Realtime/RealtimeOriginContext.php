@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Realtime;
+namespace Izbik\Service\Realtime;
 
 /**
  * The browser tab a request came from (`X-Origin-Client-Id`), echoed in live updates so that tab can

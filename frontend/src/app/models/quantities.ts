@@ -10,7 +10,7 @@ export type QuantitySurface =
     | 'RoofCovering'
     | 'Soffit'
     | 'Facade'
-    /** A roof's gutters and its downpipes, by the running metre (FD-91). */
+    /** A roof's gutters and its downpipes, by the running metre. */
     | 'Gutter'
     | 'Downpipe';
 
@@ -54,7 +54,7 @@ export interface QuantityRoof {
     complete: boolean;
 }
 
-/** A floor's façades: the wall faces outside every room per material, without the openings (`QuantityFacadeDto`, FD-88). */
+/** A floor's façades: the wall faces outside every room per material, without the openings (`QuantityFacadeDto`). */
 export interface QuantityFacade {
     floorId: number;
     floorName: string;

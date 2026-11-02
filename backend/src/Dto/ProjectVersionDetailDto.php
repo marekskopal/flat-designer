@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** A version with the floors stored in its snapshot, for browsing it read-only. */
 final readonly class ProjectVersionDetailDto

@@ -23,7 +23,7 @@ import {
  * true; `x y z w h d` are numbers or expressions, rounded half away from zero to mm, and `w h d` must come out
  * positive. An `assembly` makes no part itself: its `parts` are placed in its box and see its size as `AW`, `AH`, `AD`.
  * An option written `{"expr": "…"}` is evaluated per copy. An assembly whose `opens` is not `none` moves as one leaf
- * (FD-106): each of its parts gets `props.leaf`, `{key, box, …the assembly's options}` (`leafKey()`, the box in the
+ *: each of its parts gets `props.leaf`, `{key, box, …the assembly's options}` (`leafKey()`, the box in the
  * item's frame), and none of them may open on its own (an `opens` other than `none`). Only what the evaluation reads
  * is checked here. The input is untrusted JSON; like PHP's decoder, `{}` and `[]` are both accepted as an empty list
  * or object.

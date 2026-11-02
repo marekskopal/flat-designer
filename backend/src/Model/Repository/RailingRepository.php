@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\Railing;
+use Izbik\Model\Entity\Railing;
 
 /** @extends ARepository<Railing> */
 final class RailingRepository extends ARepository

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
  * The rooms of one floor with the indoor (living), ancillary (garage) and outdoor (terrace, garden) totals, and its voids
- * (FD-90), which the rooms' areas leave out.
+ * , which the rooms' areas leave out.
  */
 final readonly class FloorScheduleDto
 {

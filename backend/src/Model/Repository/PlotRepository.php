@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\Plot;
+use Izbik\Model\Entity\Plot;
 
 /** @extends ARepository<Plot> */
 final class PlotRepository extends ARepository

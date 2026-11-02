@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Provider;
+namespace Izbik\Service\Provider;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\ElectricalSymbolsEnum;
-use FlatDesigner\Model\Entity\Enum\UserRoleEnum;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Model\Repository\UserRepository;
+use Izbik\Model\Entity\Enum\ElectricalSymbolsEnum;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
+use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\UserRepository;
 use SensitiveParameter;
 use const PASSWORD_BCRYPT;
 

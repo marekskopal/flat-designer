@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\OAuth\AuthorizationService;
-use FlatDesigner\OAuth\ClientService;
-use FlatDesigner\OAuth\DiscoveryUrl;
-use FlatDesigner\OAuth\Exception\OAuthException;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\OAuth\AuthorizationService;
+use Izbik\OAuth\ClientService;
+use Izbik\OAuth\DiscoveryUrl;
+use Izbik\OAuth\Exception\OAuthException;
+use Izbik\Response\ErrorResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use MarekSkopal\Router\Attribute\RoutePost;

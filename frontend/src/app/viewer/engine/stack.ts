@@ -18,7 +18,7 @@ export interface ContextFloor {
     items: Map<number, THREE.Object3D>;
     /** Its roofs, which follow the Display's Roof toggle like the shown floor's. */
     roofs: THREE.Group;
-    /** Its doors: as outside a walk, or opened and closed by the walker of a walk over all floors (FD-102). */
+    /** Its doors: as outside a walk, or opened and closed by the walker of a walk over all floors. */
     leafStates: LeafStates;
     leaves: THREE.Object3D[];
 }

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Service\Furniture\CutList;
+namespace Izbik\Tests\Service\Furniture\CutList;
 
-use FlatDesigner\Service\Furniture\CutList\FoldingFront;
-use FlatDesigner\Service\Furniture\ResolvedPart;
+use Izbik\Service\Furniture\CutList\FoldingFront;
+use Izbik\Service\Furniture\ResolvedPart;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

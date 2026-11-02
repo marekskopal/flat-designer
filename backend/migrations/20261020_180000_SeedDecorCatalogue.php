@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Migrations;
 
-use FlatDesigner\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Soft furnishings and decor for a lived-in flat (FD-42): a framed picture showing a project image, rugs, a row of
+ * Soft furnishings and decor for a lived-in flat: a framed picture showing a project image, rugs, a row of
  * books, curtains, roller and venetian blinds and a scatter cushion, with the fabrics, rug wools, mount paper and book
  * cloths they use. Curtains and blinds are furniture placed at a window, not fields of the window.
  */

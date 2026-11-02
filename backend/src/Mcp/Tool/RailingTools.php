@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Mcp\Tool;
+namespace Izbik\Mcp\Tool;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Service\Editor\SceneEditor;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 
-/** Railings (FD-90): balustrades along a polyline. */
+/** Railings: balustrades along a polyline. */
 final readonly class RailingTools
 {
 	private const array Clearable = ['spacing', 'materialId', 'infillMaterialId'];

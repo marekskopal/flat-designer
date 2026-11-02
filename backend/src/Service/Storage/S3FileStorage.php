@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Storage;
+namespace Izbik\Service\Storage;
 
 use AsyncAws\S3\S3Client;
 use Psr\Log\LoggerInterface;

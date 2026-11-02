@@ -123,7 +123,7 @@ describe('netRoomArea (shared fixture)', () => {
     });
 });
 
-describe('floor voids (FD-90)', () => {
+describe('floor voids', () => {
     it('cut the floor and slab of their floor, and the ceilings of the floor below', () => {
         const hole = floorVoid({});
         expect(sceneVoids(scene({voids: [hole]})).below).toEqual([hole.polygon]);
@@ -195,7 +195,7 @@ describe('floor voids (FD-90)', () => {
     });
 });
 
-describe('railings (FD-90)', () => {
+describe('railings', () => {
     it('stand posts at their ends and at most the post spacing apart, balusters between', () => {
         const group = buildRailing(railing({}), materials);
         expect(group.userData).toEqual({railingId: 7});
@@ -226,7 +226,7 @@ describe('railings (FD-90)', () => {
         expect(meshes(glass).some((m) => m.material === materials.byCode('glass'))).toBe(true);
     });
 
-    it('make a fence along a polyline, standing on a sloping plot with follow (FD-100)', () => {
+    it('make a fence along a polyline, standing on a sloping plot with follow', () => {
         // The ground falls 0.2 mm per mm eastwards: from 0 at x 0 to −1000 at x 5000.
         const plot = {
             id: 1,

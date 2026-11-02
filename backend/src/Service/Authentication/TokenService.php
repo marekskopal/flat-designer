@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Authentication;
+namespace Izbik\Service\Authentication;
 
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use FlatDesigner\Dto\AuthenticationDto;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Service\Authentication\Exception\InvalidTokenException;
+use Izbik\Dto\AuthenticationDto;
+use Izbik\Model\Entity\User;
+use Izbik\Service\Authentication\Exception\InvalidTokenException;
 use SensitiveParameter;
 
 /**

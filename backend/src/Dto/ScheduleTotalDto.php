@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /** Sum over rooms of the schedule: count, net area (m²) and perimeter (m). */
 final readonly class ScheduleTotalDto

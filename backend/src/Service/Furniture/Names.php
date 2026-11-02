@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /** Names of variables in a definition: parameters, derived values, repeat indexes and material slots. */
 final readonly class Names

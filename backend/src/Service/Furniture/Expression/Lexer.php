@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression;
+namespace Izbik\Service\Furniture\Expression;
 
 /**
  * Splits an expression into tokens: numbers (`12`, `0.5`), 'strings' / "strings", identifiers and operators. Positions

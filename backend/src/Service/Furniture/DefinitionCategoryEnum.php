@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture;
+namespace Izbik\Service\Furniture;
 
 /** What the electrical schedule counts a definition's items as (its optional `category`). */
 enum DefinitionCategoryEnum: string

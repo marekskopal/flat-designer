@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller;
+namespace Izbik\Tests\Controller;
 
-use FlatDesigner\Controller\SavedViewController;
-use FlatDesigner\Dto\SavedViewSettingsDto;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Project\SavedViewProvider;
-use FlatDesigner\Service\Project\SnapshotViewRestorer;
-use FlatDesigner\Tests\Support\EditorTestCase;
-use FlatDesigner\Tests\Support\Fixture;
+use Izbik\Controller\SavedViewController;
+use Izbik\Dto\SavedViewSettingsDto;
+use Izbik\Route\Routes;
+use Izbik\Service\Project\SavedViewProvider;
+use Izbik\Service\Project\SnapshotViewRestorer;
+use Izbik\Tests\Support\EditorTestCase;
+use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Psr\Http\Message\ResponseInterface;
 

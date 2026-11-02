@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
-use FlatDesigner\Model\Entity\Roof;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
-use FlatDesigner\Service\Editor\Geometry\RoofGeometry;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Model\Entity\Roof;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\RoofGeometry;
 
 /**
- * Skewed verges (FD-97): a gable's or shed's `startSkew` / `endSkew`, degrees counter-clockwise (±`MaxSkew`, 0 square to
+ * Skewed verges: a gable's or shed's `startSkew` / `endSkew`, degrees counter-clockwise (±`MaxSkew`, 0 square to
  * the ridge), turning the verge at the ridge's start or end about the ridge's end on the eaves line (`RoofGeometry`); a
- * flat roof's ends turn alike (FD-101: over a skewed wall, its parapet following). A hip roof given a skew anew is
+ * flat roof's ends turn alike (over a skewed wall, its parapet following). A hip roof given a skew anew is
  * refused, and one made so leaves its skews behind. The eaves line's
  * front and back stay at least `RoofHandler::MinSide` long.
  */
 final readonly class RoofSkew
 {
-	/** The fields of a state logged before FD-97, with their values then. */
+	/** The fields of a state logged before skewed verges, with their values then. */
 	public const array Defaults = ['startSkew' => 0, 'endSkew' => 0];
 
 	/** Degrees either way. */

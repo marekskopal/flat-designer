@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Geometry;
+namespace Izbik\Service\Editor\Geometry;
 
-use FlatDesigner\Model\Entity\Enum\RoofEdgeEnum;
-use FlatDesigner\Model\Entity\Enum\RoofShapeEnum;
+use Izbik\Model\Entity\Enum\RoofEdgeEnum;
+use Izbik\Model\Entity\Enum\RoofShapeEnum;
 use const ARRAY_FILTER_USE_KEY;
 
 /**
- * A roof's rainwater goods (FD-91): its gutters run along the outer edge of the overhang at the eaves (a gable's front
+ * A roof's rainwater goods: its gutters run along the outer edge of the overhang at the eaves (a gable's front
  * and back, a shed's front, a hip's four sides), where the roof is the top (stopping where another roof of the floor is
  * higher, as the caps do), and its downpipes stand `DownpipeOffset` off the eaves line, the walls' outer face. Without a
  * list (null) the downpipes stand `CornerInset` in from the ends of the front and back eaves; a downpipe whose outlet

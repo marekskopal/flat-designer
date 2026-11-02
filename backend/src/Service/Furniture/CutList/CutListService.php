@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\CutList;
+namespace Izbik\Service\Furniture\CutList;
 
-use FlatDesigner\Dto\CutListDto;
-use FlatDesigner\Dto\ItemDto;
-use FlatDesigner\Dto\MaterialDto;
-use FlatDesigner\Dto\SceneDto;
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Service\Furniture\DefinitionEvaluator;
-use FlatDesigner\Service\Furniture\DefinitionException;
-use FlatDesigner\Service\Furniture\ResolvedPart;
-use FlatDesigner\Service\Json\JsonDecoder;
-use FlatDesigner\Service\Provider\SceneProvider;
+use Izbik\Dto\CutListDto;
+use Izbik\Dto\ItemDto;
+use Izbik\Dto\MaterialDto;
+use Izbik\Dto\SceneDto;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Service\Furniture\DefinitionEvaluator;
+use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\ResolvedPart;
+use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Provider\SceneProvider;
 use const JSON_THROW_ON_ERROR;
 
 /**

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Entity;
+namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Enum\RoomTypeEnum;
-use FlatDesigner\Model\Repository\RoomRepository;
+use Izbik\Model\Entity\Enum\RoomTypeEnum;
+use Izbik\Model\Repository\RoomRepository;
 use MarekSkopal\ORM\Attribute\Column;
 use MarekSkopal\ORM\Attribute\ColumnEnum;
 use MarekSkopal\ORM\Attribute\Entity;
@@ -55,7 +55,7 @@ class Room extends AEntity
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $ceilingMaterial = null;
 
-	/** The underside and edge of the room's slab where it overhangs the floor below (FD-88); null: the façade material. */
+	/** The underside and edge of the room's slab where it overhangs the floor below; null: the façade material. */
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $soffitMaterial = null;
 

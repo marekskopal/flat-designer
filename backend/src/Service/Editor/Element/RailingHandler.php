@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Element;
+namespace Izbik\Service\Editor\Element;
 
 use DateTimeImmutable;
-use FlatDesigner\Dto\RailingDto;
-use FlatDesigner\Model\Entity\AEntity;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Enum\HandrailProfileEnum;
-use FlatDesigner\Model\Entity\Enum\RailingFollowEnum;
-use FlatDesigner\Model\Entity\Enum\RailingStyleEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Railing;
-use FlatDesigner\Model\Repository\RailingRepository;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Editor\FieldReader;
+use Izbik\Dto\RailingDto;
+use Izbik\Model\Entity\AEntity;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Enum\HandrailProfileEnum;
+use Izbik\Model\Entity\Enum\RailingFollowEnum;
+use Izbik\Model\Entity\Enum\RailingStyleEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Railing;
+use Izbik\Model\Repository\RailingRepository;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\FieldReader;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * Railings (FD-90): balustrades along a polyline, on a void's or gallery's edge, a terrace or a retaining wall. Only the
+ * Railings: balustrades along a polyline, on a void's or gallery's edge, a terrace or a retaining wall. Only the
  * fields are checked; the posts and the infill are the viewer's (`viewer/engine/railings.ts`).
  */
 final readonly class RailingHandler implements ElementHandler
@@ -132,7 +132,7 @@ final readonly class RailingHandler implements ElementHandler
 	}
 
 	/**
-	 * Only a fence stands on the ground (FD-100): another railing is level at its base, whatever is asked. Missing in
+	 * Only a fence stands on the ground: another railing is level at its base, whatever is asked. Missing in
 	 * changes logged before fences: level.
 	 */
 	private static function follow(FieldReader $fields, RailingStyleEnum $style): RailingFollowEnum

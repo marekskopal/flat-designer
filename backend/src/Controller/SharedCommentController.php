@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Controller;
+namespace Izbik\Controller;
 
-use FlatDesigner\Dto\CommentDto;
-use FlatDesigner\Dto\CommentInputDto;
-use FlatDesigner\Model\Entity\Comment;
-use FlatDesigner\Model\Entity\Enum\ShareCommentsEnum;
-use FlatDesigner\Model\Entity\ShareLink;
-use FlatDesigner\Response\ErrorResponse;
-use FlatDesigner\Response\NotFoundResponse;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Comment\CommentProvider;
-use FlatDesigner\Service\Comment\SharedComments;
-use FlatDesigner\Service\Project\Exception\ProjectException;
-use FlatDesigner\Service\Project\ShareLinkProvider;
-use FlatDesigner\Service\Request\RequestService;
+use Izbik\Dto\CommentDto;
+use Izbik\Dto\CommentInputDto;
+use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\Enum\ShareCommentsEnum;
+use Izbik\Model\Entity\ShareLink;
+use Izbik\Response\ErrorResponse;
+use Izbik\Response\NotFoundResponse;
+use Izbik\Route\Routes;
+use Izbik\Service\Comment\CommentProvider;
+use Izbik\Service\Comment\SharedComments;
+use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Project\ShareLinkProvider;
+use Izbik\Service\Request\RequestService;
 use Laminas\Diactoros\Response\JsonResponse;
 use MarekSkopal\Router\Attribute\RouteGet;
 use MarekSkopal\Router\Attribute\RoutePost;

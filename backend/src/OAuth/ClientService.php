@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\OAuth;
+namespace Izbik\OAuth;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\OAuthClient;
-use FlatDesigner\Model\Repository\OAuthClientRepository;
-use FlatDesigner\OAuth\Exception\OAuthException;
+use Izbik\Model\Entity\OAuthClient;
+use Izbik\Model\Repository\OAuthClientRepository;
+use Izbik\OAuth\Exception\OAuthException;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use const JSON_THROW_ON_ERROR;
 

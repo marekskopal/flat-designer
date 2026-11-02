@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Editor\Drawing;
+namespace Izbik\Service\Editor\Drawing;
 
-use FlatDesigner\Dto\EditResultDto;
-use FlatDesigner\Model\Entity\Enum\ElementTypeEnum;
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\User;
-use FlatDesigner\Service\Editor\BatchWriter;
-use FlatDesigner\Service\Editor\Element\ElementHandler;
-use FlatDesigner\Service\Editor\ElementHandlers;
-use FlatDesigner\Service\Editor\Exception\EditException;
+use Izbik\Dto\EditResultDto;
+use Izbik\Model\Entity\Enum\ElementTypeEnum;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\User;
+use Izbik\Service\Editor\BatchWriter;
+use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\ElementHandlers;
+use Izbik\Service\Editor\Exception\EditException;
 
 /**
  * A run of walls drawn as a polyline of centre-line points: one wall per segment, straight or curved by its

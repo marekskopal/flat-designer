@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Controller\Admin;
+namespace Izbik\Tests\Controller\Admin;
 
-use FlatDesigner\Controller\Admin\AdminUserController;
-use FlatDesigner\Route\Routes;
-use FlatDesigner\Service\Admin\AdminUserService;
-use FlatDesigner\Tests\Support\Fixture;
-use FlatDesigner\Tests\Support\IntegrationTestCase;
+use Izbik\Controller\Admin\AdminUserController;
+use Izbik\Route\Routes;
+use Izbik\Service\Admin\AdminUserService;
+use Izbik\Tests\Support\Fixture;
+use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 #[CoversClass(AdminUserController::class)]

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Model\Repository;
+namespace Izbik\Model\Repository;
 
-use FlatDesigner\Model\Entity\Enum\ItemKindEnum;
-use FlatDesigner\Model\Entity\Item;
+use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Item;
 
 /** @extends ARepository<Item> */
 final class ItemRepository extends ARepository
@@ -40,7 +40,7 @@ final class ItemRepository extends ARepository
 	}
 
 	/**
-	 * The chimneys (not deleted) of the floors, in one query (FD-91).
+	 * The chimneys (not deleted) of the floors, in one query.
 	 *
 	 * @param list<int> $floorIds
 	 * @return list<Item>

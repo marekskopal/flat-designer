@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
 use DateTimeImmutable;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Service\Editor\Exception\EditException;
-use FlatDesigner\Service\Realtime\ProjectUpdatePublisher;
+use Izbik\Model\Entity\Project;
+use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Realtime\ProjectUpdatePublisher;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 
 /**

@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\App\ServiceProvider;
+namespace Izbik\App\ServiceProvider;
 
 use AsyncAws\S3\S3Client;
-use FlatDesigner\Mcp\Server\FlatDesignerServer;
-use FlatDesigner\Service\Authentication\RateLimitConfig;
-use FlatDesigner\Service\Authentication\TokenService;
-use FlatDesigner\Service\Cors\CorsPolicy;
-use FlatDesigner\Service\Logger\StderrLogger;
-use FlatDesigner\Service\Project\ProjectProvider;
-use FlatDesigner\Service\Realtime\MercureAccessToken;
-use FlatDesigner\Service\Realtime\MercureCookieIssuer;
-use FlatDesigner\Service\Realtime\MercurePublisherTokenProvider;
-use FlatDesigner\Service\Realtime\NullMercureHub;
-use FlatDesigner\Service\Storage\FileStorageInterface;
-use FlatDesigner\Service\Storage\S3Config;
-use FlatDesigner\Service\Storage\S3FileStorage;
 use Http\Discovery\Psr17FactoryDiscovery;
+use Izbik\Mcp\Server\IzbikServer;
+use Izbik\Service\Authentication\RateLimitConfig;
+use Izbik\Service\Authentication\TokenService;
+use Izbik\Service\Cors\CorsPolicy;
+use Izbik\Service\Logger\StderrLogger;
+use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Realtime\MercureAccessToken;
+use Izbik\Service\Realtime\MercureCookieIssuer;
+use Izbik\Service\Realtime\MercurePublisherTokenProvider;
+use Izbik\Service\Realtime\NullMercureHub;
+use Izbik\Service\Storage\FileStorageInterface;
+use Izbik\Service\Storage\S3Config;
+use Izbik\Service\Storage\S3FileStorage;
 use League\Container\ServiceProvider\AbstractServiceProvider;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Log\LoggerInterface;
@@ -39,7 +39,7 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			S3Config::class,
 			S3Client::class,
 			FileStorageInterface::class,
-			FlatDesignerServer::class,
+			IzbikServer::class,
 			HubInterface::class,
 			MercureCookieIssuer::class,
 		], true);
@@ -111,11 +111,11 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			);
 		});
 
-		$container->add(FlatDesignerServer::class, static function () use ($container): FlatDesignerServer {
+		$container->add(IzbikServer::class, static function () use ($container): IzbikServer {
 			$logger = $container->get(LoggerInterface::class);
 			assert($logger instanceof LoggerInterface);
 
-			return new FlatDesignerServer($container, $logger);
+			return new IzbikServer($container, $logger);
 		});
 
 		$container->add(FileStorageInterface::class, static function () use ($container): FileStorageInterface {

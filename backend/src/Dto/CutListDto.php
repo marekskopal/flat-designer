@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Dto;
+namespace Izbik\Dto;
 
 /**
  * What a carpenter cuts for the Custom items of a project or floor (only the shown variants): `boards` (board and front

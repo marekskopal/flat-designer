@@ -29,7 +29,7 @@ export interface ItemAssets {
     roofs?: FloorRoofs;
     /** The floor's plots, whose ground an item `onGround` stands on. */
     plots?: readonly Plot[];
-    /** The stretch of each of the floor's chimneys it draws (`chimneyStretches()`, FD-91); null not drawn. */
+    /** The stretch of each of the floor's chimneys it draws (`chimneyStretches()`); null not drawn. */
     chimneys?: ReadonlyMap<number, ChimneyStretch | null>;
 }
 
@@ -54,14 +54,14 @@ export function buildItem(
     return object;
 }
 
-/** Whether an item stands on the plots' ground: `onGround`, or a fence following it (FD-86, FD-87). */
+/** Whether an item stands on the plots' ground: `onGround`, or a fence following it. */
 export function standsOnGround(item: Pick<Item, 'kind' | 'params' | 'onGround'>): boolean {
     return item.onGround === true || fenceFollows(item);
 }
 
 /**
  * The scene's items with their z against the floor's level: an item on the ground gets the ground under it added, one
- * on the roof the roof's top (FD-91).
+ * on the roof the roof's top.
  */
 export function itemsOverFloor(scene: Pick<Scene, 'items' | 'plots' | 'roofs'>): Item[] {
     const plots = scene.plots ?? [];
@@ -88,7 +88,7 @@ export function roofUnder(roofs: FloorRoofs, x: number, y: number): {top: number
 }
 
 /**
- * Lays an item on the roof (FD-91): its bottom centre on the covering under it, `z` out along the plane's normal, the item
+ * Lays an item on the roof: its bottom centre on the covering under it, `z` out along the plane's normal, the item
  * turned onto the slope about its own heading. Left as it is where no roof covers it.
  */
 function layOnRoof(object: THREE.Object3D, item: Item, roofs: FloorRoofs): void {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Tests\Mcp;
+namespace Izbik\Tests\Mcp;
 
-use FlatDesigner\Mcp\Tool\QuantityTools;
-use FlatDesigner\Model\Entity\Enum\QuantitySurfaceEnum;
+use Izbik\Mcp\Tool\QuantityTools;
+use Izbik\Model\Entity\Enum\QuantitySurfaceEnum;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

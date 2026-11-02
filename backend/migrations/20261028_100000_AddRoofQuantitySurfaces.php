@@ -7,7 +7,7 @@ namespace Migrations;
 use MarekSkopal\ORM\Enum\Type;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
-/** Roofs in the quantities (FD-38): prices of a roof's covering and soffit, the surfaces `RoofCovering` and `Soffit`. */
+/** Roofs in the quantities: prices of a roof's covering and soffit, the surfaces `RoofCovering` and `Soffit`. */
 final class AddRoofQuantitySurfacesMigration extends Migration
 {
 	private const array Surfaces = ['Floor', 'WallFinish', 'Wall', 'Ceiling', 'Beams', 'Skirting', 'Furniture'];

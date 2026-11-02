@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\Expression\Node;
+namespace Izbik\Service\Furniture\Expression\Node;
 
-use FlatDesigner\Service\Furniture\Expression\FunctionEnum;
+use Izbik\Service\Furniture\Expression\FunctionEnum;
 
 final readonly class CallNode implements Node
 {

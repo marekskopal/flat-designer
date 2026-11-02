@@ -212,7 +212,7 @@ export interface FacadeRoom {
 }
 
 /**
- * The façades (FD-88): the stretches of each wall face that border no room, mm along the wall's centre line, within
+ * The façades: the stretches of each wall face that border no room, mm along the wall's centre line, within
  * the face's own extent (mitred at the wall's joints: `wallJoints()`). A face bordering an indoor room is covered where
  * one of the room's edges runs along it (`wallFacesAlongEdge()`); the rest of it, and the faces along open-air rooms
  * (the house's outer walls by the garden), is outside. Twin of `FacadeSpans::of()`.

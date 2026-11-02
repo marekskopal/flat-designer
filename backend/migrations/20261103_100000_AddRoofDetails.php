@@ -9,7 +9,7 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 use MarekSkopal\ORM\Migrations\Migration\Query\Enum\ReferenceOptionEnum;
 
 /**
- * Chimneys and roof details (FD-91): the item kind `Chimney`, items lying on the roof (`items.on_roof`), a roof's
+ * Chimneys and roof details: the item kind `Chimney`, items lying on the roof (`items.on_roof`), a roof's
  * rainwater goods (`gutters`, `gutter_material_id`, `downpipes`), snow guard rows and ridge style, the material pattern
  * `BeaverTail` with beaver-tail clay tiles and titanium zinc, and prices of the surfaces `Gutter` and `Downpipe`.
  */

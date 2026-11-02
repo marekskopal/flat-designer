@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Furniture\CutList;
+namespace Izbik\Service\Furniture\CutList;
 
-use FlatDesigner\Dto\CutListBoardDto;
-use FlatDesigner\Dto\CutListDto;
-use FlatDesigner\Dto\CutListMaterialDto;
-use FlatDesigner\Dto\CutListOtherDto;
-use FlatDesigner\Service\Furniture\ResolvedPart;
+use Izbik\Dto\CutListBoardDto;
+use Izbik\Dto\CutListDto;
+use Izbik\Dto\CutListMaterialDto;
+use Izbik\Dto\CutListOtherDto;
+use Izbik\Service\Furniture\ResolvedPart;
 
 /**
  * Collects the parts of the items into the rows of a cut list: identical boards (material, thickness, length along the

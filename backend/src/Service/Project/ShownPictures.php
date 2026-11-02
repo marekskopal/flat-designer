@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace FlatDesigner\Service\Project;
+namespace Izbik\Service\Project;
 
-use FlatDesigner\Model\Entity\Floor;
-use FlatDesigner\Model\Entity\Item;
-use FlatDesigner\Model\Entity\Project;
-use FlatDesigner\Model\Repository\FloorRepository;
-use FlatDesigner\Model\Repository\ItemRepository;
-use FlatDesigner\Model\Repository\ProjectFileRepository;
-use FlatDesigner\Service\Furniture\ImageParameters;
-use FlatDesigner\Service\Json\JsonDecoder;
+use Izbik\Model\Entity\Floor;
+use Izbik\Model\Entity\Item;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\FloorRepository;
+use Izbik\Model\Repository\ItemRepository;
+use Izbik\Model\Repository\ProjectFileRepository;
+use Izbik\Service\Furniture\ImageParameters;
+use Izbik\Service\Json\JsonDecoder;
 
 /** The project files that `Custom` items show as pictures (through their definitions' `image` parameters). */
 final readonly class ShownPictures
