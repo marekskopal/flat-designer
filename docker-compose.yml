@@ -27,6 +27,9 @@ services:
         build:
             context: ./frontend
             dockerfile: Dockerfile
+            args:
+                # The <base href> of the build: the app's pages under APP_PATH.
+                BASE_HREF: ${APP_PATH:-}/
         restart: unless-stopped
         healthcheck:
             test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
@@ -49,6 +52,7 @@ services:
             BACKEND_FRANKENPHP_WORKERS: ${BACKEND_FRANKENPHP_WORKERS}
             BACKEND_CORS_ALLOWED_ORIGIN: ${BACKEND_CORS_ALLOWED_ORIGIN}
             BACKEND_LOG_LEVEL: ${BACKEND_LOG_LEVEL}
+            APP_PATH: ${APP_PATH:-}
             AUTHORIZATION_TOKEN_KEY: ${AUTHORIZATION_TOKEN_KEY}
             RATE_LIMIT_LOGIN_ATTEMPTS: ${RATE_LIMIT_LOGIN_ATTEMPTS:-5}
             RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS: ${RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS:-3600}

@@ -13,7 +13,11 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `http.conf.template`, or by `ssl.conf.template` when `PROXY_SSL_ENABLED=1` (set by `docker-compose.ssl.yml`, which is
   enabled via `COMPOSE_FILE` in `.env`; it serves `PROXY_PORT_SSL` and makes http redirect).
   `docker-entrypoint.d/10-select-template.sh` picks the template at start. The backend reads the scheme from
-  `X-Forwarded-Proto`.
+  `X-Forwarded-Proto`. The app's own location is `conf/app.conf` (included last), so a deployment with a website at
+  the root swaps that file alone. `APP_PATH` (empty: the root; e.g. `/app`) is the path of the app's pages: the
+  frontend is built with it as `<base href>` (`BASE_HREF` build argument) and the backend puts it into share links and
+  the OAuth consent page's URL (`DiscoveryUrl::appUrl()`); the API, MCP, OAuth discovery and Mercure stay at the root.
+  Frontend code is base-href-agnostic: assets and in-app links resolve against `document.baseURI`.
 - `minio/` (a compose service only): S3-compatible storage for uploaded files.
 - `backend/`: FrankenPHP worker, PHP 8.5, `marekskopal/orm`, `marekskopal/router`, MariaDB. Namespace `Izbik\`.
   - Routes are in `Izbik\Route\Routes`. The entrypoint runs `migration:run` before serving.

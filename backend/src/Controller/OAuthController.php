@@ -42,7 +42,7 @@ final readonly class OAuthController
 
 		return new JsonResponse([
 			'issuer' => DiscoveryUrl::mcpUrl($request),
-			'authorization_endpoint' => $baseUrl . self::AuthorizePage,
+			'authorization_endpoint' => DiscoveryUrl::appUrl($request) . self::AuthorizePage,
 			'token_endpoint' => $baseUrl . Routes::OAuthToken->value,
 			'registration_endpoint' => $baseUrl . Routes::OAuthRegister->value,
 			'response_types_supported' => ['code'],

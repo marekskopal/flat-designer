@@ -295,6 +295,6 @@ final readonly class ShareLinkTools
 
 	private function toDto(ShareLink $link): ShareLinkDto
 	{
-		return $this->shareLinkProvider->toDto($link, $this->context->baseUrl());
+		return $this->shareLinkProvider->toDto($link, $this->context->appUrl());
 	}
 }

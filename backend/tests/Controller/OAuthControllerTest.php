@@ -30,6 +30,21 @@ final class OAuthControllerTest extends IntegrationTestCase
 		self::assertSame('http://localhost:4400/mcp', $resource['resource']);
 	}
 
+	public function testConsentPageFollowsTheAppPath(): void
+	{
+		putenv('APP_PATH=/app/');
+
+		try {
+			$server = OAuthFlow::decode(OAuthFlow::json('GET', Routes::OAuthServerMetadata->value, []));
+		} finally {
+			putenv('APP_PATH=');
+		}
+
+		// Only the consent page is the app's; the API and MCP stay at the root.
+		self::assertSame('http://localhost:4400/app/oauth/authorize', $server['authorization_endpoint']);
+		self::assertSame('http://localhost:4400/mcp/oauth/token', $server['token_endpoint']);
+	}
+
 	public function testFullFlowAndRefreshRotation(): void
 	{
 		$user = Fixture::createUser();

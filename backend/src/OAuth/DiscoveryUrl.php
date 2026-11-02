@@ -37,6 +37,24 @@ final readonly class DiscoveryUrl
 		return $scheme . '://' . $host;
 	}
 
+	/**
+	 * The base URL of the app's pages (share links, the consent page): the base URL plus `APP_PATH`, the path the
+	 * frontend is served under (empty at the root, `/app` where a website takes the root). The API, MCP and Mercure
+	 * stay at the root.
+	 */
+	public static function appUrl(ServerRequestInterface $request): string
+	{
+		return self::baseUrl($request) . self::appPath();
+	}
+
+	/** `APP_PATH` with a leading and no trailing slash, or empty. */
+	public static function appPath(): string
+	{
+		$path = trim((string) getenv('APP_PATH'), '/');
+
+		return $path === '' ? '' : '/' . $path;
+	}
+
 	public static function mcpUrl(ServerRequestInterface $request): string
 	{
 		return self::baseUrl($request) . Routes::Mcp->value;

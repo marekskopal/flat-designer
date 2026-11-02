@@ -7,14 +7,16 @@
 // Environment: FD_EMAIL, FD_PASSWORD (or FD_AUTHENTICATION) and FD_PROJECT as for scripts/screenshots.mjs, FD_VIEWS
 // (only the saved views whose name starts with it), FD_SCENARIOS (comma-separated names, default all), FD_FRAMES
 // (default 120), FD_RUNS (runs per scenario, the median kept; default 3), FD_BASELINE (an earlier result to compare
-// with), FD_URL (default http://localhost:4400), FD_OUT (default benchmarks), FD_HEADED=1 to watch it work.
+// with), FD_URL (default http://localhost:4400), FD_APP_PATH (the path of the app's pages, as APP_PATH; default none),
+// FD_OUT (default benchmarks), FD_HEADED=1 to watch it work.
 import {spawnSync} from 'node:child_process';
 import {mkdir, readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
 import {chromium} from 'playwright';
 
-const base = (process.env.FD_URL ?? 'http://localhost:4400').replace(/\/$/, '');
+const origin = (process.env.FD_URL ?? 'http://localhost:4400').replace(/\/$/, '');
+const base = origin + (process.env.FD_APP_PATH ?? '').replace(/\/$/, '');
 const projectId = Number(process.env.FD_PROJECT);
 const out = resolve(process.env.FD_OUT ?? 'benchmarks');
 const email = process.env.FD_EMAIL;
@@ -48,7 +50,7 @@ if (scenarios.length === 0) {
 }
 
 const api = async (path, token, init = {}) => {
-    const response = await fetch(`${base}/api${path}`, {
+    const response = await fetch(`${origin}/api${path}`, {
         ...init,
         headers: {'Content-Type': 'application/json', ...(token ? {Authorization: `Bearer ${token}`} : {}), ...init.headers},
     });

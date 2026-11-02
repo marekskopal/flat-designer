@@ -25,6 +25,8 @@ $testEnv = [
 	'BACKEND_LOG_LEVEL' => 'production',
 	'S3_BUCKET' => 'test-bucket',
 	'FILE_MAX_SIZE_MB' => '1',
+	// The app at the root, as on the open-source branch, whatever the container says.
+	'APP_PATH' => '',
 ];
 foreach ($testEnv as $name => $value) {
 	putenv($name . '=' . $value);

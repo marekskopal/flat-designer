@@ -46,7 +46,7 @@ final readonly class ShareLinkController
 		}
 
 		return new JsonResponse(array_map(
-			fn (ShareLink $link): ShareLinkDto => $this->shareLinkProvider->toDto($link, DiscoveryUrl::baseUrl($request)),
+			fn (ShareLink $link): ShareLinkDto => $this->shareLinkProvider->toDto($link, DiscoveryUrl::appUrl($request)),
 			$this->shareLinkProvider->list($project),
 		));
 	}
@@ -67,7 +67,7 @@ final readonly class ShareLinkController
 			return new ErrorResponse($e->getMessage(), $e->getCode());
 		}
 
-		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::baseUrl($request)), 201);
+		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::appUrl($request)), 201);
 	}
 
 	#[RoutePut(Routes::ProjectShareLink->value)]
@@ -86,7 +86,7 @@ final readonly class ShareLinkController
 			return new ErrorResponse($e->getMessage(), $e->getCode());
 		}
 
-		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::baseUrl($request)));
+		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::appUrl($request)));
 	}
 
 	/** Points the link at a new version of the project as it is now (same URL). */
@@ -104,7 +104,7 @@ final readonly class ShareLinkController
 			return new ErrorResponse($e->getMessage(), $e->getCode());
 		}
 
-		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::baseUrl($request)));
+		return new JsonResponse($this->shareLinkProvider->toDto($link, DiscoveryUrl::appUrl($request)));
 	}
 
 	#[RouteDelete(Routes::ProjectShareLink->value)]

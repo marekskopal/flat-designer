@@ -83,7 +83,7 @@ import-models:
 screenshots:
 	@cd frontend && pnpm exec playwright install chromium >/dev/null && \
 		FD_PROJECT=$(PROJECT) FD_EMAIL='$(or $(EMAIL),$(SCREENSHOTS_EMAIL))' FD_PASSWORD='$(or $(PASSWORD),$(SCREENSHOTS_PASSWORD))' FD_VIEWS="$(VIEWS)" FD_VIEWS_ONLY="$(VIEWS_ONLY)" FD_ROOM="$(ROOM)" \
-		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) node scripts/screenshots.mjs
+		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) FD_APP_PATH=$(APP_PATH) node scripts/screenshots.mjs
 
 ## Measure the rendering cost of a project's saved views into frontend/benchmarks (needs the running stack):
 ## make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… [VIEWS="Tour ·"] [SCENARIOS=fast-day,…] [FRAMES=120] [RUNS=3]
@@ -92,7 +92,7 @@ benchmark:
 	@cd frontend && pnpm exec playwright install chromium >/dev/null && \
 		FD_PROJECT=$(PROJECT) FD_EMAIL='$(or $(EMAIL),$(SCREENSHOTS_EMAIL))' FD_PASSWORD='$(or $(PASSWORD),$(SCREENSHOTS_PASSWORD))' FD_VIEWS="$(VIEWS)" FD_SCENARIOS="$(SCENARIOS)" \
 		FD_FRAMES=$(FRAMES) FD_RUNS=$(RUNS) FD_BASELINE=$(if $(BASELINE),$(abspath $(BASELINE))) \
-		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) node scripts/benchmark.mjs
+		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) FD_APP_PATH=$(APP_PATH) node scripts/benchmark.mjs
 
 ## Install backend + frontend dependencies on the host (for linting, tests, ng serve)
 install:

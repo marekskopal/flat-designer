@@ -104,4 +104,4 @@ export interface SharedView {
 
 export const ShareViewLabels: Record<ShareView, string> = {overview: '3D', top: 'Plan', walkthrough: 'Walk'};
 
-export const shareUrl = (token: string): string => `${location.origin}/s/${token}`;
+export const shareUrl = (token: string): string => new URL(`s/${token}`, document.baseURI).href;

@@ -10,6 +10,7 @@ use Izbik\Model\Entity\Floor;
 use Izbik\Model\Entity\Project;
 use Izbik\Model\Entity\User;
 use Izbik\Model\Repository\FloorRepository;
+use Izbik\OAuth\DiscoveryUrl;
 use Izbik\Service\Editor\Exception\EditException;
 use Izbik\Service\Project\ProjectProvider;
 use RuntimeException;
@@ -29,12 +30,18 @@ final readonly class ToolContext
 		return $this->userContext->getUser();
 	}
 
-	/** The app's base URL the request came through, for links the tools hand out (share links, upload URLs). */
+	/** The app's base URL the request came through, for links the tools hand out to the API (upload URLs). */
 	public function baseUrl(): string
 	{
 		$baseUrl = $this->userContext->getBaseUrl();
 
 		return $baseUrl !== '' ? $baseUrl : throw new RuntimeException('The app\'s base URL is not known to the MCP server.');
+	}
+
+	/** The base URL of the app's pages, for share links (`APP_PATH` after the base URL). */
+	public function appUrl(): string
+	{
+		return $this->baseUrl() . DiscoveryUrl::appPath();
 	}
 
 	/** The scope argument of the furniture definition and model tools. */

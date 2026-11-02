@@ -5,16 +5,18 @@
 // Environment: FD_EMAIL, FD_PASSWORD (an account that may open the project) or FD_AUTHENTICATION (the JSON the app keeps
 // in localStorage under "authentication", from a signed-in browser), FD_PROJECT (the project's id), FD_VIEWS (only the
 // saved views whose name starts with it), FD_VIEWS_ONLY=1 (the views alone, not the editor and the pages), FD_ROOM (the
-// room to select for the editor shot, default the first one listed), FD_URL (default http://localhost:4400), FD_OUT
-// (default ../docs/screenshots), FD_HEADED=1 to watch it work. With `cwebp` on the PATH, the images are saved as WebP
-// FD_WIDTH pixels wide (default 1600), otherwise as PNG at 2×.
+// room to select for the editor shot, default the first one listed), FD_URL (default http://localhost:4400), FD_APP_PATH
+// (the path of the app's pages, as APP_PATH; default none), FD_OUT (default ../docs/screenshots), FD_HEADED=1 to watch
+// it work. With `cwebp` on the PATH, the images are saved as WebP FD_WIDTH pixels wide (default 1600), otherwise as PNG
+// at 2×.
 import {spawnSync} from 'node:child_process';
 import {mkdir, unlink} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
 import {chromium} from 'playwright';
 
-const base = (process.env.FD_URL ?? 'http://localhost:4400').replace(/\/$/, '');
+const origin = (process.env.FD_URL ?? 'http://localhost:4400').replace(/\/$/, '');
+const base = origin + (process.env.FD_APP_PATH ?? '').replace(/\/$/, '');
 const projectId = Number(process.env.FD_PROJECT);
 const out = resolve(process.env.FD_OUT ?? '../docs/screenshots');
 const email = process.env.FD_EMAIL;
@@ -40,7 +42,7 @@ const slug = (name) =>
         .replace(/^-|-$/g, '');
 
 const api = async (path, token, init = {}) => {
-    const response = await fetch(`${base}/api${path}`, {
+    const response = await fetch(`${origin}/api${path}`, {
         ...init,
         headers: {'Content-Type': 'application/json', ...(token ? {Authorization: `Bearer ${token}`} : {}), ...init.headers},
     });
