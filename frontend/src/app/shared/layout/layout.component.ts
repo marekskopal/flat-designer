@@ -1,3 +1,4 @@
+import {NgOptimizedImage} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, OnInit, signal} from '@angular/core';
 import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {AuthenticationService} from '@app/services/authentication.service';
@@ -9,7 +10,7 @@ import {CurrentUserService} from '@app/services/current-user.service';
  */
 @Component({
     selector: 'fd-layout',
-    imports: [RouterOutlet, RouterLink, RouterLinkActive],
+    imports: [NgOptimizedImage, RouterOutlet, RouterLink, RouterLinkActive],
     templateUrl: './layout.component.html',
     styleUrl: './layout.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

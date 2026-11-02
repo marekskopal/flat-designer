@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Izbik">
+<!-- Izbik mark: a room seen into its corner, a window in one wall and a doorway with its swing in the other. -->
+<path d="M24.00 22.05L42.75 32.88L24.00 43.70L5.25 32.88Z" fill="#ebe7df" stroke="#ebe7df" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M18.38 25.30L10.88 29.63L11.38 29.90L11.92 30.16L12.48 30.39L13.07 30.60L13.68 30.79L14.32 30.96L14.97 31.10L15.63 31.21L16.31 31.31L16.99 31.37L17.68 31.41L18.38 31.42L19.07 31.41L19.76 31.37L20.44 31.31L21.12 31.21L21.78 31.10L22.43 30.96L23.07 30.79L23.68 30.60L24.27 30.39L24.83 30.16L25.37 29.90L25.88 29.63Z" fill="#a9b8ad" stroke="#a9b8ad" stroke-width="0.35" stroke-linejoin="round"/>
+<path fill-rule="evenodd" d="M5.25 32.88L5.25 17.72L24.00 6.90L24.00 22.05ZM18.38 25.30L10.88 29.63L10.88 18.26L18.38 13.93Z" fill="#2e2b27"/>
+<path fill-rule="evenodd" d="M24.00 22.05L42.75 32.88L42.75 17.72L24.00 6.90ZM29.62 19.89L37.12 24.22L37.12 17.72L29.62 13.39Z" fill="#4a4640"/>
+<path d="M24.00 4.30L3.00 16.42L5.25 17.72L26.25 5.60Z" fill="#8a847a" stroke="#8a847a" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M24.00 6.90L42.75 17.72L45.00 16.42L26.25 5.60Z" fill="#8a847a" stroke="#8a847a" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M3.00 31.58L3.00 16.42L5.25 17.72L5.25 32.88Z" fill="#4a4640" stroke="#4a4640" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M45.00 31.58L42.75 32.88L42.75 17.72L45.00 16.42Z" fill="#2e2b27" stroke="#2e2b27" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M16.12 24.00L18.38 25.30L18.38 13.93L16.12 12.63Z" fill="#4a4640" stroke="#4a4640" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M31.88 18.59L29.62 19.89L29.62 13.39L31.88 12.09Z" fill="#2e2b27" stroke="#2e2b27" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M31.88 18.59L39.38 22.92L37.12 24.22L29.62 19.89Z" fill="#8a847a" stroke="#8a847a" stroke-width="0.35" stroke-linejoin="round"/>
+<path d="M30.75 19.24L38.25 23.57L38.25 17.07L30.75 12.74Z" fill="#c9d8cc" stroke="#c9d8cc" stroke-width="0.35" stroke-linejoin="round"/>
+</svg>
