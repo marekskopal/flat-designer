@@ -1,4 +1,4 @@
-# Openable fronts (FD-106)
+# Openable fronts (I-106)
 
 Implemented as planned, with these differences: an assembly cannot `fold` (only a front folds); a front of its own is
 keyed `front:<n>` (the n-th in part order); the selection card's button shows while viewing (editing shows the
@@ -149,8 +149,8 @@ reversed mid-way does not jump:
 3. Interaction: walk, the selected item's click and card button, the Display toggle, the preview.
 4. Seeds migration, a CLAUDE.md section ("Openable fronts"), and the README tour if it shows it.
 
-## Follow-ups (not in FD-106)
+## Follow-ups (not in I-106)
 
 - `slidingDoor` parts sliding aside behind their neighbour (they need to know their track and overlap).
-- Concealed hinge cups and arm plates drawn on a door's back (the cupboard counterpart of FD-105 and FD-109).
+- Concealed hinge cups and arm plates drawn on a door's back (the cupboard counterpart of I-105 and I-109).
 - Push-to-open (`handle: none` with a tip-on latch) as a front option affecting only the animation.

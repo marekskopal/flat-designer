@@ -1,9 +1,9 @@
-# Stairs (FD-37)
+# Stairs (I-37)
 
-Parametric stairs between stacked floors (FD-36): straight, L, U and spiral, with the rise from the floor-to-floor
+Parametric stairs between stacked floors (I-36): straight, L, U and spiral, with the rise from the floor-to-floor
 height and a railing. A stair cuts a void through the slab above, and the walkthrough follows its steps between floors.
 
-## What FD-36 gives
+## What I-36 gives
 
 - Floor elevations: the rise between two floors is known.
 - Slabs built from the room and wall outlines (`buildSlab()`), and room floors as `THREE.Shape`s: a void is a hole in
@@ -79,7 +79,7 @@ Validation: riser 140–220 mm, going 200–350 mm, within the floor's coordinat
 - Over a stair the walker's height follows the treads, smoothed along the walk line; upstairs the void follows the
   same stair down.
 - The stair's sides and the void's edges block the walker, except where you step on and off.
-- Reaching the top switches to the floor above, reaching the bottom from upstairs to the floor below (the FD-73
+- Reaching the top switches to the floor above, reaching the bottom from upstairs to the floor below (the I-73
   mechanism), keeping the spot and the height. As built, the floor is loaded when the walker reaches the end of the
   stair (not ahead), and the floor above is not drawn while climbing.
 

@@ -1,7 +1,7 @@
 # Demo flat
 
-The demo project (FD-40) recreates a real flat over MCP only, from its published plan and photos. This file is the
-reference for the modelling (FD-45): dimensions, rooms, the photos' camera positions and an inventory of everything in
+The demo project (I-40) recreates a real flat over MCP only, from its published plan and photos. This file is the
+reference for the modelling (I-45): dimensions, rooms, the photos' camera positions and an inventory of everything in
 the flat, mapped to what Izbik has or to the task that adds it.
 
 ## Source
@@ -90,7 +90,7 @@ Camera position → the point it looks at, in plan mm.
 | 11 | Bathroom door: vanity, round mirror, WC, herringbone tiles | 6410, 2900 | 6410, 5200 |
 | 12 | Bathroom: shower screen, rain shower, vessel basin | 5510, 3610 | 6930, 5060 |
 
-The photo views have a 14 mm lens (FD-54): the photos are portrait wide-angle shots, and 14 mm in the 16:10 views
+The photo views have a 14 mm lens (I-54): the photos are portrait wide-angle shots, and 14 mm in the 16:10 views
 covers their height (floor to vaults), compared side by side for photos 02 and 12.
 
 The photos are staged sparsely. Furniture they do not show (sofa, side tables, dining table and chairs, beds, desks)
@@ -98,99 +98,99 @@ comes from the plan.
 
 ## Inventory
 
-Legend: **have** = an existing kind, definition, material or opening option. **FD-nn** = the task that adds it.
+Legend: **have** = an existing kind, definition, material or opening option. **I-nn** = the task that adds it.
 
 ### Shell
 
 | Element | Notes | Maps to |
 | --- | --- | --- |
 | Walls 300 / 150 / 80, non-orthogonal facade and diagonal partition | | have (walls at any angle) |
-| Balcony doors, French, 2 leaves, glazed with panelled lower parts, about 1300 × 2450 | white timber | Window walkable + **FD-48** (panelled lower part) |
-| Exterior louvred shutters on the balcony doors | brown timber | **FD-48** |
-| Balconies, about 2150 × 560, wrought-iron railing 1000 high | | Terrace room; railing **FD-28** (balusters definition) |
+| Balcony doors, French, 2 leaves, glazed with panelled lower parts, about 1300 × 2450 | white timber | Window walkable + **I-48** (panelled lower part) |
+| Exterior louvred shutters on the balcony doors | brown timber | **I-48** |
+| Balconies, about 2150 × 560, wrought-iron railing 1000 high | | Terrace room; railing **I-28** (balusters definition) |
 | Small windows to the light wells (bathroom, kitchen, dining, bedrooms 2 and 3) | white casements, 2 sashes | have (Window, mullions) |
-| Entrance door, restored panelled, with architrave | white | Door + **FD-48** (panelled leaf) |
-| Bathroom and bedroom 3 doors, restored panelled, with architrave | white | Door, Architrave + **FD-48** |
+| Entrance door, restored panelled, with architrave | white | Door + **I-48** (panelled leaf) |
+| Bathroom and bedroom 3 doors, restored panelled, with architrave | white | Door, Architrave + **I-48** |
 | Bedroom 2 door (swing) | white | Door |
 | Master bedroom sliding door in the diagonal partition, flush, round pull | white | SlidingDoor (or PocketDoor), handle Pull |
-| Brick Catalan vaults between white beams, spacing 550, crown 2920 | exposed brick, white beams | **FD-35** beams + **FD-30** vaulted ceiling |
-| Dropped ceiling 2510 over the service band, curved edge towards the living room | white plaster; black over the kitchen | **FD-30** (partial dropped ceiling with its own outline) |
-| Skirting 70 mm | white | **FD-30** |
+| Brick Catalan vaults between white beams, spacing 550, crown 2920 | exposed brick, white beams | **I-35** beams + **I-30** vaulted ceiling |
+| Dropped ceiling 2510 over the service band, curved edge towards the living room | white plaster; black over the kitchen | **I-30** (partial dropped ceiling with its own outline) |
+| Skirting 70 mm | white | **I-30** |
 | Oak cladding of the service box with flush doors (storage, bathroom side) | oak veneer | Panel definition + Door frameStyle None |
 
 ### Kitchen
 
 | Element | Notes | Maps to |
 | --- | --- | --- |
-| Base run 3640 long, 6 modules of 600 | matt black fronts, no handles | Kitchen base cabinet (have) + matt black material (**FD-47**) |
+| Base run 3640 long, 6 modules of 600 | matt black fronts, no handles | Kitchen base cabinet (have) + matt black material (**I-47**) |
 | Oven in a base module | stainless | Kitchen base cabinet, appliance part (have) |
 | Induction hob | black glass | Hob (have) |
-| Inset sink and black tap | black | Sink (have); black tap **FD-29** |
-| Wall cabinets over the left 4 modules, extractor below them | matt black | Kitchen wall cabinet (have); built-in extractor **FD-29** |
-| Worktop and backsplash | black compact | Worktop, Backsplash (have) + **FD-47** |
+| Inset sink and black tap | black | Sink (have); black tap **I-29** |
+| Wall cabinets over the left 4 modules, extractor below them | matt black | Kitchen wall cabinet (have); built-in extractor **I-29** |
+| Worktop and backsplash | black compact | Worktop, Backsplash (have) + **I-47** |
 | Tall oak side panels at both ends | oak veneer | Panel (have) |
-| Oak sliding panels closing the galley (5–6 leaves into pockets) | oak veneer, round pulls | a definition with slidingDoor parts (have), made in FD-45 |
-| Portable lamp on the worktop (Santa & Cole Cestita style) | | **FD-29** / **FD-31** |
+| Oak sliding panels closing the galley (5–6 leaves into pockets) | oak veneer, round pulls | a definition with slidingDoor parts (have), made in I-45 |
+| Portable lamp on the worktop (Santa & Cole Cestita style) | | **I-29** / **I-31** |
 
 ### Bathroom
 
 | Element | Notes | Maps to |
 | --- | --- | --- |
-| Walk-in shower, glass screen 1000 × 2000, floor drain | | screen definition **FD-28** |
-| Rain shower set | matt black | **FD-29** (Fixture is chrome only) |
-| Wall-hung vanity 580 × 420 with a vessel basin and a black tap | white | vanity: base cabinet definition (have); basin and tap **FD-29** |
-| Round mirror Ø 600 with a black frame | | **FD-28** (round mirror definition) |
-| WC, floor-standing, close-coupled | white | **FD-29** (Toilet is wall-hung) |
-| Walls: terrazzo slabs (shower), charcoal herringbone tiles (basin and WC wall), paint above 2.1 m | | **FD-47** |
+| Walk-in shower, glass screen 1000 × 2000, floor drain | | screen definition **I-28** |
+| Rain shower set | matt black | **I-29** (Fixture is chrome only) |
+| Wall-hung vanity 580 × 420 with a vessel basin and a black tap | white | vanity: base cabinet definition (have); basin and tap **I-29** |
+| Round mirror Ø 600 with a black frame | | **I-28** (round mirror definition) |
+| WC, floor-standing, close-coupled | white | **I-29** (Toilet is wall-hung) |
+| Walls: terrazzo slabs (shower), charcoal herringbone tiles (basin and WC wall), paint above 2.1 m | | **I-47** |
 
 ### Lights and electrics
 
 | Element | Where | Maps to |
 | --- | --- | --- |
-| Bare-bulb pendants on black fabric cable, swagged to a ceiling hook | living ×2, master bedroom, bedrooms 2 and 3, dining | **FD-31** (pendant with a cable path) |
-| Recessed round downlights | dropped ceiling: corridor ×4, hall, bathroom, kitchen | **FD-31** |
-| Floor lamp (Santa & Cole TMM style), timber stem, white shade | living | **FD-29** + **FD-31** |
-| Wall reading lamp (Tolomeo style) on the headboard ledge | master bedroom | **FD-29** + **FD-31** |
+| Bare-bulb pendants on black fabric cable, swagged to a ceiling hook | living ×2, master bedroom, bedrooms 2 and 3, dining | **I-31** (pendant with a cable path) |
+| Recessed round downlights | dropped ceiling: corridor ×4, hall, bathroom, kitchen | **I-31** |
+| Floor lamp (Santa & Cole TMM style), timber stem, white shade | living | **I-29** + **I-31** |
+| Wall reading lamp (Tolomeo style) on the headboard ledge | master bedroom | **I-29** + **I-31** |
 | LED strip under the wall cabinets | kitchen | LedStrip (have) |
-| Sockets and switches, white | every room | **FD-31** |
-| AC grilles in the dropped ceiling edge and walls | living, master bedroom, corridor | Box / definition (made in FD-45) |
+| Sockets and switches, white | every room | **I-31** |
+| AC grilles in the dropped ceiling edge and walls | living, master bedroom, corridor | Box / definition (made in I-45) |
 
 ### Furniture and decor
 
 | Element | Room | Maps to |
 | --- | --- | --- |
-| Double bed 1500 × 2000, low, white linen | master | Bed frame (have) + mattress and bedding **FD-28** |
-| Bedside tables 450 × 420 ×2 | master | **FD-28** |
+| Double bed 1500 × 2000, low, white linen | master | Bed frame (have) + mattress and bedding **I-28** |
+| Bedside tables 450 × 420 ×2 | master | **I-28** |
 | Headboard ledge, 1000 high, full wall width | master | Wall shelf / Panel (have) |
 | Hinged wardrobe 2000 × 560, full height | master | Kitchen tall cabinet definition (have) |
 | Wall safe | master | Box (have) |
-| Single beds 900 × 2000 | bedrooms 2 and 3 | Bed frame (have) + **FD-28** |
-| Small desks or bedside tables 450 × 450 | bedrooms 2 and 3 | Desk (have) / **FD-28** |
-| Wardrobes 980 × 520 and a trapezoid one 700 deep | bedrooms 2 and 3 | tall cabinet definition (have); the trapezoid one is the Trapezoid wardrobe (FD-57) |
-| Three-seat sofa 2100 × 850 | living | **FD-28** |
-| Round side tables Ø 560 and Ø 450 | living | **FD-28** (round top) |
-| Butterfly (BKF) chair, leather | living | **FD-29** |
-| Dining table 1400 × 800, 4 cantilever chairs (Cesca style) | dining | Dining table (have); chairs **FD-29** |
-| Poster in a black frame leaning on the wall, 700 × 1000 | dining | **FD-42** |
-| Plants (pot on the floor, fern on a chair) | living, master | **FD-29** / **FD-42** |
+| Single beds 900 × 2000 | bedrooms 2 and 3 | Bed frame (have) + **I-28** |
+| Small desks or bedside tables 450 × 450 | bedrooms 2 and 3 | Desk (have) / **I-28** |
+| Wardrobes 980 × 520 and a trapezoid one 700 deep | bedrooms 2 and 3 | tall cabinet definition (have); the trapezoid one is the Trapezoid wardrobe (I-57) |
+| Three-seat sofa 2100 × 850 | living | **I-28** |
+| Round side tables Ø 560 and Ø 450 | living | **I-28** (round top) |
+| Butterfly (BKF) chair, leather | living | **I-29** |
+| Dining table 1400 × 800, 4 cantilever chairs (Cesca style) | dining | Dining table (have); chairs **I-29** |
+| Poster in a black frame leaning on the wall, 700 × 1000 | dining | **I-42** |
+| Plants (pot on the floor, fern on a chair) | living, master | **I-29** / **I-42** |
 | Low strip along the living room's south wall (about 500 deep) | living | unclear in the photos; bench or radiator cover (Box) |
 
 ## Gaps → tasks
 
-- **FD-25** Plan underlay: the agent traces `Propuesta.jpg`, calibrated with the scale bar.
-- **FD-28** Furniture catalogue: sofa, mattress and bedding, bedside tables, round tables, trapezoid wardrobe, shower
+- **I-25** Plan underlay: the agent traces `Propuesta.jpg`, calibrated with the scale bar.
+- **I-28** Furniture catalogue: sofa, mattress and bedding, bedside tables, round tables, trapezoid wardrobe, shower
   screen, round mirror, balcony railing.
-- **FD-29** glTF models: design chairs (BKF, Cesca), lamps (TMM, Tolomeo, Cestita), vessel basin, black taps, rain
+- **I-29** glTF models: design chairs (BKF, Cesca), lamps (TMM, Tolomeo, Cestita), vessel basin, black taps, rain
   shower, close-coupled WC, extractor, plants.
-- **FD-30** Ceilings: a vaulted ceiling type, a partial dropped ceiling with its own outline (curved), skirting.
-- **FD-31** Lighting: pendants with swagged cables, recessed downlights, lamp light sources, sockets and switches.
-- **FD-35** Beams: exposed beams under the vaults at 550 spacing.
-- **FD-42** Decor: framed poster, plants, bedding textiles.
-- **FD-47** Materials: terrazzo, exposed brick, charcoal herringbone tiles (a new pattern), matt black fronts, black
+- **I-30** Ceilings: a vaulted ceiling type, a partial dropped ceiling with its own outline (curved), skirting.
+- **I-31** Lighting: pendants with swagged cables, recessed downlights, lamp light sources, sockets and switches.
+- **I-35** Beams: exposed beams under the vaults at 550 spacing.
+- **I-42** Decor: framed poster, plants, bedding textiles.
+- **I-47** Materials: terrazzo, exposed brick, charcoal herringbone tiles (a new pattern), matt black fronts, black
   compact worktop, oak veneer.
-- **FD-48** Door and window leaf styles: panelled leaves, French doors with panelled lower parts, exterior shutters.
+- **I-48** Door and window leaf styles: panelled leaves, French doors with panelled lower parts, exterior shutters.
 
-## Result (FD-45)
+## Result (I-45)
 
 The flat was modelled by Claude Code over the izbik MCP server only. The human part was creating the empty
 project and importing the plan, photos and poster with `make import-files`. Positions came from the plan underlay,
@@ -211,7 +211,7 @@ read with `get_project_file` and small local measuring scripts.
 1. Underlay calibrated from the scale bar, then the walls (`add_walls`) and the rooms (`detect_room`). Version 1.
 2. Doors, French windows with panels, transoms and shutters, light-well windows, balconies and railings. Version 2.
 3. Finishes: oak planks, terrazzo, herringbone band, black kitchen ceiling, brick vaults with beams, skirting. The
-   living room, dining and master bedroom planks run along the diagonal partition (`floorAngle` 75, FD-51).
+   living room, dining and master bedroom planks run along the diagonal partition (`floorAngle` 75, I-51).
 4. The kitchen (6 base modules, 4 wall cabinets, worktop, backsplashes, hob, sink, oak end panels) as one group, and
    **Oak sliding panels**, a project definition of six `slidingDoor` leaves on a ceiling track with an `open`
    parameter. The two states are the variants of "Kitchen open / closed".
@@ -228,11 +228,11 @@ The shell, heights, vaults, service box, kitchen, sliding panels and bathroom wa
 (photos 02 and 12 side by side with their saved views). Placing the poster outside the dining room was caught
 in the comparison and fixed. These mismatches remain, each logged as a task:
 
-- **FD-52** Wall finishes are per room, so the shower walls are herringbone instead of terrazzo.
-- **FD-53** Missing product models: vessel basin, black taps, close-coupled WC, rain shower, extractor, Cesca and
+- **I-52** Wall finishes are per room, so the shower walls are herringbone instead of terrazzo.
+- **I-53** Missing product models: vessel basin, black taps, close-coupled WC, rain shower, extractor, Cesca and
   butterfly chairs, TMM lamp. Stand-ins are named "… stand-in".
-- **FD-56** The dropped ceiling's curved edge is a polyline shared with the floor edge.
-- **FD-55** Under `make dev`, live updates do not arrive (the dev proxy has no Mercure route).
+- **I-56** The dropped ceiling's curved edge is a polyline shared with the floor edge.
+- **I-55** Under `make dev`, live updates do not arrive (the dev proxy has no Mercure route).
 
 The open variant stacks the sliding leaves at both ends of the run in front of the end cabinets. The real panels
 slide into pockets, which the model does not have.

@@ -1,7 +1,7 @@
 # Demo house
 
-The demo house (FD-84) recreates a real family house over MCP only, from its published drawings and photos, as the demo
-flat did (`docs/demo-flat.md`). This file is the reference for the modelling (FD-95): levels, walls, rooms, openings,
+The demo house (I-84) recreates a real family house over MCP only, from its published drawings and photos, as the demo
+flat did (`docs/demo-flat.md`). This file is the reference for the modelling (I-95): levels, walls, rooms, openings,
 the photos' camera positions and an inventory of everything in the house, mapped to what Izbik has or to the
 task that adds it.
 
@@ -192,7 +192,7 @@ Two stacked straight flights on oak stringers with open oak treads (about 50 thi
   east façade. On the south side, the ground slopes from +2960 at the garage to ±0 at the SE corner past the kitchen's
   light well (x 2400–5400, y −1800 to −200, concrete walls). East of the house a larch deck at ±0 (x 9120–12 400,
   y 380–9050) has a step down; the lawn then falls east (about −0.5 m at x 14 000; further down the garden the fall is
-  only visible in photo 01, to be settled in FD-86).
+  only visible in photo 01, to be settled in I-86).
 - Garden: a stepping-slab path along y ≈ 5500 from the deck east to x ≈ 24 000; a curved dry-stone wall with fan-shaped
   steps around (23 000, 7500); a stepping-slab path along the north side (y ≈ 10 000); about 25 trees; a shed with a
   deck at the far east end, centred about (55 200, 6900).
@@ -203,7 +203,7 @@ Two stacked straight flights on oak stringers with open oak treads (about 50 thi
 ## Photos
 
 Camera position → the point it looks at, in plan mm; z in mm above ±0. All positions are estimates from the views.
-They become saved views "Photo 01" and so on in FD-95.
+They become saved views "Photo 01" and so on in I-95.
 
 | Photo | Shows | Camera (x, y, z) | Looks at (x, y, z) |
 | --- | --- | --- | --- |
@@ -234,63 +234,63 @@ The photos show no beds, desks or wardrobes in the bedrooms and kids' rooms. Tho
 
 ## Inventory
 
-Legend: **have** = an existing kind, definition, material or option. **FD-nn** = the task that adds it.
+Legend: **have** = an existing kind, definition, material or option. **I-nn** = the task that adds it.
 
 ### Shell
 
 | Element | Notes | Maps to |
 | --- | --- | --- |
 | Three floors on one outline, the slope between them | | have (stacked floors, `elevation`) |
-| Outer walls 450, rendered white | white render, a grey plinth | walls (have); render and façade faces **FD-88**, material **FD-92** |
+| Outer walls 450, rendered white | white render, a grey plinth | walls (have); render and façade faces **I-88**, material **I-92** |
 | Skewed south wall (5°) | | have (walls at any angle) |
-| Ground floor retaining walls against the slope | concrete | walls (have); earth behind **FD-86** |
-| Oriel box cantilevered 1.9 m east, larch boards outside, under it too | | walls and room (have, the slab follows the room); cladding **FD-88**, larch **FD-92**; the box below the FF floor (570) Box item + soffit **FD-88** |
+| Ground floor retaining walls against the slope | concrete | walls (have); earth behind **I-86** |
+| Oriel box cantilevered 1.9 m east, larch boards outside, under it too | | walls and room (have, the slab follows the room); cladding **I-88**, larch **I-92**; the box below the FF floor (570) Box item + soffit **I-88** |
 | Garage and entrance wing with a flat roof, parapet, canopy | | Roof Flat with parapet (have) |
-| Garage room type | | **FD-89** |
-| Kitchen window set in the wall's outer face | | position across the wall `inset` **FD-89** |
-| Light well, lift-and-slide glazing, 3 panels | oak-stained frames | SlidingDoor (have) + fixed panes, frame material **FD-89** |
-| Timber windows, oak stained, 2 sashes | | Window (have) + frame material **FD-89** |
-| Frameless corner glazing of the oriel | | corner windows (have) + frame material **FD-89** |
-| Front door and garage door in larch boards | | Door leaf Boarded, GarageDoor Sectional **FD-89** |
-| Interior oak flush doors, oak frames to the ceiling | | Door (have) + leaf and frame material **FD-89** |
+| Garage room type | | **I-89** |
+| Kitchen window set in the wall's outer face | | position across the wall `inset` **I-89** |
+| Light well, lift-and-slide glazing, 3 panels | oak-stained frames | SlidingDoor (have) + fixed panes, frame material **I-89** |
+| Timber windows, oak stained, 2 sashes | | Window (have) + frame material **I-89** |
+| Frameless corner glazing of the oriel | | corner windows (have) + frame material **I-89** |
+| Front door and garage door in larch boards | | Door leaf Boarded, GarageDoor Sectional **I-89** |
+| Interior oak flush doors, oak frames to the ceiling | | Door (have) + leaf and frame material **I-89** |
 | Outer sills, grey metal | | have (outer sill) |
-| External blind boxes over the GF glazing and the oriel | | **FD-93** |
+| External blind boxes over the GF glazing and the oriel | | **I-93** |
 
 ### Roof
 
 | Element | Notes | Maps to |
 | --- | --- | --- |
 | Gable roof 38°, small overhangs | | Roof Gable (have) |
-| South verge skewed 5° with the wall | | **FD-97** (skewed verge) |
-| Beaver-tail clay tiles | | **FD-91** pattern, `roof-tiles-beaver-clay` |
+| South verge skewed 5° with the wall | | **I-97** (skewed verge) |
+| Beaver-tail clay tiles | | **I-91** pattern, `roof-tiles-beaver-clay` |
 | Gables up to the roof | | `upToRoof` (have) |
-| Sloped attic ceilings, knee walls | | have (FD-81) |
+| Sloped attic ceilings, knee walls | | have (I-81) |
 | 5 roof windows | | RoofWindow (have) |
-| Chimney with a cap, satellite dish | rendered | **FD-91** chimney; dish **FD-93** |
-| Gutters and downpipes, snow guards, vent tiles | zinc | **FD-91** |
-| Flat roofs: garage (gravel), oriel | | Roof Flat (have); gravel or membrane material **FD-92** |
+| Chimney with a cap, satellite dish | rendered | **I-91** chimney; dish **I-93** |
+| Gutters and downpipes, snow guards, vent tiles | zinc | **I-91** |
+| Flat roofs: garage (gravel), oriel | | Roof Flat (have); gravel or membrane material **I-92** |
 
 ### Interior
 
 | Element | Room | Maps to |
 | --- | --- | --- |
-| Wide oak planks | all living rooms | **FD-92** (wide oak) |
-| Quartzite tiles, large format, floor and walls | bathrooms, WC | **FD-92** + room wall finishes (have) |
+| Wide oak planks | all living rooms | **I-92** (wide oak) |
+| Quartzite tiles, large format, floor and walls | bathrooms, WC | **I-92** + room wall finishes (have) |
 | White walls and ceilings | everywhere | have |
 | Stacked straight stairs, open oak treads on stringers | GF, FF | Stair Straight, Stringers (have) |
-| Vertical oak balusters with an oak handrail; a wall handrail | stairs, SF void | **FD-90** |
-| Floor openings lined with oak, the SF void | FF, SF | **FD-90** (floor voids) |
-| Fireplace: oak hood cabinet, black plinth with a log store, fire | living | **FD-93** |
-| Kitchen: white handleless base run under the window, tall units with oven and microwave, solid-surface worktop with integrated sink, tap | kitchen | kitchen definitions (have) + solid surface **FD-92** |
-| Built-in oak bench along the dining wall, white plinth band | dining | **FD-93** |
-| Long oak table 3000 × 900, oak chairs | dining | Dining table (have) at 3000; chairs Model **FD-93** |
-| Felt poufs (round) | living, study | **FD-93** |
-| Linear oak pendant over the table, square oak-framed ceiling lights, wall lights | GF, FF | **FD-93** |
+| Vertical oak balusters with an oak handrail; a wall handrail | stairs, SF void | **I-90** |
+| Floor openings lined with oak, the SF void | FF, SF | **I-90** (floor voids) |
+| Fireplace: oak hood cabinet, black plinth with a log store, fire | living | **I-93** |
+| Kitchen: white handleless base run under the window, tall units with oven and microwave, solid-surface worktop with integrated sink, tap | kitchen | kitchen definitions (have) + solid surface **I-92** |
+| Built-in oak bench along the dining wall, white plinth band | dining | **I-93** |
+| Long oak table 3000 × 900, oak chairs | dining | Dining table (have) at 3000; chairs Model **I-93** |
+| Felt poufs (round) | living, study | **I-93** |
+| Linear oak pendant over the table, square oak-framed ceiling lights, wall lights | GF, FF | **I-93** |
 | Floor convector grilles along the glazing | living | Box item (have) |
-| Double vanity, white, with two vessel basins and tall taps | FF bathroom | **FD-93** vanity + **FD-53** basin and tap models |
-| Walk-in shower with a ceiling rain head, glass screen | FF bathroom | shower screen (have) + rain head **FD-93** |
+| Double vanity, white, with two vessel basins and tall taps | FF bathroom | **I-93** vanity + **I-53** basin and tap models |
+| Walk-in shower with a ceiling rain head, glass screen | FF bathroom | shower screen (have) + rain head **I-93** |
 | Wall-hung WCs | bathrooms, GF WC | Toilet (have) |
-| Freestanding oval bath | SF bathroom | **FD-93** |
+| Freestanding oval bath | SF bathroom | **I-93** |
 | Hand basin | GF lobby, garage | Washbasin (have) |
 | Wardrobes on both sides | cloakroom | sliding wardrobe / tall cabinet (have) |
 | Beds, desks | bedrooms, kids' rooms (from the plans) | have |
@@ -300,21 +300,21 @@ Legend: **have** = an existing kind, definition, material or option. **FD-nn** =
 
 | Element | Notes | Maps to |
 | --- | --- | --- |
-| Sloping plot, street 3 m above the garden | | **FD-86** |
-| Larch deck at ±0 with a step down | | Terrace room with `floorElevation` (have); decking **FD-92** |
-| Concrete retaining walls with sloping tops, light-well walls | | **FD-87** |
-| Concrete steps along the north side | | **FD-87** (outdoor steps) |
-| Larch-board fences following the slope, sliding gate | | **FD-87** |
-| Clay paver forecourt and driveway | | Driveway room (have) + pavers **FD-92** |
-| Stepping-slab paths | | **FD-92** (stepping slabs) |
-| Curved dry-stone wall with fan steps | | curved wall (have) + `Stone` **FD-92**; steps **FD-87** |
-| Bin store with four doors, garden shed | | **FD-93** |
-| Car in the garage, trees | | **FD-93** (CC0 models) |
-| Elevations and sections to check the model against the drawings | | **FD-94** |
+| Sloping plot, street 3 m above the garden | | **I-86** |
+| Larch deck at ±0 with a step down | | Terrace room with `floorElevation` (have); decking **I-92** |
+| Concrete retaining walls with sloping tops, light-well walls | | **I-87** |
+| Concrete steps along the north side | | **I-87** (outdoor steps) |
+| Larch-board fences following the slope, sliding gate | | **I-87** |
+| Clay paver forecourt and driveway | | Driveway room (have) + pavers **I-92** |
+| Stepping-slab paths | | **I-92** (stepping slabs) |
+| Curved dry-stone wall with fan steps | | curved wall (have) + `Stone` **I-92**; steps **I-87** |
+| Bin store with four doors, garden shed | | **I-93** |
+| Car in the garage, trees | | **I-93** (CC0 models) |
+| Elevations and sections to check the model against the drawings | | **I-94** |
 
 ## Materials
 
-Seeded by `SeedDemoHouseMaterials` (FD-92), all drawn procedurally: the photos have no licence, so no texture is cut
+Seeded by `SeedDemoHouseMaterials` (I-92), all drawn procedurally: the photos have no licence, so no texture is cut
 from them. Colours and sizes were judged against the photos in the scratch project.
 
 | Where | Code | Pattern, size (mm) |
@@ -325,8 +325,8 @@ from them. Colours and sizes were judged against the photos in the scratch proje
 | Retaining walls, light well, street wall | `concrete-formwork` | Formwork 2500 × 1250 panels (the photos show smooth panel formwork) |
 | Bin store, if board-marked | `concrete-board-marked` | Formwork 3000 × 150 boards |
 | Bin store doors, gates | `steel-painted-grey` | Plain, metallic |
-| Roof covering | `roof-tiles-beaver-clay` | BeaverTail 180 × 380 (FD-91) |
-| Gutters, flashings | `zinc-titanium` | Plain (FD-91) |
+| Roof covering | `roof-tiles-beaver-clay` | BeaverTail 180 × 380 (I-91) |
+| Gutters, flashings | `zinc-titanium` | Plain (I-91) |
 | Garage and oriel flat roofs | `gravel` | Gravel (have) |
 | Living rooms' floors | `oak-planks-wide` | Planks 220 × 2200 (wider and longer than `oak-planks-natural`) |
 | Stairs, balusters, void linings, fireplace box | `oak-solid` | Wood |
@@ -342,7 +342,7 @@ from them. Colours and sizes were judged against the photos in the scratch proje
 
 ## Furniture and models
 
-Global definitions seeded by `SeedDemoHouseFurniture` (FD-93), and CC0 Poly Haven models kept in
+Global definitions seeded by `SeedDemoHouseFurniture` (I-93), and CC0 Poly Haven models kept in
 `source_files/demo-house/models/` (never committed; the originals in `src/`, optimised as the flat's, the tree with
 `--simplify-error 0.003` and its leaves masked instead of blended) and imported with
 `make import-models DIR=source_files/demo-house/models`.
@@ -363,7 +363,7 @@ Global definitions seeded by `SeedDemoHouseFurniture` (FD-93), and CC0 Poly Have
 | Garden shed | Garden shed | Gable roof at 20–45°, the gables in stepped boards. |
 | Stepping slabs | Stepping slabs | `count`, `slab`, `spacing` along the item's depth. |
 | Blind boxes over the glazing | Roller blind with a cassette | Inside or outside the glazing. |
-| Satellite dish | Satellite dish (FD-91) | |
+| Satellite dish | Satellite dish (I-91) | |
 | Car in the garage | Model "Car under a cover" (`covered_car`) | Stand-in: no CC0 hatchback found. |
 | Fruit trees, birch | Model "Tree, small deciduous" (`tree_small_02`) | Stand-in for the apple trees and the birch alike. |
 | Shrubs, lavender | Models "Shrubs, a group" (`shrub_02`), "Shrub, small" (`shrub_04`), "Flowering ground cover, a strip" (`shrub_01`) | No CC0 lavender: the beds are the `lavender-bed` material with the ground cover strip. |
@@ -371,11 +371,11 @@ Global definitions seeded by `SeedDemoHouseFurniture` (FD-93), and CC0 Poly Have
 | Dining chairs (oak plywood) | Dining chair definition (have) in `oak-veneer` | Stand-in: no CC0 plywood chair. |
 | Wall-hung WC | `Toilet` kind (have) | |
 
-## Result (FD-95)
+## Result (I-95)
 
 The house was modelled by Claude Code over the izbik MCP server only (project "Family house Žebětín" on the
 local stack). The human part was creating the empty project and importing the drawings and photos with
-`make import-files DIR=source_files/demo-house/raw PROJECT=13`, and the CC0 models (FD-93) with `make import-models`.
+`make import-files DIR=source_files/demo-house/raw PROJECT=13`, and the CC0 models (I-93) with `make import-models`.
 Positions came from the calibration above (wall faces, levels, openings, cameras); the furniture definitions' ids were
 looked up once in the database instead of with `list_furniture_definitions`, to keep its long listing out of the
 context.
@@ -405,7 +405,7 @@ context.
    glazing, oak doors with frames to the ceiling. Version 3.
 4. Two stacked straight flights on oak stringers with balusters (the upper with a wall handrail), the oak-lined hall
    void and the gallery balustrade. Version 4.
-5. The beaver-tail gable with a skewed south verge (FD-97), round ridge tiles, snow guards, half-round zinc gutters and
+5. The beaver-tail gable with a skewed south verge (I-97), round ridge tiles, snow guards, half-round zinc gutters and
    downpipes, five roof windows; the garage and entrance flat roofs in gravel; the oriel's top; the chimney from the
    ground floor with its cap; three vent tiles on the roof and the dish on the chimney. Version 5.
 6. The plot with 22 spot heights (the street at +3240 down to −2000 at the garden's end), the light well, the larch
@@ -427,20 +427,20 @@ east façade with the oriel, the north gable with the fence on the slope, the ki
 fireplace with its logs, the stacked stairs and the oriel's corner glazing. The exported first-floor plan lines up
 with the architect's plan. These remain, each logged as a task where it is a gap:
 
-- **FD-98** (done) A wall's top could not lie below its floor's level, so the dry-stone wall down the garden was about
+- **I-98** (done) A wall's top could not lie below its floor's level, so the dry-stone wall down the garden was about
   1 m tall. Now its top is at −300, 600 mm over the ground, and the spot heights that raised the ground behind it are gone.
-- **FD-99** (done) No fan-shaped steps: the steps round the dry-stone wall were left out. Now a `Curved` stair of three
+- **I-99** (done) No fan-shaped steps: the steps round the dry-stone wall were left out. Now a `Curved` stair of three
   risers (450 mm, stepping-slab concrete) follows the wall's south-west face, concentric with it.
-- **FD-100** (done) Fences were straight items: the boundaries were four 10 m items. Now the north and south fences are
+- **I-100** (done) Fences were straight items: the boundaries were four 10 m items. Now the north and south fences are
   one fence railing each (larch boards, raking with the ground); the sliding gate stays a Fence item.
-- **FD-101** (done) Flat roofs were rectangles: the garage roof left slivers along the skewed south wall. Now it is turned
+- **I-101** (done) Flat roofs were rectangles: the garage roof left slivers along the skewed south wall. Now it is turned
   so its start end is the south edge, skewed 5° along the wall.
-- **FD-54** Saved views have no lens, so photo 19 shows only the shower wall instead of the whole bathroom.
-- The fire does not flicker (FD-93), and the bath is rounded rather than oval.
+- **I-54** Saved views have no lens, so photo 19 shows only the shower wall instead of the whole bathroom.
+- The fire does not flicker (I-93), and the bath is rounded rather than oval.
 - The ground floor's plan PDF takes in the whole plot (40 m of garden), so it comes out at 1:500; the README shows the
   first floor's.
 
-### README tour (FD-96)
+### README tour (I-96)
 
 Six saved views named "House tour · 01 …" to "06 …" (garden façade at 9:30 on 21 June, all floors cut at the first
 floor, the roof, the attic, on the stairs, the living room at night), captured with
@@ -450,17 +450,17 @@ lines A and B on the first floor) rendered from the exports to `docs/screenshots
 
 ## Gaps → tasks
 
-- **FD-86** Sloping terrain: spot heights, the ground under the house, contours.
-- **FD-87** Site walls with sloping tops, outdoor steps, fences on the slope, sliding gate.
-- **FD-88** Façade finishes on the outer faces (render, plinth, larch cladding), slab and box soffits.
-- **FD-89** Frame and leaf materials, Boarded leaves, `GarageDoor`, fixed panes of sliding doors, the position across the
+- **I-86** Sloping terrain: spot heights, the ground under the house, contours.
+- **I-87** Site walls with sloping tops, outdoor steps, fences on the slope, sliding gate.
+- **I-88** Façade finishes on the outer faces (render, plinth, larch cladding), slab and box soffits.
+- **I-89** Frame and leaf materials, Boarded leaves, `GarageDoor`, fixed panes of sliding doors, the position across the
   wall (`inset`), room type Garage.
-- **FD-90** Floor voids with linings, railings, stair railing styles and wall handrails.
-- **FD-91** Chimney, gutters and downpipes, snow guards, items on the roof (vent tiles), beaver-tail tiles.
-- **FD-92** Materials: render, larch, exposed concrete, zinc, gravel, wide oak, solid surface, quartzite, decking,
+- **I-90** Floor voids with linings, railings, stair railing styles and wall handrails.
+- **I-91** Chimney, gutters and downpipes, snow guards, items on the roof (vent tiles), beaver-tail tiles.
+- **I-92** Materials: render, larch, exposed concrete, zinc, gravel, wide oak, solid surface, quartzite, decking,
   stepping slabs, clay pavers, stone.
-- **FD-93** Catalogue: fireplace, bench, poufs, lights, vanity, rain shower, freestanding bath, blind boxes, bin store,
+- **I-93** Catalogue: fireplace, bench, poufs, lights, vanity, rain shower, freestanding bath, blind boxes, bin store,
   shed, dish; CC0 models of a car, chairs and trees.
-- **FD-53** Product models: vessel basins and taps.
-- **FD-94** Sections and façade elevations (optional).
-- **FD-97** (added by this inventory): a roof's verge not square to its ridge, as the south gable follows the 5° wall.
+- **I-53** Product models: vessel basins and taps.
+- **I-94** Sections and façade elevations (optional).
+- **I-97** (added by this inventory): a roof's verge not square to its ridge, as the south gable follows the 5° wall.

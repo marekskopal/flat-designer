@@ -1,4 +1,4 @@
-# Stacked floors (FD-36)
+# Stacked floors (I-36)
 
 Floors have only a `level` today, and the viewer shows one floor at a time. This plan stacks them: floors get an
 elevation and a slab thickness, the editor shows a ghost of the floor below, the 3D view can show all floors cut at
@@ -22,7 +22,7 @@ any of them, and the walkthrough can move between floors.
   per-floor offset.
 - **Walk between floors first by PageUp / PageDown**, stairs come as a follow-up.
 
-## Phase 1: floor elevation and slab thickness (FD-36 sub-task)
+## Phase 1: floor elevation and slab thickness (I-36 sub-task)
 
 - New columns `floors.elevation` (mm) and `floors.slab_thickness` (mm, the slab *under* this floor), with a migration
   that fills existing floors in level order: the ground floor (level 0) at 0, each floor above at the floor below's
@@ -37,7 +37,7 @@ any of them, and the walkthrough can move between floors.
 - The viewer's slab uses the floor's `slabThickness`.
 - CLAUDE.md: the floor fields and the shared plan origin.
 
-## Phase 2: ghost of the floor below (FD-36 sub-task)
+## Phase 2: ghost of the floor below (I-36 sub-task)
 
 - The viewer page also loads the scene of the next lower level (the existing endpoint; with `?version=` from the same
   version) and reloads it with the scene.
@@ -46,7 +46,7 @@ any of them, and the walkthrough can move between floors.
 - A Display toggle, on by default in edit mode.
 - The draw walls and measure tools snap to the ghost's wall ends and centre lines.
 
-## Phase 3: "All floors" 3D view (FD-36 sub-task)
+## Phase 3: "All floors" 3D view (I-36 sub-task)
 
 - Engine: a `FloorLayer` per floor. The active layer stays as today (y = 0, editable, diffed by `load()`); context
   layers are built by the same builders (`buildBuilding`, `buildItem`, `mergeStatic`) in a group lifted by
@@ -60,13 +60,13 @@ any of them, and the walkthrough can move between floors.
 - Floors below keep their ceilings; only the active floor follows the ceilings toggle.
 - `fitGround()` / `fitSunShadow()` / `lowestGround()` take the bounds and plots of all layers (plots usually belong to
   the ground floor).
-- Context floors' fixture lights stay off (FD-58 cost, `MaxFixtureShadows`).
+- Context floors' fixture lights stay off (I-58 cost, `MaxFixtureShadows`).
 - The client loads the scenes per floor in parallel (no new endpoint); they share the materials catalogue.
 - Saved views (`SavedViewSettingsDto`) and share links (`ShareSettingsDto.floors: 'one' | 'all'`, missing: one) keep
   the mode; a share snapshot already has every floor.
 - Benchmark a two-storey project with `make benchmark` (draw calls grow with the floors).
 
-## Phase 4: walk between floors (FD-36 sub-task)
+## Phase 4: walk between floors (I-36 sub-task)
 
 - PageUp / PageDown (and the walk pad's floor buttons) move the walker to the same plan point on the next floor up or
   down, falling back to where a walk of that floor starts (`entranceWalkStart()`) when the point lies in none of its
@@ -76,9 +76,9 @@ any of them, and the walkthrough can move between floors.
   `floorLevels()` and door leaves are the shown floor's, so no per-layer state is needed, and the floor above can be
   walked to too. It works with or without the all floors view.
 
-## Follow-up: stairs (FD-37)
+## Follow-up: stairs (I-37)
 
-- FD-37 scopes them: a new element type (handler, snapshot restore, picking tag, scene patch, MCP tools), straight, L,
+- I-37 scopes them: a new element type (handler, snapshot restore, picking tag, scene patch, MCP tools), straight, L,
   U and spiral, rise and going from the floor-to-floor height, a railing. The plan PDF draws the outline with a
   walking-line arrow.
 - The stair's footprint cuts a void into the slab and the room floors of the floor above (holes in `THREE.Shape`).

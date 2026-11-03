@@ -1,10 +1,10 @@
-# Electrical plan (FD-64)
+# Electrical plan (I-64)
 
-A follow-up to FD-50, the electrical schedule (commit 6f4c025). It adds a plan overlay with electrical symbols in the
+A follow-up to I-50, the electrical schedule (commit 6f4c025). It adds a plan overlay with electrical symbols in the
 top view and an electrical plan PDF for the electrician. It also makes the schedule count and list only what matters,
 using settings declared on the definition instead of parameter names.
 
-## What FD-50 gives
+## What I-50 gives
 
 - A definition's optional `category` (`DefinitionCategoryEnum`, TS `ElectricalCategory`): light, socket, switch, data,
   plumbing. `DefinitionValidator` checks it, and the evaluators ignore it (fixture case "the schedule's category is not
@@ -81,7 +81,7 @@ Pendants that differ only in `sag`, `bulb` or `shadow` then share a row.
   the other variants). Each point has the item id, category, the plan point, the outward direction, `z`, the
   multiplier (the `count` value) and a short label.
   - Wall-mounted points (socket, switch, data, plumbing) sit at the middle of the item's back edge, on the wall face
-    (FD-108), and face out of its front (rotation 0 faces −y).
+    (I-108), and face out of its front (rotation 0 faces −y).
   - Lights sit at the footprint centre.
 - `symbolPolylines(point, set, size)`: the set's unit-size polylines (lines, not text, `ElectricalSymbolSets`) placed in
   plan mm (see Symbol sets).
@@ -89,7 +89,7 @@ Pendants that differ only in `sag`, `bulb` or `shadow` then share a row.
   `content` (clicks still pick the item) and without a depth test, so neither the wall cut nor the furniture hides them;
   the 3D items are not dimmed. A CSS2D label with the elevation (`levelText()`, `+1.100` above the floor) sits beside
   each wall-mounted point. The viewer shows every label; the PDF puts each at the first of a few spots round its
-  symbol that is free of the text placed before it, else at the first anyway, so no elevation is lost (FD-108).
+  symbol that is free of the text placed before it, else at the first anyway, so no elevation is lost (I-108).
 - `ViewerEngine.setElectricalVisible(visible, set)` works like `setDimensionsVisible()`: built lazily, marked stale on `load()`,
   rebuilt when next shown, visible only while `isTopDown()`. It calls `invalidate()`; it casts no shadow.
 - Display toggle "Electrical (Plan)" on both viewer pages (shown only when the floor has points), kept as `electrical` (missing: off) by `SavedViewSettingsDto`,
@@ -151,4 +151,4 @@ Pendants that differ only in `sag`, `bulb` or `shadow` then share a row.
 
 ## Out of scope
 
-- Switch-to-light links (which switch controls which light): FD-104.
+- Switch-to-light links (which switch controls which light): I-104.
