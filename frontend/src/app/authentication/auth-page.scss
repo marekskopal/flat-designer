@@ -32,10 +32,10 @@
     text-transform: uppercase;
     color: $color-accent;
 
-    svg {
-        width: 18px;
-        height: 18px;
-        fill: currentColor;
+    .auth__mark {
+        display: block;
+        width: 24px;
+        height: 24px;
     }
 }
 
