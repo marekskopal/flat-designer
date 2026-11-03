@@ -1,3 +1,4 @@
+import {NgOptimizedImage} from '@angular/common';
 import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
@@ -7,7 +8,7 @@ import {AuthenticationService} from '@app/services/authentication.service';
 
 @Component({
     selector: 'fd-login',
-    imports: [ReactiveFormsModule, RouterLink],
+    imports: [NgOptimizedImage, ReactiveFormsModule, RouterLink],
     templateUrl: './login.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

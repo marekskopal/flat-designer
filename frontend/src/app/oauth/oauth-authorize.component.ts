@@ -1,3 +1,4 @@
+import {NgOptimizedImage} from '@angular/common';
 import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, inject, OnInit, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
@@ -14,7 +15,7 @@ import {AuthorizeRequest, OAuthService} from '@app/services/oauth.service';
  */
 @Component({
     selector: 'fd-oauth-authorize',
-    imports: [ReactiveFormsModule],
+    imports: [NgOptimizedImage, ReactiveFormsModule],
     templateUrl: './oauth-authorize.component.html',
     styleUrl: '../authentication/auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
