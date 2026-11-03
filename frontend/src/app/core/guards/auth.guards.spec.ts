@@ -16,6 +16,9 @@ const user: User = {
     lastLoginAt: null,
     createdAt: '2026-10-17T00:00:00+00:00',
     electricalSymbols: 'Iec',
+    hasPassword: true,
+    google: false,
+    emailVerified: true,
 };
 
 function setup(options: {loggedIn: boolean; user?: User | Error}): Router {

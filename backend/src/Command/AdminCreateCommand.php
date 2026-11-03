@@ -62,7 +62,7 @@ final class AdminCreateCommand extends AbstractCommand
 		$nameOption = $input->getOption('name');
 		$name = UserFieldValidator::normalizeName(is_string($nameOption) ? $nameOption : '') ?? 'Administrator';
 
-		$admin = $userProvider->createUser($email, $password, $name, UserRoleEnum::Admin);
+		$admin = $userProvider->createUser($email, $password, $name, UserRoleEnum::Admin, emailVerified: true);
 
 		$ownerless = $projectRepository->findWithoutOwner();
 		foreach ($ownerless as $project) {

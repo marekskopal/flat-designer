@@ -43,6 +43,18 @@
     <button type="button" class="menu-backdrop" tabindex="-1" aria-label="Close menu" (click)="menuOpen.set(false)"></button>
 }
 
+@if (verifyBanner()) {
+    <div class="verify-banner" role="status">
+        <span class="verify-banner__text">
+            Please confirm your email: open the link we sent to <strong>{{ currentUser.currentUser()?.email }}</strong>.
+        </span>
+        <button type="button" class="btn btn--ghost" [disabled]="resending()" (click)="resendVerification()">
+            {{ resending() ? 'Sending…' : 'Send again' }}
+        </button>
+        <button type="button" class="btn btn--ghost" (click)="dismissBanner()">Later</button>
+    </div>
+}
+
 <main class="content">
     <router-outlet />
 </main>

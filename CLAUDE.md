@@ -27,6 +27,17 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
   - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
     directory as project files.
+  - Sign-in extras: password reset by email (`PasswordResetService`, one-time `password_reset_tokens` hashed, an hour,
+    capped per account; the reset unlocks and signs out everywhere), email verification (`EmailVerificationService`,
+    `users.email_verified`, accounts from before it verified; a day's link mailed on sign-up and from the app's banner,
+    `email_verification_tokens` keeping the address it went to, so an admin's email change, which unverifies, voids it;
+    an unverified account may use the app) and Sign in with Google (`GoogleAuthService` checks the ID token at Google's
+    tokeninfo; `users.google_id`, such an account may have no password; a Google sign-in links the account with the
+    verified email, dropping the password and the tokens of an unverified one, which may have been signed up by
+    someone else). `GET /api/authentication/options` tells the pages what is on: `GOOGLE_CLIENT_ID` and `SMTP_HOST`
+    (`mail`). Mail is queued in `MailOutbox` and sent after the response, like the live updates, laid out by
+    `AccountEmail`; tests record it in `RecordingMailer` and fake Google with `FakeGoogleAuthService`; `Fixture` users
+    are verified.
 - `frontend/`: Angular 22 (standalone, signals, zoneless), component prefix `fd`, SCSS tokens in
   `src/styles/_variables.scss`.
   - three.js code lives in `src/app/viewer/engine/` and must stay framework-free (no Angular imports).

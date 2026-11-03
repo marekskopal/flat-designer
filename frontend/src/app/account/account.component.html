@@ -62,24 +62,34 @@
 
     <section class="card">
         <h2 class="card__title">Password</h2>
-        <form class="form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
-            <label class="field">
-                <span class="field__label">Current password</span>
-                <input class="input" type="password" formControlName="currentPassword" autocomplete="current-password" />
-            </label>
-            <label class="field">
-                <span class="field__label">New password</span>
-                <input class="input" type="password" formControlName="newPassword" autocomplete="new-password" />
-                <span class="field__hint">{{ passwordHint }}</span>
-            </label>
-            @if (passwordError(); as message) {
-                <p class="form-error" role="alert">{{ message }}</p>
-            }
-            <div class="form__actions">
-                <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || savingPassword()">
-                    Change password
-                </button>
-            </div>
-        </form>
+        @if (currentUser.currentUser()?.google) {
+            <p class="hint">Your account is linked to Google, so you can also sign in with Google.</p>
+        }
+        @if (currentUser.currentUser()?.hasPassword === false) {
+            <p class="hint">
+                Your account has no password yet. To sign in with your email too, sign out and choose
+                <em>Forgot password?</em> on the sign-in page.
+            </p>
+        } @else {
+            <form class="form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+                <label class="field">
+                    <span class="field__label">Current password</span>
+                    <input class="input" type="password" formControlName="currentPassword" autocomplete="current-password" />
+                </label>
+                <label class="field">
+                    <span class="field__label">New password</span>
+                    <input class="input" type="password" formControlName="newPassword" autocomplete="new-password" />
+                    <span class="field__hint">{{ passwordHint }}</span>
+                </label>
+                @if (passwordError(); as message) {
+                    <p class="form-error" role="alert">{{ message }}</p>
+                }
+                <div class="form__actions">
+                    <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || savingPassword()">
+                        Change password
+                    </button>
+                </div>
+            </form>
+        }
     </section>
 </div>

@@ -89,5 +89,7 @@ final readonly class AdminUserService
 		}
 
 		$target->email = $normalized;
+		// The new address is not proven to be the user's (its owner confirms it from the app's banner).
+		$target->emailVerified = false;
 	}
 }

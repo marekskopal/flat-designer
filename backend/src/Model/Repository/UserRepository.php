@@ -20,6 +20,11 @@ final class UserRepository extends ARepository
 		return $this->findOne(['email' => $email]);
 	}
 
+	public function findByGoogleId(string $googleId): ?User
+	{
+		return $this->findOne(['google_id' => $googleId]);
+	}
+
 	/** @return list<User> */
 	public function findAllOrdered(): array
 	{

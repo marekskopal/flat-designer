@@ -8,6 +8,9 @@ use Izbik\App\Application;
 use Izbik\App\ApplicationFactory;
 use Izbik\Mcp\McpUserContext;
 use Izbik\Service\Actor\ActorContext;
+use Izbik\Service\Authentication\GoogleAuthServiceInterface;
+use Izbik\Service\Mail\MailConfig;
+use Izbik\Service\Mail\MailOutbox;
 use Izbik\Service\Project\SharedAssetIds;
 use Izbik\Service\Realtime\ProjectUpdatePublisher;
 use Izbik\Service\Storage\FileStorageInterface;
@@ -17,6 +20,7 @@ use PDOException;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mercure\HubInterface;
 
 /**
@@ -34,6 +38,10 @@ final class AppHarness
 
 	private static ?RecordingMercureHub $mercureHub = null;
 
+	private static ?RecordingMailer $mailer = null;
+
+	private static ?FakeGoogleAuthService $googleAuth = null;
+
 	/** @var list<string>|null */
 	private static ?array $tables = null;
 
@@ -48,6 +56,9 @@ final class AppHarness
 			assert($container instanceof Container);
 			$container->extend(FileStorageInterface::class)->setConcrete(self::fileStorage());
 			$container->extend(HubInterface::class)->setConcrete(self::mercureHub());
+			$container->extend(MailerInterface::class)->setConcrete(self::mailer());
+			$container->extend(MailConfig::class)->setConcrete(new MailConfig('smtp.test', '25', '', '', 'no-reply@izbik.test'));
+			$container->extend(GoogleAuthServiceInterface::class)->setConcrete(self::googleAuth());
 		}
 
 		return self::$application;
@@ -63,6 +74,7 @@ final class AppHarness
 		$response = self::app()->handler->handle($request);
 		self::app()->dbContext->resetOrmState();
 		self::updatePublisher()->flush();
+		self::mailOutbox()->flush();
 		self::app()->dbContext->resetOrmState();
 
 		return $response;
@@ -72,6 +84,18 @@ final class AppHarness
 	public static function mercureHub(): RecordingMercureHub
 	{
 		return self::$mercureHub ??= new RecordingMercureHub();
+	}
+
+	/** Replaces the SMTP mailer for the whole suite; mail is on (`MailConfig`). */
+	public static function mailer(): RecordingMailer
+	{
+		return self::$mailer ??= new RecordingMailer();
+	}
+
+	/** Replaces Google's token check for the whole suite; Sign in with Google is on. */
+	public static function googleAuth(): FakeGoogleAuthService
+	{
+		return self::$googleAuth ??= new FakeGoogleAuthService();
 	}
 
 	/** Replaces S3 for the whole suite. */
@@ -110,6 +134,8 @@ final class AppHarness
 		assert($assetIds instanceof SharedAssetIds);
 		$assetIds->clear();
 		self::mercureHub()->updates = [];
+		self::mailer()->sent = [];
+		self::googleAuth()->identities = [];
 
 		self::resetRequestContexts();
 	}
@@ -124,6 +150,15 @@ final class AppHarness
 		assert($mcpUserContext instanceof McpUserContext);
 		$mcpUserContext->clear();
 		self::updatePublisher()->reset();
+		self::mailOutbox()->reset();
+	}
+
+	private static function mailOutbox(): MailOutbox
+	{
+		$outbox = self::container()->get(MailOutbox::class);
+		assert($outbox instanceof MailOutbox);
+
+		return $outbox;
 	}
 
 	private static function updatePublisher(): ProjectUpdatePublisher

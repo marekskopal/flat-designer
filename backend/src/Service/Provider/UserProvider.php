@@ -29,17 +29,58 @@ final readonly class UserProvider
 		return $this->userRepository->findByEmail(mb_strtolower(trim($email)));
 	}
 
+	public function getUserByGoogleId(string $googleId): ?User
+	{
+		return $this->userRepository->findByGoogleId($googleId);
+	}
+
 	public function createUser(
 		string $email,
 		#[SensitiveParameter] string $password,
 		string $name,
 		UserRoleEnum $role = UserRoleEnum::User,
+		bool $emailVerified = false,
 	): User {
 		$now = new DateTimeImmutable();
 		$user = new User(email: mb_strtolower($email), password: self::hash($password), name: $name, role: $role);
+		$user->emailVerified = $emailVerified;
 		$user->createdAt = $now;
 		$user->updatedAt = $now;
 
+		$this->userRepository->persist($user);
+
+		return $user;
+	}
+
+	/** An account signing in with Google only, with no password until it sets one by a reset link. */
+	public function createUserFromGoogle(string $email, string $name, string $googleId): User
+	{
+		$now = new DateTimeImmutable();
+		$user = new User(email: mb_strtolower($email), password: null, name: mb_substr($name, 0, 255));
+		$user->googleId = $googleId;
+		$user->emailVerified = true;
+		$user->createdAt = $now;
+		$user->updatedAt = $now;
+
+		$this->userRepository->persist($user);
+
+		return $user;
+	}
+
+	/**
+	 * Links an existing account (found by the email Google verified) to the Google account, which proves the address. An
+	 * account whose address was not verified may have been signed up by someone else with the owner's email, so its
+	 * password is dropped and every token issued so far revoked; a verified account keeps its password.
+	 */
+	public function linkGoogleAccount(User $user, string $googleId): User
+	{
+		if (!$user->emailVerified) {
+			$user->password = null;
+			$user->tokenVersion++;
+			$user->emailVerified = true;
+		}
+		$user->googleId = $googleId;
+		$user->updatedAt = new DateTimeImmutable();
 		$this->userRepository->persist($user);
 
 		return $user;
@@ -66,6 +107,17 @@ final readonly class UserProvider
 		$user->tokenVersion++;
 		$user->updatedAt = new DateTimeImmutable();
 		$this->userRepository->persist($user);
+
+		return $user;
+	}
+
+	public function markEmailVerified(User $user): User
+	{
+		if (!$user->emailVerified) {
+			$user->emailVerified = true;
+			$user->updatedAt = new DateTimeImmutable();
+			$this->userRepository->persist($user);
+		}
 
 		return $user;
 	}

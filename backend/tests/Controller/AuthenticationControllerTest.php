@@ -94,7 +94,7 @@ final class AuthenticationControllerTest extends IntegrationTestCase
 		self::assertNotNull($user);
 		self::assertSame('New User', $user->name);
 		self::assertFalse($user->isAdmin());
-		self::assertTrue(password_verify('Secret123', $user->password));
+		self::assertTrue(password_verify('Secret123', (string) $user->password));
 	}
 
 	public function testSignUpWithExistingEmailAnswersTheSameAndKeepsTheAccount(): void
@@ -111,7 +111,7 @@ final class AuthenticationControllerTest extends IntegrationTestCase
 		$user = $this->userRepository()->findById($existing->id);
 		self::assertNotNull($user);
 		self::assertSame('Jane', $user->name);
-		self::assertTrue(password_verify(Fixture::Password, $user->password));
+		self::assertTrue(password_verify(Fixture::Password, (string) $user->password));
 	}
 
 	public function testSignUpValidatesInput(): void

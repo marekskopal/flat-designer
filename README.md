@@ -179,8 +179,8 @@ it has made the change.
 - **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.
 - **AI agents (MCP)**: a built-in MCP server lets agents such as Claude read and edit projects, with the same
   validation and history as the UI.
-- **Accounts**: sign-up, JWT authentication, `Admin` and `User` roles. Users own their projects; admins see all
-  projects and manage users.
+- **Accounts**: sign-up with email verification, optional Sign in with Google, password reset by email, JWT
+  authentication, `Admin` and `User` roles. Users own their projects; admins see all projects and manage users.
 
 ## Built over MCP by an AI agent
 
@@ -261,6 +261,17 @@ backend applies pending database migrations on start, so a fresh database includ
 global material and furniture catalogues.
 
 New users can sign up at `/sign-up` and get the `User` role. Admins manage accounts under **Users**.
+
+Two sign-in extras are off until configured in `.env` (then `make up`):
+
+- **Sign in with Google**: set `GOOGLE_CLIENT_ID` to an OAuth web client id whose authorized JavaScript origins include
+  the site's origin. The first Google sign-in creates an account without a password, or links the account with the
+  email Google verified.
+- **Mail** (password reset and email verification): set `SMTP_HOST` (and `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`,
+  `EMAIL_FROM`). The sign-in page then offers *Forgot password?*, which mails a one-time link valid for an hour, and a
+  new account gets a link to confirm its email (the app shows a banner until it is confirmed). To try it locally, use
+  the bundled Mailpit: `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `COMPOSE_PROFILES=mail`, and read the mail on
+  http://localhost:4402.
 
 To import reference files (plans, renders, photos) into a project:
 
@@ -385,6 +396,9 @@ access token.
 | Endpoint | Description |
 | --- | --- |
 | `/api/authentication/{login,sign-up,refresh-token}` | Sign-in and token refresh |
+| `/api/authentication/{options,google-login}` | What the sign-in page offers, Sign in with Google |
+| `/api/authentication/{request,confirm}-password-reset` | Password reset by email |
+| `/api/authentication/verify-email`, `/api/current-user/resend-verification` | Email verification |
 | `/api/current-user`, `…/password`, `…/mcp-clients` | Account, password change, connected agents |
 | `/api/projects`, `/api/projects/{id}` | Projects |
 | `…/floors/{floorId}/scene` | Everything the viewer needs to render a floor |

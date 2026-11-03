@@ -124,6 +124,26 @@
     display: none;
 }
 
+.verify-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-8;
+    padding: $space-8 $space-16;
+    border-bottom: 1px solid $color-border;
+    background: $color-accent-soft;
+    font-size: $font-size-13;
+
+    .verify-banner__text {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    strong {
+        font-weight: 600;
+    }
+}
+
 .content {
     position: relative;
     flex: 1;

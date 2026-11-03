@@ -1,0 +1,30 @@
+<div class="auth">
+    <div class="auth__brand">
+        <img class="auth__mark" ngSrc="assets/brand/logo-mark.svg" alt="" width="24" height="24" priority />
+        Izbik
+    </div>
+    <h1 class="auth__title">Confirm your email</h1>
+
+    @switch (state().kind) {
+        @case ('verifying') {
+            <p class="auth__text" role="status">Confirming…</p>
+        }
+        @case ('verified') {
+            <p class="auth__text" role="status">Thank you, your email is confirmed.</p>
+        }
+        @case ('failed') {
+            <p class="form-error" role="alert">{{ failure() }}</p>
+            @if (signedIn()) {
+                <p class="auth__text">You can send a new link from the banner in the app.</p>
+            }
+        }
+    }
+
+    <p class="auth__footer">
+        @if (signedIn()) {
+            <a routerLink="/">Go to your projects</a>
+        } @else {
+            <a routerLink="/login">Sign in</a>
+        }
+    </p>
+</div>

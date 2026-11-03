@@ -30,6 +30,11 @@ final readonly class AuthorizationMiddleware implements MiddlewareInterface
 		Routes::AuthenticationLogin->value,
 		Routes::AuthenticationSignUp->value,
 		Routes::AuthenticationRefreshToken->value,
+		Routes::AuthenticationOptions->value,
+		Routes::AuthenticationRequestPasswordReset->value,
+		Routes::AuthenticationConfirmPasswordReset->value,
+		Routes::AuthenticationGoogleLogin->value,
+		Routes::AuthenticationVerifyEmail->value,
 		// MCP authenticates with its own OAuth tokens (McpController); discovery, registration and token
 		// exchange are public by design, the consent page looks the client up before sign-in.
 		Routes::Mcp->value,

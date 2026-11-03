@@ -17,6 +17,9 @@ final readonly class UserDto
 		public ?string $lastLoginAt,
 		public string $createdAt,
 		public string $electricalSymbols,
+		public bool $hasPassword,
+		public bool $google,
+		public bool $emailVerified,
 	) {
 	}
 
@@ -30,6 +33,9 @@ final readonly class UserDto
 			lastLoginAt: $user->lastLoginAt?->format(DATE_ATOM),
 			createdAt: $user->createdAt->format(DATE_ATOM),
 			electricalSymbols: $user->electricalSymbols->value,
+			hasPassword: $user->password !== null,
+			google: $user->googleId !== null,
+			emailVerified: $user->emailVerified,
 		);
 	}
 }

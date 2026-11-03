@@ -11,9 +11,15 @@ enum Routes: string
 	case AuthenticationLogin = '/api/authentication/login';
 	case AuthenticationSignUp = '/api/authentication/sign-up';
 	case AuthenticationRefreshToken = '/api/authentication/refresh-token';
+	case AuthenticationOptions = '/api/authentication/options';
+	case AuthenticationRequestPasswordReset = '/api/authentication/request-password-reset';
+	case AuthenticationConfirmPasswordReset = '/api/authentication/confirm-password-reset';
+	case AuthenticationGoogleLogin = '/api/authentication/google-login';
+	case AuthenticationVerifyEmail = '/api/authentication/verify-email';
 
 	case CurrentUser = '/api/current-user';
 	case CurrentUserPassword = '/api/current-user/password';
+	case CurrentUserResendVerification = '/api/current-user/resend-verification';
 
 	case Materials = '/api/materials';
 	case ItemKinds = '/api/item-kinds';

@@ -14,6 +14,9 @@
             <span class="field__label">Password</span>
             <input class="input" type="password" formControlName="password" autocomplete="current-password" />
         </label>
+        @if (options()?.mail) {
+            <a class="auth__extra" routerLink="/forgot-password">Forgot password?</a>
+        }
         @if (error(); as message) {
             <p class="form-error" role="alert">{{ message }}</p>
         }
@@ -21,6 +24,16 @@
             {{ saving() ? 'Signing in…' : 'Sign in' }}
         </button>
     </form>
+
+    @if (options()?.googleClientId; as clientId) {
+        <div class="auth__divider"><span>or</span></div>
+        <fd-google-sign-in
+            [clientId]="clientId"
+            [busy]="googleBusy()"
+            (credential)="onGoogleCredential($event)"
+            (unavailable)="onGoogleUnavailable()"
+        />
+    }
 
     <p class="auth__footer">No account yet? <a routerLink="/sign-up">Sign up</a></p>
 </div>

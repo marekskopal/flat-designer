@@ -7,10 +7,13 @@ namespace Izbik\App\ServiceProvider;
 use AsyncAws\S3\S3Client;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Izbik\Mcp\Server\IzbikServer;
+use Izbik\Service\Authentication\GoogleAuthService;
+use Izbik\Service\Authentication\GoogleAuthServiceInterface;
 use Izbik\Service\Authentication\RateLimitConfig;
 use Izbik\Service\Authentication\TokenService;
 use Izbik\Service\Cors\CorsPolicy;
 use Izbik\Service\Logger\StderrLogger;
+use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Project\ProjectProvider;
 use Izbik\Service\Realtime\MercureAccessToken;
 use Izbik\Service\Realtime\MercureCookieIssuer;
@@ -22,6 +25,9 @@ use Izbik\Service\Storage\S3FileStorage;
 use League\Container\ServiceProvider\AbstractServiceProvider;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mercure\Hub;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\ProtocolVersion;
@@ -36,6 +42,9 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			CorsPolicy::class,
 			TokenService::class,
 			RateLimitConfig::class,
+			GoogleAuthServiceInterface::class,
+			MailConfig::class,
+			MailerInterface::class,
 			S3Config::class,
 			S3Client::class,
 			FileStorageInterface::class,
@@ -67,6 +76,17 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 		$container->add(TokenService::class, static fn (): TokenService => TokenService::fromEnv());
 
 		$container->add(RateLimitConfig::class, static fn (): RateLimitConfig => RateLimitConfig::fromEnv());
+
+		$container->add(GoogleAuthServiceInterface::class, static fn (): GoogleAuthServiceInterface => GoogleAuthService::fromEnv());
+
+		$container->add(MailConfig::class, static fn (): MailConfig => MailConfig::fromEnv());
+
+		$container->add(MailerInterface::class, static function () use ($container): MailerInterface {
+			$config = $container->get(MailConfig::class);
+			assert($config instanceof MailConfig);
+
+			return new Mailer(Transport::fromDsn($config->dsn()));
+		});
 
 		$container->add(S3Config::class, static fn (): S3Config => S3Config::fromEnv());
 

@@ -14,9 +14,11 @@ use MarekSkopal\ORM\Attribute\Entity;
 use MarekSkopal\ORM\Enum\Type;
 
 /**
- * Account signing in with email + password (bcrypt). `tokenVersion` is embedded in every issued JWT;
+ * Account signing in with email + password (bcrypt) or with Google (`googleId`, the Google account's `sub`; such an
+ * account may have no password until it sets one by a reset link). `tokenVersion` is embedded in every issued JWT;
  * bumping it (password change) revokes all tokens issued before. `failedLoginAttempts` and
- * `lockedUntil` drive the sign-in backoff. `electricalSymbols` picks the electrical plan's symbol set.
+ * `lockedUntil` drive the sign-in backoff. `emailVerified`: the address is proven (a verification or reset link, Google,
+ * `admin:create`). `electricalSymbols` picks the electrical plan's symbol set.
  */
 #[Entity(repositoryClass: UserRepository::class)]
 class User extends AEntity
@@ -36,11 +38,17 @@ class User extends AEntity
 	#[ColumnEnum(enum: ElectricalSymbolsEnum::class, default: ElectricalSymbolsEnum::Iec)]
 	public ElectricalSymbolsEnum $electricalSymbols = ElectricalSymbolsEnum::Iec;
 
+	#[Column(type: Type::String, nullable: true)]
+	public ?string $googleId = null;
+
+	#[Column(type: Type::Boolean, default: false)]
+	public bool $emailVerified = false;
+
 	public function __construct(
 		#[Column(type: Type::String)]
 		public string $email,
-		#[Column(type: Type::String)]
-		public string $password,
+		#[Column(type: Type::String, nullable: true)]
+		public ?string $password,
 		#[Column(type: Type::String)]
 		public string $name,
 		#[ColumnEnum(enum: UserRoleEnum::class, default: UserRoleEnum::User)]

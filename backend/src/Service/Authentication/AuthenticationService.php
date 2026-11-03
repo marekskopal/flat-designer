@@ -36,7 +36,8 @@ final readonly class AuthenticationService
 
 		$this->loginAttempts->assertNotLocked($user);
 
-		if (!password_verify($credentials->password, $user->password)) {
+		// An account signing in with Google only has no password; it fails like a wrong one.
+		if ($user->password === null || !password_verify($credentials->password, $user->password)) {
 			$this->loginAttempts->recordFailure($user);
 			// If this failure just tripped the lock, surface that to the caller as 429.
 			$this->loginAttempts->assertNotLocked($user);

@@ -16,6 +16,24 @@ export const appRoutes: Routes = [
         loadComponent: async () => (await import('@app/authentication/sign-up.component')).SignUpComponent,
     },
     {
+        path: 'forgot-password',
+        canActivate: [guestGuard],
+        title: 'Reset password · Izbik',
+        loadComponent: async () => (await import('@app/authentication/forgot-password.component')).ForgotPasswordComponent,
+    },
+    {
+        // The link of a verification mail; it works signed in or out, so no guard.
+        path: 'verify-email',
+        title: 'Confirm email · Izbik',
+        loadComponent: async () => (await import('@app/authentication/verify-email.component')).VerifyEmailComponent,
+    },
+    {
+        // The link of a password reset mail; it may be opened while signed in (it signs in anew), so no guard.
+        path: 'reset-password',
+        title: 'Choose a new password · Izbik',
+        loadComponent: async () => (await import('@app/authentication/reset-password.component')).ResetPasswordComponent,
+    },
+    {
         // OAuth consent for MCP clients; signs in inline, so no guard.
         path: 'oauth/authorize',
         title: 'Connect · Izbik',

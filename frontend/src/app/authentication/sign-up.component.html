@@ -27,5 +27,16 @@
         </button>
     </form>
 
+    @if (options()?.googleClientId; as clientId) {
+        <div class="auth__divider"><span>or</span></div>
+        <fd-google-sign-in
+            [clientId]="clientId"
+            text="signup_with"
+            [busy]="googleBusy()"
+            (credential)="onGoogleCredential($event)"
+            (unavailable)="onGoogleUnavailable()"
+        />
+    }
+
     <p class="auth__footer">Already have an account? <a routerLink="/login">Sign in</a></p>
 </div>

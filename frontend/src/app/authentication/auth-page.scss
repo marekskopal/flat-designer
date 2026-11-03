@@ -58,6 +58,41 @@
     font-size: $font-size-14;
 }
 
+.auth__extra {
+    align-self: flex-end;
+    margin-top: -6px;
+    font-size: $font-size-13;
+}
+
+.auth__text {
+    margin: 0 0 $space-16;
+    font-size: $font-size-14;
+    line-height: 1.5;
+    color: $color-text-muted;
+
+    strong {
+        color: $color-text;
+        font-weight: 600;
+    }
+}
+
+.auth__divider {
+    display: flex;
+    align-items: center;
+    gap: $space-12;
+    margin: $space-20 0 14px;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+
+    &::before,
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: $color-border;
+    }
+}
+
 .auth__footer {
     margin: $space-20 0 0;
     font-size: $font-size-13;

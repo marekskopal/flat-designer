@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Izbik\App\ServiceProvider;
 
 use Izbik\Model\Entity\Comment;
+use Izbik\Model\Entity\EmailVerificationToken;
 use Izbik\Model\Entity\Floor;
 use Izbik\Model\Entity\FloorUnderlay;
 use Izbik\Model\Entity\FloorVoid;
@@ -16,6 +17,7 @@ use Izbik\Model\Entity\ModelAsset;
 use Izbik\Model\Entity\OAuthAuthorization;
 use Izbik\Model\Entity\OAuthClient;
 use Izbik\Model\Entity\Opening;
+use Izbik\Model\Entity\PasswordResetToken;
 use Izbik\Model\Entity\Plot;
 use Izbik\Model\Entity\Project;
 use Izbik\Model\Entity\ProjectChange;
@@ -35,6 +37,7 @@ use Izbik\Model\Entity\User;
 use Izbik\Model\Entity\VariantSet;
 use Izbik\Model\Entity\Wall;
 use Izbik\Model\Repository\CommentRepository;
+use Izbik\Model\Repository\EmailVerificationTokenRepository;
 use Izbik\Model\Repository\FloorRepository;
 use Izbik\Model\Repository\FloorUnderlayRepository;
 use Izbik\Model\Repository\FloorVoidRepository;
@@ -46,6 +49,7 @@ use Izbik\Model\Repository\ModelAssetRepository;
 use Izbik\Model\Repository\OAuthAuthorizationRepository;
 use Izbik\Model\Repository\OAuthClientRepository;
 use Izbik\Model\Repository\OpeningRepository;
+use Izbik\Model\Repository\PasswordResetTokenRepository;
 use Izbik\Model\Repository\PlotRepository;
 use Izbik\Model\Repository\ProjectChangeRepository;
 use Izbik\Model\Repository\ProjectFileRepository;
@@ -112,6 +116,8 @@ final class OrmServiceProvider extends AbstractServiceProvider
 			ItemGroupRepository::class,
 			VariantSetRepository::class,
 			UserRepository::class,
+			PasswordResetTokenRepository::class,
+			EmailVerificationTokenRepository::class,
 		], true);
 	}
 
@@ -155,6 +161,8 @@ final class OrmServiceProvider extends AbstractServiceProvider
 		$this->addRepository($container, $orm, ItemGroupRepository::class, ItemGroup::class);
 		$this->addRepository($container, $orm, VariantSetRepository::class, VariantSet::class);
 		$this->addRepository($container, $orm, UserRepository::class, User::class);
+		$this->addRepository($container, $orm, PasswordResetTokenRepository::class, PasswordResetToken::class);
+		$this->addRepository($container, $orm, EmailVerificationTokenRepository::class, EmailVerificationToken::class);
 	}
 
 	/**

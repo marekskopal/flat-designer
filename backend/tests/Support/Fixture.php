@@ -72,7 +72,13 @@ final class Fixture
 	{
 		self::$userCounter++;
 
-		return self::userProvider()->createUser($email ?? 'user' . self::$userCounter . '@example.com', self::Password, $name, $role);
+		return self::userProvider()->createUser(
+			$email ?? 'user' . self::$userCounter . '@example.com',
+			self::Password,
+			$name,
+			$role,
+			emailVerified: true,
+		);
 	}
 
 	public static function createAdmin(?string $email = null): User
