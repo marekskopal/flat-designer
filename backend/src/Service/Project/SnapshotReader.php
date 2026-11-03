@@ -38,6 +38,11 @@ final readonly class SnapshotReader
 		return is_int($value) || is_float($value) ? (float) $value : throw $this->invalid($key, 'a number');
 	}
 
+	public function nullableNumber(string $key): ?float
+	{
+		return ($this->data[$key] ?? null) === null ? null : $this->number($key);
+	}
+
 	public function string(string $key): string
 	{
 		$value = $this->data[$key] ?? null;

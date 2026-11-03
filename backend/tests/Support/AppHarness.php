@@ -9,6 +9,7 @@ use Izbik\App\ApplicationFactory;
 use Izbik\Mcp\McpUserContext;
 use Izbik\Service\Actor\ActorContext;
 use Izbik\Service\Authentication\GoogleAuthServiceInterface;
+use Izbik\Service\Example\ExampleCatalogue;
 use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Mail\MailOutbox;
 use Izbik\Service\Project\SharedAssetIds;
@@ -59,6 +60,8 @@ final class AppHarness
 			$container->extend(MailerInterface::class)->setConcrete(self::mailer());
 			$container->extend(MailConfig::class)->setConcrete(new MailConfig('smtp.test', '25', '', '', 'no-reply@izbik.test'));
 			$container->extend(GoogleAuthServiceInterface::class)->setConcrete(self::googleAuth());
+			// The examples the tests write, not those shipped in examples/.
+			$container->add(ExampleCatalogue::class, new ExampleCatalogue(self::examplesDirectory()));
 		}
 
 		return self::$application;
@@ -99,6 +102,11 @@ final class AppHarness
 	}
 
 	/** Replaces S3 for the whole suite. */
+	public static function examplesDirectory(): string
+	{
+		return sys_get_temp_dir() . '/izbik-test-examples-' . getmypid();
+	}
+
 	public static function fileStorage(): InMemoryFileStorage
 	{
 		return self::$fileStorage ??= new InMemoryFileStorage();
@@ -130,6 +138,10 @@ final class AppHarness
 
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
+		$examples = glob(self::examplesDirectory() . '/*.json');
+		foreach ($examples === false ? [] : $examples as $example) {
+			unlink($example);
+		}
 		$assetIds = self::container()->get(SharedAssetIds::class);
 		assert($assetIds instanceof SharedAssetIds);
 		$assetIds->clear();

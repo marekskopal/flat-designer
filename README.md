@@ -262,6 +262,16 @@ global material and furniture catalogues.
 
 New users can sign up at `/sign-up` and get the `User` role. Admins manage accounts under **Users**.
 
+The projects page offers **Start from an example**: a copy of the demo flat (`backend/examples/`) goes into the
+user's projects, opened at its guided tour. Its product models are CC0 models from [Poly Haven](https://polyhaven.com),
+which the repository does not ship. Download, optimise and import them once (the stack must be running):
+
+```sh
+make example-models   # into data/example-models (ignored by git), then imported as global models
+```
+
+Without them, the example's lamps, chairs and plants draw as boxes. Running it again only adds what is missing.
+
 Two sign-in extras are off until configured in `.env` (then `make up`):
 
 - **Sign in with Google**: set `GOOGLE_CLIENT_ID` to an OAuth web client id whose authorized JavaScript origins include

@@ -1061,6 +1061,27 @@ format is the text in `FurnitureTools::Format`.
   works once for 15 minutes; a rejected file releases the ticket. `delete_project_file` / `delete_model` remove them.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
+## Example projects
+
+- `backend/examples/<slug>.json` (`ExampleCatalogue`: `{format, name, description, credit, startView, snapshot}`) are
+  projects every user may start from: `GET /api/examples`, `POST /api/examples/{slug}/projects` (MCP `list_examples` /
+  `create_project_from_example`; the projects page's "Start from an example") makes a project of the user's
+  (`ExampleProjectService`) and answers the floor and saved view to open it at. `bin/console examples:export <project>
+  <slug> [--name … --description … --credit … --start-view … --without-views PREFIX]` writes one from a working copy,
+  without its files (`SnapshotFiles::withoutFiles()`: underlays, pictures, image parameters). The demo flat is
+  `demo-flat` (its "Photo …" views left out); re-export it after a change of the demo project.
+- The snapshot comes from another instance, so it is imported, not restored: `ProjectSnapshotService::import()` puts
+  it onto this one first (`SnapshotLocalizer`): materials by code (`SnapshotMaterials`: every `materialId` /
+  `…MaterialId` key and a Custom item's slot materials; a finish band or slot without one dropped), models by source URL
+  among the global ones and the owner's library (`SnapshotModels`; none: a box), files left out, and definitions by name
+  among the global ones (`SnapshotDefinitionRestorer` with `$foreign`; else a project copy). The project takes the
+  snapshot's name, details, site and façade material. Project import (follow-up) is meant to reuse it.
+- Models: `make example-models` runs `frontend/scripts/example-models.mjs` in a Node container: the Poly Haven models
+  the examples list (`sourceUrl` `https://polyhaven.com/a/<asset>`), fetched through the Poly Haven API (a User-Agent
+  naming Izbik, md5 checked; its terms allow this, crediting Poly Haven), optimised with gltf-transform as in Product
+  models, into `data/example-models/` (gitignored), then `make import-models`. `models:import` skips a model whose
+  source the scope has already, so both run again safely.
+
 ## Seed data and files
 
 - Seed data lives in migrations (`Seed*`, `Fix*`, `Convert*`). The early ones predate `AddProjectsAndFloors` and still

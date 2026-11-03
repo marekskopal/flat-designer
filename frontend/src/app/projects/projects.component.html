@@ -1,10 +1,45 @@
 <div class="page">
     <div class="page__header">
         <h1 class="page__title">Projects</h1>
-        @if (!creating()) {
-            <button type="button" class="btn btn--primary" (click)="creating.set(true)">New project</button>
-        }
+        <div class="page__actions">
+            @if (examples().length > 0 && projects().length > 0) {
+                <button type="button" class="btn btn--ghost" [attr.aria-expanded]="showExamples()" (click)="toggleExamples()">
+                    Start from an example
+                </button>
+            }
+            @if (!creating()) {
+                <button type="button" class="btn btn--primary" (click)="creating.set(true); showExamples.set(false)">New project</button>
+            }
+        </div>
     </div>
+
+    @if (examples().length > 0 && (showExamples() || (!loading() && projects().length === 0 && !creating()))) {
+        <section class="examples" aria-labelledby="examples-title">
+            <h2 id="examples-title" class="examples__title">Start from an example</h2>
+            <p class="examples__hint">A copy goes into your projects: look around, walk through it, change anything.</p>
+            <div class="grid">
+                @for (example of examples(); track example.slug) {
+                    <div class="example card">
+                        <span class="project__name">{{ example.name }}</span>
+                        @if (example.description) {
+                            <span class="example__description">{{ example.description }}</span>
+                        }
+                        @if (example.credit) {
+                            <span class="project__meta">{{ example.credit }}</span>
+                        }
+                        <button
+                            type="button"
+                            class="btn btn--primary example__action"
+                            [disabled]="copying() !== null"
+                            (click)="startFrom(example)"
+                        >
+                            {{ copying() === example.slug ? 'Copying…' : 'Open a copy' }}
+                        </button>
+                    </div>
+                }
+            </div>
+        </section>
+    }
 
     @if (creating()) {
         <form class="card form new-project" [formGroup]="form" (ngSubmit)="create()">
@@ -45,7 +80,7 @@
         } @empty {
             @if (!loading() && !creating()) {
                 <div class="empty card">
-                    <p>No projects yet.</p>
+                    <p>No projects yet.{{ examples().length > 0 ? ' Start from an example above, or draw your own.' : '' }}</p>
                     <button type="button" class="btn btn--primary" (click)="creating.set(true)">Create your first project</button>
                 </div>
             }

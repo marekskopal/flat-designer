@@ -6,6 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use Izbik\Command\AdminCreateCommand;
+use Izbik\Command\ExamplesExportCommand;
 use Izbik\Command\FilesImportCommand;
 use Izbik\Command\ModelsImportCommand;
 use Izbik\Command\MigrationRunCommand;
@@ -15,6 +16,7 @@ use Symfony\Component\Console\Application;
 $application = new Application();
 
 $application->addCommand(new AdminCreateCommand());
+$application->addCommand(new ExamplesExportCommand());
 $application->addCommand(new FilesImportCommand());
 $application->addCommand(new ModelsImportCommand());
 $application->addCommand(new MigrationRunCommand());

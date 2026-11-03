@@ -6,3 +6,5 @@
 /ssl/
 /node_modules/
 /.claude/skills/bump-deps/
+/log/
+/data/

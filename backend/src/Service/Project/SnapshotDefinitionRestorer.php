@@ -15,7 +15,8 @@ use Izbik\Service\Furniture\FurnitureDefinitionProvider;
  * The furniture definitions of a restored version (`definitions` of its floors, see ProjectSnapshotService): the live
  * definition of the same id while the project may use it (also a soft-deleted one, as the items used it until now),
  * otherwise a project definition made from the copy stored in the version (an identical one from an earlier restore
- * is reused) — or none when the version holds no usable copy.
+ * is reused) — or none when the version holds no usable copy. A snapshot from another instance (`$foreign`) has ids of
+ * its own: there the global definition of the same name stands in for the live one.
  */
 final readonly class SnapshotDefinitionRestorer
 {
@@ -28,13 +29,16 @@ final readonly class SnapshotDefinitionRestorer
 	 * @param array<int, FurnitureDefinition|null> $known definitions by snapshot id from earlier floors
 	 * @return array<int, FurnitureDefinition|null> `$known` with those of `$entries` added
 	 */
-	public function restore(Project $project, array $entries, array $known): array
+	public function restore(Project $project, array $entries, array $known, bool $foreign = false): array
 	{
 		foreach ($entries as $data) {
 			$id = $data->int('id');
-			if (!array_key_exists($id, $known)) {
-				$known[$id] = $this->live($project, $id) ?? $this->copy($project, $data);
+			if (array_key_exists($id, $known)) {
+				continue;
 			}
+
+			$live = $foreign ? $this->definitionRepository->findGlobalByName($data->string('name')) : $this->live($project, $id);
+			$known[$id] = $live ?? $this->copy($project, $data);
 		}
 
 		return $known;

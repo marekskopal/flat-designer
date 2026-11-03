@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db migrate-volumes env ssl-cert admin import-files import-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up down logs build reset-db migrate-volumes env ssl-cert admin import-files import-models example-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -74,6 +74,13 @@ import-files:
 ## Upload the .glb models of a directory (with optional <name>.json credits): make import-models DIR=… [PROJECT=…]
 import-models:
 	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console models:import /import $(if $(PROJECT),--project=$(PROJECT))
+
+## Download the product models of the example projects from Poly Haven (CC0) into data/example-models (gitignored),
+## optimise them and import them as global models (needs the running stack; models already there are skipped)
+example-models:
+	docker run --rm -v "$(CURDIR)":/work -w /work/frontend -u "$$(id -u):$$(id -g)" -e HOME=/tmp \
+		node:24.22.2-alpine node scripts/example-models.mjs /work/data/example-models /work/backend/examples
+	$(MAKE) import-models DIR=data/example-models
 
 ## Capture the README screenshots of a project's saved views and pages into docs/screenshots (needs the running stack):
 ## make screenshots PROJECT=4 EMAIL=you@example.com PASSWORD=… [VIEWS="Tour ·"] [VIEWS_ONLY=1] [ROOM=Kitchen] [URL=http://localhost:4400]
