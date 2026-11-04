@@ -11,6 +11,7 @@ use Izbik\Command\FilesImportCommand;
 use Izbik\Command\ModelsImportCommand;
 use Izbik\Command\MigrationRunCommand;
 use Izbik\Command\OrmSchemaDumpCommand;
+use Izbik\Command\UserResetPasswordCommand;
 use Symfony\Component\Console\Application;
 
 $application = new Application();
@@ -21,5 +22,6 @@ $application->addCommand(new FilesImportCommand());
 $application->addCommand(new ModelsImportCommand());
 $application->addCommand(new MigrationRunCommand());
 $application->addCommand(new OrmSchemaDumpCommand());
+$application->addCommand(new UserResetPasswordCommand());
 
 $application->run();

@@ -72,3 +72,26 @@
     overflow: hidden;
     clip-path: inset(50%);
 }
+
+.add-user {
+    margin-bottom: $space-20;
+}
+
+.add-user__fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: $space-12;
+}
+
+.password-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: $space-8;
+    white-space: normal;
+}
+
+.password-row__field {
+    flex: 1;
+    min-width: 220px;
+}

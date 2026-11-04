@@ -9,6 +9,7 @@ use Izbik\App\ApplicationFactory;
 use Izbik\Mcp\McpUserContext;
 use Izbik\Service\Actor\ActorContext;
 use Izbik\Service\Authentication\GoogleAuthServiceInterface;
+use Izbik\Service\Authentication\SignUpConfig;
 use Izbik\Service\Example\ExampleCatalogue;
 use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Mail\MailOutbox;
@@ -37,6 +38,8 @@ final class AppHarness
 
 	private static ?InMemoryFileStorage $fileStorage = null;
 
+	private static ?SignUpConfig $signUp = null;
+
 	private static ?RecordingMercureHub $mercureHub = null;
 
 	private static ?RecordingMailer $mailer = null;
@@ -62,6 +65,7 @@ final class AppHarness
 			$container->extend(GoogleAuthServiceInterface::class)->setConcrete(self::googleAuth());
 			// The examples the tests write, not those shipped in examples/.
 			$container->add(ExampleCatalogue::class, new ExampleCatalogue(self::examplesDirectory()));
+			$container->extend(SignUpConfig::class)->setConcrete(self::signUp());
 		}
 
 		return self::$application;
@@ -102,6 +106,13 @@ final class AppHarness
 	}
 
 	/** Replaces S3 for the whole suite. */
+
+	/** Open by default; a test closes it with `->enabled = false` (reset after each test). */
+	public static function signUp(): SignUpConfig
+	{
+		return self::$signUp ??= new SignUpConfig(true);
+	}
+
 	public static function examplesDirectory(): string
 	{
 		return sys_get_temp_dir() . '/izbik-test-examples-' . getmypid();
@@ -138,6 +149,7 @@ final class AppHarness
 
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
+		self::signUp()->enabled = true;
 		$examples = glob(self::examplesDirectory() . '/*.json');
 		foreach ($examples === false ? [] : $examples as $example) {
 			unlink($example);

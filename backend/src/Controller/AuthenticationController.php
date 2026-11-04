@@ -14,6 +14,7 @@ use Izbik\Dto\SignUpDto;
 use Izbik\Dto\VerifyEmailDto;
 use Izbik\OAuth\DiscoveryUrl;
 use Izbik\Response\ErrorResponse;
+use Izbik\Response\ForbiddenResponse;
 use Izbik\Response\NotAuthorizedResponse;
 use Izbik\Response\OkResponse;
 use Izbik\Route\Routes;
@@ -25,6 +26,7 @@ use Izbik\Service\Authentication\Exception\GoogleAuthException;
 use Izbik\Service\Authentication\Exception\InvalidTokenException;
 use Izbik\Service\Authentication\GoogleAuthServiceInterface;
 use Izbik\Service\Authentication\PasswordResetService;
+use Izbik\Service\Authentication\SignUpConfig;
 use Izbik\Service\Authentication\TokenService;
 use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Provider\UserProvider;
@@ -41,6 +43,8 @@ use RuntimeException;
 
 final readonly class AuthenticationController
 {
+	public const string SignUpClosed = 'This server takes no new sign-ups; ask its administrator for an account.';
+
 	public function __construct(
 		private AuthenticationService $authenticationService,
 		private TokenService $tokenService,
@@ -50,6 +54,7 @@ final readonly class AuthenticationController
 		private EmailVerificationService $emailVerificationService,
 		private GoogleAuthServiceInterface $googleAuthService,
 		private MailConfig $mailConfig,
+		private SignUpConfig $signUpConfig,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -61,6 +66,7 @@ final readonly class AuthenticationController
 			new AuthenticationOptionsDto(
 				googleClientId: $this->googleAuthService->clientId(),
 				mail: $this->mailConfig->isEnabled(),
+				signUp: $this->signUpConfig->enabled,
 			),
 		);
 	}
@@ -85,11 +91,16 @@ final readonly class AuthenticationController
 
 	/**
 	 * Answers the same whether or not the email is already registered, so the endpoint does not reveal
-	 * accounts. The client follows up with a normal login. A new account gets a link to confirm its email.
+	 * accounts. The client follows up with a normal login. A new account gets a link to confirm its email. Closed
+	 * (`SignUpConfig`), it answers 403.
 	 */
 	#[RoutePost(Routes::AuthenticationSignUp->value)]
 	public function actionPostSignUp(ServerRequestInterface $request): ResponseInterface
 	{
+		if (!$this->signUpConfig->enabled) {
+			return new ForbiddenResponse(self::SignUpClosed);
+		}
+
 		$signUp = $this->requestService->getRequestBodyDto($request, SignUpDto::class);
 
 		$email = UserFieldValidator::normalizeEmail($signUp->email);
@@ -174,7 +185,7 @@ final readonly class AuthenticationController
 
 	/**
 	 * Signs in with a Google ID token: the account linked to that Google account, else the account with the email Google
-	 * verified (which gets linked), else a new account.
+	 * verified (which gets linked), else a new account (403 while sign-up is closed).
 	 */
 	#[RoutePost(Routes::AuthenticationGoogleLogin->value)]
 	public function actionPostGoogleLogin(ServerRequestInterface $request): ResponseInterface
@@ -199,6 +210,9 @@ final readonly class AuthenticationController
 			$user = $this->userProvider->getUserByEmail($email);
 			if ($user?->googleId !== null) {
 				return new NotAuthorizedResponse('This email\'s account is linked to another Google account.');
+			}
+			if ($user === null && !$this->signUpConfig->enabled) {
+				return new ForbiddenResponse(self::SignUpClosed);
 			}
 			$user = $user !== null
 				? $this->userProvider->linkGoogleAccount($user, $identity->subject)

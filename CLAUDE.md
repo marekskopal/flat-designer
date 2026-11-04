@@ -27,6 +27,14 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
   - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
     directory as project files.
+  - Accounts on a self-hosted server: sign-up is closed unless `SIGN_UP_ENABLED` (`SignUpConfig`; closed, sign-up and a
+    Google sign-in that would create an account answer 403, and the pages say to ask the admin; tests switch it with
+    `AppHarness::signUp()`). Admins add accounts (`POST /api/admin/users`, verified) and set passwords (`PATCH` with
+    `password`, not their own: it signs the user out and lifts a lock), `bin/console user:reset-password`
+    (`make reset-password EMAIL=…`) does it from the server. `DELETE /api/current-user` (the password, or the email of a
+    Google-only account) deletes an account with its projects and library (`AccountDeletion`: rows in one transaction,
+    stored files after it, best effort; never the last admin), as the admin's delete does for an account without
+    projects.
   - Sign-in extras: password reset by email (`PasswordResetService`, one-time `password_reset_tokens` hashed, an hour,
     capped per account; the reset unlocks and signs out everywhere), email verification (`EmailVerificationService`,
     `users.email_verified`, accounts from before it verified; a day's link mailed on sign-up and from the app's banner,
@@ -1112,6 +1120,7 @@ format is the text in `FurnitureTools::Format`.
 | --- | --- |
 | `make up` | Build and start the stack (creates `.env` and secrets on first run) |
 | `make admin` | Create an admin account |
+| `make reset-password EMAIL=…` | Set a user's password from the server (no mail needed) |
 | `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |

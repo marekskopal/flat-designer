@@ -29,4 +29,14 @@ export interface UserUpdate {
     name?: string;
     email?: string;
     role?: UserRole;
+    /** A new password, which signs the user out everywhere (not one's own: the account page changes that). */
+    password?: string;
+}
+
+/** An account an admin adds; its email counts as verified. */
+export interface UserCreate {
+    name: string;
+    email: string;
+    password: string;
+    role: UserRole;
 }

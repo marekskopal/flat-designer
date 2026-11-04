@@ -26,13 +26,13 @@ export class AuthenticationService {
 
     private optionsRequest: Promise<AuthenticationOptions> | null = null;
 
-    /** Fetched once; when the server cannot tell, only email and password are offered. */
+    /** Fetched once; when the server cannot tell, only email and password are offered (and sign-up, which it may refuse). */
     public options(): Promise<AuthenticationOptions> {
         this.optionsRequest ??= firstValueFrom(
             this.http.get<AuthenticationOptions>(`${environment.apiUrl}/authentication/options`, inlineErrors()),
         ).catch((): AuthenticationOptions => {
             this.optionsRequest = null;
-            return {googleClientId: null, mail: false};
+            return {googleClientId: null, mail: false, signUp: true};
         });
         return this.optionsRequest;
     }
@@ -104,7 +104,16 @@ export class AuthenticationService {
         );
     }
 
-    /** Tokens are stateless, so signing out only forgets them locally. */
+    /**
+     * Deletes the account with its projects, confirmed by the password (or the email of an account without one), then
+     * signs out here.
+     */
+    public async deleteAccount(confirmation: {password?: string; email?: string}): Promise<void> {
+        await firstValueFrom(this.http.delete<void>(`${environment.apiUrl}/current-user`, {body: confirmation, ...inlineErrors()}));
+        this.logout();
+    }
+
+        /** Tokens are stateless, so signing out only forgets them locally. */
     public logout(): void {
         this.storage.remove(StorageKey);
         this.authentication.set(null);

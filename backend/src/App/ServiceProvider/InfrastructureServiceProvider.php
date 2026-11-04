@@ -10,6 +10,7 @@ use Izbik\Mcp\Server\IzbikServer;
 use Izbik\Service\Authentication\GoogleAuthService;
 use Izbik\Service\Authentication\GoogleAuthServiceInterface;
 use Izbik\Service\Authentication\RateLimitConfig;
+use Izbik\Service\Authentication\SignUpConfig;
 use Izbik\Service\Authentication\TokenService;
 use Izbik\Service\Cors\CorsPolicy;
 use Izbik\Service\Logger\StderrLogger;
@@ -80,6 +81,8 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 		$container->add(GoogleAuthServiceInterface::class, static fn (): GoogleAuthServiceInterface => GoogleAuthService::fromEnv());
 
 		$container->add(MailConfig::class, static fn (): MailConfig => MailConfig::fromEnv());
+
+		$container->add(SignUpConfig::class, static fn (): SignUpConfig => SignUpConfig::fromEnv());
 
 		$container->add(MailerInterface::class, static function () use ($container): MailerInterface {
 			$config = $container->get(MailConfig::class);

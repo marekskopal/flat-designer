@@ -260,7 +260,15 @@ On the first run, `make up` creates `.env` from `.env.example` and generates the
 backend applies pending database migrations on start, so a fresh database includes a sample project and the
 global material and furniture catalogues.
 
-New users can sign up at `/sign-up` and get the `User` role. Admins manage accounts under **Users**.
+Accounts: sign-up is closed by default, so a server on the internet is not open to everyone. Admins add accounts
+under **Users** (and set a new password there for someone locked out), or set `SIGN_UP_ENABLED=1` in `.env` to let
+anyone sign up at `/sign-up` with the `User` role. Without mail, an account's password is reset from the server:
+
+```sh
+make reset-password EMAIL=jane@example.com   # prompts for the new password; signs Jane out everywhere
+```
+
+Users delete their own account, with all their projects, on the account page.
 
 The projects page offers **Start from an example**: a copy of the demo flat (`backend/examples/`) goes into the
 user's projects, opened at its guided tour. Its product models are CC0 models from [Poly Haven](https://polyhaven.com),

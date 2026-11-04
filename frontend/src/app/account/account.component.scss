@@ -53,3 +53,7 @@
     font-size: $font-size-12;
     color: $color-text-subtle;
 }
+
+.danger-zone {
+    border-color: color-mix(in srgb, $color-danger 35%, transparent);
+}

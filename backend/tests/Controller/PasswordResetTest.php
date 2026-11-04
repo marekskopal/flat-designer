@@ -26,7 +26,7 @@ final class PasswordResetTest extends IntegrationTestCase
 
 		self::assertSame(200, $response->getStatusCode());
 		self::assertSame(
-			['googleClientId' => 'test-client.apps.googleusercontent.com', 'mail' => true],
+			['googleClientId' => 'test-client.apps.googleusercontent.com', 'mail' => true, 'signUp' => true],
 			$this->jsonBody($response),
 		);
 	}

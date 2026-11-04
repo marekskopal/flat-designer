@@ -1,5 +1,43 @@
 <div class="page">
-    <h1 class="page__title">Users</h1>
+    <div class="page__header">
+        <h1 class="page__title">Users</h1>
+        @if (!adding()) {
+            <button type="button" class="btn btn--primary" (click)="adding.set(true)">Add user</button>
+        }
+    </div>
+
+    @if (adding()) {
+        <form class="card form add-user" [formGroup]="addForm" (ngSubmit)="add()">
+            <h2 class="card__title">Add user</h2>
+            <div class="add-user__fields">
+                <label class="field">
+                    <span class="field__label">Name</span>
+                    <input class="input" type="text" formControlName="name" autocomplete="off" />
+                </label>
+                <label class="field">
+                    <span class="field__label">Email</span>
+                    <input class="input" type="email" formControlName="email" autocomplete="off" />
+                </label>
+                <label class="field">
+                    <span class="field__label">Password</span>
+                    <input class="input" type="password" formControlName="password" autocomplete="new-password" />
+                    <span class="field__hint">{{ passwordHint }} Pass it on to them.</span>
+                </label>
+                <label class="field">
+                    <span class="field__label">Role</span>
+                    <select class="input" formControlName="role">
+                        @for (role of roles; track role) {
+                            <option [value]="role">{{ role }}</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <div class="form__actions">
+                <button type="button" class="btn btn--ghost" (click)="cancelAdd()">Cancel</button>
+                <button type="submit" class="btn btn--primary" [disabled]="addForm.invalid || saving()">Add</button>
+            </div>
+        </form>
+    }
 
     <div class="card card--table">
         <table class="table">
@@ -34,9 +72,29 @@
                         <td class="table__muted">{{ user.lastLoginAt ? (user.lastLoginAt | date: 'd MMM y, HH:mm') : 'never' }}</td>
                         <td class="table__muted">{{ user.createdAt | date: 'd MMM y' }}</td>
                         <td class="table__actions">
+                            @if (!isSelf) {
+                                <button type="button" class="btn btn--ghost" [attr.aria-expanded]="passwordFor() === user.id" (click)="editPassword(user)">
+                                    Set password
+                                </button>
+                            }
                             <button type="button" class="btn btn--ghost btn--danger" [disabled]="isSelf" (click)="delete(user)">Delete</button>
                         </td>
                     </tr>
+                    @if (passwordFor() === user.id) {
+                        <tr>
+                            <td colspan="6">
+                                <form class="password-row" [formGroup]="passwordForm" (ngSubmit)="setPassword(user)">
+                                    <label class="field password-row__field">
+                                        <span class="field__label">New password for {{ user.name }}</span>
+                                        <input class="input" type="password" formControlName="password" autocomplete="new-password" />
+                                        <span class="field__hint">{{ passwordHint }} It signs them out everywhere.</span>
+                                    </label>
+                                    <button type="button" class="btn btn--ghost" (click)="editPassword(null)">Cancel</button>
+                                    <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || saving()">Set password</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
                 } @empty {
                     <tr>
                         <td colspan="6" class="table__empty">{{ loading() ? 'Loading…' : 'No users.' }}</td>
