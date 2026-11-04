@@ -13,3 +13,6 @@
 
 # Plans are local working notes, never committed
 docs/*-plan.md
+
+# The website lives on the private main branch only; ignored here so its files do not show as untracked
+/web/
