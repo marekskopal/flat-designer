@@ -113,6 +113,24 @@ final class ProjectFileControllerTest extends IntegrationTestCase
 		);
 	}
 
+	public function testDeleteReportsSuccessWhenTheStoredObjectCannotBeDeleted(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$file = $this->jsonBody($this->upload(self::path(Routes::ProjectFiles, $project->id), 'plan.png', self::Png, $user));
+		self::assertIsInt($file['id']);
+		$storage = AppHarness::fileStorage();
+		$storage->failingDeletes = array_keys($storage->objects);
+
+		self::assertSame(
+			200,
+			$this->request('DELETE', self::path(Routes::ProjectFile, $project->id, $file['id']), authenticatedAs: $user)->getStatusCode(),
+		);
+		$list = $this->jsonList($this->request('GET', self::path(Routes::ProjectFiles, $project->id), authenticatedAs: $user));
+		self::assertSame([], $list);
+		self::assertCount(1, $storage->objects);
+	}
+
 	public function testFilesOfOtherProjectsAreNotFound(): void
 	{
 		$owner = Fixture::createUser();

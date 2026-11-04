@@ -12,8 +12,6 @@ use Izbik\Model\Repository\UserRepository;
 use Izbik\Service\Project\ProjectFileProvider;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use MarekSkopal\ORM\ORM;
-use Psr\Log\LoggerInterface;
-use Throwable;
 
 /**
  * Deletes an account with everything it owns: its projects (their floors, versions, files and models go with them,
@@ -30,7 +28,6 @@ final readonly class AccountDeletion
 		private ProjectFileProvider $projectFileProvider,
 		private ORM $orm,
 		private DatabaseInterface $database,
-		private LoggerInterface $logger,
 	) {
 	}
 
@@ -56,11 +53,7 @@ final readonly class AccountDeletion
 			$this->userRepository->delete($user);
 		});
 
-		try {
-			$this->projectFileProvider->deleteStoredObjects($storageKeys);
-		} catch (Throwable $e) {
-			$this->logger->warning(sprintf('Stored files of the deleted account %d were left behind: %s', $user->id, $e->getMessage()));
-		}
+		$this->projectFileProvider->deleteStoredObjects($storageKeys);
 	}
 
 	/**

@@ -19,6 +19,9 @@ final class InMemoryFileStorage implements FileStorageInterface
 
 	public bool $failPuts = false;
 
+	/** @var list<string> keys whose delete fails */
+	public array $failingDeletes = [];
+
 	public function put(string $key, string $body, string $contentType): void
 	{
 		if ($this->failPuts) {
@@ -46,6 +49,9 @@ final class InMemoryFileStorage implements FileStorageInterface
 
 	public function delete(string $key): void
 	{
+		if (in_array($key, $this->failingDeletes, true)) {
+			throw new RuntimeException('Storage is down.');
+		}
 		unset($this->objects[$key], $this->contentTypes[$key]);
 	}
 
@@ -54,5 +60,6 @@ final class InMemoryFileStorage implements FileStorageInterface
 		$this->objects = [];
 		$this->contentTypes = [];
 		$this->failPuts = false;
+		$this->failingDeletes = [];
 	}
 }
