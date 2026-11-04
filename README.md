@@ -262,7 +262,7 @@ the 3D view runs in the browser.
 ### Install
 
 ```sh
-git clone --branch v0.1.0-beta https://github.com/marekskopal/izbik.git
+git clone --branch v0.1.0 https://github.com/marekskopal/izbik.git
 cd izbik
 make env      # .env with random secrets and passwords; review it (see Configuration)
 make deploy   # start the published images (ghcr.io/marekskopal/izbik-*) of IZBIK_VERSION
@@ -318,7 +318,7 @@ for the token key, the Mercure keys and the database and MinIO passwords. The mo
 | `MYSQL_*` | Database connection |
 | `S3_*` | Object storage. Defaults to the bundled MinIO (console on `MINIO_CONSOLE_PORT`, default `4401`) |
 | `FILE_MAX_SIZE_MB` | Largest accepted upload |
-| `IZBIK_VERSION` | The published images `make deploy` runs (`latest`, or a version such as `0.1.0-beta`) |
+| `IZBIK_VERSION` | The published images `make deploy` runs (`latest`, or a version such as `0.1.0`) |
 | `SIGN_UP_ENABLED` | `1` lets anyone sign up; `0` (default) leaves adding accounts to admins |
 | `BACKEND_CORS_ALLOWED_ORIGIN` | Empty (default) on a server: the app and the API share one origin |
 

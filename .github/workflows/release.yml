@@ -1,8 +1,8 @@
 name: Release
 
-# A version tag (v0.1.0-beta, v0.2.0, …) publishes the images of the stack to GHCR as
+# A version tag (v0.1.0, v0.2.0, …) publishes the images of the stack to GHCR as
 # ghcr.io/<owner>/izbik-{backend,frontend,proxy}:<version> and :latest, then a GitHub release with the tag's section
-# of CHANGELOG.md (a pre-release for a version with a suffix, e.g. -beta). `make deploy` runs these images.
+# of CHANGELOG.md (a pre-release for a version with a suffix, e.g. -rc.1). `make deploy` runs these images.
 on:
     push:
         tags: ['v*']
@@ -38,7 +38,7 @@ jobs:
               uses: docker/metadata-action@v5
               with:
                   images: ghcr.io/${{ github.repository_owner }}/izbik-${{ matrix.service }}
-                  # The version without its v, and latest for every release (the betas included).
+                  # The version without its v, and latest for every release (pre-releases included).
                   flavor: latest=false
                   tags: |
                       type=semver,pattern={{version}}

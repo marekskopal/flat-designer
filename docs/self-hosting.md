@@ -24,7 +24,7 @@ A small server is enough: 2 CPU cores, 2 GB of memory and disk for the uploads. 
 Requirements: Docker with Compose, `make`, `openssl` and `git`.
 
 ```sh
-git clone --branch v0.1.0-beta https://github.com/marekskopal/izbik.git
+git clone --branch v0.1.0 https://github.com/marekskopal/izbik.git
 cd izbik
 make env        # creates .env with random secrets and passwords
 ```
@@ -154,14 +154,14 @@ rely on your backups.
 Upgrades go forward from any earlier release, as the migrations of every release in between run in order. There is
 no downgrade: to go back, check out the old version and restore the backup made before the upgrade.
 
-`IZBIK_VERSION=latest` follows the newest release, betas included. Pin a version on a server you care about, so an
+`IZBIK_VERSION=latest` follows the newest release, pre-releases included. Pin a version on a server you care about, so an
 upgrade happens only when you choose.
 
 ## Releases
 
-Versions follow [semantic versioning](https://semver.org). A tag `v<version>` (e.g. `v0.1.0-beta`) on the
+Versions follow [semantic versioning](https://semver.org). A tag `v<version>` (e.g. `v0.1.0`) on the
 open-source repository publishes the three images as `<version>` and `latest`, and a GitHub release with the
-version's notes from [CHANGELOG.md](../CHANGELOG.md) (a pre-release for versions with a suffix such as `-beta`).
+version's notes from [CHANGELOG.md](../CHANGELOG.md) (a pre-release for versions with a suffix such as `-rc.1`).
 
 To publish a release (maintainers):
 
