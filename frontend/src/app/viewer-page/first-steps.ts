@@ -52,6 +52,5 @@ export const firstSteps = (scene: Scene, walked: boolean): StepView[] => {
             action: 'Walk',
             done: walked,
         },
-    
     ];
 };

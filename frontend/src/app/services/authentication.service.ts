@@ -113,7 +113,7 @@ export class AuthenticationService {
         this.logout();
     }
 
-        /** Tokens are stateless, so signing out only forgets them locally. */
+    /** Tokens are stateless, so signing out only forgets them locally. */
     public logout(): void {
         this.storage.remove(StorageKey);
         this.authentication.set(null);
