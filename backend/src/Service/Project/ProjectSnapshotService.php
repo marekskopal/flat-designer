@@ -184,9 +184,9 @@ final readonly class ProjectSnapshotService
 
 	/**
 	 * Restores a snapshot taken on another instance (an example project, an imported file) into a new project, as
-	 * `restore()` does, its ids put onto this instance first (`SnapshotLocalizer`) and its definitions matched by name.
-	 * The project takes the snapshot's name, address, description, site and façade material. The caller runs this in a
-	 * transaction.
+	 * `restore()` does, its ids put onto this instance first (`SnapshotLocalizer`) and its definitions matched by name and
+	 * content among the global ones. The project takes the snapshot's name, address, description, site and façade
+	 * material. The caller runs this in a transaction.
 	 */
 	public function import(Project $project, string $snapshot): void
 	{
@@ -214,7 +214,7 @@ final readonly class ProjectSnapshotService
 		$this->restoreData($project, $data, true);
 	}
 
-	/** @param bool $foreign from another instance: the definitions are matched by name, not id */
+	/** @param bool $foreign from another instance: the definitions are matched by name and content, not id */
 	private function restoreData(Project $project, SnapshotReader $data, bool $foreign): void
 	{
 		// The views go with the floors; a snapshot from before saved views keeps the current ones.

@@ -1087,8 +1087,8 @@ format is the text in `FurnitureTools::Format`.
 - The snapshot comes from another instance, so it is imported, not restored: `ProjectSnapshotService::import()` puts
   it onto this one first (`SnapshotLocalizer`): materials by code (`SnapshotMaterials`: every `materialId` /
   `…MaterialId` key and a Custom item's slot materials; a finish band or slot without one dropped), models by source URL
-  among the global ones and the owner's library (`SnapshotModels`; none: a box), files left out, and definitions by name
-  among the global ones (`SnapshotDefinitionRestorer` with `$foreign`; else a project copy). The project takes the
+  among the global ones and the owner's library (`SnapshotModels`; none: a box), files left out, and definitions by name and
+  content among the global ones (`SnapshotDefinitionRestorer` with `$foreign`; else a project copy). The project takes the
   snapshot's name, details, site and façade material. Project import (follow-up) is meant to reuse it.
 - Models: `make example-models` runs `frontend/scripts/example-models.mjs` in a Node container: the Poly Haven models
   the examples list (`sourceUrl` `https://polyhaven.com/a/<asset>`), fetched through the Poly Haven API (a User-Agent
