@@ -1114,7 +1114,8 @@ The current format is the text in `FurnitureTools::Format`.
   snapshot's name, details, site and façade material. `import()` takes untrusted input: `SnapshotLimits` caps it, and a
   value the restore cannot take (`ValueError` / `TypeError`) is an `InvalidSnapshotException`; elements are not
   validated as edits are.
-- Project files (`Service/Project/Transfer`): `ProjectImporter` makes a new project of the user's from one
+- Project files (`Service/Project/Transfer`, REST `GET …/export` (`?files=0`: the JSON alone) and `POST
+  /api/projects/import` in `ProjectTransferController`; nginx takes 512 MB there and streams the export): `ProjectImporter` makes a new project of the user's from one
   (`ProjectBundleReader`: zip or JSON by the first bytes, at most `IMPORT_MAX_SIZE_MB` unpacked, `MaxEntries`; entries
   read only by the manifest's paths, each once, never extracted; `SnapshotLimits` checked before anything is stored) in
   one transaction: `BundleAssetImporter` uploads the files and

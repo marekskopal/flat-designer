@@ -62,7 +62,7 @@ Check these before going live:
 | `GOOGLE_CLIENT_ID` | Optional, Sign in with Google: authorize `https://<PROXY_HOST>` as a JavaScript origin |
 | `BACKEND_LOG_LEVEL` | `production` |
 | `FILE_MAX_SIZE_MB` | The largest upload you accept |
-| `IMPORT_MAX_SIZE_MB` | The largest project file (unpacked) a user may import, default 500 |
+| `IMPORT_MAX_SIZE_MB` | The largest project file (unpacked) a user may import, default 500; nginx and PHP take 512 MB at most |
 
 Keep `.env` private: it holds every secret of the installation. Back it up apart from the data, because a backup of
 the database is useless without the token key and passwords.

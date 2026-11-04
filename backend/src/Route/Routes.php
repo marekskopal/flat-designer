@@ -47,7 +47,9 @@ enum Routes: string
 	case Projects = '/api/projects';
 	case Examples = '/api/examples';
 	case ExampleProjects = '/api/examples/{slug:[a-z0-9-]+}/projects';
+	case ProjectImport = '/api/projects/import';
 	case Project = '/api/projects/{projectId:number}';
+	case ProjectExport = '/api/projects/{projectId:number}/export';
 	case ProjectFloors = '/api/projects/{projectId:number}/floors';
 	case ProjectFloor = '/api/projects/{projectId:number}/floors/{floorId:number}';
 	case ProjectFloorScene = '/api/projects/{projectId:number}/floors/{floorId:number}/scene';
