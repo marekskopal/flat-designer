@@ -1,0 +1,65 @@
+name: E2E
+
+# The whole stack built and started as a server would run it, then the smoke test through the browser
+# (frontend/scripts/smoke.mjs): sign up, a project with walls, a room and a door, a share link, the example.
+on:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+
+jobs:
+    smoke:
+        name: Smoke test
+        runs-on: ubuntu-latest
+        timeout-minutes: 40
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Prepare .env with generated secrets, sign-up open
+              run: |
+                  make env
+                  sed -i 's/^SIGN_UP_ENABLED=.*/SIGN_UP_ENABLED=1/' .env
+
+            - name: Build and start the stack
+              run: docker compose up -d --build --wait
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v6
+              with:
+                  version: 10
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: '24'
+                  cache: 'pnpm'
+                  cache-dependency-path: frontend/pnpm-lock.yaml
+
+            - name: Install dependencies
+              working-directory: frontend
+              run: pnpm install --frozen-lockfile
+
+            - name: Install Chromium
+              working-directory: frontend
+              run: pnpm exec playwright install --with-deps chromium
+
+            # No GPU on the runner: WebGL through SwiftShader.
+            - name: Run the smoke test
+              working-directory: frontend
+              env:
+                  FD_URL: http://localhost:4400
+                  FD_SOFTWARE_GL: '1'
+              run: node scripts/smoke.mjs
+
+            - name: Upload the failure's screenshot
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: smoke-results
+                  path: frontend/smoke-results/
+                  retention-days: 7
+
+            - name: Dump docker logs on failure
+              if: failure()
+              run: docker compose logs --no-color

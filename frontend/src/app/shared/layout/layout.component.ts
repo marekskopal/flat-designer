@@ -5,6 +5,9 @@ import {AlertService} from '@app/services/alert.service';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
 
+/** Where "Report a problem" leads: a new issue in the project's GitHub repository (its templates ask what is needed). */
+const ReportProblemUrl = 'https://github.com/marekskopal/izbik/issues/new/choose';
+
 /**
  * Shell of the signed-in app: top bar with navigation and the user's menu, content below; while the user's email is not
  * confirmed (and the server sends mail), a banner offers to send the link again.
@@ -20,6 +23,7 @@ import {CurrentUserService} from '@app/services/current-user.service';
 })
 export class LayoutComponent implements OnInit {
     protected readonly currentUser = inject(CurrentUserService);
+    protected readonly reportUrl = ReportProblemUrl;
     protected readonly menuOpen = signal(false);
     protected readonly resending = signal(false);
     private readonly auth = inject(AuthenticationService);

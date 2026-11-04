@@ -1,4 +1,4 @@
-.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models example-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models example-models screenshots smoke benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -131,6 +131,12 @@ screenshots:
 	@cd frontend && pnpm exec playwright install chromium >/dev/null && \
 		FD_PROJECT=$(PROJECT) FD_EMAIL='$(or $(EMAIL),$(SCREENSHOTS_EMAIL))' FD_PASSWORD='$(or $(PASSWORD),$(SCREENSHOTS_PASSWORD))' FD_VIEWS="$(VIEWS)" FD_VIEWS_ONLY="$(VIEWS_ONLY)" FD_ROOM="$(ROOM)" \
 		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) FD_APP_PATH=$(APP_PATH) node scripts/screenshots.mjs
+
+## End-to-end smoke test of the running stack through the browser (needs SIGN_UP_ENABLED=1): sign up, a project with
+## walls, a room and a door, a share link, the example (FD_SOFTWARE_GL=1 without a GPU, FD_HEADED=1 to watch)
+smoke:
+	@cd frontend && pnpm exec playwright install chromium >/dev/null && \
+		FD_URL=$(or $(URL),http://localhost:$(or $(PROXY_PORT),4400)) FD_APP_PATH=$(APP_PATH) node scripts/smoke.mjs
 
 ## Measure the rendering cost of a project's saved views into frontend/benchmarks (needs the running stack):
 ## make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… [VIEWS="Tour ·"] [SCENARIOS=fast-day,…] [FRAMES=120] [RUNS=3]

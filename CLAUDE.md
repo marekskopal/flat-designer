@@ -1132,5 +1132,6 @@ format is the text in `FurnitureTools::Format`.
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |
 | `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `izbik_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
+| `make smoke` | Browser smoke test of the running stack (`frontend/scripts/smoke.mjs`, sign-up open; CI's E2E workflow): sign up, walls, a room, a door, a share link, the example |
 | `make benchmark PROJECT=… EMAIL=… PASSWORD=… [BASELINE=…]` | Time the rendering of a project's saved views (I-58) |
 | `make reset-db` | Drop the database and file volumes and re-seed |

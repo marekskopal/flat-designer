@@ -63,6 +63,7 @@
 }
 
 .nav a,
+.user__report,
 .user__name {
     padding: 6px 10px;
     border-radius: $radius-6;
@@ -80,6 +81,10 @@
         color: $color-text;
         background: $color-accent-soft;
     }
+}
+
+.user__report {
+    flex: none;
 }
 
 .user__name {
@@ -195,6 +200,7 @@
     }
 
     .nav a,
+    .user__report,
     .user__name {
         max-width: none;
         padding: 12px;

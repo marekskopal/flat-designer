@@ -1,0 +1,20 @@
+name: Suggest an improvement
+description: An idea for Izbik, or something it could do better.
+labels: [enhancement]
+body:
+    - type: textarea
+      id: problem
+      attributes:
+          label: What you are trying to do
+          description: The design task or situation, rather than the solution (e.g. "draw a mansard roof", "price the tiles of a bathroom").
+      validations:
+          required: true
+    - type: textarea
+      id: idea
+      attributes:
+          label: How it could work
+          description: Your idea, how other tools do it, sketches or screenshots.
+    - type: textarea
+      id: else
+      attributes:
+          label: Anything else

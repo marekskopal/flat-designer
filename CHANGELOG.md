@@ -21,6 +21,8 @@ The first public beta, for running on a server of your own.
 - Production setup: published images on GHCR (`make deploy`, `IZBIK_VERSION`), `make backup` / `make restore` for
   the database and the stored files, a nonce-based Content-Security-Policy, and a
   [self-hosting guide](docs/self-hosting.md).
+- For contributors: CONTRIBUTING.md, SECURITY.md, issue and pull request templates, a browser smoke test in CI
+  (`make smoke`) and *Report a problem* in the app's header.
 
 ### Changed
 

@@ -1,0 +1,51 @@
+name: Report a problem
+description: Something in Izbik does not work as it should.
+labels: [bug]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for reporting. A security problem goes to a [private security advisory](https://github.com/marekskopal/izbik/security/advisories/new) instead, never here.
+    - type: textarea
+      id: what
+      attributes:
+          label: What happened
+          description: What you did, what you expected and what happened instead. Screenshots help, especially of the 3D view.
+      validations:
+          required: true
+    - type: textarea
+      id: steps
+      attributes:
+          label: Steps to reproduce
+          description: The shortest way to see it again, e.g. starting from the demo flat example.
+          placeholder: |
+              1. Start from the example
+              2. Edit, select the kitchen wall
+              3. …
+    - type: input
+      id: version
+      attributes:
+          label: Version
+          description: The release (IZBIK_VERSION, or the git tag or commit you built), or "izbik.com".
+      validations:
+          required: true
+    - type: dropdown
+      id: install
+      attributes:
+          label: How it runs
+          options:
+              - Published images (make deploy)
+              - Built from source (make up)
+              - Development (make dev)
+              - The hosted service
+    - type: input
+      id: browser
+      attributes:
+          label: Browser and system
+          placeholder: e.g. Firefox 140 on Windows 11, a laptop's integrated graphics
+    - type: textarea
+      id: logs
+      attributes:
+          label: Logs
+          description: The browser console's errors, and on a server of your own `docker compose logs backend proxy --tail 100`.
+          render: text
