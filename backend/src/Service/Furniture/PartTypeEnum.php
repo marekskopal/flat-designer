@@ -92,7 +92,8 @@ enum PartTypeEnum: string
 
 	/**
 	 * How a front, or an assembly moving as one leaf (a drawer with its box), opens in the viewer: `opens`
-	 * swing (a door on its `hinge` edge, default the side away from `handleSide`), slide (a drawer, `travel` mm out),
+	 * swing (a door on its `hinge` edge, default the side away from `handleSide`, hanging on `hingeType` concealed cup
+	 * hinges, the default, which open it at most 155°, or a butt hinge), slide (a drawer, `travel` mm out),
 	 * lift (a flap turning up about its top edge), fold (a bi-fold flap folding `foldAt` mm below its top, at most half
 	 * way) or parallel (a flap rising `travel` mm upright), or none; `angle` is how far it turns (degrees) and `softClose`
 	 * damps its closing. They change the drawing only; the cut list splits a folding front in two.
@@ -100,6 +101,7 @@ enum PartTypeEnum: string
 	private const array Motion = [
 		'opens' => ['swing', 'slide', 'lift', 'fold', 'parallel', 'none'],
 		'hinge' => ['left', 'right'],
+		'hingeType' => ['concealed', 'butt'],
 		'angle' => 'opening',
 		'travel' => 'mm',
 		'foldAt' => 'mm',
@@ -110,6 +112,7 @@ enum PartTypeEnum: string
 	private const array AssemblyMotion = [
 		'opens' => ['swing', 'slide', 'lift', 'parallel', 'none'],
 		'hinge' => ['left', 'right'],
+		'hingeType' => ['concealed', 'butt'],
 		'angle' => 'opening',
 		'travel' => 'mm',
 		'softClose' => 'bool',

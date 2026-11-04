@@ -7,7 +7,7 @@ namespace Izbik\Service\Furniture;
 use Izbik\Service\Furniture\Expression\Node\Values;
 
 /**
- * Turns a furniture definition (decoded JSON, format 1, see docs/furniture-definitions-plan.md) and an item's size and
+ * Turns a furniture definition (decoded JSON, format 1, see `FurnitureTools::Format`) and an item's size and
  * parameter values into its parts. Twin: frontend/src/app/viewer/engine/custom/definition.ts, both checked against
  * tests/fixtures/furniture-definitions.json.
  *

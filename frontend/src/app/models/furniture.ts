@@ -1,7 +1,7 @@
 import {DefinitionScheduleSettings, ElectricalCategory} from '@app/models/electrical-schedule';
 /**
  * Furniture definitions (format 1): a custom piece of furniture as parameters and parts whose position and size are
- * expressions (see docs/furniture-definitions-plan.md and `viewer/engine/custom`). Lengths are mm; the frame has its
+ * expressions (see `viewer/engine/custom`). Lengths are mm; the frame has its
  * origin at the item's left-bottom-back corner: x along the width, y up, z towards the front.
  */
 

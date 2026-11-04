@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import {MM} from '../plan-geometry';
 import {ResolvedPart} from './definition';
+import {ConcealedMaxAngle, concealedOffset, HingeType, poseHingeLinks} from './hinges';
 
 /**
  * Openable fronts of custom furniture. A `front` part opens by its `opens` option (a door swings, a drawer
@@ -39,6 +40,10 @@ export interface FrontSpec {
     /** The front's box, or the moving assembly's. */
     box: FrontBox;
     hinge: 'left' | 'right';
+    /** A swinging door's hinges: concealed (cup) hinges, the default, or a butt hinge. */
+    hingeType: HingeType;
+    /** The box of the door a swinging leaf hangs by (an assembly's front), its hinges' frame; else the box. */
+    door: FrontBox;
     /** Degrees a swinging door or a flap turns (a bi-fold's upper panel). */
     angle: number;
     /** Mm a drawer slides out or a parallel flap rises. */
@@ -52,6 +57,8 @@ export interface FrontSpec {
 export const FoldJoint = 2;
 
 const DefaultAngles: Record<FrontMotion, number> = {swing: 105, lift: 100, fold: 90, slide: 0, parallel: 0};
+/** A door on concealed hinges opens this far by default. */
+const ConcealedAngle = 110;
 /** A drawer slides out this share of its reach into the item. */
 const SlideShare = 0.75;
 /** A parallel flap rises its height and this much more, mm. */
@@ -59,9 +66,10 @@ const ParallelClearance = 10;
 
 /**
  * How the part opens, or null when it does not: a part of a moving assembly by its `leaf`, a front by its own
- * options (`ordinal` numbers the fronts of their own in part order, for their key).
+ * options (`ordinal` numbers the fronts of their own in part order, for their key). `doors` are the boxes of the
+ * moving assemblies' fronts by leaf key (`leafDoors()`), where a swinging assembly's hinges go.
  */
-export function frontSpec(part: ResolvedPart, ordinal: number): FrontSpec | null {
+export function frontSpec(part: ResolvedPart, ordinal: number, doors: ReadonlyMap<string, LeafDoor> = new Map()): FrontSpec | null {
     const leaf = part.props['leaf'];
     if (isRecord(leaf)) {
         const box = Array.isArray(leaf['box']) ? (leaf['box'] as unknown[]) : [];
@@ -69,7 +77,7 @@ export function frontSpec(part: ResolvedPart, ordinal: number): FrontSpec | null
         const motion = motionOf(leaf['opens']);
         return motion === null || motion === 'fold'
             ? null
-            : specOf(String(leaf['key']), motion, {x, y, z, w, h, d}, leaf, hingeOf(leaf['hinge'], 'left'));
+            : specOf(String(leaf['key']), motion, {x, y, z, w, h, d}, leaf, hingeOf(leaf['hinge'], 'left'), doors.get(String(leaf['key'])));
     }
     if (part.type !== 'front') {
         return null;
@@ -85,7 +93,51 @@ export function frontSpec(part: ResolvedPart, ordinal: number): FrontSpec | null
     return specOf(`front:${ordinal}`, motion, box, part.props, hingeOf(part.props['hinge'], fallback));
 }
 
-function specOf(key: string, motion: FrontMotion, box: FrontBox, options: Record<string, unknown>, hinge: 'left' | 'right'): FrontSpec {
+/** The door a moving assembly hangs by: its box, and the hinge type its front gives (null: none). */
+export interface LeafDoor extends FrontBox {
+    hingeType: HingeType | null;
+}
+
+/**
+ * The door of each moving assembly, by its leaf key: its first front, else its part reaching furthest out (a rack
+ * hung as a door), so its hinges stand at its front, not at the back of its box.
+ */
+export function leafDoors(parts: readonly ResolvedPart[]): Map<string, LeafDoor> {
+    const doors = new Map<string, LeafDoor>();
+    const fronts = new Set<string>();
+    for (const part of parts) {
+        const leaf = part.props['leaf'];
+        if (!isRecord(leaf)) {
+            continue;
+        }
+        const key = String(leaf['key']);
+        const known = doors.get(key);
+        const front = part.type === 'front';
+        if (fronts.has(key) || (known !== undefined && !front && part.z + part.d <= known.z + known.d)) {
+            continue;
+        }
+        const hingeType = part.props['hingeType'] === 'butt' || part.props['hingeType'] === 'concealed' ? part.props['hingeType'] : null;
+        doors.set(key, {x: part.x, y: part.y, z: part.z, w: part.w, h: part.h, d: part.d, hingeType: front ? hingeType : null});
+        if (front) {
+            fronts.add(key);
+        }
+    }
+    return doors;
+}
+
+function specOf(
+    key: string,
+    motion: FrontMotion,
+    box: FrontBox,
+    options: Record<string, unknown>,
+    hinge: 'left' | 'right',
+    leafDoor?: LeafDoor,
+): FrontSpec {
+    // An assembly's own hinge type, else its front's.
+    const given = options['hingeType'] ?? leafDoor?.hingeType;
+    const hingeType: HingeType = given === 'butt' ? 'butt' : 'concealed';
+    const door: FrontBox = leafDoor === undefined ? box : {x: leafDoor.x, y: leafDoor.y, z: leafDoor.z, w: leafDoor.w, h: leafDoor.h, d: leafDoor.d};
+    const concealed = motion === 'swing' && hingeType === 'concealed';
     const number = (name: string): number | null => (typeof options[name] === 'number' && options[name] > 0 ? options[name] : null);
     const travel = number('travel') ?? (motion === 'parallel' ? box.h + ParallelClearance : Math.round(SlideShare * (box.z + box.d)));
     const fold = motion === 'fold' ? foldPanels(box.h, number('foldAt')) : null;
@@ -95,7 +147,9 @@ function specOf(key: string, motion: FrontMotion, box: FrontBox, options: Record
         motion: motion === 'fold' && fold === null ? 'lift' : motion,
         box,
         hinge,
-        angle: Math.min(number('angle') ?? DefaultAngles[motion], 180),
+        hingeType,
+        door,
+        angle: Math.min(number('angle') ?? (concealed ? ConcealedAngle : DefaultAngles[motion]), concealed ? ConcealedMaxAngle : 180),
         travel: Math.max(travel, 1),
         softClose: options['softClose'] === true,
         fold,
@@ -131,11 +185,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Where a pivot of the front stands while it is closed, mm in the parts frame. */
 export function pivotPoint(spec: FrontSpec, pivot: FrontPivot): THREE.Vector3 {
-    const {x, y, z, w, h} = spec.box;
+    const {x, y, z, h} = spec.box;
     switch (spec.motion) {
-        case 'swing':
-            // The hinge edge of the back face.
-            return new THREE.Vector3(spec.hinge === 'left' ? x : x + w, y, z);
+        case 'swing': {
+            // The hinge edge of the door's back face.
+            const door = spec.door;
+            return new THREE.Vector3(spec.hinge === 'left' ? door.x : door.x + door.w, door.y, door.z);
+        }
         case 'lift':
             return new THREE.Vector3(x, y + h, z);
         case 'fold':
@@ -157,10 +213,15 @@ export function pivotPose(spec: FrontSpec, pivot: FrontPivot, t: number): PivotP
     const rotation = new THREE.Euler();
     const angle = THREE.MathUtils.degToRad(spec.angle) * t;
     switch (spec.motion) {
-        case 'swing':
-            // The free edge comes out (+z).
+        case 'swing': {
+            // The free edge comes out (+z); a concealed hinge's linkage carries the door forward and in as it turns.
             rotation.y = spec.hinge === 'left' ? -angle : angle;
+            if (spec.hingeType === 'concealed') {
+                const [u, v] = concealedOffset(spec.angle * t);
+                offset.set(spec.hinge === 'left' ? u : -u, 0, v);
+            }
             break;
+        }
         case 'slide':
             offset.z = spec.travel * t;
             break;
@@ -207,6 +268,9 @@ export function setFrontPose(front: THREE.Object3D, t: number): void {
         const pose = pivotPose(spec, pivot, t);
         child.position.copy(pivotPoint(spec, pivot).add(pose.offset)).multiplyScalar(MM);
         child.rotation.copy(pose.rotation);
+    }
+    if (spec.motion === 'swing' && spec.hingeType === 'concealed') {
+        poseHingeLinks(front, spec, spec.angle * t);
     }
 }
 

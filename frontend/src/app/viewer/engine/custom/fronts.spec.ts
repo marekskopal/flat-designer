@@ -21,6 +21,7 @@ import {
     pivotPose,
     setFrontPose,
 } from './fronts';
+import {concealedOffset, frontHingeHeights,FrontLinkTag} from './hinges';
 
 const library = (): MaterialLibrary =>
     new MaterialLibrary(
@@ -119,12 +120,27 @@ const posed = (spec: FrontSpec, pivot: 'main' | 'upper' | 'lower', t: number, po
 
 describe('frontSpec', () => {
     it('swings a door on the side away from its handle and slides a drawer out', () => {
-        expect(frontSpec(part({kind: 'door'}), 0)).toMatchObject({key: 'front:0', motion: 'swing', hinge: 'left', angle: 105, softClose: false});
+        expect(frontSpec(part({kind: 'door'}), 0)).toMatchObject({
+            key: 'front:0',
+            motion: 'swing',
+            hinge: 'left',
+            hingeType: 'concealed',
+            angle: 110,
+            softClose: false,
+        });
         expect(frontSpec(part({kind: 'door', handleSide: 'left'}), 1)?.hinge).toBe('right');
         expect(frontSpec(part({kind: 'door', handleSide: 'left', hinge: 'left'}), 1)?.hinge).toBe('left');
         expect(frontSpec(part({kind: 'drawer', softClose: true}), 0)).toMatchObject({motion: 'slide', travel: 420, softClose: true});
         expect(frontSpec(part({opens: 'none'}), 0)).toBeNull();
         expect(frontSpec(part({}, {type: 'board'}), 0)).toBeNull();
+    });
+
+    it('opens a concealed hinge 155° at most, a butt hinge 180°', () => {
+        expect(frontSpec(part({kind: 'door', hingeType: 'butt'}), 0)).toMatchObject({hingeType: 'butt', angle: 105});
+        expect(frontSpec(part({kind: 'door', angle: 170}), 0)?.angle).toBe(155);
+        expect(frontSpec(part({kind: 'door', angle: 155}), 0)?.angle).toBe(155);
+        expect(frontSpec(part({kind: 'door', hingeType: 'butt', angle: 170}), 0)?.angle).toBe(170);
+        expect(frontSpec(part({opens: 'lift', angle: 170}), 0)?.angle).toBe(170);
     });
 
     it('moves a part of an opening assembly with it', () => {
@@ -184,7 +200,167 @@ describe('poses', () => {
     });
 });
 
+describe('hinges', () => {
+    it('keeps a door on concealed hinges in front of the carcass and inside its side while it swings', () => {
+        // The cabinet's left side is 18 mm thick, its front flush with the door's back (z 540); the door is 20 mm thick.
+        const spec = frontSpec(part({kind: 'door', angle: 155}), 0) as FrontSpec;
+        expect(pivotPose(spec, 'main', 0).offset.length()).toBe(0);
+        for (let degrees = 0; degrees <= 155; degrees += 1) {
+            const t = degrees / 155;
+            const backEdge = posed(spec, 'main', t, new THREE.Vector3(0, 400, 540));
+            const frontEdge = posed(spec, 'main', t, new THREE.Vector3(0, 400, 560));
+            // Never out past the side's outer face (x 0) by more than half a millimetre…
+            expect(Math.min(backEdge.x, frontEdge.x), `${degrees}°`).toBeGreaterThan(-0.5);
+            // … nor back into the carcass.
+            for (const u of [0, 10, 20, 40, 80, 300, 600]) {
+                const back = posed(spec, 'main', t, new THREE.Vector3(u, 400, 540));
+                if (back.x > 0) {
+                    expect(back.z, `${degrees}° at ${u}`).toBeGreaterThan(539.4);
+                }
+            }
+        }
+        // Open square, it has come forward and in over the side, a little into the opening.
+        const square = posed(spec, 'main', 90 / 155, new THREE.Vector3(0, 400, 540));
+        expect(square.z).toBeGreaterThan(545);
+        expect(square.x).toBeGreaterThan(18);
+        expect(square.x).toBeLessThan(32);
+    });
+
+    it('turns a door on a butt hinge about its back hinge edge', () => {
+        const spec = frontSpec(part({kind: 'door', hingeType: 'butt'}), 0) as FrontSpec;
+        expect(posed(spec, 'main', 1, new THREE.Vector3(0, 400, 540)).distanceTo(new THREE.Vector3(0, 400, 540))).toBeCloseTo(0, 6);
+        expect(pivotPose(spec, 'main', 1).offset.length()).toBe(0);
+    });
+
+    it('moves the linkage continuously', () => {
+        let last = concealedOffset(0);
+        expect(last).toEqual([0, 0]);
+        for (let degrees = 0.25; degrees <= 155; degrees += 0.25) {
+            const next = concealedOffset(degrees);
+            expect(Math.hypot(next[0] - last[0], next[1] - last[1]), `${degrees}°`).toBeLessThan(0.5);
+            last = next;
+        }
+    });
+
+    it('spreads more hinges along a taller door', () => {
+        expect(frontHingeHeights(700)).toEqual([100, 600]);
+        expect(frontHingeHeights(1200)).toEqual([100, 600, 1100]);
+        expect(frontHingeHeights(1800)).toHaveLength(4);
+        expect(frontHingeHeights(2100)).toHaveLength(5);
+        expect(frontHingeHeights(200)).toEqual([50, 150]);
+    });
+});
+
 describe('the builder', () => {
+    it('hangs a door on concealed hinges: cups on the door, plates on the side, links joining them', () => {
+        const {body} = item(cabinet({kind: 'door'}));
+        const door = frontObjects(body)[0];
+        const links = door.children.filter((c) => c.userData[FrontLinkTag] !== undefined);
+        expect(links).toHaveLength(4);
+        // The plates stand on the left side's inner face (18 mm in from the door's hinge edge at x −300).
+        const plates = body.children.filter((c) => c instanceof THREE.Mesh && c.userData['partName'] === 'Hinge');
+        expect(plates.length).toBeGreaterThan(0);
+        expect(Math.min(...plates.map((p) => box(p)[0]))).toBe(-282);
+        // Every link keeps its length, from the arm's nose to the cup, as the door opens.
+        const ends = (link: THREE.Object3D): number => {
+            const geometry = (link as THREE.Mesh).geometry as THREE.BoxGeometry;
+            return geometry.parameters.width;
+        };
+        const lengths = links.map(ends);
+        setFrontPose(door, 1);
+        expect(links.map(ends)).toEqual(lengths);
+        mergeStatic(body);
+        expect(frontObjects(body)[0].children.filter((c) => c.userData[FrontLinkTag] !== undefined)).toHaveLength(4);
+    });
+
+    it('turns the links with the door: their arm ends stay, their cup ends follow it', () => {
+        const {body} = item(cabinet({kind: 'door'}));
+        const door = frontObjects(body)[0];
+        // A link runs from its arm pivot (−x) to its cup pivot (+x).
+        const ends = (side: number): THREE.Vector3[] => {
+            body.updateMatrixWorld(true);
+            return door.children
+                .filter((c) => c.userData[FrontLinkTag] !== undefined)
+                .map((link) => {
+                    const length = ((link as THREE.Mesh).geometry as THREE.BoxGeometry).parameters.width;
+                    return new THREE.Vector3((side * length) / 2, 0, 0).applyMatrix4(link.matrixWorld);
+                });
+        };
+        const [arms, cups] = [ends(-1), ends(1)];
+        setFrontPose(door, 1);
+        ends(-1).forEach((p, i) => expect(p.distanceTo(arms[i])).toBeLessThan(1e-6));
+        ends(1).forEach((p, i) => expect(p.distanceTo(cups[i])).toBeGreaterThan(0.003));
+    });
+
+    it('hides the links while the door is closed', () => {
+        const {body} = item(cabinet({kind: 'door'}));
+        const door = frontObjects(body)[0];
+        const links = door.children.filter((c) => c.userData[FrontLinkTag] !== undefined);
+        expect(links.every((l) => !l.visible)).toBe(true);
+        setFrontPose(door, 0.5);
+        expect(links.every((l) => l.visible)).toBe(true);
+        setFrontPose(door, 0);
+        expect(links.every((l) => !l.visible)).toBe(true);
+    });
+
+    it('draws only the cups of a door hinged where no side stands', () => {
+        const definition = cabinet({kind: 'door', hinge: 'right', x: 0, w: 300});
+        const {body} = item(definition);
+        const door = frontObjects(body)[0];
+        expect(door.children.filter((c) => c.userData[FrontLinkTag] !== undefined)).toHaveLength(0);
+        const hinges = (root: THREE.Object3D): number => root.children.filter((c) => c.userData['partName'] === 'Hinge').length;
+        expect(hinges(body)).toBe(0);
+        expect(hinges(door.children[0])).toBe(2);
+    });
+
+    it('takes no turned board for the side', () => {
+        const definition = cabinet({kind: 'door'});
+        (definition.parts[0] as unknown as Record<string, unknown>)['turn'] = 10;
+        const {body} = item(definition);
+        expect(frontObjects(body)[0].children.filter((c) => c.userData[FrontLinkTag] !== undefined)).toHaveLength(0);
+    });
+
+    it('hangs a swinging assembly by its front, of the hinge type the front gives', () => {
+        const definition = {
+            format: 1,
+            size: {width: 600, depth: 560, height: 800},
+            parts: [
+                {type: 'board', name: 'Side', repeat: {count: 2}, x: 'i * (W - 18)', y: 0, z: 0, w: 18, h: 'H', d: 'D - 20'},
+                {
+                    type: 'assembly',
+                    name: 'Larder door',
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    w: 'W',
+                    h: 'H',
+                    d: 'D',
+                    opens: 'swing',
+                    parts: [
+                        {type: 'board', name: 'Rack', x: 40, y: 100, z: 'AD - 120', w: 'AW - 80', h: 16, d: 100},
+                        {type: 'front', name: 'Door', x: 0, y: 0, z: 'AD - 20', w: 'AW', h: 'AH', d: 20, hingeType: 'butt'},
+                    ],
+                },
+            ],
+        } as unknown as FurnitureDefinitionBody;
+        const {body} = item(definition);
+        const spec = frontSpecOf(frontObjects(body)[0]);
+        expect(spec).toMatchObject({hingeType: 'butt', door: {z: 540, d: 20}});
+        // Without a front, the part reaching furthest out.
+        const rack = {...definition, parts: [definition.parts[0], {...definition.parts[1], parts: [definition.parts[1].parts?.[0]]}]};
+        expect(frontSpecOf(frontObjects(item(rack as FurnitureDefinitionBody).body)[0]).door).toMatchObject({z: 440, d: 100});
+    });
+
+    it('hangs a door on butt hinges: a barrel half on the door, half on the carcass', () => {
+        const {body} = item(cabinet({kind: 'door', hingeType: 'butt'}));
+        const door = frontObjects(body)[0];
+        expect(door.children.filter((c) => c.userData[FrontLinkTag] !== undefined)).toHaveLength(0);
+        const barrels = (root: THREE.Object3D): number =>
+            root.children.filter((c) => c instanceof THREE.Mesh && c.geometry instanceof THREE.CylinderGeometry).length;
+        expect(barrels(body)).toBe(2);
+        expect(barrels(door.children[0])).toBe(2);
+    });
+
     it('draws closed fronts where the parts are, each in its own tagged group', () => {
         const {body: fixed} = item(cabinet({opens: 'none'}));
         const {body} = item(cabinet({kind: 'door'}));
@@ -282,7 +458,7 @@ describe('FrontStates', () => {
         states.setAll(true, new Map(), false);
         states.apply(items);
         expect(states.isOpen(7, 'front:0')).toBe(true);
-        expect(frontObjects(body)[0].children[0].rotation.y).toBeCloseTo(-THREE.MathUtils.degToRad(105));
+        expect(frontObjects(body)[0].children[0].rotation.y).toBeCloseTo(-THREE.MathUtils.degToRad(110));
         states.toggle(7, frontObjects(body)[0]);
         expect(states.isOpen(7, 'front:0')).toBe(false);
     });

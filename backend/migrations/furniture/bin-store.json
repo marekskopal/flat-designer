@@ -89,6 +89,7 @@
     "kind": "door",
     "handle": "vertical",
     "handleSide": "right",
+    "hingeType": "butt",
     "x": "wall + i * bay + 5",
     "y": 60,
     "z": "D - 40",

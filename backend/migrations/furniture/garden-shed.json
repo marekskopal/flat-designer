@@ -132,6 +132,7 @@
     "kind": "door",
     "handle": "vertical",
     "handleSide": "right",
+    "hingeType": "butt",
     "x": "round((W - doorWidth) / 2)",
     "y": 0,
     "z": "D - 30",

@@ -382,6 +382,16 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 			'an assembly does not fold' => [['parts', 0, 'opens'], 'fold', 'parts[0].opens: Must be one of "swing", "slide", "lift", "parallel", "none".'],
 			'an opening angle out of range' => [['parts', 0, 'parts', 0, 'angle'], 200, 'parts[0].parts[0].angle: Must be degrees from 1 to 180.'],
 			'an unknown hinge' => [['parts', 0, 'parts', 0, 'hinge'], 'top', 'parts[0].parts[0].hinge: Must be one of "left", "right".'],
+			'a concealed hinge opening too far' => [
+				['parts', 0, 'parts', 0, 'angle'],
+				170,
+				'parts[0].parts[0].angle: A door on concealed hinges opens at most 155 degrees; use hingeType "butt" to open it further.',
+			],
+			'an unknown hinge type' => [
+				['parts', 0, 'parts', 0, 'hingeType'],
+				'piano',
+				'parts[0].parts[0].hingeType: Must be one of "concealed", "butt".',
+			],
 			'an unknown option written as an expression' => [
 				['parts', 0, 'parts', 0, 'grian'],
 				['expr' => "'vertical'"],

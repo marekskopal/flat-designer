@@ -11145,6 +11145,120 @@
    ]
   },
   {
+   "name": "a swinging assembly carries its hinge type to its parts' leaf",
+   "definition": {
+    "format": 1,
+    "size": {
+     "width": 400,
+     "depth": 300,
+     "height": 600
+    },
+    "parts": [
+     {
+      "type": "assembly",
+      "name": "Larder door",
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "w": "W",
+      "h": "H",
+      "d": "D",
+      "opens": "swing",
+      "hinge": "right",
+      "hingeType": "butt",
+      "angle": 120,
+      "parts": [
+       {
+        "type": "front",
+        "name": "Door",
+        "x": 0,
+        "y": 0,
+        "z": "AD - 18",
+        "w": "AW",
+        "h": "AH",
+        "d": 18
+       },
+       {
+        "type": "board",
+        "name": "Rack",
+        "x": 20,
+        "y": 100,
+        "z": "AD - 118",
+        "w": "AW - 40",
+        "h": 16,
+        "d": 100
+       }
+      ]
+     }
+    ]
+   },
+   "size": {
+    "width": 400,
+    "depth": 300,
+    "height": 600
+   },
+   "parts": [
+    {
+     "name": "Door",
+     "type": "front",
+     "index": null,
+     "x": 0,
+     "y": 0,
+     "z": 282,
+     "w": 400,
+     "h": 600,
+     "d": 18,
+     "material": null,
+     "props": {
+      "leaf": {
+       "key": "parts[0]",
+       "box": [
+        0,
+        0,
+        0,
+        400,
+        600,
+        300
+       ],
+       "opens": "swing",
+       "hinge": "right",
+       "hingeType": "butt",
+       "angle": 120
+      }
+     }
+    },
+    {
+     "name": "Rack",
+     "type": "board",
+     "index": null,
+     "x": 20,
+     "y": 100,
+     "z": 182,
+     "w": 360,
+     "h": 16,
+     "d": 100,
+     "material": null,
+     "props": {
+      "leaf": {
+       "key": "parts[0]",
+       "box": [
+        0,
+        0,
+        0,
+        400,
+        600,
+        300
+       ],
+       "opens": "swing",
+       "hinge": "right",
+       "hingeType": "butt",
+       "angle": 120
+      }
+     }
+    }
+   ]
+  },
+  {
    "name": "a part of an opening assembly cannot open on its own",
    "definition": {
     "format": 1,

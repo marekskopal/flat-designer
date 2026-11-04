@@ -12,7 +12,8 @@ import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {FloorRoofs} from '../under-roof';
 import {evaluateDefinition, ResolvedPart} from './definition';
-import {FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, pivotPoint} from './fronts';
+import {FrontBox, FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, leafDoors, pivotPoint} from './fronts';
+import {buildFrontHinges} from './hinges';
 import {taperedLeg} from './legs';
 
 /** The scene's furniture definitions by id. */
@@ -79,11 +80,12 @@ export function buildCustomItemBody(
         const slots = Array.isArray(definition.definition.materialSlots) ? definition.definition.materialSlots : [];
         const group = new THREE.Group();
         const fronts = new Map<string, THREE.Group>();
+        const doors = leafDoors(parts);
         let ordinal = 0;
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
-            const spec = frontSpec(part, ordinal);
+            const spec = frontSpec(part, ordinal, doors);
             if (spec !== null && part.props['leaf'] === undefined) {
                 ordinal++;
             }
@@ -103,6 +105,7 @@ export function buildCustomItemBody(
             mesh.position.z -= (item.depth / 2) * MM;
             group.add(mesh);
         }
+        addHinges(fronts, parts, group, item, materials);
         return group;
     } catch (e) {
         return placeholder(item, e instanceof Error ? e.message : String(e));
@@ -157,6 +160,61 @@ function frontGroup(fronts: Map<string, THREE.Group>, spec: FrontSpec, group: TH
         group.add(front);
     }
     return front;
+}
+
+/** Hinge metal: nickel-plated steel. */
+const HingeColor = '#c4c7ca';
+
+/**
+ * Hangs each swinging door on its hinges (`hinges.ts`): what turns with it in its pivot, a concealed hinge's links in
+ * its group, the rest on the carcass, beside the side panel behind its hinge edge.
+ */
+function addHinges(
+    fronts: Map<string, THREE.Group>,
+    parts: readonly ResolvedPart[],
+    group: THREE.Group,
+    item: Item,
+    materials: MaterialLibrary,
+): void {
+    const material = materials.plain(HingeColor, 0.3, 0.85);
+    for (const front of fronts.values()) {
+        const spec = front.userData[FrontTag] as FrontSpec;
+        if (spec.motion !== 'swing') {
+            continue;
+        }
+        const hinges = buildFrontHinges(spec, sideInner(parts, spec.door, spec.hinge), material);
+        hinges.door.forEach((mesh) => addToPivot(front, 'main', mesh, spec));
+        hinges.links.forEach((link) => front.add(link));
+        for (const mesh of hinges.carcass) {
+            mesh.position.x -= (item.width / 2) * MM;
+            mesh.position.z -= (item.depth / 2) * MM;
+            group.add(mesh);
+        }
+    }
+}
+
+/** The thickest a board can be to count as the side a door hangs on, mm. */
+const SideMaxThickness = 50;
+
+/**
+ * How far in from the door's hinge edge the inner face of the carcass side behind it lies (mm): the upright board
+ * that does not move, is neither turned nor tilted, whose front meets the door's back and that lies under the hinge
+ * edge; null when there is none (a door hinged where no side stands, or on a slanted one).
+ */
+function sideInner(parts: readonly ResolvedPart[], door: FrontBox, hinge: 'left' | 'right'): number | null {
+    for (const part of parts) {
+        const slanted = (part.props['turn'] ?? 0) !== 0 || (part.props['tilt'] ?? 0) !== 0;
+        if (part.type !== 'board' || part.props['leaf'] !== undefined || slanted || part.w > SideMaxThickness || part.w >= part.h) {
+            continue;
+        }
+        const front = part.z + part.d;
+        const overlaps = part.y < door.y + door.h && part.y + part.h > door.y;
+        const near = hinge === 'left' ? part.x - door.x : door.x + door.w - (part.x + part.w);
+        if (overlaps && front >= door.z - 5 && front <= door.z + 0.5 && near <= 1 && near + part.w > 1) {
+            return near + part.w;
+        }
+    }
+    return null;
 }
 
 /** Puts a part (built in the parts frame) into the front's pivot, which stands on the motion's axis, closed. */
