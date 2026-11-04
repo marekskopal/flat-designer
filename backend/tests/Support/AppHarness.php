@@ -106,8 +106,6 @@ final class AppHarness
 		return self::$googleAuth ??= new FakeGoogleAuthService();
 	}
 
-	/** Replaces S3 for the whole suite. */
-
 	/** Open by default; a test closes it with `->enabled = false` (reset after each test). */
 	public static function signUp(): SignUpConfig
 	{
@@ -119,6 +117,7 @@ final class AppHarness
 		return sys_get_temp_dir() . '/izbik-test-examples-' . getmypid();
 	}
 
+	/** Replaces S3 for the whole suite. */
 	public static function fileStorage(): InMemoryFileStorage
 	{
 		return self::$fileStorage ??= new InMemoryFileStorage();
