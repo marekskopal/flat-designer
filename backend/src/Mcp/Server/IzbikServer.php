@@ -85,7 +85,8 @@ final readonly class IzbikServer
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);
-		upload_project_file / upload_model take small files as base64.
+		upload_project_file / upload_model take small files as base64. A project file (.izbik.zip or .izbik.json,
+		from a project page's Download) becomes a new project with request_project_import, the same way.
 
 		To work from a plan or photos the user uploaded, list them with list_project_files and look at them
 		with get_project_file (crop into a region and add a pixel grid to read positions exactly). Lay the plan
