@@ -6,6 +6,8 @@ versions follow [semantic versioning](https://semver.org). Upgrading is describe
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-04
+
 The first public beta, for running on a server of your own.
 
 ### Added
@@ -14,6 +16,10 @@ The first public beta, for running on a server of your own.
   plots with sloping terrain, furniture from parametric definitions and product models, materials and finishes,
   lighting, variants, a walkthrough, saved views, share links, review comments, versions, plans, elevations, sections
   and façades as PDF, a cut list, room and electrical schedules, quantities with costs, and an MCP server for AI agents.
+- Project files: download a project with its files and models as one zip (or the JSON alone) from its page, and
+  import one as a new project from the projects page, over REST or MCP, or with `make export-project` /
+  `make import-project`.
+- Cupboard doors hang on concealed hinges (or butt hinges), drawn in 3D and moving as the door opens.
 - Start from an example: a copy of the demo flat, opened at its tour (`make example-models` adds its CC0 models).
 - First steps guide on an empty floor, a shortcuts overlay (`?`) and a message where the browser lacks WebGL 2.
 - Accounts on a self-hosted server: sign-up closed unless `SIGN_UP_ENABLED=1`, admins add users and set passwords,
@@ -28,3 +34,6 @@ The first public beta, for running on a server of your own.
 
 - `make env` gives a new `.env` random database and MinIO passwords.
 - `BACKEND_CORS_ALLOWED_ORIGIN` defaults to empty (no cross-origin calls). Clear `*` in an existing `.env`.
+
+[Unreleased]: https://github.com/marekskopal/izbik/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/marekskopal/izbik/releases/tag/v0.1.0
