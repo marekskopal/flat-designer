@@ -256,7 +256,11 @@ make up      # build and start the stack on http://localhost:4400
 make admin   # create the first admin account (prompts for email and password)
 ```
 
-On the first run, `make up` creates `.env` from `.env.example` and generates the token and Mercure secrets. The
+To run Izbik on a server (published images, HTTPS, external S3, backups and upgrades), follow
+[docs/self-hosting.md](docs/self-hosting.md). What changed between releases is in [CHANGELOG.md](CHANGELOG.md).
+
+On the first run, `make up` creates `.env` from `.env.example` and generates the token and Mercure secrets, and random
+database and MinIO passwords. The
 backend applies pending database migrations on start, so a fresh database includes a sample project and the
 global material and furniture catalogues.
 
@@ -339,10 +343,14 @@ All settings are in `.env`. `.env.example` documents each variable. The most imp
 | `MYSQL_*` | Database connection |
 | `S3_*` | Object storage. Defaults to the bundled MinIO (console on `MINIO_CONSOLE_PORT`, default `4401`) |
 | `FILE_MAX_SIZE_MB` | Largest accepted upload |
+| `IZBIK_VERSION` | The published images `make deploy` runs (`latest`, or a version such as `0.1.0-beta`) |
 
 **HTTPS**: uncomment `COMPOSE_FILE` in `.env` to include `docker-compose.ssl.yml`, then set `PROXY_SSL_CERT` /
 `PROXY_SSL_KEY`, or run `make ssl-cert` to generate a self-signed localhost certificate. The stack then serves
 `https://localhost:4443` (`PROXY_PORT_SSL`), and the HTTP port redirects there.
+
+**Backups**: `make backup` writes the database and every stored file into `backups/<date-time>/`, and
+`make restore BACKUP=backups/<date-time>` puts them back (see [docs/self-hosting.md](docs/self-hosting.md#backups)).
 
 ## Development
 

@@ -11,6 +11,16 @@ interface FileStorageInterface
 
 	public function get(string $key): string;
 
+	/** The object with the content type it was stored with (for backups). */
+	public function fetch(string $key): StoredObject;
+
+	/**
+	 * Every key in the storage, for backups.
+	 *
+	 * @return list<string>
+	 */
+	public function keys(): array;
+
 	/** Best effort: a failure is logged, not thrown, so a missing object never blocks deleting its row. */
 	public function delete(string $key): void;
 }

@@ -2,6 +2,8 @@ name: izbik
 
 services:
     proxy:
+        # Built from source by `make up`, or the published image of IZBIK_VERSION by `make deploy`.
+        image: ${IZBIK_IMAGES:-ghcr.io/marekskopal/izbik}-proxy:${IZBIK_VERSION:-latest}
         build:
             context: ./proxy
             dockerfile: Dockerfile
@@ -24,6 +26,8 @@ services:
             - backend
 
     frontend:
+        # Built from source by `make up`, or the published image of IZBIK_VERSION by `make deploy`.
+        image: ${IZBIK_IMAGES:-ghcr.io/marekskopal/izbik}-frontend:${IZBIK_VERSION:-latest}
         build:
             context: ./frontend
             dockerfile: Dockerfile
@@ -41,6 +45,8 @@ services:
             - frontend
 
     backend:
+        # Built from source by `make up`, or the published image of IZBIK_VERSION by `make deploy`.
+        image: ${IZBIK_IMAGES:-ghcr.io/marekskopal/izbik}-backend:${IZBIK_VERSION:-latest}
         build:
             context: ./backend
             dockerfile: Dockerfile

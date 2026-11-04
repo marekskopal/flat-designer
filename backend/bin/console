@@ -11,6 +11,8 @@ use Izbik\Command\FilesImportCommand;
 use Izbik\Command\ModelsImportCommand;
 use Izbik\Command\MigrationRunCommand;
 use Izbik\Command\OrmSchemaDumpCommand;
+use Izbik\Command\StorageBackupCommand;
+use Izbik\Command\StorageRestoreCommand;
 use Izbik\Command\UserResetPasswordCommand;
 use Symfony\Component\Console\Application;
 
@@ -22,6 +24,8 @@ $application->addCommand(new FilesImportCommand());
 $application->addCommand(new ModelsImportCommand());
 $application->addCommand(new MigrationRunCommand());
 $application->addCommand(new OrmSchemaDumpCommand());
+$application->addCommand(new StorageBackupCommand());
+$application->addCommand(new StorageRestoreCommand());
 $application->addCommand(new UserResetPasswordCommand());
 
 $application->run();

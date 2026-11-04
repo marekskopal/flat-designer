@@ -17,7 +17,10 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   the root swaps that file alone. `APP_PATH` (empty: the root; e.g. `/app`) is the path of the app's pages: the
   frontend is built with it as `<base href>` (`BASE_HREF` build argument) and the backend puts it into share links and
   the OAuth consent page's URL (`DiscoveryUrl::appUrl()`); the API, MCP, OAuth discovery and Mercure stay at the root.
-  Frontend code is base-href-agnostic: assets and in-app links resolve against `document.baseURI`.
+  Frontend code is base-href-agnostic: assets and in-app links resolve against `document.baseURI`. The app's location
+  includes `conf/app-headers.conf`: the security headers and a nonce-based CSP (`index.html`'s
+  `ngCspNonce="random_nonce_value"`, replaced by `sub_filter` with `$request_id`, the header's nonce). **A script,
+  style, font, frame or connection from another origin needs adding to that CSP.**
 - `minio/` (a compose service only): S3-compatible storage for uploaded files.
 - `backend/`: FrankenPHP worker, PHP 8.5, `marekskopal/orm`, `marekskopal/router`, MariaDB. Namespace `Izbik\`.
   - Routes are in `Izbik\Route\Routes`. The entrypoint runs `migration:run` before serving.
@@ -26,7 +29,9 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     (a 401 makes the frontend refresh the token or sign out).
   - Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
   - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
-    directory as project files.
+    directory as project files. `storage:backup` / `storage:restore` (`StorageBackup`, through `FileStorageInterface`'s
+    `keys()` / `fetch()`) copy every stored object with its content type into a directory and back, for `make backup` /
+    `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored).
   - Accounts on a self-hosted server: sign-up is closed unless `SIGN_UP_ENABLED` (`SignUpConfig`; closed, sign-up and a
     Google sign-in that would create an account answer 403, and the pages say to ask the admin; tests switch it with
     `AppHarness::signUp()`). Admins add accounts (`POST /api/admin/users`, verified) and set passwords (`PATCH` with
@@ -1119,7 +1124,9 @@ format is the text in `FurnitureTools::Format`.
 | Command | What it does |
 | --- | --- |
 | `make up` | Build and start the stack (creates `.env` and secrets on first run) |
+| `make deploy` | Start the published GHCR images of `IZBIK_VERSION` instead of building (`.github/workflows/release.yml` pushes them on a `v*` tag; `docs/self-hosting.md`) |
 | `make admin` | Create an admin account |
+| `make backup [BACKUP=…]` / `make restore BACKUP=…` | Back up / restore the database and the stored files |
 | `make reset-password EMAIL=…` | Set a user's password from the server (no mail needed) |
 | `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
 | `make dev` | `ng serve` on 4200 against the running stack |

@@ -1,4 +1,4 @@
-.PHONY: up down logs build reset-db migrate-volumes env ssl-cert admin reset-password import-files import-models example-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models example-models screenshots benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -6,6 +6,12 @@
 ## Build and start the stack (http://localhost:$PROXY_PORT, default 4400)
 up: env
 	docker compose up -d --build
+
+## Start the stack from the published images of IZBIK_VERSION (.env) instead of building them; the way to install and
+## upgrade a release (see docs/self-hosting.md). The images serve the app at the root (APP_PATH empty).
+deploy: env
+	docker compose pull proxy frontend backend
+	docker compose up -d --no-build --remove-orphans
 
 ## Stop the stack
 down:
@@ -35,9 +41,18 @@ migrate-volumes:
 		echo "Copied $$from to $$to"; \
 	done
 
-## Create .env from .env.example and fill in random secrets (token and Mercure keys) that are empty
+## Create .env from .env.example and fill in random secrets (token and Mercure keys) that are empty. A new .env also
+## gets random database and MinIO passwords instead of the examples' (only then: the database keeps the ones it started with)
 env:
-	@if [ ! -f .env ]; then cp .env.example .env; fi
+	@if [ ! -f .env ]; then \
+		cp .env.example .env; \
+		for key in MYSQL_PASSWORD MYSQL_ROOT_PASSWORD S3_SECRET_KEY; do \
+			grep -v "^$$key=" .env > .env.tmp; \
+			echo "$$key=$$(openssl rand -hex 24)" >> .env.tmp; \
+			mv .env.tmp .env; \
+		done; \
+		echo "Created .env with random database and storage passwords"; \
+	fi
 	@for key in AUTHORIZATION_TOKEN_KEY MERCURE_PUBLISHER_JWT_KEY MERCURE_SUBSCRIBER_JWT_KEY; do \
 		if ! grep -q "^$$key=.\{32,\}" .env; then \
 			grep -v "^$$key=" .env > .env.tmp; \
@@ -70,6 +85,27 @@ admin:
 ## Set a user's password in the running stack, for a server that sends no mail (prompts): make reset-password EMAIL=…
 reset-password:
 	docker compose exec backend php bin/console user:reset-password "$(EMAIL)"
+
+## Back up the database (the bundled MariaDB) and every stored file (MinIO or S3) into backups/<date-time>/, or BACKUP=…
+## (the stack must be running; the app keeps running meanwhile): make backup [BACKUP=backups/before-upgrade]
+backup:
+	@dir="$(or $(BACKUP),backups/$(shell date +%Y%m%d-%H%M%S))"; \
+	mkdir -p "$$dir/files" && \
+	docker compose exec -T db sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mariadb-dump -uroot --single-transaction --routines --triggers --add-drop-database --databases "$$MYSQL_DATABASE"' > "$$dir/database.sql" && \
+	gzip "$$dir/database.sql" && \
+	docker compose run --rm --no-deps --entrypoint "" -u "$$(id -u):$$(id -g)" -v "$$(cd "$$dir/files" && pwd)":/backup backend php bin/console storage:backup /backup && \
+	echo "Backed up to $$dir"
+
+## Restore a backup of make backup: replaces the database and puts the stored files back, with the backend stopped
+## meanwhile (it migrates the restored database when it starts): make restore BACKUP=backups/<date-time> (asks first)
+restore:
+	@[ -n "$(BACKUP)" ] && [ -f "$(BACKUP)/database.sql.gz" ] && [ -f "$(BACKUP)/files/objects.json" ] || { echo "Usage: make restore BACKUP=backups/<date-time> (a directory of make backup)"; exit 1; }
+	@gunzip -t "$(BACKUP)/database.sql.gz"
+	@printf 'This replaces the database and the stored files with the backup %s. Type yes to go on: ' "$(BACKUP)"; read answer; [ "$$answer" = yes ]
+	docker compose stop backend
+	gunzip -c "$(BACKUP)/database.sql.gz" | docker compose exec -T db sh -c 'MYSQL_PWD="$$MYSQL_ROOT_PASSWORD" exec mariadb -uroot'
+	docker compose run --rm --no-deps --entrypoint "" -v "$(abspath $(BACKUP))/files":/backup:ro backend php bin/console storage:restore /backup
+	docker compose start backend
 
 ## Upload a directory to a project as its files: make import-files DIR=source_files PROJECT=1
 import-files:

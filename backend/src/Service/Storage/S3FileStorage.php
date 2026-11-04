@@ -49,6 +49,40 @@ final class S3FileStorage implements FileStorageInterface
 		}
 	}
 
+	public function fetch(string $key): StoredObject
+	{
+		$this->ensureBucket();
+
+		try {
+			$object = $this->client->getObject(['Bucket' => $this->config->bucket, 'Key' => $key]);
+
+			return new StoredObject($object->getBody()->getContentAsString(), $object->getContentType() ?? 'application/octet-stream');
+		} catch (Throwable $e) {
+			throw new RuntimeException('Failed to read object "' . $key . '": ' . $e->getMessage(), 0, $e);
+		}
+	}
+
+	/** @return list<string> */
+	public function keys(): array
+	{
+		$this->ensureBucket();
+
+		try {
+			$keys = [];
+			// The listing pages through the bucket by itself.
+			foreach ($this->client->listObjectsV2(['Bucket' => $this->config->bucket])->getContents() as $object) {
+				$key = $object->getKey();
+				if ($key !== null) {
+					$keys[] = $key;
+				}
+			}
+
+			return $keys;
+		} catch (Throwable $e) {
+			throw new RuntimeException('Failed to list the bucket "' . $this->config->bucket . '": ' . $e->getMessage(), 0, $e);
+		}
+	}
+
 	public function delete(string $key): void
 	{
 		try {

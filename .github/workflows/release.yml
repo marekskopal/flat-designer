@@ -1,0 +1,87 @@
+name: Release
+
+# A version tag (v0.1.0-beta, v0.2.0, …) publishes the images of the stack to GHCR as
+# ghcr.io/<owner>/izbik-{backend,frontend,proxy}:<version> and :latest, then a GitHub release with the tag's section
+# of CHANGELOG.md (a pre-release for a version with a suffix, e.g. -beta). `make deploy` runs these images.
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: write
+    packages: write
+
+jobs:
+    images:
+        name: Image ${{ matrix.service }}
+        # Only the open-source repository publishes.
+        if: github.repository == 'marekskopal/izbik'
+        runs-on: ubuntu-latest
+        timeout-minutes: 60
+        strategy:
+            matrix:
+                service: [backend, frontend, proxy]
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: docker/setup-qemu-action@v3
+
+            - uses: docker/setup-buildx-action@v3
+
+            - uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ghcr.io/${{ github.repository_owner }}/izbik-${{ matrix.service }}
+                  # The version without its v, and latest for every release (the betas included).
+                  flavor: latest=false
+                  tags: |
+                      type=semver,pattern={{version}}
+                      type=raw,value=latest
+                  labels: |
+                      org.opencontainers.image.title=izbik-${{ matrix.service }}
+                      org.opencontainers.image.licenses=MIT
+
+            # The frontend is built for the root (APP_PATH empty); a server with APP_PATH builds its own (make up).
+            - uses: docker/build-push-action@v6
+              with:
+                  context: ./${{ matrix.service }}
+                  platforms: linux/amd64,linux/arm64
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  labels: ${{ steps.meta.outputs.labels }}
+                  cache-from: type=gha,scope=${{ matrix.service }}
+                  cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+    release:
+        name: GitHub release
+        needs: images
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Release notes from CHANGELOG.md
+              run: |
+                  version="${GITHUB_REF_NAME#v}"
+                  awk -v version="$version" '
+                      /^## \[/ { if (found) exit; found = index($0, "[" version "]") > 0; next }
+                      found { print }
+                  ' CHANGELOG.md > notes.md
+                  if [ ! -s notes.md ]; then
+                      echo "CHANGELOG.md has no section [$version]" >&2
+                      exit 1
+                  fi
+
+            - name: Create the release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  prerelease=""
+                  case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+                  gh release create "$GITHUB_REF_NAME" --title "Izbik ${GITHUB_REF_NAME#v}" --notes-file notes.md $prerelease
