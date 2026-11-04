@@ -1,4 +1,4 @@
-.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models example-models screenshots smoke benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models export-project example-models screenshots smoke benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -110,6 +110,12 @@ restore:
 ## Upload a directory to a project as its files: make import-files DIR=source_files PROJECT=1
 import-files:
 	docker compose run --rm --no-deps -v "$(abspath $(DIR))":/import:ro backend php bin/console files:import /import --project=$(PROJECT)
+
+## Write a project as a project file into backups/: make export-project PROJECT=1 [WITHOUT_FILES=1]
+export-project:
+	mkdir -p backups
+	docker compose run --rm --no-deps -v "$(abspath backups)":/export backend php bin/console projects:export $(PROJECT) \
+		/export/project-$(PROJECT)$(if $(WITHOUT_FILES),.izbik.json --without-files,.izbik.zip)
 
 ## Upload the .glb models of a directory (with optional <name>.json credits): make import-models DIR=… [PROJECT=…]
 import-models:

@@ -31,7 +31,10 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
     directory as project files. `storage:backup` / `storage:restore` (`StorageBackup`, through `FileStorageInterface`'s
     `keys()` / `fetch()`) copy every stored object with its content type into a directory and back, for `make backup` /
-    `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored).
+    `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored). `projects:export`
+    (`make export-project PROJECT=… [WITHOUT_FILES=1]`, into `backups/`) writes one project as a project file
+    (`Service/Project/Transfer`: `ProjectBundle` documents the format, `ProjectExporter` a zip with `project.json`, the
+    files and the models, or the JSON alone); the zip needs PHP's `zip` extension.
   - Accounts on a self-hosted server: sign-up is closed unless `SIGN_UP_ENABLED` (`SignUpConfig`; closed, sign-up and a
     Google sign-in that would create an account answer 403, and the pages say to ask the admin; tests switch it with
     `AppHarness::signUp()`). Admins add accounts (`POST /api/admin/users`, verified) and set passwords (`PATCH` with
@@ -1143,6 +1146,7 @@ The current format is the text in `FurnitureTools::Format`.
 | `make backup [BACKUP=…]` / `make restore BACKUP=…` | Back up / restore the database and the stored files |
 | `make reset-password EMAIL=…` | Set a user's password from the server (no mail needed) |
 | `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
+| `make export-project PROJECT=… [WITHOUT_FILES=1]` | Write a project as a project file into `backups/` |
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |
 | `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `izbik_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |

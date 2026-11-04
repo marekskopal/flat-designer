@@ -27,6 +27,16 @@ final class ModelAssetRepository extends ARepository
 	}
 
 	/**
+	 * The project's own models, not deleted, by id.
+	 *
+	 * @return list<ModelAsset>
+	 */
+	public function findByProject(int $projectId): array
+	{
+		return $this->select()->where(['project_id' => $projectId, 'deleted_at' => null])->orderBy('id')->fetchAll();
+	}
+
+	/**
 	 * The stored files of the project's models (deleted ones too), to remove after the project rows.
 	 *
 	 * @return list<string>
