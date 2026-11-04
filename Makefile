@@ -1,4 +1,4 @@
-.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models export-project example-models screenshots smoke benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
+.PHONY: up deploy down logs build reset-db migrate-volumes env ssl-cert admin reset-password backup restore import-files import-models export-project import-project example-models screenshots smoke benchmark install test test-backend test-frontend lint lint-backend lint-frontend dev
 
 # Compose variables (database credentials for the test run); `make env` creates the file.
 -include .env
@@ -116,6 +116,11 @@ export-project:
 	mkdir -p backups
 	docker compose run --rm --no-deps -v "$(abspath backups)":/export backend php bin/console projects:export $(PROJECT) \
 		/export/project-$(PROJECT)$(if $(WITHOUT_FILES),.izbik.json --without-files,.izbik.zip)
+
+## Make a new project of a user's from a project file: make import-project FILE=backups/project-1.izbik.zip EMAIL=…
+import-project:
+	docker compose run --rm --no-deps -v "$(abspath $(FILE))":/import/$(notdir $(FILE)):ro backend php bin/console projects:import \
+		/import/$(notdir $(FILE)) --owner=$(EMAIL)
 
 ## Upload the .glb models of a directory (with optional <name>.json credits): make import-models DIR=… [PROJECT=…]
 import-models:

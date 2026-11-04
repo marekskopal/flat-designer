@@ -34,7 +34,8 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored). `projects:export`
     (`make export-project PROJECT=… [WITHOUT_FILES=1]`, into `backups/`) writes one project as a project file
     (`Service/Project/Transfer`: `ProjectBundle` documents the format, `ProjectExporter` a zip with `project.json`, the
-    files and the models, or the JSON alone); the zip needs PHP's `zip` extension.
+    files and the models, or the JSON alone); the zip needs PHP's `zip` extension. `projects:import <file> --owner=…`
+    (`make import-project FILE=… EMAIL=…`) makes a new project of it (`ProjectImporter`, see Example projects).
   - Accounts on a self-hosted server: sign-up is closed unless `SIGN_UP_ENABLED` (`SignUpConfig`; closed, sign-up and a
     Google sign-in that would create an account answer 403, and the pages say to ask the admin; tests switch it with
     `AppHarness::signUp()`). Admins add accounts (`POST /api/admin/users`, verified) and set passwords (`PATCH` with
@@ -1110,7 +1111,17 @@ The current format is the text in `FurnitureTools::Format`.
   `…MaterialId` key and a Custom item's slot materials; a finish band or slot without one dropped), models by source URL
   among the global ones and the owner's library (`SnapshotModels`; none: a box), files left out, and definitions by name and
   content among the global ones (`SnapshotDefinitionRestorer` with `$foreign`; else a project copy). The project takes the
-  snapshot's name, details, site and façade material. Project import (follow-up) is meant to reuse it.
+  snapshot's name, details, site and façade material. `import()` takes untrusted input: `SnapshotLimits` caps it, and a
+  value the restore cannot take (`ValueError` / `TypeError`) is an `InvalidSnapshotException`; elements are not
+  validated as edits are.
+- Project files (`Service/Project/Transfer`): `ProjectImporter` makes a new project of the user's from one
+  (`ProjectBundleReader`: zip or JSON by the first bytes, at most `IMPORT_MAX_SIZE_MB` unpacked, `MaxEntries`; entries
+  read only by the manifest's paths, each once, never extracted; `SnapshotLimits` checked before anything is stored) in
+  one transaction: `BundleAssetImporter` uploads the files and
+  the models no model matches by source URL as the project's own (`ImportedAssets`, the new ids, which
+  `SnapshotFiles::withFiles()` and `SnapshotModels` put into the snapshot), `BundleLibraryImporter` the own definitions
+  (validated) and the prices (materials by code). What this instance cannot take is left out as a `warnings` entry of
+  `ProjectImportDto`; on a failure the stored objects are deleted again.
 - Models: `make example-models` runs `frontend/scripts/example-models.mjs` in a Node container: the Poly Haven models
   the examples list (`sourceUrl` `https://polyhaven.com/a/<asset>`), fetched through the Poly Haven API (a User-Agent
   naming Izbik, md5 checked; its terms allow this, crediting Poly Haven), optimised with gltf-transform as in Product
