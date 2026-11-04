@@ -17,7 +17,10 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   the root swaps that file alone. `APP_PATH` (empty: the root; e.g. `/app`) is the path of the app's pages: the
   frontend is built with it as `<base href>` (`BASE_HREF` build argument) and the backend puts it into share links and
   the OAuth consent page's URL (`DiscoveryUrl::appUrl()`); the API, MCP, OAuth discovery and Mercure stay at the root.
-  Frontend code is base-href-agnostic: assets and in-app links resolve against `document.baseURI`.
+  Frontend code is base-href-agnostic: assets and in-app links resolve against `document.baseURI`. The app's location
+  includes `conf/app-headers.conf`: the security headers and a nonce-based CSP (`index.html`'s
+  `ngCspNonce="random_nonce_value"`, replaced by `sub_filter` with `$request_id`, the header's nonce). **A script,
+  style, font, frame or connection from another origin needs adding to that CSP.**
 - `minio/` (a compose service only): S3-compatible storage for uploaded files.
 - `backend/`: FrankenPHP worker, PHP 8.5, `marekskopal/orm`, `marekskopal/router`, MariaDB. Namespace `Izbik\`.
   - Routes are in `Izbik\Route\Routes`. The entrypoint runs `migration:run` before serving.
@@ -26,7 +29,17 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     (a 401 makes the frontend refresh the token or sign out).
   - Request DTOs implement `ArrayFactoryInterface` and read fields via `BodyReader`.
   - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
-    directory as project files.
+    directory as project files. `storage:backup` / `storage:restore` (`StorageBackup`, through `FileStorageInterface`'s
+    `keys()` / `fetch()`) copy every stored object with its content type into a directory and back, for `make backup` /
+    `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored).
+  - Accounts on a self-hosted server: sign-up is closed unless `SIGN_UP_ENABLED` (`SignUpConfig`; closed, sign-up and a
+    Google sign-in that would create an account answer 403, and the pages say to ask the admin; tests switch it with
+    `AppHarness::signUp()`). Admins add accounts (`POST /api/admin/users`, verified) and set passwords (`PATCH` with
+    `password`, not their own: it signs the user out and lifts a lock), `bin/console user:reset-password`
+    (`make reset-password EMAIL=…`) does it from the server. `DELETE /api/current-user` (the password, or the email of a
+    Google-only account) deletes an account with its projects and library (`AccountDeletion`: rows in one transaction,
+    stored files after it, best effort; never the last admin), as the admin's delete does for an account without
+    projects.
   - Sign-in extras: password reset by email (`PasswordResetService`, one-time `password_reset_tokens` hashed, an hour,
     capped per account; the reset unlocks and signs out everywhere), email verification (`EmailVerificationService`,
     `users.email_verified`, accounts from before it verified; a day's link mailed on sign-up and from the app's banner,
@@ -189,6 +202,12 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     viewer uses the same layout and stylesheet (its rail: comments, variants, export). On phones (≤ 640 px) the top bar
     keeps icons, the panels and the inspector are bottom sheets (a selection closes the panel), and the Display popover
     takes the wall cut.
+  - Help in the rail: the first-steps guide (`FirstStepsComponent`, steps from `firstSteps()`: walls, rooms, a door,
+    furniture, a walk, each ticked off from the scene; it opens by itself on an empty floor, once per project,
+    `izbik.firstStepsShown` in localStorage; a step's button starts its tool and closes the guide) and the shortcuts
+    (`ShortcutsComponent`, key `?`, the shared viewer's too). **A new shortcut goes into `ShortcutsComponent`.**
+  - Without WebGL 2 (`webglAvailable()` in `viewer/engine/webgl.ts`) `ViewerComponent` and the furniture preview make
+    no engine and show `WebglMessageComponent`; a lost context shows it with a Reload button.
   - `EditorPanelComponent` is the inspector panel (shown with a selection) and holds the editing shortcuts;
     `AddLibraryComponent` is the Add library (categories, search), `WallDraftComponent` the Draw walls options.
   - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. A field's `section` starts
@@ -1061,6 +1080,27 @@ format is the text in `FurnitureTools::Format`.
   works once for 15 minutes; a rejected file releases the ticket. `delete_project_file` / `delete_model` remove them.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
+## Example projects
+
+- `backend/examples/<slug>.json` (`ExampleCatalogue`: `{format, name, description, credit, startView, snapshot}`) are
+  projects every user may start from: `GET /api/examples`, `POST /api/examples/{slug}/projects` (MCP `list_examples` /
+  `create_project_from_example`; the projects page's "Start from an example") makes a project of the user's
+  (`ExampleProjectService`) and answers the floor and saved view to open it at. `bin/console examples:export <project>
+  <slug> [--name … --description … --credit … --start-view … --without-views PREFIX]` writes one from a working copy,
+  without its files (`SnapshotFiles::withoutFiles()`: underlays, pictures, image parameters). The demo flat is
+  `demo-flat` (its "Photo …" views left out); re-export it after a change of the demo project.
+- The snapshot comes from another instance, so it is imported, not restored: `ProjectSnapshotService::import()` puts
+  it onto this one first (`SnapshotLocalizer`): materials by code (`SnapshotMaterials`: every `materialId` /
+  `…MaterialId` key and a Custom item's slot materials; a finish band or slot without one dropped), models by source URL
+  among the global ones and the owner's library (`SnapshotModels`; none: a box), files left out, and definitions by name and
+  content among the global ones (`SnapshotDefinitionRestorer` with `$foreign`; else a project copy). The project takes the
+  snapshot's name, details, site and façade material. Project import (follow-up) is meant to reuse it.
+- Models: `make example-models` runs `frontend/scripts/example-models.mjs` in a Node container: the Poly Haven models
+  the examples list (`sourceUrl` `https://polyhaven.com/a/<asset>`), fetched through the Poly Haven API (a User-Agent
+  naming Izbik, md5 checked; its terms allow this, crediting Poly Haven), optimised with gltf-transform as in Product
+  models, into `data/example-models/` (gitignored), then `make import-models`. `models:import` skips a model whose
+  source the scope has already, so both run again safely.
+
 ## Seed data and files
 
 - Seed data lives in migrations (`Seed*`, `Fix*`, `Convert*`). The early ones predate `AddProjectsAndFloors` and still
@@ -1084,10 +1124,14 @@ format is the text in `FurnitureTools::Format`.
 | Command | What it does |
 | --- | --- |
 | `make up` | Build and start the stack (creates `.env` and secrets on first run) |
+| `make deploy` | Start the published GHCR images of `IZBIK_VERSION` instead of building (`.github/workflows/release.yml` pushes them on a `v*` tag; `docs/self-hosting.md`) |
 | `make admin` | Create an admin account |
+| `make backup [BACKUP=…]` / `make restore BACKUP=…` | Back up / restore the database and the stored files |
+| `make reset-password EMAIL=…` | Set a user's password from the server (no mail needed) |
 | `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |
 | `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `izbik_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
+| `make smoke` | Browser smoke test of the running stack (`frontend/scripts/smoke.mjs`, sign-up open; CI's E2E workflow): sign up, walls, a room, a door, a share link, the example |
 | `make benchmark PROJECT=… EMAIL=… PASSWORD=… [BASELINE=…]` | Time the rendering of a project's saved views (I-58) |
 | `make reset-db` | Drop the database and file volumes and re-seed |

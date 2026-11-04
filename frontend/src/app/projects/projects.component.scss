@@ -4,6 +4,44 @@
     margin-bottom: $space-20;
 }
 
+.page__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-8;
+}
+
+.examples {
+    margin-bottom: $space-20;
+}
+
+.examples__title {
+    margin: 0 0 $space-4;
+    font-size: 15px;
+    font-weight: 650;
+}
+
+.examples__hint {
+    margin: 0 0 $space-12;
+    font-size: $font-size-13;
+    color: $color-text-muted;
+}
+
+.example {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+}
+
+.example__description {
+    font-size: $font-size-13;
+    color: $color-text-muted;
+}
+
+.example__action {
+    align-self: flex-start;
+    margin-top: $space-12;
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

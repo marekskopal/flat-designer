@@ -65,7 +65,10 @@ import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 import {switchMap} from 'rxjs';
 
+import {FirstStep} from './first-steps';
+import {FirstStepsComponent} from './first-steps.component';
 import {CaptureTarget, SavedViewsComponent} from './saved-views.component';
+import {ShortcutsComponent} from './shortcuts.component';
 
 /** Section heights offered by the slider (mm); the top value means "no cut". */
 const SectionMin = 900;
@@ -92,7 +95,7 @@ const DrawTools: {tool: EditorTool; label: string; icon: IconName; key: string}[
 ];
 
 /** The panels of the left rail; one is open at a time. */
-type PanelKey = 'rooms' | 'views' | 'variants' | 'comments' | 'export' | 'activity' | 'underlay' | 'keys';
+type PanelKey = 'rooms' | 'views' | 'variants' | 'comments' | 'export' | 'activity' | 'underlay' | 'guide' | 'keys';
 
 const PanelTitles: Record<PanelKey, string> = {
     rooms: 'Rooms',
@@ -102,8 +105,12 @@ const PanelTitles: Record<PanelKey, string> = {
     export: 'Export',
     activity: 'Activity',
     underlay: 'Plan underlay',
+    guide: 'First steps',
     keys: 'Keyboard shortcuts',
 };
+
+/** The projects whose empty floor has shown the first-steps guide by itself (localStorage), so it does so once. */
+const GuideShownKey = 'izbik.firstStepsShown';
 
 /** The popovers of the top bar and the dock; one is open at a time. */
 type MenuKey = 'floors' | 'display' | 'add';
@@ -145,6 +152,8 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         AddLibraryComponent,
         WallDraftComponent,
         ActivityComponent,
+        FirstStepsComponent,
+        ShortcutsComponent,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -373,6 +382,8 @@ export class ViewerPageComponent {
     protected readonly activeView = signal<ViewMode>('overview');
     /** First-person walk in progress: the panel steps aside for the full view. */
     protected readonly walking = signal(false);
+    /** A walk was taken on this page (the first-steps guide ticks it off). */
+    protected readonly walked = signal(false);
     /** No mouse to capture: the walk shows on-screen arrows instead of the keyboard hint. */
     protected readonly touchWalk = walkthroughTouchMode();
     /** The walk has the mouse captured; otherwise the walker is asked to click the view. */
@@ -695,6 +706,18 @@ export class ViewerPageComponent {
                 untracked(() => this.showSavedView(view));
             }
         });
+        // An empty floor of the working copy opens the first-steps guide, once per project.
+        effect(() => {
+            const scene = this.scene();
+            if (scene === null || !this.canEdit() || scene.walls.length + scene.rooms.length + scene.items.length > 0) {
+                return;
+            }
+            untracked(() => {
+                if (this.panel() === null && ViewerPageComponent.firstGuide(this.projectId())) {
+                    this.panel.set('guide');
+                }
+            });
+        });
         // Editing works on the project's own variants.
         effect(() => {
             if (this.editor.enabled()) {
@@ -820,6 +843,7 @@ export class ViewerPageComponent {
         this.activeView.set('walkthrough');
         this.walkLocked.set(false);
         this.walking.set(true);
+        this.walked.set(true);
         this.walkStartFloorId = this.floorId();
         // Synchronously within the click: the pointer lock needs the user gesture.
         this.viewer().startWalkthrough();
@@ -908,6 +932,47 @@ export class ViewerPageComponent {
 
     protected togglePanel(key: PanelKey): void {
         this.panel.set(this.panel() === key ? null : key);
+    }
+
+    /**
+     * A button of the first-steps guide: starts that step (the walk synchronously, as the pointer lock needs the click).
+     * The guide makes way for the tool's hints and the dock; the rail's button brings it back.
+     */
+    protected startStep(step: FirstStep): void {
+        if (step === 'walk') {
+            this.setView('walkthrough');
+            return;
+        }
+        this.panel.set(null);
+        void this.editor.enable(true).then(() => {
+            if (step === 'walls') {
+                this.editor.setTool('drawWalls');
+            } else if (step === 'rooms') {
+                this.editor.setTool('detectRoom');
+            } else {
+                this.editor.setTool('select');
+                if (step === 'door') {
+                    this.setView('top');
+                }
+                this.menu.set('add');
+            }
+        });
+    }
+
+    /** Whether the guide opened by itself in this project before; marks it so. */
+    private static firstGuide(projectId: number): boolean {
+        try {
+            const shown = JSON.parse(localStorage.getItem(GuideShownKey) ?? '[]') as unknown;
+            const ids = Array.isArray(shown) ? shown.filter((id): id is number => typeof id === 'number') : [];
+            if (ids.includes(projectId)) {
+                return false;
+            }
+            localStorage.setItem(GuideShownKey, JSON.stringify([...ids.slice(-49), projectId]));
+            return true;
+        } catch {
+            // Storage blocked (a private window): the guide stays in the rail.
+            return false;
+        }
     }
 
     protected toggleMenu(key: MenuKey): void {

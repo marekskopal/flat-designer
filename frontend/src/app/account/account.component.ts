@@ -40,6 +40,11 @@ export class AccountComponent implements OnInit {
     });
     protected readonly symbolSets = Object.entries(ElectricalSymbolsLabels) as [ElectricalSymbols, string][];
 
+    protected readonly deleting = signal(false);
+    protected readonly deleteError = signal<string | null>(null);
+    /** The password, or the email of an account without one. */
+    protected readonly deleteForm = this.fb.group({confirmation: ['', Validators.required]});
+
     protected readonly passwordForm = this.fb.group({
         currentPassword: ['', Validators.required],
         newPassword: ['', [Validators.required, passwordValidator]],
@@ -102,6 +107,24 @@ export class AccountComponent implements OnInit {
             this.passwordError.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not change the password.');
         } finally {
             this.savingPassword.set(false);
+        }
+    }
+
+    protected async deleteAccount(): Promise<void> {
+        const user = this.currentUser.currentUser();
+        if (this.deleteForm.invalid || user === null) {
+            return;
+        }
+        this.deleting.set(true);
+        this.deleteError.set(null);
+        const {confirmation} = this.deleteForm.getRawValue();
+        try {
+            await this.auth.deleteAccount(user.hasPassword ? {password: confirmation} : {email: confirmation});
+            this.alerts.success('Your account and its projects were deleted.');
+        } catch (e: unknown) {
+            this.deleteError.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not delete the account.');
+        } finally {
+            this.deleting.set(false);
         }
     }
 

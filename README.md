@@ -5,6 +5,9 @@ walls, doors and windows, finishes and furniture. Custom-made furniture is descr
 furniture definitions whose parts are sized by expressions. The application produces the 3D model, a floor plan,
 a first-person walkthrough and a cut list from them, and AI agents can do all of it over MCP.
 
+> **Beta.** Izbik is in its first public beta: expect rough edges, and back up before every upgrade.
+> [Report a problem](https://github.com/marekskopal/izbik/issues/new/choose) when you meet one.
+
 ![A flat in Barcelona, cut away at 2.2 m](docs/screenshots/view-tour-01-cut-away.webp)
 
 All geometry is generated from parameters. The repository contains no 3D model files: bought products are glTF
@@ -246,23 +249,52 @@ the building sections).
 | Data | MariaDB 11.8, MinIO / S3 for files, Mercure (built into FrankenPHP) for live updates |
 | Infrastructure | Docker Compose, nginx reverse proxy (optional TLS) |
 
-## Getting started
+## Self-hosting
 
-Requirements: Docker with Compose, `make` and `openssl`. To develop the frontend or run lint and tests on the
-host, you also need PHP 8.5 with Composer, Node.js and pnpm.
+Izbik runs as a Docker Compose stack on one machine: the nginx proxy, the Angular frontend, the PHP backend (API, MCP
+server, live updates), MariaDB and MinIO for uploaded files. The full guide, with HTTPS, external S3 and a backup
+schedule, is [docs/self-hosting.md](docs/self-hosting.md); what changed between releases is in
+[CHANGELOG.md](CHANGELOG.md).
+
+Requirements: Docker with Compose, `make`, `openssl` and `git`; a small server (2 cores, 2 GB of memory) is enough, as
+the 3D view runs in the browser.
+
+### Install
 
 ```sh
-make up      # build and start the stack on http://localhost:4400
-make admin   # create the first admin account (prompts for email and password)
+git clone --branch v0.1.0 https://github.com/marekskopal/izbik.git
+cd izbik
+make env      # .env with random secrets and passwords; review it (see Configuration)
+make deploy   # start the published images (ghcr.io/marekskopal/izbik-*) of IZBIK_VERSION
+make admin    # create the first admin account (prompts for email and password)
 ```
 
-On the first run, `make up` creates `.env` from `.env.example` and generates the token and Mercure secrets. The
-backend applies pending database migrations on start, so a fresh database includes a sample project and the
-global material and furniture catalogues.
+`make up` builds the images from the checkout instead: to try Izbik on your own machine
+(http://localhost:4400), to serve it under a path (`APP_PATH`) or to run changes of your own. The backend applies
+pending database migrations on start, so a fresh database includes a sample project and the global material and
+furniture catalogues.
 
-New users can sign up at `/sign-up` and get the `User` role. Admins manage accounts under **Users**.
+Accounts: sign-up is closed by default, so a server on the internet is not open to everyone. Admins add accounts
+under **Users** (and set a new password there for someone locked out), or set `SIGN_UP_ENABLED=1` in `.env` to let
+anyone sign up at `/sign-up` with the `User` role. Without mail, an account's password is reset from the server:
 
-Two sign-in extras are off until configured in `.env` (then `make up`):
+```sh
+make reset-password EMAIL=jane@example.com   # prompts for the new password; signs Jane out everywhere
+```
+
+Users delete their own account, with all their projects, on the account page.
+
+The projects page offers **Start from an example**: a copy of the demo flat (`backend/examples/`) goes into the
+user's projects, opened at its guided tour. Its product models are CC0 models from [Poly Haven](https://polyhaven.com),
+which the repository does not ship. Download, optimise and import them once (the stack must be running):
+
+```sh
+make example-models   # into data/example-models (ignored by git), then imported as global models
+```
+
+Without them, the example's lamps, chairs and plants draw as boxes. Running it again only adds what is missing.
+
+Two sign-in extras are off until configured in `.env` (then `make deploy` or `make up` again):
 
 - **Sign in with Google**: set `GOOGLE_CLIENT_ID` to an OAuth web client id whose authorized JavaScript origins include
   the site's origin. The first Google sign-in creates an account without a password, or links the account with the
@@ -272,6 +304,88 @@ Two sign-in extras are off until configured in `.env` (then `make up`):
   new account gets a link to confirm its email (the app shows a banner until it is confirmed). To try it locally, use
   the bundled Mailpit: `SMTP_HOST=mailpit`, `SMTP_PORT=1025`, `COMPOSE_PROFILES=mail`, and read the mail on
   http://localhost:4402.
+
+### Configuration
+
+All settings are in `.env`, and `.env.example` documents each one. `make env` fills a new `.env` with random values
+for the token key, the Mercure keys and the database and MinIO passwords. The most important settings:
+
+| Variable | Purpose |
+| --- | --- |
+| `PROXY_PORT` | HTTP port of the proxy (default `4400`) |
+| `PROXY_HOST` | Public hostname. Required for OAuth/MCP behind a domain |
+| `AUTHORIZATION_TOKEN_KEY` | JWT signing key (generated). Changing it signs everyone out |
+| `MYSQL_*` | Database connection |
+| `S3_*` | Object storage. Defaults to the bundled MinIO (console on `MINIO_CONSOLE_PORT`, default `4401`) |
+| `FILE_MAX_SIZE_MB` | Largest accepted upload |
+| `IZBIK_VERSION` | The published images `make deploy` runs (`latest`, or a version such as `0.1.0`) |
+| `SIGN_UP_ENABLED` | `1` lets anyone sign up; `0` (default) leaves adding accounts to admins |
+| `BACKEND_CORS_ALLOWED_ORIGIN` | Empty (default) on a server: the app and the API share one origin |
+
+**HTTPS**: serve Izbik on a domain over HTTPS, with TLS in the proxy or in front of the stack. For TLS in the proxy,
+uncomment `COMPOSE_FILE` in `.env` to include `docker-compose.ssl.yml` and set `PROXY_SSL_CERT` / `PROXY_SSL_KEY` (a
+certificate's full chain and key; `make ssl-cert` makes a self-signed one for localhost, served on
+`https://localhost:4443`); plain HTTP then redirects. Set `PROXY_HOST` either way. The proxy sends a nonce-based
+Content-Security-Policy with every page (`proxy/conf/app-headers.conf`).
+
+**External S3**: point the `S3_*` settings at the bucket (`S3_ENDPOINT` empty for AWS, `S3_USE_PATH_STYLE=false`); the
+bundled MinIO then stays unused.
+
+### Connecting AI agents on a domain
+
+With `PROXY_HOST` set and HTTPS in place, MCP clients connect to `https://<PROXY_HOST>/mcp` (OAuth discovery
+advertises that host), e.g. `claude mcp add --transport http izbik https://izbik.example.com/mcp`, or as a custom
+connector in claude.ai. See [AI agents (MCP)](#ai-agents-mcp).
+
+### Backups
+
+```sh
+make backup                             # database and every stored file into backups/<date-time>/
+make restore BACKUP=backups/<date-time> # put them back (asks first)
+```
+
+Copy `backups/` off the machine, and keep `.env` with them: a database without its `AUTHORIZATION_TOKEN_KEY` signs
+everyone out. A cron line and the restore to a new machine are in
+[docs/self-hosting.md](docs/self-hosting.md#backups).
+
+### Upgrading
+
+1. Read the [changelog](CHANGELOG.md) up to the new version.
+2. `make backup BACKUP=backups/before-<version>`.
+3. `git fetch --tags && git checkout v<version>`, and with the published images set `IZBIK_VERSION=<version>` in `.env`.
+4. `make deploy` (or `make up` when building from source). The new migrations run when the backend starts.
+
+Upgrades go forward from any earlier release; to go back, restore the backup made before the upgrade.
+
+## Development
+
+To develop the frontend or run lint and tests on the host, you also need PHP 8.5 with Composer, Node.js 24 and pnpm.
+[CONTRIBUTING.md](CONTRIBUTING.md) describes how to contribute; [SECURITY.md](SECURITY.md) how to report a
+vulnerability. Problems and ideas go to the [issues](https://github.com/marekskopal/izbik/issues) (the app's header
+links there as *Report a problem*).
+
+```sh
+make up        # build and start the stack from the checkout on http://localhost:4400
+make install   # backend and frontend dependencies on the host
+make dev       # Angular dev server on http://localhost:4200, API proxied to the running stack
+make lint      # phpcs + phpstan (max level), eslint
+make test      # phpunit (separate izbik_test database), vitest
+make smoke     # browser smoke test of the running stack (sign-up open): walls, a room, a door, a share link, the example
+make reset-db  # drop the database and file volumes and re-seed
+```
+
+Schema and seed data changes always go into a new migration in `backend/migrations/`. If you edit a migration
+that has already been applied, run `make reset-db`.
+
+Izbik was called Flat Designer before. A checkout from then keeps its data in the volumes of the `flat-designer`
+compose project: run `make down` with the old checkout, then `make migrate-volumes` once to copy them into the
+`izbik` ones. Its `.env` keeps working, as the database and storage credentials stay what they were.
+
+CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHPUnit, ESLint, Vitest, the frontend
+build and the smoke test against the whole stack. A version tag publishes the images and a GitHub release
+(`.github/workflows/release.yml`).
+
+### Data and tooling
 
 To import reference files (plans, renders, photos) into a project:
 
@@ -308,42 +422,6 @@ viewer URL for a live readout.
 make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·"
 make benchmark PROJECT=5 EMAIL=you@example.com PASSWORD=… VIEWS="Tour ·" BASELINE=frontend/benchmarks/<earlier>.json
 ```
-
-### Configuration
-
-All settings are in `.env`. `.env.example` documents each variable. The most important ones:
-
-| Variable | Purpose |
-| --- | --- |
-| `PROXY_PORT` | HTTP port of the proxy (default `4400`) |
-| `PROXY_HOST` | Public hostname. Required for OAuth/MCP behind a domain |
-| `AUTHORIZATION_TOKEN_KEY` | JWT signing key (generated). Changing it signs everyone out |
-| `MYSQL_*` | Database connection |
-| `S3_*` | Object storage. Defaults to the bundled MinIO (console on `MINIO_CONSOLE_PORT`, default `4401`) |
-| `FILE_MAX_SIZE_MB` | Largest accepted upload |
-
-**HTTPS**: uncomment `COMPOSE_FILE` in `.env` to include `docker-compose.ssl.yml`, then set `PROXY_SSL_CERT` /
-`PROXY_SSL_KEY`, or run `make ssl-cert` to generate a self-signed localhost certificate. The stack then serves
-`https://localhost:4443` (`PROXY_PORT_SSL`), and the HTTP port redirects there.
-
-## Development
-
-```sh
-make install   # backend and frontend dependencies on the host
-make dev       # Angular dev server on http://localhost:4200, API proxied to the running stack
-make lint      # phpcs + phpstan (max level), eslint
-make test      # phpunit (separate izbik_test database), vitest
-make reset-db  # drop the database and file volumes and re-seed
-```
-
-Schema and seed data changes always go into a new migration in `backend/migrations/`. If you edit a migration
-that has already been applied, run `make reset-db`.
-
-Izbik was called Flat Designer before. A checkout from then keeps its data in the volumes of the `flat-designer`
-compose project: run `make down` with the old checkout, then `make migrate-volumes` once to copy them into the
-`izbik` ones. Its `.env` keeps working, as the database and storage credentials stay what they were.
-
-CI (GitHub Actions) runs composer and pnpm audits, PHPStan, PHP_CodeSniffer, PHPUnit, ESLint, Vitest and the frontend build.
 
 ### Repository layout
 

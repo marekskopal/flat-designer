@@ -22,6 +22,15 @@ final class FurnitureDefinitionRepository extends ARepository
 		return $this->findOne(['project_id' => $projectId, 'name' => $name, 'definition' => $definition, 'deleted_at' => null]);
 	}
 
+	/** The not deleted global definition of this name (the oldest, should there be two). */
+	public function findGlobalByName(string $name): ?FurnitureDefinition
+	{
+		return $this->select()
+			->where(['user_id' => null, 'project_id' => null, 'name' => $name, 'deleted_at' => null])
+			->orderBy('id')
+			->fetchOne();
+	}
+
 	/**
 	 * Not deleted, by name: the global ones, the libraries of `$userIds` and the definitions of the project.
 	 *

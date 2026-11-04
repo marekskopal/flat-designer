@@ -11,6 +11,7 @@ use Izbik\Service\Editor\CustomItemValidator;
 use Izbik\Service\Editor\Element\ItemHandler;
 use Izbik\Service\Project\ProjectSnapshotService;
 use Izbik\Service\Project\SnapshotDefinitionRestorer;
+use Izbik\Service\Project\SnapshotReader;
 use Izbik\Tests\Support\EditorTestCase;
 use Izbik\Tests\Support\Fixture;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -226,6 +227,26 @@ final class CustomItemTest extends EditorTestCase
 		self::assertSame('Open shelf', $copy['name']);
 		self::assertIsArray($copy['definition']);
 		self::assertSame(self::Definition['parts'], $copy['definition']['parts']);
+	}
+
+	public function testAnImportedDefinitionTakesTheGlobalOneOnlyWhileItIsTheSame(): void
+	{
+		$globalId = $this->defineFurniture(Fixture::createAdmin(), ['scope' => 'global']);
+		$restorer = Fixture::service(SnapshotDefinitionRestorer::class);
+		$entry = static fn (array $definition): SnapshotReader => new SnapshotReader(
+			['id' => 7, 'name' => 'Open shelf', 'definition' => $definition],
+		);
+
+		$same = $restorer->restore($this->project, [$entry(self::Definition)], [], true)[7] ?? null;
+		self::assertSame($globalId, $same?->id);
+
+		// The global one changed since the snapshot was taken: its parameters may no longer fit, so the items get a copy.
+		$changed = self::Definition;
+		$changed['parameters'][1]['default'] = 5;
+		$copy = $restorer->restore($this->project, [$entry($changed)], [], true)[7] ?? null;
+		self::assertNotNull($copy);
+		self::assertNotSame($globalId, $copy->id);
+		self::assertSame($this->project->id, $copy->project?->id);
 	}
 
 	/** @param array<string, mixed> $fields */

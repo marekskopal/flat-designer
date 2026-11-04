@@ -14,6 +14,7 @@ RUN apk add --no-cache curl tzdata
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
 COPY ./bin /app/bin
+COPY ./examples /app/examples
 COPY ./migrations /app/migrations
 COPY ./src /app/src
 COPY ./Caddyfile /etc/frankenphp/Caddyfile

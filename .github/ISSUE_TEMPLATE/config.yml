@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+    - name: Security problem
+      url: https://github.com/marekskopal/izbik/security/advisories/new
+      about: Report a vulnerability privately, not as a public issue (see SECURITY.md).
+    - name: Self-hosting guide
+      url: https://github.com/marekskopal/izbik/blob/main/docs/self-hosting.md
+      about: Installing, HTTPS, backups and upgrades.

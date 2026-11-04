@@ -9,6 +9,8 @@ use Izbik\App\ApplicationFactory;
 use Izbik\Mcp\McpUserContext;
 use Izbik\Service\Actor\ActorContext;
 use Izbik\Service\Authentication\GoogleAuthServiceInterface;
+use Izbik\Service\Authentication\SignUpConfig;
+use Izbik\Service\Example\ExampleCatalogue;
 use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Mail\MailOutbox;
 use Izbik\Service\Project\SharedAssetIds;
@@ -20,6 +22,7 @@ use PDOException;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mercure\HubInterface;
 
@@ -35,6 +38,8 @@ final class AppHarness
 	private static ?Application $application = null;
 
 	private static ?InMemoryFileStorage $fileStorage = null;
+
+	private static ?SignUpConfig $signUp = null;
 
 	private static ?RecordingMercureHub $mercureHub = null;
 
@@ -59,6 +64,9 @@ final class AppHarness
 			$container->extend(MailerInterface::class)->setConcrete(self::mailer());
 			$container->extend(MailConfig::class)->setConcrete(new MailConfig('smtp.test', '25', '', '', 'no-reply@izbik.test'));
 			$container->extend(GoogleAuthServiceInterface::class)->setConcrete(self::googleAuth());
+			// The examples the tests write, not those shipped in examples/.
+			$container->add(ExampleCatalogue::class, new ExampleCatalogue(new NullLogger(), self::examplesDirectory()));
+			$container->extend(SignUpConfig::class)->setConcrete(self::signUp());
 		}
 
 		return self::$application;
@@ -98,6 +106,17 @@ final class AppHarness
 		return self::$googleAuth ??= new FakeGoogleAuthService();
 	}
 
+	/** Open by default; a test closes it with `->enabled = false` (reset after each test). */
+	public static function signUp(): SignUpConfig
+	{
+		return self::$signUp ??= new SignUpConfig(true);
+	}
+
+	public static function examplesDirectory(): string
+	{
+		return sys_get_temp_dir() . '/izbik-test-examples-' . getmypid();
+	}
+
 	/** Replaces S3 for the whole suite. */
 	public static function fileStorage(): InMemoryFileStorage
 	{
@@ -130,6 +149,11 @@ final class AppHarness
 
 		self::app()->dbContext->resetOrmState();
 		self::fileStorage()->reset();
+		self::signUp()->enabled = true;
+		$examples = glob(self::examplesDirectory() . '/*.json');
+		foreach ($examples === false ? [] : $examples as $example) {
+			unlink($example);
+		}
 		$assetIds = self::container()->get(SharedAssetIds::class);
 		assert($assetIds instanceof SharedAssetIds);
 		$assetIds->clear();

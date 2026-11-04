@@ -7,6 +7,8 @@ namespace Izbik\Command;
 use Izbik\App\ApplicationFactory;
 use Izbik\Dto\ModelAssetInputDto;
 use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
+use Izbik\Model\Entity\Project;
+use Izbik\Model\Repository\ModelAssetRepository;
 use Izbik\Model\Repository\ProjectRepository;
 use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\ModelAsset\ModelAssetException;
@@ -21,7 +23,7 @@ use const PATHINFO_FILENAME;
 /**
  * Uploads every `.glb` of a directory as a 3D model: global, or a project's own with `--project`. A `<name>.json` next to
  * a model gives its `name`, `description`, `license`, `author` and `sourceUrl` (credits of third-party models); without
- * one the file name is the model's name.
+ * one the file name is the model's name. A model whose source URL the scope has already is skipped, so it may run again.
  */
 final class ModelsImportCommand extends AbstractCommand
 {
@@ -59,29 +61,14 @@ final class ModelsImportCommand extends AbstractCommand
 			}
 		}
 
+		$models = $container->get(ModelAssetRepository::class);
+		assert($models instanceof ModelAssetRepository);
+
 		$files = glob(rtrim($directory, '/') . '/*.glb');
 		$files = $files === false ? [] : $files;
 		$imported = 0;
 		foreach ($files as $file) {
-			$credits = self::credits(substr($file, 0, -4) . '.json');
-			$modelInput = new ModelAssetInputDto(
-				name: $credits['name'] ?? pathinfo($file, PATHINFO_FILENAME),
-				description: $credits['description'] ?? '',
-				license: $credits['license'] ?? '',
-				author: $credits['author'] ?? '',
-				sourceUrl: $credits['sourceUrl'] ?? '',
-				scope: $project === null ? FurnitureScopeEnum::Global : FurnitureScopeEnum::Project,
-				projectId: $project?->id,
-			);
-
-			try {
-				// A project model is added as its owner; global ones have no author.
-				$model = $provider->upload($project?->owner, $modelInput, basename($file), (string) file_get_contents($file));
-				$io->writeln(sprintf('  %s: %d × %d × %d mm', $model->name, $model->width, $model->depth, $model->height));
-				$imported++;
-			} catch (ModelAssetException $e) {
-				$io->warning(sprintf('%s: %s', basename($file), $e->getMessage()));
-			}
+			$imported += self::import($file, $project, $provider, $models, $io) ? 1 : 0;
 		}
 
 		$io->success(
@@ -89,6 +76,44 @@ final class ModelsImportCommand extends AbstractCommand
 		);
 
 		return self::SUCCESS;
+	}
+
+	/** Run again, it adds only what is new: a model of the same source is there already. */
+	private static function import(
+		string $file,
+		?Project $project,
+		ModelAssetProvider $provider,
+		ModelAssetRepository $models,
+		SymfonyStyle $io,
+	): bool {
+		$credits = self::credits(substr($file, 0, -4) . '.json');
+		$source = $credits['sourceUrl'] ?? '';
+		if ($source !== '' && $models->findBySource($source, $project?->id) !== null) {
+			$io->writeln(sprintf('  %s: already imported, skipped', basename($file)));
+
+			return false;
+		}
+		$modelInput = new ModelAssetInputDto(
+			name: $credits['name'] ?? pathinfo($file, PATHINFO_FILENAME),
+			description: $credits['description'] ?? '',
+			license: $credits['license'] ?? '',
+			author: $credits['author'] ?? '',
+			sourceUrl: $source,
+			scope: $project === null ? FurnitureScopeEnum::Global : FurnitureScopeEnum::Project,
+			projectId: $project?->id,
+		);
+
+		try {
+			// A project model is added as its owner; global ones have no author.
+			$model = $provider->upload($project?->owner, $modelInput, basename($file), (string) file_get_contents($file));
+			$io->writeln(sprintf('  %s: %d × %d × %d mm', $model->name, $model->width, $model->depth, $model->height));
+
+			return true;
+		} catch (ModelAssetException $e) {
+			$io->warning(sprintf('%s: %s', basename($file), $e->getMessage()));
+
+			return false;
+		}
 	}
 
 	/** @return array<string, string> the string fields of the credits file, if there is one */

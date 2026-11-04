@@ -6,3 +6,7 @@
 /ssl/
 /node_modules/
 /.claude/skills/bump-deps/
+/log/
+/data/
+/backups/
+/frontend/smoke-results/

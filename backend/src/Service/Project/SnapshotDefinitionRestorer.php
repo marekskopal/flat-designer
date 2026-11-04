@@ -10,12 +10,15 @@ use Izbik\Model\Entity\Project;
 use Izbik\Model\Repository\FurnitureDefinitionRepository;
 use Izbik\Service\Furniture\DefinitionValidator;
 use Izbik\Service\Furniture\FurnitureDefinitionProvider;
+use const JSON_THROW_ON_ERROR;
 
 /**
  * The furniture definitions of a restored version (`definitions` of its floors, see ProjectSnapshotService): the live
  * definition of the same id while the project may use it (also a soft-deleted one, as the items used it until now),
  * otherwise a project definition made from the copy stored in the version (an identical one from an earlier restore
- * is reused) — or none when the version holds no usable copy.
+ * is reused) — or none when the version holds no usable copy. A snapshot from another instance (`$foreign`) has ids of
+ * its own: there the global definition of the same name and content stands in for the live one (a global changed
+ * since, whose parameters may no longer fit the items, gets a project copy instead).
  */
 final readonly class SnapshotDefinitionRestorer
 {
@@ -28,13 +31,16 @@ final readonly class SnapshotDefinitionRestorer
 	 * @param array<int, FurnitureDefinition|null> $known definitions by snapshot id from earlier floors
 	 * @return array<int, FurnitureDefinition|null> `$known` with those of `$entries` added
 	 */
-	public function restore(Project $project, array $entries, array $known): array
+	public function restore(Project $project, array $entries, array $known, bool $foreign = false): array
 	{
 		foreach ($entries as $data) {
 			$id = $data->int('id');
-			if (!array_key_exists($id, $known)) {
-				$known[$id] = $this->live($project, $id) ?? $this->copy($project, $data);
+			if (array_key_exists($id, $known)) {
+				continue;
 			}
+
+			$live = $foreign ? $this->global($data) : $this->live($project, $id);
+			$known[$id] = $live ?? $this->copy($project, $data);
 		}
 
 		return $known;
@@ -45,6 +51,18 @@ final readonly class SnapshotDefinitionRestorer
 		$definition = $this->definitionRepository->findById($id);
 
 		return $definition !== null && FurnitureDefinitionProvider::isUsableIn($definition, $project) ? $definition : null;
+	}
+
+	private function global(SnapshotReader $data): ?FurnitureDefinition
+	{
+		$body = $data->raw('definition');
+		$global = $this->definitionRepository->findGlobalByName($data->string('name'));
+		if ($global === null || !is_array($body)) {
+			return null;
+		}
+		$stored = json_decode($global->definition, true, flags: JSON_THROW_ON_ERROR);
+
+		return is_array($stored) && DefinitionValidator::encode($stored) === DefinitionValidator::encode($body) ? $global : null;
 	}
 
 	private function copy(Project $project, SnapshotReader $data): ?FurnitureDefinition

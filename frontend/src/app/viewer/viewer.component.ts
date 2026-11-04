@@ -16,6 +16,7 @@ import {
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {PlanPoint, Room, Scene, SunTime} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
+import {WebglMessageComponent} from '@app/shared/webgl-message/webgl-message.component';
 import {environment} from '@environments/environment';
 
 import {CommentPin, CommentPoint} from './engine/comments';
@@ -28,6 +29,7 @@ import {PictureFetcher} from './engine/pictures';
 import {Vec2} from './engine/plan-geometry';
 import {Selection} from './engine/selection';
 import {DoorAim, EditHandler, ViewerEngine, ViewPreset, WallDraftShape} from './engine/viewer-engine';
+import {webglAvailable, WebglProblem} from './engine/webgl';
 import {StatsHudComponent} from './stats-hud.component';
 
 /** A click on the view: the element (or group) under the pointer, `additive` for Shift+click. */
@@ -39,9 +41,12 @@ export interface SelectEvent {
 /** Hosts the three.js canvas. Persistent display options are inputs; one-off camera moves are methods. */
 @Component({
     selector: 'fd-viewer',
-    imports: [StatsHudComponent],
+    imports: [StatsHudComponent, WebglMessageComponent],
     template: `
         <div #host class="host"></div>
+        @if (webglProblem(); as problem) {
+            <fd-webgl-message [problem]="problem" />
+        }
         @if (showStats) {
             @if (engine(); as e) {
                 <fd-stats-hud [engine]="e" />
@@ -169,12 +174,17 @@ export class ViewerComponent {
     private readonly underlay = computed(() => this.scene()?.underlay ?? null, {equal: (a, b) => JSON.stringify(a) === JSON.stringify(b)});
     /** Created after the first render, once the host element has its size. */
     protected readonly engine = signal<ViewerEngine | null>(null);
+    /** Why there is no 3D view: no WebGL 2 (no engine is made), or its context was lost. */
+    protected readonly webglProblem = signal<WebglProblem | null>(null);
     /** `?stats` in the URL: the rendering readout over the view and the `fdBench` handle for `make benchmark`. */
     protected readonly showStats = new URLSearchParams(window.location.search).has('stats');
 
     public constructor() {
         afterNextRender(() => {
-            const engine = new ViewerEngine(this.host().nativeElement);
+            const engine = this.createEngine();
+            if (engine === null) {
+                return;
+            }
             engine.onSelect = (selection, additive): void => this.selected.emit({selection, additive});
             engine.onEdit = (selection, fields): Promise<boolean> => this.editHandler()(selection, fields);
             engine.onWalkthroughEnd = (): void => this.walkthroughEnded.emit();
@@ -260,6 +270,12 @@ export class ViewerComponent {
         effect(() => this.engine()?.setCommenting(this.commenting()));
 
         inject(DestroyRef).onDestroy(() => this.engine()?.dispose());
+        afterNextRender(() => {
+            // The canvas's context events do not bubble: listen in the capture phase.
+            const host = this.host().nativeElement;
+            host.addEventListener('webglcontextlost', () => this.webglProblem.set('lost'), true);
+            host.addEventListener('webglcontextrestored', () => this.webglProblem.set(null), true);
+        });
     }
 
     public setView(preset: ViewPreset, animate = true): void {
@@ -372,5 +388,20 @@ export class ViewerComponent {
     /** Opens or closes the fronts of the items (one, or a group's). */
     public setItemFrontsOpen(itemIds: readonly number[], open: boolean): void {
         this.engine()?.setItemFrontsOpen(itemIds, open);
+    }
+
+    /** The engine, or none (and the message) where the browser cannot draw it. */
+    private createEngine(): ViewerEngine | null {
+        if (!webglAvailable()) {
+            this.webglProblem.set('unsupported');
+            return null;
+        }
+        try {
+            return new ViewerEngine(this.host().nativeElement);
+        } catch (error) {
+            console.error(error);
+            this.webglProblem.set('unsupported');
+            return null;
+        }
     }
 }

@@ -35,5 +35,11 @@
         />
     }
 
-    <p class="auth__footer">No account yet? <a routerLink="/sign-up">Sign up</a></p>
+    @if (options(); as o) {
+        @if (o.signUp) {
+            <p class="auth__footer">No account yet? <a routerLink="/sign-up">Sign up</a></p>
+        } @else {
+            <p class="auth__footer">No account yet? Ask the administrator of this server for one.</p>
+        }
+    }
 </div>

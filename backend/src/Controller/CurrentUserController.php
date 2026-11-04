@@ -6,11 +6,14 @@ namespace Izbik\Controller;
 
 use Izbik\Dto\ChangePasswordDto;
 use Izbik\Dto\CurrentUserUpdateDto;
+use Izbik\Dto\DeleteAccountDto;
 use Izbik\Dto\UserDto;
 use Izbik\OAuth\DiscoveryUrl;
 use Izbik\Response\ErrorResponse;
 use Izbik\Response\OkResponse;
 use Izbik\Route\Routes;
+use Izbik\Service\Account\AccountDeletion;
+use Izbik\Service\Account\AccountException;
 use Izbik\Service\Authentication\EmailVerificationService;
 use Izbik\Service\Authentication\TokenService;
 use Izbik\Service\Mail\MailConfig;
@@ -19,6 +22,7 @@ use Izbik\Service\Request\RequestService;
 use Izbik\Validator\PasswordValidator;
 use Izbik\Validator\UserFieldValidator;
 use Laminas\Diactoros\Response\JsonResponse;
+use MarekSkopal\Router\Attribute\RouteDelete;
 use MarekSkopal\Router\Attribute\RouteGet;
 use MarekSkopal\Router\Attribute\RoutePatch;
 use MarekSkopal\Router\Attribute\RoutePost;
@@ -33,6 +37,7 @@ final readonly class CurrentUserController
 		private RequestService $requestService,
 		private EmailVerificationService $emailVerificationService,
 		private MailConfig $mailConfig,
+		private AccountDeletion $accountDeletion,
 	)
 	{
 	}
@@ -59,6 +64,32 @@ final readonly class CurrentUserController
 		$user = $this->userProvider->updateProfile($user, $name, $dto->electricalSymbols);
 
 		return new JsonResponse(UserDto::fromEntity($user));
+	}
+
+	/**
+	 * Deletes the account with its projects and library, confirmed by the password (or, for an account signing in with
+	 * Google only, by its email). The last administrator stays.
+	 */
+	#[RouteDelete(Routes::CurrentUser->value)]
+	public function actionDeleteCurrentUser(ServerRequestInterface $request): ResponseInterface
+	{
+		$user = $this->requestService->getUser($request);
+		$dto = $this->requestService->getRequestBodyDto($request, DeleteAccountDto::class);
+
+		$confirmed = $user->password !== null
+			? $dto->password !== null && password_verify($dto->password, $user->password)
+			: UserFieldValidator::normalizeEmail($dto->email ?? '') === $user->email;
+		if (!$confirmed) {
+			return new ErrorResponse($user->password !== null ? 'Password is incorrect.' : 'Type your email to confirm.', 422);
+		}
+
+		try {
+			$this->accountDeletion->delete($user);
+		} catch (AccountException $e) {
+			return new ErrorResponse($e->getMessage(), $e->getCode());
+		}
+
+		return new OkResponse();
 	}
 
 	/**

@@ -472,25 +472,6 @@ $inspector-width: 320px;
     list-style: none;
 }
 
-.shortcuts {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 6px $space-12;
-    align-items: center;
-    margin: 0;
-    font-size: $font-size-12;
-
-    dt {
-        text-align: right;
-        white-space: nowrap;
-    }
-
-    dd {
-        margin: 0;
-        color: $color-text-muted;
-    }
-}
-
 .rooms {
     flex: 1;
     min-height: 0;

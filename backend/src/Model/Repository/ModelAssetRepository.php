@@ -16,6 +16,16 @@ final class ModelAssetRepository extends ARepository
 		return $this->findOne(['id' => $modelId]);
 	}
 
+	/** A not deleted model of this source in the scope: global (no project) or the project's own. */
+	public function findBySource(string $sourceUrl, ?int $projectId): ?ModelAsset
+	{
+		return $this->findOne(
+			$projectId === null
+				? ['source_url' => $sourceUrl, 'user_id' => null, 'project_id' => null, 'deleted_at' => null]
+				: ['source_url' => $sourceUrl, 'project_id' => $projectId, 'deleted_at' => null],
+		);
+	}
+
 	/**
 	 * The stored files of the project's models (deleted ones too), to remove after the project rows.
 	 *

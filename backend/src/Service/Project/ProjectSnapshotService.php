@@ -35,6 +35,7 @@ use Izbik\Model\Repository\ItemGroupRepository;
 use Izbik\Model\Repository\ItemRepository;
 use Izbik\Model\Repository\MaterialRepository;
 use Izbik\Model\Repository\OpeningRepository;
+use Izbik\Model\Repository\ProjectRepository;
 use Izbik\Model\Repository\RoomRepository;
 use Izbik\Model\Repository\VariantSetRepository;
 use Izbik\Model\Repository\WallRepository;
@@ -90,6 +91,8 @@ final readonly class ProjectSnapshotService
 		private SnapshotViewRestorer $viewRestorer,
 		private CommentKeeper $commentKeeper,
 		private ItemModelLink $modelLink,
+		private SnapshotLocalizer $localizer,
+		private ProjectRepository $projectRepository,
 	) {
 	}
 
@@ -176,7 +179,44 @@ final readonly class ProjectSnapshotService
 	 */
 	public function restore(Project $project, string $snapshot): void
 	{
-		$data = $this->read($snapshot);
+		$this->restoreData($project, $this->read($snapshot), false);
+	}
+
+	/**
+	 * Restores a snapshot taken on another instance (an example project, an imported file) into a new project, as
+	 * `restore()` does, its ids put onto this instance first (`SnapshotLocalizer`) and its definitions matched by name and
+	 * content among the global ones. The project takes the snapshot's name, address, description, site and façade
+	 * material. The caller runs this in a transaction.
+	 */
+	public function import(Project $project, string $snapshot): void
+	{
+		$decoded = $this->decode($snapshot, true);
+		if (!is_array($decoded)) {
+			throw new InvalidSnapshotException('Snapshot must be a JSON object.');
+		}
+		$data = $this->reader($this->localizer->localize($decoded, $project));
+
+		$details = $data->object('project');
+		$project->name = $details->string('name');
+		$project->address = $details->nullableString('address');
+		$project->description = $details->nullableString('description');
+		if ($data->raw('location') !== null) {
+			$location = $data->object('location');
+			$project->northAngle = $location->int('northAngle');
+			$project->latitude = $location->nullableNumber('latitude');
+			$project->longitude = $location->nullableNumber('longitude');
+			$project->timeZone = $location->nullableString('timeZone');
+		}
+		$exterior = $data->nullableInt('exteriorMaterialId');
+		$project->exteriorMaterial = $exterior === null ? null : $this->materialRepository->findById($exterior);
+		$this->projectRepository->persist($project);
+
+		$this->restoreData($project, $data, true);
+	}
+
+	/** @param bool $foreign from another instance: the definitions are matched by name and content, not id */
+	private function restoreData(Project $project, SnapshotReader $data, bool $foreign): void
+	{
 		// The views go with the floors; a snapshot from before saved views keeps the current ones.
 		$currentViews = $this->viewRestorer->keep($project, $data);
 		// The review comments are not in snapshots: they are carried over to the restored floors.
@@ -228,6 +268,7 @@ final readonly class ProjectSnapshotService
 				$project,
 				$entry->raw('definitions') === null ? [] : $entry->objects('definitions'),
 				$definitions,
+				$foreign,
 			);
 			$this->restoreItems($floor, $entry->objects('items'), $materials, $roomIds, $groupIds, $definitions);
 			$this->activateVariants($sets, $setIds, $groupIds);
@@ -463,6 +504,12 @@ final readonly class ProjectSnapshotService
 			throw new InvalidSnapshotException('Snapshot must be a JSON object.');
 		}
 
+		return $this->reader($data);
+	}
+
+	/** @param array<mixed> $data */
+	private function reader(array $data): SnapshotReader
+	{
 		$reader = new SnapshotReader($data);
 		if ($reader->int('format') !== self::Format) {
 			throw new InvalidSnapshotException('Unsupported snapshot format.');

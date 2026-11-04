@@ -3,7 +3,7 @@ import {inject, Injectable} from '@angular/core';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {CutList} from '@app/models/cut-list';
 import {ElectricalSchedule} from '@app/models/electrical-schedule';
-import {FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
+import {Example, ExampleProject, FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
 import {MaterialPrices, Quantities} from '@app/models/quantities';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {Floor, Scene} from '@app/models/scene';
@@ -64,6 +64,16 @@ export class ProjectService {
 
     public async create(input: ProjectInput): Promise<Project> {
         return firstValueFrom(this.http.post<Project>(projectsUrl, input));
+    }
+
+    /** The example projects a user may start from. */
+    public async examples(): Promise<Example[]> {
+        return firstValueFrom(this.http.get<Example[]>(`${environment.apiUrl}/examples`));
+    }
+
+    /** A new project of the user's, a copy of the example. */
+    public async createFromExample(slug: string): Promise<ExampleProject> {
+        return firstValueFrom(this.http.post<ExampleProject>(`${environment.apiUrl}/examples/${encodeURIComponent(slug)}/projects`, {}));
     }
 
     public async update(projectId: number, input: ProjectInput): Promise<Project> {

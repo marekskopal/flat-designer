@@ -92,4 +92,31 @@
             </form>
         }
     </section>
+
+    <section class="card danger-zone">
+        <h2 class="card__title">Delete account</h2>
+        <p class="hint">
+            Deletes your account with all your projects, their versions, files and share links, and your furniture and model library.
+            This cannot be undone.
+        </p>
+        <form class="form" [formGroup]="deleteForm" (ngSubmit)="deleteAccount()">
+            @if (currentUser.currentUser()?.hasPassword === false) {
+                <label class="field">
+                    <span class="field__label">Type your email to confirm</span>
+                    <input class="input" type="email" formControlName="confirmation" autocomplete="off" />
+                </label>
+            } @else {
+                <label class="field">
+                    <span class="field__label">Your password, to confirm</span>
+                    <input class="input" type="password" formControlName="confirmation" autocomplete="current-password" />
+                </label>
+            }
+            @if (deleteError(); as message) {
+                <p class="form-error" role="alert">{{ message }}</p>
+            }
+            <div class="form__actions">
+                <button type="submit" class="btn btn--danger" [disabled]="deleteForm.invalid || deleting()">Delete my account</button>
+            </div>
+        </form>
+    </section>
 </div>

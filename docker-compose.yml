@@ -2,6 +2,8 @@ name: izbik
 
 services:
     proxy:
+        # Built from source by `make up`, or the published image of IZBIK_VERSION by `make deploy`.
+        image: ${IZBIK_IMAGES:-ghcr.io/marekskopal/izbik}-proxy:${IZBIK_VERSION:-latest}
         build:
             context: ./proxy
             dockerfile: Dockerfile
@@ -24,6 +26,8 @@ services:
             - backend
 
     frontend:
+        # Built from source by `make up`, or the published image of IZBIK_VERSION by `make deploy`.
+        image: ${IZBIK_IMAGES:-ghcr.io/marekskopal/izbik}-frontend:${IZBIK_VERSION:-latest}
         build:
             context: ./frontend
             dockerfile: Dockerfile
@@ -41,6 +45,8 @@ services:
             - frontend
 
     backend:
+        # Built from source by `make up`, or the published image of IZBIK_VERSION by `make deploy`.
+        image: ${IZBIK_IMAGES:-ghcr.io/marekskopal/izbik}-backend:${IZBIK_VERSION:-latest}
         build:
             context: ./backend
             dockerfile: Dockerfile
@@ -57,6 +63,7 @@ services:
             RATE_LIMIT_LOGIN_ATTEMPTS: ${RATE_LIMIT_LOGIN_ATTEMPTS:-5}
             RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS: ${RATE_LIMIT_LOGIN_BACKOFF_CAP_SECONDS:-3600}
             RATE_LIMIT_PASSWORD_RESETS_PER_HOUR: ${RATE_LIMIT_PASSWORD_RESETS_PER_HOUR:-5}
+            SIGN_UP_ENABLED: ${SIGN_UP_ENABLED:-0}
             GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
             SMTP_HOST: ${SMTP_HOST:-}
             SMTP_PORT: ${SMTP_PORT:-25}

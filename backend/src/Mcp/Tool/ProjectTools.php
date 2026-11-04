@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Izbik\Mcp\Tool;
 
 use Izbik\Dto\ChangeDto;
+use Izbik\Dto\ExampleDto;
+use Izbik\Dto\ExampleProjectDto;
 use Izbik\Dto\FloorDto;
 use Izbik\Dto\FloorInputDto;
 use Izbik\Dto\ProjectDto;
@@ -14,6 +16,10 @@ use Izbik\Model\Entity\Project;
 use Izbik\Model\Entity\ProjectChange;
 use Izbik\Model\Entity\ProjectVersion;
 use Izbik\Model\Repository\ProjectChangeRepository;
+use Izbik\Service\Example\Example;
+use Izbik\Service\Example\ExampleCatalogue;
+use Izbik\Service\Example\ExampleProjectService;
+use Izbik\Service\Project\Exception\ProjectException;
 use Izbik\Service\Project\FloorProvider;
 use Izbik\Service\Project\ProjectProvider;
 use Izbik\Service\Project\ProjectVersionProvider;
@@ -32,6 +38,8 @@ final readonly class ProjectTools
 		private FloorProvider $floorProvider,
 		private ProjectVersionProvider $versionProvider,
 		private ProjectChangeRepository $changeRepository,
+		private ExampleCatalogue $exampleCatalogue,
+		private ExampleProjectService $exampleProjectService,
 	) {
 	}
 
@@ -74,6 +82,33 @@ final readonly class ProjectTools
 		return $this->projectProvider->toDto(
 			$this->projectProvider->create($this->context->user(), new ProjectInputDto($name, $address, $description)),
 		);
+	}
+
+	/** @return list<ExampleDto> */
+	#[McpTool(
+		name: 'list_examples',
+		description: 'List the example projects shipped with the app (slug, name, description), which create_project_from_example copies.',
+		annotations: new ToolAnnotations(readOnlyHint: true),
+	)]
+	public function listExamples(): array
+	{
+		return array_map(static fn (Example $example): ExampleDto => ExampleDto::fromExample($example), $this->exampleCatalogue->all());
+	}
+
+	/** @param string $slug the example's slug, from list_examples */
+	#[McpTool(
+		name: 'create_project_from_example',
+		description: 'Create a project you own as a copy of an example project: its floors with everything on them and its saved views. '
+			. 'Returns the project, the floor to start on and the saved view to show first.',
+	)]
+	public function createProjectFromExample(string $slug): ExampleProjectDto
+	{
+		$example = $this->exampleCatalogue->find($slug) ?? throw new ProjectException(
+			sprintf('No example "%s" (see list_examples).', $slug),
+			404,
+		);
+
+		return $this->exampleProjectService->create($this->context->user(), $example);
 	}
 
 	/**

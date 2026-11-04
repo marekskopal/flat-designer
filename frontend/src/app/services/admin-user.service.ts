@@ -1,6 +1,6 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
-import {User, UserUpdate} from '@app/models/user';
+import {User, UserCreate, UserUpdate} from '@app/models/user';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
 
@@ -10,6 +10,10 @@ export class AdminUserService {
 
     public async list(): Promise<User[]> {
         return firstValueFrom(this.http.get<User[]>(`${environment.apiUrl}/admin/users`));
+    }
+
+    public async create(user: UserCreate): Promise<User> {
+        return firstValueFrom(this.http.post<User>(`${environment.apiUrl}/admin/users`, user));
     }
 
     public async update(userId: number, update: UserUpdate): Promise<User> {

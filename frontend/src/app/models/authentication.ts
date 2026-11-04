@@ -10,4 +10,6 @@ export interface AuthenticationOptions {
     googleClientId: string | null;
     /** Whether the server sends mail: password reset and email verification links. */
     mail: boolean;
+    /** Whether anyone may create an account; closed, an admin adds them and Google signs in existing ones only. */
+    signUp: boolean;
 }

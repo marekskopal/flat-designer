@@ -31,6 +31,7 @@
         </nav>
 
         <div class="user">
+            <a class="user__report" [href]="reportUrl" target="_blank" rel="noopener" (click)="menuOpen.set(false)">Report a problem</a>
             @if (currentUser.currentUser(); as user) {
                 <a routerLink="/account" routerLinkActive="active" class="user__name" [title]="user.email" (click)="menuOpen.set(false)">{{ user.name }}</a>
             }

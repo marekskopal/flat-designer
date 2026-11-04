@@ -2,6 +2,24 @@ import {Floor} from '@app/models/scene';
 
 // Mirrors the backend DTOs (Izbik\Dto\Project*).
 
+/** An example project shipped with the app, which a user copies to start from. */
+export interface Example {
+    slug: string;
+    name: string;
+    description: string;
+    /** Where it comes from, e.g. the building it is modelled after. */
+    credit: string;
+}
+
+/** A project made from an example, with where to open it. */
+export interface ExampleProject {
+    project: Project;
+    /** The floor to open; null only for a project without floors. */
+    floorId: number | null;
+    /** The saved view to open it at, if the example names one. */
+    viewId: number | null;
+}
+
 export interface Project {
     id: number;
     name: string;

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Izbik\Tests\Controller\Admin;
 
 use Izbik\Controller\Admin\AdminUserController;
+use Izbik\Dto\AdminUserUpdateDto;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
 use Izbik\Route\Routes;
 use Izbik\Service\Admin\AdminUserService;
+use Izbik\Service\Admin\Exception\AdminUserException;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -68,6 +71,21 @@ final class AdminUserControllerTest extends IntegrationTestCase
 		$admin = Fixture::createAdmin();
 
 		self::assertSame(409, $this->request('PATCH', self::userPath($admin->id), ['role' => 'User'], $admin)->getStatusCode());
+		// Refused as a whole: a new password given with it is not saved either.
+		$refused = null;
+
+		try {
+			Fixture::service(AdminUserService::class)->updateUser(
+				$admin,
+				new AdminUserUpdateDto(null, null, UserRoleEnum::User, 'Changed123'),
+			);
+		} catch (AdminUserException $exception) {
+			$refused = $exception;
+		}
+
+		self::assertNotNull($refused);
+		$login = $this->request('POST', Routes::AuthenticationLogin->value, ['email' => $admin->email, 'password' => 'Changed123']);
+		self::assertSame(401, $login->getStatusCode());
 
 		$second = Fixture::createAdmin();
 		self::assertSame(200, $this->request('PATCH', self::userPath($admin->id), ['role' => 'User'], $second)->getStatusCode());
@@ -90,6 +108,42 @@ final class AdminUserControllerTest extends IntegrationTestCase
 		Fixture::createProject($user);
 
 		self::assertSame(409, $this->request('DELETE', self::userPath($user->id), authenticatedAs: $admin)->getStatusCode());
+	}
+
+	public function testAdminAddsAUser(): void
+	{
+		$admin = Fixture::createAdmin();
+		$user = Fixture::createUser();
+		$body = ['name' => 'Jane', 'email' => 'Jane@Example.com', 'password' => 'Secret123', 'role' => 'User'];
+
+		self::assertSame(403, $this->request('POST', Routes::AdminUsers->value, $body, $user)->getStatusCode());
+		$created = $this->request('POST', Routes::AdminUsers->value, $body, $admin);
+
+		self::assertSame(201, $created->getStatusCode());
+		self::assertSame(['jane@example.com', 'User', true], [
+			$this->jsonBody($created)['email'],
+			$this->jsonBody($created)['role'],
+			$this->jsonBody($created)['emailVerified'],
+		]);
+		$login = $this->request('POST', Routes::AuthenticationLogin->value, ['email' => 'jane@example.com', 'password' => 'Secret123']);
+		self::assertSame(200, $login->getStatusCode());
+		self::assertSame(409, $this->request('POST', Routes::AdminUsers->value, $body, $admin)->getStatusCode());
+		self::assertSame(422, $this->request('POST', Routes::AdminUsers->value, ['password' => 'weak'] + $body, $admin)->getStatusCode());
+	}
+
+	public function testAdminSetsAPasswordWhichSignsTheUserOut(): void
+	{
+		$admin = Fixture::createAdmin();
+		$user = Fixture::createUser('jane@example.com');
+		$token = Fixture::accessTokenFor($user);
+
+		self::assertSame(422, $this->request('PATCH', self::userPath($user->id), ['password' => 'weak'], $admin)->getStatusCode());
+		self::assertSame(422, $this->request('PATCH', self::userPath($admin->id), ['password' => 'Changed123'], $admin)->getStatusCode());
+		self::assertSame(200, $this->request('PATCH', self::userPath($user->id), ['password' => 'Changed123'], $admin)->getStatusCode());
+
+		self::assertSame(401, $this->request('GET', Routes::CurrentUser->value, bearerToken: $token)->getStatusCode());
+		$login = $this->request('POST', Routes::AuthenticationLogin->value, ['email' => 'jane@example.com', 'password' => 'Changed123']);
+		self::assertSame(200, $login->getStatusCode());
 	}
 
 	private static function userPath(int $userId): string
