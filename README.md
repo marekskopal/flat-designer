@@ -180,6 +180,9 @@ it has made the change.
 - **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
 - **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.
+- **Project export and import**: a project downloads as one file (a zip with its plans, photos and product models, or
+  the JSON alone) and imports as a new project, on the same Izbik or another one: to move a project, or as your own
+  backup. What the other instance cannot take (a material or model it does not have) is left out and listed.
 - **AI agents (MCP)**: a built-in MCP server lets agents such as Claude read and edit projects, with the same
   validation and history as the UI.
 - **Accounts**: sign-up with email verification, optional Sign in with Google, password reset by email, JWT
@@ -344,6 +347,9 @@ make backup                             # database and every stored file into ba
 make restore BACKUP=backups/<date-time> # put them back (asks first)
 ```
 
+One project goes into a project file and back with `make export-project PROJECT=…` and
+`make import-project FILE=… EMAIL=…`, as with the project page's Download and the projects page's Import.
+
 Copy `backups/` off the machine, and keep `.env` with them: a database without its `AUTHORIZATION_TOKEN_KEY` signs
 everyone out. A cron line and the restore to a new machine are in
 [docs/self-hosting.md](docs/self-hosting.md#backups).
@@ -370,7 +376,7 @@ make install   # backend and frontend dependencies on the host
 make dev       # Angular dev server on http://localhost:4200, API proxied to the running stack
 make lint      # phpcs + phpstan (max level), eslint
 make test      # phpunit (separate izbik_test database), vitest
-make smoke     # browser smoke test of the running stack (sign-up open): walls, a room, a door, a share link, the example
+make smoke     # browser smoke test of the running stack (sign-up open): walls, a room, a door, a share link, the example, its export and import
 make reset-db  # drop the database and file volumes and re-seed
 ```
 
@@ -489,6 +495,7 @@ access token.
 | `/api/uploads/{token}` | One-time upload URL an MCP agent got (PUT the raw file; the token authorizes it) |
 | `/api/projects/{id}/views` | Saved views (camera, display, variants of a floor) |
 | `/api/projects/{id}/files` | Project files |
+| `/api/projects/{id}/export`, `/api/projects/import` | A project as a project file (zip, or `?files=0` the JSON alone), and a new project from one |
 | `/api/projects/{id}/cut-list` | Cut list of the project's custom furniture |
 | `/api/projects/{id}/room-schedule` | Room areas, perimeters and clear heights with indoor and outdoor totals (also per floor) |
 | `/api/projects/{id}/electrical-schedule` | Lights, sockets, switches, data sockets and plumbing points per room (also per floor) |
