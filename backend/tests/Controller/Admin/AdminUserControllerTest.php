@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Izbik\Tests\Controller\Admin;
 
 use Izbik\Controller\Admin\AdminUserController;
+use Izbik\Dto\AdminUserUpdateDto;
+use Izbik\Model\Entity\Enum\UserRoleEnum;
 use Izbik\Route\Routes;
 use Izbik\Service\Admin\AdminUserService;
+use Izbik\Service\Admin\Exception\AdminUserException;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -68,6 +71,21 @@ final class AdminUserControllerTest extends IntegrationTestCase
 		$admin = Fixture::createAdmin();
 
 		self::assertSame(409, $this->request('PATCH', self::userPath($admin->id), ['role' => 'User'], $admin)->getStatusCode());
+		// Refused as a whole: a new password given with it is not saved either.
+		$refused = null;
+
+		try {
+			Fixture::service(AdminUserService::class)->updateUser(
+				$admin,
+				new AdminUserUpdateDto(null, null, UserRoleEnum::User, 'Changed123'),
+			);
+		} catch (AdminUserException $exception) {
+			$refused = $exception;
+		}
+
+		self::assertNotNull($refused);
+		$login = $this->request('POST', Routes::AuthenticationLogin->value, ['email' => $admin->email, 'password' => 'Changed123']);
+		self::assertSame(401, $login->getStatusCode());
 
 		$second = Fixture::createAdmin();
 		self::assertSame(200, $this->request('PATCH', self::userPath($admin->id), ['role' => 'User'], $second)->getStatusCode());

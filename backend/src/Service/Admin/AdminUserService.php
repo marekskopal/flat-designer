@@ -57,6 +57,15 @@ final readonly class AdminUserService
 
 	public function updateUser(User $target, AdminUserUpdateDto $update): User
 	{
+		// The checks that need no change come first, so a refused update writes nothing (the password is saved at once).
+		$role = $update->role !== $target->role ? $update->role : null;
+		if ($role !== null && $target->isAdmin() && $this->userRepository->countAdmins() <= 1) {
+			throw new AdminUserException('Cannot demote the last administrator.');
+		}
+		if ($update->password !== null && !PasswordValidator::isValid($update->password)) {
+			throw new AdminUserException(PasswordValidator::Requirements, 422);
+		}
+
 		if ($update->name !== null) {
 			$target->name = UserFieldValidator::normalizeName($update->name) ?? throw new AdminUserException('Invalid name.', 422);
 		}
@@ -65,19 +74,16 @@ final readonly class AdminUserService
 			$this->applyEmail($target, $update->email);
 		}
 
-		if ($update->password !== null) {
-			$this->applyPassword($target, $update->password);
-		}
-
-		if ($update->role !== null && $update->role !== $target->role) {
-			if ($target->isAdmin() && $this->userRepository->countAdmins() <= 1) {
-				throw new AdminUserException('Cannot demote the last administrator.');
-			}
-			$target->role = $update->role;
+		if ($role !== null) {
+			$target->role = $role;
 		}
 
 		$target->updatedAt = new DateTimeImmutable();
 		$this->userRepository->persist($target);
+
+		if ($update->password !== null) {
+			$this->applyPassword($target, $update->password);
+		}
 
 		return $target;
 	}
@@ -107,9 +113,6 @@ final readonly class AdminUserService
 	 */
 	private function applyPassword(User $target, #[SensitiveParameter] string $password): void
 	{
-		if (!PasswordValidator::isValid($password)) {
-			throw new AdminUserException(PasswordValidator::Requirements, 422);
-		}
 		$this->userProvider->updatePassword($target, $password);
 		$this->loginAttempts->recordSuccess($target);
 	}
