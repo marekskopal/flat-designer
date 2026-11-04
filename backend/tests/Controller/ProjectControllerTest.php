@@ -8,6 +8,7 @@ use Izbik\Controller\ProjectController;
 use Izbik\Model\Repository\MaterialRepository;
 use Izbik\Route\Routes;
 use Izbik\Service\Project\ProjectProvider;
+use Izbik\Tests\Support\AppHarness;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -175,6 +176,23 @@ final class ProjectControllerTest extends IntegrationTestCase
 
 		self::assertSame(200, $this->request('DELETE', self::path($project->id), authenticatedAs: $user)->getStatusCode());
 		self::assertSame(404, $this->request('GET', self::path($project->id), authenticatedAs: $user)->getStatusCode());
+	}
+
+	public function testDeleteReportsSuccessAndTriesEveryStoredFileWhenOneCannotBeDeleted(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$files = str_replace('{projectId:number}', (string) $project->id, Routes::ProjectFiles->value);
+		self::assertSame(201, $this->upload($files, 'notes.txt', 'Measured on site.', $user)->getStatusCode());
+		self::assertSame(201, $this->upload($files, 'more.txt', 'And again.', $user)->getStatusCode());
+		$storage = AppHarness::fileStorage();
+		[$failing, $other] = array_keys($storage->objects);
+		$storage->failingDeletes = [$failing];
+
+		self::assertSame(200, $this->request('DELETE', self::path($project->id), authenticatedAs: $user)->getStatusCode());
+		self::assertSame(404, $this->request('GET', self::path($project->id), authenticatedAs: $user)->getStatusCode());
+		self::assertArrayHasKey($failing, $storage->objects);
+		self::assertArrayNotHasKey($other, $storage->objects);
 	}
 
 	/** @param array<string, mixed> $project */

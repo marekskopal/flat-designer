@@ -14,6 +14,7 @@ use Izbik\Model\Repository\ProjectFileRepository;
 use Izbik\Service\Project\Exception\ProjectException;
 use Izbik\Service\Storage\FileStorageInterface;
 use Izbik\Service\Storage\S3Config;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use const FILEINFO_MIME_TYPE;
 use const PATHINFO_EXTENSION;
@@ -41,6 +42,7 @@ final readonly class ProjectFileProvider
 		private FileStorageInterface $fileStorage,
 		private S3Config $s3Config,
 		private ProjectRevisionService $revisionService,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -155,7 +157,7 @@ final readonly class ProjectFileProvider
 	{
 		$shown = $this->underlayRepository->findByFile($file->id) !== [] || $this->shownPictures->isShownIn($file->project, $file->id);
 		$this->projectFileRepository->delete($file);
-		$this->fileStorage->delete($file->storageKey);
+		$this->deleteStoredObjects([$file->storageKey]);
 		if ($shown) {
 			$this->revisionService->bump($file->project);
 		}
@@ -167,12 +169,37 @@ final readonly class ProjectFileProvider
 		return array_map(fn (ProjectFile $file): string => $file->storageKey, $this->list($project));
 	}
 
-	/** @param list<string> $storageKeys */
+	/**
+	 * Deletes the stored objects of rows already gone, best effort: every key is tried, and those left behind are
+	 * logged with their keys (for a clean-up by hand) instead of failing a delete that has happened.
+	 *
+	 * @param list<string> $storageKeys
+	 */
 	public function deleteStoredObjects(array $storageKeys): void
 	{
+		$failed = [];
+		$error = null;
 		foreach ($storageKeys as $storageKey) {
-			$this->fileStorage->delete($storageKey);
+			try {
+				$this->fileStorage->delete($storageKey);
+			} catch (Throwable $e) {
+				$failed[] = $storageKey;
+				$error ??= $e->getMessage();
+			}
 		}
+		if ($failed === []) {
+			return;
+		}
+
+		$this->logger->warning(
+			sprintf(
+				'%d of %d stored objects were left behind (%s): %s',
+				count($failed),
+				count($storageKeys),
+				$error,
+				implode(', ', $failed),
+			),
+		);
 	}
 
 	/** Base name without control characters, collapsed whitespace and at most 200 characters; Unicode stays. */
