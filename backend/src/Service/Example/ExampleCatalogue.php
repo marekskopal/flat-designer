@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Izbik\Service\Example;
 
 use Izbik\Service\Json\JsonDecoder;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Throwable;
 use const JSON_PRETTY_PRINT;
 use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
@@ -22,7 +24,7 @@ final readonly class ExampleCatalogue
 
 	private const string SlugPattern = '/^[a-z0-9]+(?:-[a-z0-9]+)*$/';
 
-	public function __construct(private string $directory = __DIR__ . '/../../../examples')
+	public function __construct(private LoggerInterface $logger, private string $directory = __DIR__ . '/../../../examples')
 	{
 	}
 
@@ -31,11 +33,18 @@ final readonly class ExampleCatalogue
 		return preg_match(self::SlugPattern, $slug) === 1;
 	}
 
-	/** @return list<Example> by name */
+	/** @return list<Example> by name, leaving out (and logging) a file that is not an example */
 	public function all(): array
 	{
+		$examples = [];
 		$files = glob($this->directory . '/*.json');
-		$examples = array_map(fn (string $file): Example => $this->read($file), $files === false ? [] : $files);
+		foreach ($files === false ? [] : $files as $file) {
+			try {
+				$examples[] = $this->read($file);
+			} catch (Throwable $e) {
+				$this->logger->warning(sprintf('Example %s left out: %s', basename($file), $e->getMessage()));
+			}
+		}
 		usort($examples, static fn (Example $a, Example $b): int => strcmp($a->name, $b->name));
 
 		return $examples;

@@ -22,6 +22,7 @@ use PDOException;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mercure\HubInterface;
 
@@ -64,7 +65,7 @@ final class AppHarness
 			$container->extend(MailConfig::class)->setConcrete(new MailConfig('smtp.test', '25', '', '', 'no-reply@izbik.test'));
 			$container->extend(GoogleAuthServiceInterface::class)->setConcrete(self::googleAuth());
 			// The examples the tests write, not those shipped in examples/.
-			$container->add(ExampleCatalogue::class, new ExampleCatalogue(self::examplesDirectory()));
+			$container->add(ExampleCatalogue::class, new ExampleCatalogue(new NullLogger(), self::examplesDirectory()));
 			$container->extend(SignUpConfig::class)->setConcrete(self::signUp());
 		}
 

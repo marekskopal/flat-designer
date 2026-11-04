@@ -85,6 +85,17 @@ final class ExampleControllerTest extends IntegrationTestCase
 		self::assertSame(404, $this->request('GET', self::projectPath(Routes::Project, $source), authenticatedAs: $user)->getStatusCode());
 	}
 
+	public function testAFileThatIsNotAnExampleIsLeftOut(): void
+	{
+		$author = Fixture::createUser('author@example.com');
+		$this->export(Fixture::createProject($author, 'Model flat'), ['--name' => 'Demo flat']);
+		file_put_contents(AppHarness::examplesDirectory() . '/broken.json', '{"format": 1}');
+
+		$examples = $this->jsonList($this->request('GET', Routes::Examples->value, authenticatedAs: $author));
+
+		self::assertSame(['Demo flat'], array_column($examples, 'name'));
+	}
+
 	public function testAnUnknownExampleIsNotFound(): void
 	{
 		$user = Fixture::createUser();

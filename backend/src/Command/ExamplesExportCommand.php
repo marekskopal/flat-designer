@@ -12,6 +12,7 @@ use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\Project\ProjectSnapshotService;
 use Izbik\Service\Project\SnapshotFiles;
 use Izbik\Service\Project\SnapshotJson;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -81,7 +82,7 @@ final class ExamplesExportCommand extends AbstractCommand
 		}
 
 		$directory = self::option($input, 'directory');
-		$catalogue = $directory === null ? new ExampleCatalogue() : new ExampleCatalogue($directory);
+		$catalogue = $directory === null ? new ExampleCatalogue(new NullLogger()) : new ExampleCatalogue(new NullLogger(), $directory);
 		$file = $catalogue->write(new Example(
 			slug: $slug,
 			name: $name,
