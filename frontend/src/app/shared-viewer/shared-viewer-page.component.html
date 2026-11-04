@@ -74,6 +74,18 @@
                 }
             </button>
         }
+        <span class="rail__spacer"></span>
+        <button
+            type="button"
+            class="rail__button"
+            [class.rail__button--active]="panel() === 'keys'"
+            [attr.aria-pressed]="panel() === 'keys'"
+            aria-label="Keyboard shortcuts"
+            data-tip="Keyboard shortcuts (?)"
+            (click)="togglePanel('keys')"
+        >
+            <fd-icon name="keyboard" />
+        </button>
     </nav>
 
     <!-- Top bar: what is shared, the views the link allows, back to how it opens. -->
@@ -160,6 +172,9 @@
                         @if (scene(); as s) {
                             <fd-variants [scene]="s" [local]="true" (switched)="switchVariant($event)" />
                         }
+                    }
+                    @case ('keys') {
+                        <fd-shortcuts [owner]="false" [canComment]="commentAccess() === 'write'" />
                     }
                     @case ('export') {
                         @if (scene(); as s) {

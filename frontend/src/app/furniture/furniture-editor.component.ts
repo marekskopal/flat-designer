@@ -19,7 +19,9 @@ import {FurnitureDefinition, FurnitureDefinitionBody, ScopeLabels} from '@app/mo
 import {Material} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {WebglMessageComponent} from '@app/shared/webgl-message/webgl-message.component';
 import {FurniturePreview} from '@app/viewer/engine/custom/preview';
+import {webglAvailable, WebglProblem} from '@app/viewer/engine/webgl';
 
 import {ScheduleSettingsComponent} from './schedule-settings.component';
 
@@ -32,7 +34,7 @@ type Parsed = {ok: true; body: FurnitureDefinitionBody} | {ok: false; error: str
  */
 @Component({
     selector: 'fd-furniture-editor',
-    imports: [CustomParamsComponent, RouterLink, ScheduleSettingsComponent],
+    imports: [CustomParamsComponent, RouterLink, ScheduleSettingsComponent, WebglMessageComponent],
     templateUrl: './furniture-editor.component.html',
     styleUrl: './furniture-editor.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +47,8 @@ export class FurnitureEditorComponent implements OnDestroy {
     private readonly router = inject(Router);
     private readonly previewHost = viewChild.required<ElementRef<HTMLElement>>('preview');
     private preview: FurniturePreview | null = null;
+    /** Why the preview is not drawn: no WebGL 2, or its context was lost. */
+    protected readonly webglProblem = signal<WebglProblem | null>(null);
 
     protected readonly scopeLabels = ScopeLabels;
     protected readonly definition = signal<FurnitureDefinition | null>(null);
@@ -93,7 +97,14 @@ export class FurnitureEditorComponent implements OnDestroy {
     public constructor() {
         effect(() => void this.load(this.definitionId()));
         afterNextRender(() => {
-            this.preview = new FurniturePreview(this.previewHost().nativeElement);
+            const host = this.previewHost().nativeElement;
+            if (!webglAvailable()) {
+                this.webglProblem.set('unsupported');
+                return;
+            }
+            host.addEventListener('webglcontextlost', () => this.webglProblem.set('lost'), true);
+            host.addEventListener('webglcontextrestored', () => this.webglProblem.set(null), true);
+            this.preview = new FurniturePreview(host);
             if (this.materials().length > 0) {
                 this.preview.setMaterials(this.materials());
             }

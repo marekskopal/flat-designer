@@ -189,6 +189,12 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
     viewer uses the same layout and stylesheet (its rail: comments, variants, export). On phones (≤ 640 px) the top bar
     keeps icons, the panels and the inspector are bottom sheets (a selection closes the panel), and the Display popover
     takes the wall cut.
+  - Help in the rail: the first-steps guide (`FirstStepsComponent`, steps from `firstSteps()`: walls, rooms, a door,
+    furniture, a walk, each ticked off from the scene; it opens by itself on an empty floor, once per project,
+    `izbik.firstStepsShown` in localStorage; a step's button starts its tool and closes the guide) and the shortcuts
+    (`ShortcutsComponent`, key `?`, the shared viewer's too). **A new shortcut goes into `ShortcutsComponent`.**
+  - Without WebGL 2 (`webglAvailable()` in `viewer/engine/webgl.ts`) `ViewerComponent` and the furniture preview make
+    no engine and show `WebglMessageComponent`; a lost context shows it with a Reload button.
   - `EditorPanelComponent` is the inspector panel (shown with a selection) and holds the editing shortcuts;
     `AddLibraryComponent` is the Add library (categories, search), `WallDraftComponent` the Draw walls options.
   - `InspectorComponent` is driven by `ElementFields`; add a field there to make it editable. A field's `section` starts

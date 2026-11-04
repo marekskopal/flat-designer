@@ -99,6 +99,19 @@
             </button>
         }
         <span class="rail__spacer"></span>
+        @if (canEdit()) {
+            <button
+                type="button"
+                class="rail__button"
+                [class.rail__button--active]="panel() === 'guide'"
+                [attr.aria-pressed]="panel() === 'guide'"
+                aria-label="First steps"
+                data-tip="First steps"
+                (click)="togglePanel('guide')"
+            >
+                <fd-icon name="help" />
+            </button>
+        }
         <button
             type="button"
             class="rail__button"
@@ -333,41 +346,13 @@
                             <fd-underlay-panel [scene]="s" [projectId]="projectId()" />
                         }
                     }
+                    @case ('guide') {
+                        @if (scene(); as s) {
+                            <fd-first-steps [scene]="s" [walked]="walked()" (start)="startStep($event)" />
+                        }
+                    }
                     @case ('keys') {
-                        <dl class="shortcuts">
-                            <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt>
-                            <dd>3D · Plan · Walk</dd>
-                            <dt><kbd>E</kbd></dt>
-                            <dd>Edit / done</dd>
-                            <dt><kbd>V</kbd></dt>
-                            <dd>Select (ends a tool)</dd>
-                            <dt><kbd>D</kbd> <kbd>C</kbd></dt>
-                            <dd>Measure · pin a comment</dd>
-                            <dt><kbd>W</kbd> <kbd>M</kbd> <kbd>B</kbd></dt>
-                            <dd>Draw walls · room from walls · railing</dd>
-                            <dt><kbd>A</kbd></dt>
-                            <dd>Arc, while drawing walls</dd>
-                            <dt>Arrows</dt>
-                            <dd>Nudge the selection (<kbd>Shift</kbd> × 10)</dd>
-                            <dt><kbd>R</kbd></dt>
-                            <dd>Turn by 90°</dd>
-                            <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt>
-                            <dd>Duplicate</dd>
-                            <dt><kbd>Del</kbd></dt>
-                            <dd>Delete</dd>
-                            <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt>
-                            <dd>Undo (with <kbd>Shift</kbd>: redo)</dd>
-                            <dt><kbd>Shift</kbd>+click</dt>
-                            <dd>Pick items to group</dd>
-                            <dt><kbd>Alt</kbd>+click</dt>
-                            <dd>An item inside its group</dd>
-                            <dt><kbd>Esc</kbd></dt>
-                            <dd>Cancel, deselect</dd>
-                        </dl>
-                        <p class="flyout__note">
-                            Drag to orbit, right-drag to pan, scroll to zoom. In the plan, drags snap to the grid and to corners; <kbd>Shift</kbd> moves in 1
-                            mm steps without snapping. Drag a midpoint of a selected outline for a new corner, double-click a corner to remove it.
-                        </p>
+                        <fd-shortcuts [canComment]="version() === null" />
                     }
                 }
             </div>

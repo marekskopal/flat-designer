@@ -55,7 +55,11 @@
         </section>
 
         <section class="pane pane--preview">
-            <div #preview class="preview" aria-label="Preview of the furniture"></div>
+            <div #preview class="preview" aria-label="Preview of the furniture">
+                @if (webglProblem(); as problem) {
+                    <fd-webgl-message [problem]="problem" />
+                }
+            </div>
             <div class="tryout">
                 <div class="tryout__head">
                     <h2 class="tryout__title">Try it out</h2>

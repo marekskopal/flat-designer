@@ -3,7 +3,7 @@
         <h1 class="page__title">Projects</h1>
         <div class="page__actions">
             @if (examples().length > 0 && projects().length > 0) {
-                <button type="button" class="btn btn--ghost" [attr.aria-expanded]="showExamples()" (click)="toggleExamples()">
+                <button type="button" class="btn" [attr.aria-expanded]="showExamples()" (click)="toggleExamples()">
                     Start from an example
                 </button>
             }

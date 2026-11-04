@@ -25,6 +25,7 @@ import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {SunTimeComponent} from '@app/viewer/sun-time.component';
 import {ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
+import {ShortcutsComponent} from '@app/viewer-page/shortcuts.component';
 
 /** Section heights offered by the slider (mm); the top value means "no cut" (as on the viewer page). */
 const SectionMin = 900;
@@ -33,9 +34,9 @@ const SectionMax = 2700;
 const GuestNameKey = 'fd.guestName';
 
 /** The panels of the rail a link may offer. */
-type PanelKey = 'comments' | 'variants' | 'export';
+type PanelKey = 'comments' | 'variants' | 'export' | 'keys';
 
-const PanelTitles: Record<PanelKey, string> = {comments: 'Comments', variants: 'Variants', export: 'Export'};
+const PanelTitles: Record<PanelKey, string> = {comments: 'Comments', variants: 'Variants', export: 'Export', keys: 'Keyboard shortcuts'};
 
 /**
  * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
@@ -55,6 +56,7 @@ const PanelTitles: Record<PanelKey, string> = {comments: 'Comments', variants: '
         CommentsComponent,
         SunTimeComponent,
         IconComponent,
+        ShortcutsComponent,
     ],
     templateUrl: './shared-viewer-page.component.html',
     // The viewer page's layout: the rail, the top bar, the dock and their panels.
@@ -335,7 +337,9 @@ export class SharedViewerPageComponent {
             this.menu.set(null);
             return;
         }
-        if (event.key === 'v' || event.key === 'V') {
+        if (event.key === '?') {
+            this.togglePanel('keys');
+        } else if (event.key === 'v' || event.key === 'V') {
             this.selectTool();
         } else if (event.key === 'd' || event.key === 'D') {
             event.preventDefault();
