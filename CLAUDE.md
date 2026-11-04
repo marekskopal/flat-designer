@@ -1122,7 +1122,8 @@ The current format is the text in `FurnitureTools::Format`.
   the models no model matches by source URL as the project's own (`ImportedAssets`, the new ids, which
   `SnapshotFiles::withFiles()` and `SnapshotModels` put into the snapshot), `BundleLibraryImporter` the own definitions
   (validated) and the prices (materials by code). What this instance cannot take is left out as a `warnings` entry of
-  `ProjectImportDto`; on a failure the stored objects are deleted again.
+  `ProjectImportDto`; on a failure the stored objects are deleted again. UI: the project page's Download and Without
+  files, the projects page's Import (opens the new project, the warnings as toasts).
 - Models: `make example-models` runs `frontend/scripts/example-models.mjs` in a Node container: the Poly Haven models
   the examples list (`sourceUrl` `https://polyhaven.com/a/<asset>`), fetched through the Poly Haven API (a User-Agent
   naming Izbik, md5 checked; its terms allow this, crediting Poly Haven), optimised with gltf-transform as in Product

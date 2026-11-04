@@ -7,6 +7,10 @@
                     Start from an example
                 </button>
             }
+            <label class="btn" [class.btn--busy]="importing()" title="A project file downloaded from a project's page (.izbik.zip or .izbik.json)">
+                {{ importing() ? 'Importing…' : 'Import' }}
+                <input type="file" class="picker" accept=".zip,.json,application/zip,application/json" [disabled]="importing()" (change)="importFrom($event)" />
+            </label>
             @if (!creating()) {
                 <button type="button" class="btn btn--primary" (click)="creating.set(true); showExamples.set(false)">New project</button>
             }
