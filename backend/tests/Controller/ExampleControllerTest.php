@@ -128,7 +128,11 @@ final class ExampleControllerTest extends IntegrationTestCase
 					'rooms' => [
 						[
 							'floorMaterialId' => 901,
-							'wallFinishes' => [['materialId' => 901, 'bottom' => 0, 'top' => 900], ['materialId' => 902, 'bottom' => 900, 'top' => 1200]],
+							'wallFinishes' => [
+								['materialId' => 901, 'bottom' => 0, 'top' => 900],
+								['materialId' => 902, 'bottom' => 900, 'top' => 1200],
+								['bottom' => 1200, 'top' => 1500],
+							],
 						]],
 					'items' => [
 						['kind' => 'Model', 'modelId' => 77],

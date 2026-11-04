@@ -57,7 +57,7 @@ final readonly class SnapshotMaterials
 			}
 
 			$value[$key] = array_values(
-				array_filter($value[$key], static fn (mixed $band): bool => is_array($band) && $band['materialId'] !== null),
+				array_filter($value[$key], static fn (mixed $band): bool => is_array($band) && ($band['materialId'] ?? null) !== null),
 			);
 		}
 		// A Custom item's slot materials: slot key → material id.
