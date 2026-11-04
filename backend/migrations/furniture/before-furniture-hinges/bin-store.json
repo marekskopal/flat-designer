@@ -1,0 +1,102 @@
+{
+ "name": "Bin store",
+ "description": "A concrete bin store: a back, two ends and a roof slab, with a grey steel door per bin.",
+ "definition": {
+  "format": 1,
+  "catalogue": "outdoor",
+  "size": {
+   "width": 2400,
+   "depth": 900,
+   "height": 1300
+  },
+  "parameters": [
+   {
+    "key": "bins",
+    "label": "Bins",
+    "type": "int",
+    "default": 3,
+    "min": 1,
+    "max": 6
+   },
+   {
+    "key": "wall",
+    "label": "Wall thickness",
+    "type": "int",
+    "default": 120,
+    "min": 60,
+    "max": 250,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "bay": "round((W - 2 * wall) / bins)"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Concrete",
+    "default": "concrete-formwork"
+   },
+   {
+    "key": "doors",
+    "label": "Doors",
+    "default": "steel-painted-grey"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Back",
+    "x": "wall",
+    "y": 0,
+    "z": 0,
+    "w": "W - 2 * wall",
+    "h": "H - 100",
+    "d": "wall",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "End",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - wall)",
+    "y": 0,
+    "z": 0,
+    "w": "wall",
+    "h": "H - 100",
+    "d": "D",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Roof",
+    "x": 0,
+    "y": "H - 100",
+    "z": 0,
+    "w": "W",
+    "h": 100,
+    "d": "D",
+    "material": "body"
+   },
+   {
+    "type": "front",
+    "name": "Door",
+    "repeat": {
+     "count": "bins"
+    },
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "right",
+    "x": "wall + i * bay + 5",
+    "y": 60,
+    "z": "D - 40",
+    "w": "bay - 10",
+    "h": "H - 180",
+    "d": 30,
+    "material": "doors"
+   }
+  ]
+ }
+}

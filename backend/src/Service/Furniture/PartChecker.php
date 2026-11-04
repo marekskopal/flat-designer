@@ -36,6 +36,36 @@ final readonly class PartChecker
 			ARRAY_FILTER_USE_BOTH,
 		);
 		self::checkOptions($type, $options, $path);
+		self::checkHingeAngle($type, $options, $path);
+	}
+
+	/** A concealed hinge, the default for a swinging door, opens at most this far (degrees). */
+	public const int ConcealedMaxAngle = 155;
+
+	/**
+	 * A door (a front, or an assembly) swinging on concealed hinges opens at most `ConcealedMaxAngle`; checked on
+	 * literal options only (the viewer caps an evaluated one).
+	 *
+	 * @param array<mixed> $options
+	 */
+	private static function checkHingeAngle(PartTypeEnum $type, array $options, string $path): void
+	{
+		$opens = $options['opens'] ?? null;
+		$swings = $opens === 'swing'
+			|| ($type === PartTypeEnum::Front && $opens === null && ($options['kind'] ?? null) !== 'drawer');
+		$hingeType = $options['hingeType'] ?? 'concealed';
+		$angle = $options['angle'] ?? null;
+		if (!$swings || $hingeType !== 'concealed' || !(is_int($angle) || is_float($angle)) || $angle <= self::ConcealedMaxAngle) {
+			return;
+		}
+
+		throw DefinitionException::invalid(
+			$path . '.angle',
+			sprintf(
+				'A door on concealed hinges opens at most %d degrees; use hingeType "butt" to open it further.',
+				self::ConcealedMaxAngle,
+			),
+		);
 	}
 
 	/**

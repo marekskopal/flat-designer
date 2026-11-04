@@ -64,7 +64,7 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
 - All stored lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the
   ground floor, x points east and y points north; all floors of a project share it, so they stack. The viewer converts
   with `MM` (0.001) and maps plan y to scene −z.
-- Stacked floors (I-36, plan in `docs/stacked-floors-plan.md`): a floor's `level` orders it, `elevation` is its
+- Stacked floors (I-36): a floor's `level` orders it, `elevation` is its
   finished floor level above the project datum ±0.000 and `slabThickness` the slab under it (the viewer's slab). A new
   floor without them stands on the tallest wall of the floor below plus its slab, or hangs under the one above
   (`FloorStack`; 300 mm slabs at level 0 and below, 250 above); snapshots from before them are stacked the same way. The
@@ -232,8 +232,7 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
 
 ## Furniture definitions
 
-The design notes are in `docs/furniture-definitions-plan.md` and `docs/furniture-definitions-v2-plan.md`. The current
-format is the text in `FurnitureTools::Format`.
+The current format is the text in `FurnitureTools::Format`.
 
 - A definition describes custom furniture as data: parameters and parts whose sizes are expressions.
 - The expression language and the definition evaluator exist twice: in PHP (`Service/Furniture`) and in TS
@@ -304,8 +303,8 @@ format is the text in `FurnitureTools::Format`.
 
 ## Openable fronts (I-106)
 
-- The plan is `docs/openable-fronts-plan.md`. A `front` part opens in the viewer by `opens`: `swing` (a door's default,
-  on its `hinge` edge, default the side away from `handleSide`, `angle` default 105), `slide` (a drawer's default,
+- A `front` part opens in the viewer by `opens`: `swing` (a door's default, on its `hinge` edge, default the side away
+  from `handleSide`, on `hingeType` hinges, `angle` default 110 concealed / 105 butt), `slide` (a drawer's default,
   `travel` mm out, default ¾ of its reach into the item), `lift` (a flap turning up about its top edge), `fold` (a
   bi-fold flap folding `foldAt` below its top, at most half way; the cut list lists its two panels, `FoldingFront`, twin
   `foldPanels()`), `parallel` (rising `travel` upright, default its height + 10) or `none`; `softClose` damps the
@@ -325,6 +324,20 @@ format is the text in `FurnitureTools::Format`.
   the selected item (or of the selected group's) toggles it; `setFrontsOpen()` (the Display toggle "Open fronts", not kept by views or share links),
   `itemFrontsOpen()` / `setItemFrontsOpen()` (the selection card's button, for an item or a group). The furniture editor's preview toggles a
   front by a click and has Open fronts. Plans and elevations draw the closed box; the glTF export the current pose.
+- Hinges (I-128, `viewer/engine/custom/hinges.ts`, framework-free, TS only): a swinging door or assembly hangs on
+  `hingeType` `concealed` (the default) or `butt` hinges (an assembly's own, else its front's), at the box of its door
+  (`FrontSpec.door`, `leafDoors()`: an assembly's first front, else its part reaching furthest out). A concealed hinge
+  is a four-bar linkage (`ArmPivots` on the arm's nose, `CupPivots` in the cup, tuned so a full-overlay door 16–22 mm
+  thick never stands out past the side nor back into the carcass): `concealedOffset()` (solved by continuation, a
+  table per half degree) carries the door forward and in over the side as it turns. It opens at most
+  `ConcealedMaxAngle` (155, a wide-angle hinge): `PartChecker` refuses a literal angle over it, the viewer caps an
+  evaluated one. A butt hinge turns the door about its back hinge edge. `buildFrontHinges()` draws
+  `frontHingeHeights()` hinges (2–5 by the door's height, 100 mm from its ends), meshes named `Hinge` on shared
+  geometries: a concealed one's cup in the pivot, its plate, arm and nose on the inner face of the side behind the
+  hinge edge (`sideInner()` in `custom.ts`: an upright board, not turned or tilted) and its two links in the front's
+  group tagged `frontLink`, posed by `setFrontPose()` (`poseHingeLinks()`) and hidden while closed; a butt one's
+  barrel and leaves, half on the door, half on the carcass. Without a side there, only the door's half is drawn. The
+  integrated soft-close damper is not drawn. `AddFurnitureHinges` gives the bin store and garden shed butt hinges.
 - Seeds (`AddOpenableFrontsMigration`, `down()` writes back `furniture/before-openable-fronts`): the kitchen cabinets,
   sideboard, bedside table and vanity have drawers with boxes, shelves behind doors and a `softClose` parameter; the wall
   and tall cabinets' fronts may be `liftUp`, `bifold` or `parallelLift`.
@@ -506,7 +519,7 @@ format is the text in `FurnitureTools::Format`.
 
 ## Stairs (I-37)
 
-- The plan is `docs/stairs-plan.md`. A `Stair` (`stairs`, element type `Stair`, `StairHandler` through `SceneEditor`:
+- A `Stair` (`stairs`, element type `Stair`, `StairHandler` through `SceneEditor`:
   undo, change log; REST `…/stairs`, MCP `add_stair` / `update_stair` / `delete_stair`) belongs to the floor it starts
   on and climbs to the next one up. (x, y) is the middle of the first step's front edge and `rotation` the walking-up
   direction (0 north). `shape` is Straight, LShaped (quarter landing), UShaped (half landing, `gap` between the flights),
@@ -624,7 +637,7 @@ format is the text in `FurnitureTools::Format`.
 
 ## Roofs (I-38)
 
-- The plan is `docs/roofs-plan.md`. A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,
+- A `Roof` (`roofs`, element type `Roof`, `RoofHandler` through `SceneEditor`: undo,
   change log; REST `…/roofs`, MCP `add_roof` / `update_roof` / `delete_roof`) belongs to the floor it covers, its heights
   counting from that floor's level. It is a rectangle, the eaves line: `width` × `depth` centred on (x, y), the ridge
   along the width, turned by `rotation`. `shape` is Gable, Hip (a pyramid over a square), Shed (rising from the front,
@@ -914,7 +927,7 @@ format is the text in `FurnitureTools::Format`.
   and the data sockets' `dataPorts`. The rows are PHP only; what an item counts as is twinned by `scheduleUnits()` in
   `electrical.ts` (the plan's gang marks, the PDF legend), kept identical by `backend/tests/fixtures/electrical-units.json`.
   **Always change both twins and add a fixture case in the same change.**
-- Electrical plan (I-64, plan in `docs/electrical-plan.md`): `viewer/engine/electrical.ts` (framework-free) gives the
+- Electrical plan (I-64): `viewer/engine/electrical.ts` (framework-free) gives the
   points (`electricalPoints()`: wall points on the middle of the item's back edge, the wall face, facing out; lights at
   the centre; hidden variants left out; `hasElectricalPoints()` only tells whether there are any) and their symbols as unit-frame polylines in two sets, `Iec` and `Csn`
   (`ElectricalSymbolSets`, `symbolPolylines()`). The user picks the set on the account page (`users.electrical_symbols`,
@@ -1114,6 +1127,7 @@ format is the text in `FurnitureTools::Format`.
 
 ## Code style
 
+- Plans (`docs/*-plan.md`) are local working notes, gitignored: never commit them.
 - Never mention ukolio task numbers (`I-…`) in code, comments, test names or fixtures; describe the feature instead.
   Ticket numbers belong in commit messages, branch names and the docs.
 - PHP: tabs, the slevomat ruleset copied from ukolio, phpstan at max level.
