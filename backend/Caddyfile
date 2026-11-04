@@ -25,7 +25,7 @@
 		# Set by the backend as an HttpOnly cookie (MercureCookieIssuer); no __Host- prefix so it works
 		# over plain http locally.
 		cookie_name mercureAuthorization
-		cors_origins {$BACKEND_CORS_ALLOWED_ORIGIN}
+		cors_origins {$MERCURE_CORS_ORIGINS}
 	}
 
 	php {
