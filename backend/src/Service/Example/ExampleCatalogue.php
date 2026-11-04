@@ -15,7 +15,7 @@ use const JSON_UNESCAPED_UNICODE;
 
 /**
  * The example projects shipped with the app: one JSON file per example in `backend/examples/`, `<slug>.json` holding
- * `{format, name, description, credit, startView, snapshot}` (`ExampleExporter` writes them). The snapshot is a project
+ * `{format, name, description, credit, startView, snapshot}` (`ExamplesExportCommand` writes them). The snapshot is a project
  * snapshot taken on the instance it was modelled on, so it is imported (`ProjectSnapshotService::import()`), not restored.
  */
 final readonly class ExampleCatalogue
