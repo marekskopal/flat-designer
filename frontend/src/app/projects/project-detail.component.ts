@@ -5,6 +5,7 @@ import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {levelText} from '@app/core/level-text';
+import {downloadBlob, safeFilename} from '@app/export/download';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor, Material} from '@app/models/scene';
 import {ShareLink, shareUrl} from '@app/models/share';
@@ -54,6 +55,8 @@ export class ProjectDetailComponent {
     protected readonly editingShare = signal<number | null>(null);
     protected readonly shareUrl = shareUrl;
     protected readonly busy = signal(false);
+    /** A project file being prepared for download. */
+    protected readonly exporting = signal(false);
     protected readonly editingDetails = signal(false);
     /** Floor being renamed, or 'new' while adding one. */
     protected readonly editingFloor = signal<number | 'new' | null>(null);
@@ -138,6 +141,19 @@ export class ProjectDetailComponent {
             );
             this.editingDetails.set(false);
         });
+    }
+
+    /** Saves the project as a project file: a zip with its files and models, or the JSON alone. */
+    protected async downloadProject(project: Project, withFiles: boolean): Promise<void> {
+        this.exporting.set(true);
+        try {
+            const blob = await this.projectService.exportProject(project.id, withFiles);
+            downloadBlob(blob, `${safeFilename(project.name) || 'project'}.izbik.${withFiles ? 'zip' : 'json'}`);
+        } catch {
+            // The error interceptor shows the toast.
+        } finally {
+            this.exporting.set(false);
+        }
     }
 
     protected async deleteProject(project: Project): Promise<void> {

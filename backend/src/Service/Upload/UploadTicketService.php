@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Izbik\Service\Upload;
 
-use Closure;
 use DateTimeImmutable;
 use Izbik\Dto\ModelAssetInputDto;
+use Izbik\Dto\ProjectImportDto;
 use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
 use Izbik\Model\Entity\Enum\UploadKindEnum;
 use Izbik\Model\Entity\ModelAsset;
@@ -19,8 +19,13 @@ use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\ModelAsset\ModelAssetProvider;
 use Izbik\Service\Project\ProjectFileProvider;
 use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\Transfer\ProjectImportConfig;
+use Izbik\Service\Project\Transfer\ProjectImporter;
+use Izbik\Service\Project\Transfer\ProjectImportException;
 use Izbik\Service\Storage\S3Config;
 use MarekSkopal\ORM\Database\DatabaseInterface;
+use Psr\Http\Message\StreamInterface;
+use RuntimeException;
 use Throwable;
 use const JSON_FORCE_OBJECT;
 use const JSON_THROW_ON_ERROR;
@@ -42,6 +47,8 @@ final readonly class UploadTicketService
 		private ProjectFileProvider $projectFileProvider,
 		private ModelAssetProvider $modelProvider,
 		private S3Config $s3Config,
+		private ProjectImportConfig $importConfig,
+		private ProjectImporter $importer,
 		private DatabaseInterface $database,
 	) {
 	}
@@ -50,6 +57,12 @@ final readonly class UploadTicketService
 	public function createForFile(User $user, Project $project, string $filename): array
 	{
 		return $this->create($user, UploadKindEnum::ProjectFile, $project, ProjectFileProvider::cleanFilename($filename), []);
+	}
+
+	/** @return array{UploadTicket, string} the ticket and its token, for a project file to import as a new project */
+	public function createForImport(User $user): array
+	{
+		return $this->create($user, UploadKindEnum::ProjectImport, null, 'project', []);
 	}
 
 	/** @return array{UploadTicket, string} the ticket and its token */
@@ -74,13 +87,13 @@ final readonly class UploadTicketService
 	}
 
 	/** The most bytes an upload may have; a body read past it is rejected by the provider. */
-	public function maxBytes(): int
+	public function maxBytes(UploadKindEnum $kind = UploadKindEnum::ProjectFile): int
 	{
-		return $this->s3Config->maxFileSizeBytes;
+		return $kind === UploadKindEnum::ProjectImport ? $this->importConfig->maxBytes : $this->s3Config->maxFileSizeBytes;
 	}
 
-	/** @param Closure(): string $readBody reads the request body, called once the ticket is claimed */
-	public function redeem(string $token, Closure $readBody): ProjectFile|ModelAsset
+	/** @param StreamInterface $body the request body, read once the ticket is claimed and only up to the kind's limit */
+	public function redeem(string $token, StreamInterface $body): ProjectFile|ModelAsset|ProjectImportDto
 	{
 		$tokenHash = hash('sha256', $token);
 		$now = new DateTimeImmutable();
@@ -95,9 +108,11 @@ final readonly class UploadTicketService
 		}
 
 		try {
-			$body = $readBody();
-
-			return $ticket->kind === UploadKindEnum::ProjectFile ? $this->storeFile($ticket, $body) : $this->storeModel($ticket, $body);
+			return match ($ticket->kind) {
+				UploadKindEnum::ProjectFile => $this->storeFile($ticket, self::read($body, $this->maxBytes() + 1)),
+				UploadKindEnum::Model => $this->storeModel($ticket, self::read($body, $this->maxBytes() + 1)),
+				UploadKindEnum::ProjectImport => $this->import($ticket, $body),
+			};
 		} catch (Throwable $e) {
 			$this->database->execute('UPDATE upload_tickets SET used_at = NULL WHERE id = ?', [$ticket->id], cached: false);
 
@@ -129,6 +144,54 @@ final readonly class UploadTicketService
 		$this->ticketRepository->persist($ticket);
 
 		return [$ticket, $token];
+	}
+
+	/** The project file goes to a temporary file, as it may be larger than PHP's memory: the importer reads it from there. */
+	private function import(UploadTicket $ticket, StreamInterface $body): ProjectImportDto
+	{
+		$path = tempnam(sys_get_temp_dir(), 'izbik-import');
+		$file = $path === false ? false : fopen($path, 'wb');
+		if ($path === false || $file === false) {
+			throw new RuntimeException('Cannot create a temporary file.');
+		}
+
+		try {
+			$limit = $this->maxBytes(UploadKindEnum::ProjectImport);
+			$written = 0;
+			while (!$body->eof() && $written <= $limit) {
+				$chunk = $body->read(1 << 20);
+				if ($chunk === '') {
+					break;
+				}
+				fwrite($file, $chunk);
+				$written += strlen($chunk);
+			}
+			fclose($file);
+			if ($written > $limit) {
+				throw new ProjectImportException(sprintf('The project file is larger than %d MB.', intdiv($limit, 1024 * 1024)), 413);
+			}
+
+			return $this->importer->import($ticket->user, $path);
+		} finally {
+			if (is_file($path)) {
+				unlink($path);
+			}
+		}
+	}
+
+	/** At most `$limit` bytes of the stream; one byte over the upload limit is enough for the provider to reject it. */
+	private static function read(StreamInterface $stream, int $limit): string
+	{
+		$body = '';
+		while (strlen($body) < $limit && !$stream->eof()) {
+			$chunk = $stream->read(min(1 << 20, $limit - strlen($body)));
+			if ($chunk === '') {
+				break;
+			}
+			$body .= $chunk;
+		}
+
+		return $body;
 	}
 
 	private function storeFile(UploadTicket $ticket, string $body): ProjectFile

@@ -100,3 +100,14 @@
         margin: 0 0 $space-12;
     }
 }
+
+.picker {
+    display: none;
+}
+
+// A label standing in for a button while its file input is disabled.
+.btn--busy {
+    opacity: 0.55;
+    cursor: default;
+    pointer-events: none;
+}

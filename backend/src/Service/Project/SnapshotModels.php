@@ -9,9 +9,10 @@ use Izbik\Model\Entity\Project;
 use Izbik\Model\Repository\ModelAssetRepository;
 
 /**
- * The models of a snapshot from another instance, matched by their source URL (from the floors' `models`) among the
- * global models and the project owner's library, a global one first: the items take this instance's model id, none
- * where there is no such model (the item then draws a box). `make example-models` imports those of the examples.
+ * The models of a snapshot from another instance: one uploaded with it (a project file's) by its new id, else matched by
+ * its source URL (from the floors' `models`) among the global models and the project owner's library, a global one
+ * first: the items take this instance's model id, none where there is no such model (the item then draws a box).
+ * `make example-models` imports those of the examples.
  */
 final readonly class SnapshotModels
 {
@@ -21,11 +22,12 @@ final readonly class SnapshotModels
 
 	/**
 	 * @param array<mixed> $data the decoded snapshot
+	 * @param array<int, int> $uploaded the id of a model uploaded with the snapshot by the snapshot's
 	 * @return array<mixed>
 	 */
-	public function localize(array $data, Project $project): array
+	public function localize(array $data, Project $project, array $uploaded = []): array
 	{
-		$ids = $this->ids($data, $project);
+		$ids = $uploaded + $this->ids($data, $project);
 
 		return SnapshotJson::mapFloors($data, static fn (array $entry): array => SnapshotJson::mapItems(
 			$entry,
@@ -61,7 +63,7 @@ final readonly class SnapshotModels
 	}
 
 	/** @return array<string, ModelAsset> the models the project may use, by source URL (a global one first) */
-	private function bySource(Project $project): array
+	public function bySource(Project $project): array
 	{
 		$owner = $project->owner;
 		$bySource = [];

@@ -16,6 +16,16 @@ final class FurnitureDefinitionRepository extends ARepository
 		return $this->findOne(['id' => $definitionId]);
 	}
 
+	/**
+	 * The project's own definitions, not deleted, by id.
+	 *
+	 * @return list<FurnitureDefinition>
+	 */
+	public function findByProject(int $projectId): array
+	{
+		return $this->select()->where(['project_id' => $projectId, 'deleted_at' => null])->orderBy('id')->fetchAll();
+	}
+
 	/** A not deleted definition of the project with exactly this name and JSON (a copy made by an earlier restore). */
 	public function findProjectCopy(int $projectId, string $name, string $definition): ?FurnitureDefinition
 	{

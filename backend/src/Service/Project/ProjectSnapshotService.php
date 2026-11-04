@@ -44,7 +44,10 @@ use Izbik\Service\Editor\Element\ItemModelLink;
 use Izbik\Service\Project\Exception\InvalidSnapshotException;
 use Izbik\Service\Provider\SceneProvider;
 use JsonException;
+use Psr\Log\LoggerInterface;
 use stdClass;
+use TypeError;
+use ValueError;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -93,6 +96,7 @@ final readonly class ProjectSnapshotService
 		private ItemModelLink $modelLink,
 		private SnapshotLocalizer $localizer,
 		private ProjectRepository $projectRepository,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -184,18 +188,44 @@ final readonly class ProjectSnapshotService
 
 	/**
 	 * Restores a snapshot taken on another instance (an example project, an imported file) into a new project, as
-	 * `restore()` does, its ids put onto this instance first (`SnapshotLocalizer`) and its definitions matched by name and
-	 * content among the global ones. The project takes the snapshot's name, address, description, site and façade
-	 * material. The caller runs this in a transaction.
+	 * `restore()` does, its ids put onto this instance first (`SnapshotLocalizer`, with the files and models uploaded
+	 * with it) and its definitions matched by name and content among the global ones. The project takes the snapshot's
+	 * name, address, description, site and façade material. The caller runs this in a transaction.
+	 *
+	 * A snapshot from a file is untrusted: it is held to `SnapshotLimits`, and any value the restore cannot take is an
+	 * `InvalidSnapshotException`. The elements are not validated as an edit would be: a project that draws badly harms
+	 * only the one who imported it.
 	 */
-	public function import(Project $project, string $snapshot): void
+	public function import(Project $project, string $snapshot, ImportedAssets $assets = new ImportedAssets()): void
 	{
 		$decoded = $this->decode($snapshot, true);
 		if (!is_array($decoded)) {
 			throw new InvalidSnapshotException('Snapshot must be a JSON object.');
 		}
-		$data = $this->reader($this->localizer->localize($decoded, $project));
+		$this->importDecoded($project, $decoded, $assets);
+	}
 
+	/**
+	 * `import()` of a snapshot already decoded (a project file's).
+	 *
+	 * @param array<mixed> $data
+	 */
+	public function importDecoded(Project $project, array $data, ImportedAssets $assets = new ImportedAssets()): void
+	{
+		SnapshotLimits::check($data);
+
+		try {
+			$this->importData($project, $this->reader($this->localizer->localize($data, $project, $assets)));
+		} catch (ValueError | TypeError $e) {
+			// Logged in full, as it may as well be a bug of the restore; the user learns only that the file is at fault.
+			$this->logger->warning(sprintf('Import of a snapshot into project %d failed: %s', $project->id, $e));
+
+			throw new InvalidSnapshotException('The project file holds a value this version of Izbik cannot take.', 0, $e);
+		}
+	}
+
+	private function importData(Project $project, SnapshotReader $data): void
+	{
 		$details = $data->object('project');
 		$project->name = $details->string('name');
 		$project->address = $details->nullableString('address');

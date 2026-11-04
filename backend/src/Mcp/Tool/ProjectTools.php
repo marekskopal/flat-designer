@@ -23,6 +23,7 @@ use Izbik\Service\Project\Exception\ProjectException;
 use Izbik\Service\Project\FloorProvider;
 use Izbik\Service\Project\ProjectProvider;
 use Izbik\Service\Project\ProjectVersionProvider;
+use Izbik\Service\Upload\UploadTicketService;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Schema\ToolAnnotations;
 
@@ -40,6 +41,7 @@ final readonly class ProjectTools
 		private ProjectChangeRepository $changeRepository,
 		private ExampleCatalogue $exampleCatalogue,
 		private ExampleProjectService $exampleProjectService,
+		private UploadTicketService $uploadTicketService,
 	) {
 	}
 
@@ -109,6 +111,23 @@ final readonly class ProjectTools
 		);
 
 		return $this->exampleProjectService->create($this->context->user(), $example);
+	}
+
+	/** @return array{uploadUrl: string, expiresAt: string, curl: string} */
+	#[McpTool(
+		name: 'request_project_import',
+		description: 'A one-time URL to import a project file (.izbik.zip with its files and models, or .izbik.json without '
+			. 'them: what a project page\'s Download gives) as a new project you own, for a file on a disk you can reach '
+			. 'from a shell. Send it as the raw body of a PUT, e.g. with the returned curl command; the answer is JSON with '
+			. 'the new project, the floor to start on and `warnings` (files, models, furniture or prices this instance '
+			. 'could not take and left out), or an error saying why the file was refused. The URL works once, for 15 '
+			. 'minutes; a refused file may be sent again to the same URL.',
+	)]
+	public function requestProjectImport(): array
+	{
+		[$ticket, $token] = $this->uploadTicketService->createForImport($this->context->user());
+
+		return UploadContent::uploadUrl($this->context->baseUrl(), $token, $ticket->expiresAt);
 	}
 
 	/**

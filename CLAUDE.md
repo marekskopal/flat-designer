@@ -31,7 +31,11 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - `bin/console admin:create` (`make admin`) creates an admin, and `files:import` (`make import-files`) uploads a
     directory as project files. `storage:backup` / `storage:restore` (`StorageBackup`, through `FileStorageInterface`'s
     `keys()` / `fetch()`) copy every stored object with its content type into a directory and back, for `make backup` /
-    `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored).
+    `make restore` (with a `mariadb-dump` of the database; `backups/`, gitignored). `projects:export`
+    (`make export-project PROJECT=… [WITHOUT_FILES=1]`, into `backups/`) writes one project as a project file
+    (`Service/Project/Transfer`: `ProjectBundle` documents the format, `ProjectExporter` a zip with `project.json`, the
+    files and the models, or the JSON alone); the zip needs PHP's `zip` extension. `projects:import <file> --owner=…`
+    (`make import-project FILE=… EMAIL=…`) makes a new project of it (`ProjectImporter`, see Example projects).
   - Accounts on a self-hosted server: sign-up is closed unless `SIGN_UP_ENABLED` (`SignUpConfig`; closed, sign-up and a
     Google sign-in that would create an account answer 403, and the pages say to ask the admin; tests switch it with
     `AppHarness::signUp()`). Admins add accounts (`POST /api/admin/users`, verified) and set passwords (`PATCH` with
@@ -1107,7 +1111,20 @@ The current format is the text in `FurnitureTools::Format`.
   `…MaterialId` key and a Custom item's slot materials; a finish band or slot without one dropped), models by source URL
   among the global ones and the owner's library (`SnapshotModels`; none: a box), files left out, and definitions by name and
   content among the global ones (`SnapshotDefinitionRestorer` with `$foreign`; else a project copy). The project takes the
-  snapshot's name, details, site and façade material. Project import (follow-up) is meant to reuse it.
+  snapshot's name, details, site and façade material. `import()` takes untrusted input: `SnapshotLimits` caps it, and a
+  value the restore cannot take (`ValueError` / `TypeError`) is an `InvalidSnapshotException`; elements are not
+  validated as edits are.
+- Project files (`Service/Project/Transfer`, REST `GET …/export` (`?files=0`: the JSON alone) and `POST
+  /api/projects/import` in `ProjectTransferController`; nginx takes 512 MB there and streams the export): `ProjectImporter` makes a new project of the user's from one
+  (`ProjectBundleReader`: zip or JSON by the first bytes, at most `IMPORT_MAX_SIZE_MB` unpacked, `MaxEntries`; entries
+  read only by the manifest's paths, each once, never extracted; `SnapshotLimits` checked before anything is stored) in
+  one transaction: `BundleAssetImporter` uploads the files and
+  the models no model matches by source URL as the project's own (`ImportedAssets`, the new ids, which
+  `SnapshotFiles::withFiles()` and `SnapshotModels` put into the snapshot), `BundleLibraryImporter` the own definitions
+  (validated) and the prices (materials by code). What this instance cannot take is left out as a `warnings` entry of
+  `ProjectImportDto`; on a failure the stored objects are deleted again. UI: the project page's Download and Without
+  files, the projects page's Import (opens the new project, the warnings as toasts). MCP `request_project_import`: an
+  upload ticket of kind `ProjectImport` whose body goes to a temporary file (not memory) before the import.
 - Models: `make example-models` runs `frontend/scripts/example-models.mjs` in a Node container: the Poly Haven models
   the examples list (`sourceUrl` `https://polyhaven.com/a/<asset>`), fetched through the Poly Haven API (a User-Agent
   naming Izbik, md5 checked; its terms allow this, crediting Poly Haven), optimised with gltf-transform as in Product
@@ -1143,9 +1160,10 @@ The current format is the text in `FurnitureTools::Format`.
 | `make backup [BACKUP=…]` / `make restore BACKUP=…` | Back up / restore the database and the stored files |
 | `make reset-password EMAIL=…` | Set a user's password from the server (no mail needed) |
 | `make import-files DIR=… PROJECT=…` | Upload a directory as project files |
+| `make export-project PROJECT=… [WITHOUT_FILES=1]` | Write a project as a project file into `backups/` |
 | `make dev` | `ng serve` on 4200 against the running stack |
 | `make lint` | phpcs + phpstan, eslint |
 | `make test` | phpunit in a one-off backend container against the stack's MariaDB (database `izbik_test`; integration tests extend `Tests\Support\IntegrationTestCase`), then vitest |
-| `make smoke` | Browser smoke test of the running stack (`frontend/scripts/smoke.mjs`, sign-up open; CI's E2E workflow): sign up, walls, a room, a door, a share link, the example |
+| `make smoke` | Browser smoke test of the running stack (`frontend/scripts/smoke.mjs`, sign-up open; CI's E2E workflow): sign up, walls, a room, a door, a share link, the example, its export and import |
 | `make benchmark PROJECT=… EMAIL=… PASSWORD=… [BASELINE=…]` | Time the rendering of a project's saved views (I-58) |
 | `make reset-db` | Drop the database and file volumes and re-seed |

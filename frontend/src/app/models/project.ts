@@ -20,6 +20,15 @@ export interface ExampleProject {
     viewId: number | null;
 }
 
+/** A project made from a project file, with where to open it and what of the file was left out. */
+export interface ProjectImport {
+    project: Project;
+    /** The floor to open; null only for a project without floors. */
+    floorId: number | null;
+    /** What this instance could not take (a file, model, furniture definition or price), for the user. */
+    warnings: string[];
+}
+
 export interface Project {
     id: number;
     name: string;

@@ -168,6 +168,7 @@ final class McpServerTest extends IntegrationTestCase
 			'rename_variant_set',
 			'request_file_upload',
 			'request_model_upload',
+			'request_project_import',
 			'resolve_comment',
 			'save_version',
 			'save_view',

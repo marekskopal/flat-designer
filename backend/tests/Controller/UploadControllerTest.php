@@ -11,6 +11,7 @@ use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
 use Izbik\Model\Repository\ModelAssetRepository;
 use Izbik\Model\Repository\ProjectRepository;
 use Izbik\Service\ModelAsset\ModelAssetException;
+use Izbik\Service\Project\Transfer\ProjectExporter;
 use Izbik\Service\Upload\UploadTicketService;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\Glb;
@@ -83,6 +84,29 @@ final class UploadControllerTest extends IntegrationTestCase
 		$response = $this->putRaw(UploadTicketService::path($token), 'late');
 		self::assertSame(403, $response->getStatusCode());
 		self::assertStringContainsString('no longer have access', (string) $response->getBody());
+	}
+
+	public function testAProjectFileUrlImportsANewProjectAndARefusedFileLeavesItOpen(): void
+	{
+		$author = Fixture::createUser('author@example.com');
+		$source = Fixture::createProject($author, 'Cottage');
+		Fixture::furnishFloor(Fixture::firstFloor($source));
+		$json = Fixture::service(ProjectExporter::class)->json($source);
+		$user = Fixture::createUser('agent-user@example.com');
+		[, $token] = $this->tickets()->createForImport($user);
+
+		$refused = $this->putRaw(UploadTicketService::path($token), '{"kind":"something-else"}');
+		self::assertSame(422, $refused->getStatusCode());
+		self::assertStringContainsString('not an Izbik project file', (string) $refused->getBody());
+
+		$response = $this->putRaw(UploadTicketService::path($token), $json);
+		self::assertSame(201, $response->getStatusCode());
+		$body = $this->jsonBody($response);
+		self::assertIsArray($body['project']);
+		self::assertSame(['Cottage', $user->id], [$body['project']['name'], $body['project']['ownerId']]);
+		self::assertIsInt($body['floorId']);
+		self::assertSame([], $body['warnings']);
+		self::assertSame(404, $this->putRaw(UploadTicketService::path($token), $json)->getStatusCode());
 	}
 
 	public function testABodyOverTheLimitIsRejectedWithoutBeingRead(): void

@@ -3,10 +3,11 @@ import {ChangeDetectionStrategy, Component, inject, OnInit, signal} from '@angul
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {Example, Project} from '@app/models/project';
+import {AlertService} from '@app/services/alert.service';
 import {CurrentUserService} from '@app/services/current-user.service';
 import {ProjectService} from '@app/services/project.service';
 
-/** The user's projects (all projects for admins), creating a new one and starting from an example. */
+/** The user's projects (all projects for admins), creating a new one, starting from an example and importing a project file. */
 @Component({
     selector: 'fd-projects',
     imports: [DatePipe, ReactiveFormsModule, RouterLink],
@@ -18,6 +19,7 @@ export class ProjectsComponent implements OnInit {
     protected readonly currentUser = inject(CurrentUserService);
     private readonly projectService = inject(ProjectService);
     private readonly router = inject(Router);
+    private readonly alerts = inject(AlertService);
 
     protected readonly projects = signal<Project[]>([]);
     protected readonly loading = signal(true);
@@ -27,6 +29,8 @@ export class ProjectsComponent implements OnInit {
     protected readonly showExamples = signal(false);
     /** The example being copied. */
     protected readonly copying = signal<string | null>(null);
+    /** A project file being imported. */
+    protected readonly importing = signal(false);
     protected readonly form = inject(FormBuilder).nonNullable.group({
         name: ['', Validators.required],
         address: [''],
@@ -58,6 +62,31 @@ export class ProjectsComponent implements OnInit {
             // The error interceptor shows the toast.
         } finally {
             this.copying.set(null);
+        }
+    }
+
+    /** Makes a new project of the picked project file and opens it. */
+    protected async importFrom(event: Event): Promise<void> {
+        const input = event.target as HTMLInputElement;
+        const file = input.files?.[0];
+        input.value = '';
+        if (file === undefined) {
+            return;
+        }
+        this.importing.set(true);
+        try {
+            const imported = await this.projectService.importProject(file);
+            this.alerts.success(`Imported "${imported.project.name}".`);
+            for (const warning of imported.warnings) {
+                this.alerts.error(warning);
+            }
+            await this.router.navigate(
+                imported.floorId === null ? ['/projects', imported.project.id] : ['/projects', imported.project.id, 'floors', imported.floorId],
+            );
+        } catch {
+            // The error interceptor shows the toast.
+        } finally {
+            this.importing.set(false);
         }
     }
 

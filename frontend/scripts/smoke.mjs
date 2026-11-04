@@ -1,7 +1,8 @@
 /**
  * End-to-end smoke test of a running stack (`make smoke`, and the E2E workflow in CI), driven through the UI as a new
  * user would: sign up, create a project, draw four walls, make the room from them, put a door in a wall, share the
- * floor and open the link as a guest; then start a project from the example. Needs sign-up open (SIGN_UP_ENABLED=1).
+ * floor and open the link as a guest; then start a project from the example, download it as a project file and import
+ * that. Needs sign-up open (SIGN_UP_ENABLED=1).
  *
  * Env: FD_URL (default http://localhost:4400), FD_APP_PATH (the app's path, e.g. /app), FD_OUT (where a failure's
  * screenshot goes, default smoke-results), FD_SOFTWARE_GL=1 (WebGL through SwiftShader, for machines without a GPU),
@@ -157,6 +158,23 @@ try {
         await answer('POST', /\/api\/examples\/[a-z0-9-]+\/projects$/, () => page.getByRole('button', {name: 'Open a copy'}).first().click());
         await page.waitForURL(/\/floors\/\d+/);
         await page.locator('[data-view-ready]').waitFor({timeout: 120_000});
+    });
+
+    await step('download the copy and import it', async () => {
+        const projectId = /\/projects\/(\d+)\//.exec(new URL(page.url()).pathname)?.[1];
+        await page.goto(`${base}/projects/${projectId}`);
+        const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', {name: 'Download', exact: true}).click()]);
+        const file = resolve(out, await download.suggestedFilename());
+        await mkdir(out, {recursive: true});
+        await download.saveAs(file);
+        await page.goto(`${base}/projects`);
+        const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('label', {hasText: 'Import'}).click()]);
+        const imported = await answer('POST', /\/api\/projects\/import$/, () => chooser.setFiles(file));
+        if (imported?.warnings?.length > 0) {
+            throw new Error(`The import left out: ${imported.warnings.join(' ')}`);
+        }
+        await page.waitForURL(/\/floors\/\d+/);
+        await page.locator('canvas').first().waitFor({timeout});
     });
 
     if (errors.length > 0) {

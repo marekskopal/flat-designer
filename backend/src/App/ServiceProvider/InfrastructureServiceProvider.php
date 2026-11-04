@@ -16,6 +16,7 @@ use Izbik\Service\Cors\CorsPolicy;
 use Izbik\Service\Logger\StderrLogger;
 use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Project\ProjectProvider;
+use Izbik\Service\Project\Transfer\ProjectImportConfig;
 use Izbik\Service\Realtime\MercureAccessToken;
 use Izbik\Service\Realtime\MercureCookieIssuer;
 use Izbik\Service\Realtime\MercurePublisherTokenProvider;
@@ -47,6 +48,7 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 			MailConfig::class,
 			MailerInterface::class,
 			S3Config::class,
+			ProjectImportConfig::class,
 			S3Client::class,
 			FileStorageInterface::class,
 			IzbikServer::class,
@@ -92,6 +94,8 @@ final class InfrastructureServiceProvider extends AbstractServiceProvider
 		});
 
 		$container->add(S3Config::class, static fn (): S3Config => S3Config::fromEnv());
+
+		$container->add(ProjectImportConfig::class, static fn (): ProjectImportConfig => ProjectImportConfig::fromEnv());
 
 		$container->add(S3Client::class, static function () use ($container): S3Client {
 			$config = $container->get(S3Config::class);

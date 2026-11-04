@@ -81,6 +81,24 @@
                         <a class="btn btn--primary" [routerLink]="['/projects', project.id, 'floors', floor.id]">Open 3D view</a>
                     }
                     <button type="button" class="btn" (click)="editDetails(project)">Edit</button>
+                    <button
+                        type="button"
+                        class="btn"
+                        title="A project file with its files and models, to import on another Izbik or keep as a backup"
+                        [disabled]="exporting()"
+                        (click)="downloadProject(project, true)"
+                    >
+                        {{ exporting() ? 'Preparing…' : 'Download' }}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn--ghost"
+                        title="The project file without its files and models: plans, photos and product models stay behind"
+                        [disabled]="exporting()"
+                        (click)="downloadProject(project, false)"
+                    >
+                        Without files
+                    </button>
                     <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteProject(project)">Delete</button>
                 </div>
             </header>

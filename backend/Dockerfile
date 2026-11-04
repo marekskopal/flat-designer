@@ -7,6 +7,7 @@ COPY --from=php-extension-installer /usr/bin/install-php-extensions /usr/local/b
 RUN install-php-extensions \
     gd \
     pdo_mysql \
+    zip \
     opcache
 
 RUN apk add --no-cache curl tzdata

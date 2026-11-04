@@ -3,7 +3,17 @@ import {inject, Injectable} from '@angular/core';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {CutList} from '@app/models/cut-list';
 import {ElectricalSchedule} from '@app/models/electrical-schedule';
-import {Example, ExampleProject, FloorInput, Project, ProjectFile, ProjectInput, ProjectVersion, ProjectVersionDetail} from '@app/models/project';
+import {
+    Example,
+    ExampleProject,
+    FloorInput,
+    Project,
+    ProjectFile,
+    ProjectImport,
+    ProjectInput,
+    ProjectVersion,
+    ProjectVersionDetail,
+} from '@app/models/project';
 import {MaterialPrices, Quantities} from '@app/models/quantities';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {Floor, Scene} from '@app/models/scene';
@@ -74,6 +84,21 @@ export class ProjectService {
     /** A new project of the user's, a copy of the example. */
     public async createFromExample(slug: string): Promise<ExampleProject> {
         return firstValueFrom(this.http.post<ExampleProject>(`${environment.apiUrl}/examples/${encodeURIComponent(slug)}/projects`, {}));
+    }
+
+    /**
+     * The project as a project file, to move it to another instance or keep it as a backup: a zip with its files and
+     * models, or (`withFiles` false) the JSON alone. Fetched with the auth header, so it can't be a plain link.
+     */
+    public async exportProject(projectId: number, withFiles: boolean): Promise<Blob> {
+        return firstValueFrom(this.http.get(`${projectsUrl}/${projectId}/export${withFiles ? '' : '?files=0'}`, {responseType: 'blob'}));
+    }
+
+    /** A new project of the user's made from a project file. */
+    public async importProject(file: File): Promise<ProjectImport> {
+        const body = new FormData();
+        body.append('file', file, file.name);
+        return firstValueFrom(this.http.post<ProjectImport>(`${projectsUrl}/import`, body));
     }
 
     public async update(projectId: number, input: ProjectInput): Promise<Project> {
