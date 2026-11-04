@@ -10,3 +10,6 @@
 /data/
 /backups/
 /frontend/smoke-results/
+
+# Plans are local working notes, never committed
+docs/*-plan.md
