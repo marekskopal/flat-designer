@@ -26,6 +26,8 @@ export interface ElectricalPoint {
     units: number;
     /** The item's parameter values, defaults filled in (a switch's `rockers`). */
     values: Record<string, unknown>;
+    /** A switch's lights as stored (`Item.controls`): ids that may no longer be shown lights; `switchLinks()` skips those. */
+    controls: number[];
 }
 
 /** A polyline of a symbol in its unit frame. */
@@ -80,6 +82,7 @@ export function electricalPoints(scene: Scene): ElectricalPoint[] {
             z: item.z,
             units: scheduleUnits(definition, given),
             values,
+            controls: category === 'switch' ? (item.controls ?? []) : [],
         });
     }
     return points;
@@ -225,22 +228,167 @@ export const ElectricalSymbolSets: Record<ElectricalSymbols, Record<ElectricalCa
     Csn: CsnSymbols,
 };
 
-/** The point's symbol as polylines in plan mm, `size` mm a unit, +y turned out of the item's front. */
-export function symbolPolylines(point: ElectricalPoint, symbols: ElectricalSymbols, size = SymbolSize): {points: Vec2[]; closed: boolean}[] {
+/** A point of the symbol's unit frame in plan mm, `size` mm a unit. */
+function placeUnit(point: ElectricalPoint, p: Vec2, size: number): Vec2 {
     // The unit frame's x runs along the wall, to the right of one facing the wall from the room.
     const along = {x: -point.out.y, y: point.out.x};
-    const place = (p: Vec2): Vec2 => ({
-        x: point.at.x + (along.x * p.x + point.out.x * p.y) * size,
-        y: point.at.y + (along.y * p.x + point.out.y * p.y) * size,
-    });
-    return ElectricalSymbolSets[symbols][point.category](point).map((path) => ({points: path.points.map(place), closed: path.closed ?? false}));
+    return {x: point.at.x + (along.x * p.x + point.out.x * p.y) * size, y: point.at.y + (along.y * p.x + point.out.y * p.y) * size};
+}
+
+/** The point's symbol as polylines in plan mm, `size` mm a unit, +y turned out of the item's front. */
+export function symbolPolylines(point: ElectricalPoint, symbols: ElectricalSymbols, size = SymbolSize): {points: Vec2[]; closed: boolean}[] {
+    return ElectricalSymbolSets[symbols][point.category](point).map((path) => ({
+        points: path.points.map((p) => placeUnit(point, p, size)),
+        closed: path.closed ?? false,
+    }));
+}
+
+/** A switch with the shown lights it controls (a light may be in several: two-way and intermediate switching). */
+export interface SwitchLink {
+    switchId: number;
+    lightIds: number[];
+}
+
+/** The switches' links among the shown points: deleted, hidden and no longer lighting items drop out; switches without any are left out. */
+export function switchLinks(points: readonly ElectricalPoint[]): SwitchLink[] {
+    const lights = new Set(points.filter((p) => p.category === 'light').map((p) => p.itemId));
+    return points
+        .filter((p) => p.category === 'switch')
+        .map((p) => ({switchId: p.itemId, lightIds: [...new Set(p.controls)].filter((id) => lights.has(id)).sort((a, b) => a - b)}))
+        .filter((link) => link.lightIds.length > 0);
+}
+
+/** A dashed arc of the electrical plan: from a switch to a light, or between two lights of one circuit. */
+export interface LinkArc {
+    /** The switch's or the first light's item id. */
+    from: number;
+    to: number;
+    /** Plan mm. */
+    points: Vec2[];
+}
+
+/** Where a switch symbol's arc starts and its radius there, in the unit frame: the circle of the symbol. */
+const SwitchHead: Record<ElectricalSymbols, {at: Vec2; radius: number}> = {
+    Iec: {at: {x: 0, y: 0.25}, radius: 0.1},
+    Csn: {at: {x: 0, y: 0.15}, radius: 0.15},
+};
+
+/** A light symbol's circle, in units. */
+const LightRadius = 0.4;
+
+/** The arc's sagitta, a share of its chord. */
+const ArcBulge = 0.15;
+
+const ArcSteps = 12;
+
+/**
+ * The dashed arcs linking the switches to their lights, as electrical plans draw them: the lights one switch (or a set
+ * of switches) controls are chained by a minimum spanning tree, and each switch has one arc to the nearest light of its
+ * set. An arc bulges to the left of its direction by `ArcBulge` of its chord and runs between the symbols' circles.
+ */
+export function linkArcs(points: readonly ElectricalPoint[], links: readonly SwitchLink[], symbols: ElectricalSymbols, size = SymbolSize): LinkArc[] {
+    const byId = new Map(points.map((p) => [p.itemId, p]));
+    const arcs: LinkArc[] = [];
+    const drawn = new Set<string>();
+    const add = (from: number, to: number, start: Vec2, startRadius: number): void => {
+        const key = `${from}-${to}`;
+        const light = byId.get(to);
+        if (drawn.has(key) || light === undefined) {
+            return;
+        }
+        drawn.add(key);
+        const curve = arcBetween(start, light.at, startRadius, LightRadius * size);
+        if (curve !== null) {
+            arcs.push({from, to, points: curve});
+        }
+    };
+    const chained = new Set<string>();
+    for (const link of links) {
+        const lights = link.lightIds.map((id) => byId.get(id)).filter((p): p is ElectricalPoint => p !== undefined);
+        const key = lights.map((l) => l.itemId).join(',');
+        if (!chained.has(key)) {
+            chained.add(key);
+            for (const [a, b] of spanningTree(lights)) {
+                add(Math.min(a.itemId, b.itemId), Math.max(a.itemId, b.itemId), (a.itemId < b.itemId ? a : b).at, LightRadius * size);
+            }
+        }
+        const switchPoint = byId.get(link.switchId);
+        if (switchPoint === undefined || lights.length === 0) {
+            continue;
+        }
+        const head = SwitchHead[symbols];
+        const start = placeUnit(switchPoint, head.at, size);
+        const nearest = lights.reduce((best, l) => (distance(start, l.at) < distance(start, best.at) ? l : best));
+        add(switchPoint.itemId, nearest.itemId, start, head.radius * size);
+    }
+    return arcs;
+}
+
+const distance = (a: Vec2, b: Vec2): number => Math.hypot(b.x - a.x, b.y - a.y);
+
+/** Prim's minimum spanning tree over the lights, from the first; edges as pairs. */
+function spanningTree(lights: readonly ElectricalPoint[]): [ElectricalPoint, ElectricalPoint][] {
+    const inTree = lights.slice(0, 1);
+    const rest = lights.slice(1);
+    const edges: [ElectricalPoint, ElectricalPoint][] = [];
+    while (inTree.length > 0 && rest.length > 0) {
+        let from = inTree[0];
+        let index = 0;
+        let shortest = Infinity;
+        for (const candidate of inTree) {
+            for (let i = 0; i < rest.length; i++) {
+                const length = distance(candidate.at, rest[i].at);
+                if (length < shortest) {
+                    [from, index, shortest] = [candidate, i, length];
+                }
+            }
+        }
+        const [to] = rest.splice(index, 1);
+        edges.push([from, to]);
+        inTree.push(to);
+    }
+    return edges;
 }
 
 /**
- * The points' symbols as lines at height `y` (m) over the floor, one `LineSegments` per category colour, with a CSS2D
- * label of each wall point's elevation beside its symbol; nothing is pickable.
+ * A shallow arc (a parabola, close to a circle at this bulge) from the circle of `startRadius` round `a` to the circle
+ * of `endRadius` round `b`, bulging left of a → b; null when the circles overlap.
  */
-export function buildElectrical(points: readonly ElectricalPoint[], symbols: ElectricalSymbols, y = 0.04): THREE.Group {
+function arcBetween(a: Vec2, b: Vec2, startRadius: number, endRadius: number): Vec2[] | null {
+    const length = distance(a, b);
+    if (length <= startRadius + endRadius) {
+        return null;
+    }
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const start = {x: a.x + dir.x * startRadius, y: a.y + dir.y * startRadius};
+    const chord = length - startRadius - endRadius;
+    const left = {x: -dir.y, y: dir.x};
+    const sagitta = ArcBulge * chord;
+    return Array.from({length: ArcSteps + 1}, (_, i) => {
+        const t = i / ArcSteps;
+        const off = 4 * sagitta * t * (1 - t);
+        return {x: start.x + dir.x * chord * t + left.x * off, y: start.y + dir.y * chord * t + left.y * off};
+    });
+}
+
+/** Dashes of the link arcs in the viewer, m. */
+const ArcDash = 0.1;
+const ArcGap = 0.06;
+
+/** The link arcs not touching the highlighted items, when some are. */
+const DimmedOpacity = 0.3;
+
+/**
+ * The points' symbols as lines at height `y` (m) over the floor, one `LineSegments` per category colour, with a CSS2D
+ * label of each wall point's elevation beside its symbol, and the switches' dashed arcs to their lights (those touching
+ * a `highlight`ed item drawn full, the others dimmed while any is); nothing is pickable.
+ */
+export function buildElectrical(
+    points: readonly ElectricalPoint[],
+    symbols: ElectricalSymbols,
+    options: {y?: number; arcs?: readonly LinkArc[]; highlight?: ReadonlySet<number>} = {},
+): THREE.Group {
+    const y = options.y ?? 0.04;
     const group = new THREE.Group();
     group.name = 'electrical';
     const byCategory = new Map<ElectricalCategory, number[]>();
@@ -270,5 +418,40 @@ export function buildElectrical(points: readonly ElectricalPoint[], symbols: Ele
         segments.raycast = (): void => undefined;
         group.add(segments);
     }
+    const highlight = options.highlight ?? new Set<number>();
+    const lit = (link: LinkArc): boolean => highlight.size === 0 || highlight.has(link.from) || highlight.has(link.to);
+    for (const bright of [true, false]) {
+        const arcs = (options.arcs ?? []).filter((link) => lit(link) === bright);
+        if (arcs.length > 0) {
+            group.add(arcLines(arcs, y, bright ? 1 : DimmedOpacity));
+        }
+    }
     return group;
+}
+
+/** The arcs as dashed segments in the switches' colour. */
+function arcLines(arcs: readonly LinkArc[], y: number, opacity: number): THREE.LineSegments {
+    const positions: number[] = [];
+    for (const link of arcs) {
+        link.points.slice(1).forEach((p, i) => {
+            const q = link.points[i];
+            positions.push(q.x * MM, y, -q.y * MM, p.x * MM, y, -p.y * MM);
+        });
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const material = new THREE.LineDashedMaterial({
+        color: CategoryColors.switch,
+        dashSize: ArcDash,
+        gapSize: ArcGap,
+        depthTest: false,
+        transparent: true,
+        opacity,
+    });
+    const segments = new THREE.LineSegments(geometry, material);
+    segments.computeLineDistances();
+    segments.renderOrder = 10;
+    segments.raycast = (): void => undefined;
+    segments.name = 'electrical-links';
+    return segments;
 }

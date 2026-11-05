@@ -1,12 +1,14 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
+import {roomCodeText} from '@app/core/room-code';
 import {Group, Item, RoofWindow, Scene, SectionLine, VariantSet} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {IconComponent} from '@app/shared/icon/icon.component';
 import {roofLocal} from '@app/viewer/engine/roof-geometry';
 
 import {EditorStore} from './editor.store';
-import {findElement, KindIcons, KindLabels} from './element-kinds';
+import {findElement, itemCategory, itemRoom, KindIcons, KindLabels, linkedLights} from './element-kinds';
 import {FieldChange, InspectorComponent} from './inspector.component';
+import {SwitchLight, SwitchLightsComponent} from './switch-lights.component';
 
 
 
@@ -20,7 +22,7 @@ const NudgeStepCoarse = 100;
  */
 @Component({
     selector: 'fd-editor-panel',
-    imports: [InspectorComponent, IconComponent],
+    imports: [InspectorComponent, IconComponent, SwitchLightsComponent],
     templateUrl: './editor-panel.component.html',
     styleUrl: './editor-panel.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +59,21 @@ export class EditorPanelComponent {
         return selection?.kind === 'group' ? this.scene().items.filter((i) => i.groupId === selection.id) : [];
     });
     protected readonly groups = computed((): Group[] => this.scene().groups ?? []);
+    /** The selected switch's lights (while picking, the picked ones); null when no switch is selected. */
+    protected readonly switchLights = computed((): SwitchLight[] | null => {
+        const selected = this.selected();
+        const scene = this.scene();
+        const item = selected?.kind === 'item' ? (selected.element as unknown as Item) : null;
+        if (item === null || itemCategory(scene, item) !== 'switch') {
+            return null;
+        }
+        const linking = this.editor.linking();
+        const ids = linking?.switchId === item.id ? linking.lightIds : (item.controls ?? []);
+        return linkedLights(scene, ids).map((light) => {
+            const room = itemRoom(scene, light);
+            return {id: light.id, name: light.name, roomCode: room === null ? null : roomCodeText(room.code)};
+        });
+    });
     /** The variant set the selected group is a variant of. */
     protected readonly groupSet = computed((): VariantSet | null => {
         const selected = this.selected();
@@ -118,6 +135,22 @@ export class EditorPanelComponent {
         };
     }
 
+    /** Unlinks a light: while picking, from the picked ones; else at once, as one change. */
+    protected unlinkLight(lightId: number): void {
+        const linking = this.editor.linking();
+        const selected = this.selected();
+        if (linking !== null) {
+            this.editor.toggleLinked(lightId);
+        } else if (selected?.kind === 'item') {
+            const controls = (selected.element as unknown as Item).controls ?? [];
+            void this.editor.update('item', selected.element['id'] as number, {controls: controls.filter((id) => id !== lightId)});
+        }
+    }
+
+    protected selectLight(lightId: number): void {
+        this.editor.select({kind: 'item', id: lightId});
+    }
+
     protected groupPicked(name: string): void {
         void this.editor.groupPicked(name.trim() === '' ? 'Group' : name.trim());
     }
@@ -148,6 +181,10 @@ export class EditorPanelComponent {
         const mod = event.ctrlKey || event.metaKey;
         const key = event.key.toLowerCase();
 
+        if (this.editor.linking() !== null) {
+            this.linkingKey(event, mod, key);
+            return;
+        }
         if (mod && key === 'z') {
             event.preventDefault();
             void (event.shiftKey ? this.editor.redo() : this.editor.undo());
@@ -160,6 +197,9 @@ export class EditorPanelComponent {
         } else if (!mod && (event.key === 'Delete' || event.key === 'Backspace')) {
             event.preventDefault();
             void this.editor.deleteSelected();
+        } else if (!mod && !event.altKey && key === 'l' && this.switchLights() !== null) {
+            event.preventDefault();
+            this.editor.startLinking();
         } else if (event.key === 'Escape') {
             if (this.editor.tool() === 'select') {
                 this.editor.select(null);
@@ -172,6 +212,25 @@ export class EditorPanelComponent {
         } else if (!mod) {
             this.moveItem(event);
             this.moveGroup(event);
+        }
+    }
+
+    /**
+     * While a switch's lights are picked, Enter or a bare L saves them and Esc cancels; no other editing key acts (Delete
+     * would delete the switch, undo would change what the picked list is saved over). Browser shortcuts pass.
+     */
+    private linkingKey(event: KeyboardEvent, mod: boolean, key: string): void {
+        if (mod || event.altKey) {
+            return;
+        }
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.editor.cancelLinking();
+        } else if (event.key === 'Enter' || key === 'l') {
+            event.preventDefault();
+            void this.editor.commitLinking();
+        } else if (event.key === 'Delete' || event.key === 'Backspace' || /^arrow/i.test(event.key) || key === 'r') {
+            event.preventDefault();
         }
     }
 

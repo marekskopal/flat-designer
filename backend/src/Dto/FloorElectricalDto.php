@@ -15,6 +15,7 @@ final readonly class FloorElectricalDto
 		public int $elevation,
 		public array $rooms,
 		public ElectricalTotalsDto $totals,
+		public LightingDto $lighting,
 	) {
 	}
 }

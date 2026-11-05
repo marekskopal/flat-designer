@@ -29,7 +29,8 @@ use const JSON_THROW_ON_ERROR;
  * Electrical schedule of a project or a floor (working copy, shown variants only): the Custom items whose definition has
  * a `category`, per room — the item's `roomId`, otherwise the room whose outline holds its footprint centre — grouped
  * by definition, parameter values and elevation, with the counts per category. The definition's `schedule` settings
- * (`DefinitionSchedule`) say which values count and which parameter multiplies an item.
+ * (`DefinitionSchedule`) say which values count and which parameter multiplies an item. `lighting` links the switches
+ * with the lights they control (`LightingCircuits`).
  */
 final readonly class ElectricalScheduleService
 {
@@ -63,6 +64,10 @@ final readonly class ElectricalScheduleService
 		$hidden = array_flip($scene->hiddenItemIds());
 		/** @var array<int, array<string, ElectricalRowDto>> $rows by room id (0 outside every room) and point key */
 		$rows = [];
+		$switches = [];
+		$lights = [];
+		/** @var array<int, int> $roomOfItem the switches' and lights' rooms by item id (0 outside every room) */
+		$roomOfItem = [];
 		foreach ($scene->items as $item) {
 			$definitionId = $item->definitionId ?? 0;
 			$definition = $definitions[$definitionId] ?? null;
@@ -73,6 +78,13 @@ final readonly class ElectricalScheduleService
 			$given = self::given($item);
 			$values = self::values($body, $given, $schedule);
 			$roomId = self::roomOf($item, $outlines);
+			if ($category === DefinitionCategoryEnum::Switch) {
+				$switches[] = $item;
+				$roomOfItem[$item->id] = $roomId;
+			} elseif ($category === DefinitionCategoryEnum::Light) {
+				$lights[] = $item;
+				$roomOfItem[$item->id] = $roomId;
+			}
 			$key = sprintf('%s|%d|%d|%s', $category->value, $definitionId, $item->z, json_encode($values, JSON_THROW_ON_ERROR));
 			$row = $rows[$roomId][$key] ?? null;
 			$units = $schedule->units($body, $given);
@@ -103,6 +115,7 @@ final readonly class ElectricalScheduleService
 			elevation: $floor->elevation,
 			rooms: $schedule,
 			totals: ElectricalTotalsDto::sum(array_map(static fn (RoomElectricalDto $r): ElectricalTotalsDto => $r->totals, $schedule)),
+			lighting: LightingCircuits::of($switches, $lights, $rooms, $roomOfItem),
 		);
 	}
 

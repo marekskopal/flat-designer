@@ -112,6 +112,14 @@ final class JsonDecoder
 		return $downpipes;
 	}
 
+	/** @return list<int> the ints of a JSON list (anything else in it is left out) */
+	public static function decodeIds(string $json): array
+	{
+		$data = self::decode($json);
+
+		return is_array($data) ? array_values(array_filter($data, is_int(...))) : [];
+	}
+
 	private static function decode(string $json): mixed
 	{
 		try {

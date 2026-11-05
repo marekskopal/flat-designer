@@ -25,6 +25,8 @@
     [sectionHeight]="sectionHeight()"
     [selection]="editor.selection()"
     [picked]="editor.picked()"
+    [linking]="editor.linking()"
+    (linkPicked)="editor.toggleLinked($event)"
     [editMode]="editor.enabled()"
     [insetLeft]="walking() ? 0 : railWidth"
     (selected)="onSelected($event)"

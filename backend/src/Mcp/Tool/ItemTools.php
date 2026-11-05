@@ -14,7 +14,7 @@ use Mcp\Schema\ToolAnnotations;
 /** Items: cabinets, appliances, sanitary ware, fences, … (see list_item_kinds). */
 final readonly class ItemTools
 {
-	private const array Clearable = ['roomId', 'groupId', 'materialId', 'definitionId', 'modelId'];
+	private const array Clearable = ['roomId', 'groupId', 'materialId', 'definitionId', 'modelId', 'controls'];
 
 	/** A JSON object (PHP arrays would otherwise be advertised as JSON arrays). */
 	private const array ParamsSchema = [
@@ -62,6 +62,9 @@ final readonly class ItemTools
 	 *     default to the definition's
 	 * @param int|null $modelId for kind "Model": the 3D model of a bought product (list_models); the size and name default to
 	 *     the model's
+	 * @param list<int>|null $controls for a switch (a Custom item whose definition has the category "switch"): the ids of the
+	 *     light items (category "light") it controls, replacing the list; lights on the same floor only (a switch cannot
+	 *     control lights on another floor). Two switches listing the same light are two-way switching, more intermediate
 	 */
 	#[McpTool(name: 'add_item', description: 'Add an item to a floor. Unspecified size and elevation come from the kind\'s defaults.')]
 	public function addItem(
@@ -85,6 +88,7 @@ final readonly class ItemTools
 		?int $modelId = null,
 		?bool $onGround = null,
 		?bool $onRoof = null,
+		?array $controls = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -108,6 +112,7 @@ final readonly class ItemTools
 				'modelId' => $modelId,
 				'onGround' => $onGround,
 				'onRoof' => $onRoof,
+				'controls' => $controls,
 			]),
 		);
 	}
@@ -126,11 +131,14 @@ final readonly class ItemTools
 	 *     belong to the old one)
 	 * @param int|null $modelId another 3D model of a Model item (list_models)
 	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId",
-	 *     "definitionId" (with a kind other than Custom), "modelId" (with a kind other than Model)
+	 *     "definitionId" (with a kind other than Custom), "modelId" (with a kind other than Model), "controls" (a switch's lights)
+	 * @param list<int>|null $controls for a switch (a Custom item whose definition has the category "switch"): the ids of the
+	 *     light items (category "light") it controls, replacing the list; lights on the same floor only (a switch cannot
+	 *     control lights on another floor). Two switches listing the same light are two-way switching, more intermediate
 	 */
 	#[McpTool(
 		name: 'update_item',
-		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId, materialId, definitionId or modelId.',
+		description: 'Change an item. Only the given fields change; use clear to unset roomId, groupId, materialId, definitionId, modelId or controls.',
 	)]
 	public function updateItem(
 		int $projectId,
@@ -154,6 +162,7 @@ final readonly class ItemTools
 		?int $modelId = null,
 		?bool $onGround = null,
 		?bool $onRoof = null,
+		?array $controls = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -179,6 +188,7 @@ final readonly class ItemTools
 				'modelId' => $modelId,
 				'onGround' => $onGround,
 				'onRoof' => $onRoof,
+				'controls' => $controls,
 			], $clear, self::Clearable),
 		);
 	}
@@ -194,7 +204,8 @@ final readonly class ItemTools
 	 * @param int|null $y footprint centre of the copy
 	 * @param string|null $name name of the copy
 	 */
-	#[McpTool(name: 'duplicate_item', description: 'Copy an item with all its settings, optionally to another position.')]
+	#[McpTool(name: 'duplicate_item', description: 'Copy an item with all its settings, optionally to another position. '
+		. 'A copied switch controls the same lights (a two-way switch).')]
 	public function duplicateItem(
 		int $projectId,
 		int $floorId,

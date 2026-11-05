@@ -45,6 +45,7 @@ final readonly class ItemHandler implements ElementHandler
 		private CustomItemValidator $customValidator,
 		private ItemModelLink $modelLink,
 		private StructureSize $structureSize,
+		private SwitchControls $switchControls,
 	) {
 	}
 
@@ -56,7 +57,7 @@ final readonly class ItemHandler implements ElementHandler
 	/** @return list<string> */
 	public function fields(): array
 	{
-		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params', 'onGround', 'onRoof'];
+		return ['roomId', 'groupId', 'kind', 'definitionId', 'modelId', 'name', 'x', 'y', 'z', 'width', 'depth', 'height', 'rotation', 'materialId', 'params', 'onGround', 'onRoof', 'controls'];
 	}
 
 	/** @return list<string> */
@@ -107,6 +108,7 @@ final readonly class ItemHandler implements ElementHandler
 			'params' => [],
 			'onGround' => false,
 			'onRoof' => false,
+			'controls' => [],
 		];
 	}
 
@@ -178,6 +180,15 @@ final readonly class ItemHandler implements ElementHandler
 			// Missing in older change states: on the floor's level.
 			'onGround' => $fields->bool('onGround'),
 			'onRoof' => $fields->bool('onRoof'),
+			// Missing in older change states: none.
+			'controls' => $this->switchControls->normalize(
+				$floor,
+				$fields->raw('controls'),
+				$current instanceof Item ? ItemDto::controls($current->controls) : [],
+				$current?->id,
+				$kind,
+				$definition,
+			),
 		];
 		ItemPlacement::check($kind, $state['onGround'], $state['onRoof']);
 		$this->customValidator->validate(
@@ -263,6 +274,8 @@ final readonly class ItemHandler implements ElementHandler
 		$item->params = $params === [] || $params === null ? null : json_encode($params, JSON_THROW_ON_ERROR);
 		$item->onGround = $fields->bool('onGround');
 		$item->onRoof = $fields->bool('onRoof');
+		$controls = SwitchControls::ids($fields->raw('controls'));
+		$item->controls = $controls === [] ? null : json_encode($controls, JSON_THROW_ON_ERROR);
 		$this->itemRepository->persist($item);
 	}
 

@@ -114,6 +114,8 @@ export class ViewerComponent {
     public readonly selection = input<Selection | null>(null);
     /** Items picked with Shift+click, outlined each. */
     public readonly picked = input<number[]>([]);
+    /** A switch's lights being picked: the electrical overlay shows the pending links and clicks pick lights (`linkPicked`). */
+    public readonly linking = input<{switchId: number; lightIds: readonly number[]} | null>(null);
     /** Enables dragging items, walls, wall ends, doors / windows and room corners in the top view. */
     public readonly editMode = input(false);
     /** Commits a drag; resolves true when the edit was applied (the scene input then changes). */
@@ -168,6 +170,8 @@ export class ViewerComponent {
     public readonly commentPicked = output<number>();
     /** A click with the comment tool: the point to pin a new comment to. */
     public readonly commentPlaced = output<CommentPoint>();
+    /** While `linking`, a light clicked: its item id. */
+    public readonly linkPicked = output<number>();
 
     private readonly host = viewChild.required<ElementRef<HTMLDivElement>>('host');
     /** Rebuilt only when the underlay itself changes, not with every edit of the floor. */
@@ -201,6 +205,7 @@ export class ViewerComponent {
             engine.onCalibrate = (a, b): void => this.calibrated.emit({a, b});
             engine.onCommentPick = (id): void => this.commentPicked.emit(id);
             engine.onCommentPlace = (point): void => this.commentPlaced.emit(point);
+            engine.onLinkPick = (itemId): void => this.linkPicked.emit(itemId);
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.
@@ -261,6 +266,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));
         effect(() => this.engine()?.setSelection(this.selection()));
         effect(() => this.engine()?.setPicked(this.picked()));
+        effect(() => this.engine()?.setLinking(this.linking()));
         effect(() => this.engine()?.setEditMode(this.editMode()));
         effect(() => this.engine()?.setInsetLeft(this.insetLeft()));
         effect(() => this.engine()?.setTool(this.tool()));

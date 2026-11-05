@@ -6,11 +6,12 @@ import {roomCodeText} from '@app/core/room-code';
 import {CategoryLabels, FloorElectrical} from '@app/models/electrical-schedule';
 import {ProjectService} from '@app/services/project.service';
 
-import {rowValues, totalsSummary} from './electrical-labels';
+import {circuitItemText, rowValues, totalsSummary} from './electrical-labels';
 
 /**
  * The project's electrical schedule for the electrician: per floor and room the lights, sockets, switches, data
- * sockets and plumbing points with their parameter values and elevations. Rooms without points are left out.
+ * sockets and plumbing points with their parameter values and elevations, then the lighting circuits (which switches
+ * control which lights) of the floors that have any. Rooms without points are left out.
  * Reloads when the project's `revision` changes.
  */
 @Component({
@@ -33,7 +34,12 @@ export class ElectricalScheduleComponent {
             .map((floor) => ({...floor, rooms: floor.rooms.filter((room) => room.rows.length > 0)}))
             .filter((floor) => floor.rooms.length > 0),
     );
+    /** The floors whose switches have lights linked, for the lighting circuits. */
+    protected readonly lightingFloors = computed<FloorElectrical[]>(() =>
+        (this.schedule()?.floors ?? []).filter((floor) => floor.lighting.circuits.length > 0),
+    );
     protected readonly categoryLabels = CategoryLabels;
+    protected readonly circuitItemText = circuitItemText;
     protected readonly rowValues = rowValues;
     protected readonly totalsSummary = totalsSummary;
     protected readonly levelText = levelText;

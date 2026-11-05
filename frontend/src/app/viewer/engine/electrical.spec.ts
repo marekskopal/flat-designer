@@ -13,7 +13,9 @@ import {
     ElectricalSymbolSets,
     elevationText,
     hasElectricalPoints,
+    linkArcs,
     scheduleUnits,
+    switchLinks,
     symbolPolylines,
     SymbolSize,
 } from './electrical';
@@ -54,6 +56,7 @@ const scene = (items: Item[]): Scene =>
             {id: 1, name: 'Socket', definition: socket, updatedAt: ''},
             {id: 2, name: 'Downlight', definition: definition('light'), updatedAt: ''},
             {id: 3, name: 'Shelf', definition: definition(undefined), updatedAt: ''},
+            {id: 4, name: 'Switch', definition: definition('switch'), updatedAt: ''},
         ],
         groups: [{id: 10, name: 'Hidden', variantSetId: 5}],
         variantSets: [{id: 5, name: 'Layout', activeGroupId: null}],
@@ -149,6 +152,70 @@ describe('electrical symbols', () => {
         const group = buildElectrical(points, 'Csn');
         expect(group.children.filter((c) => c instanceof THREE.LineSegments)).toHaveLength(2);
         expect(group.children.filter((c) => c.type === 'Object3D' && 'element' in c)).toHaveLength(1);
+    });
+});
+
+describe('switch links', () => {
+    // A two-way pair at the hall's ends (on the south wall, facing north) and three lights along it.
+    const hall = (controls: [number[], number[]]): Scene =>
+        scene([
+            item(1, 4, {x: 0, y: 0, rotation: 180, controls: controls[0]}),
+            item(2, 4, {x: 6000, y: 0, rotation: 180, controls: controls[1]}),
+            item(11, 2, {x: 1000, y: 1500}),
+            item(12, 2, {x: 3000, y: 1500}),
+            item(13, 2, {x: 5000, y: 1500}),
+            item(14, 1, {x: 3000, y: 3000}),
+            item(15, 2, {x: 9000, y: 9000, groupId: 10}),
+        ]);
+
+    it('keeps the shown lights of each switch', () => {
+        // A socket, a hidden light, a deleted one (not in the scene) and the switch itself drop out.
+        const points = electricalPoints(hall([[13, 11, 14, 15, 99, 1, 11], []]));
+        expect(switchLinks(points)).toEqual([{switchId: 1, lightIds: [11, 13]}]);
+        expect(points.find((p) => p.itemId === 11)?.controls).toEqual([]);
+    });
+
+    it('chains the lights once and gives each switch an arc to its nearest light', () => {
+        const points = electricalPoints(
+            hall([
+                [11, 12, 13],
+                [11, 12, 13],
+            ]),
+        );
+        const arcs = linkArcs(points, switchLinks(points), 'Iec');
+        expect(arcs.map((a) => [a.from, a.to])).toEqual([
+            [11, 12],
+            [12, 13],
+            [1, 11],
+            [2, 13],
+        ]);
+    });
+
+    it('runs between the symbols\' circles, bulging left', () => {
+        const points = electricalPoints(hall([[11], []]));
+        const [arc] = linkArcs(points, switchLinks(points), 'Iec');
+        const first = arc.points[0];
+        const last = arc.points[arc.points.length - 1];
+        // The switch's circle is 0.25 units out of the wall face (5 mm behind its centre, facing north), the light's 0.4
+        // units round its centre.
+        const head = {x: 0, y: -5 + 0.25 * SymbolSize};
+        expect(Math.hypot(first.x - head.x, first.y - head.y)).toBeCloseTo(0.1 * SymbolSize);
+        expect(Math.hypot(last.x - 1000, last.y - 1500)).toBeCloseTo(0.4 * SymbolSize);
+        // Left of a north-east chord is north-west of its middle.
+        const middle = arc.points[(arc.points.length - 1) / 2];
+        const chordMiddle = {x: (first.x + last.x) / 2, y: (first.y + last.y) / 2};
+        const cross = (last.x - first.x) * (middle.y - chordMiddle.y) - (last.y - first.y) * (middle.x - chordMiddle.x);
+        expect(cross).toBeGreaterThan(0);
+    });
+
+    it('draws the arcs dashed, dimming those away from the highlighted items', () => {
+        const points = electricalPoints(hall([[11, 12], [13]]));
+        const arcs = linkArcs(points, switchLinks(points), 'Iec');
+        const dashed = (group: THREE.Group): THREE.LineSegments[] =>
+            group.children.filter((c): c is THREE.LineSegments => c instanceof THREE.LineSegments && c.material instanceof THREE.LineDashedMaterial);
+        expect(dashed(buildElectrical(points, 'Iec', {arcs}))).toHaveLength(1);
+        const lit = dashed(buildElectrical(points, 'Iec', {arcs, highlight: new Set([2])}));
+        expect(lit.map((l) => (l.material as THREE.LineDashedMaterial).opacity)).toEqual([1, 0.3]);
     });
 });
 

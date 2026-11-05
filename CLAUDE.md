@@ -943,6 +943,27 @@ The current format is the text in `FurnitureTools::Format`.
   electrical plan PDF (Export → Electrical PDF): the furniture faint without names or dimensions, the symbols, the
   elevations (each at the first free spot round its symbol, never left out) and a legend with the counts in a strip
   `planLayout(bounds, reserved)` keeps above the title band (shrunk to fit, every category with its plain symbol).
+- Switch links (I-104): a switch item's `controls` (`items.controls`, JSON ids, `ItemDto::$controls`) are the lights it
+  controls, a light in two switches' lists being two-way switching. **Same floor only: a switch cannot control lights
+  on another floor** (a stair's two-way switch upstairs and downstairs is not covered). `SwitchControls` normalises the
+  list (distinct, sorted, at most 50) and checks only the ids added: the item must be a `switch`, each id a `light` of
+  its floor (a deleted one passes, so undoing an unlink does not conflict); an item that stops being a switch drops the
+  list. Deleted, hidden-variant or recategorised lights stay listed and are skipped where the links are read. A copied
+  switch controls the same lights; `GroupEditor::copyGroup()` (group copies, new variants) points copied switches at
+  the copies of the group's lights, and for a new variant (`asVariant`) the switches outside the set controlling the
+  source's lights get the copies too, so a shared switch works with every variant; restores and imports map the ids
+  (`SnapshotSwitchControls`). MCP `add_item` / `update_item` `controls` (`clear`
+  takes it). The schedule's `FloorElectricalDto::$lighting` (`LightingCircuits`): circuits L1, L2, … as connected
+  parts of the switch–light graph, plus `unswitched` lights and `unlinked` switches (the project page's "Lighting
+  circuits"). Drawing (`switchLinks()` / `linkArcs()` in `electrical.ts`): each distinct light set is chained by a
+  minimum spanning tree and each switch gets one dashed arc to its set's nearest light, bulging left, between the
+  symbols' circles; the viewer dims the arcs away from the selected item, the PDF dashes them with a legend row.
+  Editing: with a switch selected, `L` or the inspector's Pick lights (`SwitchLightsComponent`) starts
+  `EditorStore.linking`; the page switches to the plan and turns the measure and comment tools off (turning one on
+  ends the picking); the engine (`setLinking()`, `onLinkPick`) shows the overlay with the pending links and turns a
+  click near a light symbol (or on a light, or an item grouped with one) into a toggle, double-clicks selecting
+  nothing; Enter / `L` saves one change, Esc cancels, no other editing key acts meanwhile. The overlay rebuilds on a
+  selection only when the highlighted switch or light changes. The selection card says what a switch controls and which switches a light has.
 - Quantities and cost: `Service/Quantities/QuantitiesService` (REST `…/quantities`, MCP `get_quantities`, page
   `/projects/:id/quantities`, linked from the room schedule). `RoomSurfaces` counts per room and material: the floor,
   the `wallFinishes` bands and the wall paint around and above them up to the ceiling (a vault's mean height), without

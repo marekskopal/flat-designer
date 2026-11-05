@@ -1,7 +1,9 @@
 import {levelText} from '@app/core/level-text';
-import {Opening, OpeningType, Scene, Wall} from '@app/models/scene';
+import {ElectricalCategory} from '@app/models/electrical-schedule';
+import {Item, Opening, OpeningType, Room, Scene, Wall} from '@app/models/scene';
 import {IconName} from '@app/shared/icon/icon.component';
-import {wallLength} from '@app/viewer/engine/plan-geometry';
+import {electricalPoints, switchLinks} from '@app/viewer/engine/electrical';
+import {pointInPolygon, wallLength} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 
 import {OpeningTypeLabels} from './element-fields';
@@ -76,10 +78,61 @@ export function findElement(scene: Scene, kind: ElementKind, id: number): Record
     }
 }
 
+/** What an item counts as in the electrical schedule: its definition's `category`, null for none. */
+export function itemCategory(scene: Scene, item: Pick<Item, 'kind' | 'definitionId'>): ElectricalCategory | null {
+    if (item.kind !== 'Custom' || item.definitionId === null) {
+        return null;
+    }
+    return (scene.definitions ?? []).find((d) => d.id === item.definitionId)?.definition.category ?? null;
+}
+
+/**
+ * The shown lights among `controls` (a switch's, or the ones being picked), as the electrical plan draws them
+ * (`electricalPoints()`: shown variants, deleted lights not in the scene), in the scene's order.
+ */
+export function linkedLights(scene: Scene, controls: readonly number[]): Item[] {
+    const ids = new Set(controls);
+    const lights = new Set(electricalPoints(scene).filter((p) => p.category === 'light' && ids.has(p.itemId)).map((p) => p.itemId));
+    return scene.items.filter((i) => lights.has(i.id));
+}
+
+/** The shown switches controlling a light, as the electrical plan links them (`switchLinks()`). */
+export function switchesOf(scene: Scene, lightId: number): Item[] {
+    const switches = new Set(switchLinks(electricalPoints(scene)).filter((l) => l.lightIds.includes(lightId)).map((l) => l.switchId));
+    return scene.items.filter((i) => switches.has(i.id));
+}
+
+/** The item's room as the schedules count it: its `roomId`, else the room whose outline holds its centre; null outside every room. */
+export function itemRoom(scene: Scene, item: Pick<Item, 'roomId' | 'x' | 'y'>): Room | null {
+    return (
+        scene.rooms.find((r) => r.id === item.roomId)
+        ?? scene.rooms.find((r) => pointInPolygon({x: item.x, y: item.y}, r.polygon))
+        ?? null
+    );
+}
+
 /** A fact the viewer's card shows about a selected element. */
 export interface ElementFact {
     label: string;
     value: string;
+}
+
+/** A switch's lights, or the switches of a light. */
+function switchFacts(scene: Scene, element: Record<string, unknown>): ElementFact[] {
+    const item = element as unknown as Item;
+    const names = (items: Item[]): string => items.map((i) => i.name).join(', ');
+    switch (itemCategory(scene, item)) {
+        case 'switch': {
+            const lights = linkedLights(scene, item.controls ?? []);
+            return [{label: 'Controls', value: lights.length === 0 ? 'No lights' : names(lights)}];
+        }
+        case 'light': {
+            const switches = switchesOf(scene, item.id);
+            return switches.length === 0 ? [] : [{label: 'Switched by', value: names(switches)}];
+        }
+        default:
+            return [];
+    }
 }
 
 const metres = (mm: unknown): string => (typeof mm === 'number' ? `${(mm / 1000).toFixed(2)} m` : '—');
@@ -104,6 +157,7 @@ export function elementFacts(scene: Scene, kind: ElementKind, element: Record<st
                 {label: 'Elevation', value: typeof element['z'] === 'number' ? levelText(element['z']) : '—'},
                 ...(from === undefined ? [] : [{label: 'Made from', value: from}]),
                 ...(room === undefined ? [] : [{label: 'Room', value: room.name}]),
+                ...switchFacts(scene, element),
             ];
         }
         case 'wall':
