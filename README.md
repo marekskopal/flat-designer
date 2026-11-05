@@ -183,6 +183,8 @@ it has made the change.
 - **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
 - **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.
+- **DXF import** (beta): the walls, doors and windows of a CAD floor plan saved as ASCII DXF, from the layers you pick,
+  previewed over the plan and imported as one undoable change.
 - **Project export and import**: a project downloads as one file (a zip with its plans, photos and product models, or
   the JSON alone) and imports as a new project, on the same Izbik or another one: to move a project, or as your own
   backup. What the other instance cannot take (a material or model it does not have) is left out and listed.

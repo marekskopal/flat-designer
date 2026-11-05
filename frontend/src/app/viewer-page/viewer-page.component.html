@@ -20,6 +20,7 @@
     [pictureFetcher]="pictureFetcher"
     [underlayVisible]="editor.underlayVisible()"
     [ghost]="ghost()"
+    [dxfPreview]="editor.dxfPreview()"
     [stack]="stack()"
     [walkFloors]="walkScenes()"
     [sectionHeight]="sectionHeight()"
@@ -346,6 +347,7 @@
                     @case ('underlay') {
                         @if (scene(); as s) {
                             <fd-underlay-panel [scene]="s" [projectId]="projectId()" />
+                            <fd-dxf-import [scene]="s" [projectId]="projectId()" />
                         }
                     }
                     @case ('guide') {

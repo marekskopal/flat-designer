@@ -1,5 +1,6 @@
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
+import {DxfImportInput, DxfImportResult, DxfPlan, DxfPlanInput, DxfSummary} from '@app/models/dxf';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {PlanPoint, Underlay, WallType} from '@app/models/scene';
 import {ElementKind} from '@app/viewer/engine/selection';
@@ -177,6 +178,25 @@ export class EditorApiService {
 
     public async removeUnderlay(projectId: number, floorId: number, baseRevision?: number): Promise<{revision: number}> {
         return firstValueFrom(this.http.delete<{revision: number}>(this.underlayUrl(projectId, floorId), {headers: ifMatch(baseRevision)}));
+    }
+
+    /** The layers of a DXF among the project's files. */
+    public async dxfSummary(projectId: number, fileId: number): Promise<DxfSummary> {
+        return firstValueFrom(this.http.get<DxfSummary>(`${environment.apiUrl}/projects/${projectId}/files/${fileId}/dxf`));
+    }
+
+    /** The walls and openings a DXF would make on the floor; nothing is written. */
+    public async previewDxf(projectId: number, floorId: number, input: DxfPlanInput): Promise<DxfPlan> {
+        return firstValueFrom(this.http.post<DxfPlan>(`${this.dxfUrl(projectId, floorId)}/preview`, input));
+    }
+
+    /** Imports a DXF's walls and openings into the floor as one change. */
+    public async importDxf(projectId: number, floorId: number, input: DxfImportInput, baseRevision?: number): Promise<DxfImportResult> {
+        return firstValueFrom(this.http.post<DxfImportResult>(this.dxfUrl(projectId, floorId), input, {headers: ifMatch(baseRevision)}));
+    }
+
+    private dxfUrl(projectId: number, floorId: number): string {
+        return `${environment.apiUrl}/projects/${projectId}/floors/${floorId}/dxf-import`;
     }
 
     private underlayUrl(projectId: number, floorId: number): string {

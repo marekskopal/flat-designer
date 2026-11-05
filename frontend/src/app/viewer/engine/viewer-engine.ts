@@ -1,4 +1,5 @@
 import {roomCodeText} from '@app/core/room-code';
+import {DxfPlan} from '@app/models/dxf';
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {
     FloorVoid,
@@ -50,6 +51,7 @@ import {frontObjects, frontOf, frontSpecOf, FrontStates} from './custom/fronts';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, sagittaToward, snapDrawPoint, ToolStatus} from './drawing';
+import {buildDxfPreview, disposeDxfPreview} from './dxf-preview';
 import {buildElectrical, ElectricalPoint, electricalPoints, linkArcs, switchLinks, SymbolSize} from './electrical';
 import {buildFacades} from './facades';
 import {
@@ -430,6 +432,8 @@ export class ViewerEngine {
     /** The floor below, traced in the top view (`setGhost()`), and its walls for the snapping. */
     private ghost: THREE.Group | null = null;
     private ghostWalls: readonly Wall[] = [];
+    /** The walls and openings a DXF import would make, in the top view (`setDxfPreview()`). */
+    private dxfPreview: THREE.Group | null = null;
     /** The all floors view: the scenes of other floors to draw under this one (null: this floor only), and their layers. */
     private stackScenes: readonly Scene[] | null = null;
     private stackLayers: ContextFloor[] = [];
@@ -1763,6 +1767,20 @@ export class ViewerEngine {
         }
     }
 
+    /** Shows the walls and openings a DXF import would make over the plan, in the top view (null hides them). */
+    public setDxfPreview(plan: DxfPlan | null): void {
+        this.invalidate();
+        if (this.dxfPreview !== null) {
+            disposeDxfPreview(this.dxfPreview);
+            this.dxfPreview = null;
+        }
+        if (plan !== null) {
+            this.dxfPreview = buildDxfPreview(plan);
+            this.dxfPreview.visible = false;
+            this.scene.add(this.dxfPreview);
+        }
+    }
+
     public setUnderlayVisible(visible: boolean): void {
         this.invalidate();
         this.underlayVisible = visible;
@@ -2348,6 +2366,7 @@ export class ViewerEngine {
         this.removeElectrical();
         this.setUnderlay(null, null);
         this.setGhost(null);
+        this.setDxfPreview(null);
         this.modelLibrary?.dispose();
         this.pictureLibrary?.dispose();
         this.measureLayer.children.slice().forEach((o) => disposeLine(o));
@@ -2728,6 +2747,9 @@ export class ViewerEngine {
         }
         if (this.ghost !== null) {
             this.ghost.visible = topDown;
+        }
+        if (this.dxfPreview !== null) {
+            this.dxfPreview.visible = topDown;
         }
         if (this.parts !== null) {
             this.parts.roofOutlines.visible = topDown;

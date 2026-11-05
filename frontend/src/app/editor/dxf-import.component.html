@@ -1,0 +1,115 @@
+<h3 class="section-title">Walls from a DXF <span class="beta">beta</span></h3>
+
+<div class="row">
+    <select class="input input--compact row__grow" aria-label="DXF plan" [disabled]="loading() || editor.busy()" (change)="choose($event)">
+        <option value="" [selected]="fileId() === null">Pick a DXF plan…</option>
+        @for (file of editor.dxfFiles(); track file.id) {
+            <option [value]="file.id" [selected]="file.id === fileId()">{{ file.filename }}</option>
+        }
+    </select>
+    <label class="tool upload" [class.upload--disabled]="loading()" title="Upload an ASCII DXF to the project">
+        Upload…
+        <input type="file" accept=".dxf" hidden [disabled]="loading()" (change)="upload($event)" />
+    </label>
+</div>
+
+@if (summary(); as s) {
+    <table class="layers" aria-label="DXF layers">
+        <tbody>
+            @for (layer of layers(); track layer.name) {
+                <tr>
+                    <td class="layers__name" [title]="layerCounts(layer)">
+                        {{ layer.name }}
+                        <span class="layers__counts">{{ layerCounts(layer) }}</span>
+                    </td>
+                    <td>
+                        <select class="input input--compact" [attr.aria-label]="'Role of layer ' + layer.name" (change)="setRole(layer, $event)">
+                            <option value="wall" [selected]="roles()[layer.name] === 'wall'">Walls</option>
+                            <option value="opening" [selected]="roles()[layer.name] === 'opening'">Doors &amp; windows</option>
+                            <option value="ignore" [selected]="roles()[layer.name] === 'ignore'">–</option>
+                        </select>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="fields">
+        <label class="field">
+            Units
+            <select class="input input--compact" (change)="setUnits($event)">
+                <option value="" [selected]="unitsCode() === null">{{ s.units === null ? 'not given (mm)' : 'as drawn' }}</option>
+                @for (unit of units; track unit.code) {
+                    <option [value]="unit.code" [selected]="unitsCode() === unit.code">{{ unit.label }}</option>
+                }
+            </select>
+        </label>
+        <label class="field field--wide">
+            Place
+            <select class="input input--compact" (change)="setAnchor($event)">
+                <option value="Walls" [selected]="anchor() === 'Walls'">walls' corner at the origin</option>
+                <option value="Drawing" [selected]="anchor() === 'Drawing'">drawing's origin at the origin</option>
+            </select>
+        </label>
+        <label class="field">
+            x (mm)
+            <input class="input input--compact" type="number" step="10" [value]="offsetX()" (change)="setNumber('offsetX', $event)" />
+        </label>
+        <label class="field">
+            y (mm)
+            <input class="input input--compact" type="number" step="10" [value]="offsetY()" (change)="setNumber('offsetY', $event)" />
+        </label>
+        <label class="field">
+            Turn (°)
+            <input class="input input--compact" type="number" step="90" [value]="rotation()" (change)="setNumber('rotation', $event)" />
+        </label>
+    </div>
+    <div class="fields fields--two" aria-label="Heights">
+        <label class="field">
+            Wall height
+            <input class="input input--compact" type="number" step="10" min="100" placeholder="2600" (change)="setHeight('wallHeight', $event)" />
+        </label>
+        <label class="field">
+            Door height
+            <input class="input input--compact" type="number" step="10" min="100" placeholder="1970" (change)="setHeight('doorHeight', $event)" />
+        </label>
+        <label class="field">
+            Window sill
+            <input class="input input--compact" type="number" step="10" min="0" placeholder="900" (change)="setHeight('windowSill', $event)" />
+        </label>
+        <label class="field">
+            Window height
+            <input class="input input--compact" type="number" step="10" min="100" placeholder="1200" (change)="setHeight('windowHeight', $event)" />
+        </label>
+    </div>
+
+    @if (preview(); as p) {
+        <p class="hint" aria-live="polite">
+            {{ p.walls.length }} wall(s){{ openingCounts() === '' ? '' : ', ' + openingCounts() }}. Shown in the plan view;
+            <span class="unpaired">red</span> lines made no wall.
+        </p>
+        @for (warning of p.warnings; track warning) {
+            <p class="hint hint--warning">{{ warning }}</p>
+        }
+    } @else {
+        <p class="hint">Choose the layer with the walls: two parallel lines 50 to 700 mm apart make a wall.</p>
+    }
+
+    @if (hasWalls()) {
+        <label class="show">
+            <input type="checkbox" [checked]="replaceExisting()" (change)="replaceExisting.set(!replaceExisting())" />
+            Replace the floor's walls
+        </label>
+    }
+    <div class="row">
+        <button type="button" class="tool tool--primary row__grow" [disabled]="!upToDate() || (preview()?.walls?.length ?? 0) === 0 || editor.busy()" (click)="import()">
+            Import
+        </button>
+        <button type="button" class="tool" (click)="cancel()">Cancel</button>
+    </div>
+} @else {
+    <p class="hint">
+        Read the walls, doors and windows of a CAD plan saved as an ASCII DXF. All walls come in as interior walls; outline
+        the rooms afterwards with Room from walls.
+    </p>
+}
