@@ -1,15 +1,15 @@
 <div class="page page--narrow">
-    <h1 class="page__title">Account</h1>
+    <h1 class="page__title">{{ 'account.title' | translate }}</h1>
 
     <section class="card">
-        <h2 class="card__title">Profile</h2>
+        <h2 class="card__title">{{ 'account.profile.title' | translate }}</h2>
         <form class="form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
             <label class="field">
-                <span class="field__label">Email</span>
+                <span class="field__label">{{ 'common.email' | translate }}</span>
                 <input class="input" type="email" [value]="currentUser.currentUser()?.email ?? ''" disabled />
             </label>
             <label class="field">
-                <span class="field__label">Name</span>
+                <span class="field__label">{{ 'common.name' | translate }}</span>
                 <input class="input" type="text" formControlName="name" autocomplete="name" />
             </label>
             <label class="field">
@@ -21,27 +21,25 @@
                 </select>
             </label>
             <label class="field">
-                <span class="field__label">Electrical plan symbols</span>
+                <span class="field__label">{{ 'account.profile.symbols' | translate }}</span>
                 <select class="input" formControlName="electricalSymbols">
-                    @for (set of symbolSets; track set[0]) {
-                        <option [value]="set[0]">{{ set[1] }}</option>
+                    @for (set of symbolSets; track set) {
+                        <option [value]="set">{{ 'account.symbols.' + set | translate }}</option>
                     }
                 </select>
             </label>
             <div class="form__actions">
                 <button type="submit" class="btn btn--primary" [disabled]="profileForm.invalid || profileForm.pristine || savingProfile()">
-                    Save
+                    {{ 'common.save' | translate }}
                 </button>
             </div>
         </form>
     </section>
 
     <section class="card">
-        <h2 class="card__title">AI agents (MCP)</h2>
+        <h2 class="card__title">{{ 'account.mcp.title' | translate }}</h2>
         <p class="hint">
-            Agents such as Claude can read and edit your projects through the MCP server at <code>{{ mcpUrl }}</code>.
-            In Claude Code run the command below, then approve the connection in the browser window it opens. In claude.ai,
-            add the same URL as a custom connector.
+            {{ 'account.mcp.hintBefore' | translate }} <code>{{ mcpUrl }}</code>{{ 'account.mcp.hintAfter' | translate }}
         </p>
         <code class="command">claude mcp add --transport http izbik {{ mcpUrl }}</code>
         @if (mcpClients().length > 0) {
@@ -51,50 +49,50 @@
                         <span class="client__main">
                             <span class="client__name">{{ client.clientName }}</span>
                             <span class="client__meta">
-                                connected {{ client.connectedAt | date: 'd MMM y' }} · last token {{ client.lastTokenAt | date: 'd MMM y, HH:mm' }}
+                                {{ 'account.mcp.connected' | translate }} {{ client.connectedAt | dateText }} ·
+                                {{ 'account.mcp.lastToken' | translate }} {{ client.lastTokenAt | dateText: 'dateTime' }}
                                 @if (!client.active) {
-                                    · disconnected
+                                    · {{ 'account.mcp.disconnected' | translate }}
                                 }
                             </span>
                         </span>
                         @if (client.active) {
-                            <button type="button" class="btn btn--ghost btn--danger" (click)="disconnect(client)">Disconnect</button>
+                            <button type="button" class="btn btn--ghost btn--danger" (click)="disconnect(client)">{{ 'account.mcp.disconnect' | translate }}</button>
                         }
                     </li>
                 }
             </ul>
         } @else {
-            <p class="hint">No agent is connected.</p>
+            <p class="hint">{{ 'account.mcp.none' | translate }}</p>
         }
     </section>
 
     <section class="card">
-        <h2 class="card__title">Password</h2>
+        <h2 class="card__title">{{ 'account.password.title' | translate }}</h2>
         @if (currentUser.currentUser()?.google) {
-            <p class="hint">Your account is linked to Google, so you can also sign in with Google.</p>
+            <p class="hint">{{ 'account.password.google' | translate }}</p>
         }
         @if (currentUser.currentUser()?.hasPassword === false) {
             <p class="hint">
-                Your account has no password yet. To sign in with your email too, sign out and choose
-                <em>Forgot password?</em> on the sign-in page.
+                {{ 'account.password.noneBefore' | translate }} <em>{{ 'auth.signIn.forgot' | translate }}</em>{{ 'account.password.noneAfter' | translate }}
             </p>
         } @else {
             <form class="form" [formGroup]="passwordForm" (ngSubmit)="changePassword()">
                 <label class="field">
-                    <span class="field__label">Current password</span>
+                    <span class="field__label">{{ 'account.password.current' | translate }}</span>
                     <input class="input" type="password" formControlName="currentPassword" autocomplete="current-password" />
                 </label>
                 <label class="field">
-                    <span class="field__label">New password</span>
+                    <span class="field__label">{{ 'account.password.new' | translate }}</span>
                     <input class="input" type="password" formControlName="newPassword" autocomplete="new-password" />
-                    <span class="field__hint">{{ passwordHint }}</span>
+                    <span class="field__hint">{{ 'auth.passwordHint' | translate }}</span>
                 </label>
                 @if (passwordError(); as message) {
                     <p class="form-error" role="alert">{{ message }}</p>
                 }
                 <div class="form__actions">
                     <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || savingPassword()">
-                        Change password
+                        {{ 'account.password.submit' | translate }}
                     </button>
                 </div>
             </form>
@@ -102,20 +100,19 @@
     </section>
 
     <section class="card danger-zone">
-        <h2 class="card__title">Delete account</h2>
+        <h2 class="card__title">{{ 'account.delete.title' | translate }}</h2>
         <p class="hint">
-            Deletes your account with all your projects, their versions, files and share links, and your furniture and model library.
-            This cannot be undone.
+            {{ 'account.delete.hint' | translate }}
         </p>
         <form class="form" [formGroup]="deleteForm" (ngSubmit)="deleteAccount()">
             @if (currentUser.currentUser()?.hasPassword === false) {
                 <label class="field">
-                    <span class="field__label">Type your email to confirm</span>
+                    <span class="field__label">{{ 'account.delete.confirmEmail' | translate }}</span>
                     <input class="input" type="email" formControlName="confirmation" autocomplete="off" />
                 </label>
             } @else {
                 <label class="field">
-                    <span class="field__label">Your password, to confirm</span>
+                    <span class="field__label">{{ 'account.delete.confirmPassword' | translate }}</span>
                     <input class="input" type="password" formControlName="confirmation" autocomplete="current-password" />
                 </label>
             }
@@ -123,7 +120,7 @@
                 <p class="form-error" role="alert">{{ message }}</p>
             }
             <div class="form__actions">
-                <button type="submit" class="btn btn--danger" [disabled]="deleteForm.invalid || deleting()">Delete my account</button>
+                <button type="submit" class="btn btn--danger" [disabled]="deleteForm.invalid || deleting()">{{ 'account.delete.submit' | translate }}</button>
             </div>
         </form>
     </section>

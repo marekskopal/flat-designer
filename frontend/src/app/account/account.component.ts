@@ -1,27 +1,28 @@
-import {DatePipe} from '@angular/common';
 import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, effect, inject, OnInit, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {Locale, LocaleNames, Locales} from '@app/core/locale';
-import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
-import {ElectricalSymbols, ElectricalSymbolsLabels} from '@app/models/electrical-schedule';
+import {passwordValidator} from '@app/core/validators/password.validator';
+import {ElectricalSymbols, ElectricalSymbolSets} from '@app/models/electrical-schedule';
 import {McpClient} from '@app/models/mcp-client';
 import {AlertService} from '@app/services/alert.service';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
 import {LanguageService} from '@app/services/language.service';
 import {OAuthService} from '@app/services/oauth.service';
-import {TranslatePipe} from '@ngx-translate/core';
+import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 @Component({
     selector: 'fd-account',
-    imports: [DatePipe, ReactiveFormsModule, TranslatePipe],
+    imports: [DateTextPipe, ReactiveFormsModule, TranslatePipe],
     templateUrl: './account.component.html',
     styleUrl: './account.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountComponent implements OnInit {
+    private readonly translate = inject(TranslateService);
     protected readonly currentUser = inject(CurrentUserService);
     private readonly auth = inject(AuthenticationService);
     private readonly alerts = inject(AlertService);
@@ -33,7 +34,6 @@ export class AccountComponent implements OnInit {
     protected readonly mcpUrl = `${window.location.origin}/mcp`;
     protected readonly mcpClients = signal<McpClient[]>([]);
 
-    protected readonly passwordHint = PasswordHint;
     protected readonly savingProfile = signal(false);
     protected readonly savingPassword = signal(false);
     protected readonly passwordError = signal<string | null>(null);
@@ -44,7 +44,7 @@ export class AccountComponent implements OnInit {
         locale: this.fb.control<Locale>('en'),
     });
     protected readonly locales = Locales.map((locale) => ({locale, name: LocaleNames[locale]}));
-    protected readonly symbolSets = Object.entries(ElectricalSymbolsLabels) as [ElectricalSymbols, string][];
+    protected readonly symbolSets = ElectricalSymbolSets;
 
     protected readonly deleting = signal(false);
     protected readonly deleteError = signal<string | null>(null);
@@ -70,12 +70,12 @@ export class AccountComponent implements OnInit {
     }
 
     protected async disconnect(client: McpClient): Promise<void> {
-        if (!confirm(`Disconnect ${client.clientName}? It will need to be authorized again.`)) {
+        if (!confirm(this.translate.instant('account.mcp.confirmDisconnect', {name: client.clientName}))) {
             return;
         }
         try {
             await this.oauth.revokeClient(client.clientId);
-            this.alerts.success(`${client.clientName} was disconnected.`);
+            this.alerts.success(this.translate.instant('account.mcp.wasDisconnected', {name: client.clientName}));
             await this.loadClients();
         } catch {
             // The error interceptor shows the toast.
@@ -96,7 +96,7 @@ export class AccountComponent implements OnInit {
                 return;
             }
             this.profileForm.markAsPristine();
-            this.alerts.success('Profile saved.');
+            this.alerts.success(this.translate.instant('account.profile.saved'));
         } catch {
             // The error interceptor shows the toast.
         } finally {
@@ -114,9 +114,9 @@ export class AccountComponent implements OnInit {
             const {currentPassword, newPassword} = this.passwordForm.getRawValue();
             await this.auth.changePassword(currentPassword, newPassword);
             this.passwordForm.reset();
-            this.alerts.success('Password changed. Other sessions have been signed out.');
+            this.alerts.success(this.translate.instant('account.password.changed'));
         } catch (e: unknown) {
-            this.passwordError.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not change the password.');
+            this.passwordError.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('account.password.failed'));
         } finally {
             this.savingPassword.set(false);
         }
@@ -132,9 +132,9 @@ export class AccountComponent implements OnInit {
         const {confirmation} = this.deleteForm.getRawValue();
         try {
             await this.auth.deleteAccount(user.hasPassword ? {password: confirmation} : {email: confirmation});
-            this.alerts.success('Your account and its projects were deleted.');
+            this.alerts.success(this.translate.instant('account.delete.deleted'));
         } catch (e: unknown) {
-            this.deleteError.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not delete the account.');
+            this.deleteError.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('account.delete.failed'));
         } finally {
             this.deleting.set(false);
         }

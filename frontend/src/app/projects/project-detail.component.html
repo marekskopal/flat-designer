@@ -1,38 +1,38 @@
 <div class="page">
-    <a routerLink="/projects" class="back">← Projects</a>
+    <a routerLink="/projects" class="back">{{ 'project.back' | translate }}</a>
 
     @if (project(); as project) {
         @if (editingDetails()) {
             <form class="card form" [formGroup]="detailsForm" (ngSubmit)="saveDetails(project)">
                 <label class="field">
-                    <span class="field__label">Name</span>
+                    <span class="field__label">{{ 'common.title' | translate }}</span>
                     <input class="input" type="text" formControlName="name" />
                 </label>
                 <label class="field">
-                    <span class="field__label">Address</span>
+                    <span class="field__label">{{ 'common.address' | translate }}</span>
                     <input class="input" type="text" formControlName="address" />
                 </label>
                 <label class="field">
-                    <span class="field__label">Description</span>
+                    <span class="field__label">{{ 'common.description' | translate }}</span>
                     <textarea class="input" rows="3" formControlName="description"></textarea>
                 </label>
                 <fieldset class="site">
-                    <legend class="field__label">Site (for the sun)</legend>
+                    <legend class="field__label">{{ 'project.site' | translate }}</legend>
                     <label class="field">
-                        <span class="field__label">North, ° clockwise from plan up</span>
+                        <span class="field__label">{{ 'project.north' | translate }}</span>
                         <input class="input" type="number" min="0" max="359" step="1" formControlName="northAngle" />
                     </label>
                     <label class="field">
-                        <span class="field__label">Latitude, ° (north +)</span>
-                        <input class="input" type="number" min="-90" max="90" step="any" formControlName="latitude" placeholder="e.g. 50.08" />
+                        <span class="field__label">{{ 'project.latitude' | translate }}</span>
+                        <input class="input" type="number" min="-90" max="90" step="any" formControlName="latitude" [placeholder]="'common.example' | translate: {value: (50.08 | number)}" />
                     </label>
                     <label class="field">
-                        <span class="field__label">Longitude, ° (east +)</span>
-                        <input class="input" type="number" min="-180" max="180" step="any" formControlName="longitude" placeholder="e.g. 14.42" />
+                        <span class="field__label">{{ 'project.longitude' | translate }}</span>
+                        <input class="input" type="number" min="-180" max="180" step="any" formControlName="longitude" [placeholder]="'common.example' | translate: {value: (14.42 | number)}" />
                     </label>
                     <label class="field">
-                        <span class="field__label">Time zone</span>
-                        <input class="input" type="text" list="time-zones" formControlName="timeZone" placeholder="e.g. Europe/Prague" />
+                        <span class="field__label">{{ 'project.timeZone' | translate }}</span>
+                        <input class="input" type="text" list="time-zones" formControlName="timeZone" [placeholder]="'common.example' | translate: {value: 'Europe/Prague'}" />
                         <datalist id="time-zones">
                             @for (zone of timeZones; track zone) {
                                 <option [value]="zone"></option>
@@ -41,17 +41,17 @@
                     </label>
                 </fieldset>
                 <label class="field">
-                    <span class="field__label">Façade (exterior walls without a material of their own)</span>
+                    <span class="field__label">{{ 'project.facade' | translate }}</span>
                     <select class="input" formControlName="exteriorMaterialId">
-                        <option [ngValue]="null">— the walls' own —</option>
+                        <option [ngValue]="null">{{ 'project.facadeOwn' | translate }}</option>
                         @for (material of materials(); track material.id) {
                             <option [ngValue]="material.id">{{ material.name }}</option>
                         }
                     </select>
                 </label>
                 <div class="form__actions">
-                    <button type="button" class="btn btn--ghost" (click)="editingDetails.set(false)">Cancel</button>
-                    <button type="submit" class="btn btn--primary" [disabled]="detailsForm.invalid || busy()">Save</button>
+                    <button type="button" class="btn btn--ghost" (click)="editingDetails.set(false)">{{ 'common.cancel' | translate }}</button>
+                    <button type="submit" class="btn btn--primary" [disabled]="detailsForm.invalid || busy()">{{ 'common.save' | translate }}</button>
                 </div>
             </form>
         } @else {
@@ -65,7 +65,7 @@
                         <p class="head__address">
                             {{ project.latitude | number: '1.0-4' }}°, {{ project.longitude | number: '1.0-4' }}°
                             @if (project.northAngle !== 0) {
-                                · north {{ project.northAngle }}° clockwise from plan up
+                                · {{ 'project.northNote' | translate: {angle: project.northAngle} }}
                             }
                         </p>
                     }
@@ -73,33 +73,33 @@
                         <p class="head__description">{{ project.description }}</p>
                     }
                     @if (project.ownerName) {
-                        <p class="head__owner">Owner: {{ project.ownerName }}</p>
+                        <p class="head__owner">{{ 'project.owner' | translate: {name: project.ownerName} }}</p>
                     }
                 </div>
                 <div class="head__actions">
                     @if (firstFloor(); as floor) {
-                        <a class="btn btn--primary" [routerLink]="['/projects', project.id, 'floors', floor.id]">Open 3D view</a>
+                        <a class="btn btn--primary" [routerLink]="['/projects', project.id, 'floors', floor.id]">{{ 'project.open3d' | translate }}</a>
                     }
-                    <button type="button" class="btn" (click)="editDetails(project)">Edit</button>
+                    <button type="button" class="btn" (click)="editDetails(project)">{{ 'common.edit' | translate }}</button>
                     <button
                         type="button"
                         class="btn"
-                        title="A project file with its files and models, to import on another Izbik or keep as a backup"
+                        [title]="'project.downloadHint' | translate"
                         [disabled]="exporting()"
                         (click)="downloadProject(project, true)"
                     >
-                        {{ exporting() ? 'Preparing…' : 'Download' }}
+                        {{ (exporting() ? 'project.preparing' : 'common.download') | translate }}
                     </button>
                     <button
                         type="button"
                         class="btn btn--ghost"
-                        title="The project file without its files and models: plans, photos and product models stay behind"
+                        [title]="'project.withoutFilesHint' | translate"
                         [disabled]="exporting()"
                         (click)="downloadProject(project, false)"
                     >
-                        Without files
+                        {{ 'project.withoutFiles' | translate }}
                     </button>
-                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteProject(project)">Delete</button>
+                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteProject(project)">{{ 'common.delete' | translate }}</button>
                 </div>
             </header>
         }
@@ -107,9 +107,9 @@
         <div class="columns">
             <section class="card">
                 <div class="card__header">
-                    <h2 class="card__title">Floors</h2>
+                    <h2 class="card__title">{{ 'project.floors.title' | translate }}</h2>
                     @if (editingFloor() === null) {
-                        <button type="button" class="btn btn--ghost" (click)="startFloor(null)">+ Add floor</button>
+                        <button type="button" class="btn btn--ghost" (click)="startFloor(null)">{{ 'project.floors.add' | translate }}</button>
                     }
                 </div>
 
@@ -121,18 +121,18 @@
                             } @else {
                                 <a class="list__main" [routerLink]="['/projects', project.id, 'floors', floor.id]">
                                     <span class="list__title">{{ floor.name }}</span>
-                                    <span class="list__meta">level {{ floor.level }} · {{ levelText(floor.elevation) }} · slab {{ floor.slabThickness }} mm</span>
+                                    <span class="list__meta">{{ 'project.floors.meta' | translate: {level: floor.level, elevation: levelText(floor.elevation), slab: floor.slabThickness} }}</span>
                                 </a>
                                 <span class="list__actions">
-                                    <button type="button" class="btn btn--ghost" (click)="startFloor(floor)">Edit</button>
+                                    <button type="button" class="btn btn--ghost" (click)="startFloor(floor)">{{ 'common.edit' | translate }}</button>
                                     <button
                                         type="button"
                                         class="btn btn--ghost btn--danger"
                                         [disabled]="busy() || project.floors.length === 1"
-                                        [title]="project.floors.length === 1 ? 'A project needs at least one floor' : ''"
+                                        [title]="project.floors.length === 1 ? ('project.floors.lastOne' | translate) : ''"
                                         (click)="deleteFloor(project, floor)"
                                     >
-                                        Delete
+                                        {{ 'common.delete' | translate }}
                                     </button>
                                 </span>
                             }
@@ -147,26 +147,26 @@
 
                 <ng-template #floorEditor>
                     <form class="inline-form" [formGroup]="floorForm" (ngSubmit)="saveFloor(project)">
-                        <input class="input" type="text" formControlName="name" placeholder="Floor name" aria-label="Floor name" />
-                        <input class="input input--level" type="number" formControlName="level" aria-label="Level" title="Level (0 = ground floor)" />
+                        <input class="input" type="text" formControlName="name" [placeholder]="'project.floors.name' | translate" [attr.aria-label]="'project.floors.name' | translate" />
+                        <input class="input input--level" type="number" formControlName="level" [attr.aria-label]="'project.floors.level' | translate" [title]="'project.floors.levelHint' | translate" />
                         <input
                             class="input input--mm"
                             type="number"
                             formControlName="elevation"
-                            placeholder="Elevation"
-                            aria-label="Elevation, mm"
-                            title="Finished floor level above ±0.000, mm (empty: a new floor stands on the one below, an edited one keeps its level)"
+                            [placeholder]="'project.floors.elevation' | translate"
+                            [attr.aria-label]="'project.floors.elevationLabel' | translate"
+                            [title]="'project.floors.elevationHint' | translate"
                         />
                         <input
                             class="input input--mm"
                             type="number"
                             formControlName="slabThickness"
-                            placeholder="Slab"
-                            aria-label="Slab thickness, mm"
-                            title="Slab under the floor, mm (empty: a new floor takes the default, an edited one keeps its slab)"
+                            [placeholder]="'project.floors.slab' | translate"
+                            [attr.aria-label]="'project.floors.slabLabel' | translate"
+                            [title]="'project.floors.slabHint' | translate"
                         />
-                        <button type="submit" class="btn btn--primary" [disabled]="floorForm.invalid || busy()">Save</button>
-                        <button type="button" class="btn btn--ghost" (click)="editingFloor.set(null)">Cancel</button>
+                        <button type="submit" class="btn btn--primary" [disabled]="floorForm.invalid || busy()">{{ 'common.save' | translate }}</button>
+                        <button type="button" class="btn btn--ghost" (click)="editingFloor.set(null)">{{ 'common.cancel' | translate }}</button>
                     </form>
                 </ng-template>
             </section>
@@ -177,12 +177,12 @@
 
             <section class="card">
                 <div class="card__header">
-                    <h2 class="card__title">Versions</h2>
+                    <h2 class="card__title">{{ 'project.versions.title' | translate }}</h2>
                 </div>
 
                 <form class="inline-form" [formGroup]="versionForm" (ngSubmit)="saveVersion(project)">
-                    <input class="input" type="text" formControlName="note" placeholder="Note (optional)" aria-label="Version note" maxlength="255" />
-                    <button type="submit" class="btn btn--primary" [disabled]="busy()">Save version</button>
+                    <input class="input" type="text" formControlName="note" [placeholder]="'project.versions.note' | translate" [attr.aria-label]="'project.versions.noteLabel' | translate" maxlength="255" />
+                    <button type="submit" class="btn btn--primary" [disabled]="busy()">{{ 'project.versions.save' | translate }}</button>
                 </form>
 
                 <ul class="list">
@@ -194,26 +194,26 @@
                                     {{ version.note ?? '' }}
                                 </span>
                                 <span class="list__meta">
-                                    {{ version.createdAt | date: 'd MMM y, HH:mm' }}
+                                    {{ version.createdAt | dateText: 'dateTime' }}
                                     @if (version.createdByName) {
                                         · {{ version.createdByName }}
                                     }
                                 </span>
                             </span>
                             <span class="list__actions">
-                                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="viewVersion(project, version)">View</button>
-                                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="restoreVersion(project, version)">Restore</button>
+                                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="viewVersion(project, version)">{{ 'common.view' | translate }}</button>
+                                <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="restoreVersion(project, version)">{{ 'common.restore' | translate }}</button>
                             </span>
                         </li>
                     } @empty {
-                        <li class="list__empty">No saved versions yet. Save one to keep the current state of all floors.</li>
+                        <li class="list__empty">{{ 'project.versions.empty' | translate }}</li>
                     }
                 </ul>
             </section>
 
             <section class="card share-links">
                 <div class="card__header">
-                    <h2 class="card__title">Share links</h2>
+                    <h2 class="card__title">{{ 'project.shares.title' | translate }}</h2>
                 </div>
 
                 <ul class="list">
@@ -232,15 +232,15 @@
                                     <span class="list__title">
                                         {{ link.name }}
                                         @if (link.expired) {
-                                            <span class="badge">expired</span>
+                                            <span class="badge">{{ 'project.shares.expired' | translate }}</span>
                                         }
                                     </span>
                                     <span class="list__meta">
                                         {{ link.floorName }} · v{{ link.versionNumber }} ·
                                         @if (link.expiresAt) {
-                                            {{ link.expired ? 'expired' : 'until' }} {{ link.expiresAt | date: 'd MMM y' }}
+                                            {{ (link.expired ? 'project.shares.expired' : 'project.shares.until') | translate }} {{ link.expiresAt | dateText }}
                                         } @else {
-                                            no expiry
+                                            {{ 'project.shares.noExpiry' | translate }}
                                         }
                                         @if (link.createdByName) {
                                             · {{ link.createdByName }}
@@ -248,40 +248,39 @@
                                     </span>
                                 </a>
                                 <span class="list__actions">
-                                    <button type="button" class="btn btn--ghost" (click)="copyShareLink(link)">Copy</button>
-                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="editingShare.set(link.id)">Edit</button>
+                                    <button type="button" class="btn btn--ghost" (click)="copyShareLink(link)">{{ 'common.copy' | translate }}</button>
+                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="editingShare.set(link.id)">{{ 'common.edit' | translate }}</button>
                                     <button
                                         type="button"
                                         class="btn btn--ghost"
                                         [disabled]="busy()"
-                                        title="Show the floor as it is now (saves a new version, the link stays)"
+                                        [title]="'project.shares.updateHint' | translate"
                                         (click)="refreshShareLink(project, link)"
                                     >
-                                        Update
+                                        {{ 'project.shares.update' | translate }}
                                     </button>
                                     <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="deleteShareLink(project, link)">
-                                        Delete
+                                        {{ 'common.delete' | translate }}
                                     </button>
                                 </span>
                             }
                         </li>
                     } @empty {
-                        <li class="list__empty">No share links yet. Open a floor and use Share to send a view of it to someone.</li>
+                        <li class="list__empty">{{ 'project.shares.empty' | translate }}</li>
                     }
                 </ul>
             </section>
 
             <section class="card">
                 <div class="card__header">
-                    <h2 class="card__title">Furniture</h2>
+                    <h2 class="card__title">{{ 'project.furniture.title' | translate }}</h2>
                     <div class="furniture-actions">
-                        <a class="btn btn--ghost" [routerLink]="['/projects', project.id, 'cut-list']">Cut list</a>
-                        <a class="btn btn--ghost" routerLink="/furniture" [queryParams]="{projectId: project.id}">Open</a>
+                        <a class="btn btn--ghost" [routerLink]="['/projects', project.id, 'cut-list']">{{ 'project.furniture.cutList' | translate }}</a>
+                        <a class="btn btn--ghost" routerLink="/furniture" [queryParams]="{projectId: project.id}">{{ 'common.open' | translate }}</a>
                     </div>
                 </div>
                 <p class="furniture-hint">
-                    Custom furniture this project's items can use: global pieces, the owner's library and the project's own. Add them to a
-                    floor with the editor's Add menu.
+                    {{ 'project.furniture.hint' | translate }}
                 </p>
             </section>
 

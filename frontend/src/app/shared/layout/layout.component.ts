@@ -4,6 +4,7 @@ import {RouterLink, RouterLinkActive, RouterOutlet} from '@angular/router';
 import {AlertService} from '@app/services/alert.service';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** Where "Report a problem" leads: a new issue in the project's GitHub repository (its templates ask what is needed). */
 const ReportProblemUrl = 'https://github.com/marekskopal/izbik/issues/new/choose';
@@ -15,13 +16,14 @@ const ReportProblemUrl = 'https://github.com/marekskopal/izbik/issues/new/choose
  */
 @Component({
     selector: 'fd-layout',
-    imports: [NgOptimizedImage, RouterOutlet, RouterLink, RouterLinkActive],
+    imports: [NgOptimizedImage, RouterLink, RouterLinkActive, RouterOutlet, TranslatePipe],
     templateUrl: './layout.component.html',
     styleUrl: './layout.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {'(document:keydown.escape)': 'menuOpen.set(false)'},
 })
 export class LayoutComponent implements OnInit {
+    private readonly translate = inject(TranslateService);
     protected readonly currentUser = inject(CurrentUserService);
     protected readonly reportUrl = ReportProblemUrl;
     protected readonly menuOpen = signal(false);
@@ -46,7 +48,7 @@ export class LayoutComponent implements OnInit {
         this.resending.set(true);
         try {
             await this.auth.resendVerification();
-            this.alerts.success(`A new link is on its way to ${this.currentUser.currentUser()?.email ?? 'your email'}.`);
+            this.alerts.success(this.translate.instant('layout.verify.resent', {email: this.currentUser.currentUser()?.email ?? ''}));
         } catch {
             // The error interceptor shows the toast.
         } finally {

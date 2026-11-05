@@ -3,28 +3,28 @@
         <img class="auth__mark" ngSrc="assets/brand/logo-mark.svg" alt="" width="24" height="24" priority />
         Izbik
     </div>
-    <h1 class="auth__title">Confirm your email</h1>
+    <h1 class="auth__title">{{ 'auth.verify.title' | translate }}</h1>
 
     @switch (state().kind) {
         @case ('verifying') {
-            <p class="auth__text" role="status">Confirming…</p>
+            <p class="auth__text" role="status">{{ 'auth.verify.verifying' | translate }}</p>
         }
         @case ('verified') {
-            <p class="auth__text" role="status">Thank you, your email is confirmed.</p>
+            <p class="auth__text" role="status">{{ 'auth.verify.verified' | translate }}</p>
         }
         @case ('failed') {
             <p class="form-error" role="alert">{{ failure() }}</p>
             @if (signedIn()) {
-                <p class="auth__text">You can send a new link from the banner in the app.</p>
+                <p class="auth__text">{{ 'auth.verify.resendHint' | translate }}</p>
             }
         }
     }
 
     <p class="auth__footer">
         @if (signedIn()) {
-            <a routerLink="/">Go to your projects</a>
+            <a routerLink="/">{{ 'auth.verify.toProjects' | translate }}</a>
         } @else {
-            <a routerLink="/login">Sign in</a>
+            <a routerLink="/login">{{ 'auth.verify.signIn' | translate }}</a>
         }
     </p>
 

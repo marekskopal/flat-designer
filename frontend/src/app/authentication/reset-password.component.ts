@@ -4,24 +4,25 @@ import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core'
 import {AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
-import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
+import {passwordValidator} from '@app/core/validators/password.validator';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** The page a password reset mail links to (`/reset-password?token=…`); setting the password signs the user in. */
 @Component({
     selector: 'fd-reset-password',
-    imports: [LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink, TranslatePipe],
     templateUrl: './reset-password.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ResetPasswordComponent {
+    private readonly translate = inject(TranslateService);
     private readonly auth = inject(AuthenticationService);
     private readonly router = inject(Router);
 
     protected readonly token = inject(ActivatedRoute).snapshot.queryParamMap.get('token');
-    protected readonly passwordHint = PasswordHint;
     protected readonly saving = signal(false);
     protected readonly error = signal<string | null>(null);
     protected readonly form = inject(FormBuilder).nonNullable.group(
@@ -42,7 +43,7 @@ export class ResetPasswordComponent {
             await this.auth.confirmPasswordReset(this.token, this.form.getRawValue().password);
             await this.router.navigateByUrl('/');
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not set the password.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.reset.failed'));
         } finally {
             this.saving.set(false);
         }

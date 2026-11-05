@@ -1,5 +1,312 @@
 {
     "common": {
-        "language": "Jazyk"
+        "language": "Jazyk",
+        "save": "Uložit",
+        "cancel": "Zrušit",
+        "delete": "Smazat",
+        "edit": "Upravit",
+        "create": "Vytvořit",
+        "add": "Přidat",
+        "close": "Zavřít",
+        "download": "Stáhnout",
+        "copy": "Kopírovat",
+        "open": "Otevřít",
+        "view": "Zobrazit",
+        "restore": "Obnovit",
+        "dismiss": "Zavřít",
+        "loading": "Načítání…",
+        "saving": "Ukládání…",
+        "sending": "Odesílání…",
+        "name": "Jméno",
+        "title": "Název",
+        "email": "E-mail",
+        "password": "Heslo",
+        "address": "Adresa",
+        "description": "Popis",
+        "optional": "nepovinné",
+        "or": "nebo",
+        "example": "např. {{value}}"
+    },
+    "titles": {
+        "signIn": "Přihlášení",
+        "signUp": "Registrace",
+        "forgotPassword": "Obnovení hesla",
+        "verifyEmail": "Potvrzení e-mailu",
+        "resetPassword": "Nové heslo",
+        "connect": "Připojení",
+        "sharedView": "Sdílený pohled",
+        "projects": "Projekty",
+        "project": "Projekt",
+        "cutList": "Řezný plán",
+        "quantities": "Výměry a cena",
+        "furniture": "Nábytek",
+        "account": "Účet",
+        "users": "Uživatelé"
+    },
+    "auth": {
+        "passwordHint": "Alespoň 8 znaků s velkým a malým písmenem a číslicí.",
+        "signIn": {
+            "title": "Přihlášení",
+            "forgot": "Zapomenuté heslo?",
+            "submit": "Přihlásit se",
+            "submitting": "Přihlašování…",
+            "noAccount": "Ještě nemáte účet?",
+            "signUp": "Zaregistrujte se",
+            "askAdmin": "Ještě nemáte účet? Požádejte o něj správce tohoto serveru.",
+            "failed": "Přihlášení se nezdařilo.",
+            "googleFailed": "Přihlášení přes Google se nezdařilo."
+        },
+        "signUp": {
+            "title": "Založení účtu",
+            "closed": "Tento server nepřijímá nové registrace. O účet požádejte jeho správce.",
+            "submit": "Zaregistrovat se",
+            "submitting": "Zakládání účtu…",
+            "haveAccount": "Už máte účet?",
+            "signIn": "Přihlaste se",
+            "existing": "Nepodařilo se vás přihlásit. Pokud už účet máte, přihlaste se.",
+            "failed": "Registrace se nezdařila.",
+            "googleFailed": "Registrace přes Google se nezdařila."
+        },
+        "forgot": {
+            "title": "Obnovení hesla",
+            "sentBefore": "Pokud k adrese",
+            "sentAfter": "existuje účet, je na cestě odkaz pro volbu nového hesla. Funguje jednou, po dobu jedné hodiny.",
+            "intro": "Zadejte e-mail, kterým se přihlašujete, a pošleme vám odkaz pro volbu nového hesla.",
+            "submit": "Poslat odkaz",
+            "back": "Zpět na přihlášení",
+            "failed": "Odkaz se nepodařilo odeslat."
+        },
+        "reset": {
+            "title": "Zvolte nové heslo",
+            "incomplete": "Tento odkaz pro obnovení hesla je neúplný. Otevřete odkaz z e-mailu znovu, nebo si požádejte o nový.",
+            "newPassword": "Nové heslo",
+            "repeat": "Heslo znovu",
+            "mismatch": "Hesla se liší.",
+            "submit": "Nastavit heslo a přihlásit se",
+            "newLink": "Poslat nový odkaz",
+            "signIn": "Přihlásit se",
+            "failed": "Heslo se nepodařilo nastavit."
+        },
+        "verify": {
+            "title": "Potvrzení e-mailu",
+            "verifying": "Potvrzování…",
+            "verified": "Děkujeme, váš e-mail je potvrzený.",
+            "resendHint": "Nový odkaz si můžete poslat z lišty v aplikaci.",
+            "toProjects": "Přejít na projekty",
+            "signIn": "Přihlásit se",
+            "incomplete": "Tento ověřovací odkaz je neúplný. Otevřete odkaz z e-mailu znovu.",
+            "failed": "E-mail se nepodařilo potvrdit."
+        }
+    },
+    "layout": {
+        "openMenu": "Otevřít nabídku",
+        "closeMenu": "Zavřít nabídku",
+        "projects": "Projekty",
+        "furniture": "Nábytek",
+        "users": "Uživatelé",
+        "report": "Nahlásit problém",
+        "signOut": "Odhlásit se",
+        "verify": {
+            "before": "Potvrďte prosím svůj e-mail: otevřete odkaz, který jsme poslali na",
+            "after": ".",
+            "again": "Poslat znovu",
+            "later": "Později",
+            "resent": "Nový odkaz je na cestě na {{email}}."
+        }
+    },
+    "account": {
+        "title": "Účet",
+        "profile": {
+            "title": "Profil",
+            "symbols": "Značky ve výkresu elektroinstalace",
+            "saved": "Profil je uložen."
+        },
+        "symbols": {
+            "Iec": "IEC 60617",
+            "Csn": "ČSN"
+        },
+        "mcp": {
+            "title": "AI agenti (MCP)",
+            "hintBefore": "Agenti jako Claude mohou číst a upravovat vaše projekty přes MCP server na adrese",
+            "hintAfter": ". V Claude Code spusťte příkaz níže a pak připojení schvalte v okně prohlížeče, které se otevře. V claude.ai přidejte stejnou adresu jako vlastní konektor.",
+            "connected": "připojeno",
+            "lastToken": "poslední token",
+            "disconnected": "odpojeno",
+            "disconnect": "Odpojit",
+            "none": "Není připojen žádný agent.",
+            "confirmDisconnect": "Odpojit {{name}}? Bude ho potřeba znovu autorizovat.",
+            "wasDisconnected": "{{name}} je odpojen."
+        },
+        "password": {
+            "title": "Heslo",
+            "google": "Váš účet je propojený s Googlem, takže se můžete přihlásit i přes Google.",
+            "noneBefore": "Váš účet zatím nemá heslo. Pokud se chcete přihlašovat i e-mailem, odhlaste se a na přihlašovací stránce zvolte",
+            "noneAfter": ".",
+            "current": "Současné heslo",
+            "new": "Nové heslo",
+            "submit": "Změnit heslo",
+            "changed": "Heslo je změněné. Ostatní relace byly odhlášeny.",
+            "failed": "Heslo se nepodařilo změnit."
+        },
+        "delete": {
+            "title": "Smazání účtu",
+            "hint": "Smaže váš účet se všemi projekty, jejich verzemi, soubory a sdílenými odkazy i vaši knihovnu nábytku a modelů. Nelze to vrátit.",
+            "confirmEmail": "Pro potvrzení napište svůj e-mail",
+            "confirmPassword": "Pro potvrzení zadejte heslo",
+            "submit": "Smazat můj účet",
+            "deleted": "Váš účet i jeho projekty jsou smazány.",
+            "failed": "Účet se nepodařilo smazat."
+        }
+    },
+    "projects": {
+        "title": "Projekty",
+        "examples": {
+            "start": "Začít z ukázky",
+            "hint": "Kopie se uloží mezi vaše projekty: rozhlédněte se, projděte se jí a cokoli změňte.",
+            "open": "Otevřít kopii",
+            "copying": "Kopírování…"
+        },
+        "import": "Importovat",
+        "importing": "Importování…",
+        "importHint": "Soubor projektu stažený ze stránky projektu (.izbik.zip nebo .izbik.json)",
+        "imported": "Projekt „{{name}}“ je naimportován.",
+        "new": "Nový projekt",
+        "namePlaceholder": "např. Byt 12, 2. patro",
+        "floorCount": {
+            "one": "{{count}} podlaží",
+            "few": "{{count}} podlaží",
+            "other": "{{count}} podlaží"
+        },
+        "noOwner": "Bez vlastníka",
+        "empty": "Zatím žádné projekty.",
+        "emptyExamples": "Zatím žádné projekty. Začněte z ukázky výše, nebo si nakreslete vlastní.",
+        "createFirst": "Vytvořit první projekt"
+    },
+    "project": {
+        "back": "← Projekty",
+        "site": "Pozemek (kvůli slunci)",
+        "north": "Sever, ° po směru hodin od horní strany půdorysu",
+        "latitude": "Zeměpisná šířka, ° (sever +)",
+        "longitude": "Zeměpisná délka, ° (východ +)",
+        "timeZone": "Časové pásmo",
+        "facade": "Fasáda (obvodové stěny bez vlastního materiálu)",
+        "facadeOwn": "— vlastní materiál stěn —",
+        "northNote": "sever {{angle}}° po směru hodin od horní strany půdorysu",
+        "owner": "Vlastník: {{name}}",
+        "open3d": "Otevřít 3D pohled",
+        "preparing": "Příprava…",
+        "downloadHint": "Soubor projektu i s jeho soubory a modely, k importu do jiného Izbiku nebo jako záloha",
+        "withoutFiles": "Bez souborů",
+        "withoutFilesHint": "Soubor projektu bez souborů a modelů: plány, fotky a modely výrobků v něm nebudou",
+        "confirmDelete": "Smazat projekt „{{name}}“ se všemi podlažími a verzemi? Nelze to vrátit.",
+        "deleted": "Projekt „{{name}}“ je smazán.",
+        "floors": {
+            "title": "Podlaží",
+            "add": "+ Přidat podlaží",
+            "meta": "úroveň {{level}} · {{elevation}} · deska {{slab}} mm",
+            "lastOne": "Projekt potřebuje alespoň jedno podlaží",
+            "name": "Název podlaží",
+            "level": "Úroveň",
+            "levelHint": "Úroveň (0 = přízemí)",
+            "elevation": "Výška",
+            "elevationLabel": "Výška, mm",
+            "elevationHint": "Výška čisté podlahy nad ±0,000, mm (prázdné: nové podlaží stojí na tom pod ním, upravené si výšku ponechá)",
+            "slab": "Deska",
+            "slabLabel": "Tloušťka desky, mm",
+            "slabHint": "Deska pod podlažím, mm (prázdné: nové podlaží dostane výchozí, upravené si desku ponechá)",
+            "confirmDelete": "Smazat podlaží „{{name}}“ se vším, co na něm je?"
+        },
+        "versions": {
+            "title": "Verze",
+            "note": "Poznámka (nepovinná)",
+            "noteLabel": "Poznámka k verzi",
+            "save": "Uložit verzi",
+            "empty": "Zatím žádné uložené verze. Uložte si verzi, aby se zachoval současný stav všech podlaží.",
+            "saved": "Verze {{number}} je uložena.",
+            "confirmRestore": "Nahradit současná podlaží verzí {{number}}? Současný stav se nejdřív uloží jako nová verze.",
+            "restored": "Verze {{number}} je obnovena. Předchozí stav je verze {{backup}}."
+        },
+        "shares": {
+            "title": "Sdílené odkazy",
+            "expired": "vypršel",
+            "until": "do",
+            "noExpiry": "bez vypršení",
+            "update": "Aktualizovat",
+            "updateHint": "Ukázat podlaží, jak je teď (uloží novou verzi, odkaz zůstane)",
+            "empty": "Zatím žádné sdílené odkazy. Otevřete podlaží a pohled na něj pošlete přes Sdílet.",
+            "copied": "Odkaz je zkopírován.",
+            "copyFailed": "Odkaz se nepodařilo zkopírovat.",
+            "confirmUpdate": "Aktualizovat „{{name}}“ na podlaží, jak je teď? Uloží se nová verze, odkaz zůstane stejný.",
+            "updated": "„{{name}}“ teď ukazuje verzi {{number}}.",
+            "confirmDelete": "Smazat sdílený odkaz „{{name}}“? Kdo ho má, ztratí přístup. Jeho verze zůstane."
+        },
+        "furniture": {
+            "title": "Nábytek",
+            "cutList": "Řezný plán",
+            "hint": "Nábytek na míru, který mohou prvky projektu použít: globální kusy, knihovna vlastníka a vlastní kusy projektu. Do podlaží je přidáte nabídkou Přidat v editoru."
+        }
+    },
+    "files": {
+        "title": "Soubory",
+        "upload": "+ Nahrát",
+        "uploading": {
+            "one": "Nahrávání {{count}} souboru…",
+            "few": "Nahrávání {{count}} souborů…",
+            "other": "Nahrávání {{count}} souborů…"
+        },
+        "drop": "Sem přetáhněte půdorysy, vizualizace nebo fotky",
+        "empty": "Zatím žádné soubory.",
+        "kindOther": "SOUB",
+        "closePreview": "Zavřít náhled",
+        "confirmDelete": "Smazat „{{name}}“?",
+        "uploaded": "Soubor je nahraný.",
+        "processed": {
+            "one": "Zpracován {{count}} soubor.",
+            "few": "Zpracovány {{count}} soubory.",
+            "other": "Zpracováno {{count}} souborů."
+        }
+    },
+    "admin": {
+        "title": "Uživatelé",
+        "add": "Přidat uživatele",
+        "passOn": "Předejte mu ho.",
+        "signsOut": "Všude ho to odhlásí.",
+        "role": "Role",
+        "roles": {
+            "User": "Uživatel",
+            "Admin": "Správce"
+        },
+        "lastSignIn": "Poslední přihlášení",
+        "joined": "Registrace",
+        "actions": "Akce",
+        "you": "vy",
+        "roleOf": "Role uživatele {{name}}",
+        "never": "nikdy",
+        "setPassword": "Nastavit heslo",
+        "newPasswordFor": "Nové heslo pro {{name}}",
+        "none": "Žádní uživatelé.",
+        "added": "Uživatel {{name}} je přidán. Předejte mu heslo; změnit si ho může na stránce svého účtu.",
+        "passwordSet": "Heslo uživatele {{name}} je nastaveno; všude je odhlášen.",
+        "nowAdmin": "{{name}} je teď správce.",
+        "nowUser": "{{name}} je teď uživatel.",
+        "confirmDelete": "Smazat uživatele {{name}} ({{email}})? Nelze to vrátit.",
+        "deleted": "Uživatel {{name}} je smazán."
+    },
+    "oauth": {
+        "connected": "Připojeno",
+        "returning": "Návrat do {{name}}… Toto okno můžete zavřít.",
+        "notConnected": "Nepřipojeno",
+        "denied": "{{name}} přístup nedostal. Toto okno můžete zavřít.",
+        "connect": "Připojit {{name}}",
+        "consent": "chce vaším jménem číst a upravovat vaše projekty (podlaží, místnosti, stěny, prvky a verze). Jeho změny se zobrazí pod jeho jménem a lze je vrátit.",
+        "signedInAs": "Přihlášen jako",
+        "deny": "Odmítnout",
+        "allow": "Povolit přístup",
+        "signInToContinue": "Pokračujte přihlášením",
+        "cannotConnect": "Nelze připojit",
+        "incomplete": "Tento autorizační odkaz je neúplný. Spusťte připojení znovu ze svého MCP klienta.",
+        "unknownClient": "Neznámý klient. Spusťte připojení znovu ze svého MCP klienta.",
+        "loadFailed": "Žádost se nepodařilo načíst.",
+        "failed": "Autorizace se nezdařila."
     }
 }

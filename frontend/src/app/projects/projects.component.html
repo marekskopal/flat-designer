@@ -1,26 +1,26 @@
 <div class="page">
     <div class="page__header">
-        <h1 class="page__title">Projects</h1>
+        <h1 class="page__title">{{ 'projects.title' | translate }}</h1>
         <div class="page__actions">
             @if (examples().length > 0 && projects().length > 0) {
                 <button type="button" class="btn" [attr.aria-expanded]="showExamples()" (click)="toggleExamples()">
-                    Start from an example
+                    {{ 'projects.examples.start' | translate }}
                 </button>
             }
-            <label class="btn" [class.btn--busy]="importing()" title="A project file downloaded from a project's page (.izbik.zip or .izbik.json)">
-                {{ importing() ? 'Importing…' : 'Import' }}
+            <label class="btn" [class.btn--busy]="importing()" [title]="'projects.importHint' | translate">
+                {{ (importing() ? 'projects.importing' : 'projects.import') | translate }}
                 <input type="file" class="picker" accept=".zip,.json,application/zip,application/json" [disabled]="importing()" (change)="importFrom($event)" />
             </label>
             @if (!creating()) {
-                <button type="button" class="btn btn--primary" (click)="creating.set(true); showExamples.set(false)">New project</button>
+                <button type="button" class="btn btn--primary" (click)="creating.set(true); showExamples.set(false)">{{ 'projects.new' | translate }}</button>
             }
         </div>
     </div>
 
     @if (examples().length > 0 && (showExamples() || (!loading() && projects().length === 0 && !creating()))) {
         <section class="examples" aria-labelledby="examples-title">
-            <h2 id="examples-title" class="examples__title">Start from an example</h2>
-            <p class="examples__hint">A copy goes into your projects: look around, walk through it, change anything.</p>
+            <h2 id="examples-title" class="examples__title">{{ 'projects.examples.start' | translate }}</h2>
+            <p class="examples__hint">{{ 'projects.examples.hint' | translate }}</p>
             <div class="grid">
                 @for (example of examples(); track example.slug) {
                     <div class="example card">
@@ -37,7 +37,7 @@
                             [disabled]="copying() !== null"
                             (click)="startFrom(example)"
                         >
-                            {{ copying() === example.slug ? 'Copying…' : 'Open a copy' }}
+                            {{ (copying() === example.slug ? 'projects.examples.copying' : 'projects.examples.open') | translate }}
                         </button>
                     </div>
                 }
@@ -47,18 +47,18 @@
 
     @if (creating()) {
         <form class="card form new-project" [formGroup]="form" (ngSubmit)="create()">
-            <h2 class="card__title">New project</h2>
+            <h2 class="card__title">{{ 'projects.new' | translate }}</h2>
             <label class="field">
-                <span class="field__label">Name</span>
-                <input class="input" type="text" formControlName="name" placeholder="e.g. Flat 12, 2nd floor" />
+                <span class="field__label">{{ 'common.title' | translate }}</span>
+                <input class="input" type="text" formControlName="name" [placeholder]="'projects.namePlaceholder' | translate" />
             </label>
             <label class="field">
-                <span class="field__label">Address <span class="field__hint">optional</span></span>
+                <span class="field__label">{{ 'common.address' | translate }} <span class="field__hint">{{ 'common.optional' | translate }}</span></span>
                 <input class="input" type="text" formControlName="address" />
             </label>
             <div class="form__actions">
-                <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
-                <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving()">Create</button>
+                <button type="button" class="btn btn--ghost" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+                <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving()">{{ 'common.create' | translate }}</button>
             </div>
         </form>
     }
@@ -71,21 +71,21 @@
                     <span class="project__address">{{ project.address }}</span>
                 }
                 <span class="project__meta">
-                    {{ project.floors.length }} {{ project.floors.length === 1 ? 'floor' : 'floors' }}
+                    {{ 'projects.floorCount' | plural: project.floors.length }}
                     @if (project.latestVersion) {
                         · v{{ project.latestVersion }}
                     }
-                    · {{ project.updatedAt | date: 'd MMM y' }}
+                    · {{ project.updatedAt | dateText }}
                 </span>
                 @if (currentUser.isAdmin() && project.ownerId !== currentUser.currentUser()?.id) {
-                    <span class="project__owner">{{ project.ownerName ?? 'No owner' }}</span>
+                    <span class="project__owner">{{ project.ownerName ?? ('projects.noOwner' | translate) }}</span>
                 }
             </a>
         } @empty {
             @if (!loading() && !creating()) {
                 <div class="empty card">
-                    <p>No projects yet.{{ examples().length > 0 ? ' Start from an example above, or draw your own.' : '' }}</p>
-                    <button type="button" class="btn btn--primary" (click)="creating.set(true)">Create your first project</button>
+                    <p>{{ (examples().length > 0 ? 'projects.emptyExamples' : 'projects.empty') | translate }}</p>
+                    <button type="button" class="btn btn--primary" (click)="creating.set(true)">{{ 'projects.createFirst' | translate }}</button>
                 </div>
             }
         }

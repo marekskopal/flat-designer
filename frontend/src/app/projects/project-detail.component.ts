@@ -1,4 +1,4 @@
-import {DatePipe, DecimalPipe, NgTemplateOutlet} from '@angular/common';
+import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, numberAttribute, signal} from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
@@ -18,13 +18,15 @@ import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
 import {ShareService} from '@app/services/share.service';
 import {ShareLinkFormComponent} from '@app/share/share-link-form.component';
+import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {filter, switchMap} from 'rxjs';
 
 /** One project: its details, floors (the working copy), room and electrical schedules, saved versions, share links and files. */
 @Component({
     selector: 'fd-project-detail',
     imports: [
-        DatePipe,
+        DateTextPipe,
         DecimalPipe,
         ElectricalScheduleComponent,
         NgTemplateOutlet,
@@ -33,12 +35,14 @@ import {filter, switchMap} from 'rxjs';
         RoomScheduleComponent,
         RouterLink,
         ShareLinkFormComponent,
+        TranslatePipe,
     ],
     templateUrl: './project-detail.component.html',
     styleUrl: './project-detail.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjectDetailComponent {
+    private readonly translate = inject(TranslateService);
     public readonly projectId = input.required({transform: numberAttribute});
 
     private readonly projectService = inject(ProjectService);
@@ -157,12 +161,12 @@ export class ProjectDetailComponent {
     }
 
     protected async deleteProject(project: Project): Promise<void> {
-        if (!confirm(`Delete project "${project.name}" with all its floors and versions? This cannot be undone.`)) {
+        if (!confirm(this.translate.instant('project.confirmDelete', {name: project.name}))) {
             return;
         }
         await this.run(async () => {
             await this.projectService.delete(project.id);
-            this.alerts.success(`Project "${project.name}" was deleted.`);
+            this.alerts.success(this.translate.instant('project.deleted', {name: project.name}));
             await this.router.navigate(['/projects']);
         });
     }
@@ -194,7 +198,7 @@ export class ProjectDetailComponent {
     }
 
     protected async deleteFloor(project: Project, floor: Floor): Promise<void> {
-        if (!confirm(`Delete floor "${floor.name}" with everything on it?`)) {
+        if (!confirm(this.translate.instant('project.floors.confirmDelete', {name: floor.name}))) {
             return;
         }
         await this.run(async () => {
@@ -207,7 +211,7 @@ export class ProjectDetailComponent {
         await this.run(async () => {
             const version = await this.projectService.saveVersion(project.id, this.versionForm.getRawValue().note || null);
             this.versionForm.reset();
-            this.alerts.success(`Saved version ${version.number}.`);
+            this.alerts.success(this.translate.instant('project.versions.saved', {number: version.number}));
             await this.load(project.id);
         });
     }
@@ -220,12 +224,12 @@ export class ProjectDetailComponent {
     }
 
     protected async restoreVersion(project: Project, version: ProjectVersion): Promise<void> {
-        if (!confirm(`Replace the current floors with version ${version.number}? The current state is saved as a new version first.`)) {
+        if (!confirm(this.translate.instant('project.versions.confirmRestore', {number: version.number}))) {
             return;
         }
         await this.run(async () => {
             const backup = await this.projectService.restoreVersion(project.id, version.id);
-            this.alerts.success(`Restored version ${version.number}. The previous state is version ${backup.number}.`);
+            this.alerts.success(this.translate.instant('project.versions.restored', {number: version.number, backup: backup.number}));
             await this.load(project.id);
         });
     }
@@ -233,9 +237,9 @@ export class ProjectDetailComponent {
     protected async copyShareLink(link: ShareLink): Promise<void> {
         try {
             await navigator.clipboard.writeText(shareUrl(link.token));
-            this.alerts.success('Link copied.');
+            this.alerts.success(this.translate.instant('project.shares.copied'));
         } catch {
-            this.alerts.error('Could not copy the link.');
+            this.alerts.error(this.translate.instant('project.shares.copyFailed'));
         }
     }
 
@@ -245,19 +249,19 @@ export class ProjectDetailComponent {
     }
 
     protected async refreshShareLink(project: Project, link: ShareLink): Promise<void> {
-        if (!confirm(`Update "${link.name}" to the floor as it is now? It saves a new version; the link stays the same.`)) {
+        if (!confirm(this.translate.instant('project.shares.confirmUpdate', {name: link.name}))) {
             return;
         }
         await this.run(async () => {
             const refreshed = await this.shareService.refresh(project.id, link.id);
             this.shareLinks.update((links) => links.map((l) => (l.id === refreshed.id ? refreshed : l)));
             this.versions.set(await this.projectService.listVersions(project.id));
-            this.alerts.success(`"${refreshed.name}" now shows version ${refreshed.versionNumber}.`);
+            this.alerts.success(this.translate.instant('project.shares.updated', {name: refreshed.name, number: refreshed.versionNumber}));
         });
     }
 
     protected async deleteShareLink(project: Project, link: ShareLink): Promise<void> {
-        if (!confirm(`Delete the share link "${link.name}"? Anyone who has it loses access. Its version stays.`)) {
+        if (!confirm(this.translate.instant('project.shares.confirmDelete', {name: link.name}))) {
             return;
         }
         await this.run(async () => {

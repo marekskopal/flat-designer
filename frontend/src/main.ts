@@ -3,7 +3,7 @@ import {provideHttpClient, withFetch, withInterceptors} from '@angular/common/ht
 import localeCs from '@angular/common/locales/cs';
 import {enableProdMode, inject, LOCALE_ID, provideAppInitializer, provideZonelessChangeDetection} from '@angular/core';
 import {bootstrapApplication} from '@angular/platform-browser';
-import {provideRouter, withComponentInputBinding} from '@angular/router';
+import {provideRouter, TitleStrategy, withComponentInputBinding} from '@angular/router';
 import {AppComponent} from '@app/app.component';
 import {appRoutes} from '@app/app.routes';
 import {errorInterceptor} from '@app/core/interceptors/error.interceptor';
@@ -12,6 +12,7 @@ import {originInterceptor} from '@app/core/interceptors/origin.interceptor';
 import {initialLocale, LocaleStorageKey} from '@app/core/locale';
 import {LanguageService} from '@app/services/language.service';
 import {StorageService} from '@app/services/storage.service';
+import {TranslatedTitleStrategy} from '@app/shared/i18n/translated-title.strategy';
 import {environment} from '@environments/environment';
 import {provideTranslateService} from '@ngx-translate/core';
 import {provideTranslateHttpLoader} from '@ngx-translate/http-loader';
@@ -26,6 +27,7 @@ bootstrapApplication(AppComponent, {
     providers: [
         provideHttpClient(withFetch(), withInterceptors([originInterceptor, jwtInterceptor, errorInterceptor])),
         provideRouter(appRoutes, withComponentInputBinding()),
+        {provide: TitleStrategy, useClass: TranslatedTitleStrategy},
         // Resolved against <base href>, so the texts load under /app/ too.
         provideTranslateService({loader: provideTranslateHttpLoader({prefix: new URL('i18n/', document.baseURI).href, suffix: '.json'})}),
         provideAppInitializer(() => inject(LanguageService).init()),

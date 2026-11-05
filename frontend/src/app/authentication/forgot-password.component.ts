@@ -6,15 +6,17 @@ import {RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 @Component({
     selector: 'fd-forgot-password',
-    imports: [LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink, TranslatePipe],
     templateUrl: './forgot-password.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ForgotPasswordComponent {
+    private readonly translate = inject(TranslateService);
     private readonly auth = inject(AuthenticationService);
 
     protected readonly saving = signal(false);
@@ -35,7 +37,7 @@ export class ForgotPasswordComponent {
             await this.auth.requestPasswordReset(email);
             this.sentTo.set(email.trim());
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Could not send the link.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.forgot.failed'));
         } finally {
             this.saving.set(false);
         }

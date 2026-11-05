@@ -8,15 +8,17 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationOptions} from '@app/models/authentication';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 @Component({
     selector: 'fd-login',
-    imports: [GoogleSignInComponent, LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [GoogleSignInComponent, LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink, TranslatePipe],
     templateUrl: './login.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
+    private readonly translate = inject(TranslateService);
     private readonly auth = inject(AuthenticationService);
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
@@ -45,7 +47,7 @@ export class LoginComponent {
             await this.auth.login(email, password);
             await this.router.navigateByUrl(this.returnUrl());
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Sign-in failed.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.signIn.failed'));
         } finally {
             this.saving.set(false);
         }
@@ -58,7 +60,7 @@ export class LoginComponent {
             await this.auth.googleLogin(idToken);
             await this.router.navigateByUrl(this.returnUrl());
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Google sign-in failed.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.signIn.googleFailed'));
         } finally {
             this.googleBusy.set(false);
         }

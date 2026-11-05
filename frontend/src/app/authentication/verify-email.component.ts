@@ -6,18 +6,20 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
 import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 type VerifyState = {kind: 'verifying'} | {kind: 'verified'} | {kind: 'failed'; message: string};
 
 /** The page a verification mail links to (`/verify-email?token=…`); confirms the address as it opens. */
 @Component({
     selector: 'fd-verify-email',
-    imports: [LanguageSwitchComponent, NgOptimizedImage, RouterLink],
+    imports: [LanguageSwitchComponent, NgOptimizedImage, RouterLink, TranslatePipe],
     templateUrl: './verify-email.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VerifyEmailComponent implements OnInit {
+    private readonly translate = inject(TranslateService);
     private readonly auth = inject(AuthenticationService);
     private readonly currentUser = inject(CurrentUserService);
     private readonly token = inject(ActivatedRoute).snapshot.queryParamMap.get('token');
@@ -35,7 +37,7 @@ export class VerifyEmailComponent implements OnInit {
 
     private async verify(): Promise<void> {
         if (this.token === null) {
-            this.state.set({kind: 'failed', message: 'This verification link is incomplete. Open the link from the mail again.'});
+            this.state.set({kind: 'failed', message: this.translate.instant('auth.verify.incomplete')});
             return;
         }
         try {
@@ -46,7 +48,8 @@ export class VerifyEmailComponent implements OnInit {
                 await this.currentUser.load().catch(() => undefined);
             }
         } catch (e: unknown) {
-            this.state.set({kind: 'failed', message: e instanceof HttpErrorResponse ? errorMessage(e) : 'The email could not be confirmed.'});
+            const message = e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.verify.failed');
+            this.state.set({kind: 'failed', message});
         }
     }
 }

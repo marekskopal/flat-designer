@@ -1,5 +1,312 @@
 {
     "common": {
-        "language": "Language"
+        "language": "Language",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "add": "Add",
+        "close": "Close",
+        "download": "Download",
+        "copy": "Copy",
+        "open": "Open",
+        "view": "View",
+        "restore": "Restore",
+        "dismiss": "Dismiss",
+        "loading": "Loading…",
+        "saving": "Saving…",
+        "sending": "Sending…",
+        "name": "Name",
+        "title": "Name",
+        "email": "Email",
+        "password": "Password",
+        "address": "Address",
+        "description": "Description",
+        "optional": "optional",
+        "or": "or",
+        "example": "e.g. {{value}}"
+    },
+    "titles": {
+        "signIn": "Sign in",
+        "signUp": "Sign up",
+        "forgotPassword": "Reset password",
+        "verifyEmail": "Confirm email",
+        "resetPassword": "Choose a new password",
+        "connect": "Connect",
+        "sharedView": "Shared view",
+        "projects": "Projects",
+        "project": "Project",
+        "cutList": "Cut list",
+        "quantities": "Quantities & cost",
+        "furniture": "Furniture",
+        "account": "Account",
+        "users": "Users"
+    },
+    "auth": {
+        "passwordHint": "At least 8 characters with an uppercase letter, a lowercase letter and a digit.",
+        "signIn": {
+            "title": "Sign in",
+            "forgot": "Forgot password?",
+            "submit": "Sign in",
+            "submitting": "Signing in…",
+            "noAccount": "No account yet?",
+            "signUp": "Sign up",
+            "askAdmin": "No account yet? Ask the administrator of this server for one.",
+            "failed": "Sign-in failed.",
+            "googleFailed": "Google sign-in failed."
+        },
+        "signUp": {
+            "title": "Create an account",
+            "closed": "This server takes no new sign-ups. Ask its administrator for an account.",
+            "submit": "Sign up",
+            "submitting": "Creating account…",
+            "haveAccount": "Already have an account?",
+            "signIn": "Sign in",
+            "existing": "Could not sign you in. If you already have an account, sign in instead.",
+            "failed": "Sign-up failed.",
+            "googleFailed": "Google sign-up failed."
+        },
+        "forgot": {
+            "title": "Reset your password",
+            "sentBefore": "If",
+            "sentAfter": "has an account, a link to choose a new password is on its way. It works once, for an hour.",
+            "intro": "Enter the email you sign in with and we will send you a link to choose a new password.",
+            "submit": "Send link",
+            "back": "Back to sign in",
+            "failed": "Could not send the link."
+        },
+        "reset": {
+            "title": "Choose a new password",
+            "incomplete": "This reset link is incomplete. Open the link from the mail again, or ask for a new one.",
+            "newPassword": "New password",
+            "repeat": "Repeat the password",
+            "mismatch": "The passwords differ.",
+            "submit": "Set password and sign in",
+            "newLink": "Send a new link",
+            "signIn": "Sign in",
+            "failed": "Could not set the password."
+        },
+        "verify": {
+            "title": "Confirm your email",
+            "verifying": "Confirming…",
+            "verified": "Thank you, your email is confirmed.",
+            "resendHint": "You can send a new link from the banner in the app.",
+            "toProjects": "Go to your projects",
+            "signIn": "Sign in",
+            "incomplete": "This verification link is incomplete. Open the link from the mail again.",
+            "failed": "The email could not be confirmed."
+        }
+    },
+    "layout": {
+        "openMenu": "Open menu",
+        "closeMenu": "Close menu",
+        "projects": "Projects",
+        "furniture": "Furniture",
+        "users": "Users",
+        "report": "Report a problem",
+        "signOut": "Sign out",
+        "verify": {
+            "before": "Please confirm your email: open the link we sent to",
+            "after": ".",
+            "again": "Send again",
+            "later": "Later",
+            "resent": "A new link is on its way to {{email}}."
+        }
+    },
+    "account": {
+        "title": "Account",
+        "profile": {
+            "title": "Profile",
+            "symbols": "Electrical plan symbols",
+            "saved": "Profile saved."
+        },
+        "symbols": {
+            "Iec": "IEC 60617",
+            "Csn": "ČSN (Czech)"
+        },
+        "mcp": {
+            "title": "AI agents (MCP)",
+            "hintBefore": "Agents such as Claude can read and edit your projects through the MCP server at",
+            "hintAfter": ". In Claude Code run the command below, then approve the connection in the browser window it opens. In claude.ai, add the same URL as a custom connector.",
+            "connected": "connected",
+            "lastToken": "last token",
+            "disconnected": "disconnected",
+            "disconnect": "Disconnect",
+            "none": "No agent is connected.",
+            "confirmDisconnect": "Disconnect {{name}}? It will need to be authorized again.",
+            "wasDisconnected": "{{name}} was disconnected."
+        },
+        "password": {
+            "title": "Password",
+            "google": "Your account is linked to Google, so you can also sign in with Google.",
+            "noneBefore": "Your account has no password yet. To sign in with your email too, sign out and choose",
+            "noneAfter": " on the sign-in page.",
+            "current": "Current password",
+            "new": "New password",
+            "submit": "Change password",
+            "changed": "Password changed. Other sessions have been signed out.",
+            "failed": "Could not change the password."
+        },
+        "delete": {
+            "title": "Delete account",
+            "hint": "Deletes your account with all your projects, their versions, files and share links, and your furniture and model library. This cannot be undone.",
+            "confirmEmail": "Type your email to confirm",
+            "confirmPassword": "Your password, to confirm",
+            "submit": "Delete my account",
+            "deleted": "Your account and its projects were deleted.",
+            "failed": "Could not delete the account."
+        }
+    },
+    "projects": {
+        "title": "Projects",
+        "examples": {
+            "start": "Start from an example",
+            "hint": "A copy goes into your projects: look around, walk through it, change anything.",
+            "open": "Open a copy",
+            "copying": "Copying…"
+        },
+        "import": "Import",
+        "importing": "Importing…",
+        "importHint": "A project file downloaded from a project's page (.izbik.zip or .izbik.json)",
+        "imported": "Imported \"{{name}}\".",
+        "new": "New project",
+        "namePlaceholder": "e.g. Flat 12, 2nd floor",
+        "floorCount": {
+            "one": "{{count}} floor",
+            "few": "{{count}} floors",
+            "other": "{{count}} floors"
+        },
+        "noOwner": "No owner",
+        "empty": "No projects yet.",
+        "emptyExamples": "No projects yet. Start from an example above, or draw your own.",
+        "createFirst": "Create your first project"
+    },
+    "project": {
+        "back": "← Projects",
+        "site": "Site (for the sun)",
+        "north": "North, ° clockwise from plan up",
+        "latitude": "Latitude, ° (north +)",
+        "longitude": "Longitude, ° (east +)",
+        "timeZone": "Time zone",
+        "facade": "Façade (exterior walls without a material of their own)",
+        "facadeOwn": "— the walls' own —",
+        "northNote": "north {{angle}}° clockwise from plan up",
+        "owner": "Owner: {{name}}",
+        "open3d": "Open 3D view",
+        "preparing": "Preparing…",
+        "downloadHint": "A project file with its files and models, to import on another Izbik or keep as a backup",
+        "withoutFiles": "Without files",
+        "withoutFilesHint": "The project file without its files and models: plans, photos and product models stay behind",
+        "confirmDelete": "Delete project \"{{name}}\" with all its floors and versions? This cannot be undone.",
+        "deleted": "Project \"{{name}}\" was deleted.",
+        "floors": {
+            "title": "Floors",
+            "add": "+ Add floor",
+            "meta": "level {{level}} · {{elevation}} · slab {{slab}} mm",
+            "lastOne": "A project needs at least one floor",
+            "name": "Floor name",
+            "level": "Level",
+            "levelHint": "Level (0 = ground floor)",
+            "elevation": "Elevation",
+            "elevationLabel": "Elevation, mm",
+            "elevationHint": "Finished floor level above ±0.000, mm (empty: a new floor stands on the one below, an edited one keeps its level)",
+            "slab": "Slab",
+            "slabLabel": "Slab thickness, mm",
+            "slabHint": "Slab under the floor, mm (empty: a new floor takes the default, an edited one keeps its slab)",
+            "confirmDelete": "Delete floor \"{{name}}\" with everything on it?"
+        },
+        "versions": {
+            "title": "Versions",
+            "note": "Note (optional)",
+            "noteLabel": "Version note",
+            "save": "Save version",
+            "empty": "No saved versions yet. Save one to keep the current state of all floors.",
+            "saved": "Saved version {{number}}.",
+            "confirmRestore": "Replace the current floors with version {{number}}? The current state is saved as a new version first.",
+            "restored": "Restored version {{number}}. The previous state is version {{backup}}."
+        },
+        "shares": {
+            "title": "Share links",
+            "expired": "expired",
+            "until": "until",
+            "noExpiry": "no expiry",
+            "update": "Update",
+            "updateHint": "Show the floor as it is now (saves a new version, the link stays)",
+            "empty": "No share links yet. Open a floor and use Share to send a view of it to someone.",
+            "copied": "Link copied.",
+            "copyFailed": "Could not copy the link.",
+            "confirmUpdate": "Update \"{{name}}\" to the floor as it is now? It saves a new version; the link stays the same.",
+            "updated": "\"{{name}}\" now shows version {{number}}.",
+            "confirmDelete": "Delete the share link \"{{name}}\"? Anyone who has it loses access. Its version stays."
+        },
+        "furniture": {
+            "title": "Furniture",
+            "cutList": "Cut list",
+            "hint": "Custom furniture this project's items can use: global pieces, the owner's library and the project's own. Add them to a floor with the editor's Add menu."
+        }
+    },
+    "files": {
+        "title": "Files",
+        "upload": "+ Upload",
+        "uploading": {
+            "one": "Uploading {{count}} file…",
+            "few": "Uploading {{count}} files…",
+            "other": "Uploading {{count}} files…"
+        },
+        "drop": "Drop floor plans, renders or photos here",
+        "empty": "No files yet.",
+        "kindOther": "FILE",
+        "closePreview": "Close preview",
+        "confirmDelete": "Delete \"{{name}}\"?",
+        "uploaded": "File uploaded.",
+        "processed": {
+            "one": "{{count}} file processed.",
+            "few": "{{count}} files processed.",
+            "other": "{{count}} files processed."
+        }
+    },
+    "admin": {
+        "title": "Users",
+        "add": "Add user",
+        "passOn": "Pass it on to them.",
+        "signsOut": "It signs them out everywhere.",
+        "role": "Role",
+        "roles": {
+            "User": "User",
+            "Admin": "Admin"
+        },
+        "lastSignIn": "Last sign-in",
+        "joined": "Joined",
+        "actions": "Actions",
+        "you": "you",
+        "roleOf": "Role of {{name}}",
+        "never": "never",
+        "setPassword": "Set password",
+        "newPasswordFor": "New password for {{name}}",
+        "none": "No users.",
+        "added": "Added {{name}}. Pass the password on to them; they can change it on their account page.",
+        "passwordSet": "Set the password of {{name}}; they are signed out everywhere.",
+        "nowAdmin": "{{name}} is now an admin.",
+        "nowUser": "{{name}} is now a user.",
+        "confirmDelete": "Delete {{name}} ({{email}})? This cannot be undone.",
+        "deleted": "{{name}} was deleted."
+    },
+    "oauth": {
+        "connected": "Connected",
+        "returning": "Returning to {{name}}… You can close this window.",
+        "notConnected": "Not connected",
+        "denied": "{{name}} did not get access. You can close this window.",
+        "connect": "Connect {{name}}",
+        "consent": "wants to read and edit your projects (floors, rooms, walls, items and versions) on your behalf. Its changes show up under its name and can be undone.",
+        "signedInAs": "Signed in as",
+        "deny": "Deny",
+        "allow": "Allow access",
+        "signInToContinue": "Sign in to continue",
+        "cannotConnect": "Cannot connect",
+        "incomplete": "This authorization link is incomplete. Start the connection again from your MCP client.",
+        "unknownClient": "Unknown client. Start the connection again from your MCP client.",
+        "loadFailed": "Could not load the request.",
+        "failed": "Authorization failed."
     }
 }

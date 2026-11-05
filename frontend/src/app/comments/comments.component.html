@@ -63,7 +63,7 @@
                                     @if (comment.authorType !== 'User') {
                                         <span class="tag">{{ comment.authorType === 'Agent' ? 'agent' : 'guest' }}</span>
                                     }
-                                    · {{ comment.createdAt | date: 'd MMM, HH:mm' }}
+                                    · {{ comment.createdAt | dateText: 'dayTime' }}
                                 </div>
                                 @if (editing()?.id === comment.id) {
                                     <form (submit)="submitEdit($event, comment)">

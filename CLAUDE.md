@@ -70,7 +70,11 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (resolved against `document.baseURI`, `no-cache` in `conf/default.conf`). **A new user-facing text goes into both
   files** (`TranslatePipe` in templates, `TranslateService` in code); `src/i18n/i18n.spec.ts` checks they have the same
   keys and placeholders. Specs that render texts take `provideTestTranslations()` (`src/test-translations.ts`, the real
-  files, English).
+  files, English). Counts go through `PluralPipe` / `pluralText()` (`shared/i18n`: keys `<key>.one|few|other` in both
+  languages, by `Intl.PluralRules`), dates through `DateTextPipe` (`dateText: 'date' | 'dateTime' | 'dayTime' |
+  'time'`, each language's own format), never Angular's `date` with an English pattern. A route's `title` is a key
+  (`titles.*`, `TranslatedTitleStrategy`). Server messages (`errorMessage()`) are still English until the API sends
+  keys.
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
@@ -79,7 +83,11 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `LanguageSwitchComponent` (the device's choice, live, hidden while signed in).
 - Backend: `users.locale` (`LocaleEnum`: en, cs; `UserDto`, `PATCH /api/current-user`), set at sign-up and by a
   Google sign-in creating the account from the browser's language (`LocaleEnum::fromBrowser()`), by an admin's
-  `POST /api/admin/users` from the admin's. MCP tool descriptions and agent-facing texts stay English.
+  `POST /api/admin/users` from the admin's. MCP tool descriptions and agent-facing texts stay English. The backend's own
+  texts (the account mail, `AccountEmail` by `mail.<kind>.*`; default names it writes, a "Shared: …" version, a new
+  variant's name) are `backend/translations/{en,cs}.json` read by `Translator` (dotted keys, `{name}` placeholders,
+  English fallback; `TranslationFilesTest` keeps the keys alike), in the user's language for a person and English for
+  an agent (`ActorLocale`). Names the frontend sends (a new room, a group) are translated there.
 
 ## Domain conventions
 

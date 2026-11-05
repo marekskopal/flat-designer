@@ -1,6 +1,6 @@
-import {DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 import {Comment, CommentThread, commentThreads} from '@app/models/comment';
+import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
 
 /** What the panel asks the page to do; the page talks to the server (as the user or a share link's guest). */
 export type CommentAction =
@@ -17,7 +17,7 @@ export type CommentAction =
  */
 @Component({
     selector: 'fd-comments',
-    imports: [DatePipe],
+    imports: [DateTextPipe],
     templateUrl: './comments.component.html',
     styleUrl: './comments.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

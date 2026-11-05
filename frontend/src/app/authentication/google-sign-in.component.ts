@@ -1,4 +1,5 @@
-import {ChangeDetectionStrategy, Component, effect, ElementRef, input, output, viewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, ElementRef, inject, input, output, viewChild} from '@angular/core';
+import {LanguageService} from '@app/services/language.service';
 
 const ScriptUrl = 'https://accounts.google.com/gsi/client';
 /** Google draws its button at most this wide. */
@@ -51,14 +52,15 @@ export class GoogleSignInComponent {
     public readonly unavailable = output<void>();
 
     private readonly button = viewChild.required<ElementRef<HTMLElement>>('button');
+    private readonly language = inject(LanguageService);
 
     public constructor() {
         effect(() => {
-            void this.render(this.clientId(), this.text(), this.button().nativeElement);
+            void this.render(this.clientId(), this.text(), this.language.current(), this.button().nativeElement);
         });
     }
 
-    private async render(clientId: string, text: 'signin_with' | 'signup_with', container: HTMLElement): Promise<void> {
+    private async render(clientId: string, text: 'signin_with' | 'signup_with', locale: string, container: HTMLElement): Promise<void> {
         try {
             await loadScript();
         } catch {
@@ -82,6 +84,7 @@ export class GoogleSignInComponent {
             text,
             shape: 'rectangular',
             logo_alignment: 'center',
+            locale,
             width: Math.min(MaxButtonWidth, container.offsetWidth),
         });
     }

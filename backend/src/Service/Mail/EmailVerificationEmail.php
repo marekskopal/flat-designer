@@ -4,25 +4,23 @@ declare(strict_types=1);
 
 namespace Izbik\Service\Mail;
 
+use Izbik\Model\Entity\User;
+use Izbik\Service\Translator\Translator;
 use Symfony\Component\Mime\Email;
 
-/** The mail with a link confirming the account's address (`EmailVerificationService`). */
+/** The mail with a link confirming the account's address (`EmailVerificationService`), in the account's language. */
 final readonly class EmailVerificationEmail
 {
-	public static function create(string $recipientEmail, string $userName, string $verifyUrl, int $lifetimeHours): Email
+	public static function create(Translator $translator, User $user, string $verifyUrl, int $lifetimeHours): Email
 	{
 		return AccountEmail::create(
-			recipientEmail: $recipientEmail,
-			userName: $userName,
-			subject: 'Confirm your email for Izbik',
-			title: 'Confirm your email',
-			intro: 'Please confirm that this is the address of your Izbik account with the link below.',
-			buttonLabel: 'Confirm email',
+			translator: $translator,
+			locale: $user->locale,
+			recipientEmail: $user->email,
+			userName: $user->name,
+			kind: 'emailVerification',
 			url: $verifyUrl,
-			footnote: sprintf(
-				'The link works once, for %d hours. If you did not create an Izbik account, ignore this mail.',
-				$lifetimeHours,
-			),
+			params: ['hours' => $lifetimeHours],
 		);
 	}
 }

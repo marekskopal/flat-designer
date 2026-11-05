@@ -1,6 +1,6 @@
-import {DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, input} from '@angular/core';
 import {Change} from '@app/models/editor';
+import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
 
 /** One row of the list: a change, or a batch shown as its first change (which names the operation). */
 interface ActivityRow {
@@ -12,7 +12,7 @@ interface ActivityRow {
 /** Recent changes of the project: who (a person or an agent) changed what. */
 @Component({
     selector: 'fd-activity',
-    imports: [DatePipe],
+    imports: [DateTextPipe],
     template: `
         <ul class="activity">
             @for (row of rows(); track row.change.id) {
@@ -30,7 +30,7 @@ interface ActivityRow {
                         } @else {
                             {{ change.actorName }}
                         }
-                        · {{ change.createdAt | date: 'HH:mm' }}
+                        · {{ change.createdAt | dateText: 'time' }}
                         @if (change.undone) {
                             · undone
                         }
