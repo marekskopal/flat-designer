@@ -1,18 +1,18 @@
 <div class="page">
     <div class="page__header">
-        <h1 class="page__title">Furniture</h1>
+        <h1 class="page__title">{{ 'furniture.library.title' | translate }}</h1>
         <div class="actions">
             @if (project() !== null) {
-                <a class="btn btn--ghost" [routerLink]="['/projects', project()]">Back to the project</a>
-                <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="create('project')">New in this project</button>
+                <a class="btn btn--ghost" [routerLink]="['/projects', project()]">{{ 'furniture.library.backToProject' | translate }}</a>
+                <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="create('project')">{{ 'furniture.library.newInProject' | translate }}</button>
             } @else {
-                <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="create('user')">New in my library</button>
+                <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="create('user')">{{ 'furniture.library.newInLibrary' | translate }}</button>
             }
         </div>
     </div>
     <p class="intro">
-        Custom furniture is defined by parameters and parts (boards, fronts, legs…) whose sizes are expressions of the item's
-        width <code>W</code>, depth <code>D</code> and height <code>H</code>. Editing a definition changes every item made from it.
+        {{ 'furniture.library.introWidth' | translate }} <code>W</code>{{ 'furniture.library.introDepth' | translate }} <code>D</code>
+        {{ 'furniture.library.introHeight' | translate }} <code>H</code>{{ 'furniture.library.introEnd' | translate }}
     </p>
 
     @for (section of sections(); track section.scope) {
@@ -25,7 +25,7 @@
                             <td class="table__strong">
                                 <a [routerLink]="['/furniture', definition.id]">{{ definition.name }}</a>
                                 @if (definition.definition.category; as category) {
-                                    <span class="badge badge--category" title="Counted in the electrical schedule">{{ 'enums.electricalCategory.' + category | translate }}</span>
+                                    <span class="badge badge--category" [title]="'furniture.library.countedInSchedule' | translate">{{ 'enums.electricalCategory.' + category | translate }}</span>
                                 }
                                 @if (definition.scope === 'user' && project() !== null && definition.userName) {
                                     <span class="badge">{{ definition.userName }}</span>
@@ -34,21 +34,21 @@
                             <td class="table__muted description">{{ definition.description }}</td>
                             <td class="table__actions">
                                 @if (definition.scope !== 'user') {
-                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="copy(definition, 'user')">Copy to my library</button>
+                                    <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="copy(definition, 'user')">{{ 'furniture.copyToLibrary' | translate }}</button>
                                 }
                                 @if (project() !== null && definition.scope !== 'project') {
                                     <button type="button" class="btn btn--ghost" [disabled]="busy()" (click)="copy(definition, 'project')">
-                                        Copy to the project
+                                        {{ 'furniture.library.copyToProject' | translate }}
                                     </button>
                                 }
                                 @if (definition.canEdit) {
-                                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="delete(definition)">Delete</button>
+                                    <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="delete(definition)">{{ 'common.delete' | translate }}</button>
                                 }
                             </td>
                         </tr>
                     } @empty {
                         <tr>
-                            <td colspan="3" class="table__empty">{{ loading() ? 'Loading…' : 'None yet.' }}</td>
+                            <td colspan="3" class="table__empty">{{ (loading() ? 'common.loading' : 'furniture.noneYet') | translate }}</td>
                         </tr>
                     }
                 </tbody>

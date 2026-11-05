@@ -4,6 +4,25 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Roleta s kazetou",
+    "description": "Interiérová roleta v boxu nad velkým zasklením: kazeta nahoře v prvku, roleta spuštěná o procento výšky pod ní. Umístěte prvek nad zasklení, jeho horní hranu k nadpraží.",
+    "parameters": {
+     "down": "Spuštění",
+     "box": "Výška kazety"
+    },
+    "slots": {
+     "cassette": "Kazeta",
+     "fabric": "Roleta"
+    },
+    "parts": {
+     "Cassette": "Kazeta",
+     "Blind": "Roleta",
+     "Bottom bar": "Zátěžová lišta"
+    }
+   }
+  },
   "size": {
    "width": 2400,
    "depth": 120,

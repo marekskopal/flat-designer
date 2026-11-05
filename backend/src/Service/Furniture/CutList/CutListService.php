@@ -9,14 +9,18 @@ use Izbik\Dto\ItemDto;
 use Izbik\Dto\MaterialDto;
 use Izbik\Dto\SceneDto;
 use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Entity\Floor;
 use Izbik\Model\Entity\Project;
 use Izbik\Model\Repository\FloorRepository;
 use Izbik\Service\Furniture\DefinitionEvaluator;
 use Izbik\Service\Furniture\DefinitionException;
+use Izbik\Service\Furniture\DefinitionTranslations;
 use Izbik\Service\Furniture\ResolvedPart;
 use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\Provider\SceneProvider;
+use Izbik\Service\Translator\ErrorTranslator;
+use Izbik\Service\Translator\Translator;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -34,19 +38,22 @@ final readonly class CutListService
 		private SceneProvider $sceneProvider,
 		private FloorRepository $floorRepository,
 		private DefinitionEvaluator $evaluator,
+		private Translator $translator,
+		private ErrorTranslator $errorTranslator,
 	) {
 	}
 
-	public function forProject(Project $project): CutListDto
+	/** `$locale` names the parts (by the definitions' `translations`) and writes the notes in it. */
+	public function forProject(Project $project, LocaleEnum $locale = LocaleEnum::En): CutListDto
 	{
 		$floors = $this->floorRepository->findByProject($project->id);
 
-		return $this->forScenes(array_map(fn (Floor $floor): array => [$floor, $this->sceneProvider->getScene($floor)], $floors));
+		return $this->forScenes(array_map(fn (Floor $floor): array => [$floor, $this->sceneProvider->getScene($floor)], $floors), $locale);
 	}
 
-	public function forFloor(Floor $floor): CutListDto
+	public function forFloor(Floor $floor, LocaleEnum $locale = LocaleEnum::En): CutListDto
 	{
-		return $this->forScenes([[$floor, $this->sceneProvider->getScene($floor)]]);
+		return $this->forScenes([[$floor, $this->sceneProvider->getScene($floor)]], $locale);
 	}
 
 	/**
@@ -54,17 +61,17 @@ final readonly class CutListService
 	 *
 	 * @param list<array{Floor, SceneDto}> $scenes
 	 */
-	public function forScenes(array $scenes): CutListDto
+	public function forScenes(array $scenes, LocaleEnum $locale = LocaleEnum::En): CutListDto
 	{
 		$list = new CutListAccumulator();
 		foreach ($scenes as [$floor, $scene]) {
-			$this->addFloor($list, $floor, $scene);
+			$this->addFloor($list, $floor, $scene, $locale);
 		}
 
 		return $list->result();
 	}
 
-	private function addFloor(CutListAccumulator $list, Floor $floor, SceneDto $scene): void
+	private function addFloor(CutListAccumulator $list, Floor $floor, SceneDto $scene, LocaleEnum $locale): void
 	{
 		$hidden = array_flip($scene->hiddenItemIds());
 		$definitions = self::definitions($scene);
@@ -75,7 +82,15 @@ final readonly class CutListService
 
 		foreach ($scene->items as $item) {
 			if ($item->kind === ItemKindEnum::Custom && !isset($hidden[$item->id])) {
-				$this->addItem($list, $item, $definitions[$item->definitionId ?? 0] ?? null, $floor, $materials, $scene->materials);
+				$this->addItem(
+					$list,
+					$item,
+					$definitions[$item->definitionId ?? 0] ?? null,
+					$floor,
+					$materials,
+					$scene->materials,
+					$locale,
+				);
 			}
 		}
 	}
@@ -85,10 +100,17 @@ final readonly class CutListService
 	 * @param array<string, MaterialDto> $byCode
 	 * @param list<MaterialDto> $all
 	 */
-	private function addItem(CutListAccumulator $list, ItemDto $item, ?array $definition, Floor $floor, array $byCode, array $all): void
-	{
+	private function addItem(
+		CutListAccumulator $list,
+		ItemDto $item,
+		?array $definition,
+		Floor $floor,
+		array $byCode,
+		array $all,
+		LocaleEnum $locale,
+	): void {
 		if ($definition === null) {
-			$list->skip($item->id, $item->name, $floor->name, 'The furniture definition is gone.');
+			$list->skip($item->id, $item->name, $floor->name, $this->translator->translate('cutList.definitionGone', $locale));
 			return;
 		}
 
@@ -98,21 +120,43 @@ final readonly class CutListService
 		try {
 			$parts = $this->evaluator->evaluate($definition, $item->width, $item->depth, $item->height, $values);
 		} catch (DefinitionException $e) {
-			$list->skip($item->id, $item->name, $floor->name, $e->getMessage());
+			$list->skip($item->id, $item->name, $floor->name, $this->errorTranslator->translate($e->getMessage(), $locale));
 			return;
 		}
 
 		$slots = is_array($definition['materialSlots'] ?? null) ? array_values($definition['materialSlots']) : [];
+		$noMaterial = $this->translator->translate('cutList.noMaterial', $locale);
 		foreach ($parts as $part) {
 			$material = self::partMaterial($part, $item, $params, $slots, $byCode, $all);
+			$part = self::named($part, DefinitionTranslations::partName($definition, $part->name, $locale));
 			if (in_array($part->type, self::BoardTypes, true)) {
 				foreach (FoldingFront::panels($part) as $panel) {
-					$list->addBoard($material?->id, $material->name ?? 'No material', $panel, $item->name);
+					$list->addBoard($material?->id, $material->name ?? $noMaterial, $panel, $item->name);
 				}
 			} else {
-				$list->addOther($material?->id, $material->name ?? 'No material', $part, $item->name);
+				$list->addOther($material?->id, $material->name ?? $noMaterial, $part, $item->name);
 			}
 		}
+	}
+
+	private static function named(ResolvedPart $part, string $name): ResolvedPart
+	{
+		return $name === $part->name
+			? $part
+			: new ResolvedPart(
+				$name,
+				$part->type,
+				$part->index,
+				$part->x,
+				$part->y,
+				$part->z,
+				$part->w,
+				$part->h,
+				$part->d,
+				$part->material,
+				$part->props,
+				$part->path,
+			);
 	}
 
 	/** @return array<int, array<mixed>> the scene's definition bodies by id */

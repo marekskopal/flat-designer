@@ -15,13 +15,15 @@ import {
 } from '@angular/core';
 import {Router, RouterLink} from '@angular/router';
 import {CustomParamsComponent} from '@app/editor/custom-params.component';
-import {FurnitureDefinition, FurnitureDefinitionBody, ScopeLabels} from '@app/models/furniture';
+import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
 import {Material} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {PluralPipe} from '@app/shared/i18n/plural.pipe';
 import {WebglMessageComponent} from '@app/shared/webgl-message/webgl-message.component';
 import {FurniturePreview} from '@app/viewer/engine/custom/preview';
 import {webglAvailable, WebglProblem} from '@app/viewer/engine/webgl';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {ScheduleSettingsComponent} from './schedule-settings.component';
 
@@ -34,7 +36,7 @@ type Parsed = {ok: true; body: FurnitureDefinitionBody} | {ok: false; error: str
  */
 @Component({
     selector: 'fd-furniture-editor',
-    imports: [CustomParamsComponent, RouterLink, ScheduleSettingsComponent, WebglMessageComponent],
+    imports: [CustomParamsComponent, PluralPipe, RouterLink, ScheduleSettingsComponent, TranslatePipe, WebglMessageComponent],
     templateUrl: './furniture-editor.component.html',
     styleUrl: './furniture-editor.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,12 +47,12 @@ export class FurnitureEditorComponent implements OnDestroy {
     private readonly furniture = inject(FurnitureService);
     private readonly alerts = inject(AlertService);
     private readonly router = inject(Router);
+    private readonly translate = inject(TranslateService);
     private readonly previewHost = viewChild.required<ElementRef<HTMLElement>>('preview');
     private preview: FurniturePreview | null = null;
     /** Why the preview is not drawn: no WebGL 2, or its context was lost. */
     protected readonly webglProblem = signal<WebglProblem | null>(null);
 
-    protected readonly scopeLabels = ScopeLabels;
     protected readonly definition = signal<FurnitureDefinition | null>(null);
     protected readonly materials = signal<Material[]>([]);
     protected readonly name = signal('');
@@ -74,9 +76,10 @@ export class FurnitureEditorComponent implements OnDestroy {
             const body: unknown = JSON.parse(this.json());
             return typeof body === 'object' && body !== null && !Array.isArray(body)
                 ? {ok: true, body: body as FurnitureDefinitionBody}
-                : {ok: false, error: 'The definition must be a JSON object.'};
+                : {ok: false, error: this.translate.instant('furniture.editor.notObject') as string};
         } catch (e) {
-            return {ok: false, error: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}`};
+            const error = e instanceof Error ? e.message : String(e);
+            return {ok: false, error: this.translate.instant('furniture.editor.invalidJson', {error}) as string};
         }
     });
     protected readonly body = computed(() => {
@@ -173,7 +176,7 @@ export class FurnitureEditorComponent implements OnDestroy {
                 this.definition.set({...saved, itemCount: definition.itemCount});
                 this.serverError.set(null);
                 this.serverOk.set(true);
-                this.alerts.success(`"${saved.name}" was saved.`);
+                this.alerts.success(this.translate.instant('furniture.editor.saved', {name: saved.name}) as string);
             } catch (e) {
                 this.serverOk.set(false);
                 this.serverError.set(errorMessage(e));
@@ -188,7 +191,7 @@ export class FurnitureEditorComponent implements OnDestroy {
         }
         await this.run(async () => {
             const copy = await this.furniture.copy(definition.id, 'user');
-            this.alerts.success(`"${definition.name}" was copied to your library.`);
+            this.alerts.success(this.translate.instant('furniture.copiedToLibrary', {name: definition.name}) as string);
             await this.router.navigate(['/furniture', copy.id]);
         });
     }

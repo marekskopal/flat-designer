@@ -8,8 +8,10 @@ import {ImageMimeTypes, PdfMimeType, ProjectFile} from '@app/models/project';
 import {PlanPoint, Scene, Underlay} from '@app/models/scene';
 import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {LanguageService} from '@app/services/language.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
+import {localizeDefinition} from '@app/shared/i18n/definition-texts';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {Vec2} from '@app/viewer/engine/plan-geometry';
 import {ElementKind, sameSelection, Selection} from '@app/viewer/engine/selection';
@@ -39,6 +41,7 @@ export interface EditorContext {
  */
 @Injectable()
 export class EditorStore {
+    private readonly language = inject(LanguageService);
     public readonly enabled = signal(false);
     public readonly selection = signal<Selection | null>(null);
     /** Items picked with Shift+click, e.g. to group them; while any are picked there is no single selection. */
@@ -426,7 +429,7 @@ export class EditorStore {
             return;
         }
         try {
-            this.definitions.set(await this.furniture.list(context.projectId()));
+            this.definitions.set((await this.furniture.list(context.projectId())).map((d) => localizeDefinition(d, this.language.current())));
         } catch {
             // The error interceptor shows the toast.
         }

@@ -4,6 +4,29 @@
  "definition": {
   "format": 1,
   "catalogue": "seating",
+  "translations": {
+   "cs": {
+    "name": "Jídelní židle",
+    "description": "Židle z masivu: sedák ze dvou desek zužující se dozadu, nohy zkosené na vnitřní straně, lubová lišta a opěradlo ze dvou sloupků a dvou příček skloněné dozadu o sklon (5°; s5 / c5 jsou jeho sinus a kosinus, protože výrazy nemají goniometrické funkce – měňte všechny tři společně).",
+    "parameters": {
+     "seatHeight": "Výška sedáku",
+     "backWidth": "Šířka sedáku vzadu"
+    },
+    "slots": {
+     "wood": "Dřevo"
+    },
+    "parts": {
+     "Seat": "Sedák",
+     "Front leg": "Přední noha",
+     "Back leg": "Zadní noha",
+     "Front apron": "Přední lub",
+     "Side apron": "Boční lub",
+     "Post": "Sloupek opěradla",
+     "Top rail": "Horní příčka",
+     "Lower rail": "Dolní příčka"
+    }
+   }
+  },
   "size": {
    "width": 400,
    "depth": 395,

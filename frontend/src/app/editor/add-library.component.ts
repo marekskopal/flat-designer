@@ -350,7 +350,11 @@ export class AddLibraryComponent {
         if (choice.startsWith('item:')) {
             void this.editor.create('item', {kind: choice.slice(5), x: at.x, y: at.y, roomId: room?.id ?? null});
         } else if (choice.startsWith('custom:')) {
-            void this.editor.create('item', {kind: 'Custom', definitionId: Number(choice.slice(7)), x: at.x, y: at.y, roomId: room?.id ?? null});
+            const definitionId = Number(choice.slice(7));
+            // Named as the library shows it (in the language shown), not as the definition is stored.
+            const name = this.editor.definitions().find((d) => d.id === definitionId)?.name;
+            const named = name === undefined ? {} : {name};
+            void this.editor.create('item', {kind: 'Custom', definitionId, x: at.x, y: at.y, roomId: room?.id ?? null, ...named});
         } else if (choice.startsWith('model:')) {
             void this.editor.create('item', {kind: 'Model', modelId: Number(choice.slice(6)), x: at.x, y: at.y, roomId: room?.id ?? null});
         } else if (choice === 'wall') {

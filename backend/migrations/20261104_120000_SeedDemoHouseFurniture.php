@@ -94,6 +94,8 @@ final class SeedDemoHouseFurnitureMigration extends Migration
 			if (is_array($definition['derived'] ?? null)) {
 				unset($definition['derived']['slats']);
 			}
+			// The texts in other languages came later (AddFurnitureTranslations, undone first on a rollback) and name the grille.
+			unset($definition['translations']);
 			$description = str_replace(
 				' plinthVent puts a ventilation grille in the plinth (under an oven or a fridge).',
 				'',

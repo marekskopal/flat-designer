@@ -32,9 +32,9 @@
                 <label class="cell">
                     <span class="cell__label">{{ label(parameter) }}</span>
                     <select class="input input--compact" [disabled]="disabled()" (change)="setSelect(parameter, $event)">
-                        <option value="" [selected]="value(parameter) === undefined">{{ 'inspector.custom.defaultValue' | translate: {value: parameter.default} }}</option>
+                        <option value="" [selected]="value(parameter) === undefined">{{ 'inspector.custom.defaultValue' | translate: {value: optionLabel(parameter, parameter.default)} }}</option>
                         @for (option of parameter.options; track option) {
-                            <option [value]="option" [selected]="option === value(parameter)">{{ option }}</option>
+                            <option [value]="option" [selected]="option === value(parameter)">{{ optionLabel(parameter, option) }}</option>
                         }
                     </select>
                 </label>
@@ -80,10 +80,10 @@
                                             (change)="setItemField(parameter, index, field, $event)"
                                         >
                                             <option value="" [selected]="item[field.key] === undefined">
-                                                {{ field.default === undefined || field.default === null ? '—' : ('inspector.custom.defaultValue' | translate: {value: field.default}) }}
+                                                {{ field.default === undefined || field.default === null ? '—' : ('inspector.custom.defaultValue' | translate: {value: optionLabel(field, field.default)}) }}
                                             </option>
                                             @for (option of field.options; track option) {
-                                                <option [value]="option" [selected]="option === item[field.key]">{{ option }}</option>
+                                                <option [value]="option" [selected]="option === item[field.key]">{{ optionLabel(field, option) }}</option>
                                             }
                                         </select>
                                     }

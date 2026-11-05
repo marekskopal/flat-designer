@@ -86,6 +86,13 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (`localizeMaterials()`: the scene, a shared view, the catalogue; one an admin adds keeps its own name);
   `backend/tests/fixtures/material-codes.json` lists the seeded codes (`SeededMaterialCodesTest`), so **a migration
   seeding a material adds its code there and its names to both files**.
+- Furniture definitions carry their own texts: an optional `translations` (`{cs: {name, description, parameters,
+  options, slots, parts}}`, parameters by key or `list.field`, options by select, parts by English name; checked by
+  `DefinitionTranslations`, not read by the evaluators). The editor and the libraries show definitions through
+  `localizeDefinition()` (labels, `optionLabels` for selects; the parts stay, the furniture editor edits the stored
+  JSON), a new Custom item takes the name shown, and the cut list names the parts in the `Accept-Language` language
+  (`CutListService` with a locale; its materials the page names from the catalogue by id). The seeds have Czech
+  (`AddFurnitureTranslations`): **a seed's new parameter, option, slot or part needs its Czech text too.**
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's

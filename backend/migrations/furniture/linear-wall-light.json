@@ -11,6 +11,24 @@
    ]
   },
   "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Lineární nástěnné svítidlo, dub",
+    "description": "Štíhlá dubová lišta na stěně svítící dolů přes opálový pruh na spodní straně, např. nad zrcadlem v koupelně. Výška osazení je spodní hrana.",
+    "parameters": {
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti"
+    },
+    "slots": {
+     "wood": "Lišta"
+    },
+    "parts": {
+     "Bar": "Lišta",
+     "Diffuser": "Difuzor",
+     "Light": "Světlo"
+    }
+   }
+  },
   "size": {
    "width": 800,
    "depth": 70,

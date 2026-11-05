@@ -21,5 +21,9 @@
         "sharedVersion": "Shared: {name}",
         "variant": "Variant {number}",
         "copy": "{name} (copy)"
+    },
+    "cutList": {
+        "definitionGone": "The furniture definition is gone.",
+        "noMaterial": "No material"
     }
 }

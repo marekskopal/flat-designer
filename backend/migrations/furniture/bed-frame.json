@@ -4,6 +4,28 @@
  "definition": {
   "format": 1,
   "catalogue": "bedroom",
+  "translations": {
+   "cs": {
+    "name": "Rám postele",
+    "description": "Postel s čelem u hlavy, bočnicemi, rošty a nožkami, volitelně s matrací.",
+    "parameters": {
+     "mattress": "Matrace",
+     "railHeight": "Horní hrana bočnic"
+    },
+    "slots": {
+     "frame": "Rám",
+     "mattress": "Matrace"
+    },
+    "parts": {
+     "Headboard": "Čelo postele",
+     "Side rail": "Bočnice",
+     "Foot rail": "Čelo v nohách",
+     "Slat": "Lamela roštu",
+     "Foot": "Nožka",
+     "Mattress": "Matrace"
+    }
+   }
+  },
   "size": {
    "width": 1600,
    "depth": 2100,

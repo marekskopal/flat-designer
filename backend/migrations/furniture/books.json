@@ -4,6 +4,27 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Knihy",
+    "description": "Řada knih na polici: hřbety různé šířky, výšky, hloubky a barvy (u každého prvku pevně dané; pro jinou řadu změňte variabilitu).",
+    "parameters": {
+     "spine": "Průměrný hřbet",
+     "variety": "Variabilita"
+    },
+    "slots": {
+     "navy": "Námořnická modrá",
+     "oxblood": "Vínová",
+     "ochre": "Okrová",
+     "cream": "Krémová",
+     "green": "Zelená",
+     "grey": "Šedá"
+    },
+    "parts": {
+     "Book": "Kniha"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 220,

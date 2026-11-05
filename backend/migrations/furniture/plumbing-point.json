@@ -10,6 +10,36 @@
    ]
   },
   "catalogue": "electrical",
+  "translations": {
+   "cs": {
+    "name": "Vývod vody",
+    "description": "Přípojka vody nebo odpadu vystupující ze stěny: vývod studené a/nebo teplé vody s barevnou zátkou, nebo odpadní potrubí. Výška osazení: spodek trubky.",
+    "parameters": {
+     "kind": "Druh"
+    },
+    "options": {
+     "kind": {
+      "pair": "studená i teplá",
+      "cold": "studená",
+      "hot": "teplá",
+      "waste": "odpad"
+     }
+    },
+    "slots": {
+     "pipe": "Trubka",
+     "coldCap": "Zátka studené",
+     "hotCap": "Zátka teplé",
+     "waste": "Odpadní trubka"
+    },
+    "parts": {
+     "Cold pipe": "Trubka studené",
+     "Cold cap": "Zátka studené",
+     "Hot pipe": "Trubka teplé",
+     "Hot cap": "Zátka teplé",
+     "Waste pipe": "Odpadní trubka"
+    }
+   }
+  },
   "size": {
    "width": 160,
    "depth": 60,

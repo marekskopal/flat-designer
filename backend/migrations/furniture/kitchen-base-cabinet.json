@@ -4,6 +4,75 @@
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňská spodní skříňka",
+    "description": "Spodní skříňka na zapuštěném soklu: desky korpusu, čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, spotřebiče), slepé rohy. softClose tlumí dovírání dvířek a zásuvek. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici).",
+    "parameters": {
+     "fronts": "Čela odspodu",
+     "fronts.type": "Typ",
+     "fronts.height": "Výška",
+     "fronts.count": "Křídla",
+     "fronts.handle": "Úchytka",
+     "plinth": "Sokl",
+     "plinthVent": "Větrací mřížka v soklu",
+     "handle": "Úchytka",
+     "handleSide": "Strana úchytky jednokřídlých dvířek",
+     "softClose": "Tlumené dovírání",
+     "blindLeft": "Slepá část vlevo (roh)",
+     "blindRight": "Slepá část vpravo (roh)",
+     "t": "Deska korpusu",
+     "ft": "Tloušťka čela",
+     "gap": "Spára kolem čel",
+     "recess": "Odsazení soklu"
+    },
+    "options": {
+     "fronts.type": {
+      "door": "dvířka",
+      "drawer": "zásuvka",
+      "oven": "trouba",
+      "microwave": "mikrovlnná trouba"
+     },
+     "fronts.handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handleSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Čela",
+     "grille": "Mřížka soklu"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Bottom": "Dno",
+     "Top": "Víko",
+     "Back": "Záda",
+     "Plinth": "Sokl",
+     "Plinth grille": "Mřížka soklu",
+     "Plinth grille slat": "Lamela mřížky soklu",
+     "Front slot": "Pole čela",
+     "Front": "Čelo",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Appliance": "Spotřebič",
+     "Shelf": "Police"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 580,

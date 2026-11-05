@@ -4,6 +4,30 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Koberec",
+    "description": "Koberec se zaoblenými rohy, nebo kulatý (průměr je menší ze šířky a hloubky), s volitelným lemem ve druhé barvě.",
+    "parameters": {
+     "shape": "Tvar",
+     "border": "Šířka lemu"
+    },
+    "options": {
+     "shape": {
+      "rectangle": "obdélník",
+      "round": "kruh"
+     }
+    },
+    "slots": {
+     "rug": "Koberec",
+     "border": "Lem"
+    },
+    "parts": {
+     "Rug": "Koberec",
+     "Field": "Střed"
+    }
+   }
+  },
   "size": {
    "width": 2000,
    "depth": 1400,

@@ -11,6 +11,27 @@
    ]
   },
   "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Čtvercové stropní svítidlo, dubový rám",
+    "description": "Čtvercové přisazené stropní svítidlo: dubový rám kolem opálového difuzoru. Horní hranu umístěte ke stropu.",
+    "parameters": {
+     "frame": "Šířka rámu",
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti"
+    },
+    "slots": {
+     "wood": "Rám",
+     "back": "Zadní deska"
+    },
+    "parts": {
+     "Frame": "Rám",
+     "Back plate": "Zadní deska",
+     "Diffuser": "Difuzor",
+     "Light": "Světlo"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 600,

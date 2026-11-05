@@ -4,6 +4,24 @@
  "definition": {
   "format": 1,
   "catalogue": "tables",
+  "translations": {
+   "cs": {
+    "name": "Jídelní stůl",
+    "description": "Stůl z masivu: deska z prken po šířce, nohy zkosené na vnitřní straně a lub mezi nimi.",
+    "parameters": {
+     "boardWidth": "Šířka prken desky"
+    },
+    "slots": {
+     "wood": "Dřevo"
+    },
+    "parts": {
+     "Top board": "Prkno desky",
+     "Leg": "Noha",
+     "Long apron": "Dlouhý lub",
+     "Short apron": "Krátký lub"
+    }
+   }
+  },
   "size": {
    "width": 1320,
    "depth": 700,

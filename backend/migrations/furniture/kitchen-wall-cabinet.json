@@ -4,6 +4,71 @@
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňská horní skříňka",
+    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel.",
+    "parameters": {
+     "fronts": "Čela odspodu",
+     "fronts.type": "Typ",
+     "fronts.height": "Výška",
+     "fronts.count": "Křídla",
+     "fronts.handle": "Úchytka",
+     "handle": "Úchytka",
+     "handleSide": "Strana úchytky jednokřídlých dvířek",
+     "softClose": "Tlumené dovírání",
+     "blindLeft": "Slepá část vlevo (roh)",
+     "blindRight": "Slepá část vpravo (roh)",
+     "t": "Deska korpusu",
+     "ft": "Tloušťka čela",
+     "gap": "Spára kolem čel"
+    },
+    "options": {
+     "fronts.type": {
+      "door": "dvířka",
+      "drawer": "zásuvka",
+      "liftUp": "výklop nahoru",
+      "bifold": "lomený výklop",
+      "parallelLift": "paralelní zdvih",
+      "oven": "trouba",
+      "microwave": "mikrovlnná trouba"
+     },
+     "fronts.handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handleSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Čela"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Bottom": "Dno",
+     "Top": "Víko",
+     "Back": "Záda",
+     "Front slot": "Pole čela",
+     "Front": "Čelo",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Appliance": "Spotřebič",
+     "Shelf": "Police"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 350,

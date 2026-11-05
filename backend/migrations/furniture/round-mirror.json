@@ -4,6 +4,23 @@
  "definition": {
   "format": 1,
   "catalogue": "bathroom",
+  "translations": {
+   "cs": {
+    "name": "Kulaté zrcadlo",
+    "description": "Kulaté nástěnné zrcadlo v rámu; průměr je menší ze šířky a výšky prvku.",
+    "parameters": {
+     "frame": "Šířka rámu"
+    },
+    "slots": {
+     "frame": "Rám",
+     "mirror": "Zrcadlo"
+    },
+    "parts": {
+     "Frame": "Rám",
+     "Mirror": "Zrcadlo"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 30,

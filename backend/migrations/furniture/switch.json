@@ -10,6 +10,29 @@
    ]
   },
   "catalogue": "electrical",
+  "translations": {
+   "cs": {
+    "name": "Vypínač (kolébkový)",
+    "description": "Zapuštěný nástěnný vypínač s jednou kolébkou, nebo dvěma vedle sebe. Výška osazení: jeho spodní hrana, obvykle 1050 mm.",
+    "parameters": {
+     "rockers": "Kolébky"
+    },
+    "options": {
+     "rockers": {
+      "single": "jedna",
+      "double": "dvě"
+     }
+    },
+    "slots": {
+     "frame": "Rámeček",
+     "rocker": "Kolébka"
+    },
+    "parts": {
+     "Frame": "Rámeček",
+     "Rocker": "Kolébka"
+    }
+   }
+  },
   "size": {
    "width": 80,
    "depth": 10,

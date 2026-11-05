@@ -4,6 +4,50 @@
  "definition": {
   "format": 1,
   "catalogue": "building",
+  "translations": {
+   "cs": {
+    "name": "Rohový krb",
+    "description": "Rohový krb: prosklené topeniště na jednom konci podstavce z černého kamene (sklo vpředu a na jeho otevřeném konci), vedle něj na podstavci naskládaná polena a dýhovaná dubová obestavba digestoře až ke stropu s lamelovou mřížkou nahoře. Oheň je teplé světlo (svítí při zapnutých světlech) nad žhnoucími uhlíky na dně topeniště. Výšku nastavte ke stropu.",
+    "parameters": {
+     "plinth": "Výška podstavce",
+     "insert": "Šířka topeniště",
+     "fireHeight": "Výška topeniště",
+     "glassSide": "Topeniště na straně",
+     "logs": "Zásoba polen",
+     "grille": "Mřížka v obestavbě",
+     "lumens": "Světlo ohně",
+     "kelvin": "Teplota chromatičnosti ohně"
+    },
+    "options": {
+     "glassSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "stone": "Podstavec",
+     "hood": "Obestavba",
+     "firebox": "Topeniště",
+     "logs": "Polena"
+    },
+    "parts": {
+     "Plinth": "Podstavec",
+     "Firebox back": "Zadní stěna topeniště",
+     "Firebox side": "Bok topeniště",
+     "Firebox floor": "Dno topeniště",
+     "Firebox top": "Strop topeniště",
+     "Front glass": "Přední sklo",
+     "End glass": "Boční sklo",
+     "Embers": "Žhavé uhlíky",
+     "Fire": "Oheň",
+     "Log": "Poleno",
+     "Hood": "Obestavba",
+     "Grille back": "Zadní deska mřížky",
+     "Grille slat": "Lamela mřížky",
+     "Hood top": "Strop obestavby"
+    }
+   }
+  },
   "size": {
    "width": 1400,
    "depth": 650,

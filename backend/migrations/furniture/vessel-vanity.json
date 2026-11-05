@@ -4,6 +4,37 @@
  "definition": {
   "format": 1,
   "catalogue": "bathroom",
+  "translations": {
+   "cs": {
+    "name": "Závěsná skříňka s umyvadly na desku",
+    "description": "Dlouhá závěsná koupelnová skříňka: zásuvky bez úchytek (s těly, tlumeně dovírané podle softClose) pod deskou z litého kompozitu s jedním nebo dvěma umyvadly na desku a nástěnnými výtoky. Výška osazení je spodek skříňky (asi 400).",
+    "parameters": {
+     "cabinet": "Výška skříňky",
+     "basins": "Umyvadla",
+     "drawers": "Řady zásuvek",
+     "basin": "Průměr umyvadla",
+     "softClose": "Tlumené dovírání"
+    },
+    "slots": {
+     "fronts": "Skříňka",
+     "top": "Deska",
+     "basinMaterial": "Umyvadla",
+     "tap": "Výtoky"
+    },
+    "parts": {
+     "Carcass": "Korpus",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Top": "Deska",
+     "Basin": "Umyvadlo",
+     "Waste": "Odtok",
+     "Spout": "Výtok"
+    }
+   }
+  },
   "size": {
    "width": 1800,
    "depth": 500,

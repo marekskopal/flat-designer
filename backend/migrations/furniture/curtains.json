@@ -4,6 +4,32 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Závěsy",
+    "description": "Závěsy na tyči: jeden díl nebo pár, roztažené o zadané procento (záhyby se shrnují ke stranám).",
+    "parameters": {
+     "panels": "Díly",
+     "open": "Roztažení",
+     "fold": "Šířka záhybu",
+     "rod": "Tyč"
+    },
+    "options": {
+     "panels": {
+      "pair": "pár",
+      "single": "jeden"
+     }
+    },
+    "slots": {
+     "fabric": "Látka",
+     "rod": "Tyč"
+    },
+    "parts": {
+     "Rod": "Tyč",
+     "Fold": "Záhyb"
+    }
+   }
+  },
   "size": {
    "width": 1600,
    "depth": 120,

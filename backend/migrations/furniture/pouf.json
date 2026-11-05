@@ -4,6 +4,18 @@
  "definition": {
   "format": 1,
   "catalogue": "seating",
+  "translations": {
+   "cs": {
+    "name": "Taburet",
+    "description": "Kulatý čalouněný taburet s měkce zaoblenými hranami; jako podnožka 450 v průměru a 420 vysoký, menší 380 × 380 (nastavte rozměr prvku).",
+    "slots": {
+     "fabric": "Potah"
+    },
+    "parts": {
+     "Pouf": "Taburet"
+    }
+   }
+  },
   "size": {
    "width": 450,
    "depth": 450,

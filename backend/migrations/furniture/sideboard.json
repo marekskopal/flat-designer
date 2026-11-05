@@ -4,6 +4,44 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Komoda",
+    "description": "Nízká skříňka s dvířky (úchytky u styku křídel) a policí za nimi, volitelně s řadou zásuvek s těly nad nimi, na soklu nebo nohách. softClose tlumí dovírání dvířek a zásuvek.",
+    "parameters": {
+     "doors": "Dvířka",
+     "drawers": "Zásuvky nad dvířky",
+     "base": "Podnož",
+     "t": "Tloušťka desek",
+     "softClose": "Tlumené dovírání"
+    },
+    "options": {
+     "base": {
+      "plinth": "sokl",
+      "legs": "nohy"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Čela"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Top": "Víko",
+     "Bottom": "Dno",
+     "Back": "Záda",
+     "Shelf": "Police",
+     "Plinth": "Sokl",
+     "Leg": "Noha",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Door": "Dvířka"
+    }
+   }
+  },
   "size": {
    "width": 1600,
    "depth": 450,

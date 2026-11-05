@@ -4,6 +4,20 @@
  "definition": {
   "format": 1,
   "catalogue": "roof",
+  "translations": {
+   "cs": {
+    "name": "Odvětrávací taška",
+    "description": "Pálená odvětrávací taška s kloboukem a krytkou, položená mezi střešní tašky: umístěte ji s onRoof na střechu, přední stranou po spádu dolů.",
+    "slots": {
+     "tile": "Taška"
+    },
+    "parts": {
+     "Tile": "Taška",
+     "Hood": "Klobouk",
+     "Cap": "Krytka"
+    }
+   }
+  },
   "size": {
    "width": 300,
    "depth": 420,

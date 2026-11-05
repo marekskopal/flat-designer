@@ -4,6 +4,26 @@
  "definition": {
   "format": 1,
   "catalogue": "outdoor",
+  "translations": {
+   "cs": {
+    "name": "Přístřešek na popelnice",
+    "description": "Betonový přístřešek na popelnice: zadní stěna, dvě boční stěny a stropní deska, s šedými ocelovými dvířky pro každou popelnici.",
+    "parameters": {
+     "bins": "Popelnice",
+     "wall": "Tloušťka stěny"
+    },
+    "slots": {
+     "body": "Beton",
+     "doors": "Dvířka"
+    },
+    "parts": {
+     "Back": "Zadní stěna",
+     "End": "Boční stěna",
+     "Roof": "Stříška",
+     "Door": "Dvířka"
+    }
+   }
+  },
   "size": {
    "width": 2400,
    "depth": 900,

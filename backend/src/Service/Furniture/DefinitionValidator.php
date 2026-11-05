@@ -11,14 +11,15 @@ use Izbik\Service\Editor\Element\State;
 /**
  * Checks a furniture definition before it is saved: what `DefinitionEvaluator` reads (by evaluating it at its default
  * `size` with the parameter defaults), plus what only matters for storing and drawing it — no unknown keys, a `size`,
- * known part types with valid options, existing material codes as slot defaults, a known `catalogue`, a known `category` with valid `schedule` settings and the size limit.
+ * known part types with valid options, existing material codes as slot defaults, a known `catalogue`, a known `category` with valid `schedule` settings, `translations` naming what
+ * the definition has (`DefinitionTranslations`) and the size limit.
  */
 final readonly class DefinitionValidator
 {
 	/** What the `definition` TEXT column holds. */
 	public const int MaxBytes = 65535;
 
-	private const array Keys = ['format', 'catalogue', 'category', 'schedule', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
+	private const array Keys = ['format', 'catalogue', 'category', 'schedule', 'translations', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
 
 	private const array ParameterKeys = ['key', 'label', 'type', 'default'];
 
@@ -72,6 +73,7 @@ final readonly class DefinitionValidator
 		foreach (self::list($definition, 'parts') as $index => $part) {
 			PartChecker::check($part, sprintf('parts[%d]', $index));
 		}
+		DefinitionTranslations::check($definition);
 		return new ValidatedDefinition($json, $parts);
 	}
 

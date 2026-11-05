@@ -4,6 +4,23 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Věšák – kolík",
+    "description": "Kulatý dřevěný kolík vystupující ze stěny za ním, tlustý jako šířka nebo výška prvku, volitelně s knoflíkem na konci a skloněný vzhůru.",
+    "parameters": {
+     "knob": "Knoflík na konci",
+     "angle": "Sklon vzhůru"
+    },
+    "slots": {
+     "peg": "Kolík"
+    },
+    "parts": {
+     "Peg": "Kolík",
+     "Knob": "Knoflík"
+    }
+   }
+  },
   "size": {
    "width": 25,
    "depth": 60,

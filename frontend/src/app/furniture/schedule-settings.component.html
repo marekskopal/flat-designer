@@ -1,17 +1,17 @@
 <div class="schedule">
     <label class="field">
-        <span class="field__label">Catalogue (the editor's Add library)</span>
+        <span class="field__label">{{ 'furniture.schedule.catalogue' | translate }}</span>
         <select class="input" [disabled]="readOnly()" (change)="setCatalogue($event)">
-            <option value="" [selected]="!body().catalogue">Other</option>
+            <option value="" [selected]="!body().catalogue">{{ 'furniture.schedule.other' | translate }}</option>
             @for (catalogue of catalogues; track catalogue) {
                 <option [value]="catalogue" [selected]="body().catalogue === catalogue">{{ 'enums.catalogue.' + catalogue | translate }}</option>
             }
         </select>
     </label>
     <label class="field">
-        <span class="field__label">Electrical schedule</span>
+        <span class="field__label">{{ 'furniture.schedule.electrical' | translate }}</span>
         <select class="input" [disabled]="readOnly()" (change)="setCategory($event)">
-            <option value="" [selected]="!body().category">Not counted</option>
+            <option value="" [selected]="!body().category">{{ 'furniture.schedule.notCounted' | translate }}</option>
             @for (category of categories; track category) {
                 <option [value]="category" [selected]="body().category === category">{{ 'enums.electricalCategory.' + category | translate }}</option>
             }
@@ -19,9 +19,9 @@
     </label>
     @if (body().category) {
         <label class="field">
-            <span class="field__label">Count by</span>
+            <span class="field__label">{{ 'furniture.schedule.countBy' | translate }}</span>
             <select class="input" [disabled]="readOnly()" (change)="setCount($event)">
-                <option value="" [selected]="!body().schedule?.count">{{ defaultCount() === null ? 'Each item once' : 'Default (' + defaultCount() + ')' }}</option>
+                <option value="" [selected]="!body().schedule?.count">{{ defaultCount() === null ? ('furniture.schedule.eachOnce' | translate) : ('furniture.schedule.default' | translate: {count: defaultCount()}) }}</option>
                 @for (parameter of countOptions(); track parameter.key) {
                     <option [value]="parameter.key" [selected]="body().schedule?.count === parameter.key">{{ parameter.label ?? parameter.key }}</option>
                 }
@@ -29,7 +29,7 @@
         </label>
         @if (valueOptions().length > 0) {
             <fieldset class="values">
-                <legend class="field__label">Listed values</legend>
+                <legend class="field__label">{{ 'furniture.schedule.listedValues' | translate }}</legend>
                 @for (parameter of valueOptions(); track parameter.key) {
                     <label class="toggle">
                         <input

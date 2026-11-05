@@ -21,5 +21,9 @@
         "sharedVersion": "Sdíleno: {name}",
         "variant": "Varianta {number}",
         "copy": "{name} (kopie)"
+    },
+    "cutList": {
+        "definitionGone": "Popis nábytku už neexistuje.",
+        "noMaterial": "Bez materiálu"
     }
 }

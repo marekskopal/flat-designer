@@ -4,6 +4,25 @@
  "definition": {
   "format": 1,
   "catalogue": "tables",
+  "translations": {
+   "cs": {
+    "name": "Psací stůl",
+    "description": "Stůl z masivu: deska na dvou deskových bocích, volitelně se zadní zástěnou.",
+    "parameters": {
+     "tt": "Tloušťka desky",
+     "st": "Tloušťka boků",
+     "modesty": "Zadní zástěna"
+    },
+    "slots": {
+     "wood": "Dřevo"
+    },
+    "parts": {
+     "Top": "Deska",
+     "Side": "Bok",
+     "Modesty panel": "Zadní zástěna"
+    }
+   }
+  },
   "size": {
    "width": 1400,
    "depth": 700,

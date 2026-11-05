@@ -83,6 +83,12 @@ export class CustomParamsComponent {
         return typeof value === 'boolean' ? value : parameter.default === true;
     }
 
+    /** A select's option as `localizeDefinition()` names it in the language shown, else its value. */
+    protected optionLabel(parameter: DefinitionParameter | DefinitionField, option: unknown): string {
+        const text = String(option);
+        return 'optionLabels' in parameter ? (parameter.optionLabels?.[text] ?? text) : text;
+    }
+
     protected materialName(code: string | undefined): string {
         return this.materials().find((m) => m.code === code)?.name ?? code ?? (this.translate.instant('inspector.custom.itemMaterial') as string);
     }

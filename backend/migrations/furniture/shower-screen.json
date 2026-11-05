@@ -4,6 +4,28 @@
  "definition": {
   "format": 1,
   "catalogue": "bathroom",
+  "translations": {
+   "cs": {
+    "name": "Zástěna walk-in sprchy",
+    "description": "Pevná skleněná stěna walk-in sprchy se stěnovým profilem na jedné straně.",
+    "parameters": {
+     "profileSide": "Stěnový profil"
+    },
+    "options": {
+     "profileSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "profile": "Profil"
+    },
+    "parts": {
+     "Glass": "Sklo",
+     "Wall profile": "Stěnový profil"
+    }
+   }
+  },
   "size": {
    "width": 1000,
    "depth": 30,

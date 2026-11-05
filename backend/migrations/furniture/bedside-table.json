@@ -4,6 +4,34 @@
  "definition": {
   "format": 1,
   "catalogue": "bedroom",
+  "translations": {
+   "cs": {
+    "name": "Noční stolek",
+    "description": "Malá skříňka na čtyřech zkosených nohách s horní deskou, zásuvkou s tělem (nebo otevřenou policí) a zády. softClose tlumí dovírání zásuvky.",
+    "parameters": {
+     "drawer": "Zásuvka",
+     "legHeight": "Nohy",
+     "softClose": "Tlumené dovírání"
+    },
+    "slots": {
+     "body": "Korpus",
+     "front": "Čelo zásuvky"
+    },
+    "parts": {
+     "Top": "Horní deska",
+     "Bottom": "Dno",
+     "Side": "Bok",
+     "Back": "Záda",
+     "Drawer": "Zásuvka",
+     "Drawer front": "Čelo zásuvky",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Leg": "Noha"
+    }
+   }
+  },
   "size": {
    "width": 450,
    "depth": 400,

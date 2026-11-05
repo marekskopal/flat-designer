@@ -11,6 +11,23 @@
    ]
   },
   "catalogue": "electrical",
+  "translations": {
+   "cs": {
+    "name": "Datová zásuvka (RJ45)",
+    "description": "Zapuštěná nástěnná zásuvka pro síťové nebo televizní kabely, s jedním nebo dvěma porty. Výška osazení: její spodní hrana.",
+    "parameters": {
+     "ports": "Porty"
+    },
+    "slots": {
+     "frame": "Rámeček",
+     "port": "Port"
+    },
+    "parts": {
+     "Frame": "Rámeček",
+     "Port": "Port"
+    }
+   }
+  },
   "size": {
    "width": 80,
    "depth": 10,

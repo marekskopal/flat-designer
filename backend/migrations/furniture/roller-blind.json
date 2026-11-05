@@ -4,6 +4,24 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Roleta",
+    "description": "Látková roleta na hřídeli, spuštěná o zadané procento.",
+    "parameters": {
+     "down": "Spuštění"
+    },
+    "slots": {
+     "fabric": "Látka",
+     "tube": "Hřídel a lišta"
+    },
+    "parts": {
+     "Tube": "Hřídel",
+     "Blind": "Roleta",
+     "Bottom bar": "Zátěžová lišta"
+    }
+   }
+  },
   "size": {
    "width": 1200,
    "depth": 60,
