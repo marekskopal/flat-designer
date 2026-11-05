@@ -97,7 +97,7 @@ final readonly class VariantEditor
 			$batch = $this->writer->start($floor, $baseRevision, sprintf('Added variant "%s" to "%s"', trim($name), $set->name));
 			$variant = $source === null
 				? $this->writer->create($user, $floor, $batch, $this->groups, $state)
-				: $this->groupEditor->copyGroup($user, $floor, $batch, $source, $state, 0, 0);
+				: $this->groupEditor->copyGroup($user, $floor, $batch, $source, $state, 0, 0, asVariant: true);
 			$this->writer->update($user, $floor, $batch, $this->sets, $set, ['activeGroupId' => $variant->id]);
 
 			return $batch->result($this->groups->state($variant));

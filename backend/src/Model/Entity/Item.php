@@ -50,6 +50,14 @@ class Item extends AEntity
 	#[Column(type: Type::Boolean)]
 	public bool $onRoof = false;
 
+	/**
+	 * For a switch (a Custom item whose definition has the category `switch`): the ids of the light items of the same
+	 * floor it controls, as a JSON list; null for none. A deleted or hidden light stays listed and is skipped where the
+	 * links are read, so undoing its deletion brings the link back.
+	 */
+	#[Column(type: Type::Text, nullable: true)]
+	public ?string $controls = null;
+
 	public function __construct(
 		#[ManyToOne(entityClass: Floor::class)]
 		public readonly Floor $floor,

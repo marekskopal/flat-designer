@@ -61,6 +61,31 @@ export interface RoomElectrical {
     totals: ElectricalTotals;
 }
 
+/** A switch or light of the lighting circuits. Mirrors `CircuitItemDto`. */
+export interface CircuitItem {
+    itemId: number;
+    name: string;
+    /** null outside every room. */
+    roomId: number | null;
+    roomCode: string | null;
+    /** mm, the item's bottom edge. */
+    z: number;
+}
+
+/** Switches and the lights they control, linked into one (a two-way pair with its lights); `number` counts L1, L2, … */
+export interface LightingCircuit {
+    number: number;
+    switches: CircuitItem[];
+    lights: CircuitItem[];
+}
+
+/** A floor's lighting circuits, the lights no switch controls and the switches without lights. Mirrors `LightingDto`. */
+export interface Lighting {
+    circuits: LightingCircuit[];
+    unswitched: CircuitItem[];
+    unlinked: CircuitItem[];
+}
+
 export interface FloorElectrical {
     id: number;
     name: string;
@@ -69,6 +94,7 @@ export interface FloorElectrical {
     elevation: number;
     rooms: RoomElectrical[];
     totals: ElectricalTotals;
+    lighting: Lighting;
 }
 
 /** The electrical schedule of a project or floor (working copy, shown variants). Mirrors `ElectricalScheduleDto`. */

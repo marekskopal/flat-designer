@@ -32,8 +32,11 @@ Below it, the electrical schedule lists for the electrician each room's lights, 
 data sockets (with their ports) and plumbing points with their elevations. A definition's category and what the
 schedule counts and lists are set in the furniture editor. In the viewer the Display toggle "Electrical (Plan)" draws
 the points as symbols over the plan (IEC 60617 or Czech ČSN, chosen on the account page), and Export → Electrical PDF
-prints them with their elevations and a legend. Floors, versions, share links and project files are managed
-here too.
+prints them with their elevations and a legend. A switch can be linked to the lights it controls (select it in the
+editor, then Pick lights or `L`; two switches on one light make two-way switching): the plan draws dashed arcs from
+the switches to their lights and the schedule lists the lighting circuits. A switch links lights on its own floor
+only, so a stair's two-way switch upstairs and downstairs cannot be linked. Floors, versions, share links and project
+files are managed here too.
 
 ### Eye-level views and the walkthrough
 

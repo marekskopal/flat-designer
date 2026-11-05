@@ -1,7 +1,7 @@
 import {ElectricalRow} from '@app/models/electrical-schedule';
 import {describe, expect, it} from 'vitest';
 
-import {rowValues, totalsSummary} from './electrical-labels';
+import {circuitItemText, rowValues, totalsSummary} from './electrical-labels';
 
 describe('electrical labels', () => {
     it('lists the parameter values of a row', () => {
@@ -26,5 +26,12 @@ describe('electrical labels', () => {
         // A socket definition whose gangs are 0 has no outlets to show.
         expect(totalsSummary({lights: 0, sockets: 1, outlets: 0, switches: 0, dataSockets: 0, dataPorts: 0, plumbingPoints: 0})).toBe('1 socket');
         expect(totalsSummary({lights: 0, sockets: 0, outlets: 0, switches: 0, dataSockets: 0, dataPorts: 0, plumbingPoints: 0})).toBe('');
+    });
+
+    it('names a circuit\'s switch with its room and elevation, a light with its room', () => {
+        const item = {itemId: 1, name: 'Switch', roomId: 4, roomCode: 'H1/B_04', z: 1050};
+        expect(circuitItemText(item, true)).toBe('Switch (B_04, +1.050)');
+        expect(circuitItemText({...item, name: 'Pendant'}, false)).toBe('Pendant (B_04)');
+        expect(circuitItemText({...item, roomId: null, roomCode: null}, false)).toBe('Switch');
     });
 });

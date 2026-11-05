@@ -1,5 +1,5 @@
 import {HttpErrorResponse} from '@angular/common/http';
-import {inject, Injectable, signal} from '@angular/core';
+import {inject, Injectable, signal, untracked} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
@@ -11,8 +11,9 @@ import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {Vec2} from '@app/viewer/engine/plan-geometry';
-import {ElementKind, Selection} from '@app/viewer/engine/selection';
+import {ElementKind, sameSelection, Selection} from '@app/viewer/engine/selection';
 
+import {itemCategory} from './element-kinds';
 import {patchScene} from './scene-patch';
 
 /** What the store needs from the page hosting the viewer. */
@@ -60,6 +61,8 @@ export class EditorStore {
      * lies now) and wait for their real distance.
      */
     public readonly calibration = signal<'picking' | {a: Vec2; b: Vec2} | null>(null);
+    /** A switch's lights being picked (clicks toggle lights, `commitLinking()` saves them as one change). */
+    public readonly linking = signal<{switchId: number; lightIds: number[]} | null>(null);
 
     private readonly api = inject(EditorApiService);
     private readonly furniture = inject(FurnitureService);
@@ -76,6 +79,7 @@ export class EditorStore {
         if (!enabled) {
             this.tool.set('select');
             this.calibration.set(null);
+            this.linking.set(null);
         }
         if (enabled) {
             await Promise.all([
@@ -99,6 +103,7 @@ export class EditorStore {
 
     /** Switches the tool; a drawing tool drops the selection (its handles would get in the way). */
     public setTool(tool: EditorTool): void {
+        this.linking.set(null);
         this.tool.set(tool);
         if (tool !== 'select') {
             this.select(null);
@@ -182,6 +187,10 @@ export class EditorStore {
 
     /** A click: selects the element (or nothing) and drops the Shift-picked items. */
     public select(selection: Selection | null): void {
+        // Untracked: an effect calling `select()` (a floor change clearing it) must not come to depend on the selection.
+        if (!sameSelection(selection, untracked(this.selection))) {
+            this.linking.set(null);
+        }
         this.picked.set([]);
         this.selection.set(selection);
     }
@@ -202,6 +211,47 @@ export class EditorStore {
         clicked.forEach((id) => (remove ? picked.delete(id) : picked.add(id)));
         this.selection.set(null);
         this.picked.set([...picked]);
+    }
+
+    /** Starts picking the lights of the selected switch, with the ones it controls now. */
+    public startLinking(): void {
+        const selection = this.selection();
+        const scene = this.context?.scene() ?? null;
+        const item = selection?.kind === 'item' && scene !== null ? scene.items.find((i) => i.id === selection.id) : undefined;
+        if (item === undefined || scene === null || itemCategory(scene, item) !== 'switch') {
+            return;
+        }
+        this.tool.set('select');
+        this.linking.set({switchId: item.id, lightIds: [...(item.controls ?? [])]});
+    }
+
+    /** While linking, a light clicked: linked, or unlinked when it was. */
+    public toggleLinked(itemId: number): void {
+        const linking = this.linking();
+        if (linking === null) {
+            return;
+        }
+        const lightIds = linking.lightIds.includes(itemId) ? linking.lightIds.filter((id) => id !== itemId) : [...linking.lightIds, itemId];
+        this.linking.set({...linking, lightIds});
+    }
+
+    /** Saves the picked lights as the switch's `controls` (one change, none when they did not change) and ends picking. */
+    public async commitLinking(): Promise<void> {
+        const linking = this.linking();
+        this.linking.set(null);
+        const item = linking === null ? undefined : this.context?.scene()?.items.find((i) => i.id === linking.switchId);
+        if (linking === null || item === undefined) {
+            return;
+        }
+        const sorted = (ids: readonly number[]): number[] => [...new Set(ids)].sort((a, b) => a - b);
+        const lightIds = sorted(linking.lightIds);
+        if (lightIds.join(',') !== sorted(item.controls ?? []).join(',')) {
+            await this.update('item', item.id, {controls: lightIds});
+        }
+    }
+
+    public cancelLinking(): void {
+        this.linking.set(null);
     }
 
     /** Groups the picked items and selects the new group. */

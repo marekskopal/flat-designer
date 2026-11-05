@@ -102,6 +102,20 @@
                     <p class="hint">Double-click (or Alt+click) one of its items to edit just that one.</p>
                 </section>
             }
+            @if (switchLights(); as lights) {
+                <section class="extra">
+                    <fd-switch-lights
+                        [lights]="lights"
+                        [linking]="editor.linking() !== null"
+                        [disabled]="editor.busy()"
+                        (pick)="editor.startLinking()"
+                        (done)="editor.commitLinking()"
+                        (stop)="editor.cancelLinking()"
+                        (unlink)="unlinkLight($event)"
+                        (selectLight)="selectLight($event)"
+                    />
+                </section>
+            }
             @if (s.kind === 'variantSet') {
                 <section class="extra">
                     <p class="hint">Switch and add variants in the Variants panel. To decide for the shown variant, drop the others with their items (can be undone).</p>

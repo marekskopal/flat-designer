@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Izbik\Service\Editor;
 
 use Izbik\Dto\EditResultDto;
+use Izbik\Dto\ItemDto;
 use Izbik\Model\Entity\Enum\ElementTypeEnum;
 use Izbik\Model\Entity\Floor;
 use Izbik\Model\Entity\Item;
@@ -13,6 +14,7 @@ use Izbik\Model\Entity\User;
 use Izbik\Model\Repository\ItemGroupRepository;
 use Izbik\Model\Repository\ItemRepository;
 use Izbik\Service\Editor\Element\ElementHandler;
+use Izbik\Service\Editor\Element\SwitchControls;
 
 /**
  * Operations on item groups that change several elements as one change (one revision, one undo step, logged
@@ -159,24 +161,78 @@ final readonly class GroupEditor
 	}
 
 	/**
-	 * Within a batch: a copy of the group with copies of its items, shifted by (dx, dy) mm.
+	 * Within a batch: a copy of the group with copies of its items, shifted by (dx, dy) mm. A copied switch controls the
+	 * copies of the group's lights it controlled; with `$asVariant` (a new variant of the source's set), the switches
+	 * outside the set controlling the group's lights control their copies too, so they work with either variant.
 	 *
 	 * @param array<string, mixed> $state the copy's group state, normalised
 	 */
-	public function copyGroup(User $user, Floor $floor, ChangeBatch $batch, ItemGroup $source, array $state, int $dx, int $dy): ItemGroup
+	public function copyGroup(
+		User $user,
+		Floor $floor,
+		ChangeBatch $batch,
+		ItemGroup $source,
+		array $state,
+		int $dx,
+		int $dy,
+		bool $asVariant = false,
+	): ItemGroup
 	{
 		$copy = $this->writer->create($user, $floor, $batch, $this->groups, $state);
 		assert($copy instanceof ItemGroup);
+		/** @var array<int, int> $copied copy ids by source item id */
+		$copied = [];
+		/** @var list<Item> $switches copies that control lights */
+		$switches = [];
 		foreach ($this->itemRepository->findByGroup($source->id) as $item) {
 			$fields = array_intersect_key($this->items->state($item), array_flip($this->items->fields()));
-			$this->writer->create($user, $floor, $batch, $this->items, $this->items->normalize($floor, [
+			$created = $this->writer->create($user, $floor, $batch, $this->items, $this->items->normalize($floor, [
 				'groupId' => $copy->id,
 				'x' => $item->x + $dx,
 				'y' => $item->y + $dy,
 			] + $fields, $item));
+			assert($created instanceof Item);
+			$copied[$item->id] = $created->id;
+			if ($created->controls !== null) {
+				$switches[] = $created;
+			}
+		}
+		// A copied switch controls the copies of the group's lights it controlled (the lights outside the group stay).
+		foreach ($switches as $switch) {
+			$controls = ItemDto::controls($switch->controls);
+			$remapped = array_map(static fn (int $id): int => $copied[$id] ?? $id, $controls);
+			if ($remapped !== $controls) {
+				$this->writer->update($user, $floor, $batch, $this->items, $switch, ['controls' => $remapped]);
+			}
+		}
+		if ($asVariant) {
+			$this->linkVariantCopies($user, $floor, $batch, $source, $copied);
 		}
 
 		return $copy;
+	}
+
+	/**
+	 * The switches outside the variant set of `$source` (shared items, other furniture) that control lights of the
+	 * source also control their copies.
+	 *
+	 * @param array<int, int> $copied copy ids by source item id
+	 */
+	private function linkVariantCopies(User $user, Floor $floor, ChangeBatch $batch, ItemGroup $source, array $copied): void
+	{
+		$setId = $source->variantSet?->id;
+		foreach ($this->itemRepository->findByFloor($floor->id) as $item) {
+			$controls = ItemDto::controls($item->controls);
+			$added = array_values(array_intersect_key($copied, array_flip($controls)));
+			$inSet = $setId !== null && $item->group?->variantSet?->id === $setId;
+			if ($added === [] || $inSet) {
+				continue;
+			}
+			// A switch at its limit keeps what it has rather than failing the new variant.
+			$this->writer->update($user, $floor, $batch, $this->items, $item, [
+				'controls' => array_slice([...$controls, ...$added], 0, SwitchControls::MaxControls),
+			]);
+		}
 	}
 
 	/** Within a batch: deletes the group with its items (items first: undo goes backwards, so the group is back before they need it). */

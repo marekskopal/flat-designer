@@ -45,6 +45,8 @@ import {ChangeDetectionStrategy, Component, input} from '@angular/core';
                 <dd>Pick items to group</dd>
                 <dt><kbd>Alt</kbd>+click</dt>
                 <dd>An item inside its group</dd>
+                <dt><kbd>L</kbd></dt>
+                <dd>Pick the selected switch's lights (<kbd>Enter</kbd> done)</dd>
                 <dt><kbd>Esc</kbd></dt>
                 <dd>Cancel, deselect</dd>
             </dl>

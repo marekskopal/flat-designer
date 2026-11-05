@@ -62,7 +62,7 @@ use const JSON_THROW_ON_ERROR;
  * (a floor's `elevation` / `slabThickness`, missing in snapshots taken before stacked floors, are stacked from the levels
  * and walls by `FloorStack`)
  * (`groups` / `variantSets` / `definitions` / `underlay` / `models` / `pictures` / `plots` / `stairs` / `roofs` / `voids` / `railings` / `sections` missing in snapshots taken before they
- * existed; `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
+ * existed; an item's `controls`, a switch's lights, missing before switch links: none) — `pictures` lists the files the items show, so that share guests may load them; `location`, missing in older
  * snapshots, is shown with the version, and a restore leaves the project's own) — each floor entry plus the materials and location is
  * exactly the viewer's `SceneDto`, so a version is rendered without touching the working copy, with the furniture
  * definitions as they were. Ids inside are those of the working copy at the time and only link entries together,
@@ -499,6 +499,8 @@ final readonly class ProjectSnapshotService
 	 */
 	private function restoreItems(Floor $floor, array $items, array $materials, array $roomIds, array $groupIds, array $definitions): void
 	{
+		/** @var array<int, array{Item, mixed}> $restored new items with their `controls` by their id in the snapshot */
+		$restored = [];
 		foreach ($items as $data) {
 			$params = $data->raw('params');
 			$item = $this->stamp(new Item(
@@ -524,7 +526,9 @@ final readonly class ProjectSnapshotService
 			$item->onGround = $data->raw('onGround') === true;
 			$item->onRoof = $data->raw('onRoof') === true;
 			$this->itemRepository->persist($item);
+			$restored[$data->int('id')] = [$item, $data->raw('controls')];
 		}
+		SnapshotSwitchControls::restore($restored, $this->itemRepository);
 	}
 
 	private function read(string $snapshot): SnapshotReader

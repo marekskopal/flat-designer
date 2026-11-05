@@ -50,7 +50,7 @@ import {frontObjects, frontOf, frontSpecOf, FrontStates} from './custom/fronts';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
 import {closesRun, directionOf, EditorTool, pointAt, sagittaToward, snapDrawPoint, ToolStatus} from './drawing';
-import {buildElectrical, electricalPoints} from './electrical';
+import {buildElectrical, ElectricalPoint, electricalPoints, linkArcs, switchLinks, SymbolSize} from './electrical';
 import {buildFacades} from './facades';
 import {
     BenchmarkOptions,
@@ -340,6 +340,8 @@ export class ViewerEngine {
     public onCommentPick: (id: number) => void = () => undefined;
     /** With the comment tool on, a click on the view: the point of the surface under the pointer. */
     public onCommentPlace: (point: CommentPoint) => void = () => undefined;
+    /** While a switch's lights are picked (`setLinking()`), a click on a light: its item id. */
+    public onLinkPick: (itemId: number) => void = () => undefined;
 
     private readonly renderer: THREE.WebGLRenderer;
     private readonly labelRenderer: CSS2DRenderer;
@@ -408,6 +410,11 @@ export class ViewerEngine {
      * the items are put back (`restore()`).
      */
     private electricalHeld = false;
+    /** A switch's lights being picked: the overlay shows with the pending links, and clicks pick lights. */
+    private linking: {switchId: number; lightIds: readonly number[]} | null = null;
+    /** The item whose arcs the overlay draws full (null: all full), and the switches and lights it was built with. */
+    private electricalFocus: number | null = null;
+    private electricalLinkable = new Set<number>();
     /** The measure tool: on in any top view (edit mode or not), a click places the points. */
     private measuring = false;
     private measurement: Measurement = NoMeasurement;
@@ -719,12 +726,74 @@ export class ViewerEngine {
         this.electrical = null;
     }
 
-    /** The electrical symbols of the shown items, built when they are first shown after a load or a variant switch. */
+    /**
+     * The electrical symbols of the shown items with the switches' arcs to their lights (a switch being linked with its
+     * pending lights), built when they are first shown after a load, a variant switch or a selection; the arcs of the
+     * selected switch or light, or of the switch being linked, are drawn full and the others dimmed.
+     */
     private updateElectrical(scene: Scene): void {
         this.removeElectrical();
-        this.electrical = buildElectrical(electricalPoints(scene), this.electricalSymbols);
+        const linking = this.linking;
+        const points = electricalPoints(scene).map((p) =>
+            linking !== null && p.itemId === linking.switchId ? {...p, controls: [...linking.lightIds]} : p,
+        );
+        const arcs = linkArcs(points, switchLinks(points), this.electricalSymbols);
+        this.electricalLinkable = new Set(points.filter((p) => p.category === 'switch' || p.category === 'light').map((p) => p.itemId));
+        const focus = this.focusOf(this.selection);
+        this.electricalFocus = focus;
+        const highlight = new Set(focus === null ? [] : [focus]);
+        this.electrical = buildElectrical(points, this.electricalSymbols, {arcs, highlight});
         this.scene.add(this.electrical);
         this.electricalStale = false;
+    }
+
+    /** The item whose arcs are drawn full: the switch being linked, else the selected switch or light. */
+    private focusOf(selection: Selection | null): number | null {
+        if (this.linking !== null) {
+            return this.linking.switchId;
+        }
+        return selection?.kind === 'item' && this.electricalLinkable.has(selection.id) ? selection.id : null;
+    }
+
+    /**
+     * Picking a switch's lights (null ends it): the electrical overlay shows in the top view with the pending links, and
+     * a click on a light reports it (`onLinkPick`) instead of selecting or dragging.
+     */
+    public setLinking(linking: {switchId: number; lightIds: readonly number[]} | null): void {
+        this.invalidate();
+        this.linking = linking;
+        this.electricalStale = true;
+        if (linking !== null) {
+            this.cancelDrag();
+        }
+        this.updateToolCursor();
+    }
+
+    /**
+     * The light under a click: the nearest light point within a symbol's size of the floor point under it, else the
+     * light item hit, or the light of the hit item's group nearest the hit.
+     */
+    private lightAt(event: MouseEvent): number | null {
+        const scene = this.sceneData;
+        if (scene === null) {
+            return null;
+        }
+        const lights = electricalPoints(scene).filter((p) => p.category === 'light');
+        const floor = this.planPointOn(event, FloorPlane);
+        const near = floor === null ? null : closestPoint(lights, floor);
+        if (floor !== null && near !== null && Math.hypot(near.at.x - floor.x, near.at.y - floor.y) <= SymbolSize) {
+            return near.itemId;
+        }
+        const hit = this.pick(event);
+        const picked = selectionOf(hit?.object ?? null);
+        if (hit === undefined || picked?.kind !== 'item') {
+            return null;
+        }
+        const groupId = scene.items.find((i) => i.id === picked.id)?.groupId ?? null;
+        const grouped = new Set(scene.items.filter((i) => i.id === picked.id || (groupId !== null && i.groupId === groupId)).map((i) => i.id));
+        const candidates = lights.filter((p) => grouped.has(p.itemId));
+        const own = candidates.find((p) => p.itemId === picked.id);
+        return (own ?? closestPoint(candidates, {x: hit.point.x / MM, y: -hit.point.z / MM}))?.itemId ?? null;
     }
 
     /** Hides the items of variants that are not shown; switching a variant rebuilds nothing. */
@@ -1225,6 +1294,10 @@ export class ViewerEngine {
     public setSelection(selection: Selection | null): void {
         this.invalidate();
         this.selection = selection;
+        if (this.electrical === null || this.focusOf(selection) !== this.electricalFocus) {
+            // Only another switch or light to highlight changes the overlay.
+            this.electricalStale = true;
+        }
         this.setSelectedRoom(selection?.kind === 'room' ? selection.id : null);
         this.highlightPlots();
         this.highlightRoofs();
@@ -2640,14 +2713,15 @@ export class ViewerEngine {
                 alignDimensionLabels(this.dimensions, this.camera, this.container.clientWidth, this.container.clientHeight);
             }
         }
-        if (this.electricalVisible && topDown && this.electricalStale && this.sceneData !== null) {
+        const electricalShown = this.electricalVisible || this.linking !== null;
+        if (electricalShown && topDown && this.electricalStale && this.sceneData !== null) {
             this.updateElectrical(this.sceneData);
         }
         if ((this.drag?.kind === 'item' || this.drag?.kind === 'group') && this.drag.moved) {
             this.electricalHeld = true;
         }
         if (this.electrical !== null) {
-            this.electrical.visible = this.electricalVisible && topDown && !this.electricalHeld && this.preview === null;
+            this.electrical.visible = electricalShown && topDown && !this.electricalHeld && this.preview === null;
         }
         if (this.underlay !== null) {
             this.underlay.visible = this.underlayVisible && topDown;
@@ -2704,7 +2778,8 @@ export class ViewerEngine {
     }
 
     private updateToolCursor(): void {
-        this.renderer.domElement.style.cursor = this.tool === 'select' && !this.measuring && !this.commenting ? '' : 'crosshair';
+        const tool = this.tool !== 'select' || this.measuring || this.commenting || this.linking !== null;
+        this.renderer.domElement.style.cursor = tool ? 'crosshair' : '';
     }
 
     private isTopDown(): boolean {
@@ -2747,6 +2822,7 @@ export class ViewerEngine {
         if (
             this.commenting
             || this.measuring
+            || this.linking !== null
             || !this.editMode
             || event.button !== 0
             || !this.isTopDown()
@@ -3139,6 +3215,13 @@ export class ViewerEngine {
             }
             return;
         }
+        if (this.linking !== null) {
+            const light = event.button === 0 ? this.lightAt(event) : null;
+            if (light !== null) {
+                this.onLinkPick(light);
+            }
+            return;
+        }
         if (this.measuring) {
             if (this.calibrating && this.measurement.b !== null) {
                 // Both calibration points are placed and reported; the panel takes it from here (or cancels).
@@ -3341,7 +3424,8 @@ export class ViewerEngine {
 
     /** Double-clicking an item of a group selects just that item; double-clicking a room corner removes it (a room keeps at least three). */
     private readonly handleDoubleClick = (event: MouseEvent): void => {
-        if (this.measuring) {
+        // Picking a switch's lights: its clicks toggle lights, a double-click is two of them, not a selection.
+        if (this.measuring || this.linking !== null) {
             return;
         }
         if (this.editMode && this.drawsRun()) {
@@ -4450,4 +4534,17 @@ function sameJson(a: unknown, b: unknown): boolean {
 function wallCorners(wall: Wall, ends?: WallEnds): Vec2[] {
     const {left, right} = wallFaces(wall, ends);
     return [left[0], left[left.length - 1], right[0], right[right.length - 1]].map((p) => ({x: Math.round(p.x), y: Math.round(p.y)}));
+}
+
+/** The point nearest `at`, null of none. */
+function closestPoint(points: readonly ElectricalPoint[], at: {x: number; y: number}): ElectricalPoint | null {
+    let best: ElectricalPoint | null = null;
+    let shortest = Infinity;
+    for (const point of points) {
+        const d = Math.hypot(point.at.x - at.x, point.at.y - at.y);
+        if (d < shortest) {
+            [best, shortest] = [point, d];
+        }
+    }
+    return best;
 }

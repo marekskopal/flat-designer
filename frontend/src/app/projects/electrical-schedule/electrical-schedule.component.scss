@@ -86,3 +86,27 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+
+.subtitle {
+    margin: 0;
+    padding: $space-16 $space-16 $space-8;
+    font-size: $font-size-14;
+    font-weight: 600;
+}
+
+.circuit {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.gap td {
+    color: $color-text-muted;
+}
+
+.note {
+    margin: 0;
+    padding: $space-8 $space-16 $space-12;
+    font-size: $font-size-12;
+    color: $color-text-muted;
+}

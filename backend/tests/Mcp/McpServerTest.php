@@ -27,7 +27,9 @@ use Izbik\Mcp\Tool\VariantTools;
 use Izbik\Mcp\Tool\WallTools;
 use Izbik\Model\Entity\Project;
 use Izbik\Model\Entity\User;
+use Izbik\Model\Repository\FurnitureDefinitionRepository;
 use Izbik\Route\Routes;
+use Izbik\Service\Furniture\FurnitureSeeds;
 use Izbik\Service\Material\MaterialService;
 use Izbik\Service\Project\ImagePreviewService;
 use Izbik\Tests\Support\AppHarness;
@@ -36,6 +38,8 @@ use Izbik\Tests\Support\Glb;
 use Izbik\Tests\Support\IntegrationTestCase;
 use Izbik\Tests\Support\McpClient;
 use Izbik\Tests\Support\OAuthFlow;
+use MarekSkopal\ORM\Database\DatabaseInterface;
+use Migrations\SeedLightingCatalogueMigration;
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 use stdClass;
@@ -757,6 +761,47 @@ final class McpServerTest extends IntegrationTestCase
 		$listed = $this->client->call('list_projects');
 		self::assertIsList($listed);
 		self::assertSame(['Flat 12'], array_column($listed, 'name'));
+	}
+
+	public function testLinksASwitchToItsLights(): void
+	{
+		FurnitureSeeds::insert(Fixture::service(DatabaseInterface::class)->getPdo(), SeedLightingCatalogueMigration::Files);
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$definitions = Fixture::service(FurnitureDefinitionRepository::class);
+		$point = function (string $definition, int $x) use ($ids, $definitions): int {
+			$id = $definitions->findOne(['name' => $definition, 'user_id' => null, 'project_id' => null])?->id;
+			$added = $this->client->call('add_item', $ids + ['kind' => 'Custom', 'definitionId' => $id, 'x' => $x, 'y' => 0]);
+			self::assertIsArray($added);
+			self::assertIsArray($added['element']);
+			self::assertIsInt($added['element']['id']);
+
+			return $added['element']['id'];
+		};
+		$light = $point('Downlight, recessed round', 1000);
+		$switch = $point('Light switch (rocker)', 0);
+
+		$linked = $this->client->call('update_item', $ids + ['itemId' => $switch, 'controls' => [$light]]);
+		self::assertIsArray($linked);
+		self::assertIsArray($linked['element']);
+		self::assertSame([$light], $linked['element']['controls']);
+		$schedule = $this->client->call('get_electrical_schedule', ['projectId' => $this->project->id]);
+		self::assertIsArray($schedule);
+		self::assertIsList($schedule['floors']);
+		self::assertIsArray($schedule['floors'][0]);
+		self::assertIsArray($schedule['floors'][0]['lighting']);
+		self::assertIsList($schedule['floors'][0]['lighting']['circuits']);
+		self::assertCount(1, $schedule['floors'][0]['lighting']['circuits']);
+
+		$isError = false;
+		$message = $this->client->call('update_item', $ids + ['itemId' => $light, 'controls' => [$switch]], $isError);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringStartsWith('Only a switch', $message);
+
+		$cleared = $this->client->call('update_item', $ids + ['itemId' => $switch, 'clear' => ['controls']]);
+		self::assertIsArray($cleared);
+		self::assertIsArray($cleared['element']);
+		self::assertSame([], $cleared['element']['controls']);
 	}
 
 	public function testDesignsCustomFurnitureAndPlacesIt(): void

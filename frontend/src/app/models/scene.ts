@@ -497,6 +497,11 @@ export interface Item {
     rotation: number;
     materialId: number | null;
     params: Record<string, unknown>;
+    /**
+     * A switch's lights: ids of light items of the same floor, possibly deleted or in a hidden variant since (skip
+     * those); missing in older versions.
+     */
+    controls?: number[];
 }
 
 /** Items forming one piece of furniture (they share its `groupId`); they move, copy and delete together. */

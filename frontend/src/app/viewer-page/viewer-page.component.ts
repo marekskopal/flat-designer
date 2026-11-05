@@ -680,6 +680,25 @@ export class ViewerPageComponent {
             }
         });
 
+        // A switch's lights are picked in the top view, where the electrical plan shows them; the measure and comment tools
+        // would take the clicks, so they go off, and turning one of them on ends the picking.
+        effect(() => {
+            if (this.editor.linking() !== null) {
+                untracked(() => {
+                    this.measuring.set(false);
+                    this.commenting.set(false);
+                    if (this.activeView() !== 'top') {
+                        this.setView('top');
+                    }
+                });
+            }
+        });
+        effect(() => {
+            if (this.measuring() || this.commenting()) {
+                untracked(() => this.editor.cancelLinking());
+            }
+        });
+
         // Calibration points are clicked in the top view, with the measure tool.
         effect(() => {
             if (this.editor.calibration() === 'picking') {
@@ -895,7 +914,7 @@ export class ViewerPageComponent {
             return;
         }
         // The view and mode keys, unless a tool takes the typing (a wall's length, a calibration).
-        const idle = this.editor.tool() === 'select' && this.editor.calibration() === null;
+        const idle = this.editor.tool() === 'select' && this.editor.calibration() === null && this.editor.linking() === null;
         const view = idle ? this.views.find((v) => v.key === event.key) : undefined;
         if (view !== undefined) {
             event.preventDefault();

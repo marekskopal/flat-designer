@@ -1,5 +1,5 @@
 import {HttpErrorResponse} from '@angular/common/http';
-import {provideZonelessChangeDetection} from '@angular/core';
+import {effect, provideZonelessChangeDetection} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {EditResult} from '@app/models/editor';
 import {Scene} from '@app/models/scene';
@@ -153,6 +153,65 @@ describe('EditorStore', () => {
         expect(api['detectRoom']).toHaveBeenCalledWith(1, 3, [2000, 1500], {name: 'New room', code: 'R1'}, 7);
         expect(store.selection()).toEqual({kind: 'room', id: 12});
         expect(store.tool()).toBe('detectRoom');
+    });
+
+    it('picks a switch\'s lights and saves them as one change', async () => {
+        const custom = {kind: 'Custom' as const, groupId: null, roomId: null, x: 0, y: 0, z: 0, width: 80, depth: 10, height: 80, rotation: 0};
+        const body = (category: 'switch' | 'light'): {format: 1; category: typeof category; parts: []} => ({format: 1, category, parts: []});
+        scene = {
+            ...scene,
+            items: [
+                {...custom, id: 1, name: 'Switch', definitionId: 10, materialId: null, params: {}, controls: [2]},
+                {...custom, id: 2, name: 'A', definitionId: 11, materialId: null, params: {}},
+                {...custom, id: 3, name: 'B', definitionId: 11, materialId: null, params: {}},
+            ],
+            definitions: [
+                {id: 10, name: 'Switch', definition: body('switch'), updatedAt: ''},
+                {id: 11, name: 'Light', definition: body('light'), updatedAt: ''},
+            ],
+        };
+
+        // Only a selected switch starts it.
+        store.select({kind: 'item', id: 2});
+        store.startLinking();
+        expect(store.linking()).toBeNull();
+
+        store.select({kind: 'item', id: 1});
+        store.startLinking();
+        store.toggleLinked(3);
+        store.toggleLinked(2);
+        expect(store.linking()).toEqual({switchId: 1, lightIds: [3]});
+        await store.commitLinking();
+
+        expect(api['update']).toHaveBeenCalledWith(1, 3, 'item', 1, {controls: [3]}, 7);
+        expect(store.linking()).toBeNull();
+
+        // Unchanged or cancelled: no request; selecting another element ends it.
+        store.startLinking();
+        await store.commitLinking();
+        store.startLinking();
+        store.toggleLinked(3);
+        store.cancelLinking();
+        store.startLinking();
+        store.select({kind: 'item', id: 3});
+        expect(store.linking()).toBeNull();
+        expect(api['update']).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not make an effect calling select() depend on the selection', () => {
+        let runs = 0;
+        TestBed.runInInjectionContext(() =>
+            effect(() => {
+                runs++;
+                store.select(null);
+            }),
+        );
+        TestBed.tick();
+        store.select({kind: 'wall', id: 5});
+        TestBed.tick();
+
+        expect(runs).toBe(1);
+        expect(store.selection()).toEqual({kind: 'wall', id: 5});
     });
 
     it('drops the drawing tool when edit mode ends', async () => {

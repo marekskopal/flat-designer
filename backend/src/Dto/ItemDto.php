@@ -34,6 +34,12 @@ final readonly class ItemDto
 		public bool $onGround = false,
 		/** `z` counts from the roof's top under the item's centre, and the item takes the plane's slope. */
 		public bool $onRoof = false,
+		/**
+		 * A switch's lights: ids of items of the same floor, possibly deleted or in a hidden variant since (skip those).
+		 *
+		 * @var list<int>
+		 */
+		public array $controls = [],
 	) {
 	}
 
@@ -62,6 +68,13 @@ final readonly class ItemDto
 			params: $params === [] ? new stdClass() : $params,
 			onGround: $item->onGround,
 			onRoof: $item->onRoof,
+			controls: self::controls($item->controls),
 		);
+	}
+
+	/** @return list<int> the ids of a stored `controls` list */
+	public static function controls(?string $json): array
+	{
+		return $json === null ? [] : JsonDecoder::decodeIds($json);
 	}
 }

@@ -155,6 +155,27 @@ describe('planSheet', () => {
         expect(plan).not.toContain('+1.100');
     });
 
+    it('draws the switches\' dashed arcs to their lights, with a legend row', () => {
+        const body = (category: 'switch' | 'light'): {format: 1; category: typeof category; parts: []} => ({format: 1, category, parts: []});
+        const definitions = [
+            {id: 1, name: 'Switch', updatedAt: '', definition: body('switch')},
+            {id: 2, name: 'Light', updatedAt: '', definition: body('light')},
+        ];
+        const lights = [item(2, {definitionId: 2, x: 1000, y: 2000, z: 2500}), item(3, {definitionId: 2, x: 3000, y: 2000, z: 2500})];
+        const switchItem = (controls: number[]): ReturnType<typeof item> =>
+            item(1, {definitionId: 1, x: 0, y: 5, z: 1100, depth: 10, rotation: 180, controls});
+        const dashed = (svg: string): number => (svg.match(/stroke="#2a62b8"[^>]*stroke-dasharray/g) ?? []).length;
+
+        const linked = planSheet(scene({items: [switchItem([2, 3]), ...lights], definitions}), info, 'Iec').svg;
+        // The switch to the nearer light, the lights chained; plus the legend's arc.
+        expect(dashed(linked)).toBe(3);
+        expect(texts(linked)).toContain('Switched lights');
+
+        const unlinked = planSheet(scene({items: [switchItem([]), ...lights], definitions}), info, 'Iec').svg;
+        expect(dashed(unlinked)).toBe(0);
+        expect(texts(unlinked)).not.toContain('Switched lights');
+    });
+
     it('keeps every elevation of crowded wall points, and every category in the legend with its plain symbol', () => {
         const parameters = [{key: 'rockers', type: 'select' as const, default: 'single', options: ['single', 'double']}];
         const body = (category: 'socket' | 'switch' | 'data' | 'plumbing' | 'light'): {format: 1; category: typeof category; parts: []} => ({

@@ -1,4 +1,6 @@
-import {ElectricalRow, ElectricalTotals} from '@app/models/electrical-schedule';
+import {levelText} from '@app/core/level-text';
+import {roomCodeText} from '@app/core/room-code';
+import {CircuitItem, ElectricalRow, ElectricalTotals} from '@app/models/electrical-schedule';
 
 /** A row's parameter values for the electrician, e.g. "gangs 2 · rockers single"; booleans as yes / no. */
 export function rowValues(row: ElectricalRow): string {
@@ -23,4 +25,10 @@ export function totalsSummary(totals: ElectricalTotals): string {
     ]
         .filter((part) => part !== '')
         .join(' · ');
+}
+
+/** A switch or light of a lighting circuit: its name with its room's code, and a switch's elevation, e.g. "Switch (B_04, +1.050)". */
+export function circuitItemText(item: CircuitItem, withElevation: boolean): string {
+    const details = [item.roomCode === null ? null : roomCodeText(item.roomCode), withElevation ? levelText(item.z) : null].filter((d) => d !== null);
+    return details.length === 0 ? item.name : `${item.name} (${details.join(', ')})`;
 }

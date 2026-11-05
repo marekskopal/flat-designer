@@ -20,7 +20,7 @@ import polygonClipping, {MultiPolygon} from 'polygon-clipping';
 
 import {isChimney, sceneChimneys} from './chimneys';
 import {dimensionMiddle, dimensionPath, roomDimensions} from './dimensions';
-import {CategoryColors, ElectricalPoint, electricalPoints, elevationText, isWallMounted, symbolPolylines} from './electrical';
+import {CategoryColors, ElectricalPoint, electricalPoints, elevationText, isWallMounted, linkArcs, switchLinks, symbolPolylines} from './electrical';
 import {itemsOverFloor} from './items';
 import {
     Bounds,
@@ -214,6 +214,11 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
         return true;
     };
     const symbols = electrical === undefined ? [] : points.flatMap((point) => electricalShapes(point, electrical, s));
+    const links = electrical === undefined ? [] : switchLinks(points);
+    const arcs =
+        electrical === undefined
+            ? []
+            : linkArcs(points, links, electrical, SymbolPaper * s).map((arc): Shape => ({points: arc.points, closed: false, style: LinkStyle}));
     // A wall point's elevation is what the electrician needs: it takes the first free spot round its symbol, else the
     // first one anyway (overlapping beats leaving it out).
     const elevations = points.flatMap((point): Label[] => {
@@ -246,6 +251,7 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
                 ...openings,
                 ...itemShapes,
                 ...chimneysBelow,
+                ...arcs,
                 ...symbols,
             ],
             ...labels.flatMap((l) => l.shapes ?? []),
@@ -253,7 +259,7 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
         planBandSvg(layout, info, scene.location?.northAngle ?? 0, electrical === undefined ? 'Floor plan' : 'Electrical plan'),
-        ...(electrical === undefined ? [] : [electricalLegendSvg(layout, points, electrical)]),
+        ...(electrical === undefined ? [] : [electricalLegendSvg(layout, points, electrical, links.length > 0)]),
     ];
     return {width: layout.width, height: layout.height, scale: s, svg: sheetSvg(layout.width, layout.height, body)};
 }
@@ -273,6 +279,9 @@ function faintItemShape(item: Item): Shape {
         ? itemShape(item)
         : {points: itemFootprint(item), closed: true, style: {stroke: FaintItem, width: 0.12}};
 }
+
+/** A switch's dashed arc to its lights. */
+const LinkStyle: Style = {stroke: CategoryColors.switch, width: 0.18, dash: '1.2 0.7'};
 
 function electricalShapes(point: ElectricalPoint, symbols: ElectricalSymbols, scale: number): Shape[] {
     const style: Style = {stroke: CategoryColors[point.category], width: 0.22};
@@ -311,16 +320,21 @@ function elevationLabels(point: ElectricalPoint, scale: number): Label[] {
  * category is left out. A symbol is drawn as on the plan, facing north, its plan frame flipped onto the paper: the
  * category's plain symbol (one gang, a single switch), not that of the first point.
  */
-function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoint[], symbols: ElectricalSymbols): string {
-    const entries = (Object.keys(CategoryLabels) as ElectricalCategory[]).flatMap((category) => {
-        const of = points.filter((p) => p.category === category);
-        if (of.length === 0) {
-            return [];
-        }
-        const units = of.reduce((sum, p) => sum + p.units, 0);
-        const counted = (category === 'socket' || category === 'data') && units !== of.length;
-        return [{category, label: `${CategoryLabels[category]} ${of.length}${counted ? ` (${units})` : ''}`}];
-    });
+function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoint[], symbols: ElectricalSymbols, linked: boolean): string {
+    const entries: {category: ElectricalCategory | 'link'; label: string}[] = (Object.keys(CategoryLabels) as ElectricalCategory[]).flatMap(
+        (category) => {
+            const of = points.filter((p) => p.category === category);
+            if (of.length === 0) {
+                return [];
+            }
+            const units = of.reduce((sum, p) => sum + p.units, 0);
+            const counted = (category === 'socket' || category === 'data') && units !== of.length;
+            return [{category, label: `${CategoryLabels[category]} ${of.length}${counted ? ` (${units})` : ''}`}];
+        },
+    );
+    if (linked) {
+        entries.push({category: 'link', label: 'Switched lights'});
+    }
     const room = layout.width - 2 * (Margin + Padding);
     const natural = entries.reduce((sum, e) => sum + LegendSymbol + 1.5 + textWidth(e.label, LegendText) + 4, 0);
     const k = Math.min(1, room / natural);
@@ -330,12 +344,21 @@ function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoin
     const parts: string[] = [];
     let x = Margin + Padding;
     for (const {category, label} of entries) {
-        // The symbol's foot on the baseline, reaching up (a light centred on the text).
-        const anchor = {x: x + size / 2, y: category === 'light' ? baseline - 0.9 * k : baseline + 0.4 * k};
-        const sample: ElectricalPoint = {itemId: 0, category, at: {x: 0, y: 0}, out: {x: 0, y: 1}, z: 0, units: 1, values: {}};
-        for (const polyline of symbolPolylines(sample, symbols, size)) {
-            const onPaper = polyline.points.map((p) => ({x: anchor.x + p.x, y: anchor.y - p.y}));
-            parts.push(path(onPaper, polyline.closed, {stroke: CategoryColors[category], width: 0.2}));
+        if (category === 'link') {
+            // A dashed arc across the symbol's width.
+            const arc = Array.from({length: 9}, (_, i) => ({
+                x: x + (size * i) / 8,
+                y: baseline - 0.9 * k - 0.25 * size * Math.sin((Math.PI * i) / 8),
+            }));
+            parts.push(path(arc, false, LinkStyle));
+        } else {
+            // The symbol's foot on the baseline, reaching up (a light centred on the text).
+            const anchor = {x: x + size / 2, y: category === 'light' ? baseline - 0.9 * k : baseline + 0.4 * k};
+            const sample: ElectricalPoint = {itemId: 0, category, at: {x: 0, y: 0}, out: {x: 0, y: 1}, z: 0, units: 1, values: {}, controls: []};
+            for (const polyline of symbolPolylines(sample, symbols, size)) {
+                const onPaper = polyline.points.map((p) => ({x: anchor.x + p.x, y: anchor.y - p.y}));
+                parts.push(path(onPaper, polyline.closed, {stroke: CategoryColors[category], width: 0.2}));
+            }
         }
         parts.push(text({x: x + size + 1.5 * k, y: baseline}, label, fontSize));
         x += (LegendSymbol + 1.5 + textWidth(label, LegendText) + 4) * k;

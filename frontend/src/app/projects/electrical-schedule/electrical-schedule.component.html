@@ -53,6 +53,63 @@
                     </tbody>
                 }
             </table>
+            @if (lightingFloors().length > 0) {
+                <h3 class="subtitle">Lighting circuits</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Circuit</th>
+                            <th>Switches</th>
+                            <th>Lights</th>
+                        </tr>
+                    </thead>
+                    @for (floor of lightingFloors(); track floor.id) {
+                        <tbody>
+                            @if (s.floors.length > 1) {
+                                <tr class="floor">
+                                    <th colspan="3" scope="rowgroup">{{ floor.name }} {{ levelText(floor.elevation) }}</th>
+                                </tr>
+                            }
+                            @for (circuit of floor.lighting.circuits; track circuit.number) {
+                                <tr>
+                                    <td class="circuit">L{{ circuit.number }}</td>
+                                    <td>
+                                        @for (item of circuit.switches; track item.itemId) {
+                                            <div>{{ circuitItemText(item, true) }}</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        @for (item of circuit.lights; track item.itemId) {
+                                            <div>{{ circuitItemText(item, false) }}</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            @if (floor.lighting.unlinked.length > 0) {
+                                <tr class="gap">
+                                    <td>Switches without lights</td>
+                                    <td colspan="2">
+                                        @for (item of floor.lighting.unlinked; track item.itemId) {
+                                            <div>{{ circuitItemText(item, true) }}</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            @if (floor.lighting.unswitched.length > 0) {
+                                <tr class="gap">
+                                    <td>Lights without a switch</td>
+                                    <td colspan="2">
+                                        @for (item of floor.lighting.unswitched; track item.itemId) {
+                                            <div>{{ circuitItemText(item, false) }}</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    }
+                </table>
+                <p class="note">Switches link lights on their own floor only. Link them in the editor: select a switch, then Pick lights (L).</p>
+            }
         }
     }
 </section>
