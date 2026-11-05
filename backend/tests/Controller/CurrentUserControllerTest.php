@@ -54,6 +54,18 @@ final class CurrentUserControllerTest extends IntegrationTestCase
 		self::assertSame(400, $this->request('PATCH', Routes::CurrentUser->value, ['electricalSymbols' => 'Din'], $user)->getStatusCode());
 	}
 
+	public function testPatchSetsTheLocale(): void
+	{
+		$user = Fixture::createUser();
+		self::assertSame('en', $this->jsonBody($this->request('GET', Routes::CurrentUser->value, authenticatedAs: $user))['locale']);
+
+		$response = $this->request('PATCH', Routes::CurrentUser->value, ['locale' => 'cs'], $user);
+
+		self::assertSame('cs', $this->jsonBody($response)['locale']);
+		self::assertSame('cs', $this->jsonBody($this->request('GET', Routes::CurrentUser->value, authenticatedAs: $user))['locale']);
+		self::assertSame(400, $this->request('PATCH', Routes::CurrentUser->value, ['locale' => 'de'], $user)->getStatusCode());
+	}
+
 	public function testPasswordChangeRevokesOldTokensAndReturnsNewOnes(): void
 	{
 		$user = Fixture::createUser('jane@example.com');

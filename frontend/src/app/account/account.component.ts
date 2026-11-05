@@ -3,17 +3,20 @@ import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, effect, inject, OnInit, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
+import {Locale, LocaleNames, Locales} from '@app/core/locale';
 import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
 import {ElectricalSymbols, ElectricalSymbolsLabels} from '@app/models/electrical-schedule';
 import {McpClient} from '@app/models/mcp-client';
 import {AlertService} from '@app/services/alert.service';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
+import {LanguageService} from '@app/services/language.service';
 import {OAuthService} from '@app/services/oauth.service';
+import {TranslatePipe} from '@ngx-translate/core';
 
 @Component({
     selector: 'fd-account',
-    imports: [DatePipe, ReactiveFormsModule],
+    imports: [DatePipe, ReactiveFormsModule, TranslatePipe],
     templateUrl: './account.component.html',
     styleUrl: './account.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +27,7 @@ export class AccountComponent implements OnInit {
     private readonly alerts = inject(AlertService);
     private readonly fb = inject(FormBuilder).nonNullable;
     private readonly oauth = inject(OAuthService);
+    private readonly language = inject(LanguageService);
 
     /** Address MCP clients connect to. */
     protected readonly mcpUrl = `${window.location.origin}/mcp`;
@@ -37,7 +41,9 @@ export class AccountComponent implements OnInit {
     protected readonly profileForm = this.fb.group({
         name: ['', Validators.required],
         electricalSymbols: this.fb.control<ElectricalSymbols>('Iec'),
+        locale: this.fb.control<Locale>('en'),
     });
+    protected readonly locales = Locales.map((locale) => ({locale, name: LocaleNames[locale]}));
     protected readonly symbolSets = Object.entries(ElectricalSymbolsLabels) as [ElectricalSymbols, string][];
 
     protected readonly deleting = signal(false);
@@ -54,7 +60,7 @@ export class AccountComponent implements OnInit {
         effect(() => {
             const user = this.currentUser.currentUser();
             if (user !== null && this.profileForm.pristine) {
-                this.profileForm.setValue({name: user.name, electricalSymbols: user.electricalSymbols});
+                this.profileForm.setValue({name: user.name, electricalSymbols: user.electricalSymbols, locale: user.locale});
             }
         });
     }
@@ -81,8 +87,14 @@ export class AccountComponent implements OnInit {
             return;
         }
         this.savingProfile.set(true);
+        const before = this.currentUser.currentUser()?.locale;
         try {
-            await this.currentUser.update(this.profileForm.getRawValue());
+            const user = await this.currentUser.update(this.profileForm.getRawValue());
+            if (user.locale !== before) {
+                // Numbers and dates follow LOCALE_ID, fixed for a page load.
+                this.language.reloadInto(user.locale);
+                return;
+            }
             this.profileForm.markAsPristine();
             this.alerts.success('Profile saved.');
         } catch {

@@ -8,10 +8,11 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
 import {AuthenticationOptions} from '@app/models/authentication';
 import {AuthenticationService} from '@app/services/authentication.service';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
 
 @Component({
     selector: 'fd-sign-up',
-    imports: [GoogleSignInComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [GoogleSignInComponent, LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
     templateUrl: './sign-up.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

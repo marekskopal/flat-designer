@@ -5,13 +5,14 @@ import {ActivatedRoute, RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
 
 type VerifyState = {kind: 'verifying'} | {kind: 'verified'} | {kind: 'failed'; message: string};
 
 /** The page a verification mail links to (`/verify-email?token=…`); confirms the address as it opens. */
 @Component({
     selector: 'fd-verify-email',
-    imports: [NgOptimizedImage, RouterLink],
+    imports: [LanguageSwitchComponent, NgOptimizedImage, RouterLink],
     templateUrl: './verify-email.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

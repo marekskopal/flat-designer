@@ -6,6 +6,7 @@ namespace Izbik\Tests\Controller;
 
 use Izbik\Controller\AuthenticationController;
 use Izbik\Middleware\AuthorizationMiddleware;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Repository\UserRepository;
 use Izbik\Route\Routes;
 use Izbik\Tests\Support\AppHarness;
@@ -95,6 +96,24 @@ final class AuthenticationControllerTest extends IntegrationTestCase
 		self::assertSame('New User', $user->name);
 		self::assertFalse($user->isAdmin());
 		self::assertTrue(password_verify('Secret123', (string) $user->password));
+		self::assertSame(LocaleEnum::En, $user->locale);
+	}
+
+	public function testSignUpTakesTheBrowsersLanguage(): void
+	{
+		$this->request(
+			'POST',
+			Routes::AuthenticationSignUp->value,
+			['email' => 'jana@example.com', 'password' => 'Secret123', 'name' => 'Jana', 'locale' => 'cs-CZ'],
+		);
+		$this->request(
+			'POST',
+			Routes::AuthenticationSignUp->value,
+			['email' => 'hans@example.com', 'password' => 'Secret123', 'name' => 'Hans', 'locale' => 'de'],
+		);
+
+		self::assertSame(LocaleEnum::Cs, $this->userRepository()->findByEmail('jana@example.com')?->locale);
+		self::assertSame(LocaleEnum::En, $this->userRepository()->findByEmail('hans@example.com')?->locale);
 	}
 
 	public function testSignUpWithExistingEmailAnswersTheSameAndKeepsTheAccount(): void

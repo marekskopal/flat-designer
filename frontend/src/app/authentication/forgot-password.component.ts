@@ -5,10 +5,11 @@ import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationService} from '@app/services/authentication.service';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
 
 @Component({
     selector: 'fd-forgot-password',
-    imports: [NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
     templateUrl: './forgot-password.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

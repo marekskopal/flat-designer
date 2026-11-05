@@ -7,10 +7,11 @@ import {GoogleSignInComponent} from '@app/authentication/google-sign-in.componen
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationOptions} from '@app/models/authentication';
 import {AuthenticationService} from '@app/services/authentication.service';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
 
 @Component({
     selector: 'fd-login',
-    imports: [GoogleSignInComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [GoogleSignInComponent, LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
     templateUrl: './login.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

@@ -6,6 +6,7 @@ import {User, UserRole} from '@app/models/user';
 import {AdminUserService} from '@app/services/admin-user.service';
 import {AlertService} from '@app/services/alert.service';
 import {CurrentUserService} from '@app/services/current-user.service';
+import {LanguageService} from '@app/services/language.service';
 
 /** Admin overview of all accounts: add one, change the role, set a password, delete. */
 @Component({
@@ -19,6 +20,7 @@ export class AdminUsersComponent implements OnInit {
     protected readonly currentUser = inject(CurrentUserService);
     private readonly adminUsers = inject(AdminUserService);
     private readonly alerts = inject(AlertService);
+    private readonly language = inject(LanguageService);
 
     protected readonly roles: UserRole[] = ['User', 'Admin'];
     protected readonly users = signal<User[]>([]);
@@ -53,7 +55,7 @@ export class AdminUsersComponent implements OnInit {
         }
         this.saving.set(true);
         try {
-            const user = await this.adminUsers.create(this.addForm.getRawValue());
+            const user = await this.adminUsers.create({...this.addForm.getRawValue(), locale: this.language.current()});
             this.users.update((all) => [...all, user]);
             this.alerts.success(`Added ${user.name}. Pass the password on to them; they can change it on their account page.`);
             this.cancelAdd();

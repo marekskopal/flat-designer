@@ -46,7 +46,7 @@ final readonly class AdminUserService
 			throw new AdminUserException('A user with this email already exists.');
 		}
 
-		return $this->userProvider->createUser($email, $input->password, $name, $input->role, emailVerified: true);
+		return $this->userProvider->createUser($email, $input->password, $name, $input->role, emailVerified: true, locale: $input->locale);
 	}
 
 	/** @return list<User> */

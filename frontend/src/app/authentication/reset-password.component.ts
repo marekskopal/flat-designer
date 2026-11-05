@@ -6,11 +6,12 @@ import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
 import {AuthenticationService} from '@app/services/authentication.service';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
 
 /** The page a password reset mail links to (`/reset-password?token=…`); setting the password signs the user in. */
 @Component({
     selector: 'fd-reset-password',
-    imports: [NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
     templateUrl: './reset-password.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

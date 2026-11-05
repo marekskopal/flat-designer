@@ -1,3 +1,4 @@
+import {Locale} from '@app/core/locale';
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 
 export type UserRole = 'Admin' | 'User';
@@ -17,12 +18,15 @@ export interface User {
     google: boolean;
     /** The address is confirmed (a verification link, Google, or an account from before verification). */
     emailVerified: boolean;
+    /** The language of the application and of the account's mail. */
+    locale: Locale;
 }
 
 /** What a user changes on their own account (`PATCH /api/current-user`). */
 export interface CurrentUserUpdate {
     name?: string;
     electricalSymbols?: ElectricalSymbols;
+    locale?: Locale;
 }
 
 export interface UserUpdate {
@@ -39,4 +43,6 @@ export interface UserCreate {
     email: string;
     password: string;
     role: UserRole;
+    /** Missing: English. */
+    locale?: Locale;
 }

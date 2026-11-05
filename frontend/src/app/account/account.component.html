@@ -13,6 +13,14 @@
                 <input class="input" type="text" formControlName="name" autocomplete="name" />
             </label>
             <label class="field">
+                <span class="field__label">{{ 'common.language' | translate }}</span>
+                <select class="input" formControlName="locale">
+                    @for (option of locales; track option.locale) {
+                        <option [value]="option.locale">{{ option.name }}</option>
+                    }
+                </select>
+            </label>
+            <label class="field">
                 <span class="field__label">Electrical plan symbols</span>
                 <select class="input" formControlName="electricalSymbols">
                     @for (set of symbolSets; track set[0]) {

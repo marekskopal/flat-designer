@@ -63,6 +63,24 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - `jwtInterceptor` adds the token and refreshes it on 401. `errorInterceptor` shows a toast for API errors; skip it
     with the `SkipErrorToast` context token.
 
+## Translations (I-120)
+
+- The application is in English (the default and fallback) and Czech. The frontend uses `@ngx-translate`: the texts
+  are `frontend/src/i18n/{en,cs}.json` (nested keys by area, `common.language`), served as `i18n/` next to the app
+  (resolved against `document.baseURI`, `no-cache` in `conf/default.conf`). **A new user-facing text goes into both
+  files** (`TranslatePipe` in templates, `TranslateService` in code); `src/i18n/i18n.spec.ts` checks they have the same
+  keys and placeholders. Specs that render texts take `provideTestTranslations()` (`src/test-translations.ts`, the real
+  files, English).
+- The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
+  browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
+  its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
+  `locale` wins: when it differs from the page's, `LanguageService.reloadInto()` remembers it on the device and reloads
+  (once; a session guard stops a loop), as the account page does after changing it. Pages without an account show
+  `LanguageSwitchComponent` (the device's choice, live, hidden while signed in).
+- Backend: `users.locale` (`LocaleEnum`: en, cs; `UserDto`, `PATCH /api/current-user`), set at sign-up and by a
+  Google sign-in creating the account from the browser's language (`LocaleEnum::fromBrowser()`), by an admin's
+  `POST /api/admin/users` from the admin's. MCP tool descriptions and agent-facing texts stay English.
+
 ## Domain conventions
 
 - All stored lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the

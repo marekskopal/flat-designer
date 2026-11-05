@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Izbik\Dto;
 
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Entity\Enum\UserRoleEnum;
 use Izbik\Service\Request\BodyReader;
 use Izbik\Service\Request\Exception\InvalidRequestException;
@@ -17,6 +18,7 @@ final readonly class AdminUserCreateDto implements ArrayFactoryInterface
 		public string $email,
 		#[SensitiveParameter] public string $password,
 		public UserRoleEnum $role = UserRoleEnum::User,
+		public LocaleEnum $locale = LocaleEnum::En,
 	) {
 	}
 
@@ -32,6 +34,7 @@ final readonly class AdminUserCreateDto implements ArrayFactoryInterface
 				'Unknown role.',
 				422,
 			),
+			locale: BodyReader::optionalEnum($data, 'locale', LocaleEnum::class) ?? LocaleEnum::En,
 		);
 	}
 }

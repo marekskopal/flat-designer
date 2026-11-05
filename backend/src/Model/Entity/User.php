@@ -6,6 +6,7 @@ namespace Izbik\Model\Entity;
 
 use DateTimeImmutable;
 use Izbik\Model\Entity\Enum\ElectricalSymbolsEnum;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Entity\Enum\UserRoleEnum;
 use Izbik\Model\Repository\UserRepository;
 use MarekSkopal\ORM\Attribute\Column;
@@ -18,7 +19,7 @@ use MarekSkopal\ORM\Enum\Type;
  * account may have no password until it sets one by a reset link). `tokenVersion` is embedded in every issued JWT;
  * bumping it (password change) revokes all tokens issued before. `failedLoginAttempts` and
  * `lockedUntil` drive the sign-in backoff. `emailVerified`: the address is proven (a verification or reset link, Google,
- * `admin:create`). `electricalSymbols` picks the electrical plan's symbol set.
+ * `admin:create`). `electricalSymbols` picks the electrical plan's symbol set, `locale` the language of the application and the mail.
  */
 #[Entity(repositoryClass: UserRepository::class)]
 class User extends AEntity
@@ -37,6 +38,9 @@ class User extends AEntity
 
 	#[ColumnEnum(enum: ElectricalSymbolsEnum::class, default: ElectricalSymbolsEnum::Iec)]
 	public ElectricalSymbolsEnum $electricalSymbols = ElectricalSymbolsEnum::Iec;
+
+	#[ColumnEnum(enum: LocaleEnum::class, default: LocaleEnum::En)]
+	public LocaleEnum $locale = LocaleEnum::En;
 
 	#[Column(type: Type::String, nullable: true)]
 	public ?string $googleId = null;
