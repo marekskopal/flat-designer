@@ -114,17 +114,23 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   the type's default). Doors with a leaf have a `leafStyle` (Flush, Panelled, Glazed) with `leafPanels` panels or
   panes (`leafPanels()` in `viewer/engine/opening-looks.ts`). These rules, and the window ones below, are in
   `OpeningLook`.
-- Room doors hang on hinges (I-105, TS only): a `Door` / `DoubleDoor` with a `Lining` or `Architrave` frame is
-  rebated (`doorRebate()` in `plan-geometry.ts`): each jamb's stop reaches `stop` in (a single door's
-  `(width − leafWidth) / 2`, a double door's `DoorFrameWidth`), the leaf's core closes `CoreGap` short of it and its
-  `LipOverlap` lip (`LipThickness` of the swing face, `Leaf.lip`) lies in the rebate, flush with the frame's front
-  (the swing-side casing of an `Architrave`). A double door's leaf on `hinge` laps over the other. A swinging door
-  leaf turns about `Leaf.pin` (the hinge axis, `HingeBarrelRadius` in front of the face, `LipGap` off the lip's
-  edge; an unrebated one about its swing face's hinge edge): `leafPivot()` puts the pivot on it and the parts in
-  its `body`, and `swungLeaf()` turns the walk's colliders and the plan's symbol the same way. `doorHinges()` draws
-  two-part barrel hinges at `hingeHeights()` (a third over `ThirdHingeAbove`): the upper half in the pivot, the
-  lower with the frame. A single rebated door also gets a lock faceplate and a strike plate. Windows, garage and
-  sliding doors keep their old leaves (follow-up I-109).
+- Room doors hang on hinges (I-105, I-109; TS only but the `Steel` frame style): a `Door` / `DoubleDoor` with a
+  `Lining`, `Architrave` or `Steel` frame is rebated (`doorRebate()` in `plan-geometry.ts`): each jamb's stop reaches
+  `stop` in (a single door's `(width − leafWidth) / 2`, a double door's `DoorFrameWidth`), the leaf's core closes
+  `CoreGap` short of it and its `LipOverlap` lip (`LipThickness` of the swing face, `Leaf.lip`) lies in the rebate,
+  flush with the frame's front (the swing-side casing of an `Architrave`). A `Steel` frame (`steelFrame()`) is that
+  profile in `SteelSheet` sheet, its face strips `SteelReturn` onto the wall faces. A double door's leaf on `hinge` laps
+  over the other, which opens after it and closes before it (`Leaf.lag`, `PassiveLag`, read through `leafOpen()` by
+  `setLeafPose()` and `leafCollider()`). A swinging leaf or sash turns about `Leaf.pin` (the hinge axis):
+  `leafPivot()` puts the pivot on it and the parts in its `body`, and `swungLeaf()` turns the walk's colliders and the
+  plan's symbol the same way. `Leaf.hinges` says what `leafHinges()` draws on it (the moving parts in the pivot, the
+  rest with the frame): `Barrel` two-part barrel hinges at `hingeHeights()` (a third over `ThirdHingeAbove`; the axis
+  `HingeBarrelRadius` in front of the face, a rebated leaf's `LipGap` off the lip's edge; an unrebated or bare-hole
+  door's shank reaching the jamb or reveal), `Concealed` bodies in the edge and jamb of a `Flush` frame's leaf (which
+  turns about its swing face's hinge edge), `Strap` strap hinges of a side-hinged garage door (its axis the reveal's
+  corner on the garage face) and `Sash` a walkable French window's corner covers (its axis `SashHingeOut` in front of
+  the frame's face). A single rebated door also gets a lock faceplate and a strike plate. The elevations mark the
+  hinges on the face the leaves swing to. Sliding, pocket and lifting garage doors have no hinges.
 - A niche is a recess `depth` deep (default half the wall) into its `side` face, leaving at least 30 mm of wall
   behind it (`OpeningPlacement::nicheDepth()`, also checked when the wall changes). It is neither a door nor a gap
   for the walkthrough. `wallPieces()` gives the piece behind it a `recess`; `buildWall()` draws it thinner and tags it

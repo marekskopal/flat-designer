@@ -305,7 +305,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             key: 'frameStyle',
             label: 'Frame',
             type: 'select',
-            options: ['Lining', 'Architrave', 'Flush', 'None'],
+            options: ['Lining', 'Architrave', 'Steel', 'Flush', 'None'],
             half: true,
             when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche' && element['type'] !== 'GarageDoor',
         },

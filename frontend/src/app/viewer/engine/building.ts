@@ -21,7 +21,18 @@ import {buildFacades, facadeBands,FacadeLining} from './facades';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {boxAt, curvedPrismAt, prismAt, worldUvBox} from './meshes';
-import {exteriorSign, freeBeside, hingeHeights, HingeKnuckle, leafPanels, LeafStile, louvreSlats, PanelRect, shutterLeaves} from './opening-looks';
+import {
+    exteriorSign,
+    freeBeside,
+    hingeHeights,
+    HingeKnuckle,
+    leafPanels,
+    LeafStile,
+    louvreSlats,
+    PanelRect,
+    shutterLeaves,
+    ThirdHingeAbove,
+} from './opening-looks';
 import {
     alongWall,
     ArchitraveThickness,
@@ -38,6 +49,7 @@ import {
     isDoor,
     isLiftSlide,
     Leaf,
+    leafOpen,
     LeafOpenAngle,
     LiningProud,
     LipGap,
@@ -49,8 +61,11 @@ import {
     pointOnWall,
     RollerDrum,
     rollerSlats,
+    SashHingeOut,
     SlidingDoorOverlap,
     SquareEnds,
+    SteelReturn,
+    SteelSheet,
     tileGrid,
     Vec2,
     WallCorners,
@@ -1195,7 +1210,13 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
     const frameMaterial = frameMaterialOf(opening, materials);
     const leafMaterial = leafMaterialOf(opening, materials);
     const rebate = doorRebate(opening, wall.thickness);
-    for (const part of rebate === null ? doorFrame(opening, wall.thickness, frameMaterial) : rebatedFrame(opening, rebate, frameMaterial)) {
+    const frameParts =
+        rebate === null
+            ? doorFrame(opening, wall.thickness, frameMaterial)
+            : opening.frameStyle === 'Steel'
+                ? steelFrame(opening, rebate, frameMaterial)
+                : rebatedFrame(opening, rebate, frameMaterial);
+    for (const part of frameParts) {
         group.add(part);
     }
     if (opening.type === 'GarageDoor' && (opening.garageDoorStyle ?? 'Sectional') !== 'SideHinged') {
@@ -1221,14 +1242,14 @@ function buildDoor(opening: Opening, wall: Wall, materials: MaterialLibrary): TH
             body.add(handle);
         }
         group.add(pivot);
-        if (leaf.lip !== undefined) {
-            const hinges = doorHinges(leaf, leafHeight, handleMaterial);
+        if (leaf.hinges !== undefined) {
+            const hinges = leafHinges(leaf, hingeHeights(leafHeight / MM).map((h) => h * MM), jambReach(opening, leaf, rebate), handleMaterial);
             pivot.add(...hinges.leaf);
             group.add(hinges.frame);
-            if (opening.type === 'Door' && opening.handle !== 'None' && rebate !== null) {
-                body.add(lockFaceplate(leaf, handleMaterial));
-                group.add(strikePlate(opening, leaf, rebate, handleMaterial));
-            }
+        }
+        if (leaf.lip !== undefined && opening.type === 'Door' && opening.handle !== 'None' && rebate !== null) {
+            body.add(lockFaceplate(leaf, handleMaterial));
+            group.add(strikePlate(opening, leaf, rebate, handleMaterial));
         }
 
         if (opening.type === 'SlidingDoor') {
@@ -1258,43 +1279,165 @@ const HingeHalf = HingeKnuckle / 2;
 const HingeShank = 0.012;
 
 /**
- * The hinges of a rebated leaf: two-part barrel hinges on its axis, `hingeHeights()` up it. The upper half
- * with its ball tip and a shank into the lip's edge turns with the leaf (`leaf`, for the pivot, whose origin is the
- * axis); the lower half with a shank into the jamb's rebate stays with the frame (`frame`, a group placed on the axis).
+ * How far a swinging leaf's hinge axis lies from the face of the jamb it hangs on, m along the wall: a rebated leaf's
+ * axis is at the rebate's face, an unrebated one's past the frame's lining (or the reveal of a bare hole).
  */
-function doorHinges(leaf: Leaf, height: number, material: THREE.Material): {leaf: THREE.Object3D[]; frame: THREE.Group} {
-    const radius = HingeBarrelRadius * MM;
-    const half = HingeHalf * MM;
-    const face = swingFace(leaf);
-    // The shanks run back from the barrel towards the face behind it.
-    const shankZ = face > 0 ? -radius - 0.004 : 0;
+function jambReach(opening: Opening, leaf: Leaf, rebate: DoorRebate | null): number {
+    if (rebate !== null || opening.type === 'GarageDoor') {
+        return 0;
+    }
+    const jamb = doorHeadDepth(opening) / MM;
+    const face = leaf.closed > 0 ? opening.offset + jamb : opening.offset + opening.width - jamb;
+    const axis = leaf.along - leaf.closed * (leaf.pin?.back ?? 0);
+    return Math.max(0, leaf.closed * (axis - face)) * MM;
+}
+
+/**
+ * The hinges of a swinging leaf by its `hinges`, at `heights` (m up the leaf, the joints of a barrel hinge's halves):
+ * the parts that turn with the leaf (`leaf`, for its pivot, whose origin is the axis) and those that stay with the
+ * frame (`frame`, a group placed on the axis and turned as the closed leaf). `reach` is how far the jamb's face lies
+ * behind the axis (m).
+ */
+function leafHinges(leaf: Leaf, heights: readonly number[], reach: number, material: THREE.Material): {leaf: THREE.Object3D[]; frame: THREE.Group} {
     const frame = new THREE.Group();
     const pin = leaf.pin ?? {back: 0, out: 0};
     frame.position.set((leaf.along - leaf.closed * pin.back) * MM, LeafFloorGap, -(leaf.across + leaf.swing * pin.out) * MM);
     frame.rotation.y = leaf.closed > 0 ? 0 : Math.PI;
-    const parts: THREE.Object3D[] = [];
+    const out: HingeMeshes = {leaf: [], frame: []};
+    switch (leaf.hinges) {
+        case 'Barrel':
+            barrelHinges(leaf, heights, reach, material, out);
+            break;
+        case 'Concealed':
+            concealedHinges(leaf, heights, reach, material, out);
+            break;
+        case 'Strap':
+            strapHinges(leaf, heights, material, out);
+            break;
+        case 'Sash':
+            sashHinges(leaf, heights, material, out);
+            break;
+        case undefined:
+            break;
+    }
+    for (const mesh of [...out.leaf, ...out.frame]) {
+        mesh.castShadow = true;
+        mesh.userData = {partName: 'hinge'};
+    }
+    if (out.frame.length > 0) {
+        frame.add(...out.frame);
+    }
+    return {leaf: out.leaf, frame};
+}
+
+/** The meshes of a leaf's hinges: those turning with the leaf and those staying with the frame. */
+interface HingeMeshes {
+    leaf: THREE.Mesh[];
+    frame: THREE.Mesh[];
+}
+
+/**
+ * Two-part barrel hinges on the leaf's axis: the upper half with its ball tip and a shank into the leaf's edge turns
+ * with the leaf; the lower half with a shank into the jamb (`reach` behind the axis, and on into it) stays.
+ */
+function barrelHinges(leaf: Leaf, heights: readonly number[], reach: number, material: THREE.Material, out: HingeMeshes): void {
+    const {leaf: parts, frame} = out;
+    const radius = HingeBarrelRadius * MM;
+    const half = HingeHalf * MM;
+    // The shanks run back from the barrel towards the face behind it.
+    const shankZ = swingFace(leaf) > 0 ? -radius - 0.004 : 0;
     const barrel = (y: number, ball: number): THREE.Mesh[] => {
         const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, half, 16), material);
         knuckle.position.y = y + half / 2;
         const tip = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), material);
         tip.position.y = ball;
         tip.scale.y = 0.6;
-        return [knuckle, tip].map((mesh) => {
-            mesh.castShadow = true;
-            mesh.userData = {partName: 'hinge'};
-            return mesh;
-        });
+        return [knuckle, tip];
     };
-    for (const y of hingeHeights(height / MM).map((h) => h * MM)) {
-        const shank = (x: number, at: number): THREE.Mesh => {
-            const mesh = boxAt(material, x, at - 0.005, shankZ, HingeShank, 0.01, radius + 0.004);
-            mesh.userData = {partName: 'hinge'};
-            return mesh;
-        };
-        parts.push(...barrel(y, y + half), shank(0, y + half / 2));
-        frame.add(...barrel(y - half, y - half), shank(-HingeShank, y - half / 2));
+    const shank = (x: number, length: number, at: number): THREE.Mesh => boxAt(material, x, at - 0.005, shankZ, length, 0.01, radius + 0.004);
+    for (const y of heights) {
+        parts.push(...barrel(y, y + half), shank(0, HingeShank, y + half / 2));
+        frame.push(...barrel(y - half, y - half), shank(-reach - HingeShank, reach + HingeShank, y - half / 2));
     }
-    return {leaf: parts, frame};
+}
+
+/** A concealed hinge's body, mortised into the leaf's edge and the jamb: this high, deep across the leaf and proud (m). */
+const ConcealedHeight = 0.16;
+const ConcealedDepth = 0.024;
+const ConcealedProud = 0.002;
+
+/**
+ * Concealed hinges: a body in the leaf's hinge edge and its twin in the jamb's face (`reach` behind the axis), the
+ * middle of each a hinge `heights` up; the arms between them are hidden. Only an open leaf shows them.
+ */
+function concealedHinges(leaf: Leaf, heights: readonly number[], reach: number, material: THREE.Material, out: HingeMeshes): void {
+    const {leaf: parts, frame} = out;
+    // The axis is on the leaf's swing face: its middle lies half its thickness behind it.
+    const middle = -swingFace(leaf) * (leaf.thickness / 2) * MM;
+    const z = middle - ConcealedDepth / 2;
+    for (const y of heights) {
+        const bottom = y - ConcealedHeight / 2;
+        parts.push(boxAt(material, -ConcealedProud, bottom, z, ConcealedProud, ConcealedHeight, ConcealedDepth));
+        frame.push(boxAt(material, -reach, bottom, z, ConcealedProud, ConcealedHeight, ConcealedDepth));
+    }
+}
+
+/** A box `thick` m out from the face plane at z `face`, towards `sign` (the swing face's side): its z and depth for `boxAt()`. */
+function outFrom(face: number, thick: number, sign: 1 | -1): number {
+    return sign > 0 ? face : face - thick;
+}
+
+/** A strap hinge: the strap's length on the leaf (at most), its widths, thickness, the knuckle and the wall plate (m). */
+const StrapLength = 0.6;
+const StrapWidth = 0.05;
+const StrapThickness = 0.005;
+const StrapKnuckle = 0.01;
+const PintlePlate = 0.1;
+
+/**
+ * Strap hinges of a side-hinged garage leaf, whose axis is the reveal's corner on its swing face: a strap tapering
+ * along the leaf's swing face, its knuckle on the axis, and a pintle plate on the wall face beside the opening.
+ */
+function strapHinges(leaf: Leaf, heights: readonly number[], material: THREE.Material, out: HingeMeshes): void {
+    const {leaf: parts, frame} = out;
+    const sign = swingFace(leaf);
+    const z = outFrom(0, StrapThickness, sign);
+    const length = Math.min(StrapLength, ((leaf.width * MM) * 2) / 3);
+    for (const y of heights) {
+        const knuckle = new THREE.Mesh(new THREE.CylinderGeometry(StrapKnuckle, StrapKnuckle, StrapWidth * 1.4, 12), material);
+        knuckle.position.y = y;
+        parts.push(
+            knuckle,
+            boxAt(material, 0, y - StrapWidth / 2, z, length / 3, StrapWidth, StrapThickness),
+            boxAt(material, length / 3, y - StrapWidth * 0.35, z, (length * 2) / 3, StrapWidth * 0.7, StrapThickness),
+        );
+        frame.push(boxAt(material, -PintlePlate, y - StrapWidth * 0.7, z, PintlePlate, StrapWidth * 1.4, StrapThickness));
+    }
+}
+
+/** A sash hinge's hardware covers: high, along the sash and the frame, and thick (m). */
+const SashCoverHeight = 0.06;
+const SashCoverLength = 0.05;
+const SashCoverFrame = 0.03;
+const SashCoverThickness = 0.012;
+
+/**
+ * A French window sash's hinges, under hardware covers on the swing face of its hinge corner (centred `heights` up the
+ * sash): one half on the sash's face, the other on the frame's face beside it, `SashHingeOut` behind the axis.
+ */
+function sashHinges(leaf: Leaf, heights: readonly number[], material: THREE.Material, out: HingeMeshes): void {
+    const {leaf: parts, frame} = out;
+    const sign = swingFace(leaf);
+    const behind = (leaf.pin?.out ?? 0) - leaf.thickness / 2;
+    const sashFace = -sign * behind * MM;
+    const frameFace = -sign * SashHingeOut * MM;
+    for (const y of heights) {
+        const bottom = y - SashCoverHeight / 2;
+        const cover = (x: number, face: number, length: number): THREE.Mesh =>
+            boxAt(material, x, bottom, outFrom(face, SashCoverThickness, sign), length, SashCoverHeight, SashCoverThickness);
+        parts.push(cover(0, sashFace, SashCoverLength));
+        frame.push(cover(-SashCoverFrame, frameFace, SashCoverFrame));
+    }
 }
 
 /** A lock's faceplate on a rebated leaf's free edge, at the handle, in the leaf's body frame. */
@@ -1550,6 +1693,54 @@ function rebatedFrame(opening: Opening, rebate: DoorRebate, material: THREE.Mate
     return parts;
 }
 
+/**
+ * A steel frame: sheet steel folded round the rebated profile of a lining (the stop the core closes against, the rebate
+ * the lip lies in), its face strips reaching `SteelReturn` past the reveal onto both wall faces. It is hollow, as the
+ * real one is filled with mortar behind.
+ */
+function steelFrame(opening: Opening, rebate: DoorRebate, material: THREE.Material): THREE.Mesh[] {
+    const from = opening.offset * MM;
+    const to = (opening.offset + opening.width) * MM;
+    const height = opening.height * MM;
+    const swing = opening.side === 'Right' ? -1 : 1;
+    const reach = SteelReturn * MM;
+    const sheet = SteelSheet * MM;
+    // Across the wall (plan mm, + towards `normal`): the faces, their insides, and the rebate's bottom.
+    const {back, front} = rebate;
+    const backIn = back + swing * SteelSheet;
+    const frontIn = front - swing * SteelSheet;
+    const rebateBack = front - swing * (LipThickness + 1);
+    const rebateIn = rebateBack - swing * SteelSheet;
+    const box = (x0: number, x1: number, y0: number, y1: number, a: number, b: number): THREE.Mesh => {
+        const z0 = -Math.max(a, b) * MM;
+        return boxAt(material, x0, y0, z0, x1 - x0, y1 - y0, Math.abs(b - a) * MM);
+    };
+    const stop = rebate.stop * MM;
+    const recess = rebate.rebate * MM;
+    const head = height - rebate.head * MM;
+    const headRebate = height - (rebate.head - rebate.overlap + CoreGap - LipGap) * MM;
+    return [
+        // The face strips, the jambs' up to the head's.
+        box(from - reach, from + stop, 0, head, back, backIn),
+        box(to - stop, to + reach, 0, head, back, backIn),
+        box(from - reach, to + reach, head, height + reach, back, backIn),
+        box(from - reach, from + recess, 0, headRebate, frontIn, front),
+        box(to - recess, to + reach, 0, headRebate, frontIn, front),
+        box(from - reach, to + reach, headRebate, height + reach, frontIn, front),
+        // The stops, facing the leaf's edges.
+        box(from + stop - sheet, from + stop, 0, head, backIn, rebateBack),
+        box(to - stop, to - stop + sheet, 0, head, backIn, rebateBack),
+        box(from + stop - sheet, to - stop + sheet, head, head + sheet, backIn, rebateBack),
+        // The rebates' bottoms, under the lip, and their sides, facing the lip's edges.
+        box(from + recess, from + stop, 0, head, rebateIn, rebateBack),
+        box(to - stop, to - recess, 0, head, rebateIn, rebateBack),
+        box(from + recess, to - recess, head, headRebate, rebateIn, rebateBack),
+        box(from + recess - sheet, from + recess, 0, headRebate, rebateBack, frontIn),
+        box(to - recess, to - recess + sheet, 0, headRebate, rebateBack, frontIn),
+        box(from + recess - sheet, to - recess + sheet, headRebate, headRebate + sheet, rebateBack, frontIn),
+    ];
+}
+
 /** A door handle's spindle over the leaf's bottom, m. */
 const HandleHeight = 1.0;
 
@@ -1686,7 +1877,7 @@ function buildWindow(opening: Opening, wall: Wall, materials: MaterialLibrary, c
         // Walkable: sashes hinged on the jambs, closed by default (their place across the wall includes the inset).
         const panel = opening.panelHeight == null ? null : opening.panelHeight * MM - 0.04;
         for (const leaf of leaves) {
-            group.add(buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, panel, frameMaterial, glassMaterial));
+            group.add(...buildSash(leaf, bottom + 0.04, height - bar - 0.04, transoms, panel, frameMaterial, glassMaterial));
         }
         for (const part of shutters(opening, wall, materials)) {
             group.add(part);
@@ -1752,7 +1943,7 @@ function buildLiftSlide(opening: Opening, wall: Wall, materials: MaterialLibrary
     frameBox(from, 0, width, 0.02);
     const glass = materials.byCode('glass');
     for (const leaf of openingLeaves(opening, wall.thickness)) {
-        group.add(buildSash(leaf, 0.02, height - bar - 0.02, 0, null, frameMaterial, glass, leaf.travel !== 0));
+        group.add(...buildSash(leaf, 0.02, height - bar - 0.02, 0, null, frameMaterial, glass, leaf.travel !== 0));
     }
     return group;
 }
@@ -1913,7 +2104,8 @@ function sillBoards(opening: Opening, wall: Wall, cornerStart: boolean, cornerEn
 
 /**
  * A glazed sash of a walkable French window or a lift-and-slide door: frame bars around a pane, divided by `transoms`,
- * pivoting or sliding like a door leaf; `handle` on its free edge.
+ * pivoting or sliding like a door leaf; `handle` on its free edge. A hinged sash comes with its hinges' frame halves,
+ * a group of their own for the window's group.
  */
 function buildSash(
     leaf: Leaf,
@@ -1924,9 +2116,9 @@ function buildSash(
     frameMaterial: THREE.Material,
     glassMaterial: THREE.Material,
     handle = true,
-): THREE.Group {
-    const {pivot: sash} = leafPivot(leaf, 0);
-    sash.position.y = bottom;
+): THREE.Object3D[] {
+    const {pivot, body: sash} = leafPivot(leaf, 0);
+    pivot.position.y = bottom;
     const width = leaf.width * MM;
     const thickness = leaf.thickness * MM;
     const bar = SashBar * MM;
@@ -1952,12 +2144,25 @@ function buildSash(
         sash.add(boxAt(frameMaterial, bar, y - bar / 2, z, width - 2 * bar, bar, thickness));
     }
     if (handle) {
-        // Handle on the inner face of the free edge.
+        // Handle on the inner face (the one it swings to) of the free edge.
         const grip = boxAt(frameMaterial, width - bar / 2 - 0.01, 1.05 - bottom, 0, 0.02, 0.14, 0.02);
-        grip.position.z = -leaf.swing * (thickness / 2 + 0.015);
+        grip.position.z = swingFace(leaf) * (thickness / 2 + 0.015);
         sash.add(grip);
     }
-    return sash;
+    if (leaf.hinges !== undefined) {
+        const hinges = leafHinges(leaf, sashHingeHeights(height), 0, frameMaterial);
+        pivot.add(...hinges.leaf);
+        hinges.frame.position.y = bottom;
+        return [pivot, hinges.frame];
+    }
+    return [pivot];
+}
+
+/** Where a sash `height` m tall has its hinges' covers (their middles, m up it): at its corners, and a third in the middle when it is tall. */
+function sashHingeHeights(height: number): number[] {
+    const corner = SashCoverHeight / 2 + 0.01;
+    const ends = [corner, height - corner];
+    return height > ThirdHingeAbove * MM ? [ends[0], height / 2, ends[1]] : ends;
 }
 
 /**
@@ -2050,7 +2255,7 @@ export function setLeafPose(pivot: THREE.Object3D, open: number): void {
         liftLeaf(pivot, leaf, open);
         return;
     }
-    const angle = open * LeafOpenAngle;
+    const angle = leafOpen(leaf, open) * LeafOpenAngle;
     // Plan across is local −z: the leaf points along (closed · cos, −swing · sin) in local x / z.
     pivot.rotation.y = Math.atan2(leaf.swing * Math.sin(angle), leaf.closed * Math.cos(angle));
 }

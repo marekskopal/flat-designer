@@ -250,6 +250,11 @@ final class ElementControllerTest extends EditorTestCase
 		$changes = $this->jsonBody($this->edit('PATCH', 'openings', self::id($sliding), ['type' => 'Door']));
 		self::assertIsArray($changes['change']);
 		self::assertSame('Changed door "Sliding door" (type)', $changes['change']['summary']);
+
+		$steel = $this->jsonBody($this->edit('PATCH', 'openings', self::id($sliding), ['frameStyle' => 'Steel']));
+		self::assertIsArray($steel['element']);
+		self::assertSame('Steel', $steel['element']['frameStyle']);
+		self::assertSame(422, $this->edit('PATCH', 'openings', self::id($sliding), ['frameStyle' => 'Concrete'])->getStatusCode());
 	}
 
 	public function testWindowsHaveDivisionsAndSillBoardsDoorsDoNot(): void

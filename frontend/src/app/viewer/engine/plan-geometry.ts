@@ -561,6 +561,8 @@ export const SlidingDoorGap = 15;
 /** Frame bar around a French window; its sashes hinge on the inside of it (mm). */
 export const WindowFrameBar = 70;
 export const SashThickness = 60;
+/** A window sash's hinge axis: this far in front of its frame's face, mm. */
+export const SashHingeOut = 3;
 /**
  * A rebated room door: a leaf's lip overlaps the frame by `LipOverlap` on its swing face, `LipThickness` of its
  * thickness, in the frame's rebate; gaps round the core (to the stops) and round the lip (to the rebate), mm.
@@ -573,6 +575,9 @@ export const LipGap = 2;
 export const LiningProud = 10;
 export const ArchitraveWidth = 70;
 export const ArchitraveThickness = 15;
+/** A steel frame's sheet, which lies on the wall faces, and how far its face strips reach onto them past the reveal, mm. */
+export const SteelSheet = 1.5;
+export const SteelReturn = 10;
 /** A door hinge's barrel: its radius, which puts the hinge axis that far in front of the leaf's swing face (mm). */
 export const HingeBarrelRadius = 7;
 /** How far a door leaf or sash opens, radians. */
@@ -652,9 +657,20 @@ export interface Leaf {
     thickness: number;
     /** A swinging door leaf's hinge axis; without it, the leaf turns about (`along`, `across`). */
     pin?: LeafPin;
+    /** What a swinging leaf hangs on (drawn on its pin); without it, no hinges are drawn. */
+    hinges?: LeafHinges;
+    /** A double door's passive leaf: the share of its opening's way it waits before it moves (`leafOpen()`). */
+    lag?: number;
     /** A rebated door leaf's lip. */
     lip?: LeafLip;
 }
+
+/**
+ * A leaf's hinges: `Barrel` two-part barrel hinges (a door in a lining, a steel frame or a bare hole), `Concealed`
+ * hinges mortised into the edges (a flush frame), `Strap` strap hinges on the swing face (a side-hinged garage door),
+ * `Sash` a window sash's corner bearings under hardware covers.
+ */
+export type LeafHinges = 'Barrel' | 'Concealed' | 'Strap' | 'Sash';
 
 /** A hinge axis off a leaf's hinge-edge point (`along`, `across`): `back` mm away from the leaf, `out` mm towards `swing`. */
 export interface LeafPin {
@@ -676,7 +692,7 @@ export interface LeafLip {
 }
 
 /**
- * The rebated frame of a room door: a `Door` or `DoubleDoor` with a `Lining` or `Architrave` frame. `stop` is
+ * The rebated frame of a room door: a `Door` or `DoubleDoor` with a `Lining`, `Architrave` or `Steel` frame. `stop` is
  * how far each jamb's stop reaches in from the opening's edge (the head's down from its top), `rebate` how far its
  * rebate, `overlap` the leaves' lip over the stops (mm). Across the wall (+ towards `normal`): `front` is the frame's
  * face on the swing side (an `Architrave`'s casing included), where the leaves' face lies, and `back` the other face.
@@ -693,7 +709,7 @@ export interface DoorRebate {
 
 export function doorRebate(opening: Opening, wallThickness: number): DoorRebate | null {
     const style = opening.frameStyle ?? 'Lining';
-    if ((opening.type !== 'Door' && opening.type !== 'DoubleDoor') || (style !== 'Lining' && style !== 'Architrave')) {
+    if ((opening.type !== 'Door' && opening.type !== 'DoubleDoor') || (style !== 'Lining' && style !== 'Architrave' && style !== 'Steel')) {
         return null;
     }
     const stop = opening.type === 'Door' ? (opening.width - doorLeafWidth(opening)) / 2 : DoorFrameWidth;
@@ -704,7 +720,7 @@ export function doorRebate(opening: Opening, wallThickness: number): DoorRebate 
     }
     const swing = opening.side === 'Right' ? -1 : 1;
     const band = frameBand(opening, wallThickness);
-    const depth = band.depth + (opening.inset == null ? 2 * LiningProud : 0);
+    const depth = band.depth + (opening.inset == null ? 2 * (style === 'Steel' ? SteelSheet : LiningProud) : 0);
     const casing = style === 'Architrave' && opening.inset == null ? ArchitraveThickness : 0;
     return {
         stop,
@@ -787,7 +803,7 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
                 closed: towardsEnd ? -1 : 1,
                 width,
                 thickness: DoorLeafThickness,
-                pin: FaceHinge,
+                ...unrebatedHinges(opening),
             }];
         }
         case 'DoubleDoor': {
@@ -795,7 +811,7 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
             if (rebate !== null) {
                 return rebatedLeaves(opening, rebate, base);
             }
-            return doubleLeaves(opening, base, flush, DoorFrameWidth, DoorLeafThickness).map((leaf) => ({...leaf, pin: FaceHinge}));
+            return doubleLeaves(opening, base, flush, DoorFrameWidth, DoorLeafThickness).map((leaf) => ({...leaf, ...unrebatedHinges(opening)}));
         }
         case 'GarageDoor':
             return garageLeaves(opening, wallThickness, base);
@@ -834,12 +850,16 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
             const across = band.centre + swing * (WindowFrameBar / 2 - SashThickness / 2);
             const start = opening.offset + WindowFrameBar;
             const end = opening.offset + opening.width - WindowFrameBar;
+            // The sashes turn about an axis just in front of the frame's face at the jamb's edge, so they clear the frame.
+            const behindFrame = band.depth / 2 - WindowFrameBar / 2;
+            const hung = {...base, motion: 'swing' as const, across, thickness: SashThickness, hinges: 'Sash' as const};
+            const pin = {back: 0, out: SashThickness / 2 + behindFrame + SashHingeOut};
             if (opening.mullions === 0) {
                 // One sash, hung on `hinge`.
-                const sash = {...base, motion: 'swing' as const, across, width: end - start, thickness: SashThickness};
+                const sash = {...hung, width: end - start, pin};
                 return [towardsEnd ? {...sash, along: end, closed: -1} : {...sash, along: start, closed: 1}];
             }
-            const sash = {...base, motion: 'swing' as const, across, width: (end - start) / 2, thickness: SashThickness};
+            const sash = {...hung, width: (end - start) / 2, pin};
             return [
                 {...sash, along: start, closed: 1},
                 {...sash, index: 1, along: end, closed: -1},
@@ -850,8 +870,15 @@ export function openingLeaves(opening: Opening, wallThickness: number): Leaf[] {
 
 type LeafBase = Pick<Leaf, 'openingId' | 'index' | 'swing' | 'travel'>;
 
-/** An unrebated door leaf turns about the hinge edge of its swing face, so it clears the frame. */
-const FaceHinge: LeafPin = {back: 0, out: DoorLeafThickness / 2};
+/**
+ * An unrebated door leaf turns about the hinge edge of its swing face, so it clears the frame: on concealed hinges in a
+ * flush frame, else on barrel hinges, whose axis lies a barrel's radius in front of that face.
+ */
+function unrebatedHinges(opening: Opening): Pick<Leaf, 'pin' | 'hinges'> {
+    return opening.frameStyle === 'Flush'
+        ? {pin: {back: 0, out: DoorLeafThickness / 2}, hinges: 'Concealed'}
+        : {pin: {back: 0, out: DoorLeafThickness / 2 + HingeBarrelRadius}, hinges: 'Barrel'};
+}
 
 /**
  * The leaves of a rebated door: each core `CoreGap` clear of the stops, its lip over them. A double door's
@@ -878,6 +905,7 @@ function rebatedLeaves(opening: Opening, rebate: DoorRebate, base: LeafBase): Le
             width: Math.max(coreTo, coreTo + freeLip),
             thickness: DoorLeafThickness,
             pin,
+            hinges: 'Barrel',
             lip: {from: 0, to: coreTo + freeLip, coreFrom: overlap, coreTo, top, thickness: LipThickness},
         };
     };
@@ -898,10 +926,21 @@ function rebatedLeaves(opening: Opening, rebate: DoorRebate, base: LeafBase): Le
     // of it.
     const lap = (isActive: boolean): number => (isActive ? overlap : -(overlap - CoreGap + LipGap));
     const coreAt = (from: number, to: number): number => to - from - CoreGap - CoreGap / 2;
-    return [
+    const leaves = [
         leaf(0, left, 1, coreAt(left, meeting), lap(startActive)),
         leaf(1, right, -1, coreAt(meeting, right), lap(!startActive)),
     ].filter((l) => l.lip.coreTo > l.lip.coreFrom);
+    // The other leaf waits for the active one, which laps over it, and closes before it.
+    return leaves.length === 2 ? leaves.map((l) => (l.index === (startActive ? 1 : 0) ? {...l, lag: PassiveLag} : l)) : leaves;
+}
+
+/** How much of the way a double door's passive leaf waits for the active one, opening (and closes before it). */
+export const PassiveLag = 0.3;
+
+/** How far (0 … 1) a leaf is open when its opening is `open`: a lagging leaf starts after the others and is shut before them. */
+export function leafOpen(leaf: Pick<Leaf, 'lag'>, open: number): number {
+    const lag = leaf.lag ?? 0;
+    return lag > 0 ? Math.min(1, Math.max(0, (open - lag) / (1 - lag))) : open;
 }
 
 /** Two leaves hinged on the jambs `frame` in from the opening's edges, the one on `hinge` `leafWidth` wide (half by default). */
@@ -924,8 +963,9 @@ function garageLeaves(opening: Opening, wallThickness: number, base: LeafBase): 
     const across = base.swing * (wallThickness / 2 + GarageGap + GarageLeafThickness / 2);
     const style = opening.garageDoorStyle ?? 'Sectional';
     if (style === 'SideHinged') {
-        // Hung in the opening, flush with the inner face.
-        return doubleLeaves(opening, base, base.swing * (wallThickness / 2 - GarageLeafThickness / 2), 0, GarageLeafThickness);
+        // Hung in the opening, flush with the inner face, on strap hinges about the reveal's corners there.
+        return doubleLeaves(opening, base, base.swing * (wallThickness / 2 - GarageLeafThickness / 2), 0, GarageLeafThickness)
+            .map((leaf) => ({...leaf, pin: {back: 0, out: GarageLeafThickness / 2}, hinges: 'Strap'}));
     }
     return [{
         ...base,
@@ -970,7 +1010,7 @@ function liftSlidePanes(opening: Opening, wallThickness: number, base: LeafBase)
  */
 export function leafCollider(frame: WallFrame, leaf: Leaf, open: number): WallCollider {
     if (leaf.motion === 'swing') {
-        const {start, dir, normal} = swungLeaf(frame, leaf, open * LeafOpenAngle);
+        const {start, dir, normal} = swungLeaf(frame, leaf, leafOpen(leaf, open) * LeafOpenAngle);
         return {
             frame: {start, dir, normal, length: leaf.width, angle: Math.atan2(dir.y, dir.x)},
             from: 0,

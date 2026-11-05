@@ -31,7 +31,7 @@ export const isOutdoorRoom = (room: {type: RoomType}): boolean => OutdoorRoomTyp
 export const isAncillaryRoom = (room: {type: RoomType}): boolean => room.type === 'Garage';
 export type WallType = 'Exterior' | 'Interior' | 'Shaft';
 export type OpeningType = 'Door' | 'DoubleDoor' | 'SlidingDoor' | 'PocketDoor' | 'Passage' | 'Window' | 'Niche' | 'GarageDoor';
-export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None';
+export type DoorFrameStyle = 'Lining' | 'Architrave' | 'Flush' | 'None' | 'Steel';
 export type DoorHandle = 'Lever' | 'Knob' | 'Pull' | 'None';
 export type DoorLeafStyle = 'Flush' | 'Panelled' | 'Glazed' | 'Boarded';
 export type BoardDirection = 'Vertical' | 'Horizontal';
