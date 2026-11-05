@@ -66,6 +66,11 @@ jobs:
             - name: Boot the database
               run: docker compose up -d --wait db
 
+            # From this branch's Dockerfile: without it, compose takes the published image, which may lack what the
+            # tests need (e.g. poppler-utils for the PDF pages).
+            - name: Build the backend image
+              run: docker compose build backend
+
             # One-off backend container with the host vendor/ bind-mounted, database izbik_test.
             - name: Run PHPUnit
               run: make test-backend
