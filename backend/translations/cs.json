@@ -1,0 +1,32 @@
+{
+    "mail": {
+        "greeting": "Dobrý den,",
+        "linkFallback": "Pokud tlačítko nefunguje, otevřete tento odkaz:",
+        "passwordReset": {
+            "subject": "Obnovení hesla k Izbiku",
+            "title": "Obnovte si heslo",
+            "intro": "Někdo požádal o obnovení hesla k vašemu účtu v Izbiku. Nové heslo si zvolte přes odkaz níže.",
+            "button": "Zvolit nové heslo",
+            "footnote": "Odkaz funguje jednou, po dobu {minutes} minut. Pokud jste o obnovení nežádali, tento e-mail ignorujte; vaše heslo zůstane beze změny."
+        },
+        "emailVerification": {
+            "subject": "Potvrzení e-mailu pro Izbik",
+            "title": "Potvrďte svůj e-mail",
+            "intro": "Potvrďte prosím přes odkaz níže, že je to adresa vašeho účtu v Izbiku.",
+            "button": "Potvrdit e-mail",
+            "footnote": "Odkaz funguje jednou, po dobu {hours} hodin. Pokud jste si účet v Izbiku nezaložili, tento e-mail ignorujte."
+        }
+    },
+    "names": {
+        "sharedVersion": "Sdíleno: {name}",
+        "variant": "Varianta {number}",
+        "copy": "{name} (kopie)"
+    },
+    "cutList": {
+        "definitionGone": "Popis nábytku už neexistuje.",
+        "noMaterial": "Bez materiálu"
+    },
+    "schedules": {
+        "notInRoom": "Mimo místnosti"
+    }
+}

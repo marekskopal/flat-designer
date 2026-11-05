@@ -4,6 +4,41 @@
  "definition": {
   "format": 1,
   "catalogue": "outdoor",
+  "translations": {
+   "cs": {
+    "name": "Zahradní domek",
+    "description": "Dřevěný zahradní domek se sedlovou střechou, hřeben po šířce: obložené stěny (štíty z prken stupňovitě až k hřebeni), dveře vpředu a střešní roviny přesahující dokola. Výška je k hřebeni.",
+    "parameters": {
+     "pitch": "Sklon střechy",
+     "overhang": "Přesah střechy",
+     "doorWidth": "Šířka dveří"
+    },
+    "options": {
+     "pitch": {
+      "20": "20°",
+      "25": "25°",
+      "30": "30°",
+      "35": "35°",
+      "40": "40°",
+      "45": "45°"
+     }
+    },
+    "slots": {
+     "walls": "Obklad",
+     "roof": "Střecha",
+     "door": "Dveře"
+    },
+    "parts": {
+     "Front wall": "Přední stěna",
+     "Back wall": "Zadní stěna",
+     "End wall": "Boční stěna",
+     "Gable board": "Prkno štítu",
+     "Door": "Dveře",
+     "Front roof": "Přední střešní rovina",
+     "Back roof": "Zadní střešní rovina"
+    }
+   }
+  },
   "size": {
    "width": 2500,
    "depth": 2000,

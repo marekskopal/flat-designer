@@ -9,15 +9,18 @@ import {DefinitionScheduleSettings, ElectricalCategory} from '@app/models/electr
 export type DefinitionExpression = string | number;
 
 /** A field of a list parameter's items: like a parameter, but never a list; an `optional` one may be null. */
+/** A select's options named in the language shown, put in by `localizeDefinition()` (never stored). */
+export type OptionLabels = Readonly<Record<string, string>>;
+
 export type DefinitionField =
     | {key: string; label?: string; type: 'int'; default?: number | null; min?: number; max?: number; unit?: string; optional?: boolean}
     | {key: string; label?: string; type: 'bool'; default?: boolean | null; optional?: boolean}
-    | {key: string; label?: string; type: 'select'; default?: string | null; options: string[]; optional?: boolean};
+    | {key: string; label?: string; type: 'select'; default?: string | null; options: string[]; optional?: boolean; optionLabels?: OptionLabels};
 
 export type DefinitionParameter =
     | {key: string; label?: string; type: 'int'; default: number; min?: number; max?: number; unit?: string}
     | {key: string; label?: string; type: 'bool'; default: boolean}
-    | {key: string; label?: string; type: 'select'; default: string; options: string[]}
+    | {key: string; label?: string; type: 'select'; default: string; options: string[]; optionLabels?: OptionLabels}
     /** The id of an image file of the project (see `ProjectFile`); no default. */
     | {key: string; label?: string; type: 'image'; default?: null}
     | {
@@ -76,21 +79,10 @@ export type FurnitureCatalogue =
     | 'outdoor'
     | 'roof';
 
-/** The catalogues in the Add library's order. */
-export const CatalogueLabels: Readonly<Record<FurnitureCatalogue, string>> = {
-    kitchen: 'Kitchen',
-    storage: 'Storage',
-    seating: 'Seating',
-    tables: 'Tables',
-    bedroom: 'Bedroom',
-    bathroom: 'Bathroom',
-    lighting: 'Lighting',
-    electrical: 'Sockets & services',
-    decor: 'Decor',
-    building: 'Built-ins',
-    outdoor: 'Outdoor',
-    roof: 'On the roof',
-};
+/** The catalogues in the Add library's order, named by `enums.catalogue.<catalogue>`. */
+export const FurnitureCatalogues: readonly FurnitureCatalogue[] = [
+    'kitchen', 'storage', 'seating', 'tables', 'bedroom', 'bathroom', 'lighting', 'electrical', 'decor', 'building', 'outdoor', 'roof',
+];
 
 export interface FurnitureDefinitionBody {
     format: 1;
@@ -100,6 +92,8 @@ export interface FurnitureDefinitionBody {
     category?: ElectricalCategory;
     /** What the electrical schedule counts and lists (with a category); the evaluators do not read it. */
     schedule?: DefinitionScheduleSettings;
+    /** Its texts in other languages (it is English itself); the evaluators do not read it (`DefinitionTranslations`). */
+    translations?: Partial<Record<string, DefinitionTranslation>>;
     /** Size of a new item (mm). */
     size?: {width: number; depth: number; height: number};
     parameters?: DefinitionParameter[];
@@ -107,6 +101,19 @@ export interface FurnitureDefinitionBody {
     derived?: Record<string, DefinitionExpression>;
     materialSlots?: MaterialSlot[];
     parts: DefinitionPart[];
+}
+
+/**
+ * A definition's texts in one language: parameters by key (a list's field by `list.field`), options by select, slots by
+ * key, parts by English name.
+ */
+export interface DefinitionTranslation {
+    name?: string;
+    description?: string;
+    parameters?: Record<string, string>;
+    options?: Record<string, Record<string, string>>;
+    slots?: Record<string, string>;
+    parts?: Record<string, string>;
 }
 
 export type FurnitureScope = 'global' | 'user' | 'project';
@@ -152,5 +159,3 @@ export interface FurnitureValidation {
     valid: boolean;
     error: FurnitureValidationError | null;
 }
-
-export const ScopeLabels: Record<FurnitureScope, string> = {global: 'Global', user: 'My library', project: 'This project'};

@@ -4,6 +4,26 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Otevřený regál",
+    "description": "Knihovna z polic mezi dvěma boky, volitelně s tenkou zadní stěnou.",
+    "parameters": {
+     "t": "Tloušťka desek",
+     "shelves": "Police",
+     "back": "Zadní stěna"
+    },
+    "slots": {
+     "carcass": "Desky",
+     "back": "Zadní stěna"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Shelf": "Police",
+     "Back": "Záda"
+    }
+   }
+  },
   "size": {
    "width": 800,
    "depth": 300,

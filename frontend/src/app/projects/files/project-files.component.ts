@@ -1,9 +1,12 @@
-import {DatePipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, signal} from '@angular/core';
+import {formatNumber} from '@angular/common';
+import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, LOCALE_ID,signal} from '@angular/core';
 import {DomSanitizer, SafeResourceUrl} from '@angular/platform-browser';
 import {ProjectFile} from '@app/models/project';
 import {AlertService} from '@app/services/alert.service';
 import {ProjectService} from '@app/services/project.service';
+import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
+import {PluralPipe, pluralText} from '@app/shared/i18n/plural.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** Types the browser can show inline; everything else is only downloaded. */
 const PreviewableTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf'];
@@ -19,13 +22,15 @@ interface Preview {
 /** Files of a project: drop or pick files to upload, preview images and PDFs, download, delete. */
 @Component({
     selector: 'fd-project-files',
-    imports: [DatePipe],
+    imports: [DateTextPipe, PluralPipe, TranslatePipe],
     templateUrl: './project-files.component.html',
     styleUrl: './project-files.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {'(document:keydown.escape)': 'closePreview()'},
 })
 export class ProjectFilesComponent {
+    private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
     public readonly projectId = input.required<number>();
 
     private readonly projectService = inject(ProjectService);
@@ -54,7 +59,7 @@ export class ProjectFilesComponent {
             return 'PDF';
         }
         const extension = file.filename.includes('.') ? file.filename.split('.').pop() : '';
-        return (extension ?? '').slice(0, 4).toUpperCase() || 'FILE';
+        return (extension ?? '').slice(0, 4).toUpperCase() || this.translate.instant('files.kindOther');
     }
 
     protected formatSize(bytes: number): string {
@@ -62,9 +67,9 @@ export class ProjectFilesComponent {
             return `${bytes} B`;
         }
         if (bytes < 1024 * 1024) {
-            return `${Math.round(bytes / 1024)} kB`;
+            return `${formatNumber(bytes / 1024, this.locale, '1.0-0')} kB`;
         }
-        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        return `${formatNumber(bytes / 1024 / 1024, this.locale, '1.1-1')} MB`;
     }
 
     protected onPick(event: Event): void {
@@ -107,7 +112,7 @@ export class ProjectFilesComponent {
     }
 
     protected async delete(file: ProjectFile): Promise<void> {
-        if (!confirm(`Delete "${file.filename}"?`)) {
+        if (!confirm(this.translate.instant('files.confirmDelete', {name: file.filename}))) {
             return;
         }
         try {
@@ -139,7 +144,10 @@ export class ProjectFilesComponent {
             }
         }
         if (files.length > 0) {
-            this.alerts.success(files.length === 1 ? 'File uploaded.' : `${files.length} files processed.`);
+            const done = files.length === 1
+                ? this.translate.instant('files.uploaded')
+                : pluralText(this.translate, this.locale, 'files.processed', files.length);
+            this.alerts.success(done);
         }
     }
 

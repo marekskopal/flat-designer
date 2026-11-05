@@ -11,6 +11,25 @@
    ]
   },
   "catalogue": "electrical",
+  "translations": {
+   "cs": {
+    "name": "Elektrická zásuvka (Schuko)",
+    "description": "Zapuštěná nástěnná zásuvka, jedna až čtyři vedle sebe v jednom rámečku (šířka 71 mm na zásuvku plus 9). Výška osazení: její spodní hrana, obvykle 300 mm (nad pracovní deskou 1100).",
+    "parameters": {
+     "gangs": "Počet zásuvek"
+    },
+    "slots": {
+     "frame": "Rámeček",
+     "insert": "Vložka",
+     "pins": "Otvory pro kolíky"
+    },
+    "parts": {
+     "Frame": "Rámeček",
+     "Socket": "Zásuvka",
+     "Pin hole": "Otvor pro kolík"
+    }
+   }
+  },
   "size": {
    "width": 80,
    "depth": 10,

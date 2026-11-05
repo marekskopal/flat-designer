@@ -26,7 +26,21 @@ export default tseslint.config(
             'no-continue': 'off',
             'no-return-assign': 'off',
             'class-methods-use-this': 'off',
-            'no-restricted-syntax': ['error', 'ForInStatement', 'LabeledStatement', 'WithStatement'],
+            'no-restricted-syntax': [
+                'error',
+                'ForInStatement',
+                'LabeledStatement',
+                'WithStatement',
+                // Texts people read go through the translator (src/i18n), never as literals.
+                {
+                    selector: "CallExpression[callee.object.property.name='alerts'] > :matches(Literal[value=/[A-Za-z]{2}/], TemplateLiteral)",
+                    message: 'Toasts are translated: pass translate.instant(key) instead of a literal text.',
+                },
+                {
+                    selector: "CallExpression[callee.name='confirm'] > :matches(Literal, TemplateLiteral)",
+                    message: 'Confirmations are translated: pass translate.instant(key) instead of a literal text.',
+                },
+            ],
             'no-param-reassign': 'off',
             'max-len': ['error', 150],
             'simple-import-sort/imports': 'error',

@@ -1,40 +1,40 @@
 <div class="page">
     <div class="page__header">
-        <h1 class="page__title">Users</h1>
+        <h1 class="page__title">{{ 'admin.title' | translate }}</h1>
         @if (!adding()) {
-            <button type="button" class="btn btn--primary" (click)="adding.set(true)">Add user</button>
+            <button type="button" class="btn btn--primary" (click)="adding.set(true)">{{ 'admin.add' | translate }}</button>
         }
     </div>
 
     @if (adding()) {
         <form class="card form add-user" [formGroup]="addForm" (ngSubmit)="add()">
-            <h2 class="card__title">Add user</h2>
+            <h2 class="card__title">{{ 'admin.add' | translate }}</h2>
             <div class="add-user__fields">
                 <label class="field">
-                    <span class="field__label">Name</span>
+                    <span class="field__label">{{ 'common.name' | translate }}</span>
                     <input class="input" type="text" formControlName="name" autocomplete="off" />
                 </label>
                 <label class="field">
-                    <span class="field__label">Email</span>
+                    <span class="field__label">{{ 'common.email' | translate }}</span>
                     <input class="input" type="email" formControlName="email" autocomplete="off" />
                 </label>
                 <label class="field">
-                    <span class="field__label">Password</span>
+                    <span class="field__label">{{ 'common.password' | translate }}</span>
                     <input class="input" type="password" formControlName="password" autocomplete="new-password" />
-                    <span class="field__hint">{{ passwordHint }} Pass it on to them.</span>
+                    <span class="field__hint">{{ 'auth.passwordHint' | translate }} {{ 'admin.passOn' | translate }}</span>
                 </label>
                 <label class="field">
-                    <span class="field__label">Role</span>
+                    <span class="field__label">{{ 'admin.role' | translate }}</span>
                     <select class="input" formControlName="role">
                         @for (role of roles; track role) {
-                            <option [value]="role">{{ role }}</option>
+                            <option [value]="role">{{ 'admin.roles.' + role | translate }}</option>
                         }
                     </select>
                 </label>
             </div>
             <div class="form__actions">
-                <button type="button" class="btn btn--ghost" (click)="cancelAdd()">Cancel</button>
-                <button type="submit" class="btn btn--primary" [disabled]="addForm.invalid || saving()">Add</button>
+                <button type="button" class="btn btn--ghost" (click)="cancelAdd()">{{ 'common.cancel' | translate }}</button>
+                <button type="submit" class="btn btn--primary" [disabled]="addForm.invalid || saving()">{{ 'common.add' | translate }}</button>
             </div>
         </form>
     }
@@ -43,12 +43,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Last sign-in</th>
-                    <th>Joined</th>
-                    <th><span class="visually-hidden">Actions</span></th>
+                    <th>{{ 'common.name' | translate }}</th>
+                    <th>{{ 'common.email' | translate }}</th>
+                    <th>{{ 'admin.role' | translate }}</th>
+                    <th>{{ 'admin.lastSignIn' | translate }}</th>
+                    <th>{{ 'admin.joined' | translate }}</th>
+                    <th><span class="visually-hidden">{{ 'admin.actions' | translate }}</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -58,26 +58,26 @@
                         <td class="table__strong">
                             {{ user.name }}
                             @if (isSelf) {
-                                <span class="badge">you</span>
+                                <span class="badge">{{ 'admin.you' | translate }}</span>
                             }
                         </td>
                         <td>{{ user.email }}</td>
                         <td>
-                            <select class="input input--compact" [value]="user.role" [attr.aria-label]="'Role of ' + user.name" (change)="changeRole(user, $event)">
+                            <select class="input input--compact" [value]="user.role" [attr.aria-label]="'admin.roleOf' | translate: {name: user.name}" (change)="changeRole(user, $event)">
                                 @for (role of roles; track role) {
-                                    <option [value]="role" [selected]="role === user.role">{{ role }}</option>
+                                    <option [value]="role" [selected]="role === user.role">{{ 'admin.roles.' + role | translate }}</option>
                                 }
                             </select>
                         </td>
-                        <td class="table__muted">{{ user.lastLoginAt ? (user.lastLoginAt | date: 'd MMM y, HH:mm') : 'never' }}</td>
-                        <td class="table__muted">{{ user.createdAt | date: 'd MMM y' }}</td>
+                        <td class="table__muted">{{ user.lastLoginAt ? (user.lastLoginAt | dateText: 'dateTime') : ('admin.never' | translate) }}</td>
+                        <td class="table__muted">{{ user.createdAt | dateText }}</td>
                         <td class="table__actions">
                             @if (!isSelf) {
                                 <button type="button" class="btn btn--ghost" [attr.aria-expanded]="passwordFor() === user.id" (click)="editPassword(user)">
-                                    Set password
+                                    {{ 'admin.setPassword' | translate }}
                                 </button>
                             }
-                            <button type="button" class="btn btn--ghost btn--danger" [disabled]="isSelf" (click)="delete(user)">Delete</button>
+                            <button type="button" class="btn btn--ghost btn--danger" [disabled]="isSelf" (click)="delete(user)">{{ 'common.delete' | translate }}</button>
                         </td>
                     </tr>
                     @if (passwordFor() === user.id) {
@@ -85,19 +85,19 @@
                             <td colspan="6">
                                 <form class="password-row" [formGroup]="passwordForm" (ngSubmit)="setPassword(user)">
                                     <label class="field password-row__field">
-                                        <span class="field__label">New password for {{ user.name }}</span>
+                                        <span class="field__label">{{ 'admin.newPasswordFor' | translate: {name: user.name} }}</span>
                                         <input class="input" type="password" formControlName="password" autocomplete="new-password" />
-                                        <span class="field__hint">{{ passwordHint }} It signs them out everywhere.</span>
+                                        <span class="field__hint">{{ 'auth.passwordHint' | translate }} {{ 'admin.signsOut' | translate }}</span>
                                     </label>
-                                    <button type="button" class="btn btn--ghost" (click)="editPassword(null)">Cancel</button>
-                                    <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || saving()">Set password</button>
+                                    <button type="button" class="btn btn--ghost" (click)="editPassword(null)">{{ 'common.cancel' | translate }}</button>
+                                    <button type="submit" class="btn btn--primary" [disabled]="passwordForm.invalid || saving()">{{ 'admin.setPassword' | translate }}</button>
                                 </form>
                             </td>
                         </tr>
                     }
                 } @empty {
                     <tr>
-                        <td colspan="6" class="table__empty">{{ loading() ? 'Loading…' : 'No users.' }}</td>
+                        <td colspan="6" class="table__empty">{{ (loading() ? 'common.loading' : 'admin.none') | translate }}</td>
                     </tr>
                 }
             </tbody>

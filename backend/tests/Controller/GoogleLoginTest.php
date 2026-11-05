@@ -31,9 +31,20 @@ final class GoogleLoginTest extends IntegrationTestCase
 		self::assertFalse($body['hasPassword']);
 		self::assertTrue($body['google']);
 		self::assertTrue($body['emailVerified']);
+		self::assertSame('en', $body['locale']);
 
 		$passwordLogin = $this->request('POST', Routes::AuthenticationLogin->value, ['email' => 'jane@example.com', 'password' => '']);
 		self::assertSame(401, $passwordLogin->getStatusCode());
+	}
+
+	public function testANewAccountTakesTheBrowsersLanguage(): void
+	{
+		AppHarness::googleAuth()->identities['token-a'] = new GoogleIdentity('google-1', 'jana@example.com', 'Jana');
+
+		$response = $this->request('POST', Routes::AuthenticationGoogleLogin->value, ['idToken' => 'token-a', 'locale' => 'cs']);
+
+		$me = $this->request('GET', Routes::CurrentUser->value, bearerToken: self::stringField($this->jsonBody($response)['accessToken']));
+		self::assertSame('cs', $this->jsonBody($me)['locale']);
 	}
 
 	public function testSignInAgainFindsTheAccountByGoogleIdEvenWithAnotherEmail(): void

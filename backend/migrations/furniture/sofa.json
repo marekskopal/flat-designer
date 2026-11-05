@@ -4,6 +4,29 @@
  "definition": {
   "format": 1,
   "catalogue": "seating",
+  "translations": {
+   "cs": {
+    "name": "Pohovka",
+    "description": "Čalouněná pohovka: podstava na nohách, sedací a opěrné polštáře pro každé místo a volitelné područky.",
+    "parameters": {
+     "seats": "Místa k sezení",
+     "arms": "Područky",
+     "seatHeight": "Výška sedáku",
+     "legHeight": "Nohy"
+    },
+    "slots": {
+     "upholstery": "Čalounění",
+     "legs": "Nohy"
+    },
+    "parts": {
+     "Base": "Podstava",
+     "Seat cushion": "Sedací polštář",
+     "Back cushion": "Opěrný polštář",
+     "Arm": "Područka",
+     "Leg": "Noha"
+    }
+   }
+  },
   "size": {
    "width": 2100,
    "depth": 900,

@@ -12,6 +12,7 @@ use Izbik\Service\Mail\EmailVerificationEmail;
 use Izbik\Service\Mail\MailConfig;
 use Izbik\Service\Mail\MailOutbox;
 use Izbik\Service\Provider\UserProvider;
+use Izbik\Service\Translator\Translator;
 use RuntimeException;
 use SensitiveParameter;
 
@@ -27,6 +28,7 @@ final readonly class EmailVerificationService
 	private const int MaxPerHour = 5;
 
 	public function __construct(
+		private Translator $translator,
 		private EmailVerificationTokenRepository $tokenRepository,
 		private UserProvider $userProvider,
 		private MailOutbox $mailOutbox,
@@ -58,8 +60,8 @@ final readonly class EmailVerificationService
 		$this->tokenRepository->persist($verificationToken);
 
 		$this->mailOutbox->queue(EmailVerificationEmail::create(
-			recipientEmail: $user->email,
-			userName: $user->name,
+			translator: $this->translator,
+			user: $user,
 			verifyUrl: rtrim($appUrl, '/') . '/verify-email?token=' . $token,
 			lifetimeHours: self::LifetimeHours,
 		));

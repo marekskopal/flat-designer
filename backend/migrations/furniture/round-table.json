@@ -4,6 +4,32 @@
  "definition": {
   "format": 1,
   "catalogue": "tables",
+  "translations": {
+   "cs": {
+    "name": "Kulatý stůl",
+    "description": "Kulatý odkládací, konferenční nebo jídelní stůl: kulatá deska na centrální noze s patkou, nebo na čtyřech nohách.",
+    "parameters": {
+     "base": "Podnož",
+     "top": "Tloušťka desky"
+    },
+    "options": {
+     "base": {
+      "pedestal": "centrální noha",
+      "legs": "čtyři nohy"
+     }
+    },
+    "slots": {
+     "top": "Deska",
+     "base": "Podnož"
+    },
+    "parts": {
+     "Top": "Deska",
+     "Pedestal": "Centrální noha",
+     "Foot disc": "Patka",
+     "Leg": "Noha"
+    }
+   }
+  },
   "size": {
    "width": 560,
    "depth": 560,

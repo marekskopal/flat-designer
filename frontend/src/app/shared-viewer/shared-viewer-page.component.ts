@@ -8,12 +8,13 @@ import {ExportComponent} from '@app/export/export.component';
 import {commentPinsOf} from '@app/models/comment';
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {hasSiteLocation, Scene, SunTime} from '@app/models/scene';
-import {ShareView, ShareViewLabels} from '@app/models/share';
+import {ShareView} from '@app/models/share';
 import {CommentService} from '@app/services/comment.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ShareService} from '@app/services/share.service';
 import {StorageService} from '@app/services/storage.service';
 import {IconComponent, IconName} from '@app/shared/icon/icon.component';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
 import {CommentPin, CommentPoint} from '@app/viewer/engine/comments';
 import {hasElectricalPoints} from '@app/viewer/engine/electrical';
 import {MeasureStatus} from '@app/viewer/engine/measure';
@@ -26,6 +27,7 @@ import {SunTimeComponent} from '@app/viewer/sun-time.component';
 import {ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
 import {ShortcutsComponent} from '@app/viewer-page/shortcuts.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** Section heights offered by the slider (mm); the top value means "no cut" (as on the viewer page). */
 const SectionMin = 900;
@@ -36,7 +38,13 @@ const GuestNameKey = 'fd.guestName';
 /** The panels of the rail a link may offer. */
 type PanelKey = 'comments' | 'variants' | 'export' | 'keys';
 
-const PanelTitles: Record<PanelKey, string> = {comments: 'Comments', variants: 'Variants', export: 'Export', keys: 'Keyboard shortcuts'};
+/** The panels' titles (translation keys). */
+const PanelTitles: Record<PanelKey, string> = {
+    comments: 'viewer.panel.comments',
+    variants: 'viewer.panel.variants',
+    export: 'viewer.panel.export',
+    keys: 'viewer.panel.keys',
+};
 
 /**
  * A share link opened by a guest (route `s/:token`, no sign-in): one floor of a saved version, view only. The link
@@ -57,6 +65,8 @@ const PanelTitles: Record<PanelKey, string> = {comments: 'Comments', variants: '
         SunTimeComponent,
         IconComponent,
         ShortcutsComponent,
+        LanguageSwitchComponent,
+        TranslatePipe,
     ],
     templateUrl: './shared-viewer-page.component.html',
     // The viewer page's layout: the rail, the top bar, the dock and their panels.
@@ -71,7 +81,12 @@ export class SharedViewerPageComponent {
     protected readonly railWidth = 56;
     protected readonly sectionMin = SectionMin;
     protected readonly sectionMax = SectionMax;
-    protected readonly viewLabels = ShareViewLabels;
+    /** The keys of the views' names. */
+    protected readonly viewLabels: Record<ShareView, string> = {
+        overview: 'share.views.overview',
+        top: 'share.views.top',
+        walkthrough: 'share.views.walkthrough',
+    };
     protected readonly viewIcons: Record<ShareView, IconName> = {overview: 'cube', top: 'plan', walkthrough: 'walk'};
     /** The rail's panel shown beside it. */
     protected readonly panel = signal<PanelKey | null>(null);
@@ -83,6 +98,7 @@ export class SharedViewerPageComponent {
     protected readonly menu = signal<'display' | null>(null);
 
     private readonly shares = inject(ShareService);
+    private readonly translate = inject(TranslateService);
     private readonly modelAssets = inject(ModelAssetService);
     /** The 3D models of the shared scene, through the share link (no sign-in). */
     protected readonly modelFetcher = (modelId: number): Promise<ArrayBuffer> => this.modelAssets.sharedContent(this.token(), modelId);
@@ -112,7 +128,7 @@ export class SharedViewerPageComponent {
         if (error === undefined) {
             return null;
         }
-        return error instanceof HttpErrorResponse ? errorMessage(error) : 'Could not load the shared view.';
+        return error instanceof HttpErrorResponse ? errorMessage(error) : this.translate.instant('sharedViewer.loadFailed');
     });
     protected readonly views = computed(() => this.settings()?.views ?? []);
     protected readonly hasVariants = computed(() => (this.scene()?.variantSets ?? []).length > 0);
@@ -177,30 +193,30 @@ export class SharedViewerPageComponent {
     protected readonly commentPins = computed((): CommentPin[] => commentPinsOf(this.comments(), this.activeCommentId(), this.commentPoint()));
     /** The guest may write once the link allows it and they have given a name. */
     protected readonly canComment = computed(() => this.commentAccess() === 'write' && this.guestName().trim() !== '');
-    /** The rail's buttons: the panels the link offers. */
+    /** The rail's buttons (labels are translation keys): the panels the link offers. */
     protected readonly railItems = computed((): {key: PanelKey; label: string; icon: IconName; badge: number}[] => {
         const items: {key: PanelKey; label: string; icon: IconName; badge: number}[] = [];
         if (this.commentAccess() !== 'hidden') {
             const open = this.comments().filter((c) => c.parentId === null && !c.resolved).length;
-            items.push({key: 'comments', label: 'Comments', icon: 'comment', badge: open});
+            items.push({key: 'comments', label: 'viewer.rail.comments', icon: 'comment', badge: open});
         }
         if (this.hasVariants()) {
-            items.push({key: 'variants', label: 'Variants', icon: 'variants', badge: 0});
+            items.push({key: 'variants', label: 'viewer.rail.variants', icon: 'variants', badge: 0});
         }
         if (this.settings()?.exports !== false && this.scene() !== null) {
-            items.push({key: 'export', label: 'Export drawings & 3D', icon: 'download', badge: 0});
+            items.push({key: 'export', label: 'viewer.rail.export', icon: 'download', badge: 0});
         }
         return items;
     });
-    /** The status line: what the tool at hand does. */
+    /** The status line (a translation key): what the tool at hand does. */
     protected readonly statusHint = computed((): string | null => {
         if (this.settings() === null || this.measureStatus() !== null || this.menu() !== null || this.walkPrompt()) {
             return null;
         }
         if (this.commenting()) {
-            return 'Click a surface to pin a comment there · Esc cancels';
+            return 'viewer.hints.comment';
         }
-        return this.activeView() === 'top' ? 'Drag to pan · scroll to zoom' : 'Drag to orbit · right-drag to pan · scroll to zoom';
+        return this.activeView() === 'top' ? 'sharedViewer.hints.plan' : 'sharedViewer.hints.orbit';
     });
 
     private readonly viewer = viewChild.required(ViewerComponent);

@@ -4,6 +4,39 @@
  "definition": {
   "format": 1,
   "catalogue": "bathroom",
+  "translations": {
+   "cs": {
+    "name": "Walk-in sprcha s dešťovou hlavicí",
+    "description": "Walk-in sprcha: pevná skleněná stěna vpředu od stěnového profilu, dešťová hlavice na tyči ze stropu, baterie na zadní stěně a podél ní liniový žlab. Výšku nastavte ke stropu.",
+    "parameters": {
+     "screen": "Délka skleněné stěny",
+     "screenSide": "Sklo od strany",
+     "rod": "Délka tyče",
+     "head": "Průměr dešťové hlavice",
+     "glassHeight": "Výška skla"
+    },
+    "options": {
+     "screenSide": {
+      "left": "levé",
+      "right": "pravé"
+     }
+    },
+    "slots": {
+     "profile": "Profil",
+     "metal": "Armatury"
+    },
+    "parts": {
+     "Glass": "Sklo",
+     "Wall profile": "Stěnový profil",
+     "Stay": "Vzpěra",
+     "Drain": "Žlab",
+     "Rod": "Tyč",
+     "Rain head": "Dešťová hlavice",
+     "Mixer": "Baterie",
+     "Mixer lever": "Páka baterie"
+    }
+   }
+  },
   "size": {
    "width": 1200,
    "depth": 900,

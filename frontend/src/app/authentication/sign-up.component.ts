@@ -5,22 +5,24 @@ import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {GoogleSignInComponent} from '@app/authentication/google-sign-in.component';
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
-import {PasswordHint, passwordValidator} from '@app/core/validators/password.validator';
+import {passwordValidator} from '@app/core/validators/password.validator';
 import {AuthenticationOptions} from '@app/models/authentication';
 import {AuthenticationService} from '@app/services/authentication.service';
+import {LanguageSwitchComponent} from '@app/shared/language-switch/language-switch.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 @Component({
     selector: 'fd-sign-up',
-    imports: [GoogleSignInComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink],
+    imports: [GoogleSignInComponent, LanguageSwitchComponent, NgOptimizedImage, ReactiveFormsModule, RouterLink, TranslatePipe],
     templateUrl: './sign-up.component.html',
     styleUrl: './auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SignUpComponent {
+    private readonly translate = inject(TranslateService);
     private readonly auth = inject(AuthenticationService);
     private readonly router = inject(Router);
 
-    protected readonly passwordHint = PasswordHint;
     protected readonly saving = signal(false);
     protected readonly googleBusy = signal(false);
     protected readonly error = signal<string | null>(null);
@@ -49,10 +51,10 @@ export class SignUpComponent {
             // A 401 from the follow-up login means the email was registered already (with another password).
             this.error.set(
                 e instanceof HttpErrorResponse && e.status === 401
-                    ? 'Could not sign you in. If you already have an account, sign in instead.'
+                    ? this.translate.instant('auth.signUp.existing')
                     : e instanceof HttpErrorResponse
                         ? errorMessage(e)
-                        : 'Sign-up failed.',
+                        : this.translate.instant('auth.signUp.failed'),
             );
         } finally {
             this.saving.set(false);
@@ -66,7 +68,7 @@ export class SignUpComponent {
             await this.auth.googleLogin(idToken);
             await this.router.navigateByUrl('/');
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Google sign-up failed.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.signUp.googleFailed'));
         } finally {
             this.googleBusy.set(false);
         }

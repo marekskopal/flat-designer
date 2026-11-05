@@ -4,6 +4,22 @@
  "definition": {
   "format": 1,
   "catalogue": "roof",
+  "translations": {
+   "cs": {
+    "name": "Střešní stupínek",
+    "description": "Stupínek pro chůzi po šikmé střeše: mřížkový nášlap na dvou bočních konzolách, vyrovnaný podle sklonu střechy. Umístěte ho s onRoof, přední stranou po spádu dolů.",
+    "parameters": {
+     "pitch": "Sklon střechy"
+    },
+    "slots": {
+     "metal": "Kov"
+    },
+    "parts": {
+     "Bracket": "Konzola",
+     "Tread": "Nášlap"
+    }
+   }
+  },
   "size": {
    "width": 420,
    "depth": 250,

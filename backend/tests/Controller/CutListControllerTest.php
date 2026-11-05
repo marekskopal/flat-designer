@@ -84,6 +84,31 @@ final class CutListControllerTest extends EditorTestCase
 		self::assertSame(404, $this->request('GET', $this->path(false), authenticatedAs: Fixture::createUser())->getStatusCode());
 	}
 
+	public function testPartsAreNamedInTheRequestsLanguage(): void
+	{
+		$definitionId = $this->defineFurniture([
+			'translations' => ['cs' => ['name' => 'Regál', 'parts' => ['Side' => 'Bok', 'Shelf' => 'Police']]],
+		]);
+		$this->create('items', ['kind' => 'Custom', 'definitionId' => $definitionId, 'name' => 'Regál A']);
+
+		$czech = $this->jsonBody(
+			$this->request('GET', $this->path(false), authenticatedAs: $this->user, headers: ['Accept-Language' => 'cs']),
+		);
+		$english = $this->cutList();
+
+		$parts = static function (array $list): array {
+			$names = [];
+			foreach (self::rows($list['boards']) as $board) {
+				self::assertIsArray($board['parts']);
+				$names = [...$names, ...$board['parts']];
+			}
+
+			return $names;
+		};
+		self::assertEqualsCanonicalizing(['Bok', 'Police'], $parts($czech));
+		self::assertEqualsCanonicalizing(['Side', 'Shelf'], $parts($english));
+	}
+
 	public function testItemsThatDoNotFitAreSkipped(): void
 	{
 		$definitionId = $this->defineFurniture();
@@ -133,12 +158,13 @@ final class CutListControllerTest extends EditorTestCase
 		);
 	}
 
-	private function defineFurniture(): int
+	/** @param array<string, mixed> $extra keys added to the definition */
+	private function defineFurniture(array $extra = []): int
 	{
 		$response = $this->request(
 			'POST',
 			Routes::FurnitureDefinitions->value,
-			['name' => 'Shelf', 'definition' => self::Definition],
+			['name' => 'Shelf', 'definition' => self::Definition + $extra],
 			$this->user,
 		);
 		self::assertSame(201, $response->getStatusCode(), (string) $response->getBody());

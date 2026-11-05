@@ -13,15 +13,18 @@ use Izbik\Dto\RoomDto;
 use Izbik\Dto\RoomElectricalDto;
 use Izbik\Dto\SceneDto;
 use Izbik\Model\Entity\Enum\ItemKindEnum;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Entity\Floor;
 use Izbik\Model\Entity\Project;
 use Izbik\Model\Repository\FloorRepository;
 use Izbik\Service\Editor\Geometry\PlanMath;
 use Izbik\Service\Furniture\DefinitionCategoryEnum;
 use Izbik\Service\Furniture\DefinitionSchedule;
+use Izbik\Service\Furniture\DefinitionTranslations;
 use Izbik\Service\Furniture\DefinitionValidator;
 use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\Provider\SceneProvider;
+use Izbik\Service\Translator\Translator;
 use stdClass;
 use const JSON_THROW_ON_ERROR;
 
@@ -34,29 +37,37 @@ use const JSON_THROW_ON_ERROR;
  */
 final readonly class ElectricalScheduleService
 {
-	private const string Unassigned = 'Not in a room';
-
-	public function __construct(private SceneProvider $sceneProvider, private FloorRepository $floorRepository)
+	public function __construct(
+		private SceneProvider $sceneProvider,
+		private FloorRepository $floorRepository,
+		private Translator $translator,
+	)
 	{
 	}
 
-	public function forProject(Project $project): ElectricalScheduleDto
+	/** `$locale` names the definitions by their `translations`. */
+	public function forProject(Project $project, LocaleEnum $locale = LocaleEnum::En): ElectricalScheduleDto
 	{
-		return self::schedule(array_map($this->floor(...), $this->floorRepository->findByProject($project->id)));
+		return self::schedule(
+			array_map(
+				fn (Floor $floor): FloorElectricalDto => $this->floor($floor, $locale),
+				$this->floorRepository->findByProject($project->id),
+			),
+		);
 	}
 
-	public function forFloor(Floor $floor): ElectricalScheduleDto
+	public function forFloor(Floor $floor, LocaleEnum $locale = LocaleEnum::En): ElectricalScheduleDto
 	{
-		return self::schedule([$this->floor($floor)]);
+		return self::schedule([$this->floor($floor, $locale)]);
 	}
 
-	private function floor(Floor $floor): FloorElectricalDto
+	private function floor(Floor $floor, LocaleEnum $locale): FloorElectricalDto
 	{
 		$scene = $this->sceneProvider->getScene($floor);
 		$rooms = $scene->rooms;
 		usort($rooms, static fn (RoomDto $a, RoomDto $b): int => strnatcmp($a->code, $b->code));
 
-		$definitions = self::definitions($scene);
+		$definitions = self::definitions($scene, $locale);
 		$outlines = [];
 		foreach ($rooms as $room) {
 			$outlines[$room->id] = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room->polygon);
@@ -105,7 +116,7 @@ final readonly class ElectricalScheduleService
 			$rooms,
 		);
 		if (isset($rows[0])) {
-			$schedule[] = self::room(null, null, self::Unassigned, $rows[0]);
+			$schedule[] = self::room(null, null, $this->translator->translate('schedules.notInRoom', $locale), $rows[0]);
 		}
 
 		return new FloorElectricalDto(
@@ -124,15 +135,20 @@ final readonly class ElectricalScheduleService
 	 *
 	 * @return array<int, array{string, array<mixed>, DefinitionCategoryEnum, DefinitionSchedule}> name, body, category, settings
 	 */
-	private static function definitions(SceneDto $scene): array
+	private static function definitions(SceneDto $scene, LocaleEnum $locale): array
 	{
 		$definitions = [];
 		foreach ($scene->definitions as $definition) {
 			$body = JsonDecoder::decodeObject(json_encode($definition->definition, JSON_THROW_ON_ERROR));
 			$category = DefinitionCategoryEnum::of($body);
-			if ($category !== null) {
-				$definitions[$definition->id] = [$definition->name, $body, $category, DefinitionSchedule::of($body)];
+			if ($category === null) {
+				continue;
 			}
+
+			$definitions[$definition->id] = [
+				DefinitionTranslations::name($body, $definition->name, $locale),
+				$body,
+				$category, DefinitionSchedule::of($body)];
 		}
 
 		return $definitions;

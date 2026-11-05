@@ -118,7 +118,7 @@ final readonly class AuthenticationController
 		}
 
 		if ($this->userProvider->getUserByEmail($email) === null) {
-			$user = $this->userProvider->createUser($email, $signUp->password, $name);
+			$user = $this->userProvider->createUser($email, $signUp->password, $name, locale: $signUp->locale);
 			$this->emailVerificationService->requestVerification($user, DiscoveryUrl::appUrl($request));
 		}
 
@@ -220,6 +220,7 @@ final readonly class AuthenticationController
 					$email,
 					UserFieldValidator::normalizeName($identity->name) ?? $email,
 					$identity->subject,
+					$dto->locale,
 				);
 		}
 

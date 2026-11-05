@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Izbik\Tests\Controller;
 
 use Izbik\Controller\AuthenticationController;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Repository\UserRepository;
 use Izbik\Route\Routes;
 use Izbik\Service\Authentication\PasswordResetService;
@@ -89,6 +90,22 @@ final class PasswordResetTest extends IntegrationTestCase
 
 		self::assertSame(200, $response->getStatusCode());
 		self::assertSame([], AppHarness::mailer()->sent);
+	}
+
+	public function testTheMailIsInTheAccountsLanguage(): void
+	{
+		$user = Fixture::createUser('jana@example.com', 'Jana');
+		$user->locale = LocaleEnum::Cs;
+		$this->userRepository()->persist($user);
+
+		$this->request('POST', Routes::AuthenticationRequestPasswordReset->value, ['email' => 'jana@example.com']);
+
+		$mail = AppHarness::mailer()->sent[0] ?? null;
+		self::assertInstanceOf(Email::class, $mail);
+		self::assertSame('Obnovení hesla k Izbiku', $mail->getSubject());
+		self::assertStringContainsString('po dobu 60 minut', (string) $mail->getTextBody());
+		self::assertStringContainsString('<html lang="cs">', (string) $mail->getHtmlBody());
+		self::tokenOf($mail);
 	}
 
 	public function testResetsPerAccountAreCappedSilently(): void

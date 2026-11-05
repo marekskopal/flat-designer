@@ -11,6 +11,27 @@
    ]
   },
   "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Lineární závěsné svítidlo, dub",
+    "description": "Dlouhá dubová lišta zavěšená na dvou kabelech, svítící dolů přes opálový pruh na spodní straně. Výška osazení prvku je spodek lišty a jeho výška sahá ke stropu, kde kabely končí; nastavte místnost prvku.",
+    "parameters": {
+     "bar": "Výška lišty",
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti"
+    },
+    "slots": {
+     "wood": "Lišta",
+     "cable": "Kabely"
+    },
+    "parts": {
+     "Diffuser": "Difuzor",
+     "Bar": "Lišta",
+     "Light": "Světlo",
+     "Cable": "Kabel"
+    }
+   }
+  },
   "size": {
    "width": 1500,
    "depth": 60,

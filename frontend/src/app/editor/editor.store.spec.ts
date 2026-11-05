@@ -7,6 +7,7 @@ import {EditorApiService} from '@app/services/editor-api.service';
 import {ProjectService} from '@app/services/project.service';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
+import {provideTestTranslations} from '../../test-translations';
 import {EditorStore} from './editor.store';
 
 const change = {
@@ -51,6 +52,7 @@ describe('EditorStore', () => {
         TestBed.configureTestingModule({
             providers: [
                 provideZonelessChangeDetection(),
+                provideTestTranslations(),
                 EditorStore,
                 {provide: EditorApiService, useValue: api},
                 {provide: ProjectService, useValue: projects},

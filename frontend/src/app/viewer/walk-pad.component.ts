@@ -1,4 +1,5 @@
 import {ChangeDetectionStrategy, Component, input, signal} from '@angular/core';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {ViewerComponent} from './viewer.component';
 
@@ -19,24 +20,35 @@ const SectorThreshold = Math.cos((67.5 * Math.PI) / 180);
  */
 @Component({
     selector: 'fd-walk-pad',
+    imports: [TranslatePipe],
     template: `
         <div class="bar" role="status">
-            <span>Drag the view to look around · tap a door to open it</span>
+            <span>{{ 'viewer.walk.padHint' | translate }}</span>
             @if (floorUp(); as name) {
-                <button type="button" class="bar__floor" [attr.aria-label]="'Up to ' + name" (click)="viewer().walkToFloor(1)">
+                <button
+                    type="button"
+                    class="bar__floor"
+                    [attr.aria-label]="'viewer.walk.upTo' | translate: {name}"
+                    (click)="viewer().walkToFloor(1)"
+                >
                     ↑ {{ name }}
                 </button>
             }
             @if (floorDown(); as name) {
-                <button type="button" class="bar__floor" [attr.aria-label]="'Down to ' + name" (click)="viewer().walkToFloor(-1)">
+                <button
+                    type="button"
+                    class="bar__floor"
+                    [attr.aria-label]="'viewer.walk.downTo' | translate: {name}"
+                    (click)="viewer().walkToFloor(-1)"
+                >
                     ↓ {{ name }}
                 </button>
             }
-            <button type="button" class="bar__exit" (click)="viewer().endWalkthrough()">Back to 3D</button>
+            <button type="button" class="bar__exit" (click)="viewer().endWalkthrough()">{{ 'viewer.walk.backTo3d' | translate }}</button>
         </div>
         <div
             class="pad"
-            aria-label="Walk"
+            [attr.aria-label]="'viewer.walk.pad' | translate"
             (pointerdown)="onPointerDown($event)"
             (pointermove)="onPointerMove($event)"
             (pointerup)="release($event)"

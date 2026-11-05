@@ -3,35 +3,35 @@
         <img class="auth__mark" ngSrc="assets/brand/logo-mark.svg" alt="" width="24" height="24" priority />
         Izbik
     </div>
-    <h1 class="auth__title">Create an account</h1>
+    <h1 class="auth__title">{{ 'auth.signUp.title' | translate }}</h1>
 
     @if (options()?.signUp === false) {
-        <p class="auth__note">This server takes no new sign-ups. Ask its administrator for an account.</p>
+        <p class="auth__note">{{ 'auth.signUp.closed' | translate }}</p>
     } @else {
         <form class="auth__form" [formGroup]="form" (ngSubmit)="onSubmit()">
             <label class="field">
-                <span class="field__label">Name</span>
+                <span class="field__label">{{ 'common.name' | translate }}</span>
                 <input class="input" type="text" formControlName="name" autocomplete="name" />
             </label>
             <label class="field">
-                <span class="field__label">Email</span>
+                <span class="field__label">{{ 'common.email' | translate }}</span>
                 <input class="input" type="email" formControlName="email" autocomplete="email" />
             </label>
             <label class="field">
-                <span class="field__label">Password</span>
+                <span class="field__label">{{ 'common.password' | translate }}</span>
                 <input class="input" type="password" formControlName="password" autocomplete="new-password" />
-                <span class="field__hint">{{ passwordHint }}</span>
+                <span class="field__hint">{{ 'auth.passwordHint' | translate }}</span>
             </label>
             @if (error(); as message) {
                 <p class="form-error" role="alert">{{ message }}</p>
             }
             <button type="submit" class="btn btn--primary auth__submit" [disabled]="form.invalid || saving()">
-                {{ saving() ? 'Creating account…' : 'Sign up' }}
+                {{ (saving() ? 'auth.signUp.submitting' : 'auth.signUp.submit') | translate }}
             </button>
         </form>
 
         @if (options()?.googleClientId; as clientId) {
-            <div class="auth__divider"><span>or</span></div>
+            <div class="auth__divider"><span>{{ 'common.or' | translate }}</span></div>
             <fd-google-sign-in
                 [clientId]="clientId"
                 text="signup_with"
@@ -42,5 +42,7 @@
         }
     }
 
-    <p class="auth__footer">Already have an account? <a routerLink="/login">Sign in</a></p>
+    <p class="auth__footer">{{ 'auth.signUp.haveAccount' | translate }} <a routerLink="/login">{{ 'auth.signUp.signIn' | translate }}</a></p>
+
+    <fd-language-switch />
 </div>

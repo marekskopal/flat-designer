@@ -64,8 +64,8 @@ final class AddFurnitureCatalogueTest extends IntegrationTestCase
 		unset($seeded['Rug'], $restored['Rug']);
 		self::assertSame($seeded, $restored);
 		self::assertSame(
-			['format', 'category', 'schedule', 'catalogue', 'size'],
-			array_slice(array_keys(JsonDecoder::decodeObject($restored['Pendant, bare bulb'])), 0, 5),
+			['format', 'category', 'schedule', 'catalogue', 'translations', 'size'],
+			array_slice(array_keys(JsonDecoder::decodeObject($restored['Pendant, bare bulb'])), 0, 6),
 		);
 		self::assertArrayNotHasKey('catalogue', JsonDecoder::decodeObject(self::definitions($pdo, 'user_id IS NOT NULL')['My rug']));
 	}

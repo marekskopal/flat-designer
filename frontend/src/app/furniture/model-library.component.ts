@@ -5,8 +5,7 @@ import {ModelAsset} from '@app/models/model-asset';
 import {AlertService} from '@app/services/alert.service';
 import {CurrentUserService} from '@app/services/current-user.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
-
-const ScopeLabels: Record<FurnitureScope, string> = {project: 'This project', user: 'My library', global: 'Global'};
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /**
  * The 3D models of bought products: the ones a project's items (or I) may use, upload of a `.glb` with its credits into
@@ -14,7 +13,7 @@ const ScopeLabels: Record<FurnitureScope, string> = {project: 'This project', us
  */
 @Component({
     selector: 'fd-model-library',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, TranslatePipe],
     templateUrl: './model-library.component.html',
     styleUrl: './furniture-library.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,6 +24,7 @@ export class ModelLibraryComponent {
 
     private readonly service = inject(ModelAssetService);
     private readonly alerts = inject(AlertService);
+    private readonly translate = inject(TranslateService);
     protected readonly isAdmin = inject(CurrentUserService).isAdmin;
 
     protected readonly models = signal<ModelAsset[]>([]);
@@ -34,7 +34,6 @@ export class ModelLibraryComponent {
         'user',
         ...(this.isAdmin() ? (['global'] as const) : []),
     ]);
-    protected readonly scopeLabels = ScopeLabels;
 
     public constructor() {
         effect(() => void this.load(this.project()));
@@ -44,7 +43,7 @@ export class ModelLibraryComponent {
         const data = new FormData(form);
         const file = data.get('file');
         if (!(file instanceof File) || file.size === 0) {
-            this.alerts.error('Choose a .glb file.');
+            this.alerts.error(this.translate.instant('furniture.models.chooseFile') as string);
             return;
         }
         const text = (key: string): string => String(data.get(key) ?? '').trim();
@@ -60,7 +59,14 @@ export class ModelLibraryComponent {
                 scope,
                 projectId: scope === 'project' ? (this.project() ?? undefined) : undefined,
             });
-            this.alerts.success(`Uploaded “${model.name}” (${model.width} × ${model.depth} × ${model.height} mm).`);
+            this.alerts.success(
+                this.translate.instant('furniture.models.uploaded', {
+                    name: model.name,
+                    width: model.width,
+                    depth: model.depth,
+                    height: model.height,
+                }) as string,
+            );
             form.reset();
             await this.load(this.project());
         } catch {
@@ -71,7 +77,7 @@ export class ModelLibraryComponent {
     }
 
     protected async delete(model: ModelAsset): Promise<void> {
-        if (!confirm(`Delete “${model.name}”? Items already using it keep showing it.`)) {
+        if (!confirm(this.translate.instant('furniture.models.confirmDelete', {name: model.name}) as string)) {
             return;
         }
         this.busy.set(true);

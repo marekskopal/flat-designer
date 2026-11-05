@@ -4,6 +4,78 @@
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňská vysoká skříň",
+    "description": "Vysoká skříň nebo vestavná sestava pro spotřebiče na soklu: čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, výklop nahoru, lomený výklop a paralelní zdvih), s čely trouby a mikrovlnné trouby. softClose tlumí dovírání čel. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici).",
+    "parameters": {
+     "fronts": "Čela odspodu",
+     "fronts.type": "Typ",
+     "fronts.height": "Výška",
+     "fronts.count": "Křídla",
+     "fronts.handle": "Úchytka",
+     "plinth": "Sokl",
+     "plinthVent": "Větrací mřížka v soklu",
+     "handle": "Úchytka",
+     "handleSide": "Strana úchytky jednokřídlých dvířek",
+     "softClose": "Tlumené dovírání",
+     "blindLeft": "Slepá část vlevo (roh)",
+     "blindRight": "Slepá část vpravo (roh)",
+     "t": "Deska korpusu",
+     "ft": "Tloušťka čela",
+     "gap": "Spára kolem čel",
+     "recess": "Odsazení soklu"
+    },
+    "options": {
+     "fronts.type": {
+      "door": "dvířka",
+      "drawer": "zásuvka",
+      "liftUp": "výklop nahoru",
+      "bifold": "lomený výklop",
+      "parallelLift": "paralelní zdvih",
+      "oven": "trouba",
+      "microwave": "mikrovlnná trouba"
+     },
+     "fronts.handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handleSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Čela",
+     "grille": "Mřížka soklu"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Bottom": "Dno",
+     "Top": "Víko",
+     "Back": "Záda",
+     "Plinth": "Sokl",
+     "Plinth grille": "Mřížka soklu",
+     "Plinth grille slat": "Lamela mřížky soklu",
+     "Front slot": "Pole čela",
+     "Front": "Čelo",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Appliance": "Spotřebič",
+     "Shelf": "Police"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 600,

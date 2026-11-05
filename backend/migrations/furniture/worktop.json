@@ -4,6 +4,18 @@
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Pracovní deska",
+    "description": "Pracovní deska na spodních skříňkách, přiříznutá na rozměr prvku (z = výška skříněk).",
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Slab": "Deska"
+    }
+   }
+  },
   "size": {
    "width": 1200,
    "depth": 600,

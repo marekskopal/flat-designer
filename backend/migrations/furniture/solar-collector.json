@@ -4,6 +4,21 @@
  "definition": {
   "format": 1,
   "catalogue": "roof",
+  "translations": {
+   "cs": {
+    "name": "Solární kolektor",
+    "description": "Plochý solární kolektor: hliníkový rám kolem tmavého absorbéru pod sklem. Umístěte ho s onRoof na střechu nebo komín.",
+    "slots": {
+     "frame": "Rám",
+     "absorber": "Absorbér"
+    },
+    "parts": {
+     "Frame": "Rám",
+     "Absorber": "Absorbér",
+     "Glazing": "Zasklení"
+    }
+   }
+  },
   "size": {
    "width": 1150,
    "depth": 2050,

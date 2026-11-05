@@ -4,6 +4,35 @@
  "definition": {
   "format": 1,
   "catalogue": "bathroom",
+  "translations": {
+   "cs": {
+    "name": "Volně stojící vana",
+    "description": "Volně stojící vana se zaoblenými stěnami; s volbou mixer stojí na jednom konci uvnitř prvku stojánková baterie (vana je o 250 kratší), její výtok sahá přes okraj a převyšuje výšku prvku.",
+    "parameters": {
+     "wall": "Tloušťka stěny",
+     "mixer": "Stojánková baterie",
+     "mixerEnd": "Baterie na straně"
+    },
+    "options": {
+     "mixerEnd": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "shell": "Vana",
+     "metal": "Baterie"
+    },
+    "parts": {
+     "Side": "Bok",
+     "End": "Čelo",
+     "Bottom": "Dno",
+     "Waste": "Odtok",
+     "Mixer post": "Tělo baterie",
+     "Spout": "Výtok"
+    }
+   }
+  },
   "size": {
    "width": 1950,
    "depth": 780,

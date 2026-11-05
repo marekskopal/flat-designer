@@ -1,6 +1,6 @@
 <section class="card card--table">
     <div class="card__header">
-        <h2 class="card__title">Electrics &amp; plumbing</h2>
+        <h2 class="card__title">{{ 'schedules.electrical.title' | translate }}</h2>
         @if (schedule(); as s) {
             <span class="totals">{{ totalsSummary(s.totals) }}</span>
         }
@@ -8,15 +8,15 @@
 
     @if (schedule(); as s) {
         @if (floors().length === 0) {
-            <p class="empty">No lights, sockets, switches or plumbing points yet. Add them in a floor's editor (Add → Furniture).</p>
+            <p class="empty">{{ 'schedules.electrical.empty' | translate }}</p>
         } @else {
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Room / point</th>
-                        <th>Type</th>
-                        <th class="num">Elevation mm</th>
-                        <th class="num">Count</th>
+                        <th>{{ 'schedules.electrical.point' | translate }}</th>
+                        <th>{{ 'schedules.electrical.type' | translate }}</th>
+                        <th class="num">{{ 'schedules.electrical.elevation' | translate }}</th>
+                        <th class="num">{{ 'schedules.electrical.count' | translate }}</th>
                     </tr>
                 </thead>
                 @for (floor of floors(); track floor.id) {
@@ -44,7 +44,7 @@
                                             <span class="values">{{ values }}</span>
                                         }
                                     </td>
-                                    <td>{{ categoryLabels[row.category] }}</td>
+                                    <td>{{ 'enums.electricalCategory.' + row.category | translate }}</td>
                                     <td class="num">{{ row.z | number }}</td>
                                     <td class="num">{{ row.count }}</td>
                                 </tr>
@@ -54,13 +54,13 @@
                 }
             </table>
             @if (lightingFloors().length > 0) {
-                <h3 class="subtitle">Lighting circuits</h3>
+                <h3 class="subtitle">{{ 'schedules.electrical.circuits' | translate }}</h3>
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Circuit</th>
-                            <th>Switches</th>
-                            <th>Lights</th>
+                            <th>{{ 'schedules.electrical.circuit' | translate }}</th>
+                            <th>{{ 'schedules.electrical.switches' | translate }}</th>
+                            <th>{{ 'schedules.electrical.lights' | translate }}</th>
                         </tr>
                     </thead>
                     @for (floor of lightingFloors(); track floor.id) {
@@ -87,7 +87,7 @@
                             }
                             @if (floor.lighting.unlinked.length > 0) {
                                 <tr class="gap">
-                                    <td>Switches without lights</td>
+                                    <td>{{ 'schedules.electrical.unlinked' | translate }}</td>
                                     <td colspan="2">
                                         @for (item of floor.lighting.unlinked; track item.itemId) {
                                             <div>{{ circuitItemText(item, true) }}</div>
@@ -97,7 +97,7 @@
                             }
                             @if (floor.lighting.unswitched.length > 0) {
                                 <tr class="gap">
-                                    <td>Lights without a switch</td>
+                                    <td>{{ 'schedules.electrical.unswitched' | translate }}</td>
                                     <td colspan="2">
                                         @for (item of floor.lighting.unswitched; track item.itemId) {
                                             <div>{{ circuitItemText(item, false) }}</div>
@@ -108,7 +108,7 @@
                         </tbody>
                     }
                 </table>
-                <p class="note">Switches link lights on their own floor only. Link them in the editor: select a switch, then Pick lights (L).</p>
+                <p class="note">{{ 'schedules.electrical.note' | translate }}</p>
             }
         }
     }

@@ -1,22 +1,21 @@
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
 import {WebglProblem} from '@app/viewer/engine/webgl';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /** Shown in place of a 3D view the browser cannot draw: why, and what usually helps. */
 @Component({
     selector: 'fd-webgl-message',
+    imports: [TranslatePipe],
     template: `
         <div class="message" role="alert">
             @if (problem() === 'lost') {
-                <strong>The 3D view stopped</strong>
-                <p>The graphics card was reset or ran out of memory. Reload the page to draw it again.</p>
-                <button type="button" class="btn btn--primary btn--small" (click)="reload()">Reload</button>
+                <strong>{{ 'viewer.webgl.lostTitle' | translate }}</strong>
+                <p>{{ 'viewer.webgl.lostText' | translate }}</p>
+                <button type="button" class="btn btn--primary btn--small" (click)="reload()">{{ 'viewer.webgl.reload' | translate }}</button>
             } @else {
-                <strong>This browser cannot show the 3D view</strong>
-                <p>
-                    Izbik draws with WebGL 2, which is off or missing here. Turn on hardware acceleration in the browser's settings, update the
-                    browser and the graphics driver, or try a current Chrome, Firefox, Edge or Safari.
-                </p>
-                <p><a href="https://get.webgl.org/webgl2/" target="_blank" rel="noopener">Check WebGL 2 in this browser</a></p>
+                <strong>{{ 'viewer.webgl.missingTitle' | translate }}</strong>
+                <p>{{ 'viewer.webgl.missingText' | translate }}</p>
+                <p><a href="https://get.webgl.org/webgl2/" target="_blank" rel="noopener">{{ 'viewer.webgl.check' | translate }}</a></p>
             }
         </div>
     `,

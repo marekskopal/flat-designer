@@ -9,7 +9,7 @@
         class="menu-toggle"
         aria-controls="fd-menu"
         [attr.aria-expanded]="menuOpen()"
-        [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'"
+        [attr.aria-label]="(menuOpen() ? 'layout.closeMenu' : 'layout.openMenu') | translate"
         (click)="toggleMenu()"
     >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -23,36 +23,36 @@
 
     <div id="fd-menu" class="menu" [class.menu--open]="menuOpen()">
         <nav class="nav">
-            <a routerLink="/projects" routerLinkActive="active" (click)="menuOpen.set(false)">Projects</a>
-            <a routerLink="/furniture" routerLinkActive="active" (click)="menuOpen.set(false)">Furniture</a>
+            <a routerLink="/projects" routerLinkActive="active" (click)="menuOpen.set(false)">{{ 'layout.projects' | translate }}</a>
+            <a routerLink="/furniture" routerLinkActive="active" (click)="menuOpen.set(false)">{{ 'layout.furniture' | translate }}</a>
             @if (currentUser.isAdmin()) {
-                <a routerLink="/admin/users" routerLinkActive="active" (click)="menuOpen.set(false)">Users</a>
+                <a routerLink="/admin/users" routerLinkActive="active" (click)="menuOpen.set(false)">{{ 'layout.users' | translate }}</a>
             }
         </nav>
 
         <div class="user">
-            <a class="user__report" [href]="reportUrl" target="_blank" rel="noopener" (click)="menuOpen.set(false)">Report a problem</a>
+            <a class="user__report" [href]="reportUrl" target="_blank" rel="noopener" (click)="menuOpen.set(false)">{{ 'layout.report' | translate }}</a>
             @if (currentUser.currentUser(); as user) {
                 <a routerLink="/account" routerLinkActive="active" class="user__name" [title]="user.email" (click)="menuOpen.set(false)">{{ user.name }}</a>
             }
-            <button type="button" class="btn btn--ghost" (click)="logout()">Sign out</button>
+            <button type="button" class="btn btn--ghost" (click)="logout()">{{ 'layout.signOut' | translate }}</button>
         </div>
     </div>
 </header>
 
 @if (menuOpen()) {
-    <button type="button" class="menu-backdrop" tabindex="-1" aria-label="Close menu" (click)="menuOpen.set(false)"></button>
+    <button type="button" class="menu-backdrop" tabindex="-1" [attr.aria-label]="'layout.closeMenu' | translate" (click)="menuOpen.set(false)"></button>
 }
 
 @if (verifyBanner()) {
     <div class="verify-banner" role="status">
         <span class="verify-banner__text">
-            Please confirm your email: open the link we sent to <strong>{{ currentUser.currentUser()?.email }}</strong>.
+            {{ 'layout.verify.before' | translate }} <strong>{{ currentUser.currentUser()?.email }}</strong>{{ 'layout.verify.after' | translate }}
         </span>
         <button type="button" class="btn btn--ghost" [disabled]="resending()" (click)="resendVerification()">
-            {{ resending() ? 'Sending…' : 'Send again' }}
+            {{ (resending() ? 'common.sending' : 'layout.verify.again') | translate }}
         </button>
-        <button type="button" class="btn btn--ghost" (click)="dismissBanner()">Later</button>
+        <button type="button" class="btn btn--ghost" (click)="dismissBanner()">{{ 'layout.verify.later' | translate }}</button>
     </div>
 }
 

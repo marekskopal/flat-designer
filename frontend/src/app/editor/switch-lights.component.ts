@@ -1,5 +1,6 @@
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /** A light listed under its switch. */
 export interface SwitchLight {
@@ -16,9 +17,9 @@ export interface SwitchLight {
  */
 @Component({
     selector: 'fd-switch-lights',
-    imports: [IconComponent],
+    imports: [IconComponent, TranslatePipe],
     template: `
-        <h3 class="title">{{ linking() ? 'Picking lights' : 'Lights' }}</h3>
+        <h3 class="title">{{ (linking() ? 'inspector.lights.picking' : 'inspector.lights.title') | translate }}</h3>
         <ul class="lights">
             @for (light of lights(); track light.id) {
                 <li class="light">
@@ -31,8 +32,8 @@ export interface SwitchLight {
                     <button
                         type="button"
                         class="icon-button"
-                        title="Unlink"
-                        [attr.aria-label]="'Unlink ' + light.name"
+                        [title]="'inspector.lights.unlink' | translate"
+                        [attr.aria-label]="'inspector.lights.unlinkNamed' | translate: {name: light.name}"
                         [disabled]="disabled()"
                         (click)="unlink.emit(light.id)"
                     >
@@ -40,27 +41,32 @@ export interface SwitchLight {
                     </button>
                 </li>
             } @empty {
-                <li class="hint">No lights linked.</li>
+                <li class="hint">{{ 'inspector.lights.none' | translate }}</li>
             }
         </ul>
         @if (linking()) {
-            <p class="hint">Click lights in the view to link or unlink them · <kbd>Enter</kbd> done · <kbd>Esc</kbd> cancel</p>
+            <p class="hint">
+                {{ 'inspector.lights.pickHint' | translate }} · <kbd>Enter</kbd> {{ 'inspector.lights.doneKey' | translate }} · <kbd>Esc</kbd>
+                {{ 'inspector.lights.cancelKey' | translate }}
+            </p>
             <div class="buttons">
-                <button type="button" class="btn btn--primary btn--small" [disabled]="disabled()" (click)="done.emit()">Done</button>
-                <button type="button" class="btn btn--small" (click)="stop.emit()">Cancel</button>
+                <button type="button" class="btn btn--primary btn--small" [disabled]="disabled()" (click)="done.emit()">
+                    {{ 'inspector.lights.done' | translate }}
+                </button>
+                <button type="button" class="btn btn--small" (click)="stop.emit()">{{ 'common.cancel' | translate }}</button>
             </div>
         } @else {
             <button
                 type="button"
                 class="btn btn--small"
-                title="Pick the lights this switch controls (L)"
+                [title]="'inspector.lights.pickTitle' | translate"
                 [disabled]="disabled()"
                 (click)="pick.emit()"
             >
-                <fd-icon name="bulb" [size]="15" /> Pick lights
+                <fd-icon name="bulb" [size]="15" /> {{ 'inspector.lights.pick' | translate }}
             </button>
         }
-        <p class="hint">Lights on this floor only. A light linked to two switches is two-way switching.</p>
+        <p class="hint">{{ 'inspector.lights.hint' | translate }}</p>
     `,
     styles: `
         @use 'variables' as *;

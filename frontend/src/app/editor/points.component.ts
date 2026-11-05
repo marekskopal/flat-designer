@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 import {PlanPoint} from '@app/models/scene';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /**
  * The corners of an outline (a room, a plot, a void) or the points of a railing, plan mm: typed in place, removed one
@@ -9,7 +10,7 @@ import {IconComponent} from '@app/shared/icon/icon.component';
  */
 @Component({
     selector: 'fd-points',
-    imports: [IconComponent],
+    imports: [IconComponent, TranslatePipe],
     template: `
         <div class="points">
             <span class="points__head"></span>
@@ -23,7 +24,7 @@ import {IconComponent} from '@app/shared/icon/icon.component';
                         class="input"
                         type="number"
                         step="10"
-                        [attr.aria-label]="labels[axis] + ' of point ' + (i + 1)"
+                        [attr.aria-label]="'inspector.points.coordinate' | translate: {axis: labels[axis], n: i + 1}"
                         [value]="point[axis]"
                         [disabled]="disabled()"
                         (change)="set(i, axis, $event)"
@@ -32,8 +33,8 @@ import {IconComponent} from '@app/shared/icon/icon.component';
                 <button
                     type="button"
                     class="icon-button"
-                    title="Remove"
-                    [attr.aria-label]="'Remove point ' + (i + 1)"
+                    [title]="'inspector.remove' | translate"
+                    [attr.aria-label]="'inspector.points.remove' | translate: {n: i + 1}"
                     [disabled]="disabled() || list().length <= min()"
                     (click)="remove(i)"
                 >
@@ -42,13 +43,10 @@ import {IconComponent} from '@app/shared/icon/icon.component';
             }
         </div>
         <button type="button" class="btn btn--ghost btn--small add" [disabled]="disabled() || list().length === 0" (click)="add()">
-            <fd-icon name="plus" [size]="14" /> Add {{ closed() ? 'a corner' : 'a point' }}
+            <fd-icon name="plus" [size]="14" /> {{ (closed() ? 'inspector.points.addCorner' : 'inspector.points.addPoint') | translate }}
         </button>
         <p class="hint">
-            mm.
-            @if (closed()) {
-                In the top view drag the corners; drag a midpoint for a new one, double-click one to remove it.
-            }
+            {{ (closed() ? 'inspector.points.outlineHint' : 'inspector.points.unitHint') | translate }}
         </p>
     `,
     styles: `

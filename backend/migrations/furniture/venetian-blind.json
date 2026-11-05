@@ -4,6 +4,25 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Žaluzie",
+    "description": "Žaluzie: horní lišta a lamely natočené o úhel, spuštěné o zadané procento.",
+    "parameters": {
+     "down": "Spuštění",
+     "angle": "Úhel lamel",
+     "slat": "Šířka lamely"
+    },
+    "slots": {
+     "slats": "Lamely",
+     "rail": "Horní lišta"
+    },
+    "parts": {
+     "Head rail": "Horní lišta",
+     "Slat": "Lamela"
+    }
+   }
+  },
   "size": {
    "width": 1200,
    "depth": 50,

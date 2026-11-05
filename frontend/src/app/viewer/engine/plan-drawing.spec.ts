@@ -4,6 +4,7 @@ import {describe, expect, it} from 'vitest';
 
 import {planLayout, planSheet, roomScheduleSheets} from './plan-drawing';
 import {PaperLong, PaperShort, SheetInfo} from './sheet-svg';
+import {EnglishSheetTexts, SheetTexts} from './sheet-texts';
 
 const wall = (id: number, start: PlanPoint, end: PlanPoint, openings: Opening[] = []): Wall => ({
     id,
@@ -97,7 +98,7 @@ const texts = (svg: string): string[] => [...svg.matchAll(/<text[^>]*>([^<]*)<\/
 
 describe('levelText', () => {
     it('writes levels in metres as plans do', () => {
-        expect([0, 3000, -150, 450].map(levelText)).toEqual(['±0.000', '+3.000', '−0.150', '+0.450']);
+        expect([0, 3000, -150, 450].map((mm) => levelText(mm))).toEqual(['±0.000', '+3.000', '−0.150', '+0.450']);
     });
 });
 
@@ -666,5 +667,32 @@ describe('planSheet voids and railings', () => {
         expect(labels).toContain('Gallery (void)');
         expect(labels).toContain('4.00');
         expect(labels.filter((t) => t === '10.00')).toHaveLength(2);
+    });
+});
+
+describe('sheets in another language', () => {
+    const czech: SheetTexts = {
+        ...EnglishSheetTexts,
+        decimal: ',',
+        date: (date) => `${date.getDate()}. ${date.getMonth() + 1}. ${date.getFullYear()}`,
+        north: 'S',
+        floorPlan: 'Půdorys',
+        roomSchedule: 'Tabulka místností',
+        columns: {...EnglishSheetTexts.columns, area: 'Plocha m²', room: 'Místnost'},
+        totals: {indoor: 'Vnitřní', garage: 'Garáž', outdoor: 'Venkovní'},
+    };
+
+    it('writes the plan\'s texts, numbers and date as given', () => {
+        const raised = scene({rooms: [room({floorElevation: 450, area: 12.5})]});
+        const labels = texts(planSheet(raised, {...info, floorElevation: 3000}, undefined, czech).svg);
+        expect(labels).toEqual(expect.arrayContaining(['12,50 m² · +0,450', 'Ground floor +3,000 · Main Street 1', 'S']));
+        expect(labels.some((t) => t.startsWith('Půdorys · 1:50 (A4) · 21. 10. 2026'))).toBe(true);
+        expect(labels.some((t) => t.includes('Floor plan') || t.includes('12.50'))).toBe(false);
+    });
+
+    it('writes the room schedule\'s headers, totals and numbers as given', () => {
+        const labels = texts(roomScheduleSheets(scene({rooms: [room({area: 12.5})]}), info, czech)[0].svg);
+        expect(labels).toEqual(expect.arrayContaining(['Tabulka místností', 'Místnost', 'Plocha m²', '12,50', '14,00', '2,60', 'Vnitřní']));
+        expect(labels).not.toContain('Indoor');
     });
 });

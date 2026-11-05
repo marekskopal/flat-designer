@@ -4,6 +4,26 @@
  "definition": {
   "format": 1,
   "catalogue": "roof",
+  "translations": {
+   "cs": {
+    "name": "Satelitní anténa",
+    "description": "Satelitní anténa na stožáru s ramenem a konvertorem, parabola skloněná dozadu; stožár připevněte na komín nebo stěnu.",
+    "parameters": {
+     "dia": "Průměr paraboly"
+    },
+    "slots": {
+     "dish": "Parabola",
+     "mast": "Stožár",
+     "lnb": "Konvertor"
+    },
+    "parts": {
+     "Mast": "Stožár",
+     "Dish": "Parabola",
+     "Arm": "Rameno",
+     "LNB": "Konvertor (LNB)"
+    }
+   }
+  },
   "size": {
    "width": 700,
    "depth": 500,

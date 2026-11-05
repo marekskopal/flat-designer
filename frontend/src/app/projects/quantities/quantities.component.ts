@@ -1,13 +1,17 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, effect, inject, input, numberAttribute, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, input, LOCALE_ID, numberAttribute, signal} from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
+import {decimalSeparator, fixed} from '@app/core/number-format';
 import {Project} from '@app/models/project';
-import {MaterialPrice, MaterialPrices, Quantities, QuantityLine, QuantityMaterial, QuantityRoof, SurfaceLabels} from '@app/models/quantities';
+import {MaterialPrice, MaterialPrices, Quantities, QuantityLine, QuantityMaterial, QuantityRoof, QuantitySurface} from '@app/models/quantities';
 import {AlertService} from '@app/services/alert.service';
+import {FurnitureService} from '@app/services/furniture.service';
 import {ProjectService} from '@app/services/project.service';
 import {RealtimeService} from '@app/services/realtime.service';
+import {pluralText} from '@app/shared/i18n/plural.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {filter, switchMap} from 'rxjs';
 
 type PriceField = 'pricePerArea' | 'pricePerLength';
@@ -25,7 +29,7 @@ function priceKey(price: Pick<MaterialPrice, 'materialId' | 'surface'>): string 
  */
 @Component({
     selector: 'fd-quantities',
-    imports: [DecimalPipe, RouterLink],
+    imports: [DecimalPipe, RouterLink, TranslatePipe],
     templateUrl: './quantities.component.html',
     styleUrl: './quantities.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,13 +39,18 @@ export class QuantitiesComponent {
 
     private readonly projects = inject(ProjectService);
     private readonly alerts = inject(AlertService);
+    private readonly furniture = inject(FurnitureService);
+    private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
+    private readonly decimal = decimalSeparator(this.locale);
 
     protected readonly project = signal<Project | null>(null);
     protected readonly floorId = signal<number | null>(null);
     protected readonly quantities = signal<Quantities | null>(null);
     protected readonly loading = signal(true);
     protected readonly saving = signal(false);
-    protected readonly labels = SurfaceLabels;
+    /** The catalogue's names by material id, in the page's language. */
+    private readonly materialNames = signal(new Map<number, string>());
 
     /** The price list as last saved, by `priceKey()`. */
     private readonly saved = signal<MaterialPrices>({currency: 'EUR', wastePercent: 10, prices: []});
@@ -70,8 +79,8 @@ export class QuantitiesComponent {
     protected readonly tables = computed(() => {
         const quantities = this.quantities();
         return [
-            {title: 'Materials to buy', note: 'm² in brackets: whole pieces', rows: quantities?.materials ?? []},
-            {title: 'Furniture boards', note: 'board area · edge banding', rows: quantities?.furniture ?? []},
+            {title: 'quantities.materials', note: 'quantities.materialsNote', rows: quantities?.materials ?? []},
+            {title: 'quantities.furniture', note: 'quantities.furnitureNote', rows: quantities?.furniture ?? []},
         ].filter((table) => table.rows.length > 0);
     });
 
@@ -82,6 +91,7 @@ export class QuantitiesComponent {
         effect(() => void this.loadProject(this.projectId()));
         effect(() => void this.loadPrices(this.projectId()));
         effect(() => void this.load(this.projectId(), this.floorId()));
+        void this.furniture.materials().then((all) => this.materialNames.set(new Map(all.map((m) => [m.id, m.name]))), () => undefined);
 
         // Edits, catalogue changes, prices and details saved elsewhere (another tab, an agent) show up without a reload.
         const realtime = inject(RealtimeService);
@@ -112,18 +122,30 @@ export class QuantitiesComponent {
     }
 
     protected surfaces(row: QuantityMaterial): string {
-        return row.surfaces.map((surface) => this.labels[surface]).join(', ');
+        return row.surfaces.map((surface) => this.surfaceLabel(surface)).join(', ');
+    }
+
+    protected surfaceLabel(surface: QuantitySurface): string {
+        return this.translate.instant(`enums.surface.${surface}`) as string;
+    }
+
+    /** A row's material as the catalogue names it, or its surface's default look; else the server's name. */
+    protected materialName(row: {materialId: number | null; surface: QuantitySurface | null; material: string}): string {
+        if (row.materialId === null) {
+            return row.surface === null ? row.material : (this.translate.instant(`quantities.defaultLook.${row.surface}`) as string);
+        }
+        return this.materialNames().get(row.materialId) ?? row.material;
     }
 
     /** After a roof's name: its floor (with all floors of several shown) and its roof windows. */
     protected roofNote(roof: QuantityRoof): string {
         const floor = this.floorId() === null && (this.project()?.floors?.length ?? 0) > 1 ? ` · ${roof.floorName}` : '';
-        const windows = roof.windows > 0 ? ` · ${roof.windows} ${roof.windows === 1 ? 'roof window' : 'roof windows'}` : '';
+        const windows = roof.windows > 0 ? ` · ${pluralText(this.translate, this.locale, 'quantities.roofWindows', roof.windows)}` : '';
         return floor + windows;
     }
 
     protected lineQuantity(line: QuantityLine): string {
-        return line.area === null ? `${(line.length ?? 0).toFixed(2)} m` : `${line.area.toFixed(2)} m²`;
+        return line.area === null ? `${fixed(line.length ?? 0, 2, this.decimal)} m` : `${fixed(line.area, 2, this.decimal)} m²`;
     }
 
     /** The draft price of a row's material (or default look). */
@@ -177,7 +199,7 @@ export class QuantitiesComponent {
             });
             this.applyPrices(saved);
             this.discard();
-            this.alerts.success('Prices saved.');
+            this.alerts.success(this.translate.instant('quantities.saved') as string);
             await this.load(this.projectId(), this.floorId());
         } catch {
             // The error interceptor shows the toast.

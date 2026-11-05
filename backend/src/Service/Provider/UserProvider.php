@@ -6,6 +6,7 @@ namespace Izbik\Service\Provider;
 
 use DateTimeImmutable;
 use Izbik\Model\Entity\Enum\ElectricalSymbolsEnum;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Entity\Enum\UserRoleEnum;
 use Izbik\Model\Entity\User;
 use Izbik\Model\Repository\UserRepository;
@@ -40,10 +41,12 @@ final readonly class UserProvider
 		string $name,
 		UserRoleEnum $role = UserRoleEnum::User,
 		bool $emailVerified = false,
+		LocaleEnum $locale = LocaleEnum::En,
 	): User {
 		$now = new DateTimeImmutable();
 		$user = new User(email: mb_strtolower($email), password: self::hash($password), name: $name, role: $role);
 		$user->emailVerified = $emailVerified;
+		$user->locale = $locale;
 		$user->createdAt = $now;
 		$user->updatedAt = $now;
 
@@ -53,11 +56,12 @@ final readonly class UserProvider
 	}
 
 	/** An account signing in with Google only, with no password until it sets one by a reset link. */
-	public function createUserFromGoogle(string $email, string $name, string $googleId): User
+	public function createUserFromGoogle(string $email, string $name, string $googleId, LocaleEnum $locale = LocaleEnum::En): User
 	{
 		$now = new DateTimeImmutable();
 		$user = new User(email: mb_strtolower($email), password: null, name: mb_substr($name, 0, 255));
 		$user->googleId = $googleId;
+		$user->locale = $locale;
 		$user->emailVerified = true;
 		$user->createdAt = $now;
 		$user->updatedAt = $now;
@@ -87,13 +91,14 @@ final readonly class UserProvider
 	}
 
 	/** The fields a user changes on their own account, persisted once; null leaves one as it is, none persists nothing. */
-	public function updateProfile(User $user, ?string $name, ?ElectricalSymbolsEnum $symbols): User
+	public function updateProfile(User $user, ?string $name, ?ElectricalSymbolsEnum $symbols, ?LocaleEnum $locale = null): User
 	{
-		if ($name === null && $symbols === null) {
+		if ($name === null && $symbols === null && $locale === null) {
 			return $user;
 		}
 		$user->name = $name ?? $user->name;
 		$user->electricalSymbols = $symbols ?? $user->electricalSymbols;
+		$user->locale = $locale ?? $user->locale;
 		$user->updatedAt = new DateTimeImmutable();
 		$this->userRepository->persist($user);
 

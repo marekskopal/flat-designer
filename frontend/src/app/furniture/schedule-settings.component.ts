@@ -1,7 +1,8 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 import {CategoryLabels, ElectricalCategory} from '@app/models/electrical-schedule';
-import {CatalogueLabels, FurnitureCatalogue, FurnitureDefinitionBody} from '@app/models/furniture';
+import {FurnitureCatalogue, FurnitureCatalogues, FurnitureDefinitionBody} from '@app/models/furniture';
 import {scheduleCount} from '@app/viewer/engine/electrical';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {countParameters, toggledValue, valueParameters, withCatalogue, withCategory, withCount, withValues} from './schedule-settings';
 
@@ -13,6 +14,7 @@ import {countParameters, toggledValue, valueParameters, withCatalogue, withCateg
  */
 @Component({
     selector: 'fd-schedule-settings',
+    imports: [TranslatePipe],
     templateUrl: './schedule-settings.component.html',
     styleUrl: './schedule-settings.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,8 +24,8 @@ export class ScheduleSettingsComponent {
     public readonly readOnly = input(false);
     public readonly bodyChange = output<FurnitureDefinitionBody>();
 
-    protected readonly catalogues = Object.entries(CatalogueLabels) as [FurnitureCatalogue, string][];
-    protected readonly categories = Object.entries(CategoryLabels) as [ElectricalCategory, string][];
+    protected readonly catalogues = FurnitureCatalogues;
+    protected readonly categories = Object.keys(CategoryLabels) as ElectricalCategory[];
     protected readonly countOptions = computed(() => countParameters(this.body()));
     /** What an older definition without settings counts by (a socket's gangs, `scheduleCount()`); null once it has them. */
     protected readonly defaultCount = computed(() => (this.body().schedule === undefined ? scheduleCount(this.body()) : null));

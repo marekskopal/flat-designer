@@ -4,6 +4,7 @@ import {Router} from '@angular/router';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {Authentication, AuthenticationOptions} from '@app/models/authentication';
 import {CurrentUserService} from '@app/services/current-user.service';
+import {LanguageService} from '@app/services/language.service';
 import {StorageService} from '@app/services/storage.service';
 import {environment} from '@environments/environment';
 import {firstValueFrom} from 'rxjs';
@@ -20,6 +21,7 @@ export class AuthenticationService {
     private readonly router = inject(Router);
     private readonly storage = inject(StorageService);
     private readonly currentUser = inject(CurrentUserService);
+    private readonly language = inject(LanguageService);
 
     public readonly authentication = signal<Authentication | null>(this.storage.get<Authentication>(StorageKey));
     public readonly isLoggedIn = computed(() => this.authentication() !== null);
@@ -45,17 +47,24 @@ export class AuthenticationService {
 
     /**
      * The sign-up response is the same whether or not the email was registered already, so the session
-     * is established by the follow-up login.
+     * is established by the follow-up login. A new account takes the language shown.
      */
     public async signUp(email: string, password: string, name: string): Promise<void> {
-        await firstValueFrom(this.http.post<void>(`${environment.apiUrl}/authentication/sign-up`, {email, password, name}, inlineErrors()));
+        const locale = this.language.current();
+        await firstValueFrom(this.http.post<void>(`${environment.apiUrl}/authentication/sign-up`, {email, password, name, locale}, inlineErrors()));
         await this.login(email, password);
     }
 
-    /** Signs in, or up, with the ID token Google's button returns. */
+    /** Signs in, or up (in the language shown), with the ID token Google's button returns. */
     public async googleLogin(idToken: string): Promise<void> {
         this.setAuthentication(
-            await firstValueFrom(this.http.post<Authentication>(`${environment.apiUrl}/authentication/google-login`, {idToken}, inlineErrors())),
+            await firstValueFrom(
+                this.http.post<Authentication>(
+                    `${environment.apiUrl}/authentication/google-login`,
+                    {idToken, locale: this.language.current()},
+                    inlineErrors(),
+                ),
+            ),
         );
     }
 

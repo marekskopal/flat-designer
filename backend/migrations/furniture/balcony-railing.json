@@ -4,6 +4,24 @@
  "definition": {
   "format": 1,
   "catalogue": "building",
+  "translations": {
+   "cs": {
+    "name": "Balkonové zábradlí",
+    "description": "Kované balkonové zábradlí z kulatiny: sloupky na koncích, horní a spodní madlo a výplňové sloupky.",
+    "parameters": {
+     "spacing": "Rozteč sloupků výplně"
+    },
+    "slots": {
+     "metal": "Kov"
+    },
+    "parts": {
+     "Post": "Sloupek",
+     "Top rail": "Horní madlo",
+     "Bottom rail": "Spodní příčka",
+     "Baluster": "Sloupek výplně"
+    }
+   }
+  },
   "size": {
    "width": 2000,
    "depth": 40,

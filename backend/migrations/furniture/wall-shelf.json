@@ -4,6 +4,24 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Nástěnná police",
+    "description": "Desky nad sebou na dvou kovových tyčích; zavěste ji výškou osazení prvku (z).",
+    "parameters": {
+     "shelves": "Desky",
+     "t": "Tloušťka desek"
+    },
+    "slots": {
+     "boards": "Desky",
+     "rods": "Tyče"
+    },
+    "parts": {
+     "Shelf": "Police",
+     "Rod": "Tyč"
+    }
+   }
+  },
   "size": {
    "width": 1000,
    "depth": 250,

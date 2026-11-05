@@ -1,18 +1,19 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {MeasureStatus} from './engine/measure';
 
 /** Readout of the measure tool over the viewer: the distance between the points and its east / north parts. */
 @Component({
     selector: 'fd-measure-hud',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, TranslatePipe],
     template: `
         @let s = status();
         <div class="hud" role="status">
             @if (s.points === 0) {
                 <strong class="hud__prompt">
-                    {{ calibrating() ? 'Click the first calibration point on the plan image' : 'Click the first point to measure from' }}
+                    {{ (calibrating() ? 'viewer.measure.firstCalibration' : 'viewer.measure.first') | translate }}
                 </strong>
             } @else {
                 @if (s.distance !== null) {
@@ -22,14 +23,15 @@ import {MeasureStatus} from './engine/measure';
                     </span>
                 }
                 @if (s.points === 1) {
-                    <strong class="hud__prompt">Click the second point</strong>
+                    <strong class="hud__prompt">{{ 'viewer.measure.second' | translate }}</strong>
                 }
             }
             <span class="hud__keys">
                 @if (calibrating()) {
-                    No snapping · <kbd>Esc</kbd> cancels the calibration
+                    {{ 'viewer.measure.noSnapping' | translate }} · <kbd>Esc</kbd> {{ 'viewer.measure.cancelsCalibration' | translate }}
                 } @else {
-                    Snaps to wall ends, corners and faces · <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> clears, again ends
+                    {{ 'viewer.measure.snaps' | translate }} · <kbd>Shift</kbd> {{ 'viewer.measure.noSnap' | translate }} · <kbd>Esc</kbd>
+                    {{ 'viewer.measure.clears' | translate }}
                 }
             </span>
         </div>

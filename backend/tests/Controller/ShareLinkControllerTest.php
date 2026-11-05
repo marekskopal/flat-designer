@@ -7,11 +7,14 @@ namespace Izbik\Tests\Controller;
 use DateTimeImmutable;
 use Izbik\Controller\SharedViewController;
 use Izbik\Controller\ShareLinkController;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Entity\User;
 use Izbik\Model\Repository\ShareLinkRepository;
+use Izbik\Model\Repository\UserRepository;
 use Izbik\Model\Repository\WallRepository;
 use Izbik\Route\Routes;
 use Izbik\Service\Project\ShareLinkProvider;
+use Izbik\Tests\Support\AppHarness;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -44,6 +47,27 @@ final class ShareLinkControllerTest extends IntegrationTestCase
 		'roofs' => false,
 		'electrical' => true,
 	];
+
+	public function testTheVersionIsNamedInTheLanguageOfThePersonSharing(): void
+	{
+		$user = Fixture::createUser();
+		$user->locale = LocaleEnum::Cs;
+		$repository = AppHarness::container()->get(UserRepository::class);
+		assert($repository instanceof UserRepository);
+		$repository->persist($user);
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+
+		$this->request(
+			'POST',
+			self::path(Routes::ProjectShareLinks, $project->id),
+			['floorId' => $floor->id, 'name' => 'Kuchyně', 'settings' => self::Settings],
+			$user,
+		);
+
+		$versions = $this->jsonList($this->request('GET', self::path(Routes::ProjectVersions, $project->id), authenticatedAs: $user));
+		self::assertSame(['Sdíleno: Kuchyně'], array_column($versions, 'note'));
+	}
 
 	public function testCreatingALinkSavesAVersionAndGuestsSeeIt(): void
 	{

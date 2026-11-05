@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 import {Material, WallFinish} from '@app/models/scene';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {MaterialPickerComponent} from './material-picker.component';
 
@@ -16,15 +17,19 @@ type FaceMode = 'room' | 'own' | 'bare';
  */
 @Component({
     selector: 'fd-finish-bands',
-    imports: [IconComponent, MaterialPickerComponent],
+    imports: [IconComponent, MaterialPickerComponent, TranslatePipe],
     template: `
         @if (nullable()) {
-            <div class="modes" role="group" aria-label="Finishes of this face">
-                <button type="button" [class.active]="mode() === 'room'" [disabled]="disabled()" (click)="setMode('room')">As the room</button>
-                <button type="button" [class.active]="mode() === 'own'" [disabled]="disabled() || materials().length === 0" (click)="setMode('own')">
-                    Own bands
+            <div class="modes" role="group" [attr.aria-label]="'inspector.bands.faceFinishes' | translate">
+                <button type="button" [class.active]="mode() === 'room'" [disabled]="disabled()" (click)="setMode('room')">
+                    {{ 'inspector.bands.asRoom' | translate }}
                 </button>
-                <button type="button" [class.active]="mode() === 'bare'" [disabled]="disabled()" (click)="setMode('bare')">Bare</button>
+                <button type="button" [class.active]="mode() === 'own'" [disabled]="disabled() || materials().length === 0" (click)="setMode('own')">
+                    {{ 'inspector.bands.own' | translate }}
+                </button>
+                <button type="button" [class.active]="mode() === 'bare'" [disabled]="disabled()" (click)="setMode('bare')">
+                    {{ 'inspector.bands.bare' | translate }}
+                </button>
             </div>
         }
         @if (mode() === 'own' || !nullable()) {
@@ -42,15 +47,15 @@ type FaceMode = 'room' | 'own' | 'bare';
                             <button
                                 type="button"
                                 class="icon-button"
-                                [attr.aria-label]="'Remove band ' + (i + 1)"
-                                title="Remove"
+                                [attr.aria-label]="'inspector.bands.remove' | translate: {n: i + 1}"
+                                [title]="'inspector.remove' | translate"
                                 [disabled]="disabled()"
                                 (click)="remove(i)"
                             >
                                 <fd-icon name="close" [size]="14" />
                             </button>
                             <label class="band__height">
-                                <span>From</span>
+                                <span>{{ 'inspector.bands.from' | translate }}</span>
                                 <input
                                     class="input"
                                     type="number"
@@ -61,7 +66,7 @@ type FaceMode = 'room' | 'own' | 'bare';
                                 />
                             </label>
                             <label class="band__height">
-                                <span>To</span>
+                                <span>{{ 'inspector.bands.to' | translate }}</span>
                                 <input
                                     class="input"
                                     type="number"
@@ -74,17 +79,17 @@ type FaceMode = 'room' | 'own' | 'bare';
                         </div>
                     }
                 </div>
-                <p class="hint">mm above the floor.</p>
+                <p class="hint">{{ 'inspector.bands.unitHint' | translate }}</p>
             } @else {
-                <p class="hint">Painted walls, no tiles or panelling.</p>
+                <p class="hint">{{ 'inspector.bands.none' | translate }}</p>
             }
             <button type="button" class="btn btn--ghost btn--small add" [disabled]="disabled() || materials().length === 0" (click)="add()">
-                <fd-icon name="plus" [size]="14" /> Add band
+                <fd-icon name="plus" [size]="14" /> {{ 'inspector.bands.add' | translate }}
             </button>
         } @else if (mode() === 'room') {
-            <p class="hint">This face takes the bands of the room in front of it.</p>
+            <p class="hint">{{ 'inspector.bands.roomHint' | translate }}</p>
         } @else {
-            <p class="hint">This face stays bare, whatever the room has.</p>
+            <p class="hint">{{ 'inspector.bands.bareHint' | translate }}</p>
         }
     `,
     styles: `

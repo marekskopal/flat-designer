@@ -1,23 +1,23 @@
 @if (editor.picked().length > 0) {
-    <aside class="inspector" aria-label="Picked items">
+    <aside class="inspector" [attr.aria-label]="'editor.panel.pickedItems' | translate">
         <header class="head">
             <span class="head__icon"><fd-icon name="group" /></span>
             <span class="head__title">
-                <strong>{{ editor.picked().length }} {{ editor.picked().length === 1 ? 'item' : 'items' }} picked</strong>
-                <span>Shift+click to pick more</span>
+                <strong>{{ 'editor.panel.picked' | plural: editor.picked().length }}</strong>
+                <span>{{ 'editor.panel.pickMore' | translate }}</span>
             </span>
-            <button type="button" class="icon-button" title="Stop picking (Esc)" aria-label="Stop picking" (click)="editor.select(null)">
+            <button type="button" class="icon-button" [title]="'editor.panel.stopPickingTitle' | translate" [attr.aria-label]="'editor.panel.stopPicking' | translate" (click)="editor.select(null)">
                 <fd-icon name="close" [size]="16" />
             </button>
         </header>
         <div class="body body--padded">
             <div class="group-form">
-                <input #groupName class="input input--compact" aria-label="Group name" value="Group" (keydown.enter)="groupPicked(groupName.value)" />
+                <input #groupName class="input input--compact" [attr.aria-label]="'editor.panel.groupName' | translate" [value]="'editor.defaults.group' | translate" (keydown.enter)="groupPicked(groupName.value)" />
                 <button type="button" class="btn btn--primary btn--small" [disabled]="editor.busy()" (click)="groupPicked(groupName.value)">
-                    <fd-icon name="group" [size]="15" /> Group
+                    <fd-icon name="group" [size]="15" /> {{ 'editor.panel.group' | translate }}
                 </button>
             </div>
-            <p class="hint">A grouped item adds its whole group; Shift+click a picked one to drop it, Esc to stop.</p>
+            <p class="hint">{{ 'editor.panel.pickHint' | translate }}</p>
         </div>
     </aside>
 } @else if (selected(); as s) {
@@ -28,33 +28,33 @@
                 <strong>{{ s.name }}</strong>
                 <span>{{ s.label }} · #{{ s.element['id'] }}</span>
             </span>
-            <button type="button" class="icon-button" title="Deselect (Esc)" aria-label="Deselect" (click)="editor.select(null)">
+            <button type="button" class="icon-button" [title]="'editor.panel.deselectTitle' | translate" [attr.aria-label]="'editor.panel.deselect' | translate" (click)="editor.select(null)">
                 <fd-icon name="close" [size]="16" />
             </button>
         </header>
-        <div class="actions" role="toolbar" aria-label="Element">
+        <div class="actions" role="toolbar" [attr.aria-label]="'editor.panel.element' | translate">
             <button
                 type="button"
                 class="icon-button"
-                title="Duplicate (Ctrl+D)"
-                aria-label="Duplicate"
+                [title]="'editor.panel.duplicateTitle' | translate"
+                [attr.aria-label]="'editor.panel.duplicate' | translate"
                 [disabled]="s.kind === 'variantSet' || editor.busy()"
                 (click)="editor.duplicateSelected()"
             >
                 <fd-icon name="copy" [size]="16" />
             </button>
             @if (canTurn()) {
-                <button type="button" class="icon-button" title="Turn by 90° (R, Shift+R the other way)" aria-label="Turn" [disabled]="editor.busy()" (click)="turn()">
+                <button type="button" class="icon-button" [title]="'editor.panel.turnTitle' | translate" [attr.aria-label]="'editor.panel.turn' | translate" [disabled]="editor.busy()" (click)="turn()">
                     <fd-icon name="rotate" [size]="16" />
                 </button>
             }
             @if (s.kind === 'group') {
-                <button type="button" class="icon-button" title="Ungroup: keep the items, drop the group" aria-label="Ungroup" [disabled]="editor.busy()" (click)="editor.ungroupSelected()">
+                <button type="button" class="icon-button" [title]="'editor.panel.ungroupTitle' | translate" [attr.aria-label]="'editor.panel.ungroup' | translate" [disabled]="editor.busy()" (click)="editor.ungroupSelected()">
                     <fd-icon name="ungroup" [size]="16" />
                 </button>
             }
             <span class="actions__spacer"></span>
-            <button type="button" class="icon-button icon-button--danger" title="Delete (Del)" aria-label="Delete" [disabled]="editor.busy()" (click)="editor.deleteSelected()">
+            <button type="button" class="icon-button icon-button--danger" [title]="'editor.panel.deleteTitle' | translate" [attr.aria-label]="'common.delete' | translate" [disabled]="editor.busy()" (click)="editor.deleteSelected()">
                 <fd-icon name="trash" [size]="16" />
             </button>
         </div>
@@ -76,30 +76,30 @@
             />
             @if (s.kind === 'group') {
                 <section class="extra">
-                    <h3 class="extra__title">Items</h3>
+                    <h3 class="extra__title">{{ 'editor.panel.items' | translate }}</h3>
                     <ul class="members">
                         @for (item of groupMembers(); track item.id) {
                             <li>
                                 <button type="button" class="members__item" (click)="selectItem(item)">{{ item.name }}</button>
                             </li>
                         } @empty {
-                            <li class="hint">No items (add some with an item's Group field).</li>
+                            <li class="hint">{{ 'editor.panel.noItems' | translate }}</li>
                         }
                     </ul>
                     @if (groupSet(); as set) {
-                        <p class="hint">Variant of <button type="button" class="link" (click)="selectSet(set.id)">{{ set.name }}</button></p>
+                        <p class="hint">{{ 'editor.panel.variantOf' | translate }} <button type="button" class="link" (click)="selectSet(set.id)">{{ set.name }}</button></p>
                     } @else {
                         <button
                             type="button"
                             class="btn btn--small"
-                            title="Make this group the first of several alternatives (e.g. with / without an island)"
+                            [title]="'editor.panel.makeVariantsTitle' | translate"
                             [disabled]="editor.busy()"
                             (click)="makeVariants(s.element)"
                         >
-                            <fd-icon name="variants" [size]="15" /> Make variants
+                            <fd-icon name="variants" [size]="15" /> {{ 'editor.panel.makeVariants' | translate }}
                         </button>
                     }
-                    <p class="hint">Double-click (or Alt+click) one of its items to edit just that one.</p>
+                    <p class="hint">{{ 'editor.panel.editOneHint' | translate }}</p>
                 </section>
             }
             @if (switchLights(); as lights) {
@@ -118,17 +118,17 @@
             }
             @if (s.kind === 'variantSet') {
                 <section class="extra">
-                    <p class="hint">Switch and add variants in the Variants panel. To decide for the shown variant, drop the others with their items (can be undone).</p>
-                    <button type="button" class="btn btn--small btn--danger" [disabled]="editor.busy()" (click)="editor.deleteSelected()">Keep shown, drop others</button>
+                    <p class="hint">{{ 'editor.panel.variantSetHint' | translate }}</p>
+                    <button type="button" class="btn btn--small btn--danger" [disabled]="editor.busy()" (click)="editor.deleteSelected()">{{ 'editor.panel.keepShown' | translate }}</button>
                 </section>
             }
         </div>
         <footer class="keys">
-            <span><kbd>←</kbd><kbd>→</kbd> nudge</span>
+            <span><kbd>←</kbd><kbd>→</kbd> {{ 'editor.panel.keyNudge' | translate }}</span>
             <span><kbd>Shift</kbd> × 10</span>
-            <span><kbd>Ctrl</kbd>+<kbd>D</kbd> copy</span>
-            <span><kbd>Del</kbd> delete</span>
-            <span><kbd>Esc</kbd> deselect</span>
+            <span><kbd>Ctrl</kbd>+<kbd>D</kbd> {{ 'editor.panel.keyCopy' | translate }}</span>
+            <span><kbd>Del</kbd> {{ 'editor.panel.keyDelete' | translate }}</span>
+            <span><kbd>Esc</kbd> {{ 'editor.panel.keyDeselect' | translate }}</span>
         </footer>
     </aside>
 }

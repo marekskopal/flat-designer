@@ -12,6 +12,25 @@
    ]
   },
   "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Podhledové svítidlo, kulaté",
+    "description": "Kulaté svítidlo zapuštěné do (sníženého) stropu: tenký rámeček se svítícím krytem, svítící dolů. Výšku osazení zadejte jako výšku stropu minus výšku svítidla.",
+    "parameters": {
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti",
+     "angle": "Vyzařovací úhel",
+     "shadow": "Vrhá stíny"
+    },
+    "slots": {
+     "trim": "Rámeček"
+    },
+    "parts": {
+     "Trim": "Rámeček",
+     "Lens": "Kryt"
+    }
+   }
+  },
   "size": {
    "width": 90,
    "depth": 90,

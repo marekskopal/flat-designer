@@ -1,10 +1,10 @@
 <div class="editor">
     <div class="editor__head">
-        <a routerLink="/furniture" class="back">← Furniture</a>
+        <a routerLink="/furniture" class="back">{{ 'furniture.editor.back' | translate }}</a>
         @if (definition(); as d) {
-            <span class="badge">{{ scopeLabels[d.scope] }}</span>
+            <span class="badge">{{ 'furniture.scopes.' + d.scope | translate }}</span>
             @if (d.itemCount) {
-                <span class="usage">Used by {{ d.itemCount }} {{ d.itemCount === 1 ? 'item' : 'items' }} — saving changes {{ d.itemCount === 1 ? 'it' : 'them all' }}.</span>
+                <span class="usage">{{ 'furniture.editor.usedBy' | plural: d.itemCount }}</span>
             }
         }
     </div>
@@ -12,11 +12,11 @@
     <div class="editor__body">
         <section class="pane pane--form">
             <label class="field">
-                <span class="field__label">Name</span>
+                <span class="field__label">{{ 'common.name' | translate }}</span>
                 <input class="input" [value]="name()" [readOnly]="readOnly()" (input)="name.set(text($event))" />
             </label>
             <label class="field">
-                <span class="field__label">Description</span>
+                <span class="field__label">{{ 'common.description' | translate }}</span>
                 <input class="input" [value]="description()" [readOnly]="readOnly()" (input)="description.set(text($event))" />
             </label>
             @if (body(); as b) {
@@ -24,8 +24,8 @@
             }
             <label class="field field--grow">
                 <span class="field__label">
-                    Definition (JSON)
-                    <button type="button" class="link" [disabled]="body() === null || readOnly()" (click)="format()">Format</button>
+                    {{ 'furniture.editor.definition' | translate }}
+                    <button type="button" class="link" [disabled]="body() === null || readOnly()" (click)="format()">{{ 'furniture.editor.format' | translate }}</button>
                 </span>
                 <textarea class="input code" spellcheck="false" [value]="json()" [readOnly]="readOnly()" (input)="json.set(text($event))"></textarea>
             </label>
@@ -34,57 +34,57 @@
                 @if (!parsed().ok) {
                     <p class="message message--error">{{ $any(parsed()).error }}</p>
                 } @else if (previewError(); as error) {
-                    <p class="message message--error">At the tryout size: {{ error }}</p>
+                    <p class="message message--error">{{ 'furniture.editor.atTryoutSize' | translate: {error} }}</p>
                 }
                 @if (serverError(); as error) {
-                    <p class="message message--error">Server: {{ error }}</p>
+                    <p class="message message--error">{{ 'furniture.editor.serverError' | translate: {error} }}</p>
                 } @else if (serverOk() && !dirty()) {
-                    <p class="message message--ok">The server accepts this definition.</p>
+                    <p class="message message--ok">{{ 'furniture.editor.serverOk' | translate }}</p>
                 }
             </div>
 
             <div class="actions">
                 @if (readOnly()) {
-                    <span class="hint">You cannot change this definition{{ definition()?.scope === 'global' ? ' (global ones are managed by admins)' : '' }}.</span>
-                    <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="copyToLibrary()">Copy to my library</button>
+                    <span class="hint">{{ (definition()?.scope === 'global' ? 'furniture.editor.readOnlyGlobal' : 'furniture.editor.readOnly') | translate }}</span>
+                    <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="copyToLibrary()">{{ 'furniture.copyToLibrary' | translate }}</button>
                 } @else {
-                    <button type="button" class="btn btn--ghost" [disabled]="busy() || body() === null" (click)="check()">Check</button>
-                    <button type="button" class="btn btn--primary" [disabled]="busy() || body() === null || !dirty()" (click)="save()">Save</button>
+                    <button type="button" class="btn btn--ghost" [disabled]="busy() || body() === null" (click)="check()">{{ 'furniture.editor.check' | translate }}</button>
+                    <button type="button" class="btn btn--primary" [disabled]="busy() || body() === null || !dirty()" (click)="save()">{{ 'common.save' | translate }}</button>
                 }
             </div>
         </section>
 
         <section class="pane pane--preview">
-            <div #preview class="preview" aria-label="Preview of the furniture">
+            <div #preview class="preview" [attr.aria-label]="'furniture.editor.preview' | translate">
                 @if (webglProblem(); as problem) {
                     <fd-webgl-message [problem]="problem" />
                 }
             </div>
             <div class="tryout">
                 <div class="tryout__head">
-                    <h2 class="tryout__title">Try it out</h2>
+                    <h2 class="tryout__title">{{ 'furniture.editor.tryOut' | translate }}</h2>
                     <button
                         type="button"
                         class="link"
-                        title="Or click a front in the preview"
+                        [title]="'furniture.editor.frontsHint' | translate"
                         [attr.aria-pressed]="frontsOpen()"
                         (click)="toggleFronts()"
                     >
-                        {{ frontsOpen() ? 'Close fronts' : 'Open fronts' }}
+                        {{ (frontsOpen() ? 'furniture.editor.closeFronts' : 'furniture.editor.openFronts') | translate }}
                     </button>
-                    <button type="button" class="link" (click)="resetTryout()">Defaults</button>
+                    <button type="button" class="link" (click)="resetTryout()">{{ 'furniture.editor.defaults' | translate }}</button>
                 </div>
                 <div class="sizes">
                     <label class="cell">
-                        <span class="cell__label">Width <span class="cell__unit">mm</span></span>
+                        <span class="cell__label">{{ 'furniture.editor.width' | translate }} <span class="cell__unit">mm</span></span>
                         <input class="input input--compact" type="number" min="1" step="10" [value]="tryWidth()" (change)="setNumber('width', $event)" />
                     </label>
                     <label class="cell">
-                        <span class="cell__label">Depth <span class="cell__unit">mm</span></span>
+                        <span class="cell__label">{{ 'furniture.editor.depth' | translate }} <span class="cell__unit">mm</span></span>
                         <input class="input input--compact" type="number" min="1" step="10" [value]="tryDepth()" (change)="setNumber('depth', $event)" />
                     </label>
                     <label class="cell">
-                        <span class="cell__label">Height <span class="cell__unit">mm</span></span>
+                        <span class="cell__label">{{ 'furniture.editor.height' | translate }} <span class="cell__unit">mm</span></span>
                         <input class="input input--compact" type="number" min="1" step="10" [value]="tryHeight()" (change)="setNumber('height', $event)" />
                     </label>
                 </div>

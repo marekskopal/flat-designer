@@ -4,6 +4,21 @@
  "definition": {
   "format": 1,
   "catalogue": "decor",
+  "translations": {
+   "cs": {
+    "name": "Dekorační polštář",
+    "description": "Plný polštář na pohovku nebo postel, opřený dozadu pod úhlem lean.",
+    "parameters": {
+     "lean": "Sklon dozadu"
+    },
+    "slots": {
+     "fabric": "Látka"
+    },
+    "parts": {
+     "Cushion": "Polštář"
+    }
+   }
+  },
   "size": {
    "width": 450,
    "depth": 180,

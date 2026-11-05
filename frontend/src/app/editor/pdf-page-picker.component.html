@@ -1,5 +1,5 @@
-<div class="picker" role="group" [attr.aria-label]="'Pages of ' + file().filename">
-    <p class="hint">Which page of {{ file().filename }} goes under the plan?</p>
+<div class="picker" role="group" [attr.aria-label]="'editor.pdf.pagesOf' | translate: {name: file().filename}">
+    <p class="hint">{{ 'editor.pdf.which' | translate: {name: file().filename} }}</p>
     <ul class="pages">
         @for (page of pages(); track page.page) {
             <li>
@@ -22,7 +22,7 @@
         }
     </ul>
     @if (pageCount() > pages().length) {
-        <p class="hint">Only the first {{ pages().length }} of its {{ pageCount() }} pages can be laid.</p>
+        <p class="hint">{{ 'editor.pdf.onlyFirst' | translate: {shown: pages().length, count: pageCount()} }}</p>
     }
-    <button type="button" class="tool" [disabled]="disabled()" (click)="cancelled.emit()">Cancel</button>
+    <button type="button" class="tool" [disabled]="disabled()" (click)="cancelled.emit()">{{ 'common.cancel' | translate }}</button>
 </div>

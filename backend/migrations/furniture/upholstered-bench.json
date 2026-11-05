@@ -4,6 +4,27 @@
  "definition": {
   "format": 1,
   "catalogue": "seating",
+  "translations": {
+   "cs": {
+    "name": "Vestavěná lavice s čalouněným opěradlem",
+    "description": "Vestavěná lavice podél stěny: dubový sedák na uzavřené podstavě se zapuštěným soklem a čalouněné panely opěradla na stěně nad ní.",
+    "parameters": {
+     "seat": "Výška sedáku",
+     "panels": "Panely opěradla",
+     "backDepth": "Tloušťka panelu opěradla"
+    },
+    "slots": {
+     "wood": "Sedák a podstava",
+     "upholstery": "Panely opěradla"
+    },
+    "parts": {
+     "Plinth": "Sokl",
+     "Base": "Podstava",
+     "Seat": "Sedák",
+     "Back panel": "Panel opěradla"
+    }
+   }
+  },
   "size": {
    "width": 3000,
    "depth": 450,

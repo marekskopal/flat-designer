@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Izbik\Service\Furniture;
 
+use Closure;
 use Izbik\Service\Json\JsonDecoder;
 use PDO;
 use PDOStatement;
@@ -19,9 +20,10 @@ final readonly class FurnitureSeeds
 
 	/**
 	 * @param list<string> $files names in `$directory`
+	 * @param (Closure(array<mixed>): array<mixed>)|null $change applied to each definition before it is stored
 	 * @return list<array{name: string, description: string, definition: string}> the definition as stored JSON
 	 */
-	public static function read(array $files, string $directory = self::Directory): array
+	public static function read(array $files, string $directory = self::Directory, ?Closure $change = null): array
 	{
 		$seeds = [];
 		foreach ($files as $file) {
@@ -32,7 +34,11 @@ final readonly class FurnitureSeeds
 			if (!is_string($name) || !is_string($description) || !is_array($definition)) {
 				throw new RuntimeException(sprintf('%s must be {name, description, definition}.', $file));
 			}
-			$seeds[] = ['name' => $name, 'description' => $description, 'definition' => DefinitionValidator::encode($definition)];
+			$seeds[] = [
+				'name' => $name,
+				'description' => $description,
+				'definition' => DefinitionValidator::encode($change === null ? $definition : $change($definition)),
+			];
 		}
 
 		return $seeds;
@@ -56,18 +62,20 @@ final readonly class FurnitureSeeds
 	 * Writes the files' current definitions and descriptions over the seeded rows of their names (global, created by no
 	 * one), for a migration that changed seeds an earlier one inserted (a fresh database gets the new file from that one
 	 * already). Admins' rows of the same name are left alone, and a seed whose row an admin deleted stays deleted. A
-	 * migration's `down()` may write the earlier files back from another `$directory`.
+	 * migration's `down()` may write the earlier files back from another `$directory`, or undo its change of each
+	 * definition by `$change`.
 	 *
 	 * @param list<string> $files
+	 * @param (Closure(array<mixed>): array<mixed>)|null $change
 	 */
-	public static function update(PDO $pdo, array $files, string $directory = self::Directory): void
+	public static function update(PDO $pdo, array $files, string $directory = self::Directory, ?Closure $change = null): void
 	{
 		$statement = self::prepare(
 			$pdo,
 			'UPDATE furniture_definitions SET description = ?, definition = ?, updated_at = ?
 			WHERE user_id IS NULL AND project_id IS NULL AND created_by_id IS NULL AND name = ? AND deleted_at IS NULL',
 		);
-		foreach (self::read($files, $directory) as $seed) {
+		foreach (self::read($files, $directory, $change) as $seed) {
 			$statement->execute([$seed['description'], $seed['definition'], date('Y-m-d H:i:s'), $seed['name']]);
 		}
 	}

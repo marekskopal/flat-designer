@@ -4,6 +4,27 @@
  "definition": {
   "format": 1,
   "catalogue": "building",
+  "translations": {
+   "cs": {
+    "name": "Panel",
+    "description": "Jedna deska přiříznutá na rozměr prvku: zadní panel, bok niky nebo deska podhledu.",
+    "parameters": {
+     "grain": "Kresba"
+    },
+    "options": {
+     "grain": {
+      "vertical": "svislá",
+      "horizontal": "vodorovná"
+     }
+    },
+    "slots": {
+     "board": "Materiál"
+    },
+    "parts": {
+     "Panel": "Panel"
+    }
+   }
+  },
   "size": {
    "width": 600,
    "depth": 18,

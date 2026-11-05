@@ -3,8 +3,9 @@ import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {localDate} from '@app/core/local-date';
 import {SunTime} from '@app/models/scene';
-import {CameraPose, ShareComments, ShareLink, ShareLinkInput, ShareSettings, ShareView, ShareViewLabels} from '@app/models/share';
+import {CameraPose, ShareComments, ShareLink, ShareLinkInput, ShareSettings, ShareView} from '@app/models/share';
 import {ShareService} from '@app/services/share.service';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /** What the viewer shows right now: a new link starts from it. */
 export interface ShareSource {
@@ -34,34 +35,34 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
  */
 @Component({
     selector: 'fd-share-link-form',
-    imports: [ReactiveFormsModule],
+    imports: [ReactiveFormsModule, TranslatePipe],
     template: `
         <form class="form" [formGroup]="form" (ngSubmit)="save()">
             <label class="field">
-                <span class="field__label">Name</span>
-                <input class="input" type="text" formControlName="name" maxlength="100" placeholder="e.g. Kitchen for the carpenter" />
+                <span class="field__label">{{ 'common.name' | translate }}</span>
+                <input class="input" type="text" formControlName="name" maxlength="100" [placeholder]="'share.namePlaceholder' | translate" />
             </label>
 
             <fieldset class="field">
-                <legend class="field__label">Guest can switch to</legend>
+                <legend class="field__label">{{ 'share.views.label' | translate }}</legend>
                 <div class="checks">
                     @for (view of views; track view) {
                         <label class="check">
                             <input type="checkbox" [formControlName]="view" />
-                            {{ labels[view] }}
+                            {{ labels[view] | translate }}
                         </label>
                     }
                 </div>
                 @if (!viewsValid()) {
-                    <span class="field__hint">Allow 3D or Plan: the walk-through needs a view to return to.</span>
+                    <span class="field__hint">{{ 'share.views.needsReturn' | translate }}</span>
                 }
             </fieldset>
 
             <label class="field">
-                <span class="field__label">Opens in</span>
+                <span class="field__label">{{ 'share.opensIn' | translate }}</span>
                 <select class="input" formControlName="initialView">
                     @for (view of allowedViews(); track view) {
-                        <option [value]="view">{{ labels[view] }}</option>
+                        <option [value]="view">{{ labels[view] | translate }}</option>
                     }
                 </select>
             </label>
@@ -69,47 +70,42 @@ const AllViews: ShareView[] = ['overview', 'top', 'walkthrough'];
             <div class="field">
                 <label class="check">
                     <input type="checkbox" formControlName="camera" />
-                    {{ link() === null ? 'Save the current 3D camera' : 'Keep the saved 3D camera' }}
+                    {{ (link() === null ? 'share.camera.save' : 'share.camera.keep') | translate }}
                 </label>
                 @if (cameraHint(); as hint) {
-                    <span class="field__hint">{{ hint }}</span>
+                    <span class="field__hint">{{ hint | translate }}</span>
                 }
             </div>
 
             <div class="field">
                 <label class="check">
                     <input type="checkbox" formControlName="exports" />
-                    Guests can download the plan, elevations and 3D model
+                    {{ 'share.exports' | translate }}
                 </label>
             </div>
 
             <label class="field">
-                <span class="field__label">Comments</span>
+                <span class="field__label">{{ 'share.comments.label' | translate }}</span>
                 <select class="input" formControlName="comments">
-                    <option value="hidden">Hidden</option>
-                    <option value="read">Guests see the open comments</option>
-                    <option value="write">Guests see and add comments</option>
+                    <option value="hidden">{{ 'share.comments.hidden' | translate }}</option>
+                    <option value="read">{{ 'share.comments.read' | translate }}</option>
+                    <option value="write">{{ 'share.comments.write' | translate }}</option>
                 </select>
             </label>
 
             <label class="field">
-                <span class="field__label">Expires</span>
+                <span class="field__label">{{ 'share.expires' | translate }}</span>
                 <input class="input" type="date" formControlName="expires" [min]="tomorrow" />
-                <span class="field__hint">Leave empty to keep the link working until you delete it.</span>
+                <span class="field__hint">{{ 'share.expiresHint' | translate }}</span>
             </label>
 
             @if (link() === null) {
-                <p class="field__hint">
-                    Creating the link saves a version of the project: guests see this floor as it is now, later edits do not
-                    reach them. The display (ceilings, roof, labels, wall cut, dimensions, electrical symbols, night, sun time, quality, all
-                    floors) and the
-                    shown variants are kept too.
-                </p>
+                <p class="field__hint">{{ 'share.createHint' | translate }}</p>
             }
             <div class="form__actions">
-                <button type="button" class="btn btn--ghost" (click)="cancelled.emit()">Cancel</button>
+                <button type="button" class="btn btn--ghost" (click)="cancelled.emit()">{{ 'common.cancel' | translate }}</button>
                 <button type="submit" class="btn btn--primary" [disabled]="form.invalid || !viewsValid() || busy()">
-                    {{ link() === null ? 'Create link' : 'Save' }}
+                    {{ (link() === null ? 'share.create' : 'common.save') | translate }}
                 </button>
             </div>
         </form>
@@ -164,7 +160,12 @@ export class ShareLinkFormComponent {
     private readonly shares = inject(ShareService);
 
     protected readonly views = AllViews;
-    protected readonly labels = ShareViewLabels;
+    /** The keys of the views' names. */
+    protected readonly labels: Record<ShareView, string> = {
+        overview: 'share.views.overview',
+        top: 'share.views.top',
+        walkthrough: 'share.views.walkthrough',
+    };
     protected readonly tomorrow = localDate(new Date(Date.now() + 86_400_000));
     protected readonly busy = signal(false);
 
@@ -202,20 +203,20 @@ export class ShareLinkFormComponent {
     /** At least one view, and the walk-through needs the 3D or the plan view to return to. */
     protected readonly viewsValid = computed(() => this.allowedViews().some((view) => view !== 'walkthrough'));
 
-    /** Why the camera option is off, if it is. */
+    /** Why the camera option is off, if it is (a translation key). */
     protected readonly cameraHint = computed((): string | null => {
         if (!this.allowedViews().includes('overview')) {
-            return 'Needs the 3D view allowed.';
+            return 'share.camera.needs3d';
         }
         const source = this.source();
         if (source !== null && source.view !== 'overview') {
-            return 'Switch the viewer to 3D and frame the shot first.';
+            return 'share.camera.switchTo3d';
         }
         const link = this.link();
         if (link !== null && link.settings.camera === null) {
-            return 'This link has no saved camera.';
+            return 'share.camera.none';
         }
-        return source !== null ? 'Guests start where your camera is now and can return to it.' : null;
+        return source !== null ? 'share.camera.hint' : null;
     });
 
     public constructor() {

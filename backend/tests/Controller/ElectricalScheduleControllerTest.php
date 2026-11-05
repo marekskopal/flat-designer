@@ -10,6 +10,7 @@ use Izbik\Model\Repository\FurnitureDefinitionRepository;
 use Izbik\Route\Routes;
 use Izbik\Service\Furniture\DefinitionCategoryEnum;
 use Izbik\Service\Furniture\FurnitureSeeds;
+use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\Schedule\ElectricalScheduleService;
 use Izbik\Tests\Support\EditorTestCase;
 use Izbik\Tests\Support\Fixture;
@@ -143,6 +144,48 @@ final class ElectricalScheduleControllerTest extends EditorTestCase
 		);
 		self::assertSame(422, $invalid->getStatusCode());
 		self::assertStringStartsWith('category: Must be one of light, socket', self::stringField($this->jsonBody($invalid)['message']));
+	}
+
+	public function testDefinitionsAreNamedInTheRequestsLanguage(): void
+	{
+		$definition = [
+			'format' => 1,
+			'category' => 'socket',
+			'translations' => ['cs' => ['name' => 'Podlahová krabice']],
+			'size' => ['width' => 80, 'depth' => 40, 'height' => 80],
+			'parts' => [['type' => 'board', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D']],
+		];
+		$response = $this->request(
+			'POST',
+			Routes::FurnitureDefinitions->value,
+			['name' => 'Floor box', 'definition' => $definition],
+			$this->user,
+		);
+		self::assertSame(201, $response->getStatusCode(), (string) $response->getBody());
+		$this->point(self::id($this->jsonBody($response)), 1000, 1000, 0);
+
+		$czech = (string) $this->request(
+			'GET',
+			$this->path(false),
+			authenticatedAs: $this->user,
+			headers: ['Accept-Language' => 'cs'],
+		)->getBody();
+		$english = (string) $this->request('GET', $this->path(false), authenticatedAs: $this->user)->getBody();
+
+		$room = static function (string $json): array {
+			$room = JsonDecoder::decodeObject($json);
+			foreach (['floors', 0, 'rooms', 0] as $key) {
+				self::assertIsArray($room);
+				$room = $room[$key] ?? null;
+			}
+			self::assertIsArray($room);
+			self::assertIsArray($room['rows']);
+			self::assertIsArray($room['rows'][0]);
+
+			return [$room['name'] ?? null, $room['rows'][0]['name'] ?? null];
+		};
+		self::assertSame(['Mimo místnosti', 'Podlahová krabice'], $room($czech));
+		self::assertSame(['Not in a room', 'Floor box'], $room($english));
 	}
 
 	/**

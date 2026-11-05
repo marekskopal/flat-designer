@@ -4,6 +4,23 @@
  "definition": {
   "format": 1,
   "catalogue": "outdoor",
+  "translations": {
+   "cs": {
+    "name": "Nášlapné desky",
+    "description": "Řada betonových nášlapných desek přes trávník, kladených od zadní strany prvku k přední: count desek hlubokých slab, s roztečí spacing (od středu ke středu). Hloubka prvku je (count − 1) × spacing + slab.",
+    "parameters": {
+     "count": "Desky",
+     "slab": "Hloubka desky",
+     "spacing": "Rozteč"
+    },
+    "slots": {
+     "slabs": "Desky"
+    },
+    "parts": {
+     "Slab": "Deska"
+    }
+   }
+  },
   "size": {
    "width": 900,
    "depth": 3550,

@@ -12,6 +12,29 @@
    ]
   },
   "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Světelný zdroj",
+    "description": "Světlo lampy z knihovny modelů: umístěte ho do stínidla (seskupte ho s lampou). Bodové světlo, nebo reflektor svítící dolů; může svítit jako malá žárovka.",
+    "parameters": {
+     "kind": "Druh",
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti",
+     "angle": "Vyzařovací úhel (reflektor)",
+     "glow": "Viditelná žárovka",
+     "shadow": "Vrhá stíny"
+    },
+    "options": {
+     "kind": {
+      "point": "bodové světlo",
+      "spot": "reflektor"
+     }
+    },
+    "parts": {
+     "Light": "Světlo"
+    }
+   }
+  },
   "size": {
    "width": 60,
    "depth": 60,

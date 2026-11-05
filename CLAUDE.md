@@ -63,6 +63,72 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   - `jwtInterceptor` adds the token and refreshes it on 401. `errorInterceptor` shows a toast for API errors; skip it
     with the `SkipErrorToast` context token.
 
+## Translations (I-120)
+
+- The application is in English (the default and fallback) and Czech. The frontend uses `@ngx-translate`: the texts
+  are `frontend/src/i18n/{en,cs}.json` (nested keys by area, `common.language`), served as `i18n/` next to the app
+  (resolved against `document.baseURI`, `no-cache` in `conf/default.conf`). **A new user-facing text goes into both
+  files** (`TranslatePipe` in templates, `TranslateService` in code); `src/i18n/i18n.spec.ts` checks they have the same
+  keys and placeholders. Specs that render texts take `provideTestTranslations()` (`src/test-translations.ts`, the real
+  files, English). Counts go through `PluralPipe` / `pluralText()` (`shared/i18n`: keys `<key>.one|few|other` in both
+  languages, by `Intl.PluralRules`), dates through `DateTextPipe` (`dateText: 'date' | 'dateTime' | 'dayTime' |
+  'time'`, each language's own format), never Angular's `date` with an English pattern. A route's `title` is a key
+  (`titles.*`, `TranslatedTitleStrategy`). API requests carry the language shown as `Accept-Language`
+  (`languageInterceptor`), so the server's messages come in it; `errorInterceptor` gives an error without one a
+  translated `errors.unreachable` / `errors.unexpected`. The inspector's `ElementFields` hold keys (`label`, `section`:
+  `fields.*`), its hints and parse errors are `FieldText` (`{key, params?, count?}`, `translateFieldText()`); element
+  kinds are `KindLabelKeys` (`kinds.*`) and `elementFacts()` takes the `TranslateService`. Default names the editor
+  sends (a new room, a group, a variant set) are translated (`editor.defaults.*`).
+- Option lists are values named by `enums.<enum>.<value>`: a select field's `enum` in `ElementFields` (every select has
+  one), `OpeningTypes`, `FurnitureCatalogues`, the electrical categories (the drawings still take `CategoryLabels`), item
+  kinds (`enums.itemKind`, with `enums.itemKindHint` for the Add library). **A new enum value needs its two texts**
+  (`src/i18n/enums.spec.ts`). Seeded materials are named by `materials.<code>`, put in where materials load
+  (`localizeMaterials()`: the scene, a shared view, the catalogue; one an admin adds keeps its own name);
+  `backend/tests/fixtures/material-codes.json` lists the seeded codes (`SeededMaterialCodesTest`), so **a migration
+  seeding a material adds its code there and its names to both files**.
+- Furniture definitions carry their own texts: an optional `translations` (`{cs: {name, description, parameters,
+  options, slots, parts}}`, parameters by key or `list.field`, options by select, parts by English name; checked by
+  `DefinitionTranslations`, not read by the evaluators). The editor and the libraries show definitions through
+  `localizeDefinition()` (labels, `optionLabels` for selects; the parts stay, the furniture editor edits the stored
+  JSON), a new Custom item takes the name shown, and the cut list names the parts in the `Accept-Language` language
+  (`CutListService` with a locale; its materials the page names from the catalogue by id). The seeds have Czech
+  (`AddFurnitureTranslations`): **a seed's new parameter, option, slot or part needs its Czech text too.** The electrical
+  schedule names definitions (and "Not in a room") in the `Accept-Language` language too.
+- Numbers written by hand follow the locale's decimal separator (`decimalSeparator()`, `fixed()` in
+  `core/number-format.ts`; `levelText(mm, decimal)`): the schedules, the inspector's facts and hints (`FieldDecimal`),
+  the 3D room labels (`ViewerEngine.setDecimalSeparator()`). The sheets take a `SheetTexts`
+  (`viewer/engine/sheet-texts.ts`: every word they write, the separator and the date format; `EnglishSheetTexts` the
+  default, so the engine stays framework-free) that `ExportComponent` builds from `sheets.*`; English sheets keep ISO
+  dates. **A new text on a sheet goes into `SheetTexts`**, never as a literal in the engine.
+- Example projects may carry `translations` (`{cs: {name, description, credit}}`, written by hand into
+  `backend/examples/<slug>.json`; `examples:export` keeps them): the list and a new project from one take the
+  `Accept-Language` language. The shared viewer (guests) is in the browser's language, its shortcuts panel has the
+  language switch (`LanguageSwitchComponent` with `reload`).
+- Guards: `src/i18n/hard-coded-texts.spec.ts` parses every template (inline ones too) and fails on a text node or a
+  static `title` / `placeholder` / `aria-label` / `alt` with words of its own (key names, units and the brand allowed);
+  ESLint forbids literal texts in `alerts.*()` and `confirm()`. `make smoke` switches an account to Czech and back.
+- The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
+  browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
+  its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
+  `locale` wins: when it differs from the page's, `LanguageService.reloadInto()` remembers it on the device and reloads
+  (once; a session guard stops a loop), as the account page does after changing it. Pages without an account show
+  `LanguageSwitchComponent` (the device's choice, live, hidden while signed in).
+- Backend: `users.locale` (`LocaleEnum`: en, cs; `UserDto`, `PATCH /api/current-user`), set at sign-up and by a
+  Google sign-in creating the account from the browser's language (`LocaleEnum::fromBrowser()`), by an admin's
+  `POST /api/admin/users` from the admin's. MCP tool descriptions and agent-facing texts stay English. The backend's own
+  texts (the account mail, `AccountEmail` by `mail.<kind>.*`; default names it writes, a "Shared: …" version, a new
+  variant's name) are `backend/translations/{en,cs}.json` read by `Translator` (dotted keys, `{name}` placeholders,
+  English fallback; `TranslationFilesTest` keeps the keys alike), in the user's language for a person and English for
+  an agent (`ActorLocale`). Names the frontend sends (a new room, a group) are translated there.
+- API messages are thrown in English (agents read them so) and translated on the way out: `LocalizedErrorHandler`
+  (around the router) puts an error response's `message`, and the `warnings` of a posted import, into the
+  `Accept-Language` language by `ErrorTranslator`, which looks the English message, or the `sprintf` format it came from
+  (`Wall %d is not on this floor.`), up in `translations/errors.<locale>.json` (the same placeholders in the same order;
+  a filled-in part that is a message of its own is translated too; an unknown message stays English). MCP is left
+  alone. **A new user-facing message needs its translation**: `ErrorCatalogueTest` scans `src/` (MCP aside) for thrown
+  and answered messages, sentence constants and `warnings[]`, and fails on one missing from the catalogue or an entry
+  no longer thrown (`Internal` lists the 5xx ones nobody reads).
+
 ## Domain conventions
 
 - All stored lengths are integer **millimetres** in plan coordinates. The origin is the inner south-west corner of the

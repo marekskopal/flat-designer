@@ -4,6 +4,37 @@
  "definition": {
   "format": 1,
   "catalogue": "bedroom",
+  "translations": {
+   "cs": {
+    "name": "Postel s ložním prádlem",
+    "description": "Postel na podstavě z desek s matrací, peřinou a polštáři, volitelným čelem a přehozem v nohách.",
+    "parameters": {
+     "headboard": "Čelo postele",
+     "pillows": "Polštáře",
+     "duvet": "Peřina",
+     "throw": "Přehoz v nohách",
+     "baseHeight": "Výška podstavy",
+     "mattressHeight": "Matrace"
+    },
+    "slots": {
+     "frame": "Rám",
+     "mattress": "Matrace",
+     "bedding": "Ložní prádlo",
+     "throw": "Přehoz"
+    },
+    "parts": {
+     "Headboard": "Čelo postele",
+     "Base top": "Deska podstavy",
+     "Base side": "Bok podstavy",
+     "Base foot": "Čelo podstavy",
+     "Foot": "Nožka",
+     "Mattress": "Matrace",
+     "Duvet": "Peřina",
+     "Pillow": "Polštář",
+     "Throw": "Přehoz"
+    }
+   }
+  },
   "size": {
    "width": 1600,
    "depth": 2100,

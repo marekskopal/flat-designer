@@ -21,6 +21,8 @@ use Izbik\Model\Repository\ModelAssetRepository;
 use Izbik\Model\Repository\ShareLinkRepository;
 use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\Project\Exception\ProjectException;
+use Izbik\Service\Translator\ActorLocale;
+use Izbik\Service\Translator\Translator;
 use MarekSkopal\ORM\ORM;
 use stdClass;
 use const JSON_THROW_ON_ERROR;
@@ -47,6 +49,8 @@ final readonly class ShareLinkProvider
 		private ModelAssetRepository $modelRepository,
 		private SharedAssetIds $assetIds,
 		private ORM $orm,
+		private Translator $translator,
+		private ActorLocale $actorLocale,
 	) {
 	}
 
@@ -75,7 +79,7 @@ final readonly class ShareLinkProvider
 			function () use ($author, $project, $floor, $name, $settings, $expiresAt): ShareLink {
 				$link = new ShareLink(
 					project: $project,
-					version: $this->versionProvider->create($author, $project, 'Shared: ' . $name),
+					version: $this->versionProvider->create($author, $project, $this->versionName($author, $name)),
 					floorId: $floor->id,
 					floorName: $floor->name,
 					token: bin2hex(random_bytes(16)),
@@ -121,7 +125,7 @@ final readonly class ShareLinkProvider
 		}
 
 		return $this->orm->getTransactionProvider()->transaction(function () use ($author, $link, $floor): ShareLink {
-			$link->version = $this->versionProvider->create($author, $link->project, 'Shared: ' . $link->name);
+			$link->version = $this->versionProvider->create($author, $link->project, $this->versionName($author, $link->name));
 			$link->floorName = $floor->name;
 			$link->updatedAt = new DateTimeImmutable();
 			$this->shareLinkRepository->persist($link);
@@ -297,5 +301,11 @@ final readonly class ShareLinkProvider
 		}
 
 		return $expiresAt;
+	}
+
+	/** "Shared: <name>", in the language of the person sharing. */
+	private function versionName(User $author, string $linkName): string
+	{
+		return $this->translator->translate('names.sharedVersion', $this->actorLocale->of($author), ['name' => $linkName]);
 	}
 }

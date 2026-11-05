@@ -19,6 +19,8 @@
     "@angular/forms": "^22.2.4",
     "@angular/platform-browser": "^22.2.4",
     "@angular/router": "^22.2.4",
+    "@ngx-translate/core": "^18.1.0",
+    "@ngx-translate/http-loader": "^18.1.0",
     "jspdf": "^4.2.1",
     "polygon-clipping": "0.15.7",
     "rxjs": "^7.8.2",

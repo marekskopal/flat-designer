@@ -4,6 +4,31 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Šatní skříň s posuvnými dveřmi",
+    "description": "Vestavěná šatní skříň: korpus, uzavřený vnitřek, sokl a posuvné dveře na dvou kolejnicích v hliníkových rámech, kterékoli z nich se zrcadlem.",
+    "parameters": {
+     "doors": "Dveře zleva",
+     "doors.mirror": "Zrcadlo",
+     "plinth": "Sokl",
+     "t": "Deska korpusu"
+    },
+    "slots": {
+     "body": "Korpus a dveře",
+     "profile": "Rámy a kolejnice"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Top": "Strop",
+     "Interior": "Vnitřek",
+     "Plinth": "Sokl",
+     "Top track": "Horní kolejnice",
+     "Bottom rail": "Dolní kolejnice",
+     "Door": "Dveře"
+    }
+   }
+  },
   "size": {
    "width": 2400,
    "depth": 600,

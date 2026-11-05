@@ -1,6 +1,5 @@
 import {levelText} from '@app/core/level-text';
-import {localDate} from '@app/core/local-date';
-import {CategoryLabels, ElectricalCategory, ElectricalSymbols} from '@app/models/electrical-schedule';
+import {ElectricalCategory, ElectricalSymbols} from '@app/models/electrical-schedule';
 import {
     FloorVoid,
     isAncillaryRoom,
@@ -73,6 +72,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
+import {EnglishSheetTexts, sheetNumber,SheetTexts} from './sheet-texts';
 import {StairGeometry, stairGeometry, StairLinePoint} from './stairs';
 import {hasTerrain, plotTerrain, terrainContours} from './terrain';
 import {belowLine, FloorRoofs, HeightAt, lowestTopAlong, roofBreaks, roofPlaneParts, roomUnderRoofs, wallHeightAt, wallTopAt} from './under-roof';
@@ -173,7 +173,12 @@ export function planLayout(bounds: Bounds, reserved = 0): PlanLayout {
  * it is the electrical plan: the furniture outlined faintly without names or dimensions, the electrical
  * points' symbols over it with the wall points' elevations, and a legend in the title band.
  */
-export function planSheet(scene: Scene, info: SheetInfo, electrical?: ElectricalSymbols): Sheet & {scale: number} {
+export function planSheet(
+    scene: Scene,
+    info: SheetInfo,
+    electrical?: ElectricalSymbols,
+    texts: SheetTexts = EnglishSheetTexts,
+): Sheet & {scale: number} {
     const hidden = hiddenItemIds(scene);
     const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id)).sort((a, b) => a.z - b.z);
     const rooms = scene.rooms.map(roomShape);
@@ -203,7 +208,7 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
     const crosses = (scene.plots ?? []).flatMap((plot) => spotHeightCrosses(plot, s));
 
     // Room names first, then the dimensions and the item names where they do not run into the text placed before them.
-    const roomLabels = scene.rooms.map((room) => roomLabel({...room, area: netRoomArea(room, scene.voids ?? [])}, s));
+    const roomLabels = scene.rooms.map((room) => roomLabel({...room, area: netRoomArea(room, scene.voids ?? [])}, s, texts));
     const taken = roomLabels.map((label) => labelBox(label, toPaper));
     const free = (label: Label): boolean => {
         const box = labelBox(label, toPaper);
@@ -222,7 +227,7 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
     // A wall point's elevation is what the electrician needs: it takes the first free spot round its symbol, else the
     // first one anyway (overlapping beats leaving it out).
     const elevations = points.flatMap((point): Label[] => {
-        const spots = elevationLabels(point, s);
+        const spots = elevationLabels(point, s, texts.decimal);
         const spot = spots.find(free);
         if (spot !== undefined || spots.length === 0) {
             return spot === undefined ? [] : [spot];
@@ -231,7 +236,7 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
         return [spots[0]];
     });
     const dimensions = electrical === undefined ? dimensionLabels(scene, s).filter(free) : [];
-    const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s)).filter(free);
+    const spots = (scene.plots ?? []).flatMap((plot) => spotHeightLabels(plot, s, texts.decimal)).filter(free);
     const itemLabels = electrical === undefined ? items.flatMap((item) => itemLabel(item, s)).filter(free) : [];
     const sections = (scene.sections ?? []).flatMap((section) => sectionMarks(section, s));
     const labels = [...sections, ...spots, ...itemLabels, ...stairs.labels, ...roomLabels, ...dimensions, ...elevations];
@@ -258,8 +263,8 @@ export function planSheet(scene: Scene, info: SheetInfo, electrical?: Electrical
         ].map((shape) => shapeSvg(shape, toPaper)),
         ...labels.map((label) => labelSvg(label, toPaper)),
         frameSvg(layout.width, layout.height),
-        planBandSvg(layout, info, scene.location?.northAngle ?? 0, electrical === undefined ? 'Floor plan' : 'Electrical plan'),
-        ...(electrical === undefined ? [] : [electricalLegendSvg(layout, points, electrical, links.length > 0)]),
+        planBandSvg(layout, info, scene.location?.northAngle ?? 0, electrical === undefined ? texts.floorPlan : texts.electricalPlan, texts),
+        ...(electrical === undefined ? [] : [electricalLegendSvg(layout, points, electrical, links.length > 0, texts)]),
     ];
     return {width: layout.width, height: layout.height, scale: s, svg: sheetSvg(layout.width, layout.height, body)};
 }
@@ -292,7 +297,7 @@ function electricalShapes(point: ElectricalPoint, symbols: ElectricalSymbols, sc
  * Where a wall point's elevation may go, best first: just past its symbol, further out, then beside the symbol's tip
  * on either side along the wall; none for lights.
  */
-function elevationLabels(point: ElectricalPoint, scale: number): Label[] {
+function elevationLabels(point: ElectricalPoint, scale: number, decimal: string): Label[] {
     if (!isWallMounted(point)) {
         return [];
     }
@@ -310,7 +315,7 @@ function elevationLabels(point: ElectricalPoint, scale: number): Label[] {
             x: point.at.x + (point.out.x * out + along.x * side) * unit,
             y: point.at.y + (point.out.y * out + along.y * side) * unit,
         },
-        lines: [{text: elevationText(point), size: ElevationText, color: Muted}],
+        lines: [{text: elevationText(point, decimal), size: ElevationText, color: Muted}],
     }));
 }
 
@@ -320,8 +325,14 @@ function elevationLabels(point: ElectricalPoint, scale: number): Label[] {
  * category is left out. A symbol is drawn as on the plan, facing north, its plan frame flipped onto the paper: the
  * category's plain symbol (one gang, a single switch), not that of the first point.
  */
-function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoint[], symbols: ElectricalSymbols, linked: boolean): string {
-    const entries: {category: ElectricalCategory | 'link'; label: string}[] = (Object.keys(CategoryLabels) as ElectricalCategory[]).flatMap(
+function electricalLegendSvg(
+    layout: PlanLayout,
+    points: readonly ElectricalPoint[],
+    symbols: ElectricalSymbols,
+    linked: boolean,
+    texts: SheetTexts,
+): string {
+    const entries: {category: ElectricalCategory | 'link'; label: string}[] = (Object.keys(texts.categories) as ElectricalCategory[]).flatMap(
         (category) => {
             const of = points.filter((p) => p.category === category);
             if (of.length === 0) {
@@ -329,11 +340,11 @@ function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoin
             }
             const units = of.reduce((sum, p) => sum + p.units, 0);
             const counted = (category === 'socket' || category === 'data') && units !== of.length;
-            return [{category, label: `${CategoryLabels[category]} ${of.length}${counted ? ` (${units})` : ''}`}];
+            return [{category, label: `${texts.categories[category]} ${of.length}${counted ? ` (${units})` : ''}`}];
         },
     );
     if (linked) {
-        entries.push({category: 'link', label: 'Switched lights'});
+        entries.push({category: 'link', label: texts.switchedLights});
     }
     const room = layout.width - 2 * (Margin + Padding);
     const natural = entries.reduce((sum, e) => sum + LegendSymbol + 1.5 + textWidth(e.label, LegendText) + 4, 0);
@@ -372,7 +383,7 @@ function electricalLegendSvg(layout: PlanLayout, points: readonly ElectricalPoin
  * under the slope, and a column its area with at least 1.2 m of headroom. The floor's voids are taken off the
  * rooms' areas (`netRoomArea()`) and listed after them, in no total.
  */
-export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
+export function roomScheduleSheets(scene: Scene, info: SheetInfo, texts: SheetTexts = EnglishSheetTexts): Sheet[] {
     if (scene.rooms.length === 0) {
         return [];
     }
@@ -388,7 +399,8 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
         return {room, under, volume};
     });
     const underRoofs = measured.some((m) => m.under !== null);
-    const metres = (mm: number): string => (Math.round(mm) / 1000).toFixed(2);
+    const fixed = (value: number, digits: number): string => sheetNumber(value, digits, texts);
+    const metres = (mm: number): string => fixed(Math.round(mm) / 1000, 2);
     const rows = [...measured]
         .sort((a, b) => a.room.code.localeCompare(b.room.code, undefined, {numeric: true}))
         .map(({room, under, volume}): string[] => {
@@ -397,26 +409,27 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
             return [
                 room.code,
                 room.name,
-                room.area.toFixed(2),
-                (room.perimeter ?? perimeter(room) / 1000).toFixed(2),
+                fixed(room.area, 2),
+                fixed(room.perimeter ?? perimeter(room) / 1000, 2),
                 height === null ? '–' : `${low}${metres(height)}`,
-                volume === null ? '–' : volume.toFixed(1),
-                ...(underRoofs ? [under === null ? '' : (under.headroomArea / 1e6).toFixed(2)] : []),
+                volume === null ? '–' : fixed(volume, 1),
+                ...(underRoofs ? [under === null ? '' : fixed(under.headroomArea / 1e6, 2)] : []),
             ];
         });
-    const voidRows = (scene.voids ?? []).map((v): string[] => ['', `${v.name} (void)`, v.area.toFixed(2), '', '', '', ...(underRoofs ? [''] : [])]);
+    const voidRows = (scene.voids ?? []).map((v): string[] => ['', texts.voidRow(v.name), fixed(v.area, 2), '', '', '', ...(underRoofs ? [''] : [])]);
     // The living area, garages (indoor, unheated) and open-air rooms, each totalled apart.
-    const kind = (room: Pick<Room, 'type'>): string => (isOutdoor(room) ? 'Outdoor' : isAncillaryRoom(room) ? 'Garage' : 'Indoor');
-    const total = (label: string): string[] | null => {
-        const matching = measured.filter((m) => kind(m.room) === label);
+    type Kind = keyof SheetTexts['totals'];
+    const kind = (room: Pick<Room, 'type'>): Kind => (isOutdoor(room) ? 'outdoor' : isAncillaryRoom(room) ? 'garage' : 'indoor');
+    const total = (of: Kind): string[] | null => {
+        const matching = measured.filter((m) => kind(m.room) === of);
         if (matching.length === 0) {
             return null;
         }
         const area = matching.reduce((sum, m) => sum + m.room.area, 0);
         const volume = matching.reduce((sum, m) => sum + (m.volume ?? 0), 0);
-        return ['', label, area.toFixed(2), '', '', volume > 0 ? volume.toFixed(1) : '', ...(underRoofs ? [''] : [])];
+        return ['', texts.totals[of], fixed(area, 2), '', '', volume > 0 ? fixed(volume, 1) : '', ...(underRoofs ? [''] : [])];
     };
-    const totals = [total('Indoor'), total('Garage'), total('Outdoor')].filter((t) => t !== null);
+    const totals = [total('indoor'), total('garage'), total('outdoor')].filter((t) => t !== null);
 
     const width = PaperShort;
     const height = PaperLong;
@@ -425,13 +438,13 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
     // Code, room (left-aligned at their x), then the numbers right-aligned at theirs.
     const shift = underRoofs ? 24 : 0;
     const columns: {x: number; end?: boolean; header: string}[] = [
-        {x: left, header: 'Code'},
-        {x: left + 22, header: 'Room'},
-        {x: right - 66 - shift, end: true, header: 'Area m²'},
-        {x: right - 44 - shift, end: true, header: 'Perimeter m'},
-        {x: right - 20 - shift, end: true, header: 'Clear height m'},
-        {x: right - shift, end: true, header: 'Volume m³'},
-        ...(underRoofs ? [{x: right, end: true, header: '≥ 1.2 m, m²'}] : []),
+        {x: left, header: texts.columns.code},
+        {x: left + 22, header: texts.columns.room},
+        {x: right - 66 - shift, end: true, header: texts.columns.area},
+        {x: right - 44 - shift, end: true, header: texts.columns.perimeter},
+        {x: right - 20 - shift, end: true, header: texts.columns.clearHeight},
+        {x: right - shift, end: true, header: texts.columns.volume},
+        ...(underRoofs ? [{x: right, end: true, header: texts.columns.headroom(fixed(1.2, 1))}] : []),
     ];
     const RowHeight = 6.5;
     const tableTop = Margin + Padding + 20;
@@ -442,7 +455,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
 
     return Array.from({length: pages}, (_, page) => {
         const body: string[] = [
-            text({x: left, y: Margin + Padding + 5}, 'Room schedule', 5, {bold: true}),
+            text({x: left, y: Margin + Padding + 5}, texts.roomSchedule, 5, {bold: true}),
             text({x: left, y: Margin + Padding + 11}, `${info.projectName} · ${info.floorName}`, 2.8, {color: Muted}),
         ];
         const row = (cells: string[], y: number, bold: boolean): void => {
@@ -466,7 +479,7 @@ export function roomScheduleSheets(scene: Scene, info: SheetInfo): Sheet[] {
             row(r.cells, y, r.bold);
             body.push(line({x: left, y: y + 2}, {x: right, y: y + 2}, {stroke: RuleColor, width: 0.15}));
         });
-        const footer = `${info.projectName} · ${info.floorName} · ${localDate(info.date)}${pages > 1 ? ` · ${page + 1}/${pages}` : ''}`;
+        const footer = `${info.projectName} · ${info.floorName} · ${texts.date(info.date)}${pages > 1 ? ` · ${page + 1}/${pages}` : ''}`;
         body.push(text({x: right, y: height - Margin - Padding}, footer, 2.2, {color: Muted, anchor: 'end'}));
         body.push(frameSvg(width, height));
         return {width, height, svg: sheetSvg(width, height, body)};
@@ -600,10 +613,10 @@ function spotHeightCrosses(plot: Plot, scale: number): Shape[] {
 }
 
 /** The levels of a plot's spot heights (+1.250) beside their crosses, where they do not run into other text. */
-function spotHeightLabels(plot: Plot, scale: number): Label[] {
+function spotHeightLabels(plot: Plot, scale: number, decimal: string): Label[] {
     return (plot.terrain ?? []).map(([x, y, z]) => ({
         at: {x: x + 3.2 * scale, y: y - 1.6 * scale},
-        lines: [{text: levelText(z), size: 1.5, color: Muted}],
+        lines: [{text: levelText(z, decimal), size: 1.5, color: Muted}],
     }));
 }
 /** Half the spot height's cross, paper mm. */
@@ -1089,7 +1102,7 @@ function segmentDistance(p: Vec2, a: Vec2, b: Vec2): number {
 /** Paper size of the line under a room's name: its area and level. */
 const MetaSize = 2.1;
 
-function roomLabel(room: Room, scale: number): Label {
+function roomLabel(room: Room, scale: number, texts: SheetTexts): Label {
     const {at, clearance} = labelPoint(room.polygon);
     const width = ((2 * clearance) / scale) * 0.9;
     const names: string[] = [];
@@ -1103,11 +1116,11 @@ function roomLabel(room: Room, scale: number): Label {
     }
     const widest = Math.max(0, ...names.map((name) => textWidth(name, RoomNameSize)));
     const size = widest > width ? Math.max(MinRoomNameSize, (RoomNameSize * width) / widest) : RoomNameSize;
-    const area = `${room.area.toFixed(2)} m²`;
+    const area = `${sheetNumber(room.area, 2, texts)} m²`;
     const elevation = room.floorElevation ?? 0;
     // The floor's height against the floor's level, in metres as levels are written on plans (+0.450, −0.150), when
     // the room is wide enough for it beside the area.
-    const level = `${area} · ${levelText(elevation)}`;
+    const level = `${area} · ${levelText(elevation, texts.decimal)}`;
     const meta = elevation !== 0 && textWidth(level, MetaSize) <= width ? level : area;
     return {
         at,
@@ -1194,7 +1207,7 @@ function perimeter(room: Pick<Room, 'polygon'>): number {
 // --- Page furniture (paper mm) ---
 
 /** The band under the plan: a scale bar and a north arrow at the left, the title block at the right. */
-function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number, caption: string): string {
+function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number, caption: string, texts: SheetTexts): string {
     const top = layout.height - Margin - TitleBand;
     const left = Margin + Padding;
     const parts: string[] = [];
@@ -1212,9 +1225,9 @@ function planBandSvg(layout: PlanLayout, info: SheetInfo, northAngle: number, ca
     parts.push(text({x: left, y: barY + 6}, `1:${layout.scale}`, 2.4, {bold: true}));
 
     // North arrow: true north, turned from the plan's y axis by the site's north angle.
-    parts.push(northArrowSvg({x: left + barLength + 16, y: top + 14}, northAngle));
+    parts.push(northArrowSvg({x: left + barLength + 16, y: top + 14}, northAngle, 1, texts));
 
-    parts.push(titleBlockSvg(layout.width, layout.height, info, `${caption} · 1:${layout.scale} (A4)`));
+    parts.push(titleBlockSvg(layout.width, layout.height, info, `${caption} · 1:${layout.scale} (A4)`, texts));
     return parts.join('');
 }
 

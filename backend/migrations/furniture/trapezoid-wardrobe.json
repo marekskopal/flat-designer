@@ -4,6 +4,57 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Lichoběžníková šatní skříň",
+    "description": "Šatní skříň s otvíravými dveřmi, jejíž půdorys je lichoběžník: jeden bok rovný a druhý zkosený podél šikmé stěny (vzadu backWidth, u dveří W), s policí na klobouky a šatní tyčí nebo policemi, na soklu.",
+    "parameters": {
+     "backWidth": "Šířka vzadu",
+     "slantSide": "Zkosený bok",
+     "doors": "Dveře",
+     "interior": "Vnitřek",
+     "shelves": "Police",
+     "handle": "Úchytka",
+     "plinth": "Sokl",
+     "t": "Deska korpusu",
+     "ft": "Tloušťka dveří",
+     "gap": "Spára kolem dveří",
+     "recess": "Odsazení soklu"
+    },
+    "options": {
+     "slantSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     },
+     "interior": {
+      "rail": "šatní tyč",
+      "shelves": "police"
+     },
+     "handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Dveře",
+     "rail": "Šatní tyč"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Slanted side": "Zkosený bok",
+     "Bottom": "Dno",
+     "Top": "Strop",
+     "Back": "Záda",
+     "Plinth": "Sokl",
+     "Hat shelf": "Police na klobouky",
+     "Hanging rail": "Šatní tyč",
+     "Shelf": "Police",
+     "Door": "Dveře"
+    }
+   }
+  },
   "size": {
    "width": 1200,
    "depth": 600,

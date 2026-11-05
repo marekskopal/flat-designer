@@ -6,43 +6,43 @@ export const appRoutes: Routes = [
     {
         path: 'login',
         canActivate: [guestGuard],
-        title: 'Sign in · Izbik',
+        title: 'titles.signIn',
         loadComponent: async () => (await import('@app/authentication/login.component')).LoginComponent,
     },
     {
         path: 'sign-up',
         canActivate: [guestGuard],
-        title: 'Sign up · Izbik',
+        title: 'titles.signUp',
         loadComponent: async () => (await import('@app/authentication/sign-up.component')).SignUpComponent,
     },
     {
         path: 'forgot-password',
         canActivate: [guestGuard],
-        title: 'Reset password · Izbik',
+        title: 'titles.forgotPassword',
         loadComponent: async () => (await import('@app/authentication/forgot-password.component')).ForgotPasswordComponent,
     },
     {
         // The link of a verification mail; it works signed in or out, so no guard.
         path: 'verify-email',
-        title: 'Confirm email · Izbik',
+        title: 'titles.verifyEmail',
         loadComponent: async () => (await import('@app/authentication/verify-email.component')).VerifyEmailComponent,
     },
     {
         // The link of a password reset mail; it may be opened while signed in (it signs in anew), so no guard.
         path: 'reset-password',
-        title: 'Choose a new password · Izbik',
+        title: 'titles.resetPassword',
         loadComponent: async () => (await import('@app/authentication/reset-password.component')).ResetPasswordComponent,
     },
     {
         // OAuth consent for MCP clients; signs in inline, so no guard.
         path: 'oauth/authorize',
-        title: 'Connect · Izbik',
+        title: 'titles.connect',
         loadComponent: async () => (await import('@app/oauth/oauth-authorize.component')).OAuthAuthorizeComponent,
     },
     {
         // A share link: a guest view of one floor, also for signed-in users (no guard).
         path: 's/:token',
-        title: 'Shared view · Izbik',
+        title: 'titles.sharedView',
         loadComponent: async () => (await import('@app/shared-viewer/shared-viewer-page.component')).SharedViewerPageComponent,
     },
     {
@@ -53,48 +53,47 @@ export const appRoutes: Routes = [
             {path: '', pathMatch: 'full', redirectTo: 'projects'},
             {
                 path: 'projects',
-                title: 'Projects · Izbik',
+                title: 'titles.projects',
                 loadComponent: async () => (await import('@app/projects/projects.component')).ProjectsComponent,
             },
             {
                 path: 'projects/:projectId',
-                title: 'Project · Izbik',
+                title: 'titles.project',
                 loadComponent: async () => (await import('@app/projects/project-detail.component')).ProjectDetailComponent,
             },
             {
                 path: 'projects/:projectId/cut-list',
-                title: 'Cut list · Izbik',
+                title: 'titles.cutList',
                 loadComponent: async () => (await import('@app/projects/cut-list/cut-list.component')).CutListComponent,
             },
             {
                 path: 'projects/:projectId/quantities',
-                title: 'Quantities & cost · Izbik',
+                title: 'titles.quantities',
                 loadComponent: async () => (await import('@app/projects/quantities/quantities.component')).QuantitiesComponent,
             },
             {
                 path: 'projects/:projectId/floors/:floorId',
-                title: 'Izbik',
                 loadComponent: async () => (await import('@app/viewer-page/viewer-page.component')).ViewerPageComponent,
             },
             {
                 path: 'furniture',
-                title: 'Furniture · Izbik',
+                title: 'titles.furniture',
                 loadComponent: async () => (await import('@app/furniture/furniture-library.component')).FurnitureLibraryComponent,
             },
             {
                 path: 'furniture/:definitionId',
-                title: 'Furniture · Izbik',
+                title: 'titles.furniture',
                 loadComponent: async () => (await import('@app/furniture/furniture-editor.component')).FurnitureEditorComponent,
             },
             {
                 path: 'account',
-                title: 'Account · Izbik',
+                title: 'titles.account',
                 loadComponent: async () => (await import('@app/account/account.component')).AccountComponent,
             },
             {
                 path: 'admin/users',
                 canActivate: [adminGuard],
-                title: 'Users · Izbik',
+                title: 'titles.users',
                 loadComponent: async () => (await import('@app/admin/admin-users.component')).AdminUsersComponent,
             },
         ],

@@ -11,6 +11,7 @@ use Izbik\Model\Repository\PasswordResetTokenRepository;
 use Izbik\Service\Mail\MailOutbox;
 use Izbik\Service\Mail\PasswordResetEmail;
 use Izbik\Service\Provider\UserProvider;
+use Izbik\Service\Translator\Translator;
 use RuntimeException;
 use SensitiveParameter;
 
@@ -25,6 +26,7 @@ final readonly class PasswordResetService
 	private const int LifetimeMinutes = 60;
 
 	public function __construct(
+		private Translator $translator,
 		private PasswordResetTokenRepository $tokenRepository,
 		private UserProvider $userProvider,
 		private LoginAttemptService $loginAttempts,
@@ -57,8 +59,8 @@ final readonly class PasswordResetService
 		$this->tokenRepository->persist($resetToken);
 
 		$this->mailOutbox->queue(PasswordResetEmail::create(
-			recipientEmail: $user->email,
-			userName: $user->name,
+			translator: $this->translator,
+			user: $user,
 			resetUrl: rtrim($appUrl, '/') . '/reset-password?token=' . $token,
 			lifetimeMinutes: self::LifetimeMinutes,
 		));

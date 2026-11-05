@@ -19,6 +19,7 @@ COPY ./bin /app/bin
 COPY ./examples /app/examples
 COPY ./migrations /app/migrations
 COPY ./src /app/src
+COPY ./translations /app/translations
 COPY ./Caddyfile /etc/frankenphp/Caddyfile
 COPY ./docker/php-uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 COPY ./docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

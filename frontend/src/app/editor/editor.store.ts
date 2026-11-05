@@ -8,11 +8,14 @@ import {ImageMimeTypes, PdfMimeType, ProjectFile} from '@app/models/project';
 import {PlanPoint, Scene, Underlay} from '@app/models/scene';
 import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {LanguageService} from '@app/services/language.service';
 import {ModelAssetService} from '@app/services/model-asset.service';
 import {ProjectService} from '@app/services/project.service';
+import {localizeDefinition} from '@app/shared/i18n/definition-texts';
 import {EditorTool} from '@app/viewer/engine/drawing';
 import {Vec2} from '@app/viewer/engine/plan-geometry';
 import {ElementKind, sameSelection, Selection} from '@app/viewer/engine/selection';
+import {TranslateService} from '@ngx-translate/core';
 
 import {itemCategory} from './element-kinds';
 import {patchScene} from './scene-patch';
@@ -38,6 +41,7 @@ export interface EditorContext {
  */
 @Injectable()
 export class EditorStore {
+    private readonly language = inject(LanguageService);
     public readonly enabled = signal(false);
     public readonly selection = signal<Selection | null>(null);
     /** Items picked with Shift+click, e.g. to group them; while any are picked there is no single selection. */
@@ -75,6 +79,7 @@ export class EditorStore {
     private readonly furniture = inject(FurnitureService);
     private readonly modelAssets = inject(ModelAssetService);
     private readonly projects = inject(ProjectService);
+    private readonly translate = inject(TranslateService);
     private context: EditorContext | null = null;
 
     public connect(context: EditorContext): void {
@@ -155,7 +160,7 @@ export class EditorStore {
 
     /** Adds the room enclosed by the walls around the point and selects it (to name it in the inspector). */
     public async detectRoom(point: PlanPoint): Promise<void> {
-        const fields = newRoomFields(this.context?.scene() ?? null);
+        const fields = newRoomFields(this.context?.scene() ?? null, this.translate.instant('editor.defaults.room'));
         const result = await this.run((c) => this.api.detectRoom(c.projectId(), c.floorId(), point, fields, revisionOf(c)));
         const id = result?.element?.['id'];
         if (typeof id === 'number') {
@@ -424,7 +429,7 @@ export class EditorStore {
             return;
         }
         try {
-            this.definitions.set(await this.furniture.list(context.projectId()));
+            this.definitions.set((await this.furniture.list(context.projectId())).map((d) => localizeDefinition(d, this.language.current())));
         } catch {
             // The error interceptor shows the toast.
         }
@@ -498,9 +503,12 @@ export class EditorStore {
     }
 }
 
-/** Name and code of a room added by hand (the Add menu, the room tool): numbered after the rooms there are. */
-export function newRoomFields(scene: Scene | null): {name: string; code: string} {
-    return {name: 'New room', code: `R${(scene?.rooms.length ?? 0) + 1}`};
+/**
+ * Name and code of a room added by hand (the Add menu, the room tool): `name` (the translated "New room"), the code
+ * numbered after the rooms there are.
+ */
+export function newRoomFields(scene: Scene | null, name: string): {name: string; code: string} {
+    return {name, code: `R${(scene?.rooms.length ?? 0) + 1}`};
 }
 
 function revisionOf(context: EditorContext): number | undefined {

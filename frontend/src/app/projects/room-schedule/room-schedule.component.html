@@ -1,36 +1,36 @@
 <section class="card card--table">
     <div class="card__header">
-        <h2 class="card__title">Rooms</h2>
+        <h2 class="card__title">{{ 'schedules.rooms.title' | translate }}</h2>
         <div class="header-end">
             @if (schedule(); as s) {
                 <span class="totals">
-                    {{ s.indoor.area | number: '1.2-2' }} m² indoor
+                    {{ 'schedules.rooms.indoorArea' | translate: {area: (s.indoor.area | number: '1.2-2')} }}
                     @if (s.ancillary.rooms > 0) {
-                        · {{ s.ancillary.area | number: '1.2-2' }} m² garage
+                        · {{ 'schedules.rooms.garageArea' | translate: {area: (s.ancillary.area | number: '1.2-2')} }}
                     }
                     @if (s.outdoor.rooms > 0) {
-                        · {{ s.outdoor.area | number: '1.2-2' }} m² outdoor
+                        · {{ 'schedules.rooms.outdoorArea' | translate: {area: (s.outdoor.area | number: '1.2-2')} }}
                     }
                 </span>
             }
-            <a class="btn btn--ghost" [routerLink]="['/projects', projectId(), 'quantities']">Quantities &amp; cost</a>
+            <a class="btn btn--ghost" [routerLink]="['/projects', projectId(), 'quantities']">{{ 'schedules.rooms.quantities' | translate }}</a>
         </div>
     </div>
 
     @if (schedule(); as s) {
         @if (s.indoor.rooms + s.ancillary.rooms + s.outdoor.rooms === 0) {
-            <p class="empty">No rooms yet. Add them in a floor's editor (Room from walls).</p>
+            <p class="empty">{{ 'schedules.rooms.empty' | translate }}</p>
         } @else {
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Room</th>
-                        <th class="num">Area m²</th>
-                        <th class="num">Perimeter m</th>
-                        <th class="num">Clear height m</th>
-                        <th class="num">Volume m³</th>
+                        <th>{{ 'schedules.rooms.room' | translate }}</th>
+                        <th class="num">{{ 'schedules.rooms.area' | translate }}</th>
+                        <th class="num">{{ 'schedules.rooms.perimeter' | translate }}</th>
+                        <th class="num">{{ 'schedules.rooms.clearHeight' | translate }}</th>
+                        <th class="num">{{ 'schedules.rooms.volume' | translate }}</th>
                         @if (underRoofs()) {
-                            <th class="num" title="Floor area with a clear height of at least 1.2 m under the roof">Area ≥ 1.2 m, m²</th>
+                            <th class="num" [title]="'schedules.rooms.headroomAreaHint' | translate">{{ 'schedules.rooms.headroomArea' | translate }}</th>
                         }
                     </tr>
                 </thead>
@@ -57,28 +57,28 @@
                             </tr>
                         }
                         @for (hole of floor.voids ?? []; track hole.id) {
-                            <tr class="outdoor" title="A void through the floor: its area is left out of the rooms round it">
-                                <td>{{ hole.name }} (void)</td>
+                            <tr class="outdoor" [title]="'schedules.rooms.voidHint' | translate">
+                                <td>{{ 'schedules.rooms.void' | translate: {name: hole.name} }}</td>
                                 <td class="num">{{ hole.area | number: '1.2-2' }}</td>
                                 <td [attr.colspan]="columns() - 2"></td>
                             </tr>
                         }
                         @if (s.floors.length > 1) {
                             <tr class="subtotal">
-                                <td>Indoor, {{ floor.name }}</td>
+                                <td>{{ 'schedules.rooms.indoorOn' | translate: {floor: floor.name} }}</td>
                                 <td class="num">{{ floor.indoor.area | number: '1.2-2' }}</td>
                                 <td [attr.colspan]="columns() - 2"></td>
                             </tr>
                             @if (floor.ancillary.rooms > 0) {
                                 <tr class="subtotal">
-                                    <td>Garage, {{ floor.name }}</td>
+                                    <td>{{ 'schedules.rooms.garageOn' | translate: {floor: floor.name} }}</td>
                                     <td class="num">{{ floor.ancillary.area | number: '1.2-2' }}</td>
                                     <td [attr.colspan]="columns() - 2"></td>
                                 </tr>
                             }
                             @if (floor.outdoor.rooms > 0) {
                                 <tr class="subtotal">
-                                    <td>Outdoor, {{ floor.name }}</td>
+                                    <td>{{ 'schedules.rooms.outdoorOn' | translate: {floor: floor.name} }}</td>
                                     <td class="num">{{ floor.outdoor.area | number: '1.2-2' }}</td>
                                     <td [attr.colspan]="columns() - 2"></td>
                                 </tr>
@@ -88,20 +88,20 @@
                 }
                 <tfoot>
                     <tr class="total">
-                        <td>Indoor total ({{ s.indoor.rooms }} {{ s.indoor.rooms === 1 ? 'room' : 'rooms' }})</td>
+                        <td>{{ 'schedules.rooms.indoorTotal' | plural: s.indoor.rooms }}</td>
                         <td class="num">{{ s.indoor.area | number: '1.2-2' }}</td>
                         <td [attr.colspan]="columns() - 2"></td>
                     </tr>
                     @if (s.ancillary.rooms > 0) {
                         <tr class="total">
-                            <td>Garage total (indoor, unheated)</td>
+                            <td>{{ 'schedules.rooms.garageTotal' | translate }}</td>
                             <td class="num">{{ s.ancillary.area | number: '1.2-2' }}</td>
                             <td [attr.colspan]="columns() - 2"></td>
                         </tr>
                     }
                     @if (s.outdoor.rooms > 0) {
                         <tr class="total">
-                            <td>Outdoor total (terraces, gardens)</td>
+                            <td>{{ 'schedules.rooms.outdoorTotal' | translate }}</td>
                             <td class="num">{{ s.outdoor.area | number: '1.2-2' }}</td>
                             <td [attr.colspan]="columns() - 2"></td>
                         </tr>

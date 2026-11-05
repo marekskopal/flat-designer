@@ -3,12 +3,14 @@ import {ChangeDetectionStrategy, Component, computed, effect, inject, input, num
 import {RouterLink} from '@angular/router';
 import {CutList, CutListBoard} from '@app/models/cut-list';
 import {Project} from '@app/models/project';
+import {FurnitureService} from '@app/services/furniture.service';
 import {ProjectService} from '@app/services/project.service';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** The printable cut list of a project's Custom furniture (all floors or one): boards by material, other parts, totals. */
 @Component({
     selector: 'fd-cut-list',
-    imports: [DecimalPipe, RouterLink],
+    imports: [DecimalPipe, RouterLink, TranslatePipe],
     templateUrl: './cut-list.component.html',
     styleUrl: './cut-list.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,6 +19,10 @@ export class CutListComponent {
     public readonly projectId = input.required({transform: numberAttribute});
 
     private readonly projects = inject(ProjectService);
+    private readonly translate = inject(TranslateService);
+    private readonly furniture = inject(FurnitureService);
+    /** The catalogue's names in the language shown, by id: the list's names come from the server in English. */
+    private readonly materialNames = signal(new Map<number, string>());
 
     protected readonly project = signal<Project | null>(null);
     protected readonly floorId = signal<number | null>(null);
@@ -35,6 +41,7 @@ export class CutListComponent {
     });
 
     public constructor() {
+        void this.furniture.materials().then((all) => this.materialNames.set(new Map(all.map((m) => [m.id, m.name]))), () => undefined);
         effect(() => void this.loadProject(this.projectId()));
         effect(() => void this.load(this.projectId(), this.floorId()));
     }
@@ -45,11 +52,25 @@ export class CutListComponent {
     }
 
     protected edges(board: CutListBoard): string {
-        return board.edges.length === 0 ? '—' : board.edges.join(', ');
+        return board.edges.length === 0 ? '—' : board.edges.map((edge) => this.known(`cutList.edges.${edge}`, edge)).join(', ');
+    }
+
+    /** A part type's name; the code itself for a type without one. */
+    protected partType(type: string): string {
+        return this.known(`cutList.partTypes.${type}`, type);
     }
 
     protected print(): void {
         window.print();
+    }
+
+    private known(key: string, fallback: string): string {
+        const text = this.translate.instant(key) as string;
+        return text === key ? fallback : text;
+    }
+
+    protected materialName(row: {materialId: number | null; material: string}): string {
+        return (row.materialId === null ? undefined : this.materialNames().get(row.materialId)) ?? row.material;
     }
 
     private async loadProject(projectId: number): Promise<void> {

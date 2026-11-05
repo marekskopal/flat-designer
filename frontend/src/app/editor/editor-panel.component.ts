@@ -2,11 +2,13 @@ import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angu
 import {roomCodeText} from '@app/core/room-code';
 import {Group, Item, RoofWindow, Scene, SectionLine, VariantSet} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
+import {PluralPipe} from '@app/shared/i18n/plural.pipe';
 import {IconComponent} from '@app/shared/icon/icon.component';
 import {roofLocal} from '@app/viewer/engine/roof-geometry';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {EditorStore} from './editor.store';
-import {findElement, itemCategory, itemRoom, KindIcons, KindLabels, linkedLights} from './element-kinds';
+import {findElement, itemCategory, itemRoom, KindIcons, KindLabelKeys, linkedLights} from './element-kinds';
 import {FieldChange, InspectorComponent} from './inspector.component';
 import {SwitchLight, SwitchLightsComponent} from './switch-lights.component';
 
@@ -22,13 +24,14 @@ const NudgeStepCoarse = 100;
  */
 @Component({
     selector: 'fd-editor-panel',
-    imports: [InspectorComponent, IconComponent, SwitchLightsComponent],
+    imports: [IconComponent, InspectorComponent, PluralPipe, SwitchLightsComponent, TranslatePipe],
     templateUrl: './editor-panel.component.html',
     styleUrl: './editor-panel.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     host: {'(document:keydown)': 'onKeydown($event)'},
 })
 export class EditorPanelComponent {
+    private readonly translate = inject(TranslateService);
     public readonly scene = input.required<Scene>();
 
     protected readonly editor = inject(EditorStore);
@@ -45,8 +48,9 @@ export class EditorPanelComponent {
         if (element === null) {
             return null;
         }
-        const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : KindLabels[selection.kind];
-        return {kind: selection.kind, label: KindLabels[selection.kind], icon: KindIcons[selection.kind], name, element};
+        const label = this.translate.instant(KindLabelKeys[selection.kind]) as string;
+        const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : label;
+        return {kind: selection.kind, label, icon: KindIcons[selection.kind], name, element};
     });
     /** The selected element turns by 90° (R): items, groups, stairs, roofs; a section line turns round. */
     protected readonly canTurn = computed(() => {
@@ -107,7 +111,7 @@ export class EditorPanelComponent {
         if (change.value === 'Custom') {
             const first = this.editor.definitions()[0];
             if (first === undefined) {
-                this.alerts.error('There is no furniture definition to use; add one under Furniture.');
+                this.alerts.error(this.translate.instant('editor.toasts.noDefinition'));
                 return null;
             }
             return this.freshCustom(first.id);
@@ -115,7 +119,7 @@ export class EditorPanelComponent {
         if (change.value === 'Model') {
             const first = this.editor.models()[0];
             if (first === undefined) {
-                this.alerts.error('There is no 3D model to use; upload one under Furniture.');
+                this.alerts.error(this.translate.instant('editor.toasts.noModel'));
                 return null;
             }
             return {kind: 'Model', modelId: first.id, name: first.name, width: first.width, depth: first.depth, height: first.height};
@@ -152,12 +156,12 @@ export class EditorPanelComponent {
     }
 
     protected groupPicked(name: string): void {
-        void this.editor.groupPicked(name.trim() === '' ? 'Group' : name.trim());
+        void this.editor.groupPicked(name.trim() === '' ? this.translate.instant('editor.defaults.group') : name.trim());
     }
 
     protected makeVariants(element: Record<string, unknown>): void {
         const group = element as unknown as Group;
-        void this.editor.createVariantSet(`${group.name} variants`, group.id);
+        void this.editor.createVariantSet(this.translate.instant('editor.defaults.variantSet', {name: group.name}), group.id);
     }
 
     protected selectSet(id: number): void {

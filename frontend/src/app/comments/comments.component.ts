@@ -1,6 +1,8 @@
-import {DatePipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject,input, output, signal} from '@angular/core';
 import {Comment, CommentThread, commentThreads} from '@app/models/comment';
+import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
+import {PluralPipe} from '@app/shared/i18n/plural.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** What the panel asks the page to do; the page talks to the server (as the user or a share link's guest). */
 export type CommentAction =
@@ -17,12 +19,13 @@ export type CommentAction =
  */
 @Component({
     selector: 'fd-comments',
-    imports: [DatePipe],
+    imports: [DateTextPipe, PluralPipe, TranslatePipe],
     templateUrl: './comments.component.html',
     styleUrl: './comments.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CommentsComponent {
+    private readonly translate = inject(TranslateService);
     public readonly comments = input.required<Comment[]>();
     public readonly activeId = input<number | null>(null);
     /** New threads and replies may be written (not on a saved version, not on a read-only share link). */
@@ -82,8 +85,8 @@ export class CommentsComponent {
     }
 
     protected remove(comment: Comment): void {
-        const what = comment.parentId === null ? 'this comment and its replies' : 'this reply';
-        if (window.confirm(`Delete ${what}?`)) {
+        const question = comment.parentId === null ? 'comments.confirmDeleteThread' : 'comments.confirmDeleteReply';
+        if (window.confirm(this.translate.instant(question))) {
             this.action.emit({kind: 'delete', comment});
         }
     }

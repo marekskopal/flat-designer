@@ -11,6 +11,30 @@
    ]
   },
   "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Závěsné svítidlo, holá žárovka",
+    "description": "Holá žárovka na textilním kabelu. Kabel stoupá od žárovky k háčku ve stropě nad ní a vede po path (body {x, z} od levého zadního rohu prvku, mm) k baldachýnu a mezi nimi se prověšuje; sleduje skutečný strop místnosti, i klenutý, proto nastavte místnost prvku. Výška osazení prvku je spodek žárovky.",
+    "parameters": {
+     "path": "Trasa kabelu",
+     "path.x": "x",
+     "path.z": "z",
+     "sag": "Průvěs mezi body",
+     "bulb": "Průměr žárovky",
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti",
+     "shadow": "Vrhá stíny"
+    },
+    "slots": {
+     "cable": "Kabel a objímka"
+    },
+    "parts": {
+     "Bulb": "Žárovka",
+     "Holder": "Objímka",
+     "Cable": "Kabel"
+    }
+   }
+  },
   "size": {
    "width": 140,
    "depth": 140,

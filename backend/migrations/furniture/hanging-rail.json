@@ -4,6 +4,35 @@
  "definition": {
   "format": 1,
   "catalogue": "storage",
+  "translations": {
+   "cs": {
+    "name": "Šatní tyč",
+    "description": "Kulatá šatní tyč po šířce: mezi dvěma boky na koncových přírubách, zavěšená na dvou závěsech z desky nad ní, nebo držená od stěny za ní na dvou konzolách.",
+    "parameters": {
+     "mount": "Uchycení",
+     "tube": "Průměr trubky",
+     "inset": "Závěsy / konzoly od konců"
+    },
+    "options": {
+     "mount": {
+      "ends": "mezi boky",
+      "top": "zavěšená shora",
+      "back": "na stěně"
+     }
+    },
+    "slots": {
+     "rail": "Tyč"
+    },
+    "parts": {
+     "Tube": "Trubka",
+     "End flange": "Koncová příruba",
+     "Drop": "Závěs",
+     "Ceiling rose": "Rozeta u stropu",
+     "Bracket": "Konzola",
+     "Wall rose": "Rozeta na stěně"
+    }
+   }
+  },
   "size": {
    "width": 800,
    "depth": 50,

@@ -20,6 +20,7 @@ final readonly class UserDto
 		public bool $hasPassword,
 		public bool $google,
 		public bool $emailVerified,
+		public string $locale,
 	) {
 	}
 
@@ -36,6 +37,7 @@ final readonly class UserDto
 			hasPassword: $user->password !== null,
 			google: $user->googleId !== null,
 			emailVerified: $user->emailVerified,
+			locale: $user->locale->value,
 		);
 	}
 }

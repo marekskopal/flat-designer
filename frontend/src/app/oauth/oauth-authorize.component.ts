@@ -7,6 +7,7 @@ import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {AuthenticationService} from '@app/services/authentication.service';
 import {CurrentUserService} from '@app/services/current-user.service';
 import {AuthorizeRequest, OAuthService} from '@app/services/oauth.service';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /**
  * OAuth consent for MCP clients (the server's `authorization_endpoint`). The client sends the user here
@@ -15,12 +16,13 @@ import {AuthorizeRequest, OAuthService} from '@app/services/oauth.service';
  */
 @Component({
     selector: 'fd-oauth-authorize',
-    imports: [NgOptimizedImage, ReactiveFormsModule],
+    imports: [NgOptimizedImage, ReactiveFormsModule, TranslatePipe],
     templateUrl: './oauth-authorize.component.html',
     styleUrl: '../authentication/auth-page.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OAuthAuthorizeComponent implements OnInit {
+    private readonly translate = inject(TranslateService);
     protected readonly auth = inject(AuthenticationService);
     protected readonly currentUser = inject(CurrentUserService);
     private readonly oauth = inject(OAuthService);
@@ -42,7 +44,7 @@ export class OAuthAuthorizeComponent implements OnInit {
         const redirectUri = this.query.get('redirect_uri') ?? '';
         const codeChallenge = this.query.get('code_challenge') ?? '';
         if (this.query.get('response_type') !== 'code' || clientId === '' || redirectUri === '' || codeChallenge === '') {
-            this.error.set('This authorization link is incomplete. Start the connection again from your MCP client.');
+            this.error.set(this.translate.instant('oauth.incomplete'));
             return;
         }
 
@@ -62,7 +64,7 @@ export class OAuthAuthorizeComponent implements OnInit {
             }
         } catch (e: unknown) {
             const unknownClient = e instanceof HttpErrorResponse && e.status === 404;
-            this.error.set(unknownClient ? 'Unknown client. Start the connection again from your MCP client.' : 'Could not load the request.');
+            this.error.set(this.translate.instant(unknownClient ? 'oauth.unknownClient' : 'oauth.loadFailed'));
         }
     }
 
@@ -77,7 +79,7 @@ export class OAuthAuthorizeComponent implements OnInit {
             await this.auth.login(email, password);
             await this.currentUser.load();
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Sign-in failed.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('auth.signIn.failed'));
         } finally {
             this.busy.set(false);
         }
@@ -103,7 +105,7 @@ export class OAuthAuthorizeComponent implements OnInit {
             this.done.set('approved');
             window.location.href = target.toString();
         } catch (e: unknown) {
-            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : 'Authorization failed.');
+            this.error.set(e instanceof HttpErrorResponse ? errorMessage(e) : this.translate.instant('oauth.failed'));
             this.busy.set(false);
         }
     }

@@ -1,9 +1,11 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal} from '@angular/core';
 import {Router, RouterLink} from '@angular/router';
-import {CategoryLabels} from '@app/models/electrical-schedule';
-import {FurnitureDefinition, FurnitureScope, ScopeLabels} from '@app/models/furniture';
+import {FurnitureDefinition, FurnitureScope} from '@app/models/furniture';
 import {AlertService} from '@app/services/alert.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {LanguageService} from '@app/services/language.service';
+import {localizeDefinition} from '@app/shared/i18n/definition-texts';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {NewDefinitionTemplate} from './furniture-template';
 import {ModelLibraryComponent} from './model-library.component';
@@ -14,20 +16,21 @@ import {ModelLibraryComponent} from './model-library.component';
  */
 @Component({
     selector: 'fd-furniture-library',
-    imports: [RouterLink, ModelLibraryComponent],
+    imports: [ModelLibraryComponent, RouterLink, TranslatePipe],
     templateUrl: './furniture-library.component.html',
     styleUrl: './furniture-library.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FurnitureLibraryComponent {
+    private readonly language = inject(LanguageService);
     /** From the query string: show what this project's items may use. */
     public readonly projectId = input<string | undefined>(undefined);
 
     private readonly furniture = inject(FurnitureService);
     private readonly alerts = inject(AlertService);
     private readonly router = inject(Router);
+    private readonly translate = inject(TranslateService);
 
-    protected readonly categoryLabels = CategoryLabels;
     protected readonly definitions = signal<FurnitureDefinition[]>([]);
     protected readonly loading = signal(true);
     protected readonly busy = signal(false);
@@ -49,7 +52,7 @@ export class FurnitureLibraryComponent {
         await this.run(async () => {
             const project = this.project();
             const created = await this.furniture.create({
-                name: 'New furniture',
+                name: this.translate.instant('furniture.library.newName') as string,
                 description: '',
                 definition: NewDefinitionTemplate,
                 scope,
@@ -63,13 +66,14 @@ export class FurnitureLibraryComponent {
         await this.run(async () => {
             const project = this.project();
             await this.furniture.copy(definition.id, scope, scope === 'project' && project !== null ? project : undefined);
-            this.alerts.success(`"${definition.name}" was copied to ${scope === 'project' ? 'the project' : 'your library'}.`);
+            const key = scope === 'project' ? 'furniture.copiedToProject' : 'furniture.copiedToLibrary';
+            this.alerts.success(this.translate.instant(key, {name: definition.name}) as string);
             await this.load(this.project());
         });
     }
 
     protected async delete(definition: FurnitureDefinition): Promise<void> {
-        if (!confirm(`Delete "${definition.name}"? Items already using it keep their look, but it cannot be added any more.`)) {
+        if (!confirm(this.translate.instant('furniture.library.confirmDelete', {name: definition.name}) as string)) {
             return;
         }
         await this.run(async () => {
@@ -79,13 +83,14 @@ export class FurnitureLibraryComponent {
     }
 
     private sectionLabel(scope: FurnitureScope): string {
-        return scope === 'user' && this.project() !== null ? 'Library (of the project owner)' : ScopeLabels[scope];
+        const key = scope === 'user' && this.project() !== null ? 'furniture.library.ownerLibrary' : `furniture.scopes.${scope}`;
+        return this.translate.instant(key) as string;
     }
 
     private async load(project: number | null): Promise<void> {
         this.loading.set(true);
         try {
-            this.definitions.set(await this.furniture.list(project ?? undefined));
+            this.definitions.set((await this.furniture.list(project ?? undefined)).map((d) => localizeDefinition(d, this.language.current())));
         } catch {
             // The error interceptor shows the toast.
         } finally {

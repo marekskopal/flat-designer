@@ -1,8 +1,11 @@
 import {HttpClient, HttpContext} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
+import {Scene} from '@app/models/scene';
 import {SharedView, ShareLink, ShareLinkInput} from '@app/models/share';
+import {localizeMaterials} from '@app/shared/i18n/material-names';
 import {environment} from '@environments/environment';
+import {TranslateService} from '@ngx-translate/core';
 import {firstValueFrom} from 'rxjs';
 
 const projectsUrl = `${environment.apiUrl}/projects`;
@@ -12,6 +15,7 @@ const sharesUrl = `${environment.apiUrl}/shares`;
 /** Share links of a project (owner side) and the guest's read of one. */
 @Injectable({providedIn: 'root'})
 export class ShareService {
+    private readonly translate = inject(TranslateService);
     private readonly http = inject(HttpClient);
 
     public async list(projectId: number): Promise<ShareLink[]> {
@@ -48,6 +52,8 @@ export class ShareService {
 
     /** The guest page shows its own error (unknown or expired link), so no toast. */
     public async getShared(token: string): Promise<SharedView> {
-        return firstValueFrom(this.http.get<SharedView>(`${sharesUrl}/${token}`, {context: new HttpContext().set(SkipErrorToast, true)}));
+        const view = await firstValueFrom(this.http.get<SharedView>(`${sharesUrl}/${token}`, {context: new HttpContext().set(SkipErrorToast, true)}));
+        const localized = (scene: Scene): Scene => ({...scene, materials: localizeMaterials(this.translate, scene.materials)});
+        return {...view, scene: localized(view.scene), stack: view.stack?.map(localized), above: view.above?.map(localized)};
     }
 }

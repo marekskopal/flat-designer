@@ -141,8 +141,8 @@ export function isWallMounted(point: ElectricalPoint): boolean {
 }
 
 /** The elevation label of a wall point, mm above the floor as plans write it (`+1.100`). */
-export function elevationText(point: ElectricalPoint): string {
-    return levelText(point.z);
+export function elevationText(point: ElectricalPoint, decimal = '.'): string {
+    return levelText(point.z, decimal);
 }
 
 const arc = (cx: number, cy: number, r: number, from: number, to: number, steps = 12): Vec2[] =>
@@ -386,7 +386,7 @@ const DimmedOpacity = 0.3;
 export function buildElectrical(
     points: readonly ElectricalPoint[],
     symbols: ElectricalSymbols,
-    options: {y?: number; arcs?: readonly LinkArc[]; highlight?: ReadonlySet<number>} = {},
+    options: {y?: number; arcs?: readonly LinkArc[]; highlight?: ReadonlySet<number>; decimal?: string} = {},
 ): THREE.Group {
     const y = options.y ?? 0.04;
     const group = new THREE.Group();
@@ -402,7 +402,7 @@ export function buildElectrical(
         if (isWallMounted(point)) {
             const element = document.createElement('div');
             element.className = 'electrical-label';
-            element.textContent = elevationText(point);
+            element.textContent = elevationText(point, options.decimal);
             const label = new CSS2DObject(element);
             const at = {x: point.at.x + point.out.x * SymbolSize * 1.1, y: point.at.y + point.out.y * SymbolSize * 1.1};
             label.position.set(at.x * MM, y, -at.y * MM);

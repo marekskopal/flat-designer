@@ -1,0 +1,32 @@
+{
+    "mail": {
+        "greeting": "Hello {name},",
+        "linkFallback": "If the button does not work, open this link:",
+        "passwordReset": {
+            "subject": "Reset your Izbik password",
+            "title": "Reset your password",
+            "intro": "Someone asked to reset the password of your Izbik account. Choose a new one with the link below.",
+            "button": "Choose a new password",
+            "footnote": "The link works once, for {minutes} minutes. If you did not ask for it, ignore this mail; your password stays as it is."
+        },
+        "emailVerification": {
+            "subject": "Confirm your email for Izbik",
+            "title": "Confirm your email",
+            "intro": "Please confirm that this is the address of your Izbik account with the link below.",
+            "button": "Confirm email",
+            "footnote": "The link works once, for {hours} hours. If you did not create an Izbik account, ignore this mail."
+        }
+    },
+    "names": {
+        "sharedVersion": "Shared: {name}",
+        "variant": "Variant {number}",
+        "copy": "{name} (copy)"
+    },
+    "cutList": {
+        "definitionGone": "The furniture definition is gone.",
+        "noMaterial": "No material"
+    },
+    "schedules": {
+        "notInRoom": "Not in a room"
+    }
+}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Izbik\Controller;
 
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Repository\FloorRepository;
 use Izbik\Response\NotFoundResponse;
 use Izbik\Route\Routes;
@@ -34,7 +35,9 @@ final readonly class CutListController
 			return new NotFoundResponse(ProjectController::NotFound);
 		}
 
-		return new JsonResponse($this->cutListService->forProject($project));
+		return new JsonResponse(
+			$this->cutListService->forProject($project, LocaleEnum::fromAcceptLanguage($request->getHeaderLine('Accept-Language'))),
+		);
 	}
 
 	#[RouteGet(Routes::ProjectFloorCutList->value)]
@@ -46,6 +49,8 @@ final readonly class CutListController
 			return new NotFoundResponse(ProjectController::NotFound);
 		}
 
-		return new JsonResponse($this->cutListService->forFloor($floor));
+		return new JsonResponse(
+			$this->cutListService->forFloor($floor, LocaleEnum::fromAcceptLanguage($request->getHeaderLine('Accept-Language'))),
+		);
 	}
 }

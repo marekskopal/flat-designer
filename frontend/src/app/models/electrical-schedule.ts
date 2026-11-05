@@ -2,6 +2,7 @@
 export type ElectricalCategory = 'light' | 'socket' | 'switch' | 'data' | 'plumbing';
 
 /** The categories in the schedule's order, with their names. */
+/** In the schedule's order. The pages name them by `enums.electricalCategory.<category>`; the drawings by these. */
 export const CategoryLabels: Record<ElectricalCategory, string> = {
     light: 'Light',
     socket: 'Socket',
@@ -13,10 +14,8 @@ export const CategoryLabels: Record<ElectricalCategory, string> = {
 /** The symbol set of the electrical plan, a user setting: IEC 60617 or as Czech plans draw them (ČSN). */
 export type ElectricalSymbols = 'Iec' | 'Csn';
 
-export const ElectricalSymbolsLabels: Record<ElectricalSymbols, string> = {
-    Iec: 'IEC 60617',
-    Csn: 'ČSN (Czech)',
-};
+/** The symbol sets, named on the account page by `account.symbols.<set>`. */
+export const ElectricalSymbolSets: readonly ElectricalSymbols[] = ['Iec', 'Csn'];
 
 /**
  * A definition's settings for the electrical schedule, beside its `category` (`DefinitionSchedule`): `count` names an

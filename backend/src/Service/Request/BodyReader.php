@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Izbik\Service\Request;
 
+use BackedEnum;
 use Izbik\Service\Request\Exception\InvalidRequestException;
 
 /** Typed access to fields of a decoded JSON body, for `ArrayFactoryInterface::fromArray()`. */
@@ -28,6 +29,28 @@ final readonly class BodyReader
 		}
 
 		return self::string($data, $key);
+	}
+
+	/**
+	 * A string field naming a case of `$enum`, null when missing.
+	 *
+	 * @param array<string, mixed> $data
+	 * @param class-string<T> $enum
+	 * @return T|null
+	 * @template T of BackedEnum
+	 */
+	public static function optionalEnum(array $data, string $key, string $enum): ?BackedEnum
+	{
+		$value = self::optionalString($data, $key);
+		if ($value === null) {
+			return null;
+		}
+
+		return $enum::tryFrom($value) ?? throw new InvalidRequestException(sprintf(
+			'Field "%s" must be one of: %s.',
+			$key,
+			implode(', ', array_map(static fn (BackedEnum $case): string => '"' . $case->value . '"', $enum::cases())),
+		));
 	}
 
 	/** @param array<string, mixed> $data */

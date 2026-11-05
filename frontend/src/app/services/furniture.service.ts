@@ -3,7 +3,9 @@ import {inject, Injectable} from '@angular/core';
 import {SkipErrorToast} from '@app/core/interceptors/error.interceptor';
 import {FurnitureDefinition, FurnitureDefinitionBody, FurnitureDefinitionInput, FurnitureScope, FurnitureValidation} from '@app/models/furniture';
 import {Material} from '@app/models/scene';
+import {localizeMaterials} from '@app/shared/i18n/material-names';
 import {environment} from '@environments/environment';
+import {TranslateService} from '@ngx-translate/core';
 import {firstValueFrom} from 'rxjs';
 
 const definitionsUrl = `${environment.apiUrl}/furniture-definitions`;
@@ -11,6 +13,7 @@ const definitionsUrl = `${environment.apiUrl}/furniture-definitions`;
 /** Furniture definitions (global, my library, a project's) and the material catalogue their slots pick from. */
 @Injectable({providedIn: 'root'})
 export class FurnitureService {
+    private readonly translate = inject(TranslateService);
     private readonly http = inject(HttpClient);
 
     /** Global ones and my library; with a project, what its items may use (global, the project's, its owner's library). */
@@ -49,6 +52,6 @@ export class FurnitureService {
     }
 
     public async materials(): Promise<Material[]> {
-        return firstValueFrom(this.http.get<Material[]>(`${environment.apiUrl}/materials`));
+        return localizeMaterials(this.translate, await firstValueFrom(this.http.get<Material[]>(`${environment.apiUrl}/materials`)));
     }
 }

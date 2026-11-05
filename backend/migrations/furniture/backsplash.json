@@ -4,6 +4,18 @@
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Zástěna",
+    "description": "Obklad stěny mezi pracovní deskou a horními skříňkami, přiříznutý na rozměr prvku.",
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Slab": "Deska"
+    }
+   }
+  },
   "size": {
    "width": 1200,
    "depth": 16,

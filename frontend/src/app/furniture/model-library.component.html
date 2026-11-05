@@ -1,8 +1,7 @@
 <section class="card card--table">
-    <h2 class="section">Products (3D models)</h2>
+    <h2 class="section">{{ 'furniture.models.title' | translate }}</h2>
     <p class="intro intro--card">
-        Bought products — chairs, lamps, taps, plants — as glTF binary files (<code>.glb</code>). Items scale a model evenly to
-        fit their box. Credit third-party models with their licence, author and source.
+        {{ 'furniture.models.introFiles' | translate }} (<code>.glb</code>). {{ 'furniture.models.introRest' | translate }}
     </p>
     <table class="table">
         <tbody>
@@ -10,7 +9,7 @@
                 <tr>
                     <td class="table__strong">
                         {{ model.name }}
-                        <span class="badge">{{ scopeLabels[model.scope] }}</span>
+                        <span class="badge">{{ 'furniture.scopes.' + model.scope | translate }}</span>
                     </td>
                     <td class="table__muted table__nowrap">{{ model.width }} × {{ model.depth }} × {{ model.height }} mm · {{ model.size / 1048576 | number: '1.1-1' }} MB</td>
                     <td class="table__muted description">
@@ -18,34 +17,34 @@
                             {{ model.license }}{{ model.license && model.author ? ' · ' : '' }}{{ model.author }}
                         }
                         @if (model.sourceUrl) {
-                            · <a [href]="model.sourceUrl" target="_blank" rel="noopener noreferrer">source</a>
+                            · <a [href]="model.sourceUrl" target="_blank" rel="noopener noreferrer">{{ 'furniture.models.source' | translate }}</a>
                         }
                     </td>
                     <td class="table__actions">
                         @if (model.writable) {
-                            <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="delete(model)">Delete</button>
+                            <button type="button" class="btn btn--ghost btn--danger" [disabled]="busy()" (click)="delete(model)">{{ 'common.delete' | translate }}</button>
                         }
                     </td>
                 </tr>
             } @empty {
                 <tr>
-                    <td colspan="4" class="table__empty">None yet.</td>
+                    <td colspan="4" class="table__empty">{{ 'furniture.noneYet' | translate }}</td>
                 </tr>
             }
         </tbody>
     </table>
 
     <form #form class="upload" (submit)="$event.preventDefault(); upload(form)">
-        <input class="input" type="file" name="file" accept=".glb,model/gltf-binary" aria-label="Model file" required />
-        <input class="input" type="text" name="name" placeholder="Name (default: the file name)" aria-label="Name" />
-        <input class="input" type="text" name="license" placeholder="Licence, e.g. CC0" aria-label="Licence" />
-        <input class="input" type="text" name="author" placeholder="Author" aria-label="Author" />
-        <input class="input" type="url" name="sourceUrl" placeholder="Source address" aria-label="Source" />
-        <select class="input" name="scope" aria-label="Where">
+        <input class="input" type="file" name="file" accept=".glb,model/gltf-binary" [attr.aria-label]="'furniture.models.file' | translate" required />
+        <input class="input" type="text" name="name" [placeholder]="'furniture.models.namePlaceholder' | translate" [attr.aria-label]="'common.name' | translate" />
+        <input class="input" type="text" name="license" [placeholder]="'furniture.models.licencePlaceholder' | translate" [attr.aria-label]="'furniture.models.licence' | translate" />
+        <input class="input" type="text" name="author" [placeholder]="'furniture.models.author' | translate" [attr.aria-label]="'furniture.models.author' | translate" />
+        <input class="input" type="url" name="sourceUrl" [placeholder]="'furniture.models.sourcePlaceholder' | translate" [attr.aria-label]="'furniture.models.sourceLabel' | translate" />
+        <select class="input" name="scope" [attr.aria-label]="'furniture.models.where' | translate">
             @for (scope of scopes(); track scope) {
-                <option [value]="scope">{{ scopeLabels[scope] }}</option>
+                <option [value]="scope">{{ 'furniture.scopes.' + scope | translate }}</option>
             }
         </select>
-        <button type="submit" class="btn btn--primary" [disabled]="busy()">Upload</button>
+        <button type="submit" class="btn btn--primary" [disabled]="busy()">{{ 'furniture.models.upload' | translate }}</button>
     </form>
 </section>

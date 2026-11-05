@@ -61,7 +61,7 @@ final readonly class CurrentUserController
 				return new ErrorResponse('Name is required.', 422);
 			}
 		}
-		$user = $this->userProvider->updateProfile($user, $name, $dto->electricalSymbols);
+		$user = $this->userProvider->updateProfile($user, $name, $dto->electricalSymbols, $dto->locale);
 
 		return new JsonResponse(UserDto::fromEntity($user));
 	}

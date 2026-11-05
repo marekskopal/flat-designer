@@ -1,7 +1,7 @@
 import {levelText} from '@app/core/level-text';
-import {localDate} from '@app/core/local-date';
 
 import {Vec2} from './plan-geometry';
+import {EnglishSheetTexts, SheetTexts} from './sheet-texts';
 
 // Writing the A4 drawing sheets (the plan, the room schedule, the wall elevations) as SVG text in paper mm.
 
@@ -63,20 +63,20 @@ export function frameSvg(width: number, height: number): string {
  * The band at the foot of the sheet with the title block at its right: the project, the floor (and address) and
  * `caption` (what the drawing is, its scale). The band's left part is the caller's.
  */
-export function titleBlockSvg(width: number, height: number, info: SheetInfo, caption: string): string {
+export function titleBlockSvg(width: number, height: number, info: SheetInfo, caption: string, texts: SheetTexts = EnglishSheetTexts): string {
     const top = height - Margin - TitleBand;
     const bottom = height - Margin;
     const right = width - Margin;
     const blockLeft = right - 110;
     const x = blockLeft + 4;
-    const name = `${info.floorName} ${levelText(info.floorElevation)}`;
+    const name = `${info.floorName} ${levelText(info.floorElevation, texts.decimal)}`;
     const floor = info.address === null || info.address === '' ? name : `${name} · ${info.address}`;
     return [
         line({x: Margin, y: top}, {x: right, y: top}, {stroke: Ink, width: 0.25}),
         line({x: blockLeft, y: top}, {x: blockLeft, y: bottom}, {stroke: Ink, width: 0.25}),
         text({x, y: top + 7}, truncate(info.projectName, 102, 4), 4, {bold: true}),
         text({x, y: top + 13}, truncate(floor, 102, 2.8), 2.8),
-        text({x, y: top + 19}, truncate(`${caption} · ${localDate(info.date)} · Izbik`, 102, 2.2), 2.2, {color: Muted}),
+        text({x, y: top + 19}, truncate(`${caption} · ${texts.date(info.date)} · Izbik`, 102, 2.2), 2.2, {color: Muted}),
     ].join('');
 }
 
@@ -122,7 +122,7 @@ export function text(
  * A north arrow about `at` (its centre), turned `northAngle` degrees clockwise from the paper's up as true north lies
  * from plan north; `scale` 1 is 9 mm long. The N stays upright beyond its tip.
  */
-export function northArrowSvg(at: Vec2, northAngle: number, scale = 1): string {
+export function northArrowSvg(at: Vec2, northAngle: number, scale = 1, texts: SheetTexts = EnglishSheetTexts): string {
     const s = scale;
     const corners: Vec2[] = [
         {x: at.x, y: at.y - 6 * s},
@@ -134,7 +134,7 @@ export function northArrowSvg(at: Vec2, northAngle: number, scale = 1): string {
     const turn = northAngle % 360 === 0 ? '' : ` transform="rotate(${n(northAngle)} ${n(at.x)} ${n(at.y)})"`;
     const radians = (northAngle * Math.PI) / 180;
     const letter = {x: at.x + Math.sin(radians) * 8.6 * s, y: at.y - Math.cos(radians) * 8.6 * s + 0.9 * s};
-    return `<path d="${arrow}" fill="${Ink}"${turn}/>${text(letter, 'N', 2.6 * s, {bold: true, anchor: 'middle'})}`;
+    return `<path d="${arrow}" fill="${Ink}"${turn}/>${text(letter, texts.north, 2.6 * s, {bold: true, anchor: 'middle'})}`;
 }
 
 /** Estimated width of a text in mm. */

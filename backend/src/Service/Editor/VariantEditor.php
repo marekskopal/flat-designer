@@ -13,6 +13,8 @@ use Izbik\Model\Entity\VariantSet;
 use Izbik\Model\Repository\ItemGroupRepository;
 use Izbik\Service\Editor\Element\ElementHandler;
 use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Translator\ActorLocale;
+use Izbik\Service\Translator\Translator;
 
 /**
  * Variant sets as batches (one revision, one undo step): making one of groups, adding a variant, switching
@@ -30,6 +32,8 @@ final readonly class VariantEditor
 		private BatchWriter $writer,
 		private GroupEditor $groupEditor,
 		private ItemGroupRepository $groupRepository,
+		private Translator $translator,
+		private ActorLocale $actorLocale,
 	) {
 		$this->groups = $handlers->get(ElementTypeEnum::Group);
 		$this->sets = $handlers->get(ElementTypeEnum::VariantSet);
@@ -86,12 +90,14 @@ final readonly class VariantEditor
 		return $this->writer->transaction(function () use ($user, $floor, $setId, $fromGroupId, $name, $baseRevision): EditResultDto {
 			$set = $this->variantSet($floor, $setId);
 			$source = $fromGroupId === null ? null : $this->variant($floor, $set, $fromGroupId);
+			$locale = $this->actorLocale->of($user);
 			$name ??= $source === null
-				? sprintf(
-					'Variant %d',
-					count($this->groupRepository->findBySet($set->id)) + 1,
+				? $this->translator->translate(
+					'names.variant',
+					$locale,
+					['number' => count($this->groupRepository->findBySet($set->id)) + 1],
 				)
-				: $source->name . ' (copy)';
+				: $this->translator->translate('names.copy', $locale, ['name' => $source->name]);
 			$state = $this->groups->normalize($floor, ['name' => $name, 'variantSetId' => $set->id], null);
 
 			$batch = $this->writer->start($floor, $baseRevision, sprintf('Added variant "%s" to "%s"', trim($name), $set->name));
