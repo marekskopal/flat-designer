@@ -308,5 +308,9 @@
         "unknownClient": "Unknown client. Start the connection again from your MCP client.",
         "loadFailed": "Could not load the request.",
         "failed": "Authorization failed."
+    },
+    "errors": {
+        "unreachable": "The server is not reachable.",
+        "unexpected": "An unexpected error occurred."
     }
 }

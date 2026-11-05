@@ -10,6 +10,8 @@ use Izbik\Middleware\AuthorizationMiddleware;
 use Izbik\Middleware\CorsMiddleware;
 use Izbik\Route\Strategy\JsonStrategy;
 use Izbik\Service\Dbal\DbContext;
+use Izbik\Service\Translator\ErrorTranslator;
+use Izbik\Service\Translator\LocalizedErrorHandler;
 use League\Container\Container;
 use League\Container\ReflectionContainer;
 use MarekSkopal\Router\Builder\RouterBuilder;
@@ -65,7 +67,12 @@ final readonly class ApplicationFactory
 		}
 		$router->middleware($authorizationMiddleware);
 
-		return $router;
+		$errorTranslator = $container->get(ErrorTranslator::class);
+		if (!$errorTranslator instanceof ErrorTranslator) {
+			throw new \RuntimeException('ErrorTranslator not found in container.');
+		}
+
+		return new LocalizedErrorHandler($router, $errorTranslator);
 	}
 
 	private static function initializeDbContext(): DbContext

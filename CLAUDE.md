@@ -73,8 +73,9 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   files, English). Counts go through `PluralPipe` / `pluralText()` (`shared/i18n`: keys `<key>.one|few|other` in both
   languages, by `Intl.PluralRules`), dates through `DateTextPipe` (`dateText: 'date' | 'dateTime' | 'dayTime' |
   'time'`, each language's own format), never Angular's `date` with an English pattern. A route's `title` is a key
-  (`titles.*`, `TranslatedTitleStrategy`). Server messages (`errorMessage()`) are still English until the API sends
-  keys.
+  (`titles.*`, `TranslatedTitleStrategy`). API requests carry the language shown as `Accept-Language`
+  (`languageInterceptor`), so the server's messages come in it; `errorInterceptor` gives an error without one a
+  translated `errors.unreachable` / `errors.unexpected`.
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
@@ -88,6 +89,14 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   variant's name) are `backend/translations/{en,cs}.json` read by `Translator` (dotted keys, `{name}` placeholders,
   English fallback; `TranslationFilesTest` keeps the keys alike), in the user's language for a person and English for
   an agent (`ActorLocale`). Names the frontend sends (a new room, a group) are translated there.
+- API messages are thrown in English (agents read them so) and translated on the way out: `LocalizedErrorHandler`
+  (around the router) puts an error response's `message`, and the `warnings` of a posted import, into the
+  `Accept-Language` language by `ErrorTranslator`, which looks the English message, or the `sprintf` format it came from
+  (`Wall %d is not on this floor.`), up in `translations/errors.<locale>.json` (the same placeholders in the same order;
+  a filled-in part that is a message of its own is translated too; an unknown message stays English). MCP is left
+  alone. **A new user-facing message needs its translation**: `ErrorCatalogueTest` scans `src/` (MCP aside) for thrown
+  and answered messages, sentence constants and `warnings[]`, and fails on one missing from the catalogue or an entry
+  no longer thrown (`Internal` lists the 5xx ones nobody reads).
 
 ## Domain conventions
 

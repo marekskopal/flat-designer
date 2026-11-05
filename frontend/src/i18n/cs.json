@@ -308,5 +308,9 @@
         "unknownClient": "Neznámý klient. Spusťte připojení znovu ze svého MCP klienta.",
         "loadFailed": "Žádost se nepodařilo načíst.",
         "failed": "Autorizace se nezdařila."
+    },
+    "errors": {
+        "unreachable": "Server není dostupný.",
+        "unexpected": "Došlo k neočekávané chybě."
     }
 }

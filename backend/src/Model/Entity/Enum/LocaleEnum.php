@@ -19,4 +19,10 @@ enum LocaleEnum: string
 
 		return self::tryFrom(strtolower(explode('-', str_replace('_', '-', trim($language)))[0])) ?? self::En;
 	}
+
+	/** The first language of an `Accept-Language` header (`cs-CZ,cs;q=0.9,en;q=0.8` → Czech); none or another, English. */
+	public static function fromAcceptLanguage(string $header): self
+	{
+		return self::fromBrowser(explode(';', explode(',', $header)[0])[0]);
+	}
 }
