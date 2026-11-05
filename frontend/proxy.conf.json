@@ -3,5 +3,12 @@
         "target": "http://localhost:4400",
         "secure": false,
         "changeOrigin": true
+    },
+    "/.well-known/mercure": {
+        "target": "http://localhost:4400",
+        "secure": false,
+        "changeOrigin": true,
+        "proxyTimeout": 0,
+        "timeout": 0
     }
 }
