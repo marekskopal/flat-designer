@@ -1,10 +1,11 @@
 import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, effect, inject, input, numberAttribute, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, input, LOCALE_ID, numberAttribute, signal} from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {levelText} from '@app/core/level-text';
+import {decimalSeparator} from '@app/core/number-format';
 import {downloadBlob, safeFilename} from '@app/export/download';
 import {Project, ProjectVersion} from '@app/models/project';
 import {Floor, Material} from '@app/models/scene';
@@ -171,7 +172,12 @@ export class ProjectDetailComponent {
         });
     }
 
-    protected readonly levelText = levelText;
+    private readonly decimal = decimalSeparator(inject(LOCALE_ID));
+
+    /** A floor's level in the page's language (`+3,000` in Czech). */
+    protected levelText(mm: number): string {
+        return levelText(mm, this.decimal);
+    }
 
     protected startFloor(floor: Floor | null): void {
         const levels = this.project()?.floors.map((f) => f.level) ?? [0];

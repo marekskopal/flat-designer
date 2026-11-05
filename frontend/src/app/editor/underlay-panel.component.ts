@@ -1,6 +1,7 @@
 import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, input, LOCALE_ID, signal, untracked} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {decimalSeparator, fixed} from '@app/core/number-format';
 import {PdfPages, ProjectFile} from '@app/models/project';
 import {Scene, Underlay} from '@app/models/scene';
 import {UnderlayInput} from '@app/services/editor-api.service';
@@ -31,6 +32,7 @@ type CalibrationDirection = 'keep' | 'horizontal' | 'vertical';
 })
 export class UnderlayPanelComponent {
     private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
     public readonly scene = input.required<Scene>();
     public readonly projectId = input.required<number>();
 
@@ -203,7 +205,7 @@ export class UnderlayPanelComponent {
     }
 
     protected scaleLabel(underlay: Underlay): string {
-        return this.translate.instant('editor.underlay.scaleLabel', {scale: underlay.scale.toFixed(2)});
+        return this.translate.instant('editor.underlay.scaleLabel', {scale: fixed(underlay.scale, 2, decimalSeparator(this.locale))});
     }
 
     /** The direction to straighten the points to: the axis nearest to how they were clicked, keeping their sense. */

@@ -1397,6 +1397,20 @@
             "switch": "Vypínač",
             "data": "Datová zásuvka",
             "plumbing": "Vodovodní bod"
+        },
+        "surface": {
+            "Floor": "Podlaha",
+            "WallFinish": "Obklad",
+            "Wall": "Stěny",
+            "Ceiling": "Strop",
+            "Beams": "Trámy",
+            "Skirting": "Sokl",
+            "Furniture": "Nábytkové desky",
+            "RoofCovering": "Střešní krytina",
+            "Soffit": "Podbití",
+            "Facade": "Fasáda",
+            "Gutter": "Žlaby",
+            "Downpipe": "Svody"
         }
     },
     "materials": {
@@ -1612,6 +1626,208 @@
             "light": "svítidlo",
             "cable": "kabel",
             "assembly": "sestava"
+        }
+    },
+    "schedules": {
+        "rooms": {
+            "title": "Místnosti",
+            "indoorArea": "{{area}} m² vnitřní",
+            "garageArea": "{{area}} m² garáž",
+            "outdoorArea": "{{area}} m² venkovní",
+            "quantities": "Výměry a cena",
+            "empty": "Zatím žádné místnosti. Přidejte je v editoru podlaží (Místnost ze stěn).",
+            "room": "Místnost",
+            "area": "Plocha m²",
+            "perimeter": "Obvod m",
+            "clearHeight": "Světlá výška m",
+            "volume": "Objem m³",
+            "headroomArea": "Plocha ≥ 1,2 m, m²",
+            "headroomAreaHint": "Plocha podlahy se světlou výškou pod střechou alespoň 1,2 m",
+            "void": "{{name}} (prostup)",
+            "voidHint": "Prostup podlažím: jeho plocha se nezapočítává do okolních místností",
+            "indoorOn": "Vnitřní, {{floor}}",
+            "garageOn": "Garáž, {{floor}}",
+            "outdoorOn": "Venkovní, {{floor}}",
+            "indoorTotal": {
+                "one": "Vnitřní celkem ({{count}} místnost)",
+                "few": "Vnitřní celkem ({{count}} místnosti)",
+                "other": "Vnitřní celkem ({{count}} místností)"
+            },
+            "garageTotal": "Garáž celkem (vnitřní, nevytápěná)",
+            "outdoorTotal": "Venkovní celkem (terasy, zahrady)"
+        },
+        "electrical": {
+            "title": "Elektro a voda",
+            "empty": "Zatím žádná svítidla, zásuvky, vypínače ani vodovodní body. Přidejte je v editoru podlaží (Přidat → Nábytek).",
+            "point": "Místnost / bod",
+            "type": "Druh",
+            "elevation": "Výška mm",
+            "count": "Počet",
+            "circuits": "Světelné okruhy",
+            "circuit": "Okruh",
+            "switches": "Vypínače",
+            "lights": "Svítidla",
+            "unlinked": "Vypínače bez svítidel",
+            "unswitched": "Svítidla bez vypínače",
+            "note": "Vypínače ovládají jen svítidla na svém podlaží. Propojte je v editoru: vyberte vypínač a pak Vybrat svítidla (L).",
+            "yes": "ano",
+            "no": "ne",
+            "counts": {
+                "lights": {
+                    "one": "{{count}} svítidlo",
+                    "few": "{{count}} svítidla",
+                    "other": "{{count}} svítidel"
+                },
+                "sockets": {
+                    "one": "{{count}} zásuvka",
+                    "few": "{{count}} zásuvky",
+                    "other": "{{count}} zásuvek"
+                },
+                "outlets": {
+                    "one": "{{count}} vývod",
+                    "few": "{{count}} vývody",
+                    "other": "{{count}} vývodů"
+                },
+                "switches": {
+                    "one": "{{count}} vypínač",
+                    "few": "{{count}} vypínače",
+                    "other": "{{count}} vypínačů"
+                },
+                "dataSockets": {
+                    "one": "{{count}} datová zásuvka",
+                    "few": "{{count}} datové zásuvky",
+                    "other": "{{count}} datových zásuvek"
+                },
+                "dataPorts": {
+                    "one": "{{count}} port",
+                    "few": "{{count}} porty",
+                    "other": "{{count}} portů"
+                },
+                "plumbingPoints": {
+                    "one": "{{count}} vodovodní bod",
+                    "few": "{{count}} vodovodní body",
+                    "other": "{{count}} vodovodních bodů"
+                }
+            }
+        }
+    },
+    "quantities": {
+        "defaultLook": {
+            "Floor": "Bez materiálu podlahy",
+            "WallFinish": "Bez materiálu",
+            "Wall": "Výmalba stěn (výchozí)",
+            "Ceiling": "Bílá omítka",
+            "Beams": "Bílý nátěr",
+            "Skirting": "Bílý sokl",
+            "Furniture": "Bez materiálu",
+            "RoofCovering": "Střešní krytina (výchozí)",
+            "Soffit": "Bíle natřené podbití",
+            "Facade": "Povrch fasády (výchozí)",
+            "Gutter": "Žlab, titanzinek (výchozí)",
+            "Downpipe": "Svod, titanzinek (výchozí)"
+        },
+        "title": "Výměry a cena",
+        "back": "Zpět na projekt",
+        "print": "Tisk",
+        "floor": "Podlaží",
+        "allFloors": "Všechna podlaží",
+        "currency": "Měna",
+        "waste": "Prořez %",
+        "discard": "Zahodit",
+        "savePrices": "Uložit ceny",
+        "hint": "Plochy pracovní verze, jak jsou nakreslené: podlahy, pásy obkladů, výmalba kolem nich a nad nimi až ke stropu (bez otvorů), stropy a sokly, pod šikmými střechami podle jejich sklonu; krytina a podbití střech po spádu; fasády (líce stěn mimo všechny místnosti) podle materiálu; nábytkové desky z řezného plánu. Dlažba a prkna se počítají v celých kusech s rezervou na prořez. Ceny jsou za m², sokly a olepování hran za běžný metr.",
+        "saveToUpdate": "Uložte ceny, aby se přepočítaly náklady.",
+        "total": "Odhad celkem",
+        "incomplete": "Některé materiály zatím nemají cenu; nejsou započítány.",
+        "materials": "Materiály k nákupu",
+        "materialsNote": "m² v závorce: celé kusy",
+        "furniture": "Nábytkové desky",
+        "furnitureNote": "plocha desek · olepení hran",
+        "material": "Materiál",
+        "usedOn": "Použito na",
+        "pieces": "Ks",
+        "cost": "Cena",
+        "surface": "Plocha",
+        "quantity": "Množství",
+        "pricePerArea": "Cena za m² – {{material}}",
+        "pricePerLength": "Cena za metr – {{material}}",
+        "notAllPriced": "(ne vše oceněno)",
+        "nothingToCount": "Není co počítat: bez materiálu podlahy a bez stěn podél obrysu.",
+        "facades": "Fasády",
+        "empty": "Zatím zde nejsou místnosti ani nábytek na míru. Místnosti přidáte v editoru podlaží (Místnost ze stěn).",
+        "saved": "Ceny uloženy.",
+        "roofWindows": {
+            "one": "{{count}} střešní okno",
+            "few": "{{count}} střešní okna",
+            "other": "{{count}} střešních oken"
+        }
+    },
+    "export": {
+        "planPdf": "Půdorys PDF",
+        "planPdfTitle": "Půdorys na A4 s tabulkou místností",
+        "planSvg": "Půdorys SVG",
+        "planSvgTitle": "Stránka půdorysu jako vektorový výkres",
+        "elevationsPdf": "Rozvinuté pohledy PDF",
+        "elevationsPdfTitle": "Stěny každé místnosti při pohledu zevnitř, s obklady, otvory a kótami, stránka na místnost",
+        "electricalPdf": "Elektro PDF",
+        "electricalPdfTitle": "Půdorys se svítidly, zásuvkami, vypínači, datovými zásuvkami a vývody vody a jejich výškami, pro elektrikáře",
+        "facadesPdf": "Pohledy PDF",
+        "facadesPdfTitle": "Budova ze všech čtyř stran, s tímto podlažím a podlažími pod ním",
+        "facadesSvg": "Pohledy SVG",
+        "facadesSvgTitle": "Výkresy pohledů jako vektorové výkresy",
+        "sectionsPdf": "Řezy PDF",
+        "sectionsPdfTitle": "Řez budovou podél každé čáry řezu (v úpravách Přidat → Řez)",
+        "sectionsSvg": "Řezy SVG",
+        "sectionsSvgTitle": "Výkresy řezů jako vektorové výkresy",
+        "glb": "3D glTF",
+        "glbTitle": "Podlaží jako 3D model (.glb) pro Blender, SketchUp nebo herní engine",
+        "noWalls": "Žádná místnost na tomto podlaží nemá stěny k zakreslení.",
+        "noSections": "Na tomto podlaží ani pod ním není žádný řez: přidejte ho v úpravách (Přidat → Řez).",
+        "failed": "Export se nezdařil.",
+        "files": {
+            "plan": "půdorys",
+            "electrical": "elektro",
+            "elevations": "rozvinuté pohledy",
+            "facades": "pohledy",
+            "sections": "řezy"
+        }
+    },
+    "sheets": {
+        "north": "S",
+        "floorPlan": "Půdorys",
+        "electricalPlan": "Výkres elektroinstalace",
+        "switchedLights": "Spínaná svítidla",
+        "roomSchedule": "Tabulka místností",
+        "columns": {
+            "code": "Číslo",
+            "room": "Místnost",
+            "area": "Plocha m²",
+            "perimeter": "Obvod m",
+            "clearHeight": "Světlá výška m",
+            "volume": "Objem m³",
+            "headroom": "≥ {{metres}} m, m²"
+        },
+        "voidRow": "{{name}} (prostup)",
+        "totals": {
+            "indoor": "Vnitřní",
+            "garage": "Garáž",
+            "outdoor": "Venkovní"
+        },
+        "wallElevations": "Rozvinuté pohledy stěn",
+        "finishes": "Povrchy",
+        "sill": "parapet {{height}}",
+        "facadeElevations": "Pohledy",
+        "facade": {
+            "North": "Severní pohled",
+            "East": "Východní pohled",
+            "South": "Jižní pohled",
+            "West": "Západní pohled"
+        },
+        "section": "Řez {{name}}",
+        "levels": {
+            "roof": "Střecha",
+            "eaves": "Okap",
+            "ridge": "Hřeben"
         }
     }
 }

@@ -25,5 +25,8 @@
     "cutList": {
         "definitionGone": "The furniture definition is gone.",
         "noMaterial": "No material"
+    },
+    "schedules": {
+        "notInRoom": "Not in a room"
     }
 }

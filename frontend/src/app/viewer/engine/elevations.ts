@@ -57,6 +57,7 @@ import {
     titleBlockSvg,
     truncate,
 } from './sheet-svg';
+import {EnglishSheetTexts, SheetTexts} from './sheet-texts';
 import {CeilingUnderRoof, FloorRoofs, HeightAt, roofBreaks, roofsReach, wallHeightAt, wallTopAt} from './under-roof';
 import {hiddenItemIds} from './variants';
 
@@ -285,7 +286,7 @@ function faceTop(room: Room, pointAt: (t: number) => Vec2, length: number, along
 }
 
 /** The room's wall elevations on A4 landscape pages (none for a room without walls). */
-export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo): Sheet[] {
+export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo, texts: SheetTexts = EnglishSheetTexts): Sheet[] {
     const faces = roomFaces(room, scene.walls, scene.roofs ?? []);
     if (faces.length === 0) {
         return [];
@@ -305,24 +306,24 @@ export function roomElevationSheets(scene: Scene, room: Room, info: SheetInfo): 
     const hidden = hiddenItemIds(scene);
     const items = itemsOverFloor(scene).filter((i) => !hidden.has(i.id) && (i.roomId === room.id || pointInPolygon(i, room.polygon)));
     let clipIds = 0;
-    const context: FaceContext = {room, walls: scene.walls, items, materials, scale, clipId: () => `clip-${clipIds++}`};
+    const context: FaceContext = {room, walls: scene.walls, items, materials, scale, clipId: () => `clip-${clipIds++}`, texts};
 
     return pages.map((placed, page) => {
         const body = placed.map(({face, at}) => faceSvg(face, at, context));
-        body.push(keyPlanSvg(room, faces, {x: area.left, y: area.top}, scene.location?.northAngle ?? 0));
-        body.push(legendSvg(finishes, {x: area.left, y: area.top + KeyPlanSize + LegendGap}));
+        body.push(keyPlanSvg(room, faces, {x: area.left, y: area.top}, scene.location?.northAngle ?? 0, texts));
+        body.push(legendSvg(finishes, {x: area.left, y: area.top + KeyPlanSize + LegendGap}, texts));
         body.push(frameSvg(width, height));
         const pageNote = pages.length > 1 ? ` · ${page + 1}/${pages.length}` : '';
-        body.push(titleBlockSvg(width, height, info, `Wall elevations · ${room.code} ${room.name} · 1:${scale} (A4)${pageNote}`));
+        body.push(titleBlockSvg(width, height, info, `${texts.wallElevations} · ${room.code} ${room.name} · 1:${scale} (A4)${pageNote}`, texts));
         return {width, height, svg: sheetSvg(width, height, body)};
     });
 }
 
 /** The wall elevations of every room with walls, a page (or more) per room. */
-export function elevationSheets(scene: Scene, info: SheetInfo): Sheet[] {
+export function elevationSheets(scene: Scene, info: SheetInfo, texts: SheetTexts = EnglishSheetTexts): Sheet[] {
     return [...scene.rooms]
         .sort((x, y) => x.code.localeCompare(y.code, undefined, {numeric: true}))
-        .flatMap((room) => roomElevationSheets(scene, room, info));
+        .flatMap((room) => roomElevationSheets(scene, room, info, texts));
 }
 
 interface PlacedFace {
@@ -416,6 +417,7 @@ interface FaceContext {
     materials: ReadonlyMap<number, Material>;
     scale: number;
     clipId: () => string;
+    texts: SheetTexts;
 }
 
 /**
@@ -485,7 +487,7 @@ function faceSvg(face: ElevationFace, at: Vec2, context: FaceContext): string {
     }
 
     for (const opening of face.openings) {
-        inside.push(openingSvg(opening, xOf, toPaper, s));
+        inside.push(openingSvg(opening, xOf, toPaper, s, context.texts));
     }
 
     for (const item of itemsAgainst(face, context.items)) {
@@ -724,7 +726,13 @@ function edgeOpenings(a: Vec2, dir: Vec2, length: number, edgeFaces: readonly {w
  * panes divided), boarded leaves with their joints; a garage door's sections or slats; a niche shaded.
  * Its size (and sill) is written in it when it fits.
  */
-function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: number, z: number) => Vec2, s: number): string {
+function openingSvg(
+    edge: EdgeOpening,
+    xOf: (t: number) => number,
+    toPaper: (x: number, z: number) => Vec2,
+    s: number,
+    texts: SheetTexts,
+): string {
     const {opening} = edge;
     const x0 = xOf(edge.to);
     const x1 = xOf(edge.from);
@@ -827,7 +835,7 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
 
     const size = 1.6;
     const label = `${Math.round(opening.width)} × ${Math.round(opening.height)}`;
-    const sill = opening.sillHeight > 0 ? `sill ${Math.round(opening.sillHeight)}` : null;
+    const sill = opening.sillHeight > 0 ? texts.sill(Math.round(opening.sillHeight)) : null;
     const widthOnPaper = (x1 - x0) / s;
     if (textWidth(label, size) <= widthOnPaper * 0.9 && (z1 - z0) / s >= 3 * size) {
         const centre = toPaper((x0 + x1) / 2, (z0 + z1) / 2);
@@ -970,7 +978,7 @@ function dimension(positions: number[], across: number, orientation: 'horizontal
 }
 
 /** The room's outline in a 45 mm square with the faces' letters inside their edges, plan north up; a north arrow beside it. */
-function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2, northAngle: number): string {
+function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2, northAngle: number, texts: SheetTexts): string {
     const box = KeyPlanSize;
     const xs = room.polygon.map(([x]) => x);
     const ys = room.polygon.map(([, y]) => y);
@@ -984,7 +992,7 @@ function keyPlanSvg(room: Room, faces: readonly ElevationFace[], at: Vec2, north
         text({x: at.x + 1.5, y: at.y + 3.5}, truncate(`${room.code} ${room.name}`, box - 3, 2.2), 2.2, {bold: true}),
         path(room.polygon.map(([x, y]) => toPaper({x, y})), true, {fill: '#ffffff', stroke: Ink, width: 0.4}),
         // In the side column's spare width right of the box, clear of the outline and the title.
-        northArrowSvg({x: at.x + box + (SideColumn - box) / 2, y: at.y + 10}, northAngle, 0.5),
+        northArrowSvg({x: at.x + box + (SideColumn - box) / 2, y: at.y + 10}, northAngle, 0.5, texts),
     ];
     for (const face of faces) {
         const mid = {x: (face.a.x + face.b.x) / 2, y: (face.a.y + face.b.y) / 2};
@@ -1004,11 +1012,11 @@ function legendHeight(entries: number): number {
 }
 
 /** The finishes on the page: a swatch in the material's colour, its name and tile size. */
-function legendSvg(materials: readonly Material[], at: Vec2): string {
+function legendSvg(materials: readonly Material[], at: Vec2, texts: SheetTexts): string {
     if (materials.length === 0) {
         return '';
     }
-    const parts = [text({x: at.x, y: at.y + 3}, 'Finishes', 2.6, {bold: true})];
+    const parts = [text({x: at.x, y: at.y + 3}, texts.finishes, 2.6, {bold: true})];
     materials.forEach((material, i) => {
         const y = at.y + 7 + i * 6;
         parts.push(rect({x: at.x, y}, 5, 4, {fill: material.color, stroke: Ink, width: 0.13}));

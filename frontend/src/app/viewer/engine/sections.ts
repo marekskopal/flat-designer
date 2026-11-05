@@ -41,6 +41,7 @@ import {
     TitleBand,
     titleBlockSvg,
 } from './sheet-svg';
+import {EnglishSheetTexts, SheetTexts} from './sheet-texts';
 import {stairGeometry} from './stairs';
 import {groundAt, plotAt} from './terrain';
 import {clipRing, FloorRoofs, HeightAt, roofBreaks, roofPlaneParts, wallBottomAt, wallHeightAt, wallTopAt} from './under-roof';
@@ -108,7 +109,10 @@ interface FloorContext {
 /** A level mark at the drawing's side. */
 export interface LevelMark {
     level: number;
+    /** A floor's name, or (with `roof`) the English name of a roof's level. */
     label: string;
+    /** A roof's level: the sheets write it in their language. */
+    roof?: keyof SheetTexts['levels'];
 }
 
 /** A drawing's content in view mm, ready to be laid on paper. */
@@ -1034,11 +1038,11 @@ function levelMarks(floors: readonly Scene[]): LevelMark[] {
         marks.push({level: e, label: scene.floor.name});
         for (const roof of scene.roofs ?? []) {
             if (roof.shape === 'Flat') {
-                marks.push({level: e + roof.eaveHeight + roofVerticalThickness(roof) + (roof.parapet ?? 0), label: 'Roof'});
+                marks.push({level: e + roof.eaveHeight + roofVerticalThickness(roof) + (roof.parapet ?? 0), label: 'Roof', roof: 'roof'});
                 continue;
             }
-            marks.push({level: e + roof.eaveHeight, label: 'Eaves'});
-            marks.push({level: e + roofRidgeHeight(roof) + roofVerticalThickness(roof), label: 'Ridge'});
+            marks.push({level: e + roof.eaveHeight, label: 'Eaves', roof: 'eaves'});
+            marks.push({level: e + roofRidgeHeight(roof) + roofVerticalThickness(roof), label: 'Ridge', roof: 'ridge'});
         }
     }
     // One mark per level (the first label), highest first.
@@ -1046,7 +1050,7 @@ function levelMarks(floors: readonly Scene[]): LevelMark[] {
     for (const mark of marks) {
         const key = Math.round(mark.level);
         if (!seen.has(key)) {
-            seen.set(key, {level: key, label: mark.label});
+            seen.set(key, {...mark, level: key});
         }
     }
     return [...seen.values()].sort((a, b) => b.level - a.level);
@@ -1079,7 +1083,7 @@ function drawingArea(width: number, height: number): {x: number; y: number; widt
  * A drawing on paper: its bottom-left corner at `at` (paper mm), the groups far to near, the cut over them and the
  * level marks at its right, each a tick on a short line out from the drawing with its level and label.
  */
-function drawViewSvg(view: BuildingView, at: Vec2, scale: number): string[] {
+function drawViewSvg(view: BuildingView, at: Vec2, scale: number, texts: SheetTexts): string[] {
     const toPaper = (q: ViewPoint): Vec2 => ({x: at.x + (q.u - view.bounds.minU) / scale, y: at.y - (q.v - view.bounds.minV) / scale});
     const draw = (shape: ViewShape): string => path(shape.points.map(toPaper), shape.closed, shape.style);
     const right = at.x + (view.bounds.maxU - view.bounds.minU) / scale;
@@ -1115,8 +1119,8 @@ function drawViewSvg(view: BuildingView, at: Vec2, scale: number): string[] {
                 true,
                 {fill: Ink},
             ),
-            text({x: x + 3.4, y: y - 0.5}, levelText(mark.level), 2),
-            text({x: x + 3.4, y: y + 2.2}, mark.label, 1.6, {color: Muted}),
+            text({x: x + 3.4, y: y - 0.5}, levelText(mark.level, texts.decimal), 2),
+            text({x: x + 3.4, y: y + 2.2}, mark.roof === undefined ? mark.label : texts.levels[mark.roof], 1.6, {color: Muted}),
         );
     }
     return body;
@@ -1132,7 +1136,7 @@ const FacadeLayouts: readonly {columns: number; rows: number}[] = [
  * The façades on A3 sheets: the building seen from plan south, north, east and west (named by the true compass when
  * the project's north is turned), all at one scale: four to a sheet, or two to a sheet where that allows a larger scale.
  */
-export function facadeSheets(scenes: readonly Scene[], info: SheetInfo, northAngle = 0): Sheet[] {
+export function facadeSheets(scenes: readonly Scene[], info: SheetInfo, northAngle = 0, texts: SheetTexts = EnglishSheetTexts): Sheet[] {
     const width = A3Long;
     const height = A3Short;
     const sides: FacadeSide[] = ['South', 'North', 'East', 'West'];
@@ -1157,18 +1161,18 @@ export function facadeSheets(scenes: readonly Scene[], info: SheetInfo, northAng
             const size = drawingSize(view, scale);
             const left = inner.x + (k % layout.columns) * cell.width + (cell.width - size.width) / 2;
             const bottom = inner.y + Math.floor(k / layout.columns) * cell.height + (cell.height - caption + size.height) / 2;
-            body.push(...drawViewSvg(view, {x: left, y: bottom}, scale));
-            const name = `${facadeName(sides[first + k], northAngle)} elevation`;
+            body.push(...drawViewSvg(view, {x: left, y: bottom}, scale, texts));
+            const name = texts.facade[facadeName(sides[first + k], northAngle)];
             body.push(text({x: left + (size.width - MarkGutter) / 2, y: bottom + 5}, name, 3, {bold: true, anchor: 'middle'}));
         });
-        body.push(titleBlockSvg(width, height, info, `Façade elevations 1:${scale}`));
+        body.push(titleBlockSvg(width, height, info, `${texts.facadeElevations} 1:${scale}`, texts));
         sheets.push({width, height, svg: sheetSvg(width, height, body)});
     }
     return sheets;
 }
 
 /** A section's sheet: A4 across, the drawing at the largest scale that fits, the section's name under it. */
-export function sectionSheet(scenes: readonly Scene[], cut: SectionCut, info: SheetInfo): Sheet | null {
+export function sectionSheet(scenes: readonly Scene[], cut: SectionCut, info: SheetInfo, texts: SheetTexts = EnglishSheetTexts): Sheet | null {
     const plane = sectionPlane(cut);
     if (plane === null) {
         return null;
@@ -1182,12 +1186,12 @@ export function sectionSheet(scenes: readonly Scene[], cut: SectionCut, info: Sh
     const size = drawingSize(view, scale);
     const left = inner.x + (inner.width - size.width) / 2;
     const bottom = inner.y + (inner.height - caption + size.height) / 2;
-    const title = `Section ${cut.name}`;
+    const title = texts.section(cut.name);
     const body = [
         frameSvg(width, height),
-        ...drawViewSvg(view, {x: left, y: bottom}, scale),
+        ...drawViewSvg(view, {x: left, y: bottom}, scale, texts),
         text({x: left + (size.width - MarkGutter) / 2, y: bottom + 5.5}, title, 3.2, {bold: true, anchor: 'middle'}),
-        titleBlockSvg(width, height, info, `${truncateName(title)} 1:${scale}`),
+        titleBlockSvg(width, height, info, `${truncateName(title)} 1:${scale}`, texts),
     ];
     return {width, height, svg: sheetSvg(width, height, body)};
 }
@@ -1198,9 +1202,14 @@ function truncateName(value: string): string {
 }
 
 /** The section sheets of the cuts, in their order (a cut along no length is left out). */
-export function sectionSheets(scenes: readonly Scene[], cuts: readonly SectionCut[], info: SheetInfo): Sheet[] {
+export function sectionSheets(
+    scenes: readonly Scene[],
+    cuts: readonly SectionCut[],
+    info: SheetInfo,
+    texts: SheetTexts = EnglishSheetTexts,
+): Sheet[] {
     return cuts.flatMap((cut) => {
-        const sheet = sectionSheet(scenes, cut, info);
+        const sheet = sectionSheet(scenes, cut, info, texts);
         return sheet === null ? [] : [sheet];
     });
 }

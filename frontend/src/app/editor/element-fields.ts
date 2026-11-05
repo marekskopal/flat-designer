@@ -1,3 +1,4 @@
+import {decimalSeparator, fixed} from '@app/core/number-format';
 import {OpeningType, RailingStyle} from '@app/models/scene';
 import {pluralText} from '@app/shared/i18n/plural.pipe';
 import {isFenceStyle} from '@app/viewer/engine/railings';
@@ -48,15 +49,26 @@ const glazedFrame = (element: Record<string, unknown>): boolean =>
  */
 export interface FieldText {
     key: string;
-    params?: Readonly<Record<string, string | number | FieldText>>;
+    params?: Readonly<Record<string, string | number | FieldText | FieldDecimal>>;
     count?: number;
+}
+
+/** A param written with `digits` decimals and the separator of the language shown. */
+export interface FieldDecimal {
+    decimal: number;
+    digits: number;
 }
 
 /** The text in the language shown (`locale` picks a plural form). */
 export function translateFieldText(translate: TranslateService, locale: string, text: FieldText): string {
     const params: Record<string, string | number> = {};
     for (const [name, value] of Object.entries(text.params ?? {})) {
-        params[name] = typeof value === 'object' ? translateFieldText(translate, locale, value) : value;
+        params[name] =
+            typeof value !== 'object'
+                ? value
+                : 'decimal' in value
+                  ? fixed(value.decimal, value.digits, decimalSeparator(locale))
+                  : translateFieldText(translate, locale, value);
     }
     return text.count === undefined ? (translate.instant(text.key, params) as string) : pluralText(translate, locale, text.key, text.count, params);
 }
@@ -142,7 +154,7 @@ export function roofRidgeHint(roof: Record<string, unknown>): FieldText | null {
         return null;
     }
     const ridge = roofRidgeHeight(roof as unknown as RoofShapeFields);
-    return {key: roof['shape'] === 'Shed' ? 'fields.ridgeHintShed' : 'fields.ridgeHint', params: {height: (ridge / 1000).toFixed(2)}};
+    return {key: roof['shape'] === 'Shed' ? 'fields.ridgeHintShed' : 'fields.ridgeHint', params: {height: {decimal: ridge / 1000, digits: 2}}};
 }
 
 const ItemKinds = [

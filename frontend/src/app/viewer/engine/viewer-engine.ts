@@ -397,6 +397,8 @@ export class ViewerEngine {
     private parts: BuildingParts | null = null;
     private labels = new Map<number, CSS2DObject>();
     private labelsVisible = true;
+    /** The decimal separator of the numbers the engine writes (room labels, electrical elevations). */
+    private decimal = '.';
     /** Dimension lines of the rooms, shown in the top view when turned on. */
     private dimensions: THREE.Group | null = null;
     private dimensionsVisible = false;
@@ -746,7 +748,7 @@ export class ViewerEngine {
         const focus = this.focusOf(this.selection);
         this.electricalFocus = focus;
         const highlight = new Set(focus === null ? [] : [focus]);
-        this.electrical = buildElectrical(points, this.electricalSymbols, {arcs, highlight});
+        this.electrical = buildElectrical(points, this.electricalSymbols, {arcs, highlight, decimal: this.decimal});
         this.scene.add(this.electrical);
         this.electricalStale = false;
     }
@@ -1492,6 +1494,23 @@ export class ViewerEngine {
         this.invalidate();
         this.labelsVisible = visible;
         this.labels.forEach((label) => (label.visible = visible));
+    }
+
+    /** The decimal separator of the numbers the engine writes: '.' (the default) or ',' as Czech writes them. */
+    public setDecimalSeparator(decimal: string): void {
+        if (decimal === this.decimal) {
+            return;
+        }
+        this.invalidate();
+        this.decimal = decimal;
+        this.electricalStale = true;
+        const scene = this.sceneData;
+        for (const room of scene?.rooms ?? []) {
+            const meta = this.labels.get(room.id)?.element.querySelector('.room-label__meta');
+            if (meta) {
+                meta.textContent = this.roomLabelMeta(room, scene?.voids ?? []);
+            }
+        }
     }
 
     /** Dimension lines along the room edges, split at doors and windows; drawn in the top view only. */
@@ -2567,6 +2586,14 @@ export class ViewerEngine {
         this.applyDaylight();
     }
 
+    /** The line under a room's name: its code, area less the floor's `voids` and clear height. */
+    private roomLabelMeta(room: Room, voids: readonly FloorVoid[]): string {
+        const fixed = (value: number, digits: number): string => value.toFixed(digits).replace('.', this.decimal);
+        const height = room.ceilingHeight === null ? '' : ` · h ${fixed(room.ceilingHeight / 1000, 2)} m`;
+        // The floor's voids are taken off the area, as the room schedule does.
+        return `${roomCodeText(room.code)} · ${fixed(netRoomArea(room, voids), 1)} m²${height}`;
+    }
+
     /** A room's label: its name, code, area less the floor's `voids` and clear height. */
     private createLabel(room: Room, voids: readonly FloorVoid[]): CSS2DObject {
         const element = document.createElement('div');
@@ -2576,10 +2603,7 @@ export class ViewerEngine {
         name.textContent = room.name;
         const meta = document.createElement('span');
         meta.className = 'room-label__meta';
-        const height = room.ceilingHeight === null ? '' : ` · h ${(room.ceilingHeight / 1000).toFixed(2)} m`;
-        // The floor's voids are taken off the area, as the room schedule does.
-        const area = netRoomArea(room, voids);
-        meta.textContent = `${roomCodeText(room.code)} · ${area.toFixed(1)} m²${height}`;
+        meta.textContent = this.roomLabelMeta(room, voids);
         element.append(name, meta);
 
         const label = new CSS2DObject(element);

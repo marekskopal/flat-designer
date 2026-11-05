@@ -1,13 +1,15 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID} from '@angular/core';
 import {levelText} from '@app/core/level-text';
+import {decimalSeparator} from '@app/core/number-format';
 import {revisionLoader} from '@app/core/revision-loader';
 import {roomCodeText} from '@app/core/room-code';
-import {FloorElectrical} from '@app/models/electrical-schedule';
+import {CircuitItem, ElectricalRow, ElectricalTotals, FloorElectrical} from '@app/models/electrical-schedule';
 import {ProjectService} from '@app/services/project.service';
-import {TranslatePipe} from '@ngx-translate/core';
+import {pluralText} from '@app/shared/i18n/plural.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
-import {circuitItemText, rowValues, totalsSummary} from './electrical-labels';
+import {circuitItemText, ElectricalTexts, rowValues, totalsSummary} from './electrical-labels';
 
 /**
  * The project's electrical schedule for the electrician: per floor and room the lights, sockets, switches, data
@@ -27,6 +29,14 @@ export class ElectricalScheduleComponent {
     public readonly revision = input.required<number>();
 
     private readonly projects = inject(ProjectService);
+    private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
+    private readonly texts: ElectricalTexts = {
+        yes: this.translate.instant('schedules.electrical.yes') as string,
+        no: this.translate.instant('schedules.electrical.no') as string,
+        decimal: decimalSeparator(this.locale),
+        count: (key, n) => pluralText(this.translate, this.locale, `schedules.electrical.counts.${key}`, n),
+    };
 
     protected readonly schedule = revisionLoader(this.projectId, this.revision, (id) => this.projects.electricalSchedule(id));
     /** The floors with points, each with only its rooms that have some. */
@@ -39,10 +49,21 @@ export class ElectricalScheduleComponent {
     protected readonly lightingFloors = computed<FloorElectrical[]>(() =>
         (this.schedule()?.floors ?? []).filter((floor) => floor.lighting.circuits.length > 0),
     );
-    protected readonly circuitItemText = circuitItemText;
-    protected readonly rowValues = rowValues;
-    protected readonly totalsSummary = totalsSummary;
-    protected readonly levelText = levelText;
     protected readonly roomCodeText = roomCodeText;
 
+    protected circuitItemText(item: CircuitItem, withElevation: boolean): string {
+        return circuitItemText(item, withElevation, this.texts.decimal);
+    }
+
+    protected rowValues(row: ElectricalRow): string {
+        return rowValues(row, this.texts);
+    }
+
+    protected totalsSummary(totals: ElectricalTotals): string {
+        return totalsSummary(totals, this.texts);
+    }
+
+    protected levelText(mm: number): string {
+        return levelText(mm, this.texts.decimal);
+    }
 }

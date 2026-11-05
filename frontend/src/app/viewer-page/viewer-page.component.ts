@@ -8,6 +8,7 @@ import {
     inject,
     input,
     linkedSignal,
+    LOCALE_ID,
     numberAttribute,
     resource,
     signal,
@@ -20,6 +21,7 @@ import {CommentAction, CommentsComponent} from '@app/comments/comments.component
 import {errorMessage} from '@app/core/interceptors/error.interceptor';
 import {originClientId} from '@app/core/interceptors/origin.interceptor';
 import {levelText} from '@app/core/level-text';
+import {decimalSeparator} from '@app/core/number-format';
 import {roomCodeText} from '@app/core/room-code';
 import {ActivityComponent} from '@app/editor/activity.component';
 import {AddLibraryComponent} from '@app/editor/add-library.component';
@@ -185,7 +187,9 @@ export class ViewerPageComponent {
     protected readonly sectionMin = SectionMin;
     protected readonly roomCodeText = roomCodeText;
     protected readonly sectionMax = SectionMax;
-    protected readonly levelText = levelText;
+    /** The decimal separator of the language shown, for the numbers written as plain text. */
+    private readonly decimal = decimalSeparator(inject(LOCALE_ID));
+    protected readonly levelText = (mm: number): string => levelText(mm, this.decimal);
     protected readonly drawTools = DrawTools;
     protected readonly views: ViewOption[] = [
         {mode: 'overview', label: 'viewer.top.view3d', icon: 'cube', key: '1'},
@@ -561,7 +565,7 @@ export class ViewerPageComponent {
         }
         const label = this.translate.instant(KindLabelKeys[selection.kind]);
         const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : label;
-        return {label, name, icon: KindIcons[selection.kind], facts: elementFacts(scene, selection.kind, element, this.translate)};
+        return {label, name, icon: KindIcons[selection.kind], facts: elementFacts(scene, selection.kind, element, this.translate, this.decimal)};
     });
     /** The items on the card: the selected item, or the selected group's. */
     private readonly cardItemIds = computed((): number[] => {

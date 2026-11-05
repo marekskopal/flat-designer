@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Izbik\Controller;
 
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Model\Repository\FloorRepository;
 use Izbik\Response\NotFoundResponse;
 use Izbik\Route\Routes;
@@ -34,7 +35,12 @@ final readonly class ElectricalScheduleController
 			return new NotFoundResponse(ProjectController::NotFound);
 		}
 
-		return new JsonResponse($this->electricalScheduleService->forProject($project));
+		return new JsonResponse(
+			$this->electricalScheduleService->forProject(
+				$project,
+				LocaleEnum::fromAcceptLanguage($request->getHeaderLine('Accept-Language')),
+			),
+		);
 	}
 
 	#[RouteGet(Routes::ProjectFloorElectricalSchedule->value)]
@@ -46,6 +52,8 @@ final readonly class ElectricalScheduleController
 			return new NotFoundResponse(ProjectController::NotFound);
 		}
 
-		return new JsonResponse($this->electricalScheduleService->forFloor($floor));
+		return new JsonResponse(
+			$this->electricalScheduleService->forFloor($floor, LocaleEnum::fromAcceptLanguage($request->getHeaderLine('Accept-Language'))),
+		);
 	}
 }

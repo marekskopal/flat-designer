@@ -1397,6 +1397,20 @@
             "switch": "Switch",
             "data": "Data",
             "plumbing": "Plumbing"
+        },
+        "surface": {
+            "Floor": "Floor",
+            "WallFinish": "Wall finish",
+            "Wall": "Walls",
+            "Ceiling": "Ceiling",
+            "Beams": "Beams",
+            "Skirting": "Skirting",
+            "Furniture": "Furniture boards",
+            "RoofCovering": "Roof covering",
+            "Soffit": "Soffit",
+            "Facade": "Façade",
+            "Gutter": "Gutters",
+            "Downpipe": "Downpipes"
         }
     },
     "materials": {
@@ -1612,6 +1626,208 @@
             "light": "light",
             "cable": "cable",
             "assembly": "assembly"
+        }
+    },
+    "schedules": {
+        "rooms": {
+            "title": "Rooms",
+            "indoorArea": "{{area}} m² indoor",
+            "garageArea": "{{area}} m² garage",
+            "outdoorArea": "{{area}} m² outdoor",
+            "quantities": "Quantities & cost",
+            "empty": "No rooms yet. Add them in a floor's editor (Room from walls).",
+            "room": "Room",
+            "area": "Area m²",
+            "perimeter": "Perimeter m",
+            "clearHeight": "Clear height m",
+            "volume": "Volume m³",
+            "headroomArea": "Area ≥ 1.2 m, m²",
+            "headroomAreaHint": "Floor area with a clear height of at least 1.2 m under the roof",
+            "void": "{{name}} (void)",
+            "voidHint": "A void through the floor: its area is left out of the rooms round it",
+            "indoorOn": "Indoor, {{floor}}",
+            "garageOn": "Garage, {{floor}}",
+            "outdoorOn": "Outdoor, {{floor}}",
+            "indoorTotal": {
+                "one": "Indoor total ({{count}} room)",
+                "few": "Indoor total ({{count}} rooms)",
+                "other": "Indoor total ({{count}} rooms)"
+            },
+            "garageTotal": "Garage total (indoor, unheated)",
+            "outdoorTotal": "Outdoor total (terraces, gardens)"
+        },
+        "electrical": {
+            "title": "Electrics & plumbing",
+            "empty": "No lights, sockets, switches or plumbing points yet. Add them in a floor's editor (Add → Furniture).",
+            "point": "Room / point",
+            "type": "Type",
+            "elevation": "Elevation mm",
+            "count": "Count",
+            "circuits": "Lighting circuits",
+            "circuit": "Circuit",
+            "switches": "Switches",
+            "lights": "Lights",
+            "unlinked": "Switches without lights",
+            "unswitched": "Lights without a switch",
+            "note": "Switches link lights on their own floor only. Link them in the editor: select a switch, then Pick lights (L).",
+            "yes": "yes",
+            "no": "no",
+            "counts": {
+                "lights": {
+                    "one": "{{count}} light",
+                    "few": "{{count}} lights",
+                    "other": "{{count}} lights"
+                },
+                "sockets": {
+                    "one": "{{count}} socket",
+                    "few": "{{count}} sockets",
+                    "other": "{{count}} sockets"
+                },
+                "outlets": {
+                    "one": "{{count}} outlet",
+                    "few": "{{count}} outlets",
+                    "other": "{{count}} outlets"
+                },
+                "switches": {
+                    "one": "{{count}} switch",
+                    "few": "{{count}} switches",
+                    "other": "{{count}} switches"
+                },
+                "dataSockets": {
+                    "one": "{{count}} data socket",
+                    "few": "{{count}} data sockets",
+                    "other": "{{count}} data sockets"
+                },
+                "dataPorts": {
+                    "one": "{{count}} port",
+                    "few": "{{count}} ports",
+                    "other": "{{count}} ports"
+                },
+                "plumbingPoints": {
+                    "one": "{{count}} plumbing point",
+                    "few": "{{count}} plumbing points",
+                    "other": "{{count}} plumbing points"
+                }
+            }
+        }
+    },
+    "quantities": {
+        "defaultLook": {
+            "Floor": "No floor material",
+            "WallFinish": "No material",
+            "Wall": "Wall paint (default)",
+            "Ceiling": "White plaster",
+            "Beams": "White paint",
+            "Skirting": "White skirting",
+            "Furniture": "No material",
+            "RoofCovering": "Roof covering (default)",
+            "Soffit": "White-painted soffit",
+            "Facade": "Wall finish (default)",
+            "Gutter": "Gutter, titanium zinc (default)",
+            "Downpipe": "Downpipe, titanium zinc (default)"
+        },
+        "title": "Quantities & cost",
+        "back": "Back to the project",
+        "print": "Print",
+        "floor": "Floor",
+        "allFloors": "All floors",
+        "currency": "Currency",
+        "waste": "Waste %",
+        "discard": "Discard",
+        "savePrices": "Save prices",
+        "hint": "Surfaces of the working copy as drawn: floors, wall finish bands, the paint around and above them up to the ceiling (openings left out), ceilings and skirting, following the roofs where they slope; the roofs' covering and soffit along the slope; the façades (wall faces outside every room) per material; furniture boards from the cut list. Tiles and planks are whole pieces with the waste allowance. Prices are per m², skirting and edge banding per running metre.",
+        "saveToUpdate": "Save the prices to update the costs.",
+        "total": "Estimated total",
+        "incomplete": "Some materials have no price yet; they are left out.",
+        "materials": "Materials to buy",
+        "materialsNote": "m² in brackets: whole pieces",
+        "furniture": "Furniture boards",
+        "furnitureNote": "board area · edge banding",
+        "material": "Material",
+        "usedOn": "Used on",
+        "pieces": "Pcs",
+        "cost": "Cost",
+        "surface": "Surface",
+        "quantity": "Quantity",
+        "pricePerArea": "Price per m² of {{material}}",
+        "pricePerLength": "Price per metre of {{material}}",
+        "notAllPriced": "(not all priced)",
+        "nothingToCount": "Nothing to count: no floor material and no walls along the outline.",
+        "facades": "Façades",
+        "empty": "No rooms or custom furniture here yet. Add rooms in a floor's editor (Room from walls).",
+        "saved": "Prices saved.",
+        "roofWindows": {
+            "one": "{{count}} roof window",
+            "few": "{{count}} roof windows",
+            "other": "{{count}} roof windows"
+        }
+    },
+    "export": {
+        "planPdf": "Plan PDF",
+        "planPdfTitle": "The plan on A4 with the room schedule",
+        "planSvg": "Plan SVG",
+        "planSvgTitle": "The plan page as a vector drawing",
+        "elevationsPdf": "Elevations PDF",
+        "elevationsPdfTitle": "Every room's walls seen from inside, with tiling, openings and dimensions, a page per room",
+        "electricalPdf": "Electrical PDF",
+        "electricalPdfTitle": "The plan with the lights, sockets, switches, data sockets and plumbing points and their elevations, for the electrician",
+        "facadesPdf": "Façades PDF",
+        "facadesPdfTitle": "The building seen from all four sides, with this floor and those below",
+        "facadesSvg": "Façades SVG",
+        "facadesSvgTitle": "The façade sheets as vector drawings",
+        "sectionsPdf": "Sections PDF",
+        "sectionsPdfTitle": "A section through the building along each section line (Add → Section line in the editor)",
+        "sectionsSvg": "Sections SVG",
+        "sectionsSvgTitle": "The section sheets as vector drawings",
+        "glb": "3D glTF",
+        "glbTitle": "The floor as a 3D model (.glb) for Blender, SketchUp or a game engine",
+        "noWalls": "No room on this floor has walls to draw.",
+        "noSections": "There is no section line on this floor or below: add one in the editor (Add → Section line).",
+        "failed": "The export failed.",
+        "files": {
+            "plan": "plan",
+            "electrical": "electrical",
+            "elevations": "elevations",
+            "facades": "façades",
+            "sections": "sections"
+        }
+    },
+    "sheets": {
+        "north": "N",
+        "floorPlan": "Floor plan",
+        "electricalPlan": "Electrical plan",
+        "switchedLights": "Switched lights",
+        "roomSchedule": "Room schedule",
+        "columns": {
+            "code": "Code",
+            "room": "Room",
+            "area": "Area m²",
+            "perimeter": "Perimeter m",
+            "clearHeight": "Clear height m",
+            "volume": "Volume m³",
+            "headroom": "≥ {{metres}} m, m²"
+        },
+        "voidRow": "{{name}} (void)",
+        "totals": {
+            "indoor": "Indoor",
+            "garage": "Garage",
+            "outdoor": "Outdoor"
+        },
+        "wallElevations": "Wall elevations",
+        "finishes": "Finishes",
+        "sill": "sill {{height}}",
+        "facadeElevations": "Façade elevations",
+        "facade": {
+            "North": "North elevation",
+            "East": "East elevation",
+            "South": "South elevation",
+            "West": "West elevation"
+        },
+        "section": "Section {{name}}",
+        "levels": {
+            "roof": "Roof",
+            "eaves": "Eaves",
+            "ridge": "Ridge"
         }
     }
 }

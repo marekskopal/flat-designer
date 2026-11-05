@@ -1,18 +1,28 @@
-import {ChangeDetectionStrategy, Component, computed, inject, input, signal} from '@angular/core';
-import {ElectricalSymbols} from '@app/models/electrical-schedule';
+import {formatDate} from '@angular/common';
+import {ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, signal} from '@angular/core';
+import {DefaultLocale, toLocale} from '@app/core/locale';
+import {decimalSeparator} from '@app/core/number-format';
+import {ElectricalCategory, ElectricalSymbols} from '@app/models/electrical-schedule';
 import {Scene} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
+import {DateFormats} from '@app/shared/i18n/date-text.pipe';
 import {hasElectricalPoints} from '@app/viewer/engine/electrical';
 import {elevationSheets} from '@app/viewer/engine/elevations';
 import {planSheet, roomScheduleSheets} from '@app/viewer/engine/plan-drawing';
 import {facadeSheets, SectionCut, sectionSheets} from '@app/viewer/engine/sections';
 import {Sheet, SheetInfo} from '@app/viewer/engine/sheet-svg';
+import {EnglishSheetTexts} from '@app/viewer/engine/sheet-texts';
+import {CompassSide, SheetTexts} from '@app/viewer/engine/sheet-texts';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {downloadBlob, safeFilename} from './download';
 import {sheetsPdf} from './sheets-pdf';
 
 /** ms between the SVG files of one export. */
 const DownloadSpacing = 400;
+
+const ElectricalCategories: readonly ElectricalCategory[] = ['light', 'socket', 'switch', 'data', 'plumbing'];
+const CompassSides: readonly CompassSide[] = ['North', 'East', 'South', 'West'];
 
 /**
  * The viewer panel's exports of the floor as shown (its variants): the plan on A4 as a PDF, with the room schedule on
@@ -23,78 +33,79 @@ const DownloadSpacing = 400;
  */
 @Component({
     selector: 'fd-export',
+    imports: [TranslatePipe],
     template: `
         <div class="exports">
-            <button type="button" class="btn btn--ghost" [disabled]="busy()" title="The plan on A4 with the room schedule" (click)="exportPdf()">
-                Plan PDF
+            <button type="button" class="btn btn--ghost" [disabled]="busy()" [title]="'export.planPdfTitle' | translate" (click)="exportPdf()">
+                {{ 'export.planPdf' | translate }}
             </button>
-            <button type="button" class="btn btn--ghost" [disabled]="busy()" title="The plan page as a vector drawing" (click)="exportSvg()">
-                Plan SVG
+            <button type="button" class="btn btn--ghost" [disabled]="busy()" [title]="'export.planSvgTitle' | translate" (click)="exportSvg()">
+                {{ 'export.planSvg' | translate }}
             </button>
             <button
                 type="button"
                 class="btn btn--ghost"
                 [disabled]="busy()"
-                title="Every room's walls seen from inside, with tiling, openings and dimensions, a page per room"
+                [title]="'export.elevationsPdfTitle' | translate"
                 (click)="exportElevations()"
             >
-                Elevations PDF
+                {{ 'export.elevationsPdf' | translate }}
             </button>
             @if (hasElectrical()) {
                 <button
                     type="button"
                     class="btn btn--ghost"
                     [disabled]="busy()"
-                    title="The plan with the lights, sockets, switches, data sockets and plumbing points and their elevations, for the electrician"
+                    [title]="'export.electricalPdfTitle' | translate"
                     (click)="exportElectrical()"
                 >
-                    Electrical PDF
+                    {{ 'export.electricalPdf' | translate }}
                 </button>
             }
             <button
                 type="button"
                 class="btn btn--ghost"
                 [disabled]="busy()"
-                title="The building seen from all four sides, with this floor and those below"
+                [title]="'export.facadesPdfTitle' | translate"
                 (click)="exportFacades('pdf')"
             >
-                Façades PDF
+                {{ 'export.facadesPdf' | translate }}
             </button>
             <button
                 type="button"
                 class="btn btn--ghost"
                 [disabled]="busy()"
-                title="The façade sheets as vector drawings"
+                [title]="'export.facadesSvgTitle' | translate"
                 (click)="exportFacades('svg')"
             >
-                Façades SVG
+                {{ 'export.facadesSvg' | translate }}
             </button>
             <button
                 type="button"
                 class="btn btn--ghost"
                 [disabled]="busy()"
-                title="A section through the building along each section line (Add → Section line in the editor)"
+                [title]="'export.sectionsPdfTitle' | translate"
                 (click)="exportSections('pdf')"
             >
-                Sections PDF
+                {{ 'export.sectionsPdf' | translate }}
             </button>
             <button
                 type="button"
                 class="btn btn--ghost"
                 [disabled]="busy()"
-                title="The section sheets as vector drawings"
+                [title]="'export.sectionsSvgTitle' | translate"
                 (click)="exportSections('svg')"
             >
-                Sections SVG
+                {{ 'export.sectionsSvg' | translate }}
             </button>
             <button
                 type="button"
                 class="btn btn--ghost"
                 [disabled]="busy()"
-                title="The floor as a 3D model (.glb) for Blender, SketchUp or a game engine"
+                [title]="'export.glbTitle' | translate"
                 (click)="exportGlb()"
             >
-                3D glTF
+                {{ 'export.glb' | translate }}
             </button>
         </div>
     `,
@@ -128,45 +139,48 @@ export class ExportComponent {
     protected readonly hasElectrical = computed(() => hasElectricalPoints(this.scene()));
 
     private readonly alerts = inject(AlertService);
+    private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
     protected readonly busy = signal(false);
 
     protected async exportPdf(): Promise<void> {
         const info = this.info();
+        const texts = this.sheetTexts();
         await this.export(async () => {
-            const blob = await sheetsPdf([planSheet(this.scene(), info), ...roomScheduleSheets(this.scene(), info)]);
-            downloadBlob(blob, this.filename('plan.pdf'));
+            const blob = await sheetsPdf([planSheet(this.scene(), info, undefined, texts), ...roomScheduleSheets(this.scene(), info, texts)]);
+            downloadBlob(blob, this.filename(`${this.t('export.files.plan')}.pdf`));
         });
     }
 
     protected async exportElectrical(): Promise<void> {
         await this.export(async () => {
-            const blob = await sheetsPdf([planSheet(this.scene(), this.info(), this.electricalSymbols())]);
-            downloadBlob(blob, this.filename('electrical.pdf'));
+            const blob = await sheetsPdf([planSheet(this.scene(), this.info(), this.electricalSymbols(), this.sheetTexts())]);
+            downloadBlob(blob, this.filename(`${this.t('export.files.electrical')}.pdf`));
         });
     }
 
     protected async exportElevations(): Promise<void> {
         await this.export(async () => {
-            const sheets = elevationSheets(this.scene(), this.info());
+            const sheets = elevationSheets(this.scene(), this.info(), this.sheetTexts());
             if (sheets.length === 0) {
-                throw new Error('No room on this floor has walls to draw.');
+                throw new Error(this.t('export.noWalls'));
             }
-            downloadBlob(await sheetsPdf(sheets), this.filename('elevations.pdf'));
+            downloadBlob(await sheetsPdf(sheets), this.filename(`${this.t('export.files.elevations')}.pdf`));
         });
     }
 
     protected async exportSvg(): Promise<void> {
         await this.export(async () => {
-            const sheet = planSheet(this.scene(), this.info());
-            downloadBlob(new Blob([sheet.svg], {type: 'image/svg+xml'}), this.filename('plan.svg'));
+            const sheet = planSheet(this.scene(), this.info(), undefined, this.sheetTexts());
+            downloadBlob(new Blob([sheet.svg], {type: 'image/svg+xml'}), this.filename(`${this.t('export.files.plan')}.svg`));
         });
     }
 
     protected async exportFacades(format: 'pdf' | 'svg'): Promise<void> {
         await this.export(async () => {
             const scenes = await this.building()();
-            const sheets = facadeSheets(scenes, this.buildingInfo(scenes), this.scene().location?.northAngle ?? 0);
-            await this.download(sheets, format, 'façades');
+            const sheets = facadeSheets(scenes, this.buildingInfo(scenes), this.scene().location?.northAngle ?? 0, this.sheetTexts());
+            await this.download(sheets, format, this.t('export.files.facades'));
         });
     }
 
@@ -182,9 +196,9 @@ export class ExportComponent {
                 })),
             );
             if (cuts.length === 0) {
-                throw new Error('There is no section line on this floor or below: add one in the editor (Add → Section line).');
+                throw new Error(this.t('export.noSections'));
             }
-            await this.download(sectionSheets(scenes, cuts, this.buildingInfo(scenes)), format, 'sections');
+            await this.download(sectionSheets(scenes, cuts, this.buildingInfo(scenes), this.sheetTexts()), format, this.t('export.files.sections'));
         });
     }
 
@@ -198,7 +212,7 @@ export class ExportComponent {
         try {
             await run();
         } catch (e) {
-            this.alerts.error(e instanceof Error ? e.message : 'The export failed.');
+            this.alerts.error(e instanceof Error ? e.message : this.t('export.failed'));
         } finally {
             this.busy.set(false);
         }
@@ -235,6 +249,47 @@ export class ExportComponent {
     private info(): SheetInfo {
         const floor = this.scene().floor;
         return {projectName: this.projectName(), floorName: floor.name, floorElevation: floor.elevation, address: this.address(), date: new Date()};
+    }
+
+    private t(key: string, params?: Record<string, string>): string {
+        return this.translate.instant(key, params) as string;
+    }
+
+    /** What the sheets write, in the language shown: its texts, decimal separator and dates. */
+    private sheetTexts(): SheetTexts {
+        const t = (key: string, params?: Record<string, string>): string => this.t(`sheets.${key}`, params);
+        const locale = toLocale(this.locale) ?? DefaultLocale;
+        return {
+            decimal: decimalSeparator(this.locale),
+            // English sheets keep their ISO dates (the README's plan images); other languages write their own.
+            date: locale === 'en' ? EnglishSheetTexts.date : (date): string => formatDate(date, DateFormats[locale].date, this.locale),
+            north: t('north'),
+            floorPlan: t('floorPlan'),
+            electricalPlan: t('electricalPlan'),
+            categories: Object.fromEntries(
+                ElectricalCategories.map((category) => [category, this.t(`enums.electricalCategory.${category}`)]),
+            ) as Record<ElectricalCategory, string>,
+            switchedLights: t('switchedLights'),
+            roomSchedule: t('roomSchedule'),
+            columns: {
+                code: t('columns.code'),
+                room: t('columns.room'),
+                area: t('columns.area'),
+                perimeter: t('columns.perimeter'),
+                clearHeight: t('columns.clearHeight'),
+                volume: t('columns.volume'),
+                headroom: (metres) => t('columns.headroom', {metres}),
+            },
+            voidRow: (name) => t('voidRow', {name}),
+            totals: {indoor: t('totals.indoor'), garage: t('totals.garage'), outdoor: t('totals.outdoor')},
+            wallElevations: t('wallElevations'),
+            finishes: t('finishes'),
+            sill: (height) => t('sill', {height: String(height)}),
+            facadeElevations: t('facadeElevations'),
+            facade: Object.fromEntries(CompassSides.map((side) => [side, t(`facade.${side}`)])) as Record<CompassSide, string>,
+            section: (name) => t('section', {name}),
+            levels: {roof: t('levels.roof'), eaves: t('levels.eaves'), ridge: t('levels.ridge')},
+        };
     }
 
     private filename(suffix: string): string {

@@ -25,5 +25,8 @@
     "cutList": {
         "definitionGone": "Popis nábytku už neexistuje.",
         "noMaterial": "Bez materiálu"
+    },
+    "schedules": {
+        "notInRoom": "Mimo místnosti"
     }
 }

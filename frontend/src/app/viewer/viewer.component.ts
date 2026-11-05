@@ -8,11 +8,13 @@ import {
     ElementRef,
     inject,
     input,
+    LOCALE_ID,
     output,
     signal,
     untracked,
     viewChild,
 } from '@angular/core';
+import {decimalSeparator} from '@app/core/number-format';
 import {DxfPlan} from '@app/models/dxf';
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {PlanPoint, Room, Scene, SunTime} from '@app/models/scene';
@@ -75,6 +77,7 @@ export interface SelectEvent {
 })
 export class ViewerComponent {
     private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
     public readonly scene = input<Scene | null>(null);
     public readonly ceilingsVisible = input(false);
     public readonly roofsVisible = input(true);
@@ -211,6 +214,7 @@ export class ViewerComponent {
             engine.onCommentPick = (id): void => this.commentPicked.emit(id);
             engine.onCommentPlace = (point): void => this.commentPlaced.emit(point);
             engine.onLinkPick = (itemId): void => this.linkPicked.emit(itemId);
+            engine.setDecimalSeparator(decimalSeparator(this.locale));
             this.engine.set(engine);
             if (!environment.production) {
                 // Handle for poking at the engine from the browser console during development.

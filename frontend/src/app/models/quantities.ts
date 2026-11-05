@@ -111,18 +111,3 @@ export interface MaterialPrices {
     wastePercent: number;
     prices: MaterialPrice[];
 }
-
-export const SurfaceLabels: Record<QuantitySurface, string> = {
-    Floor: 'Floor',
-    WallFinish: 'Wall finish',
-    Wall: 'Walls',
-    Ceiling: 'Ceiling',
-    Beams: 'Beams',
-    Skirting: 'Skirting',
-    Furniture: 'Furniture boards',
-    RoofCovering: 'Roof covering',
-    Soffit: 'Soffit',
-    Facade: 'Façade',
-    Gutter: 'Gutters',
-    Downpipe: 'Downpipes',
-};

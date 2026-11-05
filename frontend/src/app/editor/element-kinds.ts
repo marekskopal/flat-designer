@@ -1,4 +1,5 @@
 import {levelText} from '@app/core/level-text';
+import {fixed} from '@app/core/number-format';
 import {ElectricalCategory} from '@app/models/electrical-schedule';
 import {Item, Opening, Room, Scene, Wall} from '@app/models/scene';
 import {IconName} from '@app/shared/icon/icon.component';
@@ -135,15 +136,21 @@ function switchFacts(scene: Scene, element: Record<string, unknown>, t: (key: st
     }
 }
 
-const metres = (mm: unknown): string => (typeof mm === 'number' ? `${(mm / 1000).toFixed(2)} m` : '—');
-const size = (...mm: unknown[]): string => mm.map((v) => (typeof v === 'number' ? (v / 1000).toFixed(2) : '?')).join(' × ') + ' m';
 
 /**
  * What the viewer's card says about a selected element (not a room, which has a card of its own): its size and where
  * it is, by kind; nothing for kinds without a measure worth showing. The labels come translated by `translate`.
  */
-export function elementFacts(scene: Scene, kind: ElementKind, element: Record<string, unknown>, translate: TranslateService): ElementFact[] {
+export function elementFacts(
+    scene: Scene,
+    kind: ElementKind,
+    element: Record<string, unknown>,
+    translate: TranslateService,
+    decimal = '.',
+): ElementFact[] {
     const t = (key: string): string => translate.instant(key) as string;
+    const metres = (mm: unknown): string => (typeof mm === 'number' ? `${fixed(mm / 1000, 2, decimal)} m` : '—');
+    const size = (...mm: unknown[]): string => mm.map((v) => (typeof v === 'number' ? fixed(v / 1000, 2, decimal) : '?')).join(' × ') + ' m';
     switch (kind) {
         case 'item': {
             const room = scene.rooms.find((r) => r.id === element['roomId']);
@@ -155,7 +162,7 @@ export function elementFacts(scene: Scene, kind: ElementKind, element: Record<st
                       : String(element['kind']).replace(/([a-z])([A-Z])/g, '$1 $2');
             return [
                 {label: t('kinds.facts.size'), value: size(element['width'], element['depth'], element['height'])},
-                {label: t('kinds.facts.elevation'), value: typeof element['z'] === 'number' ? levelText(element['z']) : '—'},
+                {label: t('kinds.facts.elevation'), value: typeof element['z'] === 'number' ? levelText(element['z'], decimal) : '—'},
                 ...(from === undefined ? [] : [{label: t('kinds.facts.madeFrom'), value: from}]),
                 ...(room === undefined ? [] : [{label: t('kinds.facts.room'), value: room.name}]),
                 ...switchFacts(scene, element, t),

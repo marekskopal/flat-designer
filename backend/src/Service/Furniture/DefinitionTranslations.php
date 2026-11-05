@@ -65,18 +65,40 @@ final readonly class DefinitionTranslations
 	}
 
 	/**
+	 * The definition's name in the language, else `$name` (its row's).
+	 *
+	 * @param array<mixed> $definition
+	 */
+	public static function name(array $definition, string $name, LocaleEnum $locale): string
+	{
+		$translated = self::texts($definition, $locale)['name'] ?? null;
+
+		return is_string($translated) && $translated !== '' ? $translated : $name;
+	}
+
+	/**
 	 * The part's name in the language, else as it is.
 	 *
 	 * @param array<mixed> $definition
 	 */
 	public static function partName(array $definition, string $name, LocaleEnum $locale): string
 	{
-		$translations = $definition['translations'] ?? null;
-		$texts = is_array($translations) ? ($translations[$locale->value] ?? null) : null;
-		$parts = is_array($texts) ? ($texts['parts'] ?? null) : null;
+		$parts = self::texts($definition, $locale)['parts'] ?? null;
 		$translated = is_array($parts) ? ($parts[$name] ?? null) : null;
 
 		return is_string($translated) && $translated !== '' ? $translated : $name;
+	}
+
+	/**
+	 * @param array<mixed> $definition
+	 * @return array<mixed> the language's texts, empty for none
+	 */
+	private static function texts(array $definition, LocaleEnum $locale): array
+	{
+		$translations = $definition['translations'] ?? null;
+		$texts = is_array($translations) ? ($translations[$locale->value] ?? null) : null;
+
+		return is_array($texts) ? $texts : [];
 	}
 
 	private static function checkText(mixed $text, string $path, int $max): void

@@ -92,7 +92,14 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `localizeDefinition()` (labels, `optionLabels` for selects; the parts stay, the furniture editor edits the stored
   JSON), a new Custom item takes the name shown, and the cut list names the parts in the `Accept-Language` language
   (`CutListService` with a locale; its materials the page names from the catalogue by id). The seeds have Czech
-  (`AddFurnitureTranslations`): **a seed's new parameter, option, slot or part needs its Czech text too.**
+  (`AddFurnitureTranslations`): **a seed's new parameter, option, slot or part needs its Czech text too.** The electrical
+  schedule names definitions (and "Not in a room") in the `Accept-Language` language too.
+- Numbers written by hand follow the locale's decimal separator (`decimalSeparator()`, `fixed()` in
+  `core/number-format.ts`; `levelText(mm, decimal)`): the schedules, the inspector's facts and hints (`FieldDecimal`),
+  the 3D room labels (`ViewerEngine.setDecimalSeparator()`). The sheets take a `SheetTexts`
+  (`viewer/engine/sheet-texts.ts`: every word they write, the separator and the date format; `EnglishSheetTexts` the
+  default, so the engine stays framework-free) that `ExportComponent` builds from `sheets.*`; English sheets keep ISO
+  dates. **A new text on a sheet goes into `SheetTexts`**, never as a literal in the engine.
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
