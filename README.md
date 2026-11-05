@@ -272,7 +272,7 @@ the 3D view runs in the browser.
 ### Install
 
 ```sh
-git clone --branch v0.2.0 https://github.com/marekskopal/izbik.git
+git clone --branch v0.3.0 https://github.com/marekskopal/izbik.git
 cd izbik
 make env      # .env with random secrets and passwords; review it (see Configuration)
 make deploy   # start the published images (ghcr.io/marekskopal/izbik-*) of IZBIK_VERSION

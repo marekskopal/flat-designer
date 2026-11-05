@@ -6,6 +6,29 @@ versions follow [semantic versioning](https://semver.org). Upgrading is describe
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-05
+
+### Added
+
+- English and Czech: the app, its emails and the API's messages in either language, chosen on the account page (pages
+  without an account have a language switch, the shared viewer follows the browser). The seeded furniture, materials
+  and example projects are translated; dates and numbers follow the language.
+- DXF import: walls and openings from an ASCII DXF plan among the project files, the layers picked and the result
+  previewed in the underlay panel, over REST or MCP (`inspect_dxf`, `import_dxf`).
+- PDF plans as underlays: a page of a PDF project file can be laid under a floor (a page picker for multi-page PDFs);
+  agents read PDF pages through `get_project_file` and lay them with `set_floor_underlay`.
+- Switches link to the lights they control: dashed links on the electrical plan (viewer and PDF), lighting circuits
+  in the electrical schedule, picked with `L` or the inspector's Pick lights, and `controls` in MCP `add_item` /
+  `update_item`.
+- Hinges for windows, garage doors and every door frame: barrel, concealed and strap hinges drawn in 3D, a new `Steel`
+  door frame style, and a double door's passive leaf opening after the active one. The elevations mark the hinges.
+
+### Changed
+
+- The backend image includes poppler and DejaVu fonts (for PDF underlays); the published images have them, a build
+  from source picks them up with `make up`.
+- Dependencies updated (minor and patch releases).
+
 ## [0.2.0] - 2026-11-04
 
 ### Added
@@ -48,6 +71,7 @@ The first public beta, for running on a server of your own.
 - `make env` gives a new `.env` random database and MinIO passwords.
 - `BACKEND_CORS_ALLOWED_ORIGIN` defaults to empty (no cross-origin calls). Clear `*` in an existing `.env`.
 
-[Unreleased]: https://github.com/marekskopal/izbik/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/marekskopal/izbik/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/marekskopal/izbik/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/marekskopal/izbik/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/marekskopal/izbik/releases/tag/v0.1.0
