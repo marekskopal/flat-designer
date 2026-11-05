@@ -1,0 +1,2 @@
+# Keep the sample plans byte for byte as published (some use CRLF line endings).
+*.dxf -text
