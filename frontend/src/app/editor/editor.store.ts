@@ -1,5 +1,5 @@
 import {HttpErrorResponse} from '@angular/common/http';
-import {inject, Injectable, signal} from '@angular/core';
+import {inject, Injectable, signal, untracked} from '@angular/core';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
@@ -187,7 +187,8 @@ export class EditorStore {
 
     /** A click: selects the element (or nothing) and drops the Shift-picked items. */
     public select(selection: Selection | null): void {
-        if (!sameSelection(selection, this.selection())) {
+        // Untracked: an effect calling `select()` (a floor change clearing it) must not come to depend on the selection.
+        if (!sameSelection(selection, untracked(this.selection))) {
             this.linking.set(null);
         }
         this.picked.set([]);

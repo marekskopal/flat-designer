@@ -1,5 +1,5 @@
 import {HttpErrorResponse} from '@angular/common/http';
-import {provideZonelessChangeDetection} from '@angular/core';
+import {effect, provideZonelessChangeDetection} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {EditResult} from '@app/models/editor';
 import {Scene} from '@app/models/scene';
@@ -196,6 +196,22 @@ describe('EditorStore', () => {
         store.select({kind: 'item', id: 3});
         expect(store.linking()).toBeNull();
         expect(api['update']).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not make an effect calling select() depend on the selection', () => {
+        let runs = 0;
+        TestBed.runInInjectionContext(() =>
+            effect(() => {
+                runs++;
+                store.select(null);
+            }),
+        );
+        TestBed.tick();
+        store.select({kind: 'wall', id: 5});
+        TestBed.tick();
+
+        expect(runs).toBe(1);
+        expect(store.selection()).toEqual({kind: 'wall', id: 5});
     });
 
     it('drops the drawing tool when edit mode ends', async () => {
