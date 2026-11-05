@@ -44,7 +44,7 @@ final readonly class OpeningTools
 	 * @param string|null $side "Left" | "Right" of the wall when walking from its start to end. Door/DoubleDoor/walkable window: where the leaves swing to; SlidingDoor: the face the leaf hangs on; Niche: the face it is cut into (default Left)
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
-	 * @param string|null $frameStyle doors: "Lining" (default) | "Architrave" (lining with casings) | "Flush" (hidden frame) | "None" (bare hole, a passage's default)
+	 * @param string|null $frameStyle doors: "Lining" (default) | "Architrave" (lining with casings) | "Flush" (hidden frame) | "None" (bare hole, a passage's default) | "Steel" (pressed steel frame wrapping the reveal)
 	 * @param string|null $handle doors with a leaf: "Lever" | "Knob" | "Pull" | "None"; none given: a lever, a pull on sliding and pocket doors
 	 * @param int|null $mullions window: vertical glazing bars, 0–8 (default 1 = two panes; a walkable window 0 = one sash, 1 = two)
 	 * @param int|null $transoms window: horizontal glazing bars, 0–4 (default 0)
@@ -155,7 +155,7 @@ final readonly class OpeningTools
 	 * @param string|null $side "Left" | "Right" (swing side of door leaves and walkable window sashes; the face a sliding door hangs on or a niche is cut into)
 	 * @param bool|null $entrance true for the main door of the floor (a walkthrough starts just inside it)
 	 * @param bool|null $walkable window down to the floor (sill 0) only: its sashes open in the walkthrough, which can then pass through it (terrace/balcony doors)
-	 * @param string|null $frameStyle doors: "Lining" | "Architrave" | "Flush" | "None"
+	 * @param string|null $frameStyle doors: "Lining" | "Architrave" | "Flush" | "None" | "Steel"
 	 * @param string|null $handle doors with a leaf: "Lever" | "Knob" | "Pull" | "None"
 	 * @param int|null $mullions window: vertical glazing bars, 0–8
 	 * @param int|null $transoms window: horizontal glazing bars, 0–4

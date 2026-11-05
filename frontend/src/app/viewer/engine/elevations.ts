@@ -14,6 +14,7 @@ import {
 } from './ceilings';
 import {itemsOverFloor} from './items';
 import {herringboneLength, herringboneTiles} from './materials';
+import {hingeHeights, HingeKnuckle} from './opening-looks';
 import {
     acrossWall,
     alongWall,
@@ -219,7 +220,7 @@ function curvedFace(
         const start = Math.max(Math.min(t0, t1), 0);
         const end = Math.min(Math.max(t0, t1), length);
         const hinge = opening.hinge === null ? null : opening.hinge === 'End' ? t1 : t0;
-        return end > start ? [{opening, wall: curve.wall, from: start, to: end, hinge}] : [];
+        return end > start ? [{opening, wall: curve.wall, from: start, to: end, hinge, side: curve.side}] : [];
     });
 
     const chord = Math.hypot(b.x - a.x, b.y - a.y);
@@ -670,6 +671,10 @@ function clippedToRect(
     return clipped(context, rect(toPaper(x0, z1), (x1 - x0) / s, (z1 - z0) / s, {fill: '#000000'}), content);
 }
 
+/** A hinge's mark on the elevation: its stroke on paper (mm) and a sash hinge's length (mm). */
+const HingeMarkWidth = 0.6;
+const SashHingeMark = 60;
+
 /** An opening on a face: the opening, its wall and its extent along the edge (t from a). */
 export interface EdgeOpening {
     opening: Opening;
@@ -678,6 +683,8 @@ export interface EdgeOpening {
     to: number;
     /** Where the opening's hinge edge lies along the edge (t from a); null for one without. */
     hinge: number | null;
+    /** The wall face it is seen on. */
+    side: 'Left' | 'Right';
 }
 
 /**
@@ -704,7 +711,7 @@ function edgeOpenings(a: Vec2, dir: Vec2, length: number, edgeFaces: readonly {w
             const to = Math.min(Math.max(t0, t1), length);
             if (to > from) {
                 const hinge = opening.hinge === null ? null : opening.hinge === 'End' ? t1 : t0;
-                result.push({opening, wall, from, to, hinge});
+                result.push({opening, wall, from, to, hinge, side});
             }
         }
     }
@@ -727,12 +734,23 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
     const thin: Style = {stroke: Ink, width: 0.13};
     const parts: string[] = [box(x0, x1, z0, z1, {fill: opening.type === 'Niche' ? NicheFill : '#ffffff', stroke: Ink, width: 0.25})];
     const hingeX = edge.hinge === null ? null : xOf(edge.hinge);
+    // The hinges show on the face the leaves swing to.
+    const swingsHere = (opening.side ?? 'Left') === edge.side;
+    const hingeMark = (x: number, z: number, length: number): string =>
+        line(toPaper(x, z - length / 2), toPaper(x, z + length / 2), {stroke: Ink, width: HingeMarkWidth});
 
     if (opening.type === 'Window') {
         const bar = Math.min(WindowFrameBar, (x1 - x0) / 4, (z1 - z0) / 4);
         const [ix0, ix1, iz0, iz1] = [x0 + bar, x1 - bar, z0 + bar, z1 - bar];
         parts.push(box(ix0, ix1, iz0, iz1, thin));
         const panes = opening.walkable === true && opening.mullions === 0 ? 1 : (opening.mullions ?? 1) + 1;
+        if (opening.walkable === true && swingsHere) {
+            // The sashes' corner hinges on their jambs.
+            const jambs = panes === 1 ? [hingeX !== null && Math.abs(hingeX - x0) < Math.abs(hingeX - x1) ? ix0 : ix1] : [ix0, ix1];
+            for (const x of jambs) {
+                parts.push(...[iz0 + SashHingeMark / 2, iz1 - SashHingeMark / 2].map((z) => hingeMark(x, z, SashHingeMark)));
+            }
+        }
         for (let i = 1; i < panes; i++) {
             const x = ix0 + ((ix1 - ix0) * i) / panes;
             parts.push(line(toPaper(x, iz0), toPaper(x, iz1), thin));
@@ -781,6 +799,9 @@ function openingSvg(edge: EdgeOpening, xOf: (t: number) => number, toPaper: (x: 
                 parts.push(line(toPaper(free, z0), toPaper(free, top), thin));
             }
             parts.push(path([toPaper(free, top), toPaper(hinged, (z0 + top) / 2), toPaper(free, z0)], false, swing));
+            if (swingsHere && hinged !== free) {
+                parts.push(...hingeHeights(top - z0).map((h) => hingeMark(hinged, z0 + h, HingeKnuckle)));
+            }
         }
     } else if (opening.type === 'SlidingDoor' || opening.type === 'PocketDoor') {
         const frame = Math.min(DoorFrameWidth, (x1 - x0) / 4);

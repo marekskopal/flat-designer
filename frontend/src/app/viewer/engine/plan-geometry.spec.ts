@@ -6,6 +6,7 @@ import {
     collideCircle,
     columnColliders,
     cornerWindows,
+    doorRebate,
     edgeMidpoints,
     entranceWalkStart,
     insertVertex,
@@ -13,10 +14,12 @@ import {
     isSimplePolygon,
     leafCollider,
     leafColliders,
+    leafOpen,
     LeafOpenAngle,
     moveWallEnds,
     openingFitsCurve,
     openingLeaves,
+    PassiveLag,
     pointInPolygon,
     pointOnWall,
     polygonCentroid,
@@ -334,6 +337,7 @@ describe('door leaves', () => {
             width: 820,
             thickness: 40,
             pin: {back: 2, out: 27},
+            hinges: 'Barrel',
             lip: {from: 0, to: 820, coreFrom: 13, coreTo: 807, top: 13, thickness: 15},
         }]);
         const mirrored = openingLeaves({...door, hinge: 'End', side: 'Right'}, 200)[0];
@@ -343,8 +347,32 @@ describe('door leaves', () => {
     it('hangs an unrebated leaf on the hinge edge of its swing face', () => {
         const [flush] = openingLeaves({...door, frameStyle: 'Flush'}, 200);
         expect([flush.along, flush.across, flush.width, flush.pin, flush.lip]).toEqual([1050, 80, 800, {back: 0, out: 20}, undefined]);
-        // A leaf filling the opening leaves no room for a rebate.
-        expect(openingLeaves({...door, leafWidth: 880}, 200)[0].lip).toBeUndefined();
+        expect(flush.hinges).toBe('Concealed');
+        // A leaf filling the opening leaves no room for a rebate; it hangs on barrel hinges, as in a bare hole, whose
+        // axis is a barrel's radius in front of the face.
+        const [tight] = openingLeaves({...door, leafWidth: 880}, 200);
+        expect([tight.lip, tight.pin, tight.hinges]).toEqual([undefined, {back: 0, out: 27}, 'Barrel']);
+        const [bare] = openingLeaves({...door, frameStyle: 'None'}, 200);
+        expect([bare.pin, bare.hinges]).toEqual([{back: 0, out: 27}, 'Barrel']);
+    });
+
+    it('rebates a leaf in a steel frame, whose sheet lies on the wall faces', () => {
+        expect(doorRebate({...door, frameStyle: 'Steel'}, 200)).toEqual({stop: 50, head: 50, rebate: 38, overlap: 13, front: 101.5, back: -101.5});
+        const [leaf] = openingLeaves({...door, frameStyle: 'Steel'}, 200);
+        expect([leaf.across, leaf.hinges, leaf.lip?.thickness]).toEqual([81.5, 'Barrel', 15]);
+    });
+
+    it('opens a double door\'s passive leaf after the active one, which laps over it, and closes it first', () => {
+        const leaves = openingLeaves({...door, type: 'DoubleDoor', width: 1400}, 200);
+        expect(leaves.map((l) => l.lag)).toEqual([undefined, PassiveLag]);
+        expect(openingLeaves({...door, type: 'DoubleDoor', width: 1400, hinge: 'End'}, 200).map((l) => l.lag)).toEqual([PassiveLag, undefined]);
+        const [active, passive] = leaves;
+        expect([leafOpen(active, 0.2), leafOpen(passive, 0.2)]).toEqual([0.2, 0]);
+        expect([leafOpen(active, 1), leafOpen(passive, 1)]).toEqual([1, 1]);
+        expect(leafOpen(passive, 0.65)).toBeCloseTo(0.5);
+        // Its collider waits too.
+        const frame = wallFrame(wall);
+        expect(leafCollider(frame, passive, 0.2).frame.dir.x).toBeCloseTo(-1);
     });
 
     it('turns a leaf about its pin, clear of the jamb', () => {
@@ -364,6 +392,11 @@ describe('door leaves', () => {
 
     it('gives a walkable French window two sashes on its jambs and other windows none', () => {
         expect(openingLeaves(frenchWindow, 200).map((l) => [l.along, l.closed, l.width])).toEqual([[2570, 1, 530], [3630, -1, 530]]);
+        // Hung on sash hinges, whose axis lies just in front of the frame's face: the sash's 5 mm behind it.
+        expect(openingLeaves(frenchWindow, 200).map((l) => [l.pin, l.hinges])).toEqual([
+            [{back: 0, out: 38}, 'Sash'],
+            [{back: 0, out: 38}, 'Sash'],
+        ]);
         expect(openingLeaves({...frenchWindow, walkable: false}, 200)).toEqual([]);
     });
 

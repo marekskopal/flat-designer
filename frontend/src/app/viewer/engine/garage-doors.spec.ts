@@ -134,6 +134,8 @@ describe('garage doors', () => {
         expect(leaf.across).toBeGreaterThan(150);
         const hinged = openingLeaves({...sectional, garageDoorStyle: 'SideHinged'}, 300);
         expect(hinged.map((l) => [l.motion, l.width])).toEqual([['swing', 1250], ['swing', 1250]]);
+        // On strap hinges about the reveal's corners on the garage face, which their swing faces are flush with.
+        expect(hinged.map((l) => [l.along, l.across + l.swing * l.pin!.out, l.hinges])).toEqual([[1000, 150, 'Strap'], [3500, 150, 'Strap']]);
     });
 
     it('shows closed outside a walk and blocks its opening until it is mostly up', () => {

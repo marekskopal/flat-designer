@@ -289,6 +289,22 @@ describe('roomElevationSheets', () => {
         expect(sheet.svg).toContain(`M ${stile} `);
     });
 
+    it('marks the hinges on the face the leaves swing to', () => {
+        const marks = (o: Opening): number => {
+            const [sheet] = roomElevationSheets(scene({walls: box({leftFinishes: [], openings: [o]})}), room, info);
+            return (sheet.svg.match(/stroke-width="0.6"/g) ?? []).length;
+        };
+        expect(marks(door)).toBe(2);
+        // A leaf over 2100 mm hangs on three.
+        expect(marks({...door, height: 2400})).toBe(3);
+        expect(marks({...door, type: 'DoubleDoor', width: 1400})).toBe(4);
+        expect(marks({...door, side: 'Right'})).toBe(0);
+        expect(marks({...door, type: 'SlidingDoor'})).toBe(0);
+        // A walkable French window's two sashes, each on two corner hinges.
+        expect(marks({...door, type: 'Window', width: 1400, height: 2100, walkable: true})).toBe(4);
+        expect(marks({...door, type: 'Window', width: 1400, height: 2100, walkable: true, mullions: 0})).toBe(2);
+    });
+
     it('draws the sections of a garage door and the joints of a boarded leaf', () => {
         const garage: Opening = {...door, type: 'GarageDoor', offset: 300, width: 2500, height: 2125, garageDoorStyle: 'Sectional'};
         const thin = (o: Opening): number => {
