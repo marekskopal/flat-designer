@@ -1,13 +1,12 @@
 import {levelText} from '@app/core/level-text';
 import {ElectricalCategory} from '@app/models/electrical-schedule';
-import {Item, Opening, OpeningType, Room, Scene, Wall} from '@app/models/scene';
+import {Item, Opening, Room, Scene, Wall} from '@app/models/scene';
 import {IconName} from '@app/shared/icon/icon.component';
 import {electricalPoints, switchLinks} from '@app/viewer/engine/electrical';
 import {pointInPolygon, wallLength} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
 import {TranslateService} from '@ngx-translate/core';
 
-import {OpeningTypeLabels} from './element-fields';
 
 /** What each kind of element is called in the inspector and the viewer's card: translation keys. */
 export const KindLabelKeys: Record<ElementKind, string> = {
@@ -170,7 +169,7 @@ export function elementFacts(scene: Scene, kind: ElementKind, element: Record<st
             ];
         case 'opening':
             return [
-                {label: t('kinds.facts.type'), value: OpeningTypeLabels[element['type'] as OpeningType] ?? String(element['type'])},
+                {label: t('kinds.facts.type'), value: t(`enums.openingType.${String(element['type'])}`)},
                 {label: t('kinds.facts.size'), value: size(element['width'], element['height'])},
                 {label: t('kinds.facts.sill'), value: metres(element['sillHeight'])},
             ];

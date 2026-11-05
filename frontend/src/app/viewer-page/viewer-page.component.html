@@ -381,7 +381,7 @@
                 <span class="room-card__icon"><fd-icon name="rooms" /></span>
                 <span class="room-card__title">
                     <strong>{{ info.room.name }}</strong>
-                    <span>{{ info.room.type }} · {{ roomCodeText(info.room.code) }}</span>
+                    <span>{{ 'enums.roomType.' + info.room.type | translate }} · {{ roomCodeText(info.room.code) }}</span>
                 </span>
                 <button type="button" class="icon-button" [attr.aria-label]="'viewer.card.deselect' | translate" (click)="editor.select(null)">
                     <fd-icon name="close" [size]="16" />

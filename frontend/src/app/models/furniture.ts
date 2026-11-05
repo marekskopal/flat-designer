@@ -76,21 +76,10 @@ export type FurnitureCatalogue =
     | 'outdoor'
     | 'roof';
 
-/** The catalogues in the Add library's order. */
-export const CatalogueLabels: Readonly<Record<FurnitureCatalogue, string>> = {
-    kitchen: 'Kitchen',
-    storage: 'Storage',
-    seating: 'Seating',
-    tables: 'Tables',
-    bedroom: 'Bedroom',
-    bathroom: 'Bathroom',
-    lighting: 'Lighting',
-    electrical: 'Sockets & services',
-    decor: 'Decor',
-    building: 'Built-ins',
-    outdoor: 'Outdoor',
-    roof: 'On the roof',
-};
+/** The catalogues in the Add library's order, named by `enums.catalogue.<catalogue>`. */
+export const FurnitureCatalogues: readonly FurnitureCatalogue[] = [
+    'kitchen', 'storage', 'seating', 'tables', 'bedroom', 'bathroom', 'lighting', 'electrical', 'decor', 'building', 'outdoor', 'roof',
+];
 
 export interface FurnitureDefinitionBody {
     format: 1;

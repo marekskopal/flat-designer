@@ -1205,5 +1205,282 @@
         "wallDraft": {
             "title": "Nové stěny"
         }
+    },
+    "enums": {
+        "roomType": {
+            "Living": "Obytná místnost",
+            "Bedroom": "Ložnice",
+            "Bathroom": "Koupelna",
+            "Toilet": "WC",
+            "Hallway": "Chodba",
+            "Terrace": "Terasa",
+            "Garden": "Zahrada",
+            "Path": "Cesta",
+            "Driveway": "Příjezdová cesta",
+            "Garage": "Garáž"
+        },
+        "wallType": {
+            "Exterior": "Obvodová",
+            "Interior": "Vnitřní",
+            "Shaft": "Šachta"
+        },
+        "openingType": {
+            "Door": "Dveře",
+            "DoubleDoor": "Dvoukřídlé dveře",
+            "SlidingDoor": "Posuvné dveře",
+            "PocketDoor": "Posuvné dveře do pouzdra",
+            "Passage": "Průchod",
+            "Window": "Okno",
+            "Niche": "Nika",
+            "GarageDoor": "Garážová vrata"
+        },
+        "garageDoorStyle": {
+            "Sectional": "Sekční",
+            "UpAndOver": "Výklopná",
+            "SideHinged": "Křídlová",
+            "Roller": "Rolovací"
+        },
+        "hinge": {
+            "Start": "Začátek",
+            "End": "Konec"
+        },
+        "side": {
+            "Left": "Vlevo",
+            "Right": "Vpravo"
+        },
+        "frameStyle": {
+            "Lining": "Obložková",
+            "Architrave": "S obložkami a lištou",
+            "Steel": "Ocelová",
+            "Flush": "Skrytá",
+            "None": "Žádná"
+        },
+        "handle": {
+            "Lever": "Klika",
+            "Knob": "Koule",
+            "Pull": "Madlo",
+            "None": "Žádná"
+        },
+        "leafStyle": {
+            "Flush": "Hladké",
+            "Panelled": "Kazetové",
+            "Glazed": "Prosklené",
+            "Boarded": "Z prken"
+        },
+        "boardDirection": {
+            "Vertical": "Svisle",
+            "Horizontal": "Vodorovně"
+        },
+        "shutters": {
+            "Louvred": "Žaluziové",
+            "Solid": "Plné"
+        },
+        "stairShape": {
+            "Straight": "Přímé",
+            "LShaped": "L (čtvrtotočná podesta)",
+            "UShaped": "U (půlotočná podesta)",
+            "Spiral": "Točité",
+            "Curved": "Zakřivené (vějířové stupně)"
+        },
+        "turn": {
+            "Left": "Doleva",
+            "Right": "Doprava"
+        },
+        "stairConstruction": {
+            "Solid": "Plné (betonové)",
+            "Stringers": "Schodnicové",
+            "Open": "Otevřené (volné stupně)"
+        },
+        "sides": {
+            "None": "Žádné",
+            "Left": "Vlevo",
+            "Right": "Vpravo",
+            "Both": "Obě strany"
+        },
+        "railingStyle": {
+            "Balusters": "Sloupky",
+            "Rods": "Tyče",
+            "Glass": "Sklo",
+            "Panel": "Panel",
+            "Cable": "Lanka",
+            "Mesh": "Plot: svařovaná síť",
+            "Boards": "Plot: prkna"
+        },
+        "handrail": {
+            "Round": "Kulaté",
+            "Square": "Hranaté",
+            "Flat": "Plochá madlová lišta",
+            "None": "Žádné"
+        },
+        "railingFollow": {
+            "Level": "Ne: vodorovně u paty",
+            "Rake": "Šikmo s ním",
+            "Step": "Odstupňovaně po polích"
+        },
+        "roofShape": {
+            "Gable": "Sedlová",
+            "Hip": "Valbová (jehlan nad čtvercem)",
+            "Shed": "Pultová (jeden sklon)",
+            "Flat": "Plochá"
+        },
+        "ridgeStyle": {
+            "Box": "Hranatý hřebenáč",
+            "Round": "Půlkruhové hřebenáče",
+            "Angled": "Lomený plechový hřeben"
+        },
+        "gutters": {
+            "None": "Žádné",
+            "HalfRound": "Půlkruhové",
+            "Box": "Hranaté"
+        },
+        "roofWindowType": {
+            "CentrePivot": "Kyvné",
+            "TopHung": "Výklopné"
+        },
+        "itemKind": {
+            "Sink": "Dřez",
+            "Hob": "Varná deska",
+            "LedStrip": "LED pásek",
+            "Box": "Kvádr",
+            "Bathtub": "Vana",
+            "Washbasin": "Umyvadlo",
+            "Toilet": "Záchod",
+            "WashingMachine": "Pračka",
+            "Mirror": "Zrcadlo",
+            "TowelRadiator": "Žebřík na ručníky",
+            "FlushPlate": "Splachovací tlačítko",
+            "Fixture": "Baterie",
+            "Fence": "Plot",
+            "Column": "Sloup",
+            "Beam": "Trám",
+            "Chimney": "Komín",
+            "Custom": "Nábytek na míru",
+            "Model": "3D produkt"
+        },
+        "itemKindHint": {
+            "Sink": "Zapuštěný dřez s baterií; umístěte ho na pracovní desku.",
+            "Hob": "Indukční varná deska zapuštěná do pracovní desky.",
+            "LedStrip": "LED pásek, např. pod horními skříňkami.",
+            "Box": "Jednoduchý kvádr z materiálu prvku (předstěna, komín, lavice…).",
+            "Bathtub": "Vestavěná vana s čelním panelem.",
+            "Washbasin": "Závěsné umyvadlo s baterií.",
+            "Toilet": "Závěsná záchodová mísa.",
+            "WashingMachine": "Pračka plněná zepředu.",
+            "Mirror": "Nástěnné zrcadlo.",
+            "TowelRadiator": "Žebříkový radiátor na ručníky na stěně.",
+            "FlushPlate": "Splachovací tlačítko na předstěně.",
+            "Fixture": "Chromová koupelnová baterie na stěně.",
+            "Fence": "Zahradní plot se sloupky, nebo posuvná brána.",
+            "Column": "Nosný sloup stojící na podlaze; pilastr je sloup u líce stěny.",
+            "Chimney": "Komín procházející podlažími a střechami nad ním.",
+            "Beam": "Nosný trám visící pod stropem.",
+            "Custom": "Nábytek na míru podle popisu nábytku.",
+            "Model": "Koupený výrobek podle 3D modelu."
+        },
+        "catalogue": {
+            "kitchen": "Kuchyně",
+            "storage": "Úložné prostory",
+            "seating": "Sezení",
+            "tables": "Stoly",
+            "bedroom": "Ložnice",
+            "bathroom": "Koupelna",
+            "lighting": "Osvětlení",
+            "electrical": "Zásuvky a rozvody",
+            "decor": "Dekorace",
+            "building": "Vestavby",
+            "outdoor": "Venku",
+            "roof": "Na střeše"
+        },
+        "electricalCategory": {
+            "light": "Svítidlo",
+            "socket": "Zásuvka",
+            "switch": "Vypínač",
+            "data": "Datová zásuvka",
+            "plumbing": "Vodovodní bod"
+        }
+    },
+    "materials": {
+        "acrylic-white": "Akrylát vany, bílý",
+        "aluminium-brushed": "Hliník, kartáčovaný (profily, lišty)",
+        "appliance-black-glass": "Černé sklo spotřebičů",
+        "appliance-white": "Spotřebič, bílý",
+        "asphalt": "Asfalt, tmavě šedý",
+        "book-cloth-cream": "Knižní plátno, krémové",
+        "book-cloth-green": "Knižní plátno, zelené",
+        "book-cloth-grey": "Knižní plátno, šedé",
+        "book-cloth-navy": "Knižní plátno, námořnická modř",
+        "book-cloth-ochre": "Knižní plátno, okrové",
+        "book-cloth-oxblood": "Knižní plátno, vínové",
+        "brick-handmade": "Ruční cihla, režná (katalánské klenbové cihly 280 × 140)",
+        "cable-fabric-black": "Textilní kabel, černý",
+        "ceramic-white": "Sanitární keramika, bílá",
+        "chrome": "Chrom",
+        "clay-pavers": "Pálená dlažba 200 × 100, červená",
+        "compact-black": "Kompaktní laminát, černý (pracovní deska, zástěna)",
+        "concrete-board-marked": "Pohledový beton, otisk prken (prkna 3000 × 150)",
+        "concrete-floor": "Betonová podlaha, hlazená",
+        "concrete-formwork": "Pohledový beton, hladké bednění (desky 2500 × 1250)",
+        "concrete-stepping-slabs": "Betonové nášlapné desky 900 × 300, světle šedé",
+        "copper": "Měď (trubky)",
+        "door-white": "Interiérové dveře, bílé",
+        "drystone-grey": "Suchá zídka, šedý vápenec (nepravidelné řádky)",
+        "fabric-cotton-terracotta": "Bavlněná látka, terakota",
+        "fabric-felt-grey": "Vlněná plsť, šedá",
+        "fabric-linen-grey": "Potahová látka, šedý len",
+        "fabric-linen-white": "Ložní prádlo, bílý len",
+        "fabric-velvet-green": "Potahová látka, zelený samet",
+        "fabric-wool-ochre": "Přehoz, okrová vlna",
+        "fence-anthracite": "Plotové panely a sloupky, antracit",
+        "floor-laminate-dub-erica": "Laminátová podlaha, Dub Erica",
+        "floor-tiles-taupe": "Podlahová dlažba 600 × 600, šedobéžová, vzhled betonu",
+        "furniture-white-matt": "Nábytková dvířka, bílá matná",
+        "glass": "Zasklení",
+        "granite-black-honed": "Žula, černá, broušená (sokl krbu)",
+        "gravel": "Štěrk, praný oblázek",
+        "iron-wrought": "Kované železo, černě natřené (zábradlí)",
+        "kitchen-green-matt": "Kuchyňská dvířka, šalvějově zelená matná",
+        "kitchen-oak": "Dekor dub (pracovní deska, horní skříňky, zástěna)",
+        "larch-cladding": "Modřínový obklad, olejovaný (120 × 4000, na stěnách vodorovně)",
+        "larch-decking": "Modřínová terasa, ošlehaná (140 × 4000)",
+        "lavender-bed": "Záhon levandule",
+        "lawn": "Trávník",
+        "led-warm": "LED pásek, teplá bílá",
+        "matt-black": "Nábytková dvířka, černá matná",
+        "metal-white": "Kov, bílý práškový lak",
+        "mirror": "Zrcadlo",
+        "oak-planks-wide": "Dubová prkna, široká, přírodní olejovaná (220 × 2200)",
+        "oak-solid": "Masivní dub, přírodní olejovaný (schody, sloupky zábradlí, obklady)",
+        "oak-stained-frame": "Dřevěné okenní rámy, mořené na dub",
+        "oak-veneer": "Dubová dýha, přírodní (vestavby, dveře)",
+        "paper-white": "Papír, bílý (paspartu, tisky)",
+        "paving-concrete-grey": "Betonová zámková dlažba, šedá (200 × 100)",
+        "plastic-blue": "Plast, modrý (krytky studené vody)",
+        "plastic-grey": "Plast, šedý (odpadní potrubí)",
+        "plastic-red": "Plast, červený (krytky teplé vody)",
+        "plastic-white-gloss": "Plast, bílý lesklý (zásuvky, vypínače)",
+        "quartzite-tiles": "Kvarcitová dlažba 600 × 300, béžovošedá, broušená",
+        "render-plinth-grey": "Omítka, šedá (sokl)",
+        "render-silicate-white": "Silikátová omítka, bílá, jemné zrno (fasády)",
+        "roof-membrane": "Fólie ploché střechy, šedá",
+        "roof-metal-seam": "Plechová krytina na stojatou drážku, antracit",
+        "roof-slate": "Břidlice, tmavě šedá (300 × 500)",
+        "roof-tiles-beaver-clay": "Bobrovka, červená pálená (180 × 380)",
+        "roof-tiles-clay": "Střešní taška, červená pálená (300 × 420)",
+        "rug-jute": "Koberec, přírodní juta",
+        "rug-wool-cream": "Koberec, krémová vlna",
+        "shaft-plaster": "Sádrokartonová šachta, bílá",
+        "sink-granite-black": "Granitový dřez, černý",
+        "solar-absorber": "Solární absorbér, modročerný",
+        "solid-ash-honey": "Masivní jasan, medový lak (jídelní stůl, židle)",
+        "solid-surface-white": "Kompozit Solid surface, bílý matný (pracovní desky, pulty)",
+        "steel-painted-grey": "Ocel, šedě natřená (dveře, brány)",
+        "terrace-paving": "Terasová dlažba 400 × 400, betonová",
+        "terrazzo-white": "Teraco, bílé s šedými a černými zrny, leštěné (desky 600 × 600)",
+        "tile-herringbone-charcoal": "Obkladačky 240 × 60, uhlově šedé glazované, rybí kost",
+        "tile-wall-beige": "Obkladačky 600 × 300, béžové",
+        "tile-wall-brown": "Obkladačky 600 × 300, hnědé",
+        "wall-paint-white": "Malba, teple bílá",
+        "window-frame-anthracite": "Okenní rám, antracit",
+        "zinc-titanium": "Titanzinek, předzvětralý"
     }
 }

@@ -6,6 +6,7 @@ import {ProjectImport} from '@app/models/project';
 import {environment} from '@environments/environment';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
+import {provideTestTranslations} from '../../test-translations';
 import {ProjectService} from './project.service';
 
 describe('ProjectService project files', () => {
@@ -13,7 +14,9 @@ describe('ProjectService project files', () => {
     let http: HttpTestingController;
 
     beforeEach(() => {
-        TestBed.configureTestingModule({providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting()]});
+        TestBed.configureTestingModule({
+            providers: [provideZonelessChangeDetection(), provideHttpClient(), provideHttpClientTesting(), provideTestTranslations()],
+        });
         service = TestBed.inject(ProjectService);
         http = TestBed.inject(HttpTestingController);
     });

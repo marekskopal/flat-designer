@@ -32,7 +32,7 @@
                             <option value="">—</option>
                         }
                         @for (option of def.options ?? []; track option) {
-                            <option [value]="option" [selected]="option === value(def)">{{ def.optionLabels?.[option] ?? option }}</option>
+                            <option [value]="option" [selected]="option === value(def)">{{ def.enum === undefined ? option : ('enums.' + def.enum + '.' + option | translate) }}</option>
                         }
                     </select>
                 }

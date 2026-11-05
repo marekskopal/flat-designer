@@ -18,7 +18,7 @@ const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
             {{ 'fields.type' | translate }}
             <select class="input" [value]="draft.type" (change)="set('type', $event)">
                 @for (type of wallTypes; track type) {
-                    <option [value]="type">{{ type }}</option>
+                    <option [value]="type">{{ 'enums.wallType.' + type | translate }}</option>
                 }
             </select>
         </label>

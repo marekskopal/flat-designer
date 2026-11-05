@@ -18,7 +18,9 @@ import {
 import {MaterialPrices, Quantities} from '@app/models/quantities';
 import {RoomSchedule} from '@app/models/room-schedule';
 import {Floor, Scene} from '@app/models/scene';
+import {localizeMaterials} from '@app/shared/i18n/material-names';
 import {environment} from '@environments/environment';
+import {TranslateService} from '@ngx-translate/core';
 import {firstValueFrom} from 'rxjs';
 
 const projectsUrl = `${environment.apiUrl}/projects`;
@@ -26,6 +28,7 @@ const projectsUrl = `${environment.apiUrl}/projects`;
 /** Projects, their floors (the working copy) and saved versions. */
 @Injectable({providedIn: 'root'})
 export class ProjectService {
+    private readonly translate = inject(TranslateService);
     private readonly http = inject(HttpClient);
 
     public async list(): Promise<Project[]> {
@@ -125,9 +128,10 @@ export class ProjectService {
     /** Scene of a floor of the working copy, or of a saved version when `versionId` is given. */
     public async getScene(projectId: number, floorId: number, versionId: number | null = null, options: {quiet?: boolean} = {}): Promise<Scene> {
         const base = versionId === null ? `${projectsUrl}/${projectId}` : `${projectsUrl}/${projectId}/versions/${versionId}`;
-        return firstValueFrom(
+        const scene = await firstValueFrom(
             this.http.get<Scene>(`${base}/floors/${floorId}/scene`, {context: new HttpContext().set(SkipErrorToast, options.quiet === true)}),
         );
+        return {...scene, materials: localizeMaterials(this.translate, scene.materials)};
     }
 
     public async listVersions(projectId: number): Promise<ProjectVersion[]> {

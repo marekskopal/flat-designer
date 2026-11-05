@@ -1,9 +1,9 @@
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal} from '@angular/core';
 import {Router, RouterLink} from '@angular/router';
-import {CategoryLabels} from '@app/models/electrical-schedule';
 import {FurnitureDefinition, FurnitureScope, ScopeLabels} from '@app/models/furniture';
 import {AlertService} from '@app/services/alert.service';
 import {FurnitureService} from '@app/services/furniture.service';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {NewDefinitionTemplate} from './furniture-template';
 import {ModelLibraryComponent} from './model-library.component';
@@ -14,7 +14,7 @@ import {ModelLibraryComponent} from './model-library.component';
  */
 @Component({
     selector: 'fd-furniture-library',
-    imports: [RouterLink, ModelLibraryComponent],
+    imports: [ModelLibraryComponent, RouterLink, TranslatePipe],
     templateUrl: './furniture-library.component.html',
     styleUrl: './furniture-library.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,7 +27,6 @@ export class FurnitureLibraryComponent {
     private readonly alerts = inject(AlertService);
     private readonly router = inject(Router);
 
-    protected readonly categoryLabels = CategoryLabels;
     protected readonly definitions = signal<FurnitureDefinition[]>([]);
     protected readonly loading = signal(true);
     protected readonly busy = signal(false);

@@ -44,7 +44,7 @@
                                             <span class="values">{{ values }}</span>
                                         }
                                     </td>
-                                    <td>{{ categoryLabels[row.category] }}</td>
+                                    <td>{{ 'enums.electricalCategory.' + row.category | translate }}</td>
                                     <td class="num">{{ row.z | number }}</td>
                                     <td class="num">{{ row.count }}</td>
                                 </tr>

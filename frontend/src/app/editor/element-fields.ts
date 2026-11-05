@@ -28,17 +28,8 @@ export type FieldType =
     | 'finishes'
     | 'points';
 
-/** Opening types in the order of the inspector and the Add menu. */
-export const OpeningTypeLabels: Readonly<Record<OpeningType, string>> = {
-    Door: 'Door',
-    DoubleDoor: 'Double door',
-    SlidingDoor: 'Sliding door',
-    PocketDoor: 'Pocket door',
-    Passage: 'Passage',
-    Window: 'Window',
-    Niche: 'Niche',
-    GarageDoor: 'Garage door',
-};
+/** Opening types in the order of the inspector and the Add menu (named by `enums.openingType.<type>`). */
+export const OpeningTypes: readonly OpeningType[] = ['Door', 'DoubleDoor', 'SlidingDoor', 'PocketDoor', 'Passage', 'Window', 'Niche', 'GarageDoor'];
 
 /** Doors with a leaf (or two): not windows, passages or niches. */
 const hasLeaf = (element: Record<string, unknown>): boolean =>
@@ -79,8 +70,8 @@ export interface FieldDef {
     /** May be cleared (empty input = null). */
     nullable?: boolean;
     options?: readonly string[];
-    /** Shown instead of the option values that are not readable as they are. */
-    optionLabels?: Readonly<Record<string, string>>;
+    /** The options are named by `enums.<enum>.<option>` (a select's options are values, not texts). */
+    enum?: string;
     unit?: string;
     /** Shown in pairs on one row. */
     half?: boolean;
@@ -103,18 +94,11 @@ export interface FieldDef {
 const RailingStyles: readonly RailingStyle[] = ['Balusters', 'Rods', 'Glass', 'Panel', 'Cable'];
 /** A railing's infill may make it a fence; a stair's may not. */
 const RailingAndFenceStyles: readonly RailingStyle[] = [...RailingStyles, 'Mesh', 'Boards'];
-const RailingStyleLabels: Readonly<Record<string, string>> = {Mesh: 'Fence: welded mesh', Boards: 'Fence: boards'};
 /** What a railing without a material looks like, by style (`railings.ts`): steel, a fence's timber or dark grey mesh. */
 const RailingDefaultLooks: Readonly<Record<string, string>> = {Boards: 'fields.looks.timber', Mesh: 'fields.looks.darkGrey'};
 const isFence = (railing: Record<string, unknown>): boolean => isFenceStyle(railing['style'] as RailingStyle);
 
-const StairShapeLabels: Readonly<Record<string, string>> = {
-    Straight: 'Straight',
-    LShaped: 'L (quarter landing)',
-    UShaped: 'U (half landing)',
-    Spiral: 'Spiral',
-    Curved: 'Curved (fan-shaped steps)',
-};
+const StairShapes = ['Straight', 'LShaped', 'UShaped', 'Spiral', 'Curved'] as const;
 const hasLanding = (stair: Record<string, unknown>): boolean => stair['shape'] === 'LShaped' || stair['shape'] === 'UShaped';
 
 /** Comfortable stairs: twice the riser plus the going, mm. */
@@ -140,32 +124,16 @@ export function stairStepHint(stair: Record<string, unknown>): FieldText | null 
         : step;
 }
 
-const RoofShapeLabels: Readonly<Record<string, string>> = {
-    Gable: 'Gable',
-    Hip: 'Hip (pyramid over a square)',
-    Shed: 'Shed (one slope)',
-    Flat: 'Flat',
-};
+const RoofShapes = ['Gable', 'Hip', 'Shed', 'Flat'] as const;
 const isPitched = (roof: Record<string, unknown>): boolean => roof['shape'] !== 'Flat';
 
-const RidgeStyleLabels: Readonly<Record<string, string>> = {
-    Box: 'Square cap',
-    Round: 'Half-round ridge tiles',
-    Angled: 'Angled metal ridge',
-};
+const RidgeStyles = ['Box', 'Round', 'Angled'] as const;
 
-const GutterLabels: Readonly<Record<string, string>> = {
-    None: 'None',
-    HalfRound: 'Half-round',
-    Box: 'Box',
-};
+const Gutters = ['None', 'HalfRound', 'Box'] as const;
 
 const hasGutters = (roof: Record<string, unknown>): boolean => isPitched(roof) && (roof['gutters'] ?? 'None') !== 'None';
 
-const RoofWindowTypeLabels: Readonly<Record<string, string>> = {
-    CentrePivot: 'Centre pivot',
-    TopHung: 'Top hung',
-};
+const RoofWindowTypes = ['CentrePivot', 'TopHung'] as const;
 
 /** The height the roof's underside reaches at its ridge (a shed's top edge), above the floor's level. */
 export function roofRidgeHint(roof: Record<string, unknown>): FieldText | null {
@@ -217,7 +185,7 @@ export function wallFaceName(wall: Record<string, unknown>, side: 'Left' | 'Righ
 export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     item: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'kind', label: 'fields.kind', type: 'select', options: ItemKinds},
+        {key: 'kind', label: 'fields.kind', type: 'select', options: ItemKinds, enum: 'itemKind'},
         {key: 'definitionId', label: 'fields.furniture', type: 'definition', when: isCustom},
         {key: 'modelId', label: 'fields.model', type: 'model', when: (item) => item['kind'] === 'Model'},
         {section: 'fields.sections.positionAndSize', key: 'x', label: 'fields.x', type: 'int', unit: 'mm', half: true},
@@ -251,7 +219,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     wall: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'type', label: 'fields.type', type: 'select', options: ['Exterior', 'Interior', 'Shaft']},
+        {key: 'type', label: 'fields.type', type: 'select', options: ['Exterior', 'Interior', 'Shaft'], enum: 'wallType'},
         {section: 'fields.sections.position', folded: true, key: 'startX', label: 'fields.startX', type: 'int', unit: 'mm', half: true},
         {key: 'startY', label: 'fields.startY', type: 'int', unit: 'mm', half: true},
         {key: 'endX', label: 'fields.endX', type: 'int', unit: 'mm', half: true},
@@ -282,7 +250,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     opening: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'type', label: 'fields.type', type: 'select', options: Object.keys(OpeningTypeLabels), optionLabels: OpeningTypeLabels},
+        {key: 'type', label: 'fields.type', type: 'select', options: OpeningTypes, enum: 'openingType'},
         {section: 'fields.sections.sizeAndPosition', key: 'offset', label: 'fields.offset', type: 'int', unit: 'mm'},
         {key: 'width', label: 'fields.width', type: 'int', unit: 'mm', half: true},
         {key: 'height', label: 'fields.height', type: 'int', unit: 'mm', half: true},
@@ -305,7 +273,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.garageDoorStyle',
             type: 'select',
             options: ['Sectional', 'UpAndOver', 'SideHinged', 'Roller'],
-            optionLabels: {Sectional: 'Sectional', UpAndOver: 'Up and over', SideHinged: 'Side-hinged', Roller: 'Roller'},
+            enum: 'garageDoorStyle',
             half: true,
             when: (element) => element['type'] === 'GarageDoor',
         },
@@ -321,6 +289,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.hinge',
             type: 'select',
             options: ['Start', 'End'],
+            enum: 'hinge',
             nullable: true,
             half: true,
             when: (element) => element['type'] !== 'Passage' && element['type'] !== 'Niche',
@@ -330,6 +299,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.side',
             type: 'select',
             options: ['Left', 'Right'],
+            enum: 'side',
             nullable: true,
             half: true,
             when: (element) => element['type'] !== 'Passage' && element['type'] !== 'PocketDoor',
@@ -339,6 +309,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.frameStyle',
             type: 'select',
             options: ['Lining', 'Architrave', 'Steel', 'Flush', 'None'],
+            enum: 'frameStyle',
             half: true,
             when: (element) => element['type'] !== 'Window' && element['type'] !== 'Niche' && element['type'] !== 'GarageDoor',
         },
@@ -347,6 +318,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.handle',
             type: 'select',
             options: ['Lever', 'Knob', 'Pull', 'None'],
+            enum: 'handle',
             nullable: true,
             half: true,
             when: hasLeaf,
@@ -366,6 +338,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.leafStyle',
             type: 'select',
             options: ['Flush', 'Panelled', 'Glazed', 'Boarded'],
+            enum: 'leafStyle',
             half: true,
             when: (element) => hasLeaf(element) && !glazedFrame(element),
         },
@@ -381,6 +354,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.boardDirection',
             type: 'select',
             options: ['Vertical', 'Horizontal'],
+            enum: 'boardDirection',
             half: true,
             when: (element) => hasLeaf(element) && element['leafStyle'] === 'Boarded' && !glazedFrame(element),
         },
@@ -435,6 +409,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.shutters',
             type: 'select',
             options: ['Louvred', 'Solid'],
+            enum: 'shutters',
             nullable: true,
             half: true,
             when: (element) => element['type'] === 'Window',
@@ -474,7 +449,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     stair: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'shape', label: 'fields.shape', type: 'select', options: Object.keys(StairShapeLabels), optionLabels: StairShapeLabels},
+        {key: 'shape', label: 'fields.shape', type: 'select', options: StairShapes, enum: 'stairShape'},
         {section: 'fields.sections.position', key: 'x', label: 'fields.firstRiserX', type: 'int', unit: 'mm', half: true},
         {key: 'y', label: 'fields.firstRiserY', type: 'int', unit: 'mm', half: true},
         {key: 'rotation', label: 'fields.stairRotation', type: 'int', unit: '°'},
@@ -497,6 +472,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.turn',
             type: 'select',
             options: ['Left', 'Right'],
+            enum: 'turn',
             half: true,
             when: (stair) => hasLanding(stair) || stair['shape'] === 'Spiral' || stair['shape'] === 'Curved',
         },
@@ -515,7 +491,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.construction',
             type: 'select',
             options: ['Solid', 'Stringers', 'Open'],
-            optionLabels: {Solid: 'Solid (concrete)', Stringers: 'Stringers', Open: 'Open (floating treads)'},
+            enum: 'stairConstruction',
             half: true,
             when: (stair) => stair['shape'] !== 'Spiral',
         },
@@ -525,6 +501,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.railing',
             type: 'select',
             options: ['None', 'Left', 'Right', 'Both'],
+            enum: 'sides',
             half: true,
         },
         {
@@ -532,11 +509,12 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.railingStyle',
             type: 'select',
             options: RailingStyles,
+            enum: 'railingStyle',
             nullable: true,
             half: true,
             when: (stair) => stair['railing'] !== 'None',
         },
-        {key: 'wallHandrail', label: 'fields.wallHandrail', type: 'select', options: ['None', 'Left', 'Right', 'Both'], half: true},
+        {key: 'wallHandrail', label: 'fields.wallHandrail', type: 'select', options: ['None', 'Left', 'Right', 'Both'], enum: 'sides', half: true},
         {key: 'railingMaterialId', label: 'fields.railingMaterial', type: 'material', nullable: true, half: true},
         {section: 'fields.sections.materials', key: 'treadMaterialId', label: 'fields.treadMaterial', type: 'material', nullable: true, half: true},
         {key: 'structureMaterialId', label: 'fields.structureMaterial', type: 'material', nullable: true, half: true},
@@ -556,13 +534,13 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     railing: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'style', label: 'fields.infill', type: 'select', options: RailingAndFenceStyles, optionLabels: RailingStyleLabels, half: true},
+        {key: 'style', label: 'fields.infill', type: 'select', options: RailingAndFenceStyles, enum: 'railingStyle', half: true},
         {
             key: 'handrail',
             label: 'fields.handrail',
             type: 'select',
             options: ['Round', 'Square', 'Flat', 'None'],
-            optionLabels: {Flat: 'Flat cap'},
+            enum: 'handrail',
             half: true,
             when: (railing) => !isFence(railing),
         },
@@ -571,7 +549,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             label: 'fields.follow',
             type: 'select',
             options: ['Level', 'Rake', 'Step'],
-            optionLabels: {Level: 'No: level at its base', Rake: 'Raking with it', Step: 'Stepping per bay'},
+            enum: 'railingFollow',
             half: true,
             when: isFence,
         },
@@ -620,7 +598,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     roof: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'shape', label: 'fields.shape', type: 'select', options: Object.keys(RoofShapeLabels), optionLabels: RoofShapeLabels},
+        {key: 'shape', label: 'fields.shape', type: 'select', options: RoofShapes, enum: 'roofShape'},
         {section: 'fields.sections.positionAndSize', key: 'x', label: 'fields.centreX', type: 'int', unit: 'mm', half: true},
         {key: 'y', label: 'fields.centreY', type: 'int', unit: 'mm', half: true},
         {key: 'rotation', label: 'fields.ridgeDirection', type: 'int', unit: '°'},
@@ -663,8 +641,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             key: 'ridgeStyle',
             label: 'fields.ridgeStyle',
             type: 'select',
-            options: Object.keys(RidgeStyleLabels),
-            optionLabels: RidgeStyleLabels,
+            options: RidgeStyles,
+            enum: 'ridgeStyle',
             when: isPitched,
         },
         {key: 'snowGuards', label: 'fields.snowGuards', type: 'int', half: true, when: isPitched},
@@ -673,8 +651,8 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
             key: 'gutters',
             label: 'fields.gutters',
             type: 'select',
-            options: Object.keys(GutterLabels),
-            optionLabels: GutterLabels,
+            options: Gutters,
+            enum: 'gutters',
             half: true,
             when: isPitched,
         },
@@ -689,7 +667,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     ],
     roofWindow: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
-        {key: 'type', label: 'fields.roofWindowType', type: 'select', options: Object.keys(RoofWindowTypeLabels), optionLabels: RoofWindowTypeLabels},
+        {key: 'type', label: 'fields.roofWindowType', type: 'select', options: RoofWindowTypes, enum: 'roofWindowType'},
         {section: 'fields.sections.positionAndSize', key: 'along', label: 'fields.alongRidge', type: 'int', unit: 'mm', half: true},
         {key: 'across', label: 'fields.acrossRidge', type: 'int', unit: 'mm', half: true},
         {key: 'width', label: 'fields.width', type: 'int', unit: 'mm', half: true},
@@ -699,7 +677,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
     room: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},
         {key: 'code', label: 'fields.code', type: 'text', half: true},
-        {key: 'type', label: 'fields.type', type: 'select', options: RoomTypes, half: true},
+        {key: 'type', label: 'fields.type', type: 'select', options: RoomTypes, enum: 'roomType', half: true},
         {section: 'fields.sections.heightAndLevel', key: 'floorElevation', label: 'fields.floorElevation', type: 'int', unit: 'mm'},
         {key: 'ceilingHeight', label: 'fields.ceilingHeight', type: 'int', unit: 'mm', nullable: true},
         {section: 'fields.sections.surfaces', key: 'floorMaterialId', label: 'fields.floorMaterial', type: 'material', nullable: true},

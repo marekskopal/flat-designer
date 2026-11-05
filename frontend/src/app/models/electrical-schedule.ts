@@ -2,6 +2,7 @@
 export type ElectricalCategory = 'light' | 'socket' | 'switch' | 'data' | 'plumbing';
 
 /** The categories in the schedule's order, with their names. */
+/** In the schedule's order. The pages name them by `enums.electricalCategory.<category>`; the drawings by these. */
 export const CategoryLabels: Record<ElectricalCategory, string> = {
     light: 'Light',
     socket: 'Socket',

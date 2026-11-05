@@ -1205,5 +1205,282 @@
         "wallDraft": {
             "title": "New walls"
         }
+    },
+    "enums": {
+        "roomType": {
+            "Living": "Living",
+            "Bedroom": "Bedroom",
+            "Bathroom": "Bathroom",
+            "Toilet": "Toilet",
+            "Hallway": "Hallway",
+            "Terrace": "Terrace",
+            "Garden": "Garden",
+            "Path": "Path",
+            "Driveway": "Driveway",
+            "Garage": "Garage"
+        },
+        "wallType": {
+            "Exterior": "Exterior",
+            "Interior": "Interior",
+            "Shaft": "Shaft"
+        },
+        "openingType": {
+            "Door": "Door",
+            "DoubleDoor": "Double door",
+            "SlidingDoor": "Sliding door",
+            "PocketDoor": "Pocket door",
+            "Passage": "Passage",
+            "Window": "Window",
+            "Niche": "Niche",
+            "GarageDoor": "Garage door"
+        },
+        "garageDoorStyle": {
+            "Sectional": "Sectional",
+            "UpAndOver": "Up and over",
+            "SideHinged": "Side-hinged",
+            "Roller": "Roller"
+        },
+        "hinge": {
+            "Start": "Start",
+            "End": "End"
+        },
+        "side": {
+            "Left": "Left",
+            "Right": "Right"
+        },
+        "frameStyle": {
+            "Lining": "Lining",
+            "Architrave": "Architrave",
+            "Steel": "Steel",
+            "Flush": "Flush",
+            "None": "None"
+        },
+        "handle": {
+            "Lever": "Lever",
+            "Knob": "Knob",
+            "Pull": "Pull",
+            "None": "None"
+        },
+        "leafStyle": {
+            "Flush": "Flush",
+            "Panelled": "Panelled",
+            "Glazed": "Glazed",
+            "Boarded": "Boarded"
+        },
+        "boardDirection": {
+            "Vertical": "Vertical",
+            "Horizontal": "Horizontal"
+        },
+        "shutters": {
+            "Louvred": "Louvred",
+            "Solid": "Solid"
+        },
+        "stairShape": {
+            "Straight": "Straight",
+            "LShaped": "L (quarter landing)",
+            "UShaped": "U (half landing)",
+            "Spiral": "Spiral",
+            "Curved": "Curved (fan-shaped steps)"
+        },
+        "turn": {
+            "Left": "Left",
+            "Right": "Right"
+        },
+        "stairConstruction": {
+            "Solid": "Solid (concrete)",
+            "Stringers": "Stringers",
+            "Open": "Open (floating treads)"
+        },
+        "sides": {
+            "None": "None",
+            "Left": "Left",
+            "Right": "Right",
+            "Both": "Both"
+        },
+        "railingStyle": {
+            "Balusters": "Balusters",
+            "Rods": "Rods",
+            "Glass": "Glass",
+            "Panel": "Panel",
+            "Cable": "Cable",
+            "Mesh": "Fence: welded mesh",
+            "Boards": "Fence: boards"
+        },
+        "handrail": {
+            "Round": "Round",
+            "Square": "Square",
+            "Flat": "Flat cap",
+            "None": "None"
+        },
+        "railingFollow": {
+            "Level": "No: level at its base",
+            "Rake": "Raking with it",
+            "Step": "Stepping per bay"
+        },
+        "roofShape": {
+            "Gable": "Gable",
+            "Hip": "Hip (pyramid over a square)",
+            "Shed": "Shed (one slope)",
+            "Flat": "Flat"
+        },
+        "ridgeStyle": {
+            "Box": "Square cap",
+            "Round": "Half-round ridge tiles",
+            "Angled": "Angled metal ridge"
+        },
+        "gutters": {
+            "None": "None",
+            "HalfRound": "Half-round",
+            "Box": "Box"
+        },
+        "roofWindowType": {
+            "CentrePivot": "Centre pivot",
+            "TopHung": "Top hung"
+        },
+        "itemKind": {
+            "Sink": "Sink",
+            "Hob": "Hob",
+            "LedStrip": "Led Strip",
+            "Box": "Box",
+            "Bathtub": "Bathtub",
+            "Washbasin": "Washbasin",
+            "Toilet": "Toilet",
+            "WashingMachine": "Washing Machine",
+            "Mirror": "Mirror",
+            "TowelRadiator": "Towel Radiator",
+            "FlushPlate": "Flush Plate",
+            "Fixture": "Fixture",
+            "Fence": "Fence",
+            "Column": "Column",
+            "Beam": "Beam",
+            "Chimney": "Chimney",
+            "Custom": "Custom",
+            "Model": "Model"
+        },
+        "itemKindHint": {
+            "Sink": "Inset sink with tap; place it on the worktop.",
+            "Hob": "Induction hob set into the worktop.",
+            "LedStrip": "LED strip, e.g. under wall cabinets.",
+            "Box": "Plain block in the item material (pre-wall, chimney, bench, …).",
+            "Bathtub": "Built-in bathtub with a front panel.",
+            "Washbasin": "Wall-hung washbasin with tap.",
+            "Toilet": "Wall-hung toilet bowl.",
+            "WashingMachine": "Front-loading washing machine.",
+            "Mirror": "Wall mirror.",
+            "TowelRadiator": "Ladder towel radiator on the wall.",
+            "FlushPlate": "Toilet flush plate on the pre-wall.",
+            "Fixture": "Chrome bathroom fixture on a wall.",
+            "Fence": "Garden fence with posts, or a sliding gate.",
+            "Column": "Structural column standing on the floor; a pilaster is a column against a wall face.",
+            "Chimney": "Structural chimney rising through the floors and roofs above.",
+            "Beam": "Structural downstand beam hanging from the ceiling.",
+            "Custom": "Custom piece of furniture drawn from a furniture definition.",
+            "Model": "A bought product drawn from a 3D model."
+        },
+        "catalogue": {
+            "kitchen": "Kitchen",
+            "storage": "Storage",
+            "seating": "Seating",
+            "tables": "Tables",
+            "bedroom": "Bedroom",
+            "bathroom": "Bathroom",
+            "lighting": "Lighting",
+            "electrical": "Sockets & services",
+            "decor": "Decor",
+            "building": "Built-ins",
+            "outdoor": "Outdoor",
+            "roof": "On the roof"
+        },
+        "electricalCategory": {
+            "light": "Light",
+            "socket": "Socket",
+            "switch": "Switch",
+            "data": "Data",
+            "plumbing": "Plumbing"
+        }
+    },
+    "materials": {
+        "acrylic-white": "Bathtub acrylic, white",
+        "aluminium-brushed": "Aluminium, brushed (profiles, rails)",
+        "appliance-black-glass": "Appliance black glass",
+        "appliance-white": "Appliance, white",
+        "asphalt": "Asphalt, dark grey",
+        "book-cloth-cream": "Book cloth, cream",
+        "book-cloth-green": "Book cloth, green",
+        "book-cloth-grey": "Book cloth, grey",
+        "book-cloth-navy": "Book cloth, navy",
+        "book-cloth-ochre": "Book cloth, ochre",
+        "book-cloth-oxblood": "Book cloth, oxblood",
+        "brick-handmade": "Handmade brick, exposed (Catalan vault tiles 280 × 140)",
+        "cable-fabric-black": "Fabric cable, black",
+        "ceramic-white": "Sanitary ceramics, white",
+        "chrome": "Chrome",
+        "clay-pavers": "Clay pavers 200 × 100, red",
+        "compact-black": "Compact laminate, black (worktop, backsplash)",
+        "concrete-board-marked": "Exposed concrete, board-marked (3000 × 150 boards)",
+        "concrete-floor": "Concrete floor, power-floated",
+        "concrete-formwork": "Exposed concrete, smooth formwork (2500 × 1250 panels)",
+        "concrete-stepping-slabs": "Concrete stepping slabs 900 × 300, light grey",
+        "copper": "Copper (pipes)",
+        "door-white": "Interior door, white",
+        "drystone-grey": "Dry-stone walling, grey limestone (random coursed)",
+        "fabric-cotton-terracotta": "Cotton fabric, terracotta",
+        "fabric-felt-grey": "Wool felt, grey",
+        "fabric-linen-grey": "Upholstery fabric, grey linen",
+        "fabric-linen-white": "Bedding, white linen",
+        "fabric-velvet-green": "Upholstery fabric, green velvet",
+        "fabric-wool-ochre": "Throw, ochre wool",
+        "fence-anthracite": "Fence panels and posts, anthracite",
+        "floor-laminate-dub-erica": "Laminate floor, Dub Erica",
+        "floor-tiles-taupe": "Floor tiles 600 × 600, taupe concrete look",
+        "furniture-white-matt": "Furniture front, white matt",
+        "glass": "Glazing",
+        "granite-black-honed": "Granite, black, honed (fireplace plinth)",
+        "gravel": "Gravel, washed pebbles",
+        "iron-wrought": "Wrought iron, painted black (railings)",
+        "kitchen-green-matt": "Kitchen front, sage green matt",
+        "kitchen-oak": "Oak décor (worktop, wall cabinets, backsplash)",
+        "larch-cladding": "Larch cladding boards, oiled (120 × 4000, horizontal on walls)",
+        "larch-decking": "Larch decking, weathered (140 × 4000)",
+        "lavender-bed": "Lavender bed",
+        "lawn": "Lawn",
+        "led-warm": "LED strip, warm white",
+        "matt-black": "Furniture front, black matt",
+        "metal-white": "Metal, white powder-coated",
+        "mirror": "Mirror",
+        "oak-planks-wide": "Oak planks, wide, natural oiled (220 × 2200)",
+        "oak-solid": "Solid oak, natural oiled (stairs, balusters, linings)",
+        "oak-stained-frame": "Timber window frames, oak stained",
+        "oak-veneer": "Oak veneer, natural (built-ins, doors)",
+        "paper-white": "Paper, white (mounts, prints)",
+        "paving-concrete-grey": "Concrete paving blocks, grey (200 × 100)",
+        "plastic-blue": "Plastic, blue (cold water caps)",
+        "plastic-grey": "Plastic, grey (waste pipes)",
+        "plastic-red": "Plastic, red (hot water caps)",
+        "plastic-white-gloss": "Plastic, white gloss (sockets, switches)",
+        "quartzite-tiles": "Quartzite tiles 600 × 300, beige-grey, honed",
+        "render-plinth-grey": "Render, grey (plinth)",
+        "render-silicate-white": "Silicate render, white, fine grain (façades)",
+        "roof-membrane": "Flat roof membrane, grey",
+        "roof-metal-seam": "Standing seam metal roofing, anthracite",
+        "roof-slate": "Roof slate, dark grey (300 × 500)",
+        "roof-tiles-beaver-clay": "Beaver-tail roof tiles, red clay (180 × 380)",
+        "roof-tiles-clay": "Roof tiles, red clay (300 × 420)",
+        "rug-jute": "Rug, natural jute",
+        "rug-wool-cream": "Rug, cream wool",
+        "shaft-plaster": "Plasterboard shaft, white",
+        "sink-granite-black": "Granite sink, black",
+        "solar-absorber": "Solar absorber, blue-black",
+        "solid-ash-honey": "Solid ash, honey lacquer (dining table, chairs)",
+        "solid-surface-white": "Solid surface, white matt (worktops, counters)",
+        "steel-painted-grey": "Steel, painted grey (doors, gates)",
+        "terrace-paving": "Terrace paving 400 × 400, concrete",
+        "terrazzo-white": "Terrazzo, white with grey and black chips, polished (600 × 600 slabs)",
+        "tile-herringbone-charcoal": "Wall tiles 240 × 60, charcoal glazed, herringbone",
+        "tile-wall-beige": "Wall tiles 600 × 300, beige",
+        "tile-wall-brown": "Wall tiles 600 × 300, brown",
+        "wall-paint-white": "Wall paint, warm white",
+        "window-frame-anthracite": "Window frame, anthracite",
+        "zinc-titanium": "Titanium zinc, pre-weathered"
     }
 }

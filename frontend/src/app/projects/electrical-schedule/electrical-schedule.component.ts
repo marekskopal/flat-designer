@@ -3,8 +3,9 @@ import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angu
 import {levelText} from '@app/core/level-text';
 import {revisionLoader} from '@app/core/revision-loader';
 import {roomCodeText} from '@app/core/room-code';
-import {CategoryLabels, FloorElectrical} from '@app/models/electrical-schedule';
+import {FloorElectrical} from '@app/models/electrical-schedule';
 import {ProjectService} from '@app/services/project.service';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {circuitItemText, rowValues, totalsSummary} from './electrical-labels';
 
@@ -16,7 +17,7 @@ import {circuitItemText, rowValues, totalsSummary} from './electrical-labels';
  */
 @Component({
     selector: 'fd-electrical-schedule',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, TranslatePipe],
     templateUrl: './electrical-schedule.component.html',
     styleUrl: './electrical-schedule.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,7 +39,6 @@ export class ElectricalScheduleComponent {
     protected readonly lightingFloors = computed<FloorElectrical[]>(() =>
         (this.schedule()?.floors ?? []).filter((floor) => floor.lighting.circuits.length > 0),
     );
-    protected readonly categoryLabels = CategoryLabels;
     protected readonly circuitItemText = circuitItemText;
     protected readonly rowValues = rowValues;
     protected readonly totalsSummary = totalsSummary;

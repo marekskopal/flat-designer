@@ -79,6 +79,13 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   `fields.*`), its hints and parse errors are `FieldText` (`{key, params?, count?}`, `translateFieldText()`); element
   kinds are `KindLabelKeys` (`kinds.*`) and `elementFacts()` takes the `TranslateService`. Default names the editor
   sends (a new room, a group, a variant set) are translated (`editor.defaults.*`).
+- Option lists are values named by `enums.<enum>.<value>`: a select field's `enum` in `ElementFields` (every select has
+  one), `OpeningTypes`, `FurnitureCatalogues`, the electrical categories (the drawings still take `CategoryLabels`), item
+  kinds (`enums.itemKind`, with `enums.itemKindHint` for the Add library). **A new enum value needs its two texts**
+  (`src/i18n/enums.spec.ts`). Seeded materials are named by `materials.<code>`, put in where materials load
+  (`localizeMaterials()`: the scene, a shared view, the catalogue; one an admin adds keeps its own name);
+  `backend/tests/fixtures/material-codes.json` lists the seeded codes (`SeededMaterialCodesTest`), so **a migration
+  seeding a material adds its code there and its names to both files**.
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's

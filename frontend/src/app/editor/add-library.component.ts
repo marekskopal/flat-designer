@@ -1,12 +1,12 @@
 import {ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, signal, viewChild} from '@angular/core';
-import {CatalogueLabels, FurnitureCatalogue, FurnitureDefinition} from '@app/models/furniture';
+import {FurnitureCatalogue, FurnitureCatalogues, FurnitureDefinition} from '@app/models/furniture';
 import {OpeningType, Roof, Room, Scene, Wall} from '@app/models/scene';
 import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {EditorStore, newRoomFields} from './editor.store';
-import {OpeningTypeLabels} from './element-fields';
+import {OpeningTypes} from './element-fields';
 
 /** Size of a new wall and a new room, mm. */
 const NewWallLength = 3000;
@@ -198,9 +198,9 @@ export class AddLibraryComponent {
         const t = (key: string, params?: Record<string, unknown>): string => this.translate.instant(key, params) as string;
         const kindEntry = (kind: {kind: string; description: string}): AddEntry => ({
             choice: `item:${kind.kind}`,
-            label: kind.kind.replace(/([a-z])([A-Z])/g, '$1 $2'),
+            label: t(`enums.itemKind.${kind.kind}`),
             icon: KindIcons[kind.kind] ?? 'box',
-            description: kind.description,
+            description: t(`enums.itemKindHint.${kind.kind}`),
             blocked: null,
         });
         const plain = (choice: string, label: string, icon: IconName, description = ''): AddEntry => ({
@@ -232,11 +232,11 @@ export class AddLibraryComponent {
                     {
                         label: t('editor.add.openings'),
                         note: wallMissing === null ? null : t('editor.add.openingsNote'),
-                        entries: Object.entries(OpeningTypeLabels).map(([type, label]) => ({
+                        entries: OpeningTypes.map((type) => ({
                             choice: `opening:${type}`,
-                            label,
-                            icon: OpeningIcons[type as OpeningType],
-                            description: t('editor.add.openingHint', {type: label}),
+                            label: t(`enums.openingType.${type}`),
+                            icon: OpeningIcons[type],
+                            description: t('editor.add.openingHint', {type: t(`enums.openingType.${type}`)}),
                             blocked: wallMissing,
                         })),
                     },
@@ -269,7 +269,8 @@ export class AddLibraryComponent {
         };
         // The catalogue's furniture by where it is filed, in the catalogues' order, then what is filed nowhere.
         const global = this.editor.definitions().filter((d) => d.scope === 'global');
-        for (const [catalogue, label] of Object.entries(CatalogueLabels) as [FurnitureCatalogue, string][]) {
+        for (const catalogue of FurnitureCatalogues) {
+            const label = t(`enums.catalogue.${catalogue}`);
             const entries = global.filter((d) => catalogueOf(d) === catalogue).map(definitionEntry);
             categories.push({key: `furniture-${catalogue}`, label, icon: CatalogueIcons[catalogue], groups: [{label, note: null, entries}]});
         }
