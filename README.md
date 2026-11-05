@@ -182,7 +182,7 @@ it has made the change.
   with level marks); and the floor as a 3D model (glTF) for Blender or SketchUp.
 - **Presentation quality**: ambient occlusion, antialiasing and soft sun shadows for renders.
 - **Live collaboration**: open viewers update in real time (Mercure) when someone else changes the project.
-- **Project files**: plans, renders and photos in S3-compatible storage. Plans can be traced as underlays.
+- **Project files**: plans, renders and photos in S3-compatible storage. Plans (images, or a page of a PDF) can be traced as underlays.
 - **DXF import** (beta): the walls, doors and windows of a CAD floor plan saved as ASCII DXF, from the layers you pick,
   previewed over the plan and imported as one undoable change.
 - **Project export and import**: a project downloads as one file (a zip with its plans, photos and product models, or

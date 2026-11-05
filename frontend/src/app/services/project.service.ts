@@ -7,6 +7,7 @@ import {
     Example,
     ExampleProject,
     FloorInput,
+    PdfPages,
     Project,
     ProjectFile,
     ProjectImport,
@@ -164,6 +165,27 @@ export class ProjectService {
                 context: new HttpContext().set(SkipErrorToast, options.quiet === true),
             }),
         );
+    }
+
+    /** The pages of a PDF file. */
+    public async pdfPages(projectId: number, fileId: number): Promise<PdfPages> {
+        return firstValueFrom(this.http.get<PdfPages>(`${projectsUrl}/${projectId}/files/${fileId}/pdf`));
+    }
+
+    /** A PNG of a PDF page, its longer side `size` px; quiet, as a thumbnail that fails just stays blank. */
+    public async pdfPageThumbnail(projectId: number, fileId: number, page: number, size: number): Promise<Blob> {
+        return firstValueFrom(
+            this.http.get(`${projectsUrl}/${projectId}/files/${fileId}/pdf/pages/${page}`, {
+                params: {size},
+                responseType: 'blob',
+                context: new HttpContext().set(SkipErrorToast, true),
+            }),
+        );
+    }
+
+    /** Makes a PDF page into a new PNG file of the project (150 dpi). */
+    public async pdfPageToImage(projectId: number, fileId: number, page: number): Promise<ProjectFile> {
+        return firstValueFrom(this.http.post<ProjectFile>(`${projectsUrl}/${projectId}/files/${fileId}/pdf/pages/${page}/image`, {}));
     }
 
     public async deleteFile(projectId: number, fileId: number): Promise<void> {

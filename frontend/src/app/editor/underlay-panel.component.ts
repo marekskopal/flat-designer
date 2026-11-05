@@ -1,22 +1,29 @@
-import {DecimalPipe} from '@angular/common';
+import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {PdfPages, ProjectFile} from '@app/models/project';
 import {Scene, Underlay} from '@app/models/scene';
 import {UnderlayInput} from '@app/services/editor-api.service';
+import {ProjectService} from '@app/services/project.service';
 import {calibrateUnderlay} from '@app/viewer/engine/underlay';
 
 import {EditorStore} from './editor.store';
+import {PdfPagePickerComponent} from './pdf-page-picker.component';
+
+/** Option values of the picker's PDFs, beside the images' plain ids. */
+const PdfOption = 'pdf:';
 
 /** Direction the two calibration points run in reality: as clicked, along x or along y. */
 type CalibrationDirection = 'keep' | 'horizontal' | 'vertical';
 
 /**
- * The plan image under the floor's top view, in edit mode: pick an image of the project, set its opacity and
- * placement, or calibrate it from two clicked points and their real distance.
+ * The plan image under the floor's top view, in edit mode: pick an image of the project, or a page of a PDF (made into
+ * an image by the server), set its opacity and placement, or calibrate it from two clicked points and their real
+ * distance.
  */
 @Component({
     selector: 'fd-underlay-panel',
-    imports: [DecimalPipe, RouterLink],
+    imports: [DecimalPipe, NgTemplateOutlet, PdfPagePickerComponent, RouterLink],
     templateUrl: './underlay-panel.component.html',
     styleUrl: './underlay-panel.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,9 +33,19 @@ export class UnderlayPanelComponent {
     public readonly projectId = input.required<number>();
 
     protected readonly editor = inject(EditorStore);
+    protected readonly pdfOption = PdfOption;
+    /** A PDF of several pages whose page is being picked. */
+    protected readonly pdfChoice = signal<{file: ProjectFile; pages: PdfPages} | null>(null);
+    /** The pages of a picked PDF are being read. */
+    protected readonly readingPdf = signal(false);
+    /** A PDF page is being made into an image and laid. */
+    protected readonly layingPage = signal(false);
+
+    private readonly projects = inject(ProjectService);
 
     protected readonly underlay = computed(() => this.scene().underlay ?? null);
     protected readonly imageFiles = computed(() => this.editor.images());
+    protected readonly pdfFiles = computed(() => this.editor.pdfFiles());
     protected readonly points = computed(() => {
         const calibration = this.editor.calibration();
         return typeof calibration === 'object' ? calibration : null;
@@ -41,7 +58,7 @@ export class UnderlayPanelComponent {
     protected readonly distance = signal<number | null>(null);
     protected readonly direction = signal<CalibrationDirection>('keep');
     /** The placement fields and the image stay as they are while points are picked, which refer to them. */
-    protected readonly locked = computed(() => this.editor.busy() || this.editor.calibration() !== null);
+    protected readonly locked = computed(() => this.editor.busy() || this.readingPdf() || this.editor.calibration() !== null);
 
     public constructor() {
         // Picked points are plan positions of image features under the placement of that moment: a changed placement
@@ -66,9 +83,62 @@ export class UnderlayPanelComponent {
     }
 
     protected choose(event: Event): void {
-        const fileId = Number((event.target as HTMLSelectElement).value);
+        const select = event.target as HTMLSelectElement;
+        if (select.value.startsWith(PdfOption)) {
+            const fileId = Number(select.value.slice(PdfOption.length));
+            // The select keeps showing the underlay's image; the PDF's page comes from the picker.
+            select.value = String(this.underlay()?.fileId ?? '');
+            void this.openPdf(fileId);
+            return;
+        }
+        const fileId = Number(select.value);
         if (fileId > 0) {
+            this.pdfChoice.set(null);
             void this.save({fileId});
+        }
+    }
+
+    protected async pickPage(page: number): Promise<void> {
+        const choice = this.pdfChoice();
+        if (choice !== null && (await this.layPage(choice.file.id, page))) {
+            this.pdfChoice.set(null);
+        }
+    }
+
+    protected cancelPdf(): void {
+        this.pdfChoice.set(null);
+    }
+
+    private async layPage(fileId: number, page: number): Promise<boolean> {
+        this.layingPage.set(true);
+        try {
+            return await this.editor.layPdfPage(fileId, page);
+        } finally {
+            this.layingPage.set(false);
+        }
+    }
+
+    /** A one-page PDF is laid at once; for more pages the picker opens. */
+    private async openPdf(fileId: number): Promise<void> {
+        const file = this.pdfFiles().find((f) => f.id === fileId);
+        if (file === undefined || this.readingPdf()) {
+            return;
+        }
+        this.pdfChoice.set(null);
+        this.readingPdf.set(true);
+        let pages: PdfPages;
+        try {
+            pages = await this.projects.pdfPages(this.projectId(), fileId);
+        } catch {
+            // The error interceptor shows the toast (a damaged or password-protected PDF).
+            return;
+        } finally {
+            this.readingPdf.set(false);
+        }
+        if (pages.pageCount === 1 && pages.pages[0]?.widthPx != null) {
+            await this.layPage(fileId, 1);
+        } else {
+            this.pdfChoice.set({file, pages});
         }
     }
 

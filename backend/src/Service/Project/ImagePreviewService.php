@@ -31,9 +31,7 @@ final readonly class ImagePreviewService
 	public function render(string $bytes, string $mimeType, ?array $crop, int $maxSize, ?int $grid): array
 	{
 		[$width, $height] = ProjectFileProvider::imageSize($bytes, 'The file');
-		if ($maxSize < self::MinMaxSize || $maxSize > self::MaxMaxSize) {
-			throw new ProjectException(sprintf('maxSize must be between %d and %d.', self::MinMaxSize, self::MaxMaxSize));
-		}
+		self::checkArguments($width, $height, $crop, $maxSize, $grid);
 
 		$crop ??= ['x' => 0, 'y' => 0, 'width' => $width, 'height' => $height];
 		$crop = self::clampCrop($crop, $width, $height);
@@ -55,9 +53,6 @@ final readonly class ImagePreviewService
 			));
 		}
 
-		if ($grid !== null) {
-			self::checkGrid($grid, $scale);
-		}
 		$image = self::resample($bytes, $crop, $scale);
 		if ($grid !== null) {
 			self::drawGrid($image, $crop, $scale, $grid);
@@ -73,6 +68,23 @@ final readonly class ImagePreviewService
 			'crop' => $crop,
 			'scale' => $scale,
 		];
+	}
+
+	/**
+	 * Refuses a `render()` of an image of this size with these arguments before anything is decoded or rendered (an
+	 * agent's preview of a PDF page checks them before the page is rasterised).
+	 *
+	 * @param array{x: int, y: int, width: int, height: int}|null $crop
+	 */
+	public static function checkArguments(int $width, int $height, ?array $crop, int $maxSize, ?int $grid): void
+	{
+		if ($maxSize < self::MinMaxSize || $maxSize > self::MaxMaxSize) {
+			throw new ProjectException(sprintf('maxSize must be between %d and %d.', self::MinMaxSize, self::MaxMaxSize));
+		}
+		$crop = self::clampCrop($crop ?? ['x' => 0, 'y' => 0, 'width' => $width, 'height' => $height], $width, $height);
+		if ($grid !== null) {
+			self::checkGrid($grid, min(1.0, $maxSize / max($crop['width'], $crop['height'])));
+		}
 	}
 
 	/** @param array{x: int, y: int, width: int, height: int} $crop */

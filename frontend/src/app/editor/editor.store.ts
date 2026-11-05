@@ -4,7 +4,7 @@ import {DxfImportInput, DxfImportResult, DxfPlan, DxfPlanInput} from '@app/model
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
-import {ImageMimeTypes, ProjectFile} from '@app/models/project';
+import {ImageMimeTypes, PdfMimeType, ProjectFile} from '@app/models/project';
 import {PlanPoint, Scene, Underlay} from '@app/models/scene';
 import {EditorApiService, GroupMove, UnderlayInput, WallDraft} from '@app/services/editor-api.service';
 import {FurnitureService} from '@app/services/furniture.service';
@@ -51,6 +51,8 @@ export class EditorStore {
     public readonly definitions = signal<FurnitureDefinition[]>([]);
     /** The project's image files, for pictures of Custom items (their `image` parameters). */
     public readonly images = signal<ProjectFile[]>([]);
+    /** The project's PDFs, whose pages can lie under the plan. */
+    public readonly pdfFiles = signal<ProjectFile[]>([]);
     /** The project's DXF plans, for importing walls. */
     public readonly dxfFiles = signal<ProjectFile[]>([]);
     /** The walls and openings a DXF would make, drawn over the plan while the import is set up. */
@@ -168,6 +170,39 @@ export class EditorStore {
             this.underlayVisible.set(true);
         }
         return saved !== null;
+    }
+
+    /**
+     * Lays a page of a PDF under the floor: the server makes it into a PNG file of the project (it may take a few
+     * seconds), which becomes the underlay; the file is deleted again when the underlay is not saved. Resolves true when
+     * it was saved.
+     */
+    public async layPdfPage(fileId: number, page: number): Promise<boolean> {
+        const context = this.context;
+        if (context === null || this.busy()) {
+            return false;
+        }
+        this.busy.set(true);
+        let image: ProjectFile;
+        try {
+            image = await this.projects.pdfPageToImage(context.projectId(), fileId, page);
+        } catch {
+            // The error interceptor shows the toast.
+            return false;
+        } finally {
+            this.busy.set(false);
+        }
+        if (await this.saveUnderlay({fileId: image.id})) {
+            this.images.update((images) => [...images, image]);
+            return true;
+        }
+        // Not laid (a conflict, a refusal): the image made for it would only be left over among the files.
+        try {
+            await this.projects.deleteFile(context.projectId(), image.id);
+        } catch {
+            // The error interceptor shows the toast.
+        }
+        return false;
     }
 
     public async removeUnderlay(): Promise<void> {
@@ -415,6 +450,7 @@ export class EditorStore {
         try {
             const files = await this.projects.listFiles(context.projectId());
             this.images.set(files.filter((f) => ImageMimeTypes.includes(f.mimeType)));
+            this.pdfFiles.set(files.filter((f) => f.mimeType === PdfMimeType));
             this.dxfFiles.set(files.filter((f) => f.filename.toLowerCase().endsWith('.dxf')));
         } catch {
             // The error interceptor shows the toast.

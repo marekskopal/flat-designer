@@ -1078,7 +1078,13 @@ The current format is the text in `FurnitureTools::Format`.
 - Viewer: `buildUnderlay()` draws the image over the plan at its opacity (no depth test), only while `isTopDown()`.
   `UnderlayPanelComponent` (edit mode) picks the image and sets its placement. Calibrate… uses the measure tool without
   snapping (`EditorStore.calibration`, `ViewerEngine.setCalibrating()`), then `calibrateUnderlay()` applies the real
-  distance and an optional axis. Images only; PDF pages have to be uploaded as images.
+  distance and an optional axis. A PDF page is made into a PNG project file first (`Service/Project/Pdf`:
+  `PdfRasterizer` runs poppler's `pdfinfo` / `pdftoppm` from the backend image, at `dpi()`: 150 dpi, held to 6000 px
+  along the longer side and 28 megapixels; only the first `MaxPages` (500) pages; `PdfPageImageService`, REST
+  `GET …/files/{id}/pdf` (`pageCount` and the pages), `GET …/pdf/pages/{n}?size=` (a thumbnail, `pdftoppm -scale-to`
+  without `pdfinfo`) and `POST …/pdf/pages/{n}/image`), which becomes the underlay; the stored underlay stays an image.
+  That PNG is not held to the upload size limit, and the panel deletes it again when the underlay is not saved. The panel lists PDFs beside the images and shows `PdfPagePickerComponent` for one of several
+  pages (`EditorStore.layPdfPage()`).
 - DXF import (`Service/Dxf`, PHP only; REST `GET …/files/{id}/dxf` (layers), `POST …/floors/{id}/dxf-import/preview`
   and `…/dxf-import`, MCP `inspect_dxf` / `import_dxf` with `dryRun`): an ASCII DXF among the project files (DWG and
   binary DXF refused) becomes walls and openings as one `ChangeBatch`. `DxfReader` (`Read/`) flattens the model space
@@ -1095,7 +1101,8 @@ The current format is the text in `FurnitureTools::Format`.
   top view, no depth test). `backend/tests/fixtures/dxf/third-party/` holds public sample plans (their licences in its
   README) that `DxfPlannerTest` pins.
 - MCP `list_project_files` / `get_project_file` let an agent read uploaded plans and photos (and the upload tools,
-  see MCP server, add them). Images come back as image
+  see MCP server, add them). A PDF comes back as one `page` rendered as its underlay would be, so `set_floor_underlay`
+  with that PDF and `page` (which makes the PNG file and lays it) takes points read off it. Images come back as image
   content, optionally cropped, scaled to `maxSize` and overlaid with a labelled pixel `grid` (`ImagePreviewService`,
   which needs PHP gd).
 

@@ -32,6 +32,7 @@ use Izbik\Route\Routes;
 use Izbik\Service\Furniture\FurnitureSeeds;
 use Izbik\Service\Material\MaterialService;
 use Izbik\Service\Project\ImagePreviewService;
+use Izbik\Service\Project\Pdf\PdfPageImageService;
 use Izbik\Tests\Support\AppHarness;
 use Izbik\Tests\Support\Dxf;
 use Izbik\Tests\Support\Fixture;
@@ -39,6 +40,7 @@ use Izbik\Tests\Support\Glb;
 use Izbik\Tests\Support\IntegrationTestCase;
 use Izbik\Tests\Support\McpClient;
 use Izbik\Tests\Support\OAuthFlow;
+use Izbik\Tests\Support\Pdf;
 use MarekSkopal\ORM\Database\DatabaseInterface;
 use Migrations\SeedLightingCatalogueMigration;
 use PDO;
@@ -69,6 +71,7 @@ use const PHP_URL_PATH;
 #[CoversClass(UploadContent::class)]
 #[CoversClass(MaterialService::class)]
 #[CoversClass(FileTools::class)]
+#[CoversClass(PdfPageImageService::class)]
 #[CoversClass(UnderlayTools::class)]
 #[CoversClass(ImagePreviewService::class)]
 final class McpServerTest extends IntegrationTestCase
@@ -1222,6 +1225,95 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertCount(4, $floor['walls']);
 		$outline = $this->client->call('find_room_outline', $ids + ['x' => 2000, 'y' => 1500]);
 		self::assertSame(['polygon' => [[300, 300], [4300, 300], [4300, 3300], [300, 3300]]], $outline);
+	}
+
+	public function testReadsAPdfPageAndLaysItUnderTheFloor(): void
+	{
+		$uploaded = $this->upload(
+			str_replace('{projectId:number}', (string) $this->project->id, Routes::ProjectFiles->value),
+			'Plans.pdf',
+			Pdf::plans(),
+			$this->user,
+		);
+		$pdfId = $this->jsonBody($uploaded)['id'];
+		self::assertIsInt($pdfId);
+		$floorId = Fixture::firstFloor($this->project)->id;
+
+		// The second page, turned to landscape, at 150 dpi, scaled down to maxSize with a grid of its pixels.
+		$result = $this->client->request('tools/call', [
+			'name' => 'get_project_file',
+			'arguments' => ['projectId' => $this->project->id, 'fileId' => $pdfId, 'page' => 2, 'maxSize' => 800, 'grid' => 500],
+		]);
+		self::assertIsList($result['content']);
+		self::assertIsArray($result['content'][0]);
+		self::assertIsString($result['content'][0]['text']);
+		self::assertFalse($result['isError'] ?? false, $result['content'][0]['text']);
+		$info = json_decode($result['content'][0]['text'], true, 512, JSON_THROW_ON_ERROR);
+		self::assertIsArray($info);
+		self::assertSame([2, 2, 2482, 1755], [$info['page'], $info['pages'], $info['widthPx'], $info['heightPx']]);
+		self::assertIsArray($result['content'][1]);
+		self::assertSame('image/png', $result['content'][1]['mimeType']);
+
+		$isError = false;
+		$message = $this->client->call('get_project_file', ['projectId' => $this->project->id, 'fileId' => $pdfId, 'page' => 3], $isError);
+		self::assertTrue($isError);
+		self::assertSame('The PDF has no page 3; its pages are 1–2.', $message);
+		// Arguments that do not fit the page's image are refused (before it is rendered).
+		$message = $this->client->call(
+			'get_project_file',
+			['projectId' => $this->project->id, 'fileId' => $pdfId, 'cropX' => 3000, 'cropY' => 0, 'cropWidth' => 100, 'cropHeight' => 100],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertSame('The crop lies outside the image (1240 × 1755 px).', $message);
+		$message = $this->client->call(
+			'get_project_file',
+			['projectId' => $this->project->id, 'fileId' => $pdfId, 'maxSize' => 8000],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('maxSize', $message);
+
+		// A refused placement leaves no image behind.
+		$message = $this->client->call(
+			'set_floor_underlay',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'fileId' => $pdfId, 'page' => 2, 'scale' => 5000.0],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('Scale', $message);
+		$files = $this->client->call('list_project_files', ['projectId' => $this->project->id]);
+		self::assertIsList($files);
+		self::assertCount(1, $files);
+
+		// The page's pixels are those of the image laid: 1 m between two of them puts it to scale.
+		$underlay = $this->client->call('set_floor_underlay', [
+			'projectId' => $this->project->id,
+			'floorId' => $floorId,
+			'fileId' => $pdfId,
+			'page' => 2,
+			'points' => [[500, 1000, 0, 0], [1000, 1000, 1000, 0]],
+		]);
+		self::assertIsArray($underlay);
+		self::assertEquals([2482, 1755, 2.0], [$underlay['widthPx'], $underlay['heightPx'], $underlay['scale']]);
+		self::assertNotSame($pdfId, $underlay['fileId']);
+		// The image laid has no pages: another page is laid from the PDF.
+		$message = $this->client->call(
+			'set_floor_underlay',
+			['projectId' => $this->project->id, 'floorId' => $floorId, 'fileId' => $underlay['fileId'], 'page' => 1],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertIsString($message);
+		self::assertStringContainsString('is not a PDF', $message);
+		$files = $this->client->call('list_project_files', ['projectId' => $this->project->id]);
+		self::assertIsList($files);
+		self::assertEqualsCanonicalizing(
+			[['Plans.pdf', 'application/pdf'], ['Plans – page 2.png', 'image/png']],
+			array_map(static fn (mixed $file): array => is_array($file) ? [$file['filename'], $file['mimeType']] : [], $files),
+		);
 	}
 
 	public function testUploadsAndDeletesProjectFiles(): void

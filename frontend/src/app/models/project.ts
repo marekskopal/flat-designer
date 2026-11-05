@@ -93,6 +93,24 @@ export interface ProjectVersionDetail {
 /** Files the viewer can draw as an image: an underlay, or a picture of a `Custom` item. */
 export const ImageMimeTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
+/** A PDF, whose pages the server makes into images (an underlay). */
+export const PdfMimeType = 'application/pdf';
+
+/** A page of a PDF file: its size in points as shown, and the pixel size of the image made of it (null: an empty page). */
+export interface PdfPage {
+    page: number;
+    widthPt: number;
+    heightPt: number;
+    widthPx: number | null;
+    heightPx: number | null;
+}
+
+/** The pages of a PDF: its page count, and the first pages (up to the server's limit), which can be laid. */
+export interface PdfPages {
+    pageCount: number;
+    pages: PdfPage[];
+}
+
 export interface ProjectFile {
     id: number;
     filename: string;

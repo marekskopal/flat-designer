@@ -50,7 +50,7 @@ final readonly class UnderlayService
 			?? throw new ProjectException(sprintf('File %d is not a file of this project.', $input->fileId));
 		if (!in_array($file->mimeType, ProjectFileProvider::ImageMimeTypes, true)) {
 			throw new ProjectException(sprintf(
-				'File "%s" is %s; an underlay must be an image (PNG, JPEG, WebP or GIF).',
+				'File "%s" is %s; an underlay must be an image (PNG, JPEG, WebP or GIF); make a PDF page into one first.',
 				$file->filename,
 				$file->mimeType,
 			));

@@ -10,7 +10,8 @@ RUN install-php-extensions \
     zip \
     opcache
 
-RUN apk add --no-cache curl tzdata
+# poppler-utils: pdfinfo and pdftoppm turn PDF pages into images (PdfRasterizer); DejaVu for PDFs without embedded fonts.
+RUN apk add --no-cache curl tzdata poppler-utils font-dejavu
 
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 

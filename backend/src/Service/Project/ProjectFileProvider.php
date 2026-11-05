@@ -57,13 +57,14 @@ final readonly class ProjectFileProvider
 		return $this->projectFileRepository->findOneInProject($project->id, $fileId);
 	}
 
-	public function upload(?User $author, Project $project, string $filename, string $body): ProjectFile
+	/** `$checkSize` false: a file the app made itself (a PDF page's image), not held to the upload limit. */
+	public function upload(?User $author, Project $project, string $filename, string $body, bool $checkSize = true): ProjectFile
 	{
 		$size = strlen($body);
 		if ($size === 0) {
 			throw new ProjectException('The file is empty.');
 		}
-		if ($size > $this->s3Config->maxFileSizeBytes) {
+		if ($checkSize && $size > $this->s3Config->maxFileSizeBytes) {
 			throw new ProjectException(
 				sprintf('The file is larger than %d MB.', intdiv($this->s3Config->maxFileSizeBytes, 1024 * 1024)),
 				413,

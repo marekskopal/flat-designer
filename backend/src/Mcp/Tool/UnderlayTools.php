@@ -6,18 +6,27 @@ namespace Izbik\Mcp\Tool;
 
 use Izbik\Dto\UnderlayDto;
 use Izbik\Dto\UnderlayInputDto;
+use Izbik\Service\Project\Pdf\PdfPageImageService;
+use Izbik\Service\Project\ProjectFileProvider;
 use Izbik\Service\Project\UnderlayService;
 use Mcp\Capability\Attribute\McpTool;
+use RuntimeException;
+use Throwable;
 
 /** The plan image under a floor's top view, which the user traces over in the editor and an agent can calibrate. */
 final readonly class UnderlayTools
 {
-	public function __construct(private ToolContext $context, private UnderlayService $underlayService)
-	{
+	public function __construct(
+		private ToolContext $context,
+		private UnderlayService $underlayService,
+		private ProjectFileProvider $projectFileProvider,
+		private PdfPageImageService $pdfPages,
+	) {
 	}
 
 	/**
-	 * @param int $fileId an image file of the project (list_project_files)
+	 * @param int $fileId an image or PDF file of the project (list_project_files)
+	 * @param int|null $page the page of a PDF to lay (default 1); it becomes a new PNG file of the project
 	 * @param list<list<int|float>>|null $points calibration: two [px, py, x, y] lists, an image pixel (py counted down from the top) and the plan point in mm where it belongs; sets x, y, scale and rotation
 	 * @param int|null $x plan x (mm) of the image's top-left corner
 	 * @param int|null $y plan y (mm) of the image's top-left corner
@@ -31,7 +40,9 @@ final readonly class UnderlayTools
 			. 'and check walls against it. Calibrate it with two points whose image pixels and plan positions you know (e.g. '
 			. 'the ends of a dimensioned wall or of the scale bar, read with get_project_file and grid), or give x, y, scale '
 			. 'and rotation. Fields left out keep their value. Pixel (px, py) then lies at plan x = x + scale·(px·cos r + '
-			. 'py·sin r), y = y + scale·(px·sin r − py·cos r). Not an undoable change; it does not change the design.',
+			. 'py·sin r), y = y + scale·(px·sin r − py·cos r). A PDF page (fileId of a PDF, page) is first made into a PNG file '
+			. 'of the project, whose pixels are those get_project_file shows for that page; the result\'s fileId is that '
+			. 'PNG, so pass it, not the PDF, in later calls. Not an undoable change; it does not change the design.',
 	)]
 	public function setFloorUnderlay(
 		int $projectId,
@@ -43,9 +54,11 @@ final readonly class UnderlayTools
 		?float $scale = null,
 		?float $rotation = null,
 		?float $opacity = null,
+		?int $page = null,
 	): UnderlayDto {
+		$floor = $this->context->floor($projectId, $floorId);
 		// Validated like the REST body, so both paths agree; a [px, py, x, y] list becomes the body's object.
-		$input = UnderlayInputDto::fromArray([
+		$fields = [
 			'fileId' => $fileId,
 			'x' => $x,
 			'y' => $y,
@@ -53,9 +66,33 @@ final readonly class UnderlayTools
 			'rotation' => $rotation,
 			'opacity' => $opacity,
 			'points' => $points === null ? null : array_map(self::pointObject(...), $points),
-		]);
+		];
+		$input = UnderlayInputDto::fromArray($fields);
 
-		return UnderlayDto::fromEntity($this->underlayService->set($this->context->floor($projectId, $floorId), $input));
+		$file = $this->projectFileProvider->find($floor->project, $fileId);
+		if ($file === null || !PdfPageImageService::isPdf($file)) {
+			if ($page !== null && $file !== null) {
+				throw new RuntimeException(sprintf(
+					'File "%s" is not a PDF, so it has no pages; pass the PDF\'s fileId with page to lay another page.',
+					$file->filename,
+				));
+			}
+
+			return UnderlayDto::fromEntity($this->underlayService->set($floor, $input));
+		}
+
+		$image = $this->pdfPages->toImageFile($this->context->user(), $file, $page ?? 1);
+
+		try {
+			return UnderlayDto::fromEntity(
+				$this->underlayService->set($floor, UnderlayInputDto::fromArray(['fileId' => $image->id] + $fields)),
+			);
+		} catch (Throwable $e) {
+			// A refused placement leaves no stray image behind.
+			$this->projectFileProvider->delete($image);
+
+			throw $e;
+		}
 	}
 
 	/**

@@ -86,6 +86,9 @@ enum Routes: string
 	case ProjectFile = '/api/projects/{projectId:number}/files/{fileId:number}';
 	case ProjectFileContent = '/api/projects/{projectId:number}/files/{fileId:number}/content';
 	case ProjectFileDxf = '/api/projects/{projectId:number}/files/{fileId:number}/dxf';
+	case ProjectFilePdf = '/api/projects/{projectId:number}/files/{fileId:number}/pdf';
+	case ProjectFilePdfPage = '/api/projects/{projectId:number}/files/{fileId:number}/pdf/pages/{page:number}';
+	case ProjectFilePdfPageImage = '/api/projects/{projectId:number}/files/{fileId:number}/pdf/pages/{page:number}/image';
 	case ProjectViews = '/api/projects/{projectId:number}/views';
 	case ProjectView = '/api/projects/{projectId:number}/views/{viewId:number}';
 	case ProjectComments = '/api/projects/{projectId:number}/comments';

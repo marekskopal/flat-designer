@@ -7,6 +7,8 @@ namespace Izbik\Mcp\Tool;
 use Izbik\Dto\ProjectFileDto;
 use Izbik\Model\Entity\ProjectFile;
 use Izbik\Service\Project\ImagePreviewService;
+use Izbik\Service\Project\Pdf\PdfPage;
+use Izbik\Service\Project\Pdf\PdfPageImageService;
 use Izbik\Service\Project\ProjectFileProvider;
 use Izbik\Service\Upload\UploadTicketService;
 use Mcp\Capability\Attribute\McpTool;
@@ -22,6 +24,7 @@ final readonly class FileTools
 		private ToolContext $context,
 		private ProjectFileProvider $projectFileProvider,
 		private ImagePreviewService $imagePreview,
+		private PdfPageImageService $pdfPages,
 		private UploadTicketService $uploadTicketService,
 	) {
 	}
@@ -100,6 +103,7 @@ final readonly class FileTools
 	 * @param int|null $cropHeight height of the region, source pixels
 	 * @param int $maxSize the longer side of the returned image in pixels at most (64–4096); larger images are scaled down
 	 * @param int|null $grid draw a red grid every this many source pixels, labelled with source pixel coordinates
+	 * @param int $page the page of a PDF, from 1
 	 * @return list<TextContent|ImageContent>
 	 */
 	#[McpTool(
@@ -107,8 +111,9 @@ final readonly class FileTools
 		description: 'The content of a project file. An image comes back as an image plus a text line with its source size '
 			. '(widthPx × heightPx), the crop and the scale (returned pixels per source pixel). Zoom into a region with '
 			. 'cropX/cropY/cropWidth/cropHeight, and add grid to read exact source pixel positions off a plan (for '
-			. 'set_floor_underlay points or for tracing walls). Text files (txt, csv, json) come back as text; PDFs are not '
-			. 'supported yet.',
+			. 'set_floor_underlay points or for tracing walls). A PDF comes back as an image of one page (page, default 1; '
+			. 'the text line says how many pages it has), its source pixels being those of the image set_floor_underlay '
+			. 'with that page lays (150 dpi, less for a very large page). Text files (txt, csv, json) come back as text.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
 	public function getProjectFile(
@@ -120,15 +125,17 @@ final readonly class FileTools
 		?int $cropHeight = null,
 		int $maxSize = ImagePreviewService::DefaultMaxSize,
 		?int $grid = null,
+		int $page = 1,
 	): array {
 		$file = $this->findFile($projectId, $fileId);
 
 		if ($this->projectFileProvider->isText($file)) {
 			return [new TextContent($this->projectFileProvider->readText($file))];
 		}
-		if (!$this->projectFileProvider->isRasterImage($file)) {
+		$pdf = PdfPageImageService::isPdf($file);
+		if (!$pdf && !$this->projectFileProvider->isRasterImage($file)) {
 			throw new RuntimeException(sprintf(
-				'File "%s" is %s; only images and text files can be read. Upload a PDF page as an image.',
+				'File "%s" is %s; only images, PDFs and text files can be read.',
 				$file->filename,
 				$file->mimeType,
 			));
@@ -142,12 +149,27 @@ final readonly class FileTools
 			$crop = ['x' => $cropX, 'y' => $cropY, 'width' => $cropWidth, 'height' => $cropHeight];
 		}
 
-		$preview = $this->imagePreview->render($this->projectFileProvider->readContent($file), $file->mimeType, $crop, $maxSize, $grid);
+		$info = [];
+		if ($pdf) {
+			// The arguments are checked against the page's image size before the page is rasterised.
+			$rendered = $this->pdfPages->render(
+				$file,
+				$page,
+				static function (PdfPage $pdfPage, int $width, int $height) use ($crop, $maxSize, $grid): void {
+					ImagePreviewService::checkArguments($width, $height, $crop, $maxSize, $grid);
+				},
+			);
+			$preview = $this->imagePreview->render($rendered['png'], 'image/png', $crop, $maxSize, $grid);
+			$info = ['page' => $page, 'pages' => $rendered['pages']];
+		} else {
+			$preview = $this->imagePreview->render($this->projectFileProvider->readContent($file), $file->mimeType, $crop, $maxSize, $grid);
+		}
 
 		return [
 			new TextContent([
 				'fileId' => $file->id,
 				'filename' => $file->filename,
+				...$info,
 				'widthPx' => $preview['widthPx'],
 				'heightPx' => $preview['heightPx'],
 				'crop' => $preview['crop'],

@@ -4,6 +4,7 @@ import {TestBed} from '@angular/core/testing';
 import {EditResult} from '@app/models/editor';
 import {Scene} from '@app/models/scene';
 import {EditorApiService} from '@app/services/editor-api.service';
+import {ProjectService} from '@app/services/project.service';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {EditorStore} from './editor.store';
@@ -25,6 +26,7 @@ const change = {
 
 describe('EditorStore', () => {
     let api: Record<string, ReturnType<typeof vi.fn>>;
+    let projects: Record<string, ReturnType<typeof vi.fn>>;
     let reload: ReturnType<typeof vi.fn>;
     let setScene: ReturnType<typeof vi.fn>;
     let scene: Scene;
@@ -38,12 +40,21 @@ describe('EditorStore', () => {
             changes: vi.fn(async () => [change]),
             itemKinds: vi.fn(async () => []),
         };
+        projects = {
+            pdfPageToImage: vi.fn(async () => ({id: 12, filename: 'Plans – page 2.png', mimeType: 'image/png'})),
+            deleteFile: vi.fn(async () => undefined),
+        };
         reload = vi.fn();
         setScene = vi.fn();
         const floor = {id: 3, name: 'Ground', level: 0, elevation: 0, slabThickness: 300};
         scene = {floor, revision: 7, materials: [], rooms: [], walls: [], items: []};
         TestBed.configureTestingModule({
-            providers: [provideZonelessChangeDetection(), EditorStore, {provide: EditorApiService, useValue: api}],
+            providers: [
+                provideZonelessChangeDetection(),
+                EditorStore,
+                {provide: EditorApiService, useValue: api},
+                {provide: ProjectService, useValue: projects},
+            ],
         });
         store = TestBed.inject(EditorStore);
         store.connect({projectId: () => 1, floorId: () => 3, scene: () => scene, setScene, reload});
@@ -220,5 +231,42 @@ describe('EditorStore', () => {
         await store.enable(false);
 
         expect(store.tool()).toBe('select');
+    });
+
+    it('lays a PDF page as the PNG the server makes of it', async () => {
+        const underlay = {fileId: 12, widthPx: 2482, heightPx: 1755, x: 0, y: 17550, scale: 10, rotation: 0, opacity: 0.5};
+        api['setUnderlay'] = vi.fn(async () => ({underlay, revision: 8}));
+
+        expect(await store.layPdfPage(11, 2)).toBe(true);
+
+        expect(projects['pdfPageToImage']).toHaveBeenCalledWith(1, 11, 2);
+        expect(api['setUnderlay']).toHaveBeenCalledWith(1, 3, {fileId: 12}, 7);
+        expect(store.images().map((f) => f.id)).toEqual([12]);
+        expect(setScene).toHaveBeenCalledWith({...scene, underlay, revision: 8});
+        expect(store.busy()).toBe(false);
+    });
+
+    it('deletes the image made of a PDF page again when it could not be laid', async () => {
+        api['setUnderlay'] = vi.fn(async () => {
+            throw new HttpErrorResponse({status: 409});
+        });
+
+        expect(await store.layPdfPage(11, 2)).toBe(false);
+
+        expect(projects['deleteFile']).toHaveBeenCalledWith(1, 12);
+        expect(store.images()).toEqual([]);
+        expect(store.busy()).toBe(false);
+    });
+
+    it('lays nothing when the page could not be made into an image', async () => {
+        projects['pdfPageToImage'] = vi.fn(async () => {
+            throw new HttpErrorResponse({status: 422});
+        });
+        api['setUnderlay'] = vi.fn();
+
+        expect(await store.layPdfPage(11, 3)).toBe(false);
+
+        expect(api['setUnderlay']).not.toHaveBeenCalled();
+        expect(store.busy()).toBe(false);
     });
 });
