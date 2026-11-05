@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, input} from '@angular/core';
 import {Change} from '@app/models/editor';
 import {DateTextPipe} from '@app/shared/i18n/date-text.pipe';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /** One row of the list: a change, or a batch shown as its first change (which names the operation). */
 interface ActivityRow {
@@ -12,7 +13,7 @@ interface ActivityRow {
 /** Recent changes of the project: who (a person or an agent) changed what. */
 @Component({
     selector: 'fd-activity',
-    imports: [DateTextPipe],
+    imports: [DateTextPipe, TranslatePipe],
     template: `
         <ul class="activity">
             @for (row of rows(); track row.change.id) {
@@ -32,12 +33,12 @@ interface ActivityRow {
                         }
                         · {{ change.createdAt | dateText: 'time' }}
                         @if (change.undone) {
-                            · undone
+                            · {{ 'editor.activity.undone' | translate }}
                         }
                     </span>
                 </li>
             } @empty {
-                <li class="activity__empty">No changes yet.</li>
+                <li class="activity__empty">{{ 'editor.activity.empty' | translate }}</li>
             }
         </ul>
     `,

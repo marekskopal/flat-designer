@@ -1,20 +1,20 @@
-<h3 class="section-title">Walls from a DXF <span class="beta">beta</span></h3>
+<h3 class="section-title">{{ 'editor.dxf.title' | translate }} <span class="beta">{{ 'editor.dxf.beta' | translate }}</span></h3>
 
 <div class="row">
-    <select class="input input--compact row__grow" aria-label="DXF plan" [disabled]="loading() || editor.busy()" (change)="choose($event)">
-        <option value="" [selected]="fileId() === null">Pick a DXF plan…</option>
+    <select class="input input--compact row__grow" [attr.aria-label]="'editor.dxf.plan' | translate" [disabled]="loading() || editor.busy()" (change)="choose($event)">
+        <option value="" [selected]="fileId() === null">{{ 'editor.dxf.pick' | translate }}</option>
         @for (file of editor.dxfFiles(); track file.id) {
             <option [value]="file.id" [selected]="file.id === fileId()">{{ file.filename }}</option>
         }
     </select>
-    <label class="tool upload" [class.upload--disabled]="loading()" title="Upload an ASCII DXF to the project">
-        Upload…
+    <label class="tool upload" [class.upload--disabled]="loading()" [title]="'editor.dxf.uploadTitle' | translate">
+        {{ 'editor.dxf.upload' | translate }}
         <input type="file" accept=".dxf" hidden [disabled]="loading()" (change)="upload($event)" />
     </label>
 </div>
 
 @if (summary(); as s) {
-    <table class="layers" aria-label="DXF layers">
+    <table class="layers" [attr.aria-label]="'editor.dxf.layers' | translate">
         <tbody>
             @for (layer of layers(); track layer.name) {
                 <tr>
@@ -23,9 +23,9 @@
                         <span class="layers__counts">{{ layerCounts(layer) }}</span>
                     </td>
                     <td>
-                        <select class="input input--compact" [attr.aria-label]="'Role of layer ' + layer.name" (change)="setRole(layer, $event)">
-                            <option value="wall" [selected]="roles()[layer.name] === 'wall'">Walls</option>
-                            <option value="opening" [selected]="roles()[layer.name] === 'opening'">Doors &amp; windows</option>
+                        <select class="input input--compact" [attr.aria-label]="'editor.dxf.layerRole' | translate: {name: layer.name}" (change)="setRole(layer, $event)">
+                            <option value="wall" [selected]="roles()[layer.name] === 'wall'">{{ 'editor.dxf.roleWalls' | translate }}</option>
+                            <option value="opening" [selected]="roles()[layer.name] === 'opening'">{{ 'editor.dxf.roleOpenings' | translate }}</option>
                             <option value="ignore" [selected]="roles()[layer.name] === 'ignore'">–</option>
                         </select>
                     </td>
@@ -36,19 +36,19 @@
 
     <div class="fields">
         <label class="field">
-            Units
+            {{ 'editor.dxf.units' | translate }}
             <select class="input input--compact" (change)="setUnits($event)">
-                <option value="" [selected]="unitsCode() === null">{{ s.units === null ? 'not given (mm)' : 'as drawn' }}</option>
+                <option value="" [selected]="unitsCode() === null">{{ (s.units === null ? 'editor.dxf.unitsNotGiven' : 'editor.dxf.unitsAsDrawn') | translate }}</option>
                 @for (unit of units; track unit.code) {
                     <option [value]="unit.code" [selected]="unitsCode() === unit.code">{{ unit.label }}</option>
                 }
             </select>
         </label>
         <label class="field field--wide">
-            Place
+            {{ 'editor.dxf.place' | translate }}
             <select class="input input--compact" (change)="setAnchor($event)">
-                <option value="Walls" [selected]="anchor() === 'Walls'">walls' corner at the origin</option>
-                <option value="Drawing" [selected]="anchor() === 'Drawing'">drawing's origin at the origin</option>
+                <option value="Walls" [selected]="anchor() === 'Walls'">{{ 'editor.dxf.anchorWalls' | translate }}</option>
+                <option value="Drawing" [selected]="anchor() === 'Drawing'">{{ 'editor.dxf.anchorDrawing' | translate }}</option>
             </select>
         </label>
         <label class="field">
@@ -60,56 +60,56 @@
             <input class="input input--compact" type="number" step="10" [value]="offsetY()" (change)="setNumber('offsetY', $event)" />
         </label>
         <label class="field">
-            Turn (°)
+            {{ 'editor.underlay.turn' | translate }} (°)
             <input class="input input--compact" type="number" step="90" [value]="rotation()" (change)="setNumber('rotation', $event)" />
         </label>
     </div>
-    <div class="fields fields--two" aria-label="Heights">
+    <div class="fields fields--two" [attr.aria-label]="'editor.dxf.heights' | translate">
         <label class="field">
-            Wall height
+            {{ 'editor.dxf.wallHeight' | translate }}
             <input class="input input--compact" type="number" step="10" min="100" placeholder="2600" (change)="setHeight('wallHeight', $event)" />
         </label>
         <label class="field">
-            Door height
+            {{ 'editor.dxf.doorHeight' | translate }}
             <input class="input input--compact" type="number" step="10" min="100" placeholder="1970" (change)="setHeight('doorHeight', $event)" />
         </label>
         <label class="field">
-            Window sill
+            {{ 'editor.dxf.windowSill' | translate }}
             <input class="input input--compact" type="number" step="10" min="0" placeholder="900" (change)="setHeight('windowSill', $event)" />
         </label>
         <label class="field">
-            Window height
+            {{ 'editor.dxf.windowHeight' | translate }}
             <input class="input input--compact" type="number" step="10" min="100" placeholder="1200" (change)="setHeight('windowHeight', $event)" />
         </label>
     </div>
 
     @if (preview(); as p) {
         <p class="hint" aria-live="polite">
-            {{ p.walls.length }} wall(s){{ openingCounts() === '' ? '' : ', ' + openingCounts() }}. Shown in the plan view;
-            <span class="unpaired">red</span> lines made no wall.
+            {{ 'editor.dxf.walls' | plural: p.walls.length }}{{ openingCounts() === '' ? '' : ', ' + openingCounts() }}.
+            {{ 'editor.dxf.shownBefore' | translate }} <span class="unpaired">{{ 'editor.dxf.red' | translate }}</span>
+            {{ 'editor.dxf.shownAfter' | translate }}
         </p>
         @for (warning of p.warnings; track warning) {
             <p class="hint hint--warning">{{ warning }}</p>
         }
     } @else {
-        <p class="hint">Choose the layer with the walls: two parallel lines 50 to 700 mm apart make a wall.</p>
+        <p class="hint">{{ 'editor.dxf.chooseLayer' | translate }}</p>
     }
 
     @if (hasWalls()) {
         <label class="show">
             <input type="checkbox" [checked]="replaceExisting()" (change)="replaceExisting.set(!replaceExisting())" />
-            Replace the floor's walls
+            {{ 'editor.dxf.replace' | translate }}
         </label>
     }
     <div class="row">
         <button type="button" class="tool tool--primary row__grow" [disabled]="!upToDate() || (preview()?.walls?.length ?? 0) === 0 || editor.busy()" (click)="import()">
-            Import
+            {{ 'editor.dxf.import' | translate }}
         </button>
-        <button type="button" class="tool" (click)="cancel()">Cancel</button>
+        <button type="button" class="tool" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
     </div>
 } @else {
     <p class="hint">
-        Read the walls, doors and windows of a CAD plan saved as an ASCII DXF. All walls come in as interior walls; outline
-        the rooms afterwards with Room from walls.
+        {{ 'editor.dxf.intro' | translate }}
     </p>
 }

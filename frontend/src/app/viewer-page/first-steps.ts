@@ -3,6 +3,7 @@ import {OpeningType, Scene} from '@app/models/scene';
 /** A step of the first-steps guide, which the page starts when its button is pressed. */
 export type FirstStep = 'walls' | 'rooms' | 'door' | 'furniture' | 'walk';
 
+/** A step as the guide shows it; `title`, `text` and `action` are translation keys. */
 export interface StepView {
     key: FirstStep;
     title: string;
@@ -19,37 +20,37 @@ export const firstSteps = (scene: Scene, walked: boolean): StepView[] => {
     return [
         {
             key: 'walls',
-            title: 'Draw the walls',
-            text: 'Click the corners of the centre line in the plan; type 3200 for an exact length. Enter or Esc ends the run.',
-            action: 'Draw walls',
+            title: 'viewer.firstSteps.walls.title',
+            text: 'viewer.firstSteps.walls.text',
+            action: 'viewer.firstSteps.walls.action',
             done: scene.walls.length > 0,
         },
         {
             key: 'rooms',
-            title: 'Make the rooms',
-            text: 'Click inside the walls: the room follows their inner faces and shows its area.',
-            action: 'Room from walls',
+            title: 'viewer.firstSteps.rooms.title',
+            text: 'viewer.firstSteps.rooms.text',
+            action: 'viewer.firstSteps.rooms.action',
             done: scene.rooms.length > 0,
         },
         {
             key: 'door',
-            title: 'Put in a door',
-            text: 'Select a wall, then Add → Door (or a window). Drag it along the wall.',
-            action: 'Open Add',
+            title: 'viewer.firstSteps.door.title',
+            text: 'viewer.firstSteps.door.text',
+            action: 'viewer.firstSteps.openAdd',
             done: doors,
         },
         {
             key: 'furniture',
-            title: 'Furnish it',
-            text: 'Add → Furniture: kitchens, beds, sofas, lights. Drag to place, R turns.',
-            action: 'Open Add',
+            title: 'viewer.firstSteps.furniture.title',
+            text: 'viewer.firstSteps.furniture.text',
+            action: 'viewer.firstSteps.openAdd',
             done: scene.items.length > 0,
         },
         {
             key: 'walk',
-            title: 'Walk through',
-            text: 'W A S D walks, the mouse looks, E opens a door, Esc ends the walk.',
-            action: 'Walk',
+            title: 'viewer.firstSteps.walk.title',
+            text: 'viewer.firstSteps.walk.text',
+            action: 'viewer.firstSteps.walk.action',
             done: walked,
         },
     ];

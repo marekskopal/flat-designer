@@ -1,27 +1,27 @@
 @if (underlay(); as u) {
     <div class="row">
-        <select class="input input--compact row__grow" aria-label="Underlay image" [disabled]="locked()" (change)="choose($event)">
+        <select class="input input--compact row__grow" [attr.aria-label]="'editor.underlay.image' | translate" [disabled]="locked()" (change)="choose($event)">
             @for (file of imageFiles(); track file.id) {
                 <option [value]="file.id" [selected]="file.id === u.fileId">{{ file.filename }}</option>
             }
             @if (pdfFiles().length > 0) {
-                <optgroup label="PDF (pick a page)">
+                <optgroup [label]="'editor.underlay.pdfGroup' | translate">
                     @for (file of pdfFiles(); track file.id) {
                         <option [value]="pdfOption + file.id">{{ file.filename }}</option>
                     }
                 </optgroup>
             }
         </select>
-        <label class="show" title="Show the underlay in the plan view">
+        <label class="show" [title]="'editor.underlay.showTitle' | translate">
             <input type="checkbox" [checked]="editor.underlayVisible()" (change)="editor.underlayVisible.set(!editor.underlayVisible())" />
-            Show
+            {{ 'editor.underlay.show' | translate }}
         </label>
     </div>
     <ng-container *ngTemplateOutlet="pdf" />
 
     <label class="slider">
         <span class="slider__label">
-            Opacity <span class="slider__value">{{ u.opacity * 100 | number: '1.0-0' }} %</span>
+            {{ 'editor.underlay.opacity' | translate }} <span class="slider__value">{{ u.opacity * 100 | number: '1.0-0' }} %</span>
         </span>
         <input
             type="range"
@@ -30,12 +30,12 @@
             step="5"
             [value]="u.opacity * 100"
             [disabled]="editor.busy()"
-            aria-label="Underlay opacity"
+            [attr.aria-label]="'editor.underlay.opacityLabel' | translate"
             (change)="setNumber('opacity', $event)"
         />
     </label>
 
-    <div class="placement" aria-label="Underlay placement">
+    <div class="placement" [attr.aria-label]="'editor.underlay.placement' | translate">
         <label class="placement__field">
             x (mm)
             <input class="input input--compact" type="number" step="10" [value]="u.x" [disabled]="locked()" (change)="setNumber('x', $event)" />
@@ -45,7 +45,7 @@
             <input class="input input--compact" type="number" step="10" [value]="u.y" [disabled]="locked()" (change)="setNumber('y', $event)" />
         </label>
         <label class="placement__field">
-            Turn (°)
+            {{ 'editor.underlay.turn' | translate }} (°)
             <input
                 class="input input--compact"
                 type="number"
@@ -70,52 +70,52 @@
     </div>
 
     @if (points(); as p) {
-        <div class="calibration" role="group" aria-label="Calibration">
-            <p class="hint">Clicked {{ clickedDistance() | number: '1.0-0' }} mm apart. How far apart are they really?</p>
+        <div class="calibration" role="group" [attr.aria-label]="'editor.underlay.calibration' | translate">
+            <p class="hint">{{ 'editor.underlay.clickedApart' | translate: {distance: clickedDistance() | number: '1.0-0'} }}</p>
             <div class="row">
                 <input
                     class="input input--compact row__grow"
                     type="number"
                     min="1"
                     step="1"
-                    placeholder="Distance, mm"
-                    aria-label="Real distance in mm"
+                    [placeholder]="'editor.underlay.distancePlaceholder' | translate"
+                    [attr.aria-label]="'editor.underlay.distanceLabel' | translate"
                     (input)="setDistance($event)"
                     (keydown.enter)="applyCalibration()"
                 />
-                <select class="input input--compact" aria-label="Direction" (change)="setDirection($event)">
-                    <option value="keep">as clicked</option>
-                    <option value="horizontal">along x</option>
-                    <option value="vertical">along y</option>
+                <select class="input input--compact" [attr.aria-label]="'editor.underlay.direction' | translate" (change)="setDirection($event)">
+                    <option value="keep">{{ 'editor.underlay.asClicked' | translate }}</option>
+                    <option value="horizontal">{{ 'editor.underlay.alongX' | translate }}</option>
+                    <option value="vertical">{{ 'editor.underlay.alongY' | translate }}</option>
                 </select>
             </div>
             <div class="row">
-                <button type="button" class="tool tool--primary" [disabled]="distance() === null || editor.busy()" (click)="applyCalibration()">Apply</button>
-                <button type="button" class="tool" (click)="cancelCalibration()">Cancel</button>
+                <button type="button" class="tool tool--primary" [disabled]="distance() === null || editor.busy()" (click)="applyCalibration()">{{ 'editor.underlay.apply' | translate }}</button>
+                <button type="button" class="tool" (click)="cancelCalibration()">{{ 'common.cancel' | translate }}</button>
             </div>
         </div>
     } @else if (editor.calibration() === 'picking') {
         <div class="calibration">
-            <p class="hint">Click two points of a known distance on the plan image (a dimensioned wall, the scale bar).</p>
-            <button type="button" class="tool" (click)="cancelCalibration()">Cancel</button>
+            <p class="hint">{{ 'editor.underlay.pickPoints' | translate }}</p>
+            <button type="button" class="tool" (click)="cancelCalibration()">{{ 'common.cancel' | translate }}</button>
         </div>
     } @else {
         <div class="row">
-            <button type="button" class="tool row__grow" [disabled]="editor.busy()" title="Set the scale from two points of a known distance" (click)="startCalibration()">
-                Calibrate…
+            <button type="button" class="tool row__grow" [disabled]="editor.busy()" [title]="'editor.underlay.calibrateTitle' | translate" (click)="startCalibration()">
+                {{ 'editor.underlay.calibrate' | translate }}
             </button>
-            <button type="button" class="tool tool--danger" [disabled]="editor.busy()" (click)="remove()">Remove</button>
+            <button type="button" class="tool tool--danger" [disabled]="editor.busy()" (click)="remove()">{{ 'editor.underlay.remove' | translate }}</button>
         </div>
         <p class="hint">{{ scaleLabel(u) }} · {{ u.widthPx }} × {{ u.heightPx }} px</p>
     }
 } @else if (imageFiles().length > 0 || pdfFiles().length > 0) {
-    <select class="input input--compact underlay__pick" aria-label="Underlay image" [disabled]="locked()" (change)="choose($event)">
-        <option value="" selected disabled>Lay a plan under the floor…</option>
+    <select class="input input--compact underlay__pick" [attr.aria-label]="'editor.underlay.image' | translate" [disabled]="locked()" (change)="choose($event)">
+        <option value="" selected disabled>{{ 'editor.underlay.lay' | translate }}</option>
         @for (file of imageFiles(); track file.id) {
             <option [value]="file.id">{{ file.filename }}</option>
         }
         @if (pdfFiles().length > 0) {
-            <optgroup label="PDF (pick a page)">
+            <optgroup [label]="'editor.underlay.pdfGroup' | translate">
                 @for (file of pdfFiles(); track file.id) {
                     <option [value]="pdfOption + file.id">{{ file.filename }}</option>
                 }
@@ -123,16 +123,17 @@
         }
     </select>
     <ng-container *ngTemplateOutlet="pdf" />
-    <p class="hint">Trace walls over a scanned floor plan. Calibrate it after placing.</p>
+    <p class="hint">{{ 'editor.underlay.traceHint' | translate }}</p>
 } @else {
     <p class="hint">
-        Upload a floor plan (PDF, PNG, JPEG) under <a [routerLink]="['/projects', projectId()]">Files</a> to trace over it.
+        {{ 'editor.underlay.uploadBefore' | translate }} <a [routerLink]="['/projects', projectId()]">{{ 'editor.underlay.uploadFiles' | translate }}</a>
+        {{ 'editor.underlay.uploadAfter' | translate }}
     </p>
 }
 
 <ng-template #pdf>
     @if (readingPdf()) {
-        <p class="hint">Reading the PDF…</p>
+        <p class="hint">{{ 'editor.underlay.readingPdf' | translate }}</p>
     } @else if (pdfChoice(); as choice) {
         <fd-pdf-page-picker
             [projectId]="projectId()"
@@ -145,6 +146,6 @@
         />
     }
     @if (layingPage()) {
-        <p class="hint">Making the page into an image…</p>
+        <p class="hint">{{ 'editor.underlay.makingImage' | translate }}</p>
     }
 </ng-template>

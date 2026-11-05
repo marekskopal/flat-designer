@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, input, output, signal} from '@angular/core';
 import {SavedView} from '@app/models/saved-view';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /** Where a captured PNG goes: downloaded, or saved among the project's files. */
 export type CaptureTarget = 'download' | 'file';
@@ -11,7 +12,7 @@ export type CaptureTarget = 'download' | 'file';
  */
 @Component({
     selector: 'fd-saved-views',
-    imports: [IconComponent],
+    imports: [IconComponent, TranslatePipe],
     templateUrl: './saved-views.component.html',
     styleUrl: './saved-views.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,

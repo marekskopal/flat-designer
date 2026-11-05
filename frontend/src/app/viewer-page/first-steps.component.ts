@@ -2,6 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, input, output} from '@angu
 import {RouterLink} from '@angular/router';
 import {Scene} from '@app/models/scene';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {FirstStep, firstSteps, StepView} from './first-steps';
 
@@ -11,9 +12,9 @@ import {FirstStep, firstSteps, StepView} from './first-steps';
  */
 @Component({
     selector: 'fd-first-steps',
-    imports: [IconComponent, RouterLink],
+    imports: [IconComponent, RouterLink, TranslatePipe],
     template: `
-        <p class="intro">From an empty floor to a walk through it in five steps.</p>
+        <p class="intro">{{ 'viewer.firstSteps.intro' | translate }}</p>
         <ol class="steps">
             @for (step of steps(); track step.key; let i = $index) {
                 <li class="step" [class.step--done]="step.done">
@@ -25,11 +26,11 @@ import {FirstStep, firstSteps, StepView} from './first-steps';
                         }
                     </span>
                     <span class="step__body">
-                        <strong>{{ step.title }}</strong>
-                        <span class="step__text">{{ step.text }}</span>
+                        <strong>{{ step.title | translate }}</strong>
+                        <span class="step__text">{{ step.text | translate }}</span>
                         @if (!step.done || step.key === 'walk') {
                             <button type="button" class="btn btn--small step__action" (click)="start.emit(step.key)">
-                                {{ step.action }}
+                                {{ step.action | translate }}
                             </button>
                         }
                     </span>
@@ -37,8 +38,9 @@ import {FirstStep, firstSteps, StepView} from './first-steps';
             }
         </ol>
         <p class="note">
-            {{ doneCount() }} of {{ steps().length }} done. Press <kbd>?</kbd> for all shortcuts. Rather look around a finished one first?
-            <a routerLink="/projects">Start from an example</a> on the projects page.
+            {{ 'viewer.firstSteps.done' | translate: {done: doneCount(), total: steps().length} }}
+            {{ 'viewer.firstSteps.press' | translate }} <kbd>?</kbd> {{ 'viewer.firstSteps.forShortcuts' | translate }}
+            <a routerLink="/projects">{{ 'viewer.firstSteps.example' | translate }}</a> {{ 'viewer.firstSteps.onProjects' | translate }}
         </p>
     `,
     styles: `

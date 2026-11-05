@@ -1,7 +1,9 @@
-import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject,input, output, signal} from '@angular/core';
 import {DefinitionField, DefinitionParameter, FurnitureDefinitionBody} from '@app/models/furniture';
 import {ProjectFile} from '@app/models/project';
 import {Material} from '@app/models/scene';
+import {TranslateService} from '@ngx-translate/core';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {
     customParamsOf,
@@ -29,11 +31,13 @@ type ListParameter = Extract<DefinitionParameter, {type: 'list'}>;
  */
 @Component({
     selector: 'fd-custom-params',
+    imports: [TranslatePipe],
     templateUrl: './custom-params.component.html',
     styleUrl: './custom-params.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CustomParamsComponent {
+    private readonly translate = inject(TranslateService);
     public readonly definition = input.required<FurnitureDefinitionBody | null>();
     public readonly params = input.required<Params>();
     public readonly width = input.required<number>();
@@ -57,7 +61,7 @@ export class CustomParamsComponent {
     protected readonly problem = computed(() => {
         const definition = this.definition();
         return definition === null
-            ? 'The furniture definition is not available.'
+            ? (this.translate.instant('inspector.custom.unavailable') as string)
             : definitionError(definition, {width: this.width(), depth: this.depth(), height: this.height()}, this.params());
     });
     protected readonly inputError = signal<string | null>(null);
@@ -80,7 +84,13 @@ export class CustomParamsComponent {
     }
 
     protected materialName(code: string | undefined): string {
-        return this.materials().find((m) => m.code === code)?.name ?? code ?? 'item material';
+        return this.materials().find((m) => m.code === code)?.name ?? code ?? (this.translate.instant('inspector.custom.itemMaterial') as string);
+    }
+
+    /** What an empty slot takes: the first slot the item material before its default. */
+    protected slotDefault(code: string | undefined, first: boolean): string {
+        const name = this.materialName(code);
+        return first && code ? (this.translate.instant('inspector.custom.itemMaterialElse', {material: name}) as string) : name;
     }
 
     protected setInt(parameter: DefinitionParameter, event: Event): void {
@@ -91,7 +101,7 @@ export class CustomParamsComponent {
         }
         const number = parseWholeNumber(text);
         if (number === null) {
-            this.inputError.set(`${this.label(parameter)}: whole number expected.`);
+            this.inputError.set(this.translate.instant('inspector.custom.wholeNumber', {label: this.label(parameter)}) as string);
             return;
         }
         this.emit(withValue(this.params(), parameter.key, number));
@@ -140,7 +150,10 @@ export class CustomParamsComponent {
 
     /** What an empty input of the field means: its default, or "auto" for an optional one without (shared, e.g. a height). */
     protected placeholder(field: DefinitionField): string {
-        return field.default === undefined || field.default === null ? (field.optional === true ? 'auto' : '') : String(field.default);
+        if (field.default !== undefined && field.default !== null) {
+            return String(field.default);
+        }
+        return field.optional === true ? (this.translate.instant('inspector.custom.auto') as string) : '';
     }
 
     /** A field of one item; an empty input, or a checkbox at the field's default, drops the field (its default applies). */
@@ -157,7 +170,7 @@ export class CustomParamsComponent {
         } else if (field.type === 'int') {
             value = parseWholeNumber(text);
             if (value === null) {
-                this.inputError.set(`${this.fieldLabel(field)}: whole number expected.`);
+                this.inputError.set(this.translate.instant('inspector.custom.wholeNumber', {label: this.fieldLabel(field)}) as string);
                 // Back to what the item has, so the rejected text cannot stay on a row that moves.
                 target.value = String(items[index]?.[field.key] ?? '');
                 return;

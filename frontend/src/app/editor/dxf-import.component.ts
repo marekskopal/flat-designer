@@ -3,7 +3,10 @@ import {DxfImportInput, DxfLayer, DxfPlanInput, DxfSummary, DxfUnits} from '@app
 import {Scene} from '@app/models/scene';
 import {AlertService} from '@app/services/alert.service';
 import {EditorApiService} from '@app/services/editor-api.service';
+import {LanguageService} from '@app/services/language.service';
 import {ProjectService} from '@app/services/project.service';
+import {PluralPipe, pluralText} from '@app/shared/i18n/plural.pipe';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {EditorStore} from './editor.store';
 
@@ -20,11 +23,13 @@ const PreviewDelay = 300;
  */
 @Component({
     selector: 'fd-dxf-import',
+    imports: [PluralPipe, TranslatePipe],
     templateUrl: './dxf-import.component.html',
     styleUrl: './dxf-import.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DxfImportComponent implements OnDestroy {
+    private readonly translate = inject(TranslateService);
     public readonly scene = input.required<Scene>();
     public readonly projectId = input.required<number>();
 
@@ -59,7 +64,11 @@ export class DxfImportComponent implements OnDestroy {
         for (const opening of this.preview()?.openings ?? []) {
             counts.set(opening.type, (counts.get(opening.type) ?? 0) + 1);
         }
-        return [...counts.entries()].map(([type, count]) => `${count} ${OpeningLabels[type] ?? type.toLowerCase()}`).join(', ');
+        return [...counts.entries()]
+            .map(([type, count]) =>
+                OpeningTypes.includes(type) ? this.plural(`editor.dxf.openings.${type}`, count) : `${count} ${type.toLowerCase()}`,
+            )
+            .join(', ');
     });
     protected readonly hasWalls = computed(() => this.scene().walls.length > 0);
     /** What the preview is asked for: null until a file and a wall layer are chosen. */
@@ -85,6 +94,7 @@ export class DxfImportComponent implements OnDestroy {
     private readonly api = inject(EditorApiService);
     private readonly projects = inject(ProjectService);
     private readonly alerts = inject(AlertService);
+    private readonly language = inject(LanguageService);
     private previewTimer: ReturnType<typeof setTimeout> | null = null;
     /** Answers to earlier previews are dropped. */
     private previewRequest = 0;
@@ -174,7 +184,7 @@ export class DxfImportComponent implements OnDestroy {
         if (imported === null) {
             return;
         }
-        this.alerts.success(`Imported ${imported.walls} wall(s) and ${imported.openings} opening(s).`);
+        this.alerts.success(this.translate.instant('editor.dxf.imported', {walls: imported.walls, openings: imported.openings}));
         for (const warning of imported.warnings) {
             this.alerts.error(warning);
         }
@@ -191,12 +201,13 @@ export class DxfImportComponent implements OnDestroy {
     }
 
     protected layerCounts(layer: DxfLayer): string {
-        const parts = layer.hidden ? ['hidden', `${layer.lines} lines`] : [`${layer.lines} lines`];
+        const lines = this.plural('editor.dxf.lines', layer.lines);
+        const parts = layer.hidden ? [this.translate.instant('editor.dxf.hidden') as string, lines] : [lines];
         if (layer.arcs > 0) {
-            parts.push(`${layer.arcs} arcs`);
+            parts.push(this.plural('editor.dxf.arcs', layer.arcs));
         }
         if (layer.inserts > 0) {
-            parts.push(`${layer.inserts} blocks`);
+            parts.push(this.plural('editor.dxf.blocks', layer.inserts));
         }
         return parts.join(', ');
     }
@@ -250,6 +261,10 @@ export class DxfImportComponent implements OnDestroy {
         }
     }
 
+    private plural(key: string, count: number): string {
+        return pluralText(this.translate, this.language.current(), key, count);
+    }
+
     private clearTimer(): void {
         if (this.previewTimer !== null) {
             clearTimeout(this.previewTimer);
@@ -258,12 +273,8 @@ export class DxfImportComponent implements OnDestroy {
     }
 }
 
-const OpeningLabels: Record<string, string> = {
-    Door: 'door(s)',
-    DoubleDoor: 'double door(s)',
-    Window: 'window(s)',
-    Passage: 'passage(s)',
-};
+/** The opening types a DXF import makes, counted under `editor.dxf.openings.<type>`. */
+const OpeningTypes: readonly string[] = ['Door', 'DoubleDoor', 'Window', 'Passage'];
 
 function roleOf(layer: DxfLayer): DxfLayerRole {
     return layer.suggestedRole ?? 'ignore';

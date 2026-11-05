@@ -60,20 +60,23 @@
 } @else if (walking()) {
     <div class="walk-hint" role="status">
         @if (!walkLocked()) {
-            <strong class="walk-hint__prompt">Click the view to look around</strong>
+            <strong class="walk-hint__prompt">{{ 'viewer.walk.clickToLook' | translate }}</strong>
         }
         @if (walkScenes() !== null && walkPlace().floor; as floor) {
             <strong class="walk-hint__floor">{{ floor.name }}</strong>
         }
         @if (doorAim(); as aim) {
-            <strong class="walk-hint__prompt">{{ aim.open ? 'Close' : 'Open' }} with <kbd>E</kbd> or a click</strong>
+            <strong class="walk-hint__prompt">
+                {{ (aim.open ? 'viewer.walk.closeWith' : 'viewer.walk.openWith') | translate }} <kbd>E</kbd> {{ 'viewer.walk.orClick' | translate }}
+            </strong>
         }
         <span>
-            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · mouse looks around · <kbd>E</kbd> open/close ·
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> {{ 'viewer.walk.keyWalk' | translate }} · <kbd>Shift</kbd> {{ 'viewer.walk.keyRun' | translate }} ·
+            {{ 'viewer.walk.mouse' | translate }} · <kbd>E</kbd> {{ 'viewer.walk.keyOpenClose' | translate }} ·
             @if (walkPlace().up !== null || walkPlace().down !== null) {
-                <kbd>PgUp</kbd><kbd>PgDn</kbd> floor up/down ·
+                <kbd>PgUp</kbd><kbd>PgDn</kbd> {{ 'viewer.walk.keyFloors' | translate }} ·
             }
-            <kbd>Esc</kbd> back to 3D
+            <kbd>Esc</kbd> {{ 'viewer.walk.keyBack' | translate }}
         </span>
     </div>
     @if (walkLocked()) {
@@ -81,7 +84,7 @@
     }
 } @else {
     <!-- Left rail: the panels, one open at a time. -->
-    <nav class="rail" aria-label="Panels">
+    <nav class="rail" [attr.aria-label]="'viewer.rail.label' | translate">
         @for (item of railItems(); track item.key) {
             @if (item.key === 'activity') {
                 <span class="rail__separator"></span>
@@ -91,8 +94,8 @@
                 class="rail__button"
                 [class.rail__button--active]="panel() === item.key"
                 [attr.aria-pressed]="panel() === item.key"
-                [attr.aria-label]="item.label"
-                [attr.data-tip]="item.label"
+                [attr.aria-label]="item.label | translate"
+                [attr.data-tip]="item.label | translate"
                 (click)="togglePanel(item.key)"
             >
                 <fd-icon [name]="item.icon" />
@@ -108,8 +111,8 @@
                 class="rail__button"
                 [class.rail__button--active]="panel() === 'guide'"
                 [attr.aria-pressed]="panel() === 'guide'"
-                aria-label="First steps"
-                data-tip="First steps"
+                [attr.aria-label]="'viewer.rail.guide' | translate"
+                [attr.data-tip]="'viewer.rail.guide' | translate"
                 (click)="togglePanel('guide')"
             >
                 <fd-icon name="help" />
@@ -119,8 +122,8 @@
             type="button"
             class="rail__button"
             [class.rail__button--active]="panel() === 'keys'"
-            aria-label="Keyboard shortcuts"
-            data-tip="Keyboard shortcuts (?)"
+            [attr.aria-label]="'viewer.rail.keys' | translate"
+            [attr.data-tip]="'viewer.rail.keysTip' | translate"
             (click)="togglePanel('keys')"
         >
             <fd-icon name="keyboard" />
@@ -140,14 +143,14 @@
                     <fd-icon name="chevronDown" [size]="15" />
                 </button>
             } @else if (error()) {
-                <span class="crumb__floor crumb__floor--error" [title]="error()">Not available</span>
+                <span class="crumb__floor crumb__floor--error" [title]="error()">{{ 'viewer.top.notAvailable' | translate }}</span>
             } @else {
-                <span class="crumb__floor">Loading…</span>
+                <span class="crumb__floor">{{ 'common.loading' | translate }}</span>
             }
             @if (viewedVersion(); as v) {
-                <span class="crumb__version" [title]="v.version.note ?? ''">Version {{ v.version.number }} · read-only</span>
+                <span class="crumb__version" [title]="v.version.note ?? ''">{{ 'viewer.top.version' | translate: {number: v.version.number} }}</span>
                 @if (currentLink(); as link) {
-                    <a class="crumb__back" [routerLink]="link">Back to current</a>
+                    <a class="crumb__back" [routerLink]="link">{{ 'viewer.top.backToCurrent' | translate }}</a>
                 }
             }
             @if (menu() === 'floors') {
@@ -171,7 +174,7 @@
                     <span class="menu__separator"></span>
                     <a class="menu__row" role="menuitem" [routerLink]="['/projects', projectId()]">
                         <fd-icon name="folder" [size]="15" />
-                        <span class="menu__label">Project page, versions</span>
+                        <span class="menu__label">{{ 'viewer.top.projectPage' | translate }}</span>
                     </a>
                 </div>
             }
@@ -179,16 +182,16 @@
 
         <span class="bar__spacer"></span>
 
-        <div class="float segmented" role="group" aria-label="Camera view">
+        <div class="float segmented" role="group" [attr.aria-label]="'viewer.top.cameraView' | translate">
             @for (view of views; track view.mode) {
                 <button
                     type="button"
                     [class.active]="activeView() === view.mode"
-                    [attr.data-tip]="view.label + ' (' + view.key + ')'"
+                    [attr.data-tip]="(view.label | translate) + ' (' + view.key + ')'"
                     (click)="setView(view.mode)"
                 >
                     <fd-icon [name]="view.icon" [size]="16" />
-                    <span class="segmented__label">{{ view.label }}</span>
+                    <span class="segmented__label">{{ view.label | translate }}</span>
                 </button>
             }
         </div>
@@ -198,27 +201,33 @@
         @if (canEdit()) {
             <div class="float actions">
                 @if (editor.enabled()) {
-                    <span class="actions__editing"><span class="actions__dot"></span>Editing</span>
-                    <button type="button" class="icon-button" aria-label="Undo" data-tip="Undo (Ctrl+Z)" [disabled]="editor.busy()" (click)="editor.undo()">
+                    <span class="actions__editing"><span class="actions__dot"></span>{{ 'viewer.top.editing' | translate }}</span>
+                    <button type="button" class="icon-button" [attr.aria-label]="'viewer.top.undo' | translate"
+                        [attr.data-tip]="'viewer.top.undoTip' | translate"
+                        [disabled]="editor.busy()" (click)="editor.undo()">
                         <fd-icon name="undo" />
                     </button>
-                    <button type="button" class="icon-button actions__redo" aria-label="Redo" data-tip="Redo (Ctrl+Shift+Z)" [disabled]="editor.busy()" (click)="editor.redo()">
+                    <button type="button" class="icon-button actions__redo" [attr.aria-label]="'viewer.top.redo' | translate"
+                        [attr.data-tip]="'viewer.top.redoTip' | translate"
+                        [disabled]="editor.busy()" (click)="editor.redo()">
                         <fd-icon name="redo" />
                     </button>
                     <span class="separator"></span>
                 }
-                <button type="button" class="btn btn--ghost" aria-label="Share" data-tip="A link to this floor as shown" [disabled]="sharing() !== null" (click)="sharing.set('form')">
-                    <fd-icon name="share" [size]="16" /> <span class="actions__label">Share</span>
+                <button type="button" class="btn btn--ghost" [attr.aria-label]="'viewer.top.share' | translate"
+                    [attr.data-tip]="'viewer.top.shareTip' | translate"
+                    [disabled]="sharing() !== null" (click)="sharing.set('form')">
+                    <fd-icon name="share" [size]="16" /> <span class="actions__label">{{ 'viewer.top.share' | translate }}</span>
                 </button>
                 <button
                     type="button"
                     class="btn btn--primary"
-                    [attr.aria-label]="editor.enabled() ? 'Done' : 'Edit'"
-                    [attr.data-tip]="editor.enabled() ? 'Back to viewing (E)' : 'Edit this floor (E)'"
+                    [attr.aria-label]="(editor.enabled() ? 'viewer.top.done' : 'common.edit') | translate"
+                    [attr.data-tip]="(editor.enabled() ? 'viewer.top.doneTip' : 'viewer.top.editTip') | translate"
                     (click)="toggleEdit()"
                 >
                     <fd-icon [name]="editor.enabled() ? 'check' : 'pencil'" [size]="16" />
-                    <span class="actions__label">{{ editor.enabled() ? 'Done' : 'Edit' }}</span>
+                    <span class="actions__label">{{ (editor.enabled() ? 'viewer.top.done' : 'common.edit') | translate }}</span>
                 </button>
             </div>
         }
@@ -226,8 +235,8 @@
 
     <!-- Floors as levels, highest on top. -->
     @if (floors().length > 1) {
-        <div class="float levels" aria-label="Floors">
-            <span class="levels__caption">Floor</span>
+        <div class="float levels" [attr.aria-label]="'viewer.levels.label' | translate">
+            <span class="levels__caption">{{ 'viewer.levels.caption' | translate }}</span>
             @for (floor of floorsByLevel(); track floor.id) {
                 <a
                     class="levels__button"
@@ -247,8 +256,8 @@
                     class="levels__button"
                     [class.levels__button--on]="allFloors()"
                     [attr.aria-pressed]="allFloors()"
-                    aria-label="All floors below"
-                    data-tip="Show the floors below this one"
+                    [attr.aria-label]="'viewer.levels.allBelow' | translate"
+                    [attr.data-tip]="'viewer.levels.allBelowTip' | translate"
                     (click)="allFloors.set(!allFloors())"
                 >
                     <fd-icon name="layers" />
@@ -259,10 +268,10 @@
 
     <!-- The panel picked in the rail. -->
     @if (panel(); as open) {
-        <section class="float flyout" [attr.aria-label]="panelTitle()">
+        <section class="float flyout" [attr.aria-label]="panelTitle() | translate">
             <header class="flyout__head">
-                <h2 class="flyout__title">{{ panelTitle() }}</h2>
-                <button type="button" class="icon-button" aria-label="Close" (click)="panel.set(null)">
+                <h2 class="flyout__title">{{ panelTitle() | translate }}</h2>
+                <button type="button" class="icon-button" [attr.aria-label]="'common.close' | translate" (click)="panel.set(null)">
                     <fd-icon name="close" [size]="16" />
                 </button>
             </header>
@@ -279,19 +288,19 @@
                                     </button>
                                 </li>
                             } @empty {
-                                <li class="flyout__note">No rooms on this floor yet.</li>
+                                <li class="flyout__note">{{ 'viewer.rooms.empty' | translate }}</li>
                             }
                         </ul>
                         @if (rooms().length > 0) {
                             <dl class="totals">
-                                <dt>Indoor</dt>
+                                <dt>{{ 'viewer.rooms.indoor' | translate }}</dt>
                                 <dd>{{ indoorArea() | number: '1.1-1' }} m²</dd>
-                                <dt>Terrace</dt>
+                                <dt>{{ 'viewer.rooms.terrace' | translate }}</dt>
                                 <dd>{{ terraceArea() | number: '1.1-1' }} m²</dd>
-                                <dt>Garden</dt>
+                                <dt>{{ 'viewer.rooms.garden' | translate }}</dt>
                                 <dd>{{ gardenArea() | number: '1.1-1' }} m²</dd>
                                 @if (pavedArea() > 0) {
-                                    <dt>Paths & driveway</dt>
+                                    <dt>{{ 'viewer.rooms.paved' | translate }}</dt>
                                     <dd>{{ pavedArea() | number: '1.1-1' }} m²</dd>
                                 }
                             </dl>
@@ -374,21 +383,21 @@
                     <strong>{{ info.room.name }}</strong>
                     <span>{{ info.room.type }} · {{ roomCodeText(info.room.code) }}</span>
                 </span>
-                <button type="button" class="icon-button" aria-label="Deselect" (click)="editor.select(null)">
+                <button type="button" class="icon-button" [attr.aria-label]="'viewer.card.deselect' | translate" (click)="editor.select(null)">
                     <fd-icon name="close" [size]="16" />
                 </button>
             </header>
             <div class="facts">
                 <div>
-                    <small>Area</small>
+                    <small>{{ 'viewer.card.area' | translate }}</small>
                     <b>{{ info.room.area | number: '1.1-1' }} m²</b>
                 </div>
                 <div>
-                    <small>Height</small>
+                    <small>{{ 'viewer.card.height' | translate }}</small>
                     <b>{{ info.height === null ? '—' : (info.height / 1000 | number: '1.2-2') + ' m' }}</b>
                 </div>
                 <div>
-                    <small>Perimeter</small>
+                    <small>{{ 'viewer.card.perimeter' | translate }}</small>
                     <b>{{ info.perimeter / 1000 | number: '1.1-1' }} m</b>
                 </div>
             </div>
@@ -407,7 +416,7 @@
             }
             @if (canEdit()) {
                 <div class="room-card__foot">
-                    <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> Edit room</button>
+                    <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> {{ 'viewer.card.editRoom' | translate }}</button>
                 </div>
             }
         </aside>
@@ -419,7 +428,7 @@
                     <strong>{{ card.name }}</strong>
                     <span>{{ card.label }}</span>
                 </span>
-                <button type="button" class="icon-button" aria-label="Deselect" (click)="editor.select(null)">
+                <button type="button" class="icon-button" [attr.aria-label]="'viewer.card.deselect' | translate" (click)="editor.select(null)">
                     <fd-icon name="close" [size]="16" />
                 </button>
             </header>
@@ -437,15 +446,15 @@
                         <button
                             type="button"
                             class="btn btn--small"
-                            title="Or click a front of the selected item"
+                            [title]="'viewer.card.frontsTip' | translate"
                             [attr.aria-pressed]="cardFronts()"
                             (click)="toggleCardFronts(!cardFronts())"
                         >
-                            <fd-icon name="cabinet" [size]="15" /> {{ cardFronts() ? 'Close fronts' : 'Open fronts' }}
+                            <fd-icon name="cabinet" [size]="15" /> {{ (cardFronts() ? 'viewer.card.closeFronts' : 'viewer.card.openFronts') | translate }}
                         </button>
                     }
                     @if (canEdit()) {
-                        <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> Edit</button>
+                        <button type="button" class="btn btn--small" (click)="toggleEdit()"><fd-icon name="pencil" [size]="15" /> {{ 'common.edit' | translate }}</button>
                     }
                 </div>
             }
@@ -454,7 +463,7 @@
 
     <!-- Hint for the tool at hand. -->
     @if (statusHint(); as hint) {
-        <div class="status" [class.shifted]="inspectorOpen()" role="status">{{ hint }}</div>
+        <div class="status" [class.shifted]="inspectorOpen()" role="status">{{ hint | translate }}</div>
     }
 
     <!-- The readouts centre themselves in this strip over the dock (and the draw tool's options). -->
@@ -480,13 +489,13 @@
     }
 
     <!-- Bottom dock: the tools, the wall cut and the display options. -->
-    <div class="float dock" [class.shifted]="inspectorOpen()" role="toolbar" aria-label="Tools" data-menu>
+    <div class="float dock" [class.shifted]="inspectorOpen()" role="toolbar" [attr.aria-label]="'viewer.dock.label' | translate" data-menu>
         <button
             type="button"
             class="tool"
             [class.tool--active]="activeTool() === 'select'"
-            aria-label="Select"
-            [attr.data-tip]="editor.enabled() ? 'Select and move (V)' : 'Look around, click to select (V)'"
+            [attr.aria-label]="'viewer.dock.select' | translate"
+            [attr.data-tip]="(editor.enabled() ? 'viewer.dock.selectTipEdit' : 'viewer.dock.selectTipView') | translate"
             (click)="selectTool()"
         >
             <fd-icon name="pointer" />
@@ -499,8 +508,8 @@
                     class="tool"
                     [class.tool--active]="activeTool() === option.tool"
                     [attr.aria-pressed]="activeTool() === option.tool"
-                    [attr.aria-label]="option.label"
-                    [attr.data-tip]="option.label + ' (' + option.key + ')'"
+                    [attr.aria-label]="option.label | translate"
+                    [attr.data-tip]="(option.label | translate) + ' (' + option.key + ')'"
                     (click)="editor.setTool(editor.tool() === option.tool ? 'select' : option.tool)"
                 >
                     <fd-icon [name]="option.icon" />
@@ -514,8 +523,8 @@
             class="tool"
             [class.tool--active]="measuring()"
             [attr.aria-pressed]="measuring()"
-            aria-label="Measure"
-            data-tip="Measure in the plan (D)"
+            [attr.aria-label]="'viewer.dock.measure' | translate"
+            [attr.data-tip]="'viewer.dock.measureTip' | translate"
             (click)="toggleMeasuring()"
         >
             <fd-icon name="ruler" />
@@ -527,8 +536,8 @@
                 class="tool"
                 [class.tool--active]="commenting()"
                 [attr.aria-pressed]="commenting()"
-                aria-label="Comment"
-                data-tip="Pin a comment (C)"
+                [attr.aria-label]="'viewer.dock.comment' | translate"
+                [attr.data-tip]="'viewer.dock.commentTip' | translate"
                 (click)="pickCommentPoint(!commenting())"
             >
                 <fd-icon name="comment" />
@@ -538,18 +547,18 @@
         @if (editor.enabled()) {
             <span class="separator"></span>
             <button type="button" class="add" [class.add--open]="menu() === 'add'" [attr.aria-expanded]="menu() === 'add'" (click)="toggleMenu('add')">
-                <fd-icon name="plus" /> <span class="add__label">Add</span>
+                <fd-icon name="plus" /> <span class="add__label">{{ 'common.add' | translate }}</span>
             </button>
         }
         <span class="separator"></span>
-        <label class="cut" data-tip="Wall cut height">
+        <label class="cut" [attr.data-tip]="'viewer.dock.cut' | translate">
             <fd-icon name="cut" [size]="16" />
-            <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" aria-label="Wall cut height" />
+            <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" [attr.aria-label]="'viewer.dock.cut' | translate" />
             <b class="cut__value">
                 @if (sectionHeight(); as h) {
                     {{ h / 1000 | number: '1.2-2' }} m
                 } @else {
-                    off
+                    {{ 'viewer.dock.cutOff' | translate }}
                 }
             </b>
         </label>
@@ -558,8 +567,8 @@
             class="tool"
             [class.tool--active]="menu() === 'display'"
             [attr.aria-expanded]="menu() === 'display'"
-            aria-label="Display options"
-            data-tip="Display options"
+            [attr.aria-label]="'viewer.dock.display' | translate"
+            [attr.data-tip]="'viewer.dock.display' | translate"
             (click)="toggleMenu('display')"
         >
             <fd-icon name="eye" />
@@ -570,94 +579,94 @@
         }
 
         @if (menu() === 'display') {
-            <div class="float popover display" role="dialog" aria-label="Display options">
+            <div class="float popover display" role="dialog" [attr.aria-label]="'viewer.dock.display' | translate">
                 <section class="display__section">
-                    <h3 class="display__title">Show</h3>
+                    <h3 class="display__title">{{ 'viewer.display.show' | translate }}</h3>
                     <div class="toggles">
                         <button type="button" class="toggle" [class.toggle--on]="ceilingsVisible()" (click)="ceilingsVisible.set(!ceilingsVisible())">
-                            <fd-icon name="ceiling" /> Ceilings
+                            <fd-icon name="ceiling" /> {{ 'viewer.display.ceilings' | translate }}
                         </button>
                         <button type="button" class="toggle" [class.toggle--on]="roofsVisible()" (click)="roofsVisible.set(!roofsVisible())">
-                            <fd-icon name="roof" /> Roof
+                            <fd-icon name="roof" /> {{ 'viewer.display.roof' | translate }}
                         </button>
                         <button
                             type="button"
                             class="toggle"
-                            title="Doors and drawers of the cupboards open"
+                            [title]="'viewer.display.frontsTip' | translate"
                             [class.toggle--on]="frontsOpen()"
                             (click)="frontsOpen.set(!frontsOpen())"
                         >
-                            <fd-icon name="cabinet" /> Open fronts
+                            <fd-icon name="cabinet" /> {{ 'viewer.display.fronts' | translate }}
                         </button>
                         <button type="button" class="toggle" [class.toggle--on]="labelsVisible()" (click)="labelsVisible.set(!labelsVisible())">
-                            <fd-icon name="tag" /> Labels
+                            <fd-icon name="tag" /> {{ 'viewer.display.labels' | translate }}
                         </button>
                         <button
                             type="button"
                             class="toggle"
-                            title="Dimension lines, in the plan"
+                            [title]="'viewer.display.dimensionsTip' | translate"
                             [class.toggle--on]="dimensionsVisible()"
                             (click)="dimensionsVisible.set(!dimensionsVisible())"
                         >
-                            <fd-icon name="dimensions" /> Dimensions
+                            <fd-icon name="dimensions" /> {{ 'viewer.display.dimensions' | translate }}
                         </button>
                         @if (hasElectrical()) {
                             <button
                                 type="button"
                                 class="toggle"
-                                title="Lights, sockets and switches, in the plan"
+                                [title]="'viewer.display.electricalTip' | translate"
                                 [class.toggle--on]="electricalVisible()"
                                 (click)="electricalVisible.set(!electricalVisible())"
                             >
-                                <fd-icon name="plug" /> Electrical
+                                <fd-icon name="plug" /> {{ 'viewer.display.electrical' | translate }}
                             </button>
                         }
                         <button type="button" class="toggle" [class.toggle--on]="commentsVisible()" (click)="commentsVisible.set(!commentsVisible())">
-                            <fd-icon name="pin" /> Comments
+                            <fd-icon name="pin" /> {{ 'viewer.display.comments' | translate }}
                         </button>
                         @if (scene()?.underlay) {
                             <button type="button" class="toggle" [class.toggle--on]="editor.underlayVisible()" (click)="editor.underlayVisible.set(!editor.underlayVisible())">
-                                <fd-icon name="image" /> Underlay
+                                <fd-icon name="image" /> {{ 'viewer.display.underlay' | translate }}
                             </button>
                         }
                     </div>
                 </section>
                 @if (floorBelow(); as below) {
                     <section class="display__section">
-                        <h3 class="display__title">Floors</h3>
-                        <label class="line" title="Show the floors below this one under it; the floors above are left out">
-                            <span class="line__label"><fd-icon name="layers" [size]="16" /> All floors below</span>
+                        <h3 class="display__title">{{ 'viewer.display.floors' | translate }}</h3>
+                        <label class="line" [title]="'viewer.display.allBelowTip' | translate">
+                            <span class="line__label"><fd-icon name="layers" [size]="16" /> {{ 'viewer.display.allBelow' | translate }}</span>
                             <input type="checkbox" class="switch" [checked]="allFloors()" (change)="allFloors.set(!allFloors())" />
                         </label>
-                        <label class="line" title="Trace the walls and rooms of the floor below in the plan">
-                            <span class="line__label"><fd-icon name="plan" [size]="16" /> Trace {{ below.name }}</span>
+                        <label class="line" [title]="'viewer.display.traceTip' | translate">
+                            <span class="line__label"><fd-icon name="plan" [size]="16" /> {{ 'viewer.display.trace' | translate: {name: below.name} }}</span>
                             <input type="checkbox" class="switch" [checked]="floorBelowShown()" (change)="toggleFloorBelow()" />
                         </label>
                     </section>
                 }
                 <!-- The dock leaves its wall cut slider out on narrow screens. -->
                 <section class="display__section display__cut">
-                    <h3 class="display__title">Wall cut</h3>
+                    <h3 class="display__title">{{ 'viewer.display.wallCut' | translate }}</h3>
                     <label class="line">
-                        <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" aria-label="Wall cut height" />
+                        <input type="range" [min]="sectionMin" [max]="sectionMax" step="50" [value]="sectionSlider()" (input)="onSectionInput($event)" [attr.aria-label]="'viewer.dock.cut' | translate" />
                         <b class="cut__value">
                             @if (sectionHeight(); as h) {
                                 {{ h / 1000 | number: '1.2-2' }} m
                             } @else {
-                                off
+                                {{ 'viewer.dock.cutOff' | translate }}
                             }
                         </b>
                     </label>
                 </section>
                 <section class="display__section">
-                    <h3 class="display__title">Light</h3>
+                    <h3 class="display__title">{{ 'viewer.display.light' | translate }}</h3>
                     <div class="line">
-                        <span class="mini-segmented" role="group" aria-label="Time of day">
-                            <button type="button" [class.active]="!night()" (click)="setNight(false)"><fd-icon name="sun" [size]="15" /> Day</button>
-                            <button type="button" [class.active]="night()" (click)="setNight(true)"><fd-icon name="moon" [size]="15" /> Night</button>
+                        <span class="mini-segmented" role="group" [attr.aria-label]="'viewer.display.timeOfDay' | translate">
+                            <button type="button" [class.active]="!night()" (click)="setNight(false)"><fd-icon name="sun" [size]="15" /> {{ 'viewer.display.day' | translate }}</button>
+                            <button type="button" [class.active]="night()" (click)="setNight(true)"><fd-icon name="moon" [size]="15" /> {{ 'viewer.display.night' | translate }}</button>
                         </span>
                         <label class="line__label">
-                            <fd-icon name="bulb" [size]="16" /> Lamps
+                            <fd-icon name="bulb" [size]="16" /> {{ 'viewer.display.lamps' | translate }}
                             <input type="checkbox" class="switch" [checked]="lightsOn()" (change)="toggleLights()" />
                         </label>
                     </div>
@@ -666,12 +675,12 @@
                     }
                 </section>
                 <section class="display__section">
-                    <h3 class="display__title">Camera & quality</h3>
+                    <h3 class="display__title">{{ 'viewer.display.camera' | translate }}</h3>
                     @if (activeView() === 'overview') {
-                        <label class="line" title="The camera's lens: a shorter one shows more from the same place, as a wide-angle photo does">
-                            <span class="line__label">Lens</span>
-                            <select class="input line__select" aria-label="Camera lens" (change)="changeLens($event)">
-                                <option value="" [selected]="lens() === null">Standard</option>
+                        <label class="line" [title]="'viewer.display.lensTip' | translate">
+                            <span class="line__label">{{ 'viewer.display.lens' | translate }}</span>
+                            <select class="input line__select" [attr.aria-label]="'viewer.display.lensLabel' | translate" (change)="changeLens($event)">
+                                <option value="" [selected]="lens() === null">{{ 'viewer.display.lensStandard' | translate }}</option>
                                 @for (focalLength of lensChoices(); track focalLength) {
                                     <option [value]="focalLength" [selected]="lens() === focalLength">{{ focalLength }} mm</option>
                                 }
@@ -679,10 +688,10 @@
                         </label>
                     }
                     <div class="line">
-                        <span class="line__label"><fd-icon name="sparkle" [size]="16" /> Quality</span>
-                        <span class="mini-segmented" role="group" aria-label="Render quality">
-                            <button type="button" [class.active]="!presentation()" (click)="presentation.set(false)">Fast</button>
-                            <button type="button" [class.active]="presentation()" (click)="presentation.set(true)">Presentation</button>
+                        <span class="line__label"><fd-icon name="sparkle" [size]="16" /> {{ 'viewer.display.quality' | translate }}</span>
+                        <span class="mini-segmented" role="group" [attr.aria-label]="'viewer.display.qualityLabel' | translate">
+                            <button type="button" [class.active]="!presentation()" (click)="presentation.set(false)">{{ 'viewer.display.fast' | translate }}</button>
+                            <button type="button" [class.active]="presentation()" (click)="presentation.set(true)">{{ 'viewer.display.presentation' | translate }}</button>
                         </span>
                     </div>
                 </section>
@@ -691,22 +700,22 @@
     </div>
 
     @if (sharing() !== null) {
-        <section class="share-card" aria-label="Share link">
+        <section class="share-card" [attr.aria-label]="'viewer.share.label' | translate">
             @if (sharedLink(); as shared) {
-                <h2 class="share-card__title">Link “{{ shared.link.name }}” is ready</h2>
+                <h2 class="share-card__title">{{ 'viewer.share.ready' | translate: {name: shared.link.name} }}</h2>
                 <div class="share-card__url">
-                    <input class="input" type="text" readonly [value]="shared.url" aria-label="Share link" (focus)="$any($event.target).select()" />
-                    <button type="button" class="btn btn--primary" (click)="copyShareUrl(shared.url)">Copy</button>
+                    <input class="input" type="text" readonly [value]="shared.url" [attr.aria-label]="'viewer.share.label' | translate" (focus)="$any($event.target).select()" />
+                    <button type="button" class="btn btn--primary" (click)="copyShareUrl(shared.url)">{{ 'common.copy' | translate }}</button>
                 </div>
                 <p class="field__hint">
-                    Saved as version {{ shared.link.versionNumber }}. Manage the project's links on the
-                    <a [routerLink]="['/projects', projectId()]">project page</a>.
+                    {{ 'viewer.share.savedAs' | translate: {number: shared.link.versionNumber} }}
+                    <a [routerLink]="['/projects', projectId()]">{{ 'viewer.share.projectPage' | translate }}</a>.
                 </p>
                 <div class="form__actions">
-                    <button type="button" class="btn" (click)="sharing.set(null)">Close</button>
+                    <button type="button" class="btn" (click)="sharing.set(null)">{{ 'common.close' | translate }}</button>
                 </div>
             } @else if (shareSource(); as source) {
-                <h2 class="share-card__title">Share this floor</h2>
+                <h2 class="share-card__title">{{ 'viewer.share.title' | translate }}</h2>
                 <fd-share-link-form [projectId]="projectId()" [source]="source" (saved)="sharing.set($event)" (cancelled)="sharing.set(null)" />
             }
         </section>

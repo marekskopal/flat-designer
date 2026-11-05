@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {WallType} from '@app/models/scene';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {EditorStore} from './editor.store';
 
@@ -9,12 +10,12 @@ const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
 /** The Draw walls tool's options: type, thickness and height of the walls drawn next. */
 @Component({
     selector: 'fd-wall-draft',
-    imports: [IconComponent],
+    imports: [IconComponent, TranslatePipe],
     template: `
         @let draft = editor.wallDraft();
-        <span class="title"><fd-icon name="wall" [size]="16" /> New walls</span>
+        <span class="title"><fd-icon name="wall" [size]="16" /> {{ 'inspector.wallDraft.title' | translate }}</span>
         <label class="draft-field">
-            Type
+            {{ 'fields.type' | translate }}
             <select class="input" [value]="draft.type" (change)="set('type', $event)">
                 @for (type of wallTypes; track type) {
                     <option [value]="type">{{ type }}</option>
@@ -22,14 +23,14 @@ const WallTypes: WallType[] = ['Interior', 'Exterior', 'Shaft'];
             </select>
         </label>
         <label class="draft-field">
-            Thickness
+            {{ 'fields.thickness' | translate }}
             <span class="unit">
                 <input class="input" type="number" min="10" max="2000" step="10" [value]="draft.thickness" (change)="set('thickness', $event)" />
                 <span>mm</span>
             </span>
         </label>
         <label class="draft-field">
-            Height
+            {{ 'fields.height' | translate }}
             <span class="unit">
                 <input class="input" type="number" min="100" max="20000" step="10" [value]="draft.height" (change)="set('height', $event)" />
                 <span>mm</span>

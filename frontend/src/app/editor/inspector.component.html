@@ -6,7 +6,7 @@
     } @else {
         <details class="section" [open]="!section.folded">
             <summary class="section__title">
-                {{ section.title }}
+                {{ section.title | translate }}
                 <fd-icon class="section__chevron" name="chevronDown" [size]="16" />
             </summary>
             <div class="fields">
@@ -20,7 +20,7 @@
     @for (def of asFields(fields); track def.key + ':' + def.type) {
         <div class="field" [class.field--half]="def.half">
             <label class="field__label" [for]="'field-' + def.key">
-                {{ def.label }}
+                {{ def.text }}
                 @if (def.unit) {
                     <span class="field__unit">{{ def.unit }}</span>
                 }

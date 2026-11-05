@@ -5,16 +5,16 @@
                 class="input"
                 rows="3"
                 maxlength="2000"
-                placeholder="What should change here?"
-                aria-label="New comment"
+                [placeholder]="'comments.draftPlaceholder' | translate"
+                [attr.aria-label]="'comments.newComment' | translate"
                 [value]="draft()"
                 (input)="draft.set(value($event))"
                 (keydown.control.enter)="submitDraft($event)"
                 (keydown.meta.enter)="submitDraft($event)"
             ></textarea>
             <div class="row">
-                <button type="button" class="btn btn--ghost" (click)="pick.emit(false)">Cancel</button>
-                <button type="submit" class="btn btn--primary" [disabled]="busy() || draft().trim() === ''">Comment</button>
+                <button type="button" class="btn btn--ghost" (click)="pick.emit(false)">{{ 'common.cancel' | translate }}</button>
+                <button type="submit" class="btn btn--primary" [disabled]="busy() || draft().trim() === ''">{{ 'comments.submit' | translate }}</button>
             </div>
         </form>
     } @else {
@@ -23,10 +23,10 @@
             class="add"
             [class.add--on]="picking()"
             [attr.aria-pressed]="picking()"
-            title="Click a point in the view to pin a comment to it (C)"
+            [title]="'comments.addTitle' | translate"
             (click)="pick.emit(!picking())"
         >
-            {{ picking() ? 'Click a point in the view…' : 'Add comment' }} <kbd>C</kbd>
+            {{ (picking() ? 'comments.picking' : 'comments.add') | translate }} <kbd>C</kbd>
         </button>
     }
 }
@@ -45,10 +45,10 @@
                         <span class="meta">
                             {{ thread.comment.authorName }}
                             @if (thread.replies.length > 0) {
-                                · {{ thread.replies.length }} {{ thread.replies.length === 1 ? 'reply' : 'replies' }}
+                                · {{ 'comments.replies' | plural: thread.replies.length }}
                             }
                             @if (thread.comment.resolved) {
-                                · resolved
+                                · {{ 'comments.resolvedTag' | translate }}
                             }
                         </span>
                     </span>
@@ -61,7 +61,7 @@
                                 <div class="meta">
                                     <strong>{{ comment.authorName }}</strong>
                                     @if (comment.authorType !== 'User') {
-                                        <span class="tag">{{ comment.authorType === 'Agent' ? 'agent' : 'guest' }}</span>
+                                        <span class="tag">{{ (comment.authorType === 'Agent' ? 'comments.agent' : 'comments.guest') | translate }}</span>
                                     }
                                     · {{ comment.createdAt | dateText: 'dayTime' }}
                                 </div>
@@ -71,13 +71,13 @@
                                             class="input"
                                             rows="3"
                                             maxlength="2000"
-                                            aria-label="Comment"
+                                            [attr.aria-label]="'comments.comment' | translate"
                                             [value]="editing()?.body ?? ''"
                                             (input)="editing.set({id: comment.id, body: value($event)})"
                                         ></textarea>
                                         <div class="row">
-                                            <button type="button" class="btn btn--ghost" (click)="editing.set(null)">Cancel</button>
-                                            <button type="submit" class="btn btn--primary" [disabled]="busy()">Save</button>
+                                            <button type="button" class="btn btn--ghost" (click)="editing.set(null)">{{ 'common.cancel' | translate }}</button>
+                                            <button type="submit" class="btn btn--primary" [disabled]="busy()">{{ 'common.save' | translate }}</button>
                                         </div>
                                     </form>
                                 } @else {
@@ -86,11 +86,11 @@
                                         <div class="message__actions">
                                             @if (comment.canEdit) {
                                                 <button type="button" class="link" [disabled]="busy()" (click)="editing.set({id: comment.id, body: comment.body})">
-                                                    Edit
+                                                    {{ 'common.edit' | translate }}
                                                 </button>
                                             }
                                             @if (comment.canDelete) {
-                                                <button type="button" class="link link--danger" [disabled]="busy()" (click)="remove(comment)">Delete</button>
+                                                <button type="button" class="link link--danger" [disabled]="busy()" (click)="remove(comment)">{{ 'common.delete' | translate }}</button>
                                             }
                                         </div>
                                     }
@@ -104,15 +104,15 @@
                                 class="input"
                                 rows="2"
                                 maxlength="2000"
-                                placeholder="Reply"
-                                aria-label="Reply"
+                                [placeholder]="'comments.reply' | translate"
+                                [attr.aria-label]="'comments.reply' | translate"
                                 [value]="reply()"
                                 (input)="reply.set(value($event))"
                                 (keydown.control.enter)="submitReply($event, thread)"
                                 (keydown.meta.enter)="submitReply($event, thread)"
                             ></textarea>
                             <div class="row">
-                                <button type="submit" class="btn btn--ghost" [disabled]="busy() || reply().trim() === ''">Reply</button>
+                                <button type="submit" class="btn btn--ghost" [disabled]="busy() || reply().trim() === ''">{{ 'comments.reply' | translate }}</button>
                             </div>
                         </form>
                     }
@@ -123,7 +123,7 @@
                             [disabled]="busy()"
                             (click)="action.emit({kind: 'resolve', comment: thread.comment, resolved: !thread.comment.resolved})"
                         >
-                            {{ thread.comment.resolved ? 'Reopen' : 'Resolve' }}
+                            {{ (thread.comment.resolved ? 'comments.reopen' : 'comments.resolve') | translate }}
                         </button>
                     }
                 }
@@ -131,12 +131,12 @@
         }
     </ol>
 } @else if (!placing()) {
-    <p class="empty">{{ threads().length > 0 ? 'All comments are resolved.' : 'No comments on this floor.' }}</p>
+    <p class="empty">{{ (threads().length > 0 ? 'comments.allResolved' : 'comments.none') | translate }}</p>
 }
 
 @if (canResolve() && resolvedCount() > 0) {
     <label class="toggle">
         <input type="checkbox" [checked]="showResolved()" (change)="showResolved.set(!showResolved())" />
-        <span>Show resolved ({{ resolvedCount() }})</span>
+        <span>{{ 'comments.showResolved' | translate: {count: resolvedCount()} }}</span>
     </label>
 }

@@ -1,24 +1,30 @@
 import {NgTemplateOutlet} from '@angular/common';
-import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, LOCALE_ID, output, signal} from '@angular/core';
 import {FurnitureDefinition, FurnitureDefinitionBody} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
 import {ProjectFile} from '@app/models/project';
 import {Group, Material, Room, SceneDefinition, SceneModel, SpotHeight} from '@app/models/scene';
 import {IconComponent} from '@app/shared/icon/icon.component';
 import {ElementKind} from '@app/viewer/engine/selection';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {CustomParamsComponent} from './custom-params.component';
-import {ElementFields, FieldDef, formatFieldValue, isChanged, parseFieldValue} from './element-fields';
+import {ElementFields, FieldDef, FieldText, formatFieldValue, isChanged, parseFieldValue, translateFieldText} from './element-fields';
 import {FinishBandsComponent} from './finish-bands.component';
 import {MaterialPickerComponent} from './material-picker.component';
 import {PointsComponent} from './points.component';
 import {SpotHeightsComponent} from './spot-heights.component';
 
-/** A titled group of the inspector's fields (untitled: an element with one group). */
+/** A field as shown: its label for the element at hand, translated. */
+interface ShownField extends FieldDef {
+    text: string;
+}
+
+/** A titled group of the inspector's fields (untitled: an element with one group); the title is a translation key. */
 interface FieldSection {
     title: string | null;
     folded: boolean;
-    fields: FieldDef[];
+    fields: ShownField[];
 }
 
 export interface FieldChange {
@@ -40,12 +46,16 @@ export interface FieldChange {
         MaterialPickerComponent,
         FinishBandsComponent,
         PointsComponent,
+        TranslatePipe,
     ],
     templateUrl: './inspector.component.html',
     styleUrl: './inspector.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InspectorComponent {
+    private readonly translate = inject(TranslateService);
+    private readonly locale = inject(LOCALE_ID);
+
     public readonly kind = input.required<ElementKind>();
     public readonly element = input.required<Record<string, unknown>>();
     public readonly materials = input<Material[]>([]);
@@ -79,7 +89,7 @@ export class InspectorComponent {
                 sections.push({title: def.section ?? null, folded: def.folded ?? false, fields: []});
             }
             if (def.when?.(element) ?? true) {
-                sections[sections.length - 1].fields.push(def.labelOf === undefined ? def : {...def, label: def.labelOf(element)});
+                sections[sections.length - 1].fields.push({...def, text: this.text(this.labelText(def))});
             }
         }
         return sections.filter((section) => section.fields.length > 0);
@@ -96,7 +106,7 @@ export class InspectorComponent {
             return choices;
         }
         const own = this.sceneDefinitions().find((d) => d.id === id);
-        return [own !== undefined ? {id: own.id, name: `${own.name} (not offered)`} : {id: '', name: '— none —'}, ...choices];
+        return [this.ownChoice(own), ...choices];
     });
     /** The models to pick from, with the item's own first when it is not among them (deleted, another library). */
     protected readonly modelChoices = computed((): {id: number | ''; name: string}[] => {
@@ -106,7 +116,7 @@ export class InspectorComponent {
             return choices;
         }
         const own = this.sceneModels().find((m) => m.id === id);
-        return [own !== undefined ? {id: own.id, name: `${own.name} (not offered)`} : {id: '', name: '— none —'}, ...choices];
+        return [this.ownChoice(own), ...choices];
     });
     /** The body of the item's furniture definition. */
     protected readonly definitionBody = computed((): FurnitureDefinitionBody | null => {
@@ -115,8 +125,8 @@ export class InspectorComponent {
     });
 
     /** The template context's fields, typed. */
-    protected asFields(fields: unknown): FieldDef[] {
-        return fields as FieldDef[];
+    protected asFields(fields: unknown): ShownField[] {
+        return fields as ShownField[];
     }
 
     /** A material field's id, null for none. */
@@ -130,7 +140,8 @@ export class InspectorComponent {
     }
 
     protected hint(def: FieldDef): string | null {
-        return def.hint?.(this.element()) ?? null;
+        const hint = def.hint?.(this.element()) ?? null;
+        return hint === null ? null : this.text(hint);
     }
 
     /** The element's size (mm), which the definition's form evaluates at. */
@@ -160,9 +171,10 @@ export class InspectorComponent {
     protected commit(def: FieldDef, event: Event): void {
         const target = event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
         const raw = target instanceof HTMLInputElement && target.type === 'checkbox' ? String(target.checked) : target.value;
-        const parsed = parseFieldValue(def, raw);
+        const parsed = parseFieldValue(def, raw, this.labelText(def));
         if (!parsed.ok) {
-            this.errors.update((all) => ({...all, [def.key]: parsed.error}));
+            const error = this.text(parsed.error);
+            this.errors.update((all) => ({...all, [def.key]: error}));
             return;
         }
         this.errors.update((all) => {
@@ -170,5 +182,21 @@ export class InspectorComponent {
             return rest;
         });
         this.commitValue(def, parsed.value);
+    }
+
+    /** The label for the element at hand. */
+    private labelText(def: FieldDef): FieldText {
+        return def.labelOf?.(this.element()) ?? {key: def.label};
+    }
+
+    private text(text: FieldText): string {
+        return translateFieldText(this.translate, this.locale, text);
+    }
+
+    /** The item's own definition or model while it is not offered, or a "none" entry when it has lost it. */
+    private ownChoice(own: {id: number; name: string} | undefined): {id: number | ''; name: string} {
+        return own !== undefined
+            ? {id: own.id, name: this.translate.instant('inspector.notOffered', {name: own.name}) as string}
+            : {id: '', name: this.translate.instant('inspector.none') as string};
     }
 }

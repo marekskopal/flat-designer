@@ -27,7 +27,7 @@ import {DrawHudComponent} from '@app/editor/draw-hud.component';
 import {DxfImportComponent} from '@app/editor/dxf-import.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
-import {elementFacts, findElement, KindIcons, KindLabels} from '@app/editor/element-kinds';
+import {elementFacts, findElement, KindIcons, KindLabelKeys} from '@app/editor/element-kinds';
 import {UnderlayPanelComponent} from '@app/editor/underlay-panel.component';
 import {VariantsComponent} from '@app/editor/variants.component';
 import {WallDraftComponent} from '@app/editor/wall-draft.component';
@@ -64,6 +64,7 @@ import {MeasureHudComponent} from '@app/viewer/measure-hud.component';
 import {SunTimeComponent} from '@app/viewer/sun-time.component';
 import {SelectEvent, ViewerComponent} from '@app/viewer/viewer.component';
 import {WalkPadComponent} from '@app/viewer/walk-pad.component';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {switchMap} from 'rxjs';
 
 import {FirstStep} from './first-steps';
@@ -82,32 +83,34 @@ type ViewMode = ViewPreset | 'walkthrough';
 
 interface ViewOption {
     mode: ViewMode;
+    /** A translation key. */
     label: string;
     icon: IconName;
     /** Its keyboard shortcut. */
     key: string;
 }
 
-/** The drawing tools of the dock (edit mode), with their shortcuts. */
+/** The drawing tools of the dock (edit mode), with their shortcuts; the labels are translation keys. */
 const DrawTools: {tool: EditorTool; label: string; icon: IconName; key: string}[] = [
-    {tool: 'drawWalls', label: 'Draw walls', icon: 'wall', key: 'W'},
-    {tool: 'detectRoom', label: 'Room from walls', icon: 'roomFromWalls', key: 'M'},
-    {tool: 'drawRailing', label: 'Draw railing', icon: 'railing', key: 'B'},
+    {tool: 'drawWalls', label: 'viewer.dock.drawWalls', icon: 'wall', key: 'W'},
+    {tool: 'detectRoom', label: 'viewer.dock.detectRoom', icon: 'roomFromWalls', key: 'M'},
+    {tool: 'drawRailing', label: 'viewer.dock.drawRailing', icon: 'railing', key: 'B'},
 ];
 
 /** The panels of the left rail; one is open at a time. */
 type PanelKey = 'rooms' | 'views' | 'variants' | 'comments' | 'export' | 'activity' | 'underlay' | 'guide' | 'keys';
 
+/** The panels' titles (translation keys). */
 const PanelTitles: Record<PanelKey, string> = {
-    rooms: 'Rooms',
-    views: 'Saved views',
-    variants: 'Variants',
-    comments: 'Comments',
-    export: 'Export',
-    activity: 'Activity',
-    underlay: 'Plan underlay',
-    guide: 'First steps',
-    keys: 'Keyboard shortcuts',
+    rooms: 'viewer.panel.rooms',
+    views: 'viewer.panel.views',
+    variants: 'viewer.panel.variants',
+    comments: 'viewer.panel.comments',
+    export: 'viewer.panel.export',
+    activity: 'viewer.panel.activity',
+    underlay: 'viewer.panel.underlay',
+    guide: 'viewer.panel.guide',
+    keys: 'viewer.panel.keys',
 };
 
 /** The projects whose empty floor has shown the first-steps guide by itself (localStorage), so it does so once. */
@@ -116,12 +119,12 @@ const GuideShownKey = 'izbik.firstStepsShown';
 /** The popovers of the top bar and the dock; one is open at a time. */
 type MenuKey = 'floors' | 'display' | 'add';
 
-/** What the status line says the tool at hand does. */
+/** What the status line says the tool at hand does (translation keys). */
 const ToolHints: Record<EditorTool, string> = {
-    select: 'Click to select · Shift+click picks items to group · drag to move, Shift without snapping',
-    drawWalls: 'Click the centre-line points · type a length (3200) or with an angle (3200<90) · A curves · Enter or Esc ends',
-    detectRoom: 'Click inside walls to add the room they enclose',
-    drawRailing: 'Click the railing’s points · double-click ends it · a click on its start closes it',
+    select: 'viewer.hints.select',
+    drawWalls: 'viewer.hints.drawWalls',
+    detectRoom: 'viewer.hints.detectRoom',
+    drawRailing: 'viewer.hints.drawRailing',
 };
 
 /** An image file decoded for use as a texture. */
@@ -156,6 +159,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         ActivityComponent,
         FirstStepsComponent,
         ShortcutsComponent,
+        TranslatePipe,
     ],
     providers: [EditorStore],
     templateUrl: './viewer-page.component.html',
@@ -184,9 +188,9 @@ export class ViewerPageComponent {
     protected readonly levelText = levelText;
     protected readonly drawTools = DrawTools;
     protected readonly views: ViewOption[] = [
-        {mode: 'overview', label: '3D', icon: 'cube', key: '1'},
-        {mode: 'top', label: 'Plan', icon: 'plan', key: '2'},
-        {mode: 'walkthrough', label: 'Walk', icon: 'walk', key: '3'},
+        {mode: 'overview', label: 'viewer.top.view3d', icon: 'cube', key: '1'},
+        {mode: 'top', label: 'viewer.top.viewPlan', icon: 'plan', key: '2'},
+        {mode: 'walkthrough', label: 'viewer.top.viewWalk', icon: 'walk', key: '3'},
     ];
     /** The rail's panel shown beside it. */
     protected readonly panel = signal<PanelKey | null>(null);
@@ -206,6 +210,7 @@ export class ViewerPageComponent {
     private readonly projects = inject(ProjectService);
     private readonly currentUser = inject(CurrentUserService);
     private readonly alerts = inject(AlertService);
+    private readonly translate = inject(TranslateService);
 
     /** Kept while another floor loads, so the switch does not flash an empty view. */
     private readonly data = resource({
@@ -379,7 +384,7 @@ export class ViewerPageComponent {
         if (error === undefined) {
             return null;
         }
-        return error instanceof HttpErrorResponse ? errorMessage(error) : 'Could not load the floor.';
+        return error instanceof HttpErrorResponse ? errorMessage(error) : this.translate.instant('viewer.toasts.loadFailed');
     });
     protected readonly activeView = signal<ViewMode>('overview');
     /** First-person walk in progress: the panel steps aside for the full view. */
@@ -501,23 +506,26 @@ export class ViewerPageComponent {
     protected readonly gardenArea = computed(() => this.areaOf((type) => type === 'Garden'));
     protected readonly pavedArea = computed(() => this.areaOf((type) => type === 'Path' || type === 'Driveway'));
 
-    /** The rail's buttons: the panels this page offers now (variants only with some, comments on the working copy, the editor's while editing). */
+    /**
+     * The rail's buttons (labels are translation keys): the panels this page offers now (variants only with some, comments on the
+     * working copy, the editor's while editing).
+     */
     protected readonly railItems = computed((): {key: PanelKey; label: string; icon: IconName; badge: number}[] => {
         const items: {key: PanelKey; label: string; icon: IconName; badge: number}[] = [
-            {key: 'rooms', label: 'Rooms & areas', icon: 'rooms', badge: 0},
-            {key: 'views', label: 'Saved views & capture', icon: 'camera', badge: 0},
+            {key: 'rooms', label: 'viewer.rail.rooms', icon: 'rooms', badge: 0},
+            {key: 'views', label: 'viewer.rail.views', icon: 'camera', badge: 0},
         ];
         if (this.hasVariants()) {
-            items.push({key: 'variants', label: 'Variants', icon: 'variants', badge: 0});
+            items.push({key: 'variants', label: 'viewer.rail.variants', icon: 'variants', badge: 0});
         }
         if (this.scene() !== null && this.version() === null) {
             const open = this.comments().filter((c) => c.parentId === null && !c.resolved).length;
-            items.push({key: 'comments', label: 'Comments', icon: 'comment', badge: open});
+            items.push({key: 'comments', label: 'viewer.rail.comments', icon: 'comment', badge: open});
         }
-        items.push({key: 'export', label: 'Export drawings & 3D', icon: 'download', badge: 0});
+        items.push({key: 'export', label: 'viewer.rail.export', icon: 'download', badge: 0});
         if (this.editor.enabled()) {
-            items.push({key: 'activity', label: 'Activity', icon: 'history', badge: 0});
-            items.push({key: 'underlay', label: 'Plan underlay', icon: 'image', badge: 0});
+            items.push({key: 'activity', label: 'viewer.rail.activity', icon: 'history', badge: 0});
+            items.push({key: 'underlay', label: 'viewer.rail.underlay', icon: 'image', badge: 0});
         }
         return items;
     });
@@ -551,9 +559,9 @@ export class ViewerPageComponent {
         if (element === null) {
             return null;
         }
-        const label = KindLabels[selection.kind];
+        const label = this.translate.instant(KindLabelKeys[selection.kind]);
         const name = typeof element['name'] === 'string' && element['name'] !== '' ? element['name'] : label;
-        return {label, name, icon: KindIcons[selection.kind], facts: elementFacts(scene, selection.kind, element)};
+        return {label, name, icon: KindIcons[selection.kind], facts: elementFacts(scene, selection.kind, element, this.translate)};
     });
     /** The items on the card: the selected item, or the selected group's. */
     private readonly cardItemIds = computed((): number[] => {
@@ -588,16 +596,16 @@ export class ViewerPageComponent {
         const finishes: {label: string; name: string; color: string}[] = [];
         const floor = material(room.floorMaterialId);
         if (floor !== null) {
-            finishes.push({label: 'Floor', ...floor});
+            finishes.push({label: this.translate.instant('viewer.card.floor'), ...floor});
         }
         const ceiling = material(room.ceilingMaterialId);
         if (ceiling !== null) {
-            finishes.push({label: 'Ceiling', ...ceiling});
+            finishes.push({label: this.translate.instant('viewer.card.ceiling'), ...ceiling});
         }
         for (const band of room.wallFinishes) {
             const wall = material(band.materialId);
             if (wall !== null) {
-                finishes.push({label: `Walls ${band.bottom}–${band.top} mm`, ...wall});
+                finishes.push({label: this.translate.instant('viewer.card.walls', {bottom: band.bottom, top: band.top}), ...wall});
             }
         }
         const perimeter = room.polygon.reduce((sum, [x, y], i) => {
@@ -606,21 +614,21 @@ export class ViewerPageComponent {
         }, 0);
         return {room, height: room.ceilingHeight, perimeter, finishes};
     });
-    /** The status line: what the tool at hand does (nothing while a HUD or the tool's options say it). */
+    /** The status line, a translation key: what the tool at hand does (nothing while a HUD or the tool's options say it). */
     protected readonly statusHint = computed((): string | null => {
         if (this.measureStatus() !== null || this.menu() !== null) {
             return null;
         }
         if (this.commenting()) {
-            return 'Click a surface to pin a comment there · Esc cancels';
+            return 'viewer.hints.comment';
         }
         if (this.editor.calibration() !== null) {
             return null;
         }
         if (!this.editor.enabled()) {
             return this.activeView() === 'top'
-                ? 'Drag to pan · scroll to zoom · click a room to see it'
-                : 'Drag to orbit · right-drag to pan · scroll to zoom · click a room to see it';
+                ? 'viewer.hints.plan'
+                : 'viewer.hints.orbit';
         }
         const tool = this.editor.tool();
         return tool === 'drawWalls' && this.toolStatus() !== null ? null : ToolHints[tool];
@@ -834,7 +842,8 @@ export class ViewerPageComponent {
             }
             void this.editor.loadChanges();
             if (update.summary !== null && update.actorName !== null) {
-                const summary = update.undone ? `undid ${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}` : update.summary;
+                const lowered = `${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}`;
+                const summary = update.undone ? this.translate.instant('viewer.toasts.undid', {summary: lowered}) : update.summary;
                 this.alerts.success(`${update.actorName}: ${summary}`);
             }
         }
@@ -1043,9 +1052,9 @@ export class ViewerPageComponent {
     protected async copyShareUrl(url: string): Promise<void> {
         try {
             await navigator.clipboard.writeText(url);
-            this.alerts.success('Link copied.');
+            this.alerts.success(this.translate.instant('project.shares.copied'));
         } catch {
-            this.alerts.error('Could not copy; select the link and copy it by hand.');
+            this.alerts.error(this.translate.instant('viewer.toasts.copyFailed'));
         }
     }
 
@@ -1198,7 +1207,7 @@ export class ViewerPageComponent {
     }
 
     protected async removeView(view: SavedView): Promise<void> {
-        if (!window.confirm(`Delete the view "${view.name}"?`)) {
+        if (!window.confirm(this.translate.instant('viewer.toasts.deleteView', {name: view.name}))) {
             return;
         }
         await this.viewRequest(() => this.savedViewService.delete(this.projectId(), view.id));
@@ -1216,12 +1225,12 @@ export class ViewerPageComponent {
             const name = safeFilename(`${scene.floor.name} ${new Date().toISOString().slice(0, 16).replace('T', ' ')}.png`);
             if (target === 'file') {
                 await this.projects.uploadFile(this.projectId(), new File([blob], name, {type: 'image/png'}));
-                this.alerts.success(`Saved "${name}" among the project's files.`);
+                this.alerts.success(this.translate.instant('viewer.toasts.captureSaved', {name}));
             } else {
                 downloadBlob(blob, name);
             }
         } catch (e) {
-            this.alerts.error(e instanceof Error ? e.message : 'The view could not be captured.');
+            this.alerts.error(e instanceof Error ? e.message : this.translate.instant('viewer.toasts.captureFailed'));
         } finally {
             this.viewBusy.set(false);
         }

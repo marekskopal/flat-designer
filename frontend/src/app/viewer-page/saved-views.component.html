@@ -2,17 +2,17 @@
     <ul class="views">
         @for (view of views(); track view.id) {
             <li class="view">
-                <button type="button" class="view__apply" [disabled]="busy()" [title]="'Show ' + view.name" (click)="apply.emit(view)">
+                <button type="button" class="view__apply" [disabled]="busy()" [title]="'viewer.views.show' | translate: {name: view.name}" (click)="apply.emit(view)">
                     <span class="view__name">{{ view.name }}</span>
                     @if (view.floorId !== floorId()) {
                         <span class="view__floor">{{ view.floorName }}</span>
                     }
                 </button>
                 @if (canSave()) {
-                    <button type="button" class="icon-button" title="Replace with the current view" aria-label="Replace with the current view" [disabled]="busy()" (click)="overwrite.emit(view)">
+                    <button type="button" class="icon-button" [title]="'viewer.views.replace' | translate" [attr.aria-label]="'viewer.views.replace' | translate" [disabled]="busy()" (click)="overwrite.emit(view)">
                         <fd-icon name="refresh" [size]="15" />
                     </button>
-                    <button type="button" class="icon-button icon-button--danger" title="Delete" aria-label="Delete" [disabled]="busy()" (click)="remove.emit(view)">
+                    <button type="button" class="icon-button icon-button--danger" [title]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate" [disabled]="busy()" (click)="remove.emit(view)">
                         <fd-icon name="trash" [size]="15" />
                     </button>
                 }
@@ -26,22 +26,22 @@
             class="input input--compact"
             type="text"
             name="name"
-            placeholder="Name of the current view"
-            aria-label="View name"
+            [placeholder]="'viewer.views.placeholder' | translate"
+            [attr.aria-label]="'viewer.views.nameLabel' | translate"
             maxlength="100"
             [value]="name()"
             (input)="name.set($any($event.target).value)"
         />
-        <button type="submit" class="btn btn--ghost" [disabled]="busy() || name().trim() === ''">Save</button>
+        <button type="submit" class="btn btn--ghost" [disabled]="busy() || name().trim() === ''">{{ 'common.save' | translate }}</button>
     </form>
 }
 <div class="capture">
-    <button type="button" class="btn btn--ghost" [disabled]="busy()" title="1600 × 1000 at 2×, in the presentation quality" (click)="capture.emit('download')">
-        <fd-icon name="camera" [size]="15" /> Capture PNG
+    <button type="button" class="btn btn--ghost" [disabled]="busy()" [title]="'viewer.views.captureTip' | translate" (click)="capture.emit('download')">
+        <fd-icon name="camera" [size]="15" /> {{ 'viewer.views.capture' | translate }}
     </button>
     @if (canSave()) {
-        <button type="button" class="btn btn--ghost" [disabled]="busy()" title="Save the capture among the project's files" (click)="capture.emit('file')">
-            <fd-icon name="folder" [size]="15" /> To files
+        <button type="button" class="btn btn--ghost" [disabled]="busy()" [title]="'viewer.views.toFilesTip' | translate" (click)="capture.emit('file')">
+            <fd-icon name="folder" [size]="15" /> {{ 'viewer.views.toFiles' | translate }}
         </button>
     }
 </div>

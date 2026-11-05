@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal, untracked} from '@angular/core';
 import {PdfPage, ProjectFile} from '@app/models/project';
 import {ProjectService} from '@app/services/project.service';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /** The longer side of a page's thumbnail, px (the panel shows them about half as large, for sharp ones on HiDPI). */
 const ThumbnailSize = 240;
@@ -8,11 +9,13 @@ const ThumbnailSize = 240;
 /** The pages of a PDF as thumbnails, to pick the one to lay under the plan. */
 @Component({
     selector: 'fd-pdf-page-picker',
+    imports: [TranslatePipe],
     templateUrl: './pdf-page-picker.component.html',
     styleUrl: './pdf-page-picker.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfPagePickerComponent {
+    private readonly translate = inject(TranslateService);
     public readonly projectId = input.required<number>();
     public readonly file = input.required<ProjectFile>();
     public readonly pages = input.required<PdfPage[]>();
@@ -71,6 +74,8 @@ export class PdfPagePickerComponent {
     }
 
     protected title(page: PdfPage): string {
-        return page.widthPx === null ? `Page ${page.page} is empty` : `Page ${page.page} · ${page.widthPx} × ${page.heightPx} px`;
+        return page.widthPx === null
+            ? this.translate.instant('editor.pdf.emptyPage', {page: page.page})
+            : this.translate.instant('editor.pdf.pageTitle', {page: page.page, width: page.widthPx, height: page.heightPx});
     }
 }

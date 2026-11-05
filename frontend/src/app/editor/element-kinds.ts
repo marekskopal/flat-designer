@@ -5,24 +5,25 @@ import {IconName} from '@app/shared/icon/icon.component';
 import {electricalPoints, switchLinks} from '@app/viewer/engine/electrical';
 import {pointInPolygon, wallLength} from '@app/viewer/engine/plan-geometry';
 import {ElementKind} from '@app/viewer/engine/selection';
+import {TranslateService} from '@ngx-translate/core';
 
 import {OpeningTypeLabels} from './element-fields';
 
-/** What each kind of element is called and drawn as in the inspector and the viewer's card. */
-export const KindLabels: Record<ElementKind, string> = {
-    item: 'Item',
-    wall: 'Wall',
-    opening: 'Door / window',
-    room: 'Room',
-    plot: 'Plot',
-    stair: 'Stairs',
-    void: 'Void',
-    railing: 'Railing',
-    section: 'Section line',
-    roof: 'Roof',
-    roofWindow: 'Roof window',
-    group: 'Group',
-    variantSet: 'Variant set',
+/** What each kind of element is called in the inspector and the viewer's card: translation keys. */
+export const KindLabelKeys: Record<ElementKind, string> = {
+    item: 'kinds.item',
+    wall: 'kinds.wall',
+    opening: 'kinds.opening',
+    room: 'kinds.room',
+    plot: 'kinds.plot',
+    stair: 'kinds.stair',
+    void: 'kinds.void',
+    railing: 'kinds.railing',
+    section: 'kinds.section',
+    roof: 'kinds.roof',
+    roofWindow: 'kinds.roofWindow',
+    group: 'kinds.group',
+    variantSet: 'kinds.variantSet',
 };
 
 export const KindIcons: Record<ElementKind, IconName> = {
@@ -111,24 +112,24 @@ export function itemRoom(scene: Scene, item: Pick<Item, 'roomId' | 'x' | 'y'>): 
     );
 }
 
-/** A fact the viewer's card shows about a selected element. */
+/** A fact the viewer's card shows about a selected element, translated. */
 export interface ElementFact {
     label: string;
     value: string;
 }
 
 /** A switch's lights, or the switches of a light. */
-function switchFacts(scene: Scene, element: Record<string, unknown>): ElementFact[] {
+function switchFacts(scene: Scene, element: Record<string, unknown>, t: (key: string) => string): ElementFact[] {
     const item = element as unknown as Item;
     const names = (items: Item[]): string => items.map((i) => i.name).join(', ');
     switch (itemCategory(scene, item)) {
         case 'switch': {
             const lights = linkedLights(scene, item.controls ?? []);
-            return [{label: 'Controls', value: lights.length === 0 ? 'No lights' : names(lights)}];
+            return [{label: t('kinds.facts.controls'), value: lights.length === 0 ? t('kinds.facts.noLights') : names(lights)}];
         }
         case 'light': {
             const switches = switchesOf(scene, item.id);
-            return switches.length === 0 ? [] : [{label: 'Switched by', value: names(switches)}];
+            return switches.length === 0 ? [] : [{label: t('kinds.facts.switchedBy'), value: names(switches)}];
         }
         default:
             return [];
@@ -140,9 +141,10 @@ const size = (...mm: unknown[]): string => mm.map((v) => (typeof v === 'number' 
 
 /**
  * What the viewer's card says about a selected element (not a room, which has a card of its own): its size and where
- * it is, by kind; nothing for kinds without a measure worth showing.
+ * it is, by kind; nothing for kinds without a measure worth showing. The labels come translated by `translate`.
  */
-export function elementFacts(scene: Scene, kind: ElementKind, element: Record<string, unknown>): ElementFact[] {
+export function elementFacts(scene: Scene, kind: ElementKind, element: Record<string, unknown>, translate: TranslateService): ElementFact[] {
+    const t = (key: string): string => translate.instant(key) as string;
     switch (kind) {
         case 'item': {
             const room = scene.rooms.find((r) => r.id === element['roomId']);
@@ -153,44 +155,44 @@ export function elementFacts(scene: Scene, kind: ElementKind, element: Record<st
                       ? (scene.models ?? []).find((m) => m.id === element['modelId'])?.name
                       : String(element['kind']).replace(/([a-z])([A-Z])/g, '$1 $2');
             return [
-                {label: 'Size', value: size(element['width'], element['depth'], element['height'])},
-                {label: 'Elevation', value: typeof element['z'] === 'number' ? levelText(element['z']) : '—'},
-                ...(from === undefined ? [] : [{label: 'Made from', value: from}]),
-                ...(room === undefined ? [] : [{label: 'Room', value: room.name}]),
-                ...switchFacts(scene, element),
+                {label: t('kinds.facts.size'), value: size(element['width'], element['depth'], element['height'])},
+                {label: t('kinds.facts.elevation'), value: typeof element['z'] === 'number' ? levelText(element['z']) : '—'},
+                ...(from === undefined ? [] : [{label: t('kinds.facts.madeFrom'), value: from}]),
+                ...(room === undefined ? [] : [{label: t('kinds.facts.room'), value: room.name}]),
+                ...switchFacts(scene, element, t),
             ];
         }
         case 'wall':
             return [
-                {label: 'Length', value: metres(wallLength(element as unknown as Wall))},
-                {label: 'Thickness', value: metres(element['thickness'])},
-                {label: 'Height', value: metres(element['height'])},
+                {label: t('kinds.facts.length'), value: metres(wallLength(element as unknown as Wall))},
+                {label: t('kinds.facts.thickness'), value: metres(element['thickness'])},
+                {label: t('kinds.facts.height'), value: metres(element['height'])},
             ];
         case 'opening':
             return [
-                {label: 'Type', value: OpeningTypeLabels[element['type'] as OpeningType] ?? String(element['type'])},
-                {label: 'Size', value: size(element['width'], element['height'])},
-                {label: 'Sill', value: metres(element['sillHeight'])},
+                {label: t('kinds.facts.type'), value: OpeningTypeLabels[element['type'] as OpeningType] ?? String(element['type'])},
+                {label: t('kinds.facts.size'), value: size(element['width'], element['height'])},
+                {label: t('kinds.facts.sill'), value: metres(element['sillHeight'])},
             ];
         case 'stair':
             return [
-                {label: 'Shape', value: String(element['shape']).replace(/([a-z])([A-Z])/g, '$1 $2')},
-                {label: 'Width', value: metres(element['width'])},
-                {label: 'Going', value: metres(element['going'])},
+                {label: t('kinds.facts.shape'), value: String(element['shape']).replace(/([a-z])([A-Z])/g, '$1 $2')},
+                {label: t('kinds.facts.width'), value: metres(element['width'])},
+                {label: t('kinds.facts.going'), value: metres(element['going'])},
             ];
         case 'roof':
             return [
-                {label: 'Shape', value: String(element['shape'])},
-                {label: 'Size', value: size(element['width'], element['depth'])},
-                ...(element['shape'] === 'Flat' ? [] : [{label: 'Pitch', value: `${String(element['pitch'])}°`}]),
+                {label: t('kinds.facts.shape'), value: String(element['shape'])},
+                {label: t('kinds.facts.size'), value: size(element['width'], element['depth'])},
+                ...(element['shape'] === 'Flat' ? [] : [{label: t('kinds.facts.pitch'), value: `${String(element['pitch'])}°`}]),
             ];
         case 'railing':
             return [
-                {label: 'Style', value: String(element['style'])},
-                {label: 'Height', value: metres(element['height'])},
+                {label: t('kinds.facts.style'), value: String(element['style'])},
+                {label: t('kinds.facts.height'), value: metres(element['height'])},
             ];
         case 'group':
-            return [{label: 'Items', value: String(scene.items.filter((i) => i.groupId === element['id']).length)}];
+            return [{label: t('kinds.facts.items'), value: String(scene.items.filter((i) => i.groupId === element['id']).length)}];
         default:
             return [];
     }

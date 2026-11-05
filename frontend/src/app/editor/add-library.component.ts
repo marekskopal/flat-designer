@@ -3,6 +3,7 @@ import {CatalogueLabels, FurnitureCatalogue, FurnitureDefinition} from '@app/mod
 import {OpeningType, Roof, Room, Scene, Wall} from '@app/models/scene';
 import {IconComponent, IconName} from '@app/shared/icon/icon.component';
 import {polygonCentroid, wallLength} from '@app/viewer/engine/plan-geometry';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 import {EditorStore, newRoomFields} from './editor.store';
 import {OpeningTypeLabels} from './element-fields';
@@ -110,15 +111,15 @@ interface AddCategory {
  */
 @Component({
     selector: 'fd-add-library',
-    imports: [IconComponent],
+    imports: [IconComponent, TranslatePipe],
     template: `
         <div class="search">
             <fd-icon name="search" />
             <input
                 #search
                 type="search"
-                placeholder="Search building parts, furniture, products…"
-                aria-label="Search"
+                [placeholder]="'editor.add.searchPlaceholder' | translate"
+                [attr.aria-label]="'editor.add.search' | translate"
                 [value]="query()"
                 (input)="query.set($any($event.target).value)"
                 (keydown.enter)="addFirst()"
@@ -126,7 +127,7 @@ interface AddCategory {
             <kbd>Esc</kbd>
         </div>
         @if (query().trim() === '') {
-            <nav class="cats" aria-label="Categories">
+            <nav class="cats" [attr.aria-label]="'editor.add.categories' | translate">
                 @for (category of categories(); track category.key) {
                     <button type="button" class="cat" [class.cat--active]="category === active()" (click)="activeKey.set(category.key)">
                         <fd-icon [name]="category.icon" [size]="16" />
@@ -157,7 +158,7 @@ interface AddCategory {
                     }
                 </div>
             } @empty {
-                <p class="empty">Nothing matches “{{ query() }}”.</p>
+                <p class="empty">{{ 'editor.add.noMatch' | translate: {query: query()} }}</p>
             }
         </div>
     `,
@@ -166,6 +167,7 @@ interface AddCategory {
     host: {'(keydown.escape)': 'closed.emit()'},
 })
 export class AddLibraryComponent {
+    private readonly translate = inject(TranslateService);
     public readonly scene = input.required<Scene>();
     /** Plan point the camera looks at, where new elements go. */
     public readonly viewCenter = input.required<() => {x: number; y: number}>();
@@ -193,6 +195,7 @@ export class AddLibraryComponent {
 
     protected readonly categories = computed((): AddCategory[] => {
         const kinds = this.editor.itemKinds();
+        const t = (key: string, params?: Record<string, unknown>): string => this.translate.instant(key, params) as string;
         const kindEntry = (kind: {kind: string; description: string}): AddEntry => ({
             choice: `item:${kind.kind}`,
             label: kind.kind.replace(/([a-z])([A-Z])/g, '$1 $2'),
@@ -207,56 +210,56 @@ export class AddLibraryComponent {
             description,
             blocked: null,
         });
-        const wallMissing = this.selectedWall() === null ? 'Select a wall first' : null;
+        const wallMissing = this.selectedWall() === null ? t('editor.add.selectWallFirst') : null;
         const categories: AddCategory[] = [
             {
                 key: 'building',
-                label: 'Building',
+                label: t('editor.add.building'),
                 icon: 'roof',
                 groups: [
                     {
-                        label: 'Structure',
+                        label: t('editor.add.structure'),
                         note: null,
                         entries: [
-                            plain('wall', 'Wall', 'wall', 'A 3 m wall where the camera looks; Draw walls (W) draws runs'),
-                            plain('room', 'Room', 'rooms', 'A 3 × 3 m room; Room from walls (M) outlines one'),
-                            plain('stair', 'Stairs', 'stairs', 'Climbs to the floor above'),
-                            plain('void', 'Floor void', 'void', 'A hole through the floor'),
-                            plain('railing', 'Railing', 'railing', 'Draw railing (B) draws one along points'),
+                            plain('wall', t('editor.add.wall'), 'wall', t('editor.add.wallHint')),
+                            plain('room', t('editor.add.room'), 'rooms', t('editor.add.roomHint')),
+                            plain('stair', t('editor.add.stair'), 'stairs', t('editor.add.stairHint')),
+                            plain('void', t('editor.add.void'), 'void', t('editor.add.voidHint')),
+                            plain('railing', t('editor.add.railing'), 'railing', t('editor.add.railingHint')),
                             ...kinds.filter((k) => k.structural).map(kindEntry),
                         ],
                     },
                     {
-                        label: 'Openings',
-                        note: wallMissing === null ? null : 'Select a wall to put a door or window in it.',
+                        label: t('editor.add.openings'),
+                        note: wallMissing === null ? null : t('editor.add.openingsNote'),
                         entries: Object.entries(OpeningTypeLabels).map(([type, label]) => ({
                             choice: `opening:${type}`,
                             label,
                             icon: OpeningIcons[type as OpeningType],
-                            description: `${label} in the selected wall`,
+                            description: t('editor.add.openingHint', {type: label}),
                             blocked: wallMissing,
                         })),
                     },
                     {
-                        label: 'Roof & site',
+                        label: t('editor.add.roofAndSite'),
                         note: null,
                         entries: [
-                            plain('roof', 'Roof', 'roof', 'A roof over the floor’s walls'),
+                            plain('roof', t('editor.add.roof'), 'roof', t('editor.add.roofHint')),
                             {
-                                ...plain('roofWindow', 'Roof window', 'window', 'In the selected pitched roof'),
-                                blocked: this.selectedPitchedRoof() === null ? 'Select a pitched roof first' : null,
+                                ...plain('roofWindow', t('editor.add.roofWindow'), 'window', t('editor.add.roofWindowHint')),
+                                blocked: this.selectedPitchedRoof() === null ? t('editor.add.selectRoofFirst') : null,
                             },
-                            plain('plot', 'Plot', 'plot', 'The land round the building'),
-                            plain('section', 'Section line', 'section', 'A cut through the building for the section drawings'),
+                            plain('plot', t('editor.add.plot'), 'plot', t('editor.add.plotHint')),
+                            plain('section', t('editor.add.section'), 'section', t('editor.add.sectionHint')),
                         ],
                     },
                 ],
             },
             {
                 key: 'fittings',
-                label: 'Fittings',
+                label: t('editor.add.fittings'),
                 icon: 'bath',
-                groups: [{label: 'Fittings & appliances', note: null, entries: kinds.filter((k) => !k.structural).map(kindEntry)}],
+                groups: [{label: t('editor.add.fittingsAndAppliances'), note: null, entries: kinds.filter((k) => !k.structural).map(kindEntry)}],
             },
         ];
         const definitionEntry = (d: FurnitureDefinition): AddEntry => {
@@ -270,11 +273,12 @@ export class AddLibraryComponent {
             const entries = global.filter((d) => catalogueOf(d) === catalogue).map(definitionEntry);
             categories.push({key: `furniture-${catalogue}`, label, icon: CatalogueIcons[catalogue], groups: [{label, note: null, entries}]});
         }
+        const other = t('editor.add.otherFurniture');
         categories.push({
             key: 'furniture-other',
-            label: 'Other furniture',
+            label: other,
             icon: 'box',
-            groups: [{label: 'Other furniture', note: null, entries: global.filter((d) => catalogueOf(d) === null).map(definitionEntry)}],
+            groups: [{label: other, note: null, entries: global.filter((d) => catalogueOf(d) === null).map(definitionEntry)}],
         });
         const own = this.editor.definitions().filter((d) => d.scope !== 'global');
         const models = this.editor.models().map(
@@ -283,14 +287,19 @@ export class AddLibraryComponent {
         categories.push(
             {
                 key: 'own',
-                label: 'My furniture',
+                label: t('editor.add.myFurniture'),
                 icon: 'folder',
                 groups: [
-                    {label: 'This project', note: null, entries: own.filter((d) => d.scope === 'project').map(definitionEntry)},
-                    {label: 'My library', note: null, entries: own.filter((d) => d.scope === 'user').map(definitionEntry)},
+                    {label: t('editor.add.thisProject'), note: null, entries: own.filter((d) => d.scope === 'project').map(definitionEntry)},
+                    {label: t('editor.add.myLibrary'), note: null, entries: own.filter((d) => d.scope === 'user').map(definitionEntry)},
                 ],
             },
-            {key: 'models', label: '3D products', icon: 'box', groups: [{label: '3D products', note: null, entries: models}]},
+            {
+                key: 'models',
+                label: t('editor.add.products'),
+                icon: 'box',
+                groups: [{label: t('editor.add.products'), note: null, entries: models}],
+            },
         );
         return categories
             .map((c) => ({...c, groups: c.groups.filter((g) => g.entries.length > 0)}))
@@ -388,7 +397,8 @@ export class AddLibraryComponent {
             // Its boundary comes from the backend: a rectangle round the floor's walls and rooms.
             void this.editor.create('plot', {});
         } else if (choice === 'room') {
-            void this.editor.create('room', {...newRoomFields(this.scene()), polygon: square(center, NewRoomSize / 2)});
+            const fields = newRoomFields(this.scene(), this.translate.instant('editor.defaults.room'));
+            void this.editor.create('room', {...fields, polygon: square(center, NewRoomSize / 2)});
         }
     }
 }

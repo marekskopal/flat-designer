@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, output, signal, viewChild} from '@angular/core';
 import {Material} from '@app/models/scene';
 import {IconComponent} from '@app/shared/icon/icon.component';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /**
  * A material picked from the catalogue by its swatch (the material's colour, its texture over it) and name, with a
@@ -9,7 +10,7 @@ import {IconComponent} from '@app/shared/icon/icon.component';
  */
 @Component({
     selector: 'fd-material-picker',
-    imports: [IconComponent],
+    imports: [IconComponent, TranslatePipe],
     template: `
         <button
             type="button"
@@ -35,8 +36,8 @@ import {IconComponent} from '@app/shared/icon/icon.component';
                     #search
                     class="search"
                     type="search"
-                    placeholder="Search materials…"
-                    aria-label="Search materials"
+                    [placeholder]="'inspector.materials.searchPlaceholder' | translate"
+                    [attr.aria-label]="'inspector.materials.search' | translate"
                     [value]="query()"
                     (input)="query.set($any($event.target).value)"
                     (keydown.enter)="pickFirst($event)"
@@ -62,7 +63,7 @@ import {IconComponent} from '@app/shared/icon/icon.component';
                             <span class="option__name">{{ material.name }}</span>
                         </button>
                     } @empty {
-                        <p class="empty">No material matches “{{ query() }}”.</p>
+                        <p class="empty">{{ 'inspector.materials.noMatch' | translate: {query: query()} }}</p>
                     }
                 </div>
             </div>

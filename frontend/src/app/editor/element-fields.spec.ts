@@ -14,8 +14,8 @@ describe('element fields', () => {
     it('parses whole millimetres only', () => {
         expect(parseFieldValue(field('x'), ' 1200 ')).toEqual({ok: true, value: 1200});
         expect(parseFieldValue(field('x'), '-50')).toEqual({ok: true, value: -50});
-        expect(parseFieldValue(field('x'), '12.5')).toEqual({ok: false, error: 'Whole number expected.'});
-        expect(parseFieldValue(field('x'), '')).toEqual({ok: false, error: 'X is required.'});
+        expect(parseFieldValue(field('x'), '12.5')).toEqual({ok: false, error: {key: 'fields.errors.wholeNumber'}});
+        expect(parseFieldValue(field('x'), '')).toEqual({ok: false, error: {key: 'fields.errors.required', params: {label: {key: 'fields.x'}}}});
     });
 
     it('clears nullable fields with an empty input', () => {
@@ -28,7 +28,7 @@ describe('element fields', () => {
         const downpipes = [{edge: 'Front', along: 1200}];
         const def = field('downpipes', 'roof');
         expect(parseFieldValue(def, formatFieldValue(def, downpipes))).toEqual({ok: true, value: downpipes});
-        expect(parseFieldValue(def, '[{')).toEqual({ok: false, error: 'Invalid JSON.'});
+        expect(parseFieldValue(def, '[{')).toEqual({ok: false, error: {key: 'fields.errors.invalidJson'}});
         expect(parseFieldValue(def, '')).toEqual({ok: true, value: null});
     });
 
@@ -57,9 +57,10 @@ describe('element fields', () => {
 
     it('names a wall face by the direction it faces', () => {
         const east = {startX: 0, startY: 0, endX: 3000, endY: 0};
-        expect(wallFaceName(east, 'Left')).toBe('North face');
-        expect(wallFaceName(east, 'Right')).toBe('South face');
-        expect(wallFaceName({startX: 0, startY: 3000, endX: 0, endY: 0}, 'Left')).toBe('East face');
-        expect(wallFaceName({startX: 0, startY: 0, endX: 3000, endY: 3000}, 'Left')).toBe('North-west face');
+        expect(wallFaceName(east, 'Left')).toEqual({key: 'fields.faces.north'});
+        expect(wallFaceName(east, 'Right')).toEqual({key: 'fields.faces.south'});
+        expect(wallFaceName({startX: 0, startY: 3000, endX: 0, endY: 0}, 'Left')).toEqual({key: 'fields.faces.east'});
+        expect(wallFaceName({startX: 0, startY: 0, endX: 3000, endY: 3000}, 'Left')).toEqual({key: 'fields.faces.northWest'});
+        expect(wallFaceName({...east, sagitta: 200}, 'Left')).toEqual({key: 'fields.faces.convex', params: {face: {key: 'fields.faces.north'}}});
     });
 });

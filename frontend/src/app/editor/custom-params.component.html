@@ -32,7 +32,7 @@
                 <label class="cell">
                     <span class="cell__label">{{ label(parameter) }}</span>
                     <select class="input input--compact" [disabled]="disabled()" (change)="setSelect(parameter, $event)">
-                        <option value="" [selected]="value(parameter) === undefined">{{ parameter.default }} (default)</option>
+                        <option value="" [selected]="value(parameter) === undefined">{{ 'inspector.custom.defaultValue' | translate: {value: parameter.default} }}</option>
                         @for (option of parameter.options; track option) {
                             <option [value]="option" [selected]="option === value(parameter)">{{ option }}</option>
                         }
@@ -41,14 +41,14 @@
             }
             @case ('image') {
                 <label class="cell">
-                    <span class="cell__label">{{ label(parameter) }} <span class="cell__unit">image</span></span>
+                    <span class="cell__label">{{ label(parameter) }} <span class="cell__unit">{{ 'inspector.custom.image' | translate }}</span></span>
                     <select class="input input--compact" [disabled]="disabled()" (focus)="imagesRefresh.emit()" (change)="setImage(parameter, $event)">
-                        <option value="" [selected]="value(parameter) === undefined || value(parameter) === null">None</option>
+                        <option value="" [selected]="value(parameter) === undefined || value(parameter) === null">{{ 'inspector.custom.noImage' | translate }}</option>
                         @for (file of images(); track file.id) {
                             <option [value]="file.id" [selected]="file.id === value(parameter)">{{ file.filename }}</option>
                         }
                         @if (unlistedImage(parameter); as fileId) {
-                            <option [value]="fileId" disabled selected>File #{{ fileId }} (not among the project's images)</option>
+                            <option [value]="fileId" disabled selected>{{ 'inspector.custom.unlistedImage' | translate: {id: fileId} }}</option>
                         }
                     </select>
                 </label>
@@ -59,7 +59,7 @@
                     <div class="list__head">
                         <span class="cell__label">{{ label(parameter) }}</span>
                         @if (hasOwnList(parameter)) {
-                            <button type="button" class="link" [disabled]="disabled()" (click)="resetList(parameter)">Default</button>
+                            <button type="button" class="link" [disabled]="disabled()" (click)="resetList(parameter)">{{ 'inspector.custom.resetList' | translate }}</button>
                         }
                     </div>
                     <div class="list__row list__row--head" aria-hidden="true">
@@ -80,7 +80,7 @@
                                             (change)="setItemField(parameter, index, field, $event)"
                                         >
                                             <option value="" [selected]="item[field.key] === undefined">
-                                                {{ field.default === undefined || field.default === null ? '—' : field.default + ' (default)' }}
+                                                {{ field.default === undefined || field.default === null ? '—' : ('inspector.custom.defaultValue' | translate: {value: field.default}) }}
                                             </option>
                                             @for (option of field.options; track option) {
                                                 <option [value]="option" [selected]="option === item[field.key]">{{ option }}</option>
@@ -114,12 +114,12 @@
                                 }
                             }
                             <span class="list__actions">
-                                <button type="button" class="icon" title="Move up" [disabled]="disabled() || first" (click)="moveItem(parameter, index, -1)">↑</button>
-                                <button type="button" class="icon" title="Move down" [disabled]="disabled() || last" (click)="moveItem(parameter, index, 1)">↓</button>
+                                <button type="button" class="icon" [title]="'inspector.moveUp' | translate" [disabled]="disabled() || first" (click)="moveItem(parameter, index, -1)">↑</button>
+                                <button type="button" class="icon" [title]="'inspector.moveDown' | translate" [disabled]="disabled() || last" (click)="moveItem(parameter, index, 1)">↓</button>
                                 <button
                                     type="button"
                                     class="icon icon--danger"
-                                    title="Remove"
+                                    [title]="'inspector.remove' | translate"
                                     [disabled]="disabled() || rows.length <= (parameter.minItems ?? 0)"
                                     (click)="removeItem(parameter, index)"
                                 >
@@ -134,7 +134,7 @@
                         [disabled]="disabled() || (parameter.maxItems !== undefined && rows.length >= parameter.maxItems)"
                         (click)="addItem(parameter)"
                     >
-                        + Add
+                        {{ 'inspector.custom.add' | translate }}
                     </button>
                 </div>
             }
@@ -142,10 +142,10 @@
     }
     @for (slot of slots(); track slot.key; let first = $first) {
         <label class="cell">
-            <span class="cell__label">{{ slot.label ?? slot.key }} <span class="cell__unit">material</span></span>
+            <span class="cell__label">{{ slot.label ?? slot.key }} <span class="cell__unit">{{ 'inspector.custom.material' | translate }}</span></span>
             <select class="input input--compact" [disabled]="disabled()" (change)="setMaterial(slot.key, $event)">
                 <option value="" [selected]="current().materials[slot.key] === undefined">
-                    {{ first && slot.default ? 'Item material, else ' + materialName(slot.default) : materialName(slot.default) }} (default)
+                    {{ 'inspector.custom.defaultValue' | translate: {value: slotDefault(slot.default, first)} }}
                 </option>
                 @for (material of materials(); track material.id) {
                     <option [value]="material.id" [selected]="material.id === current().materials[slot.key]">{{ material.name }}</option>

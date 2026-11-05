@@ -19,6 +19,7 @@ import {PlanPoint, Room, Scene, SunTime} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
 import {WebglMessageComponent} from '@app/shared/webgl-message/webgl-message.component';
 import {environment} from '@environments/environment';
+import {TranslateService} from '@ngx-translate/core';
 
 import {CommentPin, CommentPoint} from './engine/comments';
 import {EditorTool, ToolStatus} from './engine/drawing';
@@ -73,6 +74,7 @@ export interface SelectEvent {
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ViewerComponent {
+    private readonly translate = inject(TranslateService);
     public readonly scene = input<Scene | null>(null);
     public readonly ceilingsVisible = input(false);
     public readonly roofsVisible = input(true);
@@ -358,13 +360,17 @@ export class ViewerComponent {
     /** The shown floor as a binary glTF (see `ViewerEngine.exportGlb()`). */
     public exportGlb(): Promise<Blob> {
         const engine = this.engine();
-        return engine === null ? Promise.reject(new Error('The viewer is not ready.')) : engine.exportGlb();
+        return engine === null ? Promise.reject(this.notReady()) : engine.exportGlb();
+    }
+
+    private notReady(): Error {
+        return new Error(this.translate.instant('viewer.toasts.notReady'));
     }
 
     /** The view as a PNG (see `ViewerEngine.capture()`). */
     public capture(width: number, height: number, pixelRatio = 2): Promise<Blob> {
         const engine = this.engine();
-        return engine === null ? Promise.reject(new Error('The viewer is not ready.')) : engine.capture(width, height, pixelRatio);
+        return engine === null ? Promise.reject(this.notReady()) : engine.capture(width, height, pixelRatio);
     }
 
     /** The 3D camera in plan mm; null before the engine starts. */

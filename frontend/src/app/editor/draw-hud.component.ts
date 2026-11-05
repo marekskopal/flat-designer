@@ -1,7 +1,8 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, ElementRef, input, output, signal, viewChild} from '@angular/core';
+import {ChangeDetectionStrategy, Component, ElementRef, inject,input, output, signal, viewChild} from '@angular/core';
 import {parseDrawInput, ToolStatus} from '@app/viewer/engine/drawing';
 import {RoomDetectError} from '@app/viewer/engine/room-detect';
+import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 
 /**
  * A typed segment: `length` mm, at `angle` degrees counter-clockwise from east (null: towards the pointer), curved by
@@ -14,9 +15,9 @@ export interface TypedSegment {
 }
 
 const DetectErrors: Record<RoomDetectError, string> = {
-    onWall: 'Inside a wall: click inside a room',
-    open: 'The walls around here do not close',
-    invalid: 'The walls around here do not make a usable outline',
+    onWall: 'editor.draw.errors.onWall',
+    open: 'editor.draw.errors.open',
+    invalid: 'editor.draw.errors.invalid',
 };
 
 /**
@@ -26,7 +27,7 @@ const DetectErrors: Record<RoomDetectError, string> = {
  */
 @Component({
     selector: 'fd-draw-hud',
-    imports: [DecimalPipe],
+    imports: [DecimalPipe, TranslatePipe],
     template: `
         @let s = status();
         <div class="hud" role="status">
@@ -36,29 +37,29 @@ const DetectErrors: Record<RoomDetectError, string> = {
                     class="hud__arc"
                     [class.hud__arc--on]="s.arc"
                     [attr.aria-pressed]="s.arc"
-                    title="Curved walls: each wall waits for its curve (A)"
+                    [title]="'editor.draw.arcTitle' | translate"
                     (click)="arc.emit(!s.arc)"
                 >
-                    Arc <kbd>A</kbd>
+                    {{ 'editor.draw.arc' | translate }} <kbd>A</kbd>
                 </button>
                 @if (s.sagitta !== null) {
-                    <span class="hud__value">Curve {{ s.sagitta | number: '1.0-0' }} mm</span>
-                    <strong class="hud__prompt">Move the middle of the wall out, click to fix it, or type its curve</strong>
+                    <span class="hud__value">{{ 'editor.draw.curve' | translate }} {{ s.sagitta | number: '1.0-0' }} mm</span>
+                    <strong class="hud__prompt">{{ 'editor.draw.curvePrompt' | translate }}</strong>
                     <input
                         #lengthInput
                         class="input input--compact hud__input"
                         [class.hud__input--invalid]="invalid()"
                         type="text"
                         inputmode="numeric"
-                        placeholder="curve, mm (+ left)"
-                        aria-label="Curve of the wall: how far its middle lies off the straight line, mm, + to the left"
+                        [placeholder]="'editor.draw.curvePlaceholder' | translate"
+                        [attr.aria-label]="'editor.draw.curveLabel' | translate"
                         [value]="typed()"
                         (input)="onInput($event)"
                         (keydown.enter)="placeCurve()"
                         (keydown.escape)="clear()"
                     />
                 } @else if (s.points === 0) {
-                    <strong class="hud__prompt">Click where the wall starts</strong>
+                    <strong class="hud__prompt">{{ 'editor.draw.wallStart' | translate }}</strong>
                 } @else {
                     @if (s.length !== null) {
                         <span class="hud__value">
@@ -68,7 +69,7 @@ const DetectErrors: Record<RoomDetectError, string> = {
                             }
                         </span>
                     } @else {
-                        <strong class="hud__prompt">Point to the next corner, or type a length</strong>
+                        <strong class="hud__prompt">{{ 'editor.draw.nextCorner' | translate }}</strong>
                     }
                     <input
                         #lengthInput
@@ -76,8 +77,8 @@ const DetectErrors: Record<RoomDetectError, string> = {
                         [class.hud__input--invalid]="invalid()"
                         type="text"
                         inputmode="decimal"
-                        placeholder="length<angle~curve"
-                        aria-label="Length of the next wall, mm (optionally <angle in degrees and ~curve in mm)"
+                        [placeholder]="'editor.draw.wallPlaceholder' | translate"
+                        [attr.aria-label]="'editor.draw.wallLabel' | translate"
                         [value]="typed()"
                         (input)="onInput($event)"
                         (keydown.enter)="place()"
@@ -85,12 +86,14 @@ const DetectErrors: Record<RoomDetectError, string> = {
                     />
                 }
                 <span class="hud__keys">
-                    Click the first point to close · double-click or <kbd>Enter</kbd> ends · <kbd>Backspace</kbd> undoes a point ·
-                    <kbd>A</kbd> arcs · <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> cancels
+                    {{ 'editor.draw.keyClose' | translate }} · {{ 'editor.draw.keyDoubleClick' | translate }} <kbd>Enter</kbd>
+                    {{ 'editor.draw.keyEnds' | translate }} ·
+                    <kbd>Backspace</kbd> {{ 'editor.draw.keyUndoPoint' | translate }} · <kbd>A</kbd> {{ 'editor.draw.keyArcs' | translate }} ·
+                    <kbd>Shift</kbd> {{ 'editor.draw.keyNoSnap' | translate }} · <kbd>Esc</kbd> {{ 'editor.draw.keyCancels' | translate }}
                 </span>
             } @else if (s.tool === 'drawRailing') {
                 @if (s.points === 0) {
-                    <strong class="hud__prompt">Click where the railing starts</strong>
+                    <strong class="hud__prompt">{{ 'editor.draw.railingStart' | translate }}</strong>
                 } @else {
                     @if (s.length !== null) {
                         <span class="hud__value">
@@ -100,7 +103,7 @@ const DetectErrors: Record<RoomDetectError, string> = {
                             }
                         </span>
                     } @else {
-                        <strong class="hud__prompt">Point to the next post, or type a length</strong>
+                        <strong class="hud__prompt">{{ 'editor.draw.nextPost' | translate }}</strong>
                     }
                     <input
                         #lengthInput
@@ -108,8 +111,8 @@ const DetectErrors: Record<RoomDetectError, string> = {
                         [class.hud__input--invalid]="invalid()"
                         type="text"
                         inputmode="decimal"
-                        placeholder="length<angle"
-                        aria-label="Length of the next stretch of railing, mm (optionally <angle in degrees)"
+                        [placeholder]="'editor.draw.railingPlaceholder' | translate"
+                        [attr.aria-label]="'editor.draw.railingLabel' | translate"
                         [value]="typed()"
                         (input)="onInput($event)"
                         (keydown.enter)="place()"
@@ -117,18 +120,20 @@ const DetectErrors: Record<RoomDetectError, string> = {
                     />
                 }
                 <span class="hud__keys">
-                    Click the first point to close · double-click or <kbd>Enter</kbd> ends · <kbd>Backspace</kbd> undoes a point ·
-                    <kbd>Shift</kbd> no snapping · <kbd>Esc</kbd> cancels
+                    {{ 'editor.draw.keyClose' | translate }} · {{ 'editor.draw.keyDoubleClick' | translate }} <kbd>Enter</kbd>
+                    {{ 'editor.draw.keyEnds' | translate }} ·
+                    <kbd>Backspace</kbd> {{ 'editor.draw.keyUndoPoint' | translate }} · <kbd>Shift</kbd> {{ 'editor.draw.keyNoSnap' | translate }} ·
+                    <kbd>Esc</kbd> {{ 'editor.draw.keyCancels' | translate }}
                 </span>
             } @else {
                 @if (s.error !== null) {
                     <strong class="hud__prompt hud__prompt--error">{{ errorText(s.error) }}</strong>
                 } @else if (s.area !== null) {
-                    <strong class="hud__prompt">Click to add this room · {{ s.area | number: '1.1-2' }} m²</strong>
+                    <strong class="hud__prompt">{{ 'editor.draw.addRoom' | translate: {area: s.area | number: '1.1-2'} }}</strong>
                 } @else {
-                    <strong class="hud__prompt">Point inside walls that enclose a room</strong>
+                    <strong class="hud__prompt">{{ 'editor.draw.pointInside' | translate }}</strong>
                 }
-                <span class="hud__keys"><kbd>Esc</kbd> back to selecting</span>
+                <span class="hud__keys"><kbd>Esc</kbd> {{ 'editor.draw.backToSelect' | translate }}</span>
             }
         </div>
     `,
@@ -204,6 +209,7 @@ const DetectErrors: Record<RoomDetectError, string> = {
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DrawHudComponent {
+    private readonly translate = inject(TranslateService);
     public readonly status = input.required<ToolStatus>();
     /** An exact segment was typed. */
     public readonly segment = output<TypedSegment>();
@@ -218,7 +224,7 @@ export class DrawHudComponent {
     private readonly lengthInput = viewChild<ElementRef<HTMLInputElement>>('lengthInput');
 
     protected errorText(error: RoomDetectError): string {
-        return DetectErrors[error];
+        return this.translate.instant(DetectErrors[error]);
     }
 
     protected onInput(event: Event): void {

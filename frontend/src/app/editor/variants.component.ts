@@ -1,5 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input, output} from '@angular/core';
 import {Group, Scene, VariantSet} from '@app/models/scene';
+import {TranslatePipe} from '@ngx-translate/core';
 
 import {EditorStore} from './editor.store';
 
@@ -11,6 +12,7 @@ import {EditorStore} from './editor.store';
  */
 @Component({
     selector: 'fd-variants',
+    imports: [TranslatePipe],
     template: `
         @for (entry of entries(); track entry.set.id) {
             <div class="variant-set">
@@ -35,9 +37,9 @@ import {EditorStore} from './editor.store';
                 @if (editing()) {
                     <div class="variant-set__actions">
                         <button type="button" [disabled]="busy() || entry.set.activeGroupId === null" (click)="add(entry.set, true)">
-                            + Copy of shown
+                            + {{ 'editor.variants.copyOfShown' | translate }}
                         </button>
-                        <button type="button" [disabled]="busy()" (click)="add(entry.set, false)">+ Empty variant</button>
+                        <button type="button" [disabled]="busy()" (click)="add(entry.set, false)">+ {{ 'editor.variants.empty' | translate }}</button>
                     </div>
                 }
             </div>

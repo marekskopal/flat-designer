@@ -1,5 +1,6 @@
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {SpotHeight} from '@app/models/scene';
+import {TranslatePipe} from '@ngx-translate/core';
 
 /**
  * The spot heights of a plot's sloping ground: x, y and the height of each, typed in place, and removed one by
@@ -7,14 +8,15 @@ import {SpotHeight} from '@app/models/scene';
  */
 @Component({
     selector: 'fd-spot-heights',
+    imports: [TranslatePipe],
     template: `
         @if (spots().length === 0) {
-            <p class="spots__empty">Flat. Double-click the plot's ground in the top view to add a spot height.</p>
+            <p class="spots__empty">{{ 'inspector.spots.empty' | translate }}</p>
         } @else {
             <div class="spots">
                 <span class="spots__head">X</span>
                 <span class="spots__head">Y</span>
-                <span class="spots__head">Height</span>
+                <span class="spots__head">{{ 'fields.height' | translate }}</span>
                 <span></span>
                 @for (spot of spots(); track $index; let i = $index) {
                     @for (axis of axes; track axis) {
@@ -22,7 +24,7 @@ import {SpotHeight} from '@app/models/scene';
                             class="input input--compact"
                             type="number"
                             step="1"
-                            [attr.aria-label]="labels[axis] + ' of spot height ' + (i + 1)"
+                            [attr.aria-label]="'inspector.spots.coordinate' | translate: {axis: (labels[axis] | translate), n: i + 1}"
                             [value]="spot[axis]"
                             [disabled]="disabled()"
                             (change)="set(i, axis, $event)"
@@ -31,7 +33,7 @@ import {SpotHeight} from '@app/models/scene';
                     <button
                         type="button"
                         class="btn btn--ghost spots__remove"
-                        [attr.aria-label]="'Remove spot height ' + (i + 1)"
+                        [attr.aria-label]="'inspector.spots.remove' | translate: {n: i + 1}"
                         [disabled]="disabled()"
                         (click)="remove(i)"
                     >
@@ -39,7 +41,7 @@ import {SpotHeight} from '@app/models/scene';
                     </button>
                 }
             </div>
-            <p class="spots__hint">mm; height against the floor's level. Drag a spot in the top view, double-click to add or remove one.</p>
+            <p class="spots__hint">{{ 'inspector.spots.hint' | translate }}</p>
         }
     `,
     styleUrl: './spot-heights.component.scss',
@@ -51,7 +53,8 @@ export class SpotHeightsComponent {
     public readonly spotsChange = output<SpotHeight[]>();
 
     protected readonly axes = [0, 1, 2] as const;
-    protected readonly labels = ['X', 'Y', 'Height'] as const;
+    /** The columns' labels: translation keys (X and Y read alike in every language). */
+    protected readonly labels = ['fields.x', 'fields.y', 'fields.height'] as const;
 
     protected set(index: number, axis: 0 | 1 | 2, event: Event): void {
         const field = event.target as HTMLInputElement;

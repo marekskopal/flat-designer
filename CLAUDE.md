@@ -75,7 +75,10 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   'time'`, each language's own format), never Angular's `date` with an English pattern. A route's `title` is a key
   (`titles.*`, `TranslatedTitleStrategy`). API requests carry the language shown as `Accept-Language`
   (`languageInterceptor`), so the server's messages come in it; `errorInterceptor` gives an error without one a
-  translated `errors.unreachable` / `errors.unexpected`.
+  translated `errors.unreachable` / `errors.unexpected`. The inspector's `ElementFields` hold keys (`label`, `section`:
+  `fields.*`), its hints and parse errors are `FieldText` (`{key, params?, count?}`, `translateFieldText()`); element
+  kinds are `KindLabelKeys` (`kinds.*`) and `elementFacts()` takes the `TranslateService`. Default names the editor
+  sends (a new room, a group, a variant set) are translated (`editor.defaults.*`).
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
