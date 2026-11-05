@@ -92,6 +92,8 @@ final readonly class IzbikServer
 		with get_project_file (crop into a region and add a pixel grid to read positions exactly). Lay the plan
 		under the floor with set_floor_underlay, calibrated from two points you know (a dimensioned wall, the
 		scale bar), then convert pixel positions to plan mm with its placement to place walls and openings.
+		A CAD plan saved as an ASCII DXF is read directly: inspect_dxf lists its layers, import_dxf (dryRun
+		first) makes the walls and openings of the layers you choose.
 
 		Typical flow: list_projects (or create_project for a new one: it starts with a ground floor, and
 		add_floor adds more storeys) → get_project (floors, revision) → get_floor (rooms, walls with openings,

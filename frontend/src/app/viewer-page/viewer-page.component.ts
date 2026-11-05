@@ -24,6 +24,7 @@ import {roomCodeText} from '@app/core/room-code';
 import {ActivityComponent} from '@app/editor/activity.component';
 import {AddLibraryComponent} from '@app/editor/add-library.component';
 import {DrawHudComponent} from '@app/editor/draw-hud.component';
+import {DxfImportComponent} from '@app/editor/dxf-import.component';
 import {EditorStore} from '@app/editor/editor.store';
 import {EditorPanelComponent} from '@app/editor/editor-panel.component';
 import {elementFacts, findElement, KindIcons, KindLabels} from '@app/editor/element-kinds';
@@ -144,6 +145,7 @@ const optionalId = (value: string | number | null | undefined): number | null =>
         DrawHudComponent,
         MeasureHudComponent,
         UnderlayPanelComponent,
+        DxfImportComponent,
         SavedViewsComponent,
         ExportComponent,
         CommentsComponent,
@@ -697,6 +699,20 @@ export class ViewerPageComponent {
             if (this.measuring() || this.commenting()) {
                 untracked(() => this.editor.cancelLinking());
             }
+        });
+
+        // A DXF import's preview shows in the top view.
+        let dxfPreviewShown = false;
+        effect(() => {
+            const shown = this.editor.dxfPreview() !== null;
+            if (shown && !dxfPreviewShown) {
+                untracked(() => {
+                    if (this.activeView() !== 'top') {
+                        this.setView('top');
+                    }
+                });
+            }
+            dxfPreviewShown = shown;
         });
 
         // Calibration points are clicked in the top view, with the measure tool.

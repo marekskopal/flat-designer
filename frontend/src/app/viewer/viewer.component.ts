@@ -13,6 +13,7 @@ import {
     untracked,
     viewChild,
 } from '@angular/core';
+import {DxfPlan} from '@app/models/dxf';
 import {ElectricalSymbols} from '@app/models/electrical-schedule';
 import {PlanPoint, Room, Scene, SunTime} from '@app/models/scene';
 import {CameraPose} from '@app/models/share';
@@ -103,6 +104,8 @@ export class ViewerComponent {
     public readonly underlayVisible = input(true);
     /** The floor below, traced in the top view; null shows none. */
     public readonly ghost = input<GhostFloor | null>(null);
+    /** The walls and openings a DXF import would make, over the top view; null shows none. */
+    public readonly dxfPreview = input<DxfPlan | null>(null);
     /** All floors: the scenes of the floors to draw under this one (null: this floor only). */
     public readonly stack = input<readonly Scene[] | null>(null);
     /** The project's other floors, for a walk over all of them (null: the walk stays on this floor). */
@@ -261,6 +264,7 @@ export class ViewerComponent {
         effect(() => this.engine()?.setUnderlay(this.underlay(), this.underlayImage()));
         effect(() => this.engine()?.setUnderlayVisible(this.underlayVisible()));
         effect(() => this.engine()?.setGhost(this.ghost()));
+        effect(() => this.engine()?.setDxfPreview(this.dxfPreview()));
         effect(() => this.engine()?.setStack(this.stack()));
         effect(() => this.engine()?.setWalkFloors(this.walkFloors()));
         effect(() => this.engine()?.setSectionHeight(this.sectionHeight()));

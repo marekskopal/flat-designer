@@ -33,6 +33,7 @@ use Izbik\Service\Furniture\FurnitureSeeds;
 use Izbik\Service\Material\MaterialService;
 use Izbik\Service\Project\ImagePreviewService;
 use Izbik\Tests\Support\AppHarness;
+use Izbik\Tests\Support\Dxf;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\Glb;
 use Izbik\Tests\Support\IntegrationTestCase;
@@ -152,6 +153,8 @@ final class McpServerTest extends IntegrationTestCase
 			'get_project_file',
 			'get_quantities',
 			'get_room_schedule',
+			'import_dxf',
+			'inspect_dxf',
 			'list_changes',
 			'list_comments',
 			'list_examples',
@@ -1178,6 +1181,47 @@ final class McpServerTest extends IntegrationTestCase
 			['removed' => false],
 			$this->client->call('remove_floor_underlay', ['projectId' => $this->project->id, 'floorId' => $floorId]),
 		);
+	}
+
+	public function testImportsTheWallsOfADxfPlan(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$dxf = Dxf::document([
+			Dxf::rectangle('Zdi', -300, -300, 4300, 3300),
+			Dxf::rectangle('Zdi', 0, 0, 4000, 3000),
+			Dxf::line('Okna', 500, -300, 1700, -300),
+			Dxf::line('Okna', 500, 0, 1700, 0),
+		]);
+		$file = $this->client->call('upload_project_file', [
+			'projectId' => $this->project->id,
+			'filename' => 'plan.dxf',
+			'content' => base64_encode($dxf),
+		]);
+		self::assertIsArray($file);
+
+		$summary = $this->client->call('inspect_dxf', ['projectId' => $this->project->id, 'fileId' => $file['id']]);
+		self::assertIsArray($summary);
+		self::assertIsList($summary['layers']);
+		self::assertSame(['Okna' => 'opening', 'Zdi' => 'wall'], array_column($summary['layers'], 'suggestedRole', 'name'));
+
+		$arguments = $ids + ['fileId' => $file['id'], 'wallLayers' => ['Zdi'], 'openingLayers' => ['Okna']];
+		$preview = $this->client->call('import_dxf', $arguments + ['dryRun' => true]);
+		self::assertIsArray($preview);
+		self::assertIsList($preview['walls']);
+		self::assertCount(4, $preview['walls']);
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertSame([], $floor['walls']);
+
+		$imported = $this->client->call('import_dxf', $arguments);
+		self::assertIsArray($imported);
+		self::assertSame([4, 1], [$imported['walls'], $imported['openings']]);
+		$floor = $this->client->call('get_floor', $ids);
+		self::assertIsArray($floor);
+		self::assertIsList($floor['walls']);
+		self::assertCount(4, $floor['walls']);
+		$outline = $this->client->call('find_room_outline', $ids + ['x' => 2000, 'y' => 1500]);
+		self::assertSame(['polygon' => [[300, 300], [4300, 300], [4300, 3300], [300, 3300]]], $outline);
 	}
 
 	public function testUploadsAndDeletesProjectFiles(): void

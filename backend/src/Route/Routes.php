@@ -59,6 +59,8 @@ enum Routes: string
 	case ProjectFloorElementDuplicate = '/api/projects/{projectId:number}/floors/{floorId:number}/{elementType:items|walls|openings|rooms|plots|stairs|voids|railings|roofs|roof-windows|sections|groups|variant-sets}/{elementId:number}/duplicate';
 	case ProjectFloorWallPolyline = '/api/projects/{projectId:number}/floors/{floorId:number}/walls/polyline';
 	case ProjectFloorRoomDetect = '/api/projects/{projectId:number}/floors/{floorId:number}/rooms/detect';
+	case ProjectFloorDxfImport = '/api/projects/{projectId:number}/floors/{floorId:number}/dxf-import';
+	case ProjectFloorDxfImportPreview = '/api/projects/{projectId:number}/floors/{floorId:number}/dxf-import/preview';
 	case ProjectFloorGroups = '/api/projects/{projectId:number}/floors/{floorId:number}/groups';
 	case ProjectFloorGroupMove = '/api/projects/{projectId:number}/floors/{floorId:number}/groups/{groupId:number}/move';
 	case ProjectFloorGroupUngroup = '/api/projects/{projectId:number}/floors/{floorId:number}/groups/{groupId:number}/ungroup';
@@ -83,6 +85,7 @@ enum Routes: string
 	case ProjectFiles = '/api/projects/{projectId:number}/files';
 	case ProjectFile = '/api/projects/{projectId:number}/files/{fileId:number}';
 	case ProjectFileContent = '/api/projects/{projectId:number}/files/{fileId:number}/content';
+	case ProjectFileDxf = '/api/projects/{projectId:number}/files/{fileId:number}/dxf';
 	case ProjectViews = '/api/projects/{projectId:number}/views';
 	case ProjectView = '/api/projects/{projectId:number}/views/{viewId:number}';
 	case ProjectComments = '/api/projects/{projectId:number}/comments';

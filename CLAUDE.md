@@ -1079,6 +1079,21 @@ The current format is the text in `FurnitureTools::Format`.
   `UnderlayPanelComponent` (edit mode) picks the image and sets its placement. Calibrate… uses the measure tool without
   snapping (`EditorStore.calibration`, `ViewerEngine.setCalibrating()`), then `calibrateUnderlay()` applies the real
   distance and an optional axis. Images only; PDF pages have to be uploaded as images.
+- DXF import (`Service/Dxf`, PHP only; REST `GET …/files/{id}/dxf` (layers), `POST …/floors/{id}/dxf-import/preview`
+  and `…/dxf-import`, MCP `inspect_dxf` / `import_dxf` with `dryRun`): an ASCII DXF among the project files (DWG and
+  binary DXF refused) becomes walls and openings as one `ChangeBatch`. `DxfReader` (`Read/`) flattens the model space
+  into lines and arcs in world coordinates (blocks expanded, object coordinate systems, bulges, hatch boundaries,
+  `$INSUNITS`, the codepage); `DxfPlanner` (`Plan/`) pairs parallel faces of the wall layers 50–700 mm apart into
+  wall pieces (`FaceSet`, `WallPairer`; concentric arcs: `ArcPairer`), joins collinear pieces with the gaps as openings
+  where both faces stop (`CollinearMerger`), meets ends at L and T joints (`EndJoiner`), reads each opening's kind from
+  the opening layers (a swing arc: a door, its hinge and side; glazing lines: a window; door / window block names;
+  nothing: a passage) and finds doors and windows drawn over unbroken walls (`OpeningFinder`), then places and rounds
+  them (`Placement`: the walls' south-west corner or the drawing's origin at the plan origin, plus an offset and a
+  turn). Walls come in `Interior`; heights come from the import's options; an opening the editor refuses is left out
+  with a warning; `replaceExisting` deletes the floor's walls in the same batch. No rooms. The underlay panel's
+  `DxfImportComponent` picks the layers and draws the preview (`EditorStore.dxfPreview`, `viewer/engine/dxf-preview.ts`,
+  top view, no depth test). `backend/tests/fixtures/dxf/third-party/` holds public sample plans (their licences in its
+  README) that `DxfPlannerTest` pins.
 - MCP `list_project_files` / `get_project_file` let an agent read uploaded plans and photos (and the upload tools,
   see MCP server, add them). Images come back as image
   content, optionally cropped, scaled to `maxSize` and overlaid with a labelled pixel `grid` (`ImagePreviewService`,

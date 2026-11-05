@@ -1,5 +1,6 @@
 import {HttpErrorResponse} from '@angular/common/http';
 import {inject, Injectable, signal, untracked} from '@angular/core';
+import {DxfImportInput, DxfImportResult, DxfPlan, DxfPlanInput} from '@app/models/dxf';
 import {Change, EditResult, ItemKindInfo} from '@app/models/editor';
 import {FurnitureDefinition} from '@app/models/furniture';
 import {ModelAsset} from '@app/models/model-asset';
@@ -50,6 +51,10 @@ export class EditorStore {
     public readonly definitions = signal<FurnitureDefinition[]>([]);
     /** The project's image files, for pictures of Custom items (their `image` parameters). */
     public readonly images = signal<ProjectFile[]>([]);
+    /** The project's DXF plans, for importing walls. */
+    public readonly dxfFiles = signal<ProjectFile[]>([]);
+    /** The walls and openings a DXF would make, drawn over the plan while the import is set up. */
+    public readonly dxfPreview = signal<DxfPlan | null>(null);
     /** What a click in the top view does: select and drag, draw walls, or outline a room. */
     public readonly tool = signal<EditorTool>('select');
     /** Type, thickness and height of the walls drawn next. */
@@ -80,6 +85,7 @@ export class EditorStore {
             this.tool.set('select');
             this.calibration.set(null);
             this.linking.set(null);
+            this.dxfPreview.set(null);
         }
         if (enabled) {
             await Promise.all([
@@ -90,6 +96,28 @@ export class EditorStore {
                 this.loadImages(),
             ]);
         }
+    }
+
+    /** The walls and openings a DXF would make on the floor (nothing written); null without a floor. */
+    public async previewDxf(input: DxfPlanInput): Promise<DxfPlan | null> {
+        const context = this.context;
+        return context === null ? null : this.api.previewDxf(context.projectId(), context.floorId(), input);
+    }
+
+    /**
+     * Imports a DXF's walls and openings as one change; the result's counts and warnings, or null when it failed (the
+     * error interceptor shows why). The preview goes once the walls are there.
+     */
+    public async importDxf(input: DxfImportInput): Promise<DxfImportResult | null> {
+        let imported: DxfImportResult | null = null;
+        await this.run(async (c) => {
+            imported = await this.api.importDxf(c.projectId(), c.floorId(), input, revisionOf(c));
+            return imported.result;
+        });
+        if (imported !== null) {
+            this.dxfPreview.set(null);
+        }
+        return imported;
     }
 
     /** Adds an element and selects it. */
@@ -385,7 +413,9 @@ export class EditorStore {
             return;
         }
         try {
-            this.images.set((await this.projects.listFiles(context.projectId())).filter((f) => ImageMimeTypes.includes(f.mimeType)));
+            const files = await this.projects.listFiles(context.projectId());
+            this.images.set(files.filter((f) => ImageMimeTypes.includes(f.mimeType)));
+            this.dxfFiles.set(files.filter((f) => f.filename.toLowerCase().endsWith('.dxf')));
         } catch {
             // The error interceptor shows the toast.
         }
