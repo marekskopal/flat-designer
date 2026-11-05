@@ -38,6 +38,11 @@ final readonly class ExampleProjectService
 			$project->updatedAt = $project->createdAt;
 			$this->projectRepository->persist($project);
 			$this->snapshotService->import($project, $example->snapshot);
+			// The import takes the snapshot's (English) name; the project is named as the user reads the example.
+			if ($project->name !== $example->name) {
+				$project->name = $example->name;
+				$this->projectRepository->persist($project);
+			}
 
 			return $project;
 		});

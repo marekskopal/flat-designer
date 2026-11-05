@@ -766,7 +766,8 @@
             "deleteView": "Smazat pohled „{{name}}“?",
             "captureSaved": "Snímek „{{name}}“ je uložen mezi soubory projektu.",
             "captureFailed": "Pohled se nepodařilo zachytit.",
-            "notReady": "Prohlížeč ještě není připraven."
+            "notReady": "Prohlížeč ještě není připraven.",
+            "change": "{{name}}: {{summary}}"
         },
         "views": {
             "show": "Zobrazit {{name}}",
@@ -1828,6 +1829,25 @@
             "roof": "Střecha",
             "eaves": "Okap",
             "ridge": "Hřeben"
+        }
+    },
+    "sharedViewer": {
+        "startWalk": "Spustit procházku",
+        "sharedView": "Sdílený pohled",
+        "reset": "Vrátit sdílený pohled",
+        "resetTip": "Zpět k pohledu, ve kterém se odkaz otevírá",
+        "resetLabel": "Obnovit pohled",
+        "guestName": "Vaše jméno",
+        "guestNamePlaceholder": "Zobrazí se u vašich komentářů",
+        "guestNameHint": "Komentáře přidáte po zadání svého jména.",
+        "lookAround": "Rozhlížet se",
+        "lookAroundTip": "Rozhlížet se (V)",
+        "commentNeedsName": "Komentář přidáte po zadání jména v panelu Komentáře",
+        "rendering": "Vykreslování",
+        "loadFailed": "Sdílený pohled se nepodařilo načíst.",
+        "hints": {
+            "plan": "Tažením posunete · kolečkem přiblížíte",
+            "orbit": "Tažením otáčíte · pravým tlačítkem posunete · kolečkem přiblížíte"
         }
     }
 }

@@ -23,7 +23,8 @@ const gpu = process.env.FD_SOFTWARE_GL === '1'
     ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader']
     : ['--use-angle=default', '--enable-gpu', '--ignore-gpu-blocklist'];
 const browser = await chromium.launch({headless: process.env.FD_HEADED !== '1', args: gpu});
-const context = await browser.newContext({viewport: {width: 1400, height: 900}});
+// English pages whatever the machine's language; the Czech ones are checked by a step of their own.
+const context = await browser.newContext({viewport: {width: 1400, height: 900}, locale: 'en-US'});
 context.setDefaultTimeout(timeout);
 const page = await context.newPage();
 const errors = [];
@@ -175,6 +176,20 @@ try {
         }
         await page.waitForURL(/\/floors\/\d+/);
         await page.locator('canvas').first().waitFor({timeout});
+    });
+
+    await step('switch the account to Czech and back', async () => {
+        await page.goto(`${base}/account`);
+        await page.getByLabel('Language').selectOption('cs');
+        // Saving one's own language reloads the page in it (numbers and dates follow it too).
+        await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Save'}).first().click()]);
+        await page.getByRole('heading', {name: 'Účet', exact: true}).waitFor({timeout});
+        await page.goto(`${base}/projects`);
+        await page.getByRole('heading', {name: 'Projekty', exact: true}).waitFor({timeout});
+        await page.goto(`${base}/account`);
+        await page.getByLabel('Jazyk').selectOption('en');
+        await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name: 'Uložit'}).first().click()]);
+        await page.getByRole('heading', {name: 'Account', exact: true}).waitFor({timeout});
     });
 
     if (errors.length > 0) {

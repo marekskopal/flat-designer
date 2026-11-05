@@ -848,7 +848,7 @@ export class ViewerPageComponent {
             if (update.summary !== null && update.actorName !== null) {
                 const lowered = `${update.summary.charAt(0).toLowerCase()}${update.summary.slice(1)}`;
                 const summary = update.undone ? this.translate.instant('viewer.toasts.undid', {summary: lowered}) : update.summary;
-                this.alerts.success(`${update.actorName}: ${summary}`);
+                this.alerts.success(this.translate.instant('viewer.toasts.change', {name: update.actorName, summary}));
             }
         }
     }

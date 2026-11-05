@@ -192,6 +192,8 @@ it has made the change.
   validation and history as the UI.
 - **Accounts**: sign-up with email verification, optional Sign in with Google, password reset by email, JWT
   authentication, `Admin` and `User` roles. Users own their projects; admins see all projects and manage users.
+- **English and Czech**: the whole app, its mail, the API's messages, the drawings (with the decimal comma) and the
+  seeded furniture and materials; each account picks its language, guests get the browser's.
 
 ## Built over MCP by an AI agent
 

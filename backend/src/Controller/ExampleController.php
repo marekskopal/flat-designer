@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Izbik\Controller;
 
 use Izbik\Dto\ExampleDto;
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Response\NotFoundResponse;
 use Izbik\Route\Routes;
 use Izbik\Service\Example\Example;
@@ -31,7 +32,10 @@ final readonly class ExampleController
 	public function actionGetExamples(ServerRequestInterface $request): ResponseInterface
 	{
 		return new JsonResponse(
-			array_map(static fn (Example $example): ExampleDto => ExampleDto::fromExample($example), $this->catalogue->all()),
+			array_map(
+				static fn (Example $example): ExampleDto => ExampleDto::fromExample($example->in(self::locale($request))),
+				$this->catalogue->all(),
+			),
 		);
 	}
 
@@ -43,6 +47,15 @@ final readonly class ExampleController
 			return new NotFoundResponse('Example not found.');
 		}
 
-		return new JsonResponse($this->exampleProjectService->create($this->requestService->getUser($request), $example), 201);
+		return new JsonResponse(
+			$this->exampleProjectService->create($this->requestService->getUser($request), $example->in(self::locale($request))),
+			201,
+		);
+	}
+
+	/** The project is named as the user reads the example. */
+	private static function locale(ServerRequestInterface $request): LocaleEnum
+	{
+		return LocaleEnum::fromAcceptLanguage($request->getHeaderLine('Accept-Language'));
 	}
 }

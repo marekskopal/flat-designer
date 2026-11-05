@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Izbik\Service\Example;
 
+use Izbik\Model\Entity\Enum\LocaleEnum;
 use Izbik\Service\Json\JsonDecoder;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -15,7 +16,7 @@ use const JSON_UNESCAPED_UNICODE;
 
 /**
  * The example projects shipped with the app: one JSON file per example in `backend/examples/`, `<slug>.json` holding
- * `{format, name, description, credit, startView, snapshot}` (`ExamplesExportCommand` writes them). The snapshot is a project
+ * `{format, name, description, credit, translations?, startView, snapshot}` (`translations`: `{cs: {name, description, credit}}`) (`ExamplesExportCommand` writes them). The snapshot is a project
  * snapshot taken on the instance it was modelled on, so it is imported (`ProjectSnapshotService::import()`), not restored.
  */
 final readonly class ExampleCatalogue
@@ -69,6 +70,7 @@ final readonly class ExampleCatalogue
 				'name' => $example->name,
 				'description' => $example->description,
 				'credit' => $example->credit,
+				...($example->translations === [] ? [] : ['translations' => $example->translations]),
 				'startView' => $example->startView,
 				'snapshot' => JsonDecoder::decodeObject($example->snapshot),
 			],
@@ -102,6 +104,25 @@ final readonly class ExampleCatalogue
 			credit: is_string($data['credit'] ?? null) ? $data['credit'] : '',
 			startView: is_string($startView) ? $startView : null,
 			snapshot: json_encode($snapshot, JSON_THROW_ON_ERROR),
+			translations: self::translations($data['translations'] ?? null),
 		);
+	}
+
+	/** @return array<string, array<string, string>> the texts by language, only `name`, `description` and `credit` */
+	private static function translations(mixed $translations): array
+	{
+		$result = [];
+		foreach (is_array($translations) ? $translations : [] as $language => $texts) {
+			if (!is_string($language) || LocaleEnum::tryFrom($language) === null || !is_array($texts)) {
+				continue;
+			}
+			foreach (['name', 'description', 'credit'] as $key) {
+				if (is_string($texts[$key] ?? null) && $texts[$key] !== '') {
+					$result[$language][$key] = $texts[$key];
+				}
+			}
+		}
+
+		return $result;
 	}
 }

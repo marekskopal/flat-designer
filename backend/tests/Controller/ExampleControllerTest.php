@@ -11,6 +11,7 @@ use Izbik\Model\Repository\MaterialRepository;
 use Izbik\Route\Routes;
 use Izbik\Service\Example\ExampleCatalogue;
 use Izbik\Service\Example\ExampleProjectService;
+use Izbik\Service\Json\JsonDecoder;
 use Izbik\Service\Project\SnapshotFiles;
 use Izbik\Service\Project\SnapshotLocalizer;
 use Izbik\Service\Project\SnapshotMaterials;
@@ -21,6 +22,7 @@ use Izbik\Tests\Support\Glb;
 use Izbik\Tests\Support\IntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Symfony\Component\Console\Tester\CommandTester;
+use const JSON_THROW_ON_ERROR;
 
 #[CoversClass(ExampleController::class)]
 #[CoversClass(ExampleCatalogue::class)]
@@ -83,6 +85,39 @@ final class ExampleControllerTest extends IntegrationTestCase
 		self::assertSame([$model], $modelIds);
 		// The author's project is untouched.
 		self::assertSame(404, $this->request('GET', self::projectPath(Routes::Project, $source), authenticatedAs: $user)->getStatusCode());
+	}
+
+	public function testAnExampleIsNamedInTheRequestsLanguageAndANewExportKeepsItsTexts(): void
+	{
+		$author = Fixture::createUser('author@example.com');
+		$source = Fixture::createProject($author, 'Model flat');
+		$this->export($source, ['--name' => 'Demo flat', '--description' => 'A small flat.']);
+		$file = AppHarness::examplesDirectory() . '/demo-flat.json';
+		$data = JsonDecoder::decodeObject((string) file_get_contents($file));
+		$data['translations'] = ['cs' => ['name' => 'Ukázkový byt', 'description' => 'Malý byt.'], 'xx' => ['name' => 'Ignored']];
+		file_put_contents($file, json_encode($data, JSON_THROW_ON_ERROR));
+		// Exported again (the project changed): the texts written by hand stay.
+		$this->export($source, ['--name' => 'Demo flat', '--description' => 'A small flat.']);
+
+		$user = Fixture::createUser('new@example.com');
+		$czech = ['Accept-Language' => 'cs-CZ'];
+		$examples = $this->jsonList($this->request('GET', Routes::Examples->value, authenticatedAs: $user, headers: $czech));
+		self::assertSame([['slug' => 'demo-flat', 'name' => 'Ukázkový byt', 'description' => 'Malý byt.', 'credit' => '']], $examples);
+		self::assertSame(
+			['Demo flat'],
+			array_column($this->jsonList($this->request('GET', Routes::Examples->value, authenticatedAs: $user)), 'name'),
+		);
+
+		$created = $this->request(
+			'POST',
+			str_replace('{slug:[a-z0-9-]+}', 'demo-flat', Routes::ExampleProjects->value),
+			[],
+			$user,
+			headers: $czech,
+		);
+		$project = $this->jsonBody($created)['project'] ?? null;
+		self::assertIsArray($project);
+		self::assertSame('Ukázkový byt', $project['name']);
 	}
 
 	public function testAFileThatIsNotAnExampleIsLeftOut(): void

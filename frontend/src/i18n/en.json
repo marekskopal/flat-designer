@@ -766,7 +766,8 @@
             "deleteView": "Delete the view \"{{name}}\"?",
             "captureSaved": "Saved \"{{name}}\" among the project's files.",
             "captureFailed": "The view could not be captured.",
-            "notReady": "The viewer is not ready."
+            "notReady": "The viewer is not ready.",
+            "change": "{{name}}: {{summary}}"
         },
         "views": {
             "show": "Show {{name}}",
@@ -1828,6 +1829,25 @@
             "roof": "Roof",
             "eaves": "Eaves",
             "ridge": "Ridge"
+        }
+    },
+    "sharedViewer": {
+        "startWalk": "Start the walk-through",
+        "sharedView": "Shared view",
+        "reset": "Reset to the shared view",
+        "resetTip": "Back to how the link opens",
+        "resetLabel": "Reset view",
+        "guestName": "Your name",
+        "guestNamePlaceholder": "Shown with your comments",
+        "guestNameHint": "Enter your name to add comments.",
+        "lookAround": "Look around",
+        "lookAroundTip": "Look around (V)",
+        "commentNeedsName": "Enter your name in Comments to add one",
+        "rendering": "Rendering",
+        "loadFailed": "Could not load the shared view.",
+        "hints": {
+            "plan": "Drag to pan · scroll to zoom",
+            "orbit": "Drag to orbit · right-drag to pan · scroll to zoom"
         }
     }
 }

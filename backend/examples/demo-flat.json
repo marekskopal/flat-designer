@@ -3,6 +3,13 @@
     "name": "Demo flat",
     "description": "A refurbished 55 m² flat in Barcelona: brick vaults on timber beams, an open kitchen behind sliding oak panels, three bedrooms. Furnished, with a guided tour of saved views.",
     "credit": "Modelled after a flat by Allaround Lab (2017), photos José Hevia.",
+    "translations": {
+        "cs": {
+            "name": "Ukázkový byt",
+            "description": "Rekonstruovaný byt 55 m² v Barceloně: cihelné klenby na dřevěných trámech, otevřená kuchyně za posuvnými dubovými panely, tři ložnice. Zařízený, s prohlídkou po uložených pohledech.",
+            "credit": "Podle bytu od Allaround Lab (2017), fotografie José Hevia."
+        }
+    },
     "startView": "Tour · 01 Cut-away",
     "snapshot": {
         "format": 1,

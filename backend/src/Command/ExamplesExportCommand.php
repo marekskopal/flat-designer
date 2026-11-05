@@ -90,6 +90,8 @@ final class ExamplesExportCommand extends AbstractCommand
 			credit: self::option($input, 'credit') ?? '',
 			startView: $startView,
 			snapshot: json_encode($snapshot, JSON_THROW_ON_ERROR),
+			// The texts in other languages are written by hand into the file; a new export keeps them.
+			translations: $catalogue->find($slug)->translations ?? [],
 		));
 		$io->success(sprintf('Wrote "%s" to %s.', $name, $file));
 

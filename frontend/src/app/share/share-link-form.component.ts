@@ -160,7 +160,7 @@ export class ShareLinkFormComponent {
     private readonly shares = inject(ShareService);
 
     protected readonly views = AllViews;
-    /** The keys of the views' names (`ShareViewLabels` in English). */
+    /** The keys of the views' names. */
     protected readonly labels: Record<ShareView, string> = {
         overview: 'share.views.overview',
         top: 'share.views.top',

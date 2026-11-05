@@ -100,6 +100,13 @@ Users own projects, and admins see all of them. The architecture mirrors `../uko
   (`viewer/engine/sheet-texts.ts`: every word they write, the separator and the date format; `EnglishSheetTexts` the
   default, so the engine stays framework-free) that `ExportComponent` builds from `sheets.*`; English sheets keep ISO
   dates. **A new text on a sheet goes into `SheetTexts`**, never as a literal in the engine.
+- Example projects may carry `translations` (`{cs: {name, description, credit}}`, written by hand into
+  `backend/examples/<slug>.json`; `examples:export` keeps them): the list and a new project from one take the
+  `Accept-Language` language. The shared viewer (guests) is in the browser's language, its shortcuts panel has the
+  language switch (`LanguageSwitchComponent` with `reload`).
+- Guards: `src/i18n/hard-coded-texts.spec.ts` parses every template (inline ones too) and fails on a text node or a
+  static `title` / `placeholder` / `aria-label` / `alt` with words of its own (key names, units and the brand allowed);
+  ESLint forbids literal texts in `alerts.*()` and `confirm()`. `make smoke` switches an account to Czech and back.
 - The language of a page load (`core/locale.ts`: `Locale`, `initialLocale()`: the device's `izbik.language`, else the
   browser's by its primary subtag, else English) is `LOCALE_ID` (`cs` registered), so dates and numbers follow it, and
   its texts load before the first render (`LanguageService.init()` in an app initializer). Signed in, the account's
