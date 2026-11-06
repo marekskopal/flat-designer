@@ -1,24 +1,30 @@
 {
  "name": "L-shaped worktop",
- "description": "Worktop of an L-shaped kitchen in two pieces: a run along the back of the item's box and a return along its left or right side. The run's free end (away from the return) may turn down drop mm below the item (waterfall).",
+ "description": "Worktop of an L-shaped kitchen in two pieces: a run along the back of the item's box and a return along its left or right side. The run's free end (away from the return), the return's free end or both may turn down drop mm below the item (waterfall).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Rohová pracovní deska (L)",
-    "description": "Pracovní deska kuchyně do L ze dvou dílů: běh podél zadní strany prvku a návrat podél jeho levé nebo pravé strany. Volný konec (dál od zalomení) může přejít o drop mm pod prvek (vodopád).",
+    "description": "Pracovní deska kuchyně do L ze dvou dílů: běh podél zadní strany prvku a návrat podél jeho levé nebo pravé strany. Volný konec hlavní části (dál od zalomení), konec zalomení nebo oba mohou přejít o drop mm pod prvek (vodopád).",
     "parameters": {
      "runDepth": "Hloubka běhu",
      "returnWidth": "Šířka návratu",
      "returnSide": "Strana návratu",
-     "waterfall": "Vodopád na volném konci",
+     "waterfall": "Vodopádové konce",
      "drop": "Přesah vodopádu pod desku"
     },
     "options": {
      "returnSide": {
       "left": "vlevo",
       "right": "vpravo"
+     },
+     "waterfall": {
+      "none": "žádný",
+      "run": "na konci hlavní části",
+      "return": "na konci zalomení",
+      "both": "oba"
      }
     },
     "slots": {
@@ -67,9 +73,15 @@
    },
    {
     "key": "waterfall",
-    "label": "Waterfall at the run's free end",
-    "type": "bool",
-    "default": false
+    "label": "Waterfall ends",
+    "type": "select",
+    "default": "none",
+    "options": [
+     "none",
+     "run",
+     "return",
+     "both"
+    ]
    },
    {
     "key": "drop",
@@ -106,12 +118,12 @@
    {
     "type": "board",
     "name": "Return",
-    "x": "returnSide == 'left' ? 0 : W - min(returnWidth, W - 100)",
+    "x": "returnSide == 'left' ? 0 : W - rw",
     "y": 0,
     "z": "rd",
-    "w": "min(returnWidth, W - 100)",
+    "w": "rw",
     "h": "H",
-    "d": "D - rd",
+    "d": "D - rd - wb",
     "material": "top",
     "grain": "vertical",
     "edges": [
@@ -133,11 +145,29 @@
     "edges": [
      "front"
     ]
+   },
+   {
+    "type": "board",
+    "name": "Waterfall end",
+    "when": "wb > 0",
+    "x": "returnSide == 'left' ? 0 : W - rw",
+    "y": "-drop",
+    "z": "D - H",
+    "w": "rw",
+    "h": "drop + H",
+    "d": "H",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
    }
   ],
   "derived": {
    "rd": "min(runDepth, D - 100)",
-   "wf": "waterfall ? H : 0"
+   "wf": "waterfall == 'run' || waterfall == 'both' ? H : 0",
+   "wb": "waterfall == 'return' || waterfall == 'both' ? H : 0",
+   "rw": "min(returnWidth, W - 100)"
   }
  }
 }

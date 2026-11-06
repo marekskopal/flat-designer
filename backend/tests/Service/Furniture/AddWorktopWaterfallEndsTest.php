@@ -44,6 +44,14 @@ final class AddWorktopWaterfallEndsTest extends IntegrationTestCase
 			array_map(static fn (ResolvedPart $part): array => [$part->name, $part->x, $part->y, $part->w, $part->h], $parts),
 		);
 
+		// The L's return turning down at its free end (the front): the return stops short of it.
+		$l = JsonDecoder::decodeObject(self::definition($pdo, 'L-shaped worktop'));
+		$parts = $evaluator->evaluate($l, 2100, 1580, 20, ['returnSide' => 'left', 'waterfall' => 'return']);
+		self::assertSame(
+			[['Run', 0, 620], ['Return', 620, 940], ['Waterfall end', 1560, 20]],
+			array_map(static fn (ResolvedPart $part): array => [$part->name, $part->z, $part->d], $parts),
+		);
+
 		foreach (FurnitureSeeds::read(AddWorktopWaterfallEndsMigration::Updated, AddWorktopWaterfallEndsMigration::Before) as $seed) {
 			Fixture::service(DefinitionValidator::class)->validate(JsonDecoder::decodeObject($seed['definition']));
 		}

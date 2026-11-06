@@ -451,10 +451,11 @@ The current format is the text in `FurnitureTools::Format`.
   list), the worktop's `roundEnd` (a half-cylinder of its depth, the rest of the slab shortened) and the backsplash's
   `ledge` (standing out in front of its box). Sink and hob cut-outs and stepped splashbacks are not drawn yet.
 - Worktop waterfall ends (I-165, `AddWorktopWaterfallEnds`, `down()` writes back `furniture/before-worktop-ends`): the
-  straight worktop's `waterfall` (left, right, both; not over a `roundEnd`) and the L-shaped worktop's `waterfall` at the
-  run's free end turn down `drop` mm below the item (parts below its box; default 872, a base cabinet's height) in the
-  same material. Tiled items count their upright rows from their own bottom (`alignTiles()`'s `base`), so a splashback
-  starts with a whole tile; the room's floor and wall bands count from the floor.
+  straight worktop's `waterfall` (left, right, both; not over a `roundEnd`) and the L-shaped worktop's `waterfall`
+  (the run's free end, the return's free end, both) turn down `drop` mm below the item (parts below its box; default
+  872, a base cabinet's height) in the same material. Tiled items count their upright rows from their own bottom
+  (`alignTiles()`'s `base`), so a splashback starts with a whole tile; the room's floor and wall bands count from the
+  floor.
 - Front styles and handles (I-133, `AddKitchenFrontStyles`): a `front`'s `style` (`PartTypeEnum::FrontStyles`: flat,
   shaker, fluted, glass, reeded) and `handle` (`Handles`: horizontal and vertical bars with `handleLength`, knob, edge
   pull, gola channel, push, none) are drawn by `buildFrontBody()` (`custom/front-styles.ts`) and `buildFrontHandle()`

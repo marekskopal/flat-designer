@@ -8,8 +8,8 @@ use Izbik\Service\Furniture\FurnitureSeeds;
 use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
- * Waterfall ends on the straight worktop (`waterfall`: left, right, both) and on the L-shaped worktop's free end, turning
- * down `drop` mm below the item in the same material. The rows are rewritten from the files; `down()` writes back the
+ * Waterfall ends on the straight worktop (`waterfall`: left, right, both) and on the L-shaped worktop (`waterfall`: the
+ * run's free end, the return's, both), turning down `drop` mm below the item in the same material. The rows are rewritten from the files; `down()` writes back the
  * files as they were before (`furniture/before-worktop-ends`).
  */
 final class AddWorktopWaterfallEndsMigration extends Migration
