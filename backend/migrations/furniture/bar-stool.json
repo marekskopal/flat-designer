@@ -1,23 +1,25 @@
 {
  "name": "Bar stool",
- "description": "Counter or bar stool: a round seat seatHeight high on four legs joined by a footrest ring (footrest 0: none), optionally with a low back; the backrest and the footrest have materials of their own.",
+ "description": "Counter or bar stool: a round seat seatHeight high on four legs joined by a footrest ring (footrest 0: none), optionally with a low back; the backrest is in the seat's material and the footrest in the frame's, or in materials of their own (backrestMaterial / footrestMaterial own).",
  "definition": {
   "format": 1,
   "catalogue": "seating",
   "translations": {
    "cs": {
     "name": "Barová židle",
-    "description": "Barová židle k pultu nebo baru: kulatý sedák ve výšce seatHeight na čtyřech nohách spojených opěrkou na nohy (footrest 0: bez ní), případně s nízkým opěradlem; opěradlo a opěrka na nohy mají vlastní materiál.",
+    "description": "Barová židle k pultu nebo baru: kulatý sedák ve výšce seatHeight na čtyřech nohách spojených opěrkou na nohy (footrest 0: bez ní), případně s nízkým opěradlem; opěradlo je v materiálu sedáku a opěrka v materiálu rámu, nebo ve vlastních (backrestMaterial / footrestMaterial own).",
     "parameters": {
      "seatHeight": "Výška sedáku",
      "back": "Opěradlo",
-     "footrest": "Výška opěrky na nohy (0: bez opěrky)"
+     "footrest": "Výška opěrky na nohy (0: bez opěrky)",
+     "backrestMaterial": "Materiál opěradla",
+     "footrestMaterial": "Materiál opěrky na nohy"
     },
     "slots": {
      "frame": "Rám",
      "seat": "Sedák",
-     "backrest": "Opěradlo",
-     "ring": "Opěrka na nohy"
+     "backrest": "Opěradlo (vlastní materiál)",
+     "ring": "Opěrka na nohy (vlastní materiál)"
     },
     "parts": {
      "Seat": "Sedák",
@@ -25,6 +27,16 @@
      "Footrest": "Opěrka na nohy",
      "Back post": "Sloupek opěradla",
      "Backrest": "Opěradlo"
+    },
+    "options": {
+     "backrestMaterial": {
+      "seat": "jako sedák",
+      "own": "vlastní"
+     },
+     "footrestMaterial": {
+      "frame": "jako rám",
+      "own": "vlastní"
+     }
     }
    }
   },
@@ -57,6 +69,26 @@
     "min": 0,
     "max": 500,
     "unit": "mm"
+   },
+   {
+    "key": "backrestMaterial",
+    "label": "Backrest material",
+    "type": "select",
+    "default": "seat",
+    "options": [
+     "seat",
+     "own"
+    ]
+   },
+   {
+    "key": "footrestMaterial",
+    "label": "Footrest material",
+    "type": "select",
+    "default": "frame",
+    "options": [
+     "frame",
+     "own"
+    ]
    }
   ],
   "derived": {
@@ -75,12 +107,12 @@
    },
    {
     "key": "backrest",
-    "label": "Backrest",
+    "label": "Backrest (backrestMaterial own)",
     "default": "oak-solid"
    },
    {
     "key": "ring",
-    "label": "Footrest",
+    "label": "Footrest (footrestMaterial own)",
     "default": "metal-black-matt"
    }
   ],
@@ -120,7 +152,9 @@
     "w": "W - 100",
     "h": 14,
     "d": 18,
-    "material": "ring",
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
     "when": "footrest > 0"
    },
    {
@@ -132,7 +166,9 @@
     "w": "W - 100",
     "h": 14,
     "d": 18,
-    "material": "ring",
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
     "when": "footrest > 0"
    },
    {
@@ -144,7 +180,9 @@
     "w": 18,
     "h": 14,
     "d": "D - 136",
-    "material": "ring",
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
     "when": "footrest > 0"
    },
    {
@@ -156,7 +194,9 @@
     "w": 18,
     "h": 14,
     "d": "D - 136",
-    "material": "ring",
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
     "when": "footrest > 0"
    },
    {
@@ -184,7 +224,9 @@
     "w": "W - 100",
     "h": 110,
     "d": 22,
-    "material": "backrest"
+    "material": {
+     "expr": "backrestMaterial == 'own' ? 'backrest' : 'seat'"
+    }
    }
   ]
  }

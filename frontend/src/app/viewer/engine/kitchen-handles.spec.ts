@@ -50,6 +50,14 @@ describe('front handle positions', () => {
         expect(Math.round(top.max.y)).toBe(1900);
     });
 
+    it('puts a vertical bar at the split of two doors, and a drawer knob on its handle edge when asked', () => {
+        const bar = box(buildFrontHandle('vertical', tallDoor, 19, 100, 'right', false, materials, {position: 'bottom', length: 300}));
+        expect(Math.round(bar.min.y)).toBe(80);
+        const drawer = {left: 0, width: 600, bottom: 0, height: 400};
+        const knob = box(buildFrontHandle('knob', drawer, 19, 900, 'left', true, materials, {position: 'side'}));
+        expect(Math.round(knob.getCenter(new THREE.Vector3()).x)).toBe(45);
+    });
+
     it('puts a knob at the bottom of a base unit door when asked, though its top is within reach', () => {
         const door = {left: 0, width: 400, bottom: 0, height: 700};
         const auto = box(buildFrontHandle('knob', door, 19, 100, 'right', false, materials));

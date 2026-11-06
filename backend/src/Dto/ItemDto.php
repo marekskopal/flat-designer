@@ -45,7 +45,7 @@ final readonly class ItemDto
 
 	public static function fromEntity(Item $item): self
 	{
-		$params = $item->params === null ? [] : self::withoutEmptyMaps(JsonDecoder::decodeObject($item->params));
+		$params = $item->params === null ? [] : JsonDecoder::decodeObject($item->params);
 
 		return new self(
 			id: $item->id,
@@ -73,8 +73,9 @@ final readonly class ItemDto
 	}
 
 	/**
-	 * A Custom item's params without an empty `values` or `materials`: decoded as PHP arrays, an empty JSON object would
-	 * come back as `[]` (a list); a missing one means the same, the definition's defaults.
+	 * A Custom item's params without an empty `values` or `materials`, as the editor stores them: decoded as PHP arrays,
+	 * an empty JSON object would come back as `[]` (a list); a missing one means the same, the definition's defaults.
+	 * Applied on write only, so items stored before keep their logged states (undo compares them).
 	 *
 	 * @param array<TKey, mixed> $params
 	 * @return array<TKey, mixed>

@@ -1,6 +1,6 @@
 {
  "name": "Pendant with a glass shade",
- "description": "Pendant with a glass shade on a fabric cable with a holder of its own: a globe, a dome, a drum or a flat disc (shadeHeight sets its height apart from its width) round a small glowing bulb; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
+ "description": "Pendant with a glass shade on a fabric cable (the holder in its material, or its own with holderMaterial own): a globe, a dome, a drum or a flat disc (shadeHeight sets its height apart from its width) round a small glowing bulb; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
  "definition": {
   "format": 1,
   "category": "light",
@@ -24,7 +24,8 @@
      "lumens": "Světelný tok",
      "kelvin": "Teplota chromatičnosti",
      "shadow": "Vrhá stíny",
-     "shadeHeight": "Výška stínidla (0: podle tvaru)"
+     "shadeHeight": "Výška stínidla (0: podle tvaru)",
+     "holderMaterial": "Materiál objímky"
     },
     "options": {
      "shape": {
@@ -32,12 +33,16 @@
       "dome": "kopule",
       "drum": "válec",
       "disc": "disk"
+     },
+     "holderMaterial": {
+      "cable": "jako kabel",
+      "own": "vlastní"
      }
     },
     "slots": {
      "shade": "Stínidlo",
-     "cable": "Kabel",
-     "holder": "Objímka"
+     "cable": "Kabel a objímka",
+     "holder": "Objímka (vlastní materiál)"
     },
     "parts": {
      "Shade": "Stínidlo",
@@ -129,6 +134,16 @@
     "label": "Casts shadows",
     "type": "bool",
     "default": false
+   },
+   {
+    "key": "holderMaterial",
+    "label": "Holder material",
+    "type": "select",
+    "default": "cable",
+    "options": [
+     "cable",
+     "own"
+    ]
    }
   ],
   "derived": {
@@ -149,7 +164,7 @@
    },
    {
     "key": "holder",
-    "label": "Holder",
+    "label": "Holder (holderMaterial own)",
     "default": "metal-black-matt"
    }
   ],
@@ -214,7 +229,9 @@
     "w": 44,
     "h": "holder",
     "d": 44,
-    "material": "holder"
+    "material": {
+     "expr": "holderMaterial == 'own' ? 'holder' : 'cable'"
+    }
    },
    {
     "type": "cable",

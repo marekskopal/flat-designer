@@ -423,10 +423,11 @@ The current format is the text in `FurnitureTools::Format`.
   footrest). Plinth and cove LEDs are `LedStrip` items, a fluted pedestal table the round table in a fluted material.
   Light glass draws at a fixed low opacity, so a smoked shade reads only faintly tinted.
 - Seating and lighting round two (I-164, `AddSeatingAndLightingRound2`, `down()` writes back `furniture/before-seating-2`
-  and deletes the shell chair): the bar stool's `footrest` 0 leaves it out, slots `backrest` and `ring` (the footrest);
+  and deletes the shell chair): the bar stool's `footrest` 0 leaves it out, `backrestMaterial` / `footrestMaterial` own
+  put the backrest and footrest in the slots `backrest` and `ring` (default: the seat's and the frame's, as before);
   the dining chair's `seat` / `legs` and the dining table's `legs` slots (no default: the item material, as before); the
   round table's `shape` oval (a block and two round ends, when wider than deep) and `pedestal` width; the glass pendant's
-  `disc` shade, `shadeHeight` (0: by the shape) and `holder` slot; a new upholstered `Shell chair` (legs, sled, swivel).
+  `disc` shade, `shadeHeight` (0: by the shape) and `holderMaterial` own (the `holder` slot; default: the cable's); a new upholstered `Shell chair` (legs, sled, swivel).
   Several drops from one canopy, cone / teardrop / wire shades and a cove (upward) LED strip still need new part types.
 - Kitchen appliances (I-136, `SeedKitchenAppliances`): definitions built of the existing part types, no branded
   models: a mixer tap (gooseneck, straight, pull-out), a range hood (chimney, box, integrated strip), a hob (induction,
@@ -469,8 +470,8 @@ The current format is the text in `FurnitureTools::Format`.
   `handlePosition` (`PartTypeEnum::HandlePositions`, TS `HandlePosition`; the kitchen cabinets' `fronts[].handlePosition`)
   is `auto` (as before: near the top within reach, else the bottom; on a tall door from below reach height to well above
   it, at reach height on its handle edge), `top` / `bottom` (that edge whatever the height: the pull at the split of two
-  doors; an edge pull then sits `EdgePullInset` in from a door's handle edge) or `side` (at reach height on the handle
-  edge). A gola channel is drawn in the handle material when the item gives one (`FrontHandleOptions.material`), else as
+  doors; an edge pull then sits `EdgePullInset` in from a door's handle edge; a vertical bar at that end) or `side` (at
+  reach height on the handle edge; a drawer's knob too). A gola channel is drawn in the handle material when the item gives one (`FrontHandleOptions.material`), else as
   the dark shadow band.
 - Seeds (`AddOpenableFrontsMigration`, `down()` writes back `furniture/before-openable-fronts`): the kitchen cabinets,
   sideboard, bedside table and vanity have drawers with boxes, shelves behind doors and a `softClose` parameter; the wall
@@ -553,7 +554,8 @@ The current format is the text in `FurnitureTools::Format`.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
-  grid. A room's `floorAngle` (0–179° counter-clockwise, 0 lays planks along plan y) turns the pattern of its level
+  grid. Tiled items count their upright rows from their own bottom (a splashback starts with a whole tile), so a raised
+  one does not share the wall bands' rows. A room's `floorAngle` (0–179° counter-clockwise, 0 lays planks along plan y) turns the pattern of its level
   faces (the floor, the tops of its tiled items) about the tile origin: `tileGrid()` carries it to `tileUv()`, and
   `buildFloor()` turns the UVs of the patterns `alignTiles()` does not lay (planks, wood) with `turnLevelUvs()`.
   Upright faces, the wall bands included, keep their own joints.
@@ -1287,10 +1289,12 @@ The current format is the text in `FurnitureTools::Format`.
   counter-height floor units (`CounterHeight`, taller ones break it; the global Worktop definition unless named,
   `overhang` past the deepest, on the highest), all in a new group; both rows must end within the wall's length.
 - Big floors (I-161): `get_floor` takes `roomId` (`Mcp/Tool/RoomPart`: the room, the walls whose centre line comes within
-  their thickness of its outline box, its items and the roomless ones in that box, their groups, definitions and
-  models); `list_furniture_definitions` gives each definition's `catalogue` and `materialSlots` (key, default) and filters
-  by `catalogue`. An empty `values` / `materials` in an item's params is dropped (`ItemDto::withoutEmptyMaps()`, on write
-  and read), as a decoded empty JSON object would come back as `[]`.
+  their thickness of its outline box, its items and the roomless ones in its outline, their groups, definitions, models,
+  variant sets and hidden items; stairs, roofs and the other elements stay whole); `list_furniture_definitions` gives each definition's `catalogue` and `materialSlots` (key, default) and filters
+  by `catalogue` (as the Add library files them: a definition without one but with an electrical category under lighting
+  or electrical; an unknown catalogue is refused). An empty `values` / `materials` in an item's params is dropped
+  (`ItemDto::withoutEmptyMaps()`, on write only, so states logged before still match for undo), as a decoded empty JSON
+  object would come back as `[]`.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
 ## Example projects

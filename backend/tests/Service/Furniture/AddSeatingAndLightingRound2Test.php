@@ -46,6 +46,12 @@ final class AddSeatingAndLightingRound2Test extends IntegrationTestCase
 		// A stool without a footrest; an oval table: a middle block and two round ends.
 		$stool = JsonDecoder::decodeObject(self::definition($pdo, 'Bar stool'));
 		self::assertNotContains('Footrest', $names($evaluator->evaluate($stool, 400, 400, 900, ['footrest' => 0])));
+		// By default the backrest keeps the seat's material and the footrest the frame's, as before.
+		$materials = [];
+		foreach ($evaluator->evaluate($stool, 400, 400, 900) as $part) {
+			$materials[$part->name] = $part->material;
+		}
+		self::assertSame(['seat', 'frame'], [$materials['Backrest'], $materials['Footrest']]);
 		$table = JsonDecoder::decodeObject(self::definition($pdo, 'Round table'));
 		self::assertSame(
 			['Top', 'Top end', 'Top end', 'Pedestal', 'Foot disc'],

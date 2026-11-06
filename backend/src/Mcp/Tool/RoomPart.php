@@ -10,13 +10,16 @@ use Izbik\Dto\RoomDto;
 use Izbik\Dto\SceneDefinitionDto;
 use Izbik\Dto\SceneDto;
 use Izbik\Dto\SceneModelDto;
+use Izbik\Dto\VariantSetDto;
 use Izbik\Dto\WallDto;
 use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Geometry\PlanMath;
 
 /**
  * The part of a floor's scene `get_floor` answers: the whole floor, or one room with the walls around it (those whose
  * centre line comes within their thickness of the room's outline box), its items (and the items in no room standing in
- * that box), their groups, definitions and models. A big floor does not fit an agent's tool result whole.
+ * its outline), their groups (a group's other members elsewhere are not listed), definitions and models, and the hidden
+ * items and variant sets among them. A big floor does not fit an agent's tool result whole.
  */
 final readonly class RoomPart
 {
@@ -27,6 +30,8 @@ final readonly class RoomPart
 	 * @param list<GroupDto> $groups
 	 * @param list<SceneDefinitionDto> $definitions
 	 * @param list<SceneModelDto> $models
+	 * @param list<VariantSetDto> $variantSets
+	 * @param list<int> $hiddenItemIds
 	 */
 	private function __construct(
 		public array $rooms,
@@ -35,12 +40,23 @@ final readonly class RoomPart
 		public array $groups,
 		public array $definitions,
 		public array $models,
+		public array $variantSets,
+		public array $hiddenItemIds,
 	) {
 	}
 
 	public static function whole(SceneDto $scene): self
 	{
-		return new self($scene->rooms, $scene->walls, $scene->items, $scene->groups, $scene->definitions, $scene->models);
+		return new self(
+			$scene->rooms,
+			$scene->walls,
+			$scene->items,
+			$scene->groups,
+			$scene->definitions,
+			$scene->models,
+			$scene->variantSets,
+			$scene->hiddenItemIds(),
+		);
 	}
 
 	public static function of(SceneDto $scene, int $roomId): self
@@ -50,26 +66,32 @@ final readonly class RoomPart
 			throw EditException::notFound(sprintf('Room %d is not on this floor.', $roomId));
 		}
 		[$x0, $y0, $x1, $y1] = self::box($room);
+		$outline = array_map(static fn (array $point): array => [(float) $point[0], (float) $point[1]], $room->polygon);
 
 		$items = array_values(array_filter(
 			$scene->items,
 			static fn (ItemDto $item): bool => $item->roomId === $roomId
-				|| ($item->roomId === null && $item->x >= $x0 && $item->x <= $x1 && $item->y >= $y0 && $item->y <= $y1),
+				|| ($item->roomId === null && PlanMath::contains($outline, [(float) $item->x, (float) $item->y])),
 		));
 		$groupIds = self::ids(array_map(static fn (ItemDto $item): ?int => $item->groupId, $items));
 		$definitionIds = self::ids(array_map(static fn (ItemDto $item): ?int => $item->definitionId, $items));
 		$modelIds = self::ids(array_map(static fn (ItemDto $item): ?int => $item->modelId, $items));
+		$itemIds = self::ids(array_map(static fn (ItemDto $item): int => $item->id, $items));
+		$groups = array_values(array_filter($scene->groups, static fn (GroupDto $group): bool => isset($groupIds[$group->id])));
+		$setIds = self::ids(array_map(static fn (GroupDto $group): ?int => $group->variantSetId, $groups));
 
 		return new self(
 			[$room],
 			array_values(array_filter($scene->walls, static fn (WallDto $wall): bool => self::near($wall, $x0, $y0, $x1, $y1))),
 			$items,
-			array_values(array_filter($scene->groups, static fn (GroupDto $group): bool => isset($groupIds[$group->id]))),
+			$groups,
 			array_values(array_filter(
 				$scene->definitions,
 				static fn (SceneDefinitionDto $definition): bool => isset($definitionIds[$definition->id]),
 			)),
 			array_values(array_filter($scene->models, static fn (SceneModelDto $model): bool => isset($modelIds[$model->id]))),
+			array_values(array_filter($scene->variantSets, static fn (VariantSetDto $set): bool => isset($setIds[$set->id]))),
+			array_values(array_filter($scene->hiddenItemIds(), static fn (int $id): bool => isset($itemIds[$id]))),
 		);
 	}
 

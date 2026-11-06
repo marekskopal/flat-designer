@@ -49,7 +49,8 @@ export interface FrontBox {
 
 /**
  * Bar handle on a front (mm, item-local; `faceZ` is the front's outer face): horizontal ones near the top or bottom
- * edge depending on the height (`itemElevation` + front), vertical ones at `edge` around reach height.
+ * edge depending on the height (`itemElevation` + front), vertical ones at `edge` around reach height; `position` `top`
+ * / `bottom` puts either at that end whatever the height (`side` is `auto` for a bar).
  */
 export function buildHandle(
     orientation: 'horizontal' | 'vertical',
@@ -77,11 +78,9 @@ export function buildHandle(
     const length =
         handleLength === undefined ? THREE.MathUtils.clamp(front.height * 0.35, 150, 500) : Math.min(handleLength, Math.max(40, front.height - 160));
     const x = edge === 'right' ? front.left + front.width - 45 : front.left + 45;
-    const centre = THREE.MathUtils.clamp(
-        HandleReachHeight - itemElevation,
-        front.bottom + 80 + length / 2,
-        front.bottom + front.height - 80 - length / 2,
-    );
+    const [low, high] = [front.bottom + 80 + length / 2, front.bottom + front.height - 80 - length / 2];
+    // At reach height, or at the edge asked for (the pull at the split of two doors).
+    const centre = position === 'top' ? high : position === 'bottom' ? low : THREE.MathUtils.clamp(HandleReachHeight - itemElevation, low, high);
     return boxAt(material, (x - HandleSection / 2) * MM, (centre - length / 2) * MM, z * MM, HandleSection * MM, length * MM, HandleSection * MM);
 }
 
@@ -148,9 +147,10 @@ export function buildFrontHandle(
         case 'vertical':
             return buildHandle(kind, front, faceZ, itemElevation, edge, materials, material, handleLength, position);
         case 'knob': {
-            const x = drawer ? front.left + front.width / 2 : edge === 'right' ? front.left + front.width - 45 : front.left + 45;
-            const middle = drawer && front.height < 300 && position === 'auto';
-            const y = middle ? front.bottom + front.height / 2 : place === 'side' ? atReach(0) : place === 'top' ? top - 60 : front.bottom + 60;
+            const middle = drawer && place !== 'side';
+            const x = middle ? front.left + front.width / 2 : edge === 'right' ? front.left + front.width - 45 : front.left + 45;
+            const centred = drawer && front.height < 300 && position === 'auto';
+            const y = centred ? front.bottom + front.height / 2 : place === 'side' ? atReach(0) : place === 'top' ? top - 60 : front.bottom + 60;
             const geometry = new THREE.CylinderGeometry((KnobDiameter / 2) * MM, (KnobDiameter / 2 - 4) * MM, KnobDepth * MM, 24);
             const knob = new THREE.Mesh(geometry, material);
             knob.rotation.x = Math.PI / 2;

@@ -137,7 +137,8 @@ export function buildItemParts(
         layOnRoof(object, item, assets.roofs ?? []);
     }
     object.userData = {...object.userData, itemId: item.id};
-    alignTiles(object, tileGrid(room), materials, item.z + ground);
+    // Upright tile rows from the item's own bottom (on a roof, where `layOnRoof()` put it).
+    alignTiles(object, tileGrid(room), materials, object.position.y / MM);
     object.traverse((o) => {
         if (o instanceof THREE.Mesh) {
             // A glowing bulb would block its own light.

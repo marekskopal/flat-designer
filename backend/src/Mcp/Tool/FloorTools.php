@@ -26,7 +26,8 @@ final readonly class FloorTools
 
 	/**
 	 * @param int|null $roomId only this room: its outline, the walls round it, its items (and those in no room inside
-	 *     it), their groups, definitions and models; null: the whole floor
+	 *     it), their groups, definitions, models, variant sets and hidden items (the floor's stairs, roofs and other
+	 *     elements stay whole); null: the whole floor
 	 * @return array<string, mixed>
 	 */
 	#[McpTool(
@@ -55,8 +56,8 @@ final readonly class FloorTools
 			'walls' => $part->walls,
 			'items' => $part->items,
 			'groups' => $part->groups,
-			'variantSets' => $scene->variantSets,
-			'hiddenItemIds' => $scene->hiddenItemIds(),
+			'variantSets' => $part->variantSets,
+			'hiddenItemIds' => $part->hiddenItemIds,
 			'definitions' => $part->definitions,
 			'underlay' => $scene->underlay,
 			'models' => $part->models,

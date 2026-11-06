@@ -10,7 +10,9 @@ use Izbik\Dto\FurnitureDefinitionInputDto;
 use Izbik\Dto\FurnitureValidationDto;
 use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
 use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Service\Editor\Exception\EditException;
 use Izbik\Service\Furniture\CutList\CutListService;
+use Izbik\Service\Furniture\DefinitionCatalogueEnum;
 use Izbik\Service\Furniture\DefinitionEvaluator;
 use Izbik\Service\Furniture\DefinitionException;
 use Izbik\Service\Furniture\DefinitionValidator;
@@ -138,8 +140,9 @@ final readonly class FurnitureTools
 	/**
 	 * @param int|null $projectId with a project: what its items may use (global, the project's own, the project owner's
 	 *     library); without: global ones and your library
-	 * @param string|null $catalogue only the definitions filed under it (kitchen, storage, seating, tables, bedroom, bathroom,
-	 *     lighting, electrical, decor, building, outdoor, roof); null: all
+	 * @param string|null $catalogue only the definitions filed under it in the Add library (kitchen, storage, seating,
+	 *     tables, bedroom, bathroom, lighting, electrical, decor, building, outdoor, roof; one without a catalogue but with
+	 *     an electrical category goes under lighting or electrical); null: all
 	 * @return list<array<string, mixed>>
 	 */
 	#[McpTool(
@@ -153,6 +156,9 @@ final readonly class FurnitureTools
 	{
 		$user = $this->context->user();
 		$project = $projectId === null ? null : $this->context->project($projectId);
+		if ($catalogue !== null && DefinitionCatalogueEnum::tryFrom($catalogue) === null) {
+			throw EditException::invalid(sprintf('Unknown catalogue "%s".', $catalogue));
+		}
 
 		$listed = array_map(static function (FurnitureDefinition $definition): array {
 			$body = JsonDecoder::decodeObject($definition->definition);
@@ -164,7 +170,7 @@ final readonly class FurnitureTools
 				'scope' => $definition->scope()->value,
 				'userName' => $definition->user?->name,
 				'projectId' => $definition->project?->id,
-				'catalogue' => is_string($body['catalogue'] ?? null) ? $body['catalogue'] : null,
+				'catalogue' => self::catalogue($body),
 				'size' => $body['size'] ?? null,
 				'parameters' => $body['parameters'] ?? [],
 				'materialSlots' => self::slots($body['materialSlots'] ?? null),
@@ -175,6 +181,24 @@ final readonly class FurnitureTools
 		return $catalogue === null
 			? $listed
 			: array_values(array_filter($listed, static fn (array $row): bool => $row['catalogue'] === $catalogue));
+	}
+
+	/**
+	 * Where the Add library files a definition: its `catalogue`, else by its electrical category (lights under lighting,
+	 * the rest under electrical), else none (Other).
+	 *
+	 * @param array<mixed> $body
+	 */
+	private static function catalogue(array $body): ?string
+	{
+		if (is_string($body['catalogue'] ?? null)) {
+			return $body['catalogue'];
+		}
+		if (!is_string($body['category'] ?? null)) {
+			return null;
+		}
+
+		return $body['category'] === 'light' ? DefinitionCatalogueEnum::Lighting->value : DefinitionCatalogueEnum::Electrical->value;
 	}
 
 	/** @return list<array{key: mixed, default: mixed}> a definition's material slots: key and default material code */

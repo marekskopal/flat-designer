@@ -939,6 +939,9 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame([['key' => 'carcass', 'default' => 'kitchen-oak']], $listed[0]['materialSlots']);
 		self::assertNull($listed[0]['catalogue']);
 		self::assertSame([], $this->client->call('list_furniture_definitions', ['projectId' => $projectId, 'catalogue' => 'kitchen']));
+		$isError = false;
+		$this->client->call('list_furniture_definitions', ['catalogue' => 'kitchens'], $isError);
+		self::assertTrue($isError);
 
 		$added = $this->client->call(
 			'add_item',

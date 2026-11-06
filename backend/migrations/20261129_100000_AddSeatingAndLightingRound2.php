@@ -9,9 +9,9 @@ use MarekSkopal\ORM\Migrations\Migration\Migration;
 
 /**
  * Seating and lighting, round two: the bar stool's footrest may be left out (0) and its backrest and footrest take
- * materials of their own; the dining chair's seat and legs and the dining table's legs take materials of their own; the
+ * materials of their own when asked (`backrestMaterial` / `footrestMaterial` own); the dining chair's seat and legs and the dining table's legs take materials of their own; the
  * round table may be oval with a wider pedestal; the glass pendant gets a flat disc shade, a shade height apart from its
- * width and a holder material; and a new upholstered shell chair on legs, a sled or a swivel pedestal. The changed rows
+ * width and, when asked, a holder material of its own; and a new upholstered shell chair on legs, a sled or a swivel pedestal. The changed rows
  * are rewritten from the files; `down()` writes back the files as they were before (`furniture/before-seating-2`) and
  * deletes the new one.
  */
