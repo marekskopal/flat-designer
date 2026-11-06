@@ -1,6 +1,6 @@
 {
  "name": "Pendant with a glass shade",
- "description": "Pendant with a glass shade on a fabric cable: a globe, a dome or a drum round a small glowing bulb; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
+ "description": "Pendant with a glass shade on a fabric cable with a holder of its own: a globe, a dome, a drum or a flat disc (shadeHeight sets its height apart from its width) round a small glowing bulb; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
  "definition": {
   "format": 1,
   "category": "light",
@@ -14,7 +14,7 @@
   "translations": {
    "cs": {
     "name": "Závěsné svítidlo se skleněným stínidlem",
-    "description": "Závěsné svítidlo se skleněným stínidlem na textilním kabelu: koule, kopule nebo válec kolem malé svítící žárovky; kabel stoupá k háčku nad ním a vede po path k baldachýnu jako u svítidla s holou žárovkou. Výška osazení prvku je spodek stínidla.",
+    "description": "Závěsné svítidlo se skleněným stínidlem na textilním kabelu: koule, kopule, válec nebo plochý disk (shadeHeight určuje jeho výšku nezávisle na šířce) kolem malé svítící žárovky; kabel stoupá k háčku nad ním a vede po path k baldachýnu jako u svítidla s holou žárovkou. Výška osazení prvku je spodek stínidla.",
     "parameters": {
      "path": "Trasa kabelu",
      "path.x": "x",
@@ -23,18 +23,21 @@
      "shape": "Tvar stínidla",
      "lumens": "Světelný tok",
      "kelvin": "Teplota chromatičnosti",
-     "shadow": "Vrhá stíny"
+     "shadow": "Vrhá stíny",
+     "shadeHeight": "Výška stínidla (0: podle tvaru)"
     },
     "options": {
      "shape": {
       "globe": "koule",
       "dome": "kopule",
-      "drum": "válec"
+      "drum": "válec",
+      "disc": "disk"
      }
     },
     "slots": {
      "shade": "Stínidlo",
-     "cable": "Kabel a objímka"
+     "cable": "Kabel",
+     "holder": "Objímka"
     },
     "parts": {
      "Shade": "Stínidlo",
@@ -89,9 +92,19 @@
     "options": [
      "globe",
      "dome",
-     "drum"
+     "drum",
+     "disc"
     ],
     "default": "globe"
+   },
+   {
+    "key": "shadeHeight",
+    "label": "Shade height (0: by the shape)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 800,
+    "unit": "mm"
    },
    {
     "key": "lumens",
@@ -120,7 +133,7 @@
   ],
   "derived": {
    "s": "min(W, D)",
-   "sh": "shape == 'globe' ? s : shape == 'dome' ? round(s * 0.6) : round(s * 0.55)",
+   "sh": "shadeHeight > 0 ? shadeHeight : shape == 'globe' ? s : shape == 'dome' ? round(s * 0.6) : shape == 'disc' ? round(s * 0.15) : round(s * 0.55)",
    "holder": 60
   },
   "materialSlots": [
@@ -133,6 +146,11 @@
     "key": "cable",
     "label": "Cable and holder",
     "default": "cable-fabric-black"
+   },
+   {
+    "key": "holder",
+    "label": "Holder",
+    "default": "metal-black-matt"
    }
   ],
   "parts": [
@@ -163,7 +181,7 @@
     "d": "s",
     "material": "shade",
     "radius": {
-     "expr": "shape == 'dome' ? round(sh * 0.9) : 6"
+     "expr": "shape == 'dome' ? round(min(sh, s / 2) * 0.9) : shape == 'disc' ? round(min(sh, s) * 0.4) : 6"
     }
    },
    {
@@ -196,7 +214,7 @@
     "w": 44,
     "h": "holder",
     "d": 44,
-    "material": "cable"
+    "material": "holder"
    },
    {
     "type": "cable",

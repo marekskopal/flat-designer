@@ -1,0 +1,202 @@
+{
+ "name": "Shell chair",
+ "description": "Upholstered shell chair: a padded seat and a back leaning back a little, optionally with arms, on four legs, a sled base or a swivel pedestal with a foot disc.",
+ "definition": {
+  "format": 1,
+  "catalogue": "seating",
+  "translations": {
+   "cs": {
+    "name": "Čalouněná skořepinová židle",
+    "description": "Čalouněná skořepinová židle: polstrovaný sedák a mírně zakloněné opěradlo, případně s područkami, na čtyřech nohách, na ližinách nebo na otočné noze s patkou.",
+    "parameters": {
+     "seatHeight": "Výška sedáku",
+     "base": "Podnož",
+     "arms": "Područky"
+    },
+    "options": {
+     "base": {
+      "legs": "čtyři nohy",
+      "sled": "ližiny",
+      "swivel": "otočná noha"
+     }
+    },
+    "slots": {
+     "shell": "Čalounění",
+     "base": "Podnož"
+    },
+    "parts": {
+     "Seat": "Sedák",
+     "Back": "Opěradlo",
+     "Arm": "Područka",
+     "Leg": "Noha",
+     "Runner": "Ližina",
+     "Post": "Sloupek",
+     "Pedestal": "Noha",
+     "Foot disc": "Patka"
+    }
+   }
+  },
+  "size": {
+   "width": 520,
+   "depth": 560,
+   "height": 800
+  },
+  "parameters": [
+   {
+    "key": "seatHeight",
+    "label": "Seat height",
+    "type": "int",
+    "default": 460,
+    "min": 380,
+    "max": 800,
+    "unit": "mm"
+   },
+   {
+    "key": "base",
+    "label": "Base",
+    "type": "select",
+    "default": "legs",
+    "options": [
+     "legs",
+     "sled",
+     "swivel"
+    ]
+   },
+   {
+    "key": "arms",
+    "label": "Arms",
+    "type": "bool",
+    "default": false
+   }
+  ],
+  "derived": {
+   "under": "seatHeight - 70",
+   "foot": "min(W, D) * 0.75"
+  },
+  "materialSlots": [
+   {
+    "key": "shell",
+    "label": "Upholstery",
+    "default": "fabric-boucle-cream"
+   },
+   {
+    "key": "base",
+    "label": "Base",
+    "default": "metal-black-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cushion",
+    "name": "Seat",
+    "x": 0,
+    "y": "under",
+    "z": 40,
+    "w": "W",
+    "h": 70,
+    "d": "D - 40",
+    "material": "shell",
+    "radius": 30
+   },
+   {
+    "type": "cushion",
+    "name": "Back",
+    "x": 0,
+    "y": "under + 30",
+    "z": 0,
+    "w": "W",
+    "h": "H - under - 30",
+    "d": 70,
+    "material": "shell",
+    "radius": 30,
+    "tilt": 8
+   },
+   {
+    "type": "cushion",
+    "name": "Arm",
+    "when": "arms",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - 60)",
+    "y": "seatHeight - 10",
+    "z": 40,
+    "w": 60,
+    "h": 170,
+    "d": "round(D * 0.7)",
+    "material": "shell",
+    "radius": 25
+   },
+   {
+    "type": "cylinder",
+    "name": "Leg",
+    "when": "base == 'legs'",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 == 0 ? 40 : W - 40 - 24",
+    "y": 0,
+    "z": "i < 2 ? 60 : D - 40 - 24",
+    "w": 24,
+    "h": "under",
+    "d": 24,
+    "material": "base"
+   },
+   {
+    "type": "block",
+    "name": "Runner",
+    "when": "base == 'sled'",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i == 0 ? 40 : W - 40 - 16",
+    "y": 0,
+    "z": 60,
+    "w": 16,
+    "h": 16,
+    "d": "D - 100",
+    "material": "base"
+   },
+   {
+    "type": "block",
+    "name": "Post",
+    "when": "base == 'sled'",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 == 0 ? 40 : W - 40 - 16",
+    "y": 16,
+    "z": "i < 2 ? 60 : D - 40 - 16",
+    "w": 16,
+    "h": "under - 16",
+    "d": 16,
+    "material": "base"
+   },
+   {
+    "type": "cylinder",
+    "name": "Pedestal",
+    "when": "base == 'swivel'",
+    "x": "W / 2 - 30",
+    "y": 12,
+    "z": "D / 2 - 30",
+    "w": 60,
+    "h": "under - 12",
+    "d": 60,
+    "material": "base"
+   },
+   {
+    "type": "cylinder",
+    "name": "Foot disc",
+    "when": "base == 'swivel'",
+    "x": "(W - foot) / 2",
+    "y": 0,
+    "z": "(D - foot) / 2",
+    "w": "foot",
+    "h": 12,
+    "d": "foot",
+    "material": "base",
+    "radius": 4
+   }
+  ]
+ }
+}

@@ -1,18 +1,19 @@
 {
  "name": "Dining table",
- "description": "Solid wood table: a top of boards along the width, legs tapered on the inside and an apron between them.",
+ "description": "Solid wood table: a top of boards along the width, legs tapered on the inside and an apron between them. The legs may take a material of their own.",
  "definition": {
   "format": 1,
   "catalogue": "tables",
   "translations": {
    "cs": {
     "name": "Jídelní stůl",
-    "description": "Stůl z masivu: deska z prken po šířce, nohy zkosené na vnitřní straně a lub mezi nimi.",
+    "description": "Stůl z masivu: deska z prken po šířce, nohy zkosené na vnitřní straně a lub mezi nimi. Nohy mohou mít vlastní materiál.",
     "parameters": {
      "boardWidth": "Šířka prken desky"
     },
     "slots": {
-     "wood": "Dřevo"
+     "wood": "Dřevo",
+     "legs": "Nohy"
     },
     "parts": {
      "Top board": "Prkno desky",
@@ -47,6 +48,10 @@
    {
     "key": "wood",
     "label": "Wood"
+   },
+   {
+    "key": "legs",
+    "label": "Legs"
    }
   ],
   "parts": [
@@ -81,7 +86,7 @@
     "w": 55,
     "h": "underTop",
     "d": 55,
-    "material": "wood",
+    "material": "legs",
     "bottomSize": 38
    },
    {

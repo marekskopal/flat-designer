@@ -422,6 +422,12 @@ The current format is the text in `FurnitureTools::Format`.
   (spots as `light` parts of kind spot, the schedule counting `spots`) and a bar stool (`seatHeight`, `back`,
   footrest). Plinth and cove LEDs are `LedStrip` items, a fluted pedestal table the round table in a fluted material.
   Light glass draws at a fixed low opacity, so a smoked shade reads only faintly tinted.
+- Seating and lighting round two (I-164, `AddSeatingAndLightingRound2`, `down()` writes back `furniture/before-seating-2`
+  and deletes the shell chair): the bar stool's `footrest` 0 leaves it out, slots `backrest` and `ring` (the footrest);
+  the dining chair's `seat` / `legs` and the dining table's `legs` slots (no default: the item material, as before); the
+  round table's `shape` oval (a block and two round ends, when wider than deep) and `pedestal` width; the glass pendant's
+  `disc` shade, `shadeHeight` (0: by the shape) and `holder` slot; a new upholstered `Shell chair` (legs, sled, swivel).
+  Several drops from one canopy, cone / teardrop / wire shades and a cove (upward) LED strip still need new part types.
 - Kitchen appliances (I-136, `SeedKitchenAppliances`): definitions built of the existing part types, no branded
   models: a mixer tap (gooseneck, straight, pull-out), a range hood (chimney, box, integrated strip), a hob (induction,
   gas with grates, downdraft vent) and a sink (inset, undermount, farmhouse apron; 1–2 bowls, drainer) laid on the

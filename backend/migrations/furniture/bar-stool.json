@@ -1,21 +1,23 @@
 {
  "name": "Bar stool",
- "description": "Counter or bar stool: a round seat seatHeight high on four legs joined by a footrest ring, optionally with a low back.",
+ "description": "Counter or bar stool: a round seat seatHeight high on four legs joined by a footrest ring (footrest 0: none), optionally with a low back; the backrest and the footrest have materials of their own.",
  "definition": {
   "format": 1,
   "catalogue": "seating",
   "translations": {
    "cs": {
     "name": "Barová židle",
-    "description": "Barová židle k pultu nebo baru: kulatý sedák ve výšce seatHeight na čtyřech nohách spojených opěrkou na nohy, případně s nízkým opěradlem.",
+    "description": "Barová židle k pultu nebo baru: kulatý sedák ve výšce seatHeight na čtyřech nohách spojených opěrkou na nohy (footrest 0: bez ní), případně s nízkým opěradlem; opěradlo a opěrka na nohy mají vlastní materiál.",
     "parameters": {
      "seatHeight": "Výška sedáku",
      "back": "Opěradlo",
-     "footrest": "Výška opěrky na nohy"
+     "footrest": "Výška opěrky na nohy (0: bez opěrky)"
     },
     "slots": {
      "frame": "Rám",
-     "seat": "Sedák"
+     "seat": "Sedák",
+     "backrest": "Opěradlo",
+     "ring": "Opěrka na nohy"
     },
     "parts": {
      "Seat": "Sedák",
@@ -49,10 +51,10 @@
    },
    {
     "key": "footrest",
-    "label": "Footrest height",
+    "label": "Footrest height (0: none)",
     "type": "int",
     "default": 300,
-    "min": 150,
+    "min": 0,
     "max": 500,
     "unit": "mm"
    }
@@ -70,6 +72,16 @@
     "key": "seat",
     "label": "Seat",
     "default": "oak-solid"
+   },
+   {
+    "key": "backrest",
+    "label": "Backrest",
+    "default": "oak-solid"
+   },
+   {
+    "key": "ring",
+    "label": "Footrest",
+    "default": "metal-black-matt"
    }
   ],
   "parts": [
@@ -108,7 +120,8 @@
     "w": "W - 100",
     "h": 14,
     "d": 18,
-    "material": "frame"
+    "material": "ring",
+    "when": "footrest > 0"
    },
    {
     "type": "block",
@@ -119,7 +132,8 @@
     "w": "W - 100",
     "h": 14,
     "d": 18,
-    "material": "frame"
+    "material": "ring",
+    "when": "footrest > 0"
    },
    {
     "type": "block",
@@ -130,7 +144,8 @@
     "w": 18,
     "h": 14,
     "d": "D - 136",
-    "material": "frame"
+    "material": "ring",
+    "when": "footrest > 0"
    },
    {
     "type": "block",
@@ -141,7 +156,8 @@
     "w": 18,
     "h": 14,
     "d": "D - 136",
-    "material": "frame"
+    "material": "ring",
+    "when": "footrest > 0"
    },
    {
     "type": "cylinder",
@@ -168,7 +184,7 @@
     "w": "W - 100",
     "h": 110,
     "d": 22,
-    "material": "seat"
+    "material": "backrest"
    }
   ]
  }

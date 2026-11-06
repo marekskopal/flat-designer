@@ -9,6 +9,7 @@ use Izbik\Service\Furniture\FurnitureSeeds;
 use Izbik\Service\Json\JsonDecoder;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\IntegrationTestCase;
+use Migrations\AddSeatingAndLightingRound2Migration;
 use Migrations\SeedDecorCatalogueMigration;
 use Migrations\SeedDemoHouseFurnitureMigration;
 use Migrations\SeedFlat50FurnitureDefinitionsMigration;
@@ -57,6 +58,7 @@ final class FurnitureSeedTest extends IntegrationTestCase
 			...SeedKitchenAppliancesMigration::Files,
 			...SeedKitchenLightingAndSeatingMigration::Files,
 			...SeedSlattedPanelMigration::Files,
+			...AddSeatingAndLightingRound2Migration::Files,
 		];
 		sort($listed);
 		self::assertSame(array_unique($listed), $listed, 'A file is listed by more than one migration.');
