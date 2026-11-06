@@ -414,6 +414,9 @@ The current format is the text in `FurnitureTools::Format`.
   group tagged `frontLink`, posed by `setFrontPose()` (`poseHingeLinks()`) and hidden while closed; a butt one's
   barrel and leaves, half on the door, half on the carcass. Without a side there, only the door's half is drawn. The
   integrated soft-close damper is not drawn. `AddFurnitureHinges` gives the bin store and garden shed butt hinges.
+- Slatted panels (I-138, `SeedSlattedPanel`): slats `slat` wide `gap` apart across the item, on a felt backing behind
+  them (`mount` wall) or above them (`mount` ceiling, the item laid flat under the ceiling), or without one as a screen.
+  Bulkheads over cabinet runs are `Beam` or `Box` items.
 - Kitchen lighting and seating (I-137, `SeedKitchenLightingAndSeating`): a pendant with a glass shade (globe as a
   round `cushion`, dome or drum as a `cylinder`, a glowing bulb inside, the bare-bulb pendant's cable), a track light
   (spots as `light` parts of kind spot, the schedule counting `spots`) and a bar stool (`seatHeight`, `back`,

@@ -1,0 +1,139 @@
+{
+ "name": "Slatted panel",
+ "description": "Slatted panel: slats slat mm wide with gap mm between them across the item's width, on a felt backing behind them (mount wall) or above them (mount ceiling: lay the item flat under the ceiling, its height the panel's thickness), or without a backing as a free-standing screen.",
+ "definition": {
+  "format": 1,
+  "catalogue": "building",
+  "translations": {
+   "cs": {
+    "name": "Lamelový panel",
+    "description": "Lamelový panel: lamely široké slat mm s mezerou gap mm po šířce prvku, na plstěném podkladu za nimi (mount wall) nebo nad nimi (mount ceiling: prvek položte naplocho pod strop, jeho výška je tloušťka panelu), nebo bez podkladu jako samostatná zástěna.",
+    "parameters": {
+     "mount": "Uchycení",
+     "slat": "Šířka lamely",
+     "gap": "Mezera",
+     "backing": "Plstěný podklad"
+    },
+    "options": {
+     "mount": {
+      "wall": "na stěnu",
+      "ceiling": "na strop"
+     }
+    },
+    "slots": {
+     "slats": "Lamely",
+     "backing": "Podklad"
+    },
+    "parts": {
+     "Slat": "Lamela",
+     "Backing": "Podklad"
+    }
+   }
+  },
+  "size": {
+   "width": 1200,
+   "depth": 40,
+   "height": 2400
+  },
+  "parameters": [
+   {
+    "key": "mount",
+    "label": "Mount",
+    "type": "select",
+    "options": [
+     "wall",
+     "ceiling"
+    ],
+    "default": "wall"
+   },
+   {
+    "key": "slat",
+    "label": "Slat width",
+    "type": "int",
+    "default": 40,
+    "min": 10,
+    "max": 200,
+    "unit": "mm"
+   },
+   {
+    "key": "gap",
+    "label": "Gap",
+    "type": "int",
+    "default": 20,
+    "min": 3,
+    "max": 200,
+    "unit": "mm"
+   },
+   {
+    "key": "backing",
+    "label": "Felt backing",
+    "type": "bool",
+    "default": true
+   }
+  ],
+  "derived": {
+   "count": "max(floor((W + gap) / (slat + gap)), 1)",
+   "offset": "(W - count * slat - (count - 1) * gap) / 2",
+   "backT": "backing ? 10 : 0"
+  },
+  "materialSlots": [
+   {
+    "key": "slats",
+    "label": "Slats",
+    "default": "oak-solid"
+   },
+   {
+    "key": "backing",
+    "label": "Backing",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Backing",
+    "when": "backing && mount == 'wall'",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "backT",
+    "material": "backing"
+   },
+   {
+    "type": "board",
+    "name": "Backing",
+    "when": "backing && mount == 'ceiling'",
+    "x": 0,
+    "y": "H - backT",
+    "z": 0,
+    "w": "W",
+    "h": "backT",
+    "d": "D",
+    "material": "backing",
+    "grain": "horizontal"
+   },
+   {
+    "type": "board",
+    "name": "Slat",
+    "repeat": {
+     "count": "count"
+    },
+    "x": "offset + i * (slat + gap)",
+    "y": 0,
+    "z": "mount == 'wall' ? backT : 0",
+    "w": "slat",
+    "h": "mount == 'wall' ? H : H - backT",
+    "d": "mount == 'wall' ? D - backT : D",
+    "material": "slats",
+    "grain": {
+     "expr": "mount == 'wall' ? 'vertical' : 'horizontal'"
+    },
+    "edges": [
+     "front"
+    ]
+   }
+  ]
+ }
+}
