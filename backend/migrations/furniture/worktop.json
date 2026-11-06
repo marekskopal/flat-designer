@@ -1,25 +1,34 @@
 {
  "name": "Worktop",
- "description": "Worktop slab on the base cabinets, cut to the item (z = the cabinet height).",
+ "description": "Worktop slab on the base cabinets, cut to the item (z = the cabinet height). An end without a rounding may turn down drop mm below the item in the same material (waterfall, e.g. to the floor from the cabinet height).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Pracovní deska",
-    "description": "Pracovní deska na spodních skříňkách, přiříznutá na rozměr prvku (z = výška skříněk).",
+    "description": "Pracovní deska na spodních skříňkách, přiříznutá na rozměr prvku (z = výška skříněk). Konec bez zaoblení může přejít o drop mm pod prvek ve stejném materiálu (vodopád, např. od výšky skříněk k podlaze).",
     "slots": {
      "top": "Materiál"
     },
     "parts": {
      "Slab": "Deska",
-     "Rounded end": "Zaoblený konec"
+     "Rounded end": "Zaoblený konec",
+     "Waterfall end": "Vodopádový konec"
     },
     "parameters": {
-     "roundEnd": "Zaoblený konec"
+     "roundEnd": "Zaoblený konec",
+     "waterfall": "Vodopádový konec",
+     "drop": "Přesah vodopádu pod desku"
     },
     "options": {
      "roundEnd": {
+      "none": "žádný",
+      "left": "vlevo",
+      "right": "vpravo",
+      "both": "oba"
+     },
+     "waterfall": {
       "none": "žádný",
       "left": "vlevo",
       "right": "vpravo",
@@ -43,10 +52,10 @@
    {
     "type": "board",
     "name": "Slab",
-    "x": "rl",
+    "x": "rl + wl",
     "y": 0,
     "z": 0,
-    "w": "W - rl - rr",
+    "w": "W - rl - rr - wl - wr",
     "h": "H",
     "d": "D",
     "material": "top",
@@ -78,6 +87,38 @@
     "h": "H",
     "d": "D",
     "material": "top"
+   },
+   {
+    "type": "board",
+    "name": "Waterfall end",
+    "when": "wl > 0",
+    "x": 0,
+    "y": "-drop",
+    "z": 0,
+    "w": "H",
+    "h": "drop + H",
+    "d": "D",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Waterfall end",
+    "when": "wr > 0",
+    "x": "W - H",
+    "y": "-drop",
+    "z": 0,
+    "w": "H",
+    "h": "drop + H",
+    "d": "D",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
    }
   ],
   "parameters": [
@@ -92,11 +133,34 @@
      "both"
     ],
     "default": "none"
+   },
+   {
+    "key": "waterfall",
+    "label": "Waterfall end",
+    "type": "select",
+    "default": "none",
+    "options": [
+     "none",
+     "left",
+     "right",
+     "both"
+    ]
+   },
+   {
+    "key": "drop",
+    "label": "Waterfall drop below the top",
+    "type": "int",
+    "default": 872,
+    "min": 100,
+    "max": 1200,
+    "unit": "mm"
    }
   ],
   "derived": {
    "rl": "roundEnd == 'left' || roundEnd == 'both' ? D / 2 : 0",
-   "rr": "roundEnd == 'right' || roundEnd == 'both' ? D / 2 : 0"
+   "rr": "roundEnd == 'right' || roundEnd == 'both' ? D / 2 : 0",
+   "wl": "rl == 0 && (waterfall == 'left' || waterfall == 'both') ? H : 0",
+   "wr": "rr == 0 && (waterfall == 'right' || waterfall == 'both') ? H : 0"
   }
  }
 }

@@ -1,0 +1,102 @@
+{
+ "name": "Worktop",
+ "description": "Worktop slab on the base cabinets, cut to the item (z = the cabinet height).",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Pracovní deska",
+    "description": "Pracovní deska na spodních skříňkách, přiříznutá na rozměr prvku (z = výška skříněk).",
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Slab": "Deska",
+     "Rounded end": "Zaoblený konec"
+    },
+    "parameters": {
+     "roundEnd": "Zaoblený konec"
+    },
+    "options": {
+     "roundEnd": {
+      "none": "žádný",
+      "left": "vlevo",
+      "right": "vpravo",
+      "both": "oba"
+     }
+    }
+   }
+  },
+  "size": {
+   "width": 1200,
+   "depth": 600,
+   "height": 38
+  },
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Slab",
+    "x": "rl",
+    "y": 0,
+    "z": 0,
+    "w": "W - rl - rr",
+    "h": "H",
+    "d": "D",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "cylinder",
+    "name": "Rounded end",
+    "when": "rl > 0",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "D",
+    "h": "H",
+    "d": "D",
+    "material": "top"
+   },
+   {
+    "type": "cylinder",
+    "name": "Rounded end",
+    "when": "rr > 0",
+    "x": "W - D",
+    "y": 0,
+    "z": 0,
+    "w": "D",
+    "h": "H",
+    "d": "D",
+    "material": "top"
+   }
+  ],
+  "parameters": [
+   {
+    "key": "roundEnd",
+    "label": "Rounded end",
+    "type": "select",
+    "options": [
+     "none",
+     "left",
+     "right",
+     "both"
+    ],
+    "default": "none"
+   }
+  ],
+  "derived": {
+   "rl": "roundEnd == 'left' || roundEnd == 'both' ? D / 2 : 0",
+   "rr": "roundEnd == 'right' || roundEnd == 'both' ? D / 2 : 0"
+  }
+ }
+}

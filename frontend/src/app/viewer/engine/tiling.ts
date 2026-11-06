@@ -12,9 +12,11 @@ const normalMatrix = new THREE.Matrix3();
  * (see `tileUv`), so the floor, the wall bands and tiled items (bath panel, pre-wall) of a room share their
  * joints. `object` must already be placed in the floor's frame (scene x, y up, −z = plan y), not yet added
  * to it. Meshes with other materials keep their UVs, as do geometries flagged `ownUvs` (the lining of a curved wall,
- * laid along its arc). Level faces are turned by the grid's angle.
+ * laid along its arc). Level faces are turned by the grid's angle. Upright faces count their rows from `base` (mm above
+ * the floor): the floor for the room's surfaces, an item's own bottom for a tiled item, so a splashback over the worktop
+ * starts with a whole tile.
  */
-export function alignTiles(object: THREE.Object3D, grid: TileGrid, materials: MaterialLibrary): void {
+export function alignTiles(object: THREE.Object3D, grid: TileGrid, materials: MaterialLibrary, base = 0): void {
     object.updateWorldMatrix(true, true);
     object.traverse((mesh) => {
         if (!(mesh instanceof THREE.Mesh) || Array.isArray(mesh.material) || !materials.isTile(mesh.material as THREE.Material)) {
@@ -36,7 +38,7 @@ export function alignTiles(object: THREE.Object3D, grid: TileGrid, materials: Ma
             normal.fromBufferAttribute(normals, i).applyMatrix3(normalMatrix).normalize();
             const [u, v] = tileUv(
                 {x: position.x / MM, y: -position.z / MM},
-                position.y / MM,
+                position.y / MM - base,
                 {x: normal.x, y: -normal.z, up: normal.y},
                 grid,
             );
