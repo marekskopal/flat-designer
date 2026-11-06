@@ -1,0 +1,154 @@
+{
+ "name": "Track light",
+ "description": "Ceiling track with spotlights hanging under it: a rail along the item's width at its top and spots (spot lights shining down within angle) spread along it; set the item's elevation to the ceiling height less its height.",
+ "definition": {
+  "format": 1,
+  "category": "light",
+  "schedule": {
+   "count": "spots",
+   "values": [
+    "lumens",
+    "kelvin"
+   ]
+  },
+  "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Lištové svítidlo",
+    "description": "Stropní lišta s bodovými svítidly pod ní: lišta po šířce prvku nahoře a reflektory (bodová světla svítící dolů v úhlu angle) rozložené po ní; výšku osazení nastavte na výšku stropu bez výšky prvku.",
+    "parameters": {
+     "spots": "Reflektory",
+     "lumens": "Světelný tok reflektoru",
+     "kelvin": "Teplota chromatičnosti",
+     "angle": "Úhel svazku"
+    },
+    "slots": {
+     "body": "Lišta a reflektory"
+    },
+    "parts": {
+     "Track": "Lišta",
+     "Spot": "Reflektor",
+     "Spot stem": "Držák reflektoru",
+     "Light": "Světlo"
+    }
+   }
+  },
+  "size": {
+   "width": 2000,
+   "depth": 60,
+   "height": 200
+  },
+  "parameters": [
+   {
+    "key": "spots",
+    "label": "Spots",
+    "type": "int",
+    "default": 3,
+    "min": 1,
+    "max": 8
+   },
+   {
+    "key": "lumens",
+    "label": "Light output per spot",
+    "type": "int",
+    "default": 450,
+    "min": 0,
+    "max": 3000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 3000,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   },
+   {
+    "key": "angle",
+    "label": "Beam angle",
+    "type": "int",
+    "default": 36,
+    "min": 10,
+    "max": 90,
+    "unit": "°"
+   }
+  ],
+  "derived": {
+   "pitch": "W / spots"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Track and spots",
+    "default": "metal-black-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Track",
+    "x": 0,
+    "y": "H - 35",
+    "z": "D / 2 - 17",
+    "w": "W",
+    "h": 35,
+    "d": 35,
+    "material": "body"
+   },
+   {
+    "type": "cylinder",
+    "name": "Spot stem",
+    "repeat": {
+     "count": "spots"
+    },
+    "x": "round((i + 0.5) * pitch) - 6",
+    "y": "H - 75",
+    "z": "D / 2 - 6",
+    "w": 12,
+    "h": 40,
+    "d": 12,
+    "material": "body"
+   },
+   {
+    "type": "cylinder",
+    "name": "Spot",
+    "repeat": {
+     "count": "spots"
+    },
+    "x": "round((i + 0.5) * pitch) - 30",
+    "y": "H - 195",
+    "z": "D / 2 - 30",
+    "w": 60,
+    "h": 120,
+    "d": 60,
+    "material": "body"
+   },
+   {
+    "type": "light",
+    "name": "Light",
+    "repeat": {
+     "count": "spots"
+    },
+    "x": "round((i + 0.5) * pitch) - 22",
+    "y": "H - 200",
+    "z": "D / 2 - 22",
+    "w": 44,
+    "h": 6,
+    "d": 44,
+    "kind": "spot",
+    "angle": {
+     "expr": "angle"
+    },
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "bulb": "disc"
+   }
+  ]
+ }
+}
