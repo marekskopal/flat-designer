@@ -1,4 +1,19 @@
-import {FloorVoid, isOutdoorRoom, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, SectionLine, Wall, WallFinish} from '@app/models/scene';
+import {
+    CeilingZone,
+    FloorVoid,
+    FloorZone,
+    isOutdoorRoom,
+    Opening,
+    PlanPoint,
+    Plot,
+    Railing,
+    Roof,
+    Room,
+    Scene,
+    SectionLine,
+    Wall,
+    WallFinish,
+} from '@app/models/scene';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -66,6 +81,7 @@ import {
     SquareEnds,
     SteelReturn,
     SteelSheet,
+    TileGrid,
     tileGrid,
     Vec2,
     WallCorners,
@@ -437,8 +453,8 @@ export function buildSlab(
     return slab;
 }
 
-/** The room's outline less the voids, as one geometry in plan (x, y). */
-function roomSurface(room: Room, voids: readonly PlanPoint[][]): THREE.BufferGeometry {
+/** An outline (a room's, a floor zone's) less the voids, as one geometry in plan (x, y). */
+function roomSurface(room: Pick<Room, 'polygon'>, voids: readonly PlanPoint[][]): THREE.BufferGeometry {
     const pieces = cutVoids(room.polygon, voids).map((piece) => new THREE.ShapeGeometry(cutShape(piece)));
     if (pieces.length === 1) {
         return pieces[0];
@@ -484,6 +500,11 @@ export function buildFloor(
     floor.receiveShadow = true;
     floor.name = `floor:${room.code}`;
     floor.userData = {roomId: room.id};
+    if (draped === null) {
+        for (const zone of room.floorZones ?? []) {
+            floor.add(buildFloorZone(zone, voids, grid, materials));
+        }
+    }
     alignTiles(floor, grid, materials);
     if (draped === null) {
         // From the floor mesh, which sits `FloorLift` over the floor's elevation, down to the ground beside it.
@@ -497,6 +518,27 @@ export function buildFloor(
         }
     }
     return floor;
+}
+
+/** How far a floor zone lies over the room's floor mesh, mm, so the two do not z-fight. */
+const FloorZoneLift = 1;
+
+/**
+ * A floor zone: its outline less the `voids`, in its material, `FloorZoneLift` over the room's floor mesh (its parent).
+ * It lies on the room's tile grid: `alignTiles()` lays its tiles with the floor's, other patterns are turned here.
+ */
+function buildFloorZone(zone: FloorZone, voids: readonly PlanPoint[][], grid: TileGrid, materials: MaterialLibrary): THREE.Mesh {
+    const geometry = roomSurface(zone, voids);
+    geometry.rotateX(-Math.PI / 2);
+    const material = materials.get(zone.materialId);
+    if (!materials.isTile(material)) {
+        turnLevelUvs(geometry, grid);
+    }
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.y = FloorZoneLift * MM;
+    mesh.receiveShadow = true;
+    mesh.name = 'floor-zone';
+    return mesh;
 }
 
 /** The floor's edge is drawn in pieces at most this long (mm), so it follows a sloping ground. */
@@ -574,6 +616,9 @@ function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly Pl
     const underRoofs = profile === null && roofs.length > 0 ? ceilingUnderRoofs(room, material, voids, roofs) : null;
     group.add(underRoofs ?? ceilingSurface(room, profile, material, voids));
     if (profile === null) {
+        for (const zone of room.ceilingZones ?? []) {
+            group.add(buildCeilingZone(zone, room.ceilingHeight ?? 0, zone.materialId === null ? material : materials.get(zone.materialId)));
+        }
         return group;
     }
 
@@ -592,6 +637,22 @@ function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly Pl
         group.add(holder);
     }
     return group;
+}
+
+/**
+ * A dropped ceiling: the zone's outline extruded from its soffit at `height` up to the ceiling at `ceilingHeight` (both
+ * mm above the room's floor, where the ceiling group stands), so its underside and sides show.
+ */
+function buildCeilingZone(zone: CeilingZone, ceilingHeight: number, material: THREE.Material): THREE.Mesh {
+    const shape = new THREE.Shape(counterClockwise(zone.polygon).map(([x, y]) => new THREE.Vector2(x * MM, y * MM)));
+    const geometry = new THREE.ExtrudeGeometry(shape, {depth: Math.max(ceilingHeight - zone.height, 1) * MM, bevelEnabled: false});
+    geometry.rotateX(-Math.PI / 2);
+    geometry.translate(0, zone.height * MM, 0);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = 'ceiling-zone';
+    return mesh;
 }
 
 /** A part of a downward-facing surface: its outline in plan with holes, and the height (mm) over each of its points. */

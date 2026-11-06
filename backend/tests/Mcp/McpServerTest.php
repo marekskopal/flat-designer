@@ -380,6 +380,45 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame([[], null], [$cleared['element']['leftFinishes'], $cleared['element']['rightFinishes']]);
 	}
 
+	public function testRoomsTakeFloorAndCeilingZones(): void
+	{
+		$floor = Fixture::firstFloor($this->project);
+		$outline = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+		$floorZone = ['polygon' => [[0, 0], [1000, 0], [1000, 2000], [0, 2000]], 'materialId' => 1];
+		$added = $this->client->call('add_room', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'name' => 'Kitchen',
+			'polygon' => $outline,
+			'floorZones' => [$floorZone],
+		]);
+		self::assertIsArray($added);
+		self::assertIsArray($added['element']);
+		self::assertSame([[$floorZone], []], [$added['element']['floorZones'], $added['element']['ceilingZones']]);
+
+		$ceilingZone = ['polygon' => [[0, 2400], [4000, 2400], [4000, 3000], [0, 3000]], 'height' => 2300, 'materialId' => null];
+		$updated = $this->client->call('update_room', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'roomId' => $added['element']['id'],
+			'floorZones' => [],
+			'ceilingZones' => [['polygon' => $ceilingZone['polygon'], 'height' => 2300]],
+		]);
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['element']);
+		self::assertSame([[], [$ceilingZone]], [$updated['element']['floorZones'], $updated['element']['ceilingZones']]);
+
+		// A corner outside the room is refused.
+		$isError = false;
+		$this->client->call('update_room', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'roomId' => $added['element']['id'],
+			'floorZones' => [['polygon' => [[0, 0], [5000, 0], [5000, 1000]], 'materialId' => 1]],
+		], $isError);
+		self::assertTrue($isError);
+	}
+
 	public function testGroupsMoveTheirItemsAsOneUndoStep(): void
 	{
 		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];

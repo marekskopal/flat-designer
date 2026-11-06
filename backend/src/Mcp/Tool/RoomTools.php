@@ -7,6 +7,7 @@ namespace Izbik\Mcp\Tool;
 use Izbik\Dto\EditResultDto;
 use Izbik\Model\Entity\Enum\ElementTypeEnum;
 use Izbik\Service\Editor\Drawing\RoomOutliner;
+use Izbik\Service\Editor\Element\RoomZones;
 use Izbik\Service\Editor\Element\WallFinishBands;
 use Izbik\Service\Editor\SceneEditor;
 use Mcp\Capability\Attribute\McpTool;
@@ -33,6 +34,20 @@ final readonly class RoomTools
 		'type' => ['array', 'null'],
 		'description' => 'horizontal bands around the room\'s walls, mm above the floor (e.g. tiling from 0 to 1200); [] removes them',
 		'items' => WallFinishBands::BandSchema,
+		'default' => null,
+	];
+
+	private const array FloorZonesSchema = [
+		'type' => ['array', 'null'],
+		'description' => 'another floor material over part of the floor (a tiled zone in a wooden floor), at most 20; [] removes them',
+		'items' => RoomZones::FloorZoneSchema,
+		'default' => null,
+	];
+
+	private const array CeilingZonesSchema = [
+		'type' => ['array', 'null'],
+		'description' => 'dropped ceilings over part of a flat-ceilinged room (a bulkhead over a kitchen run), at most 20; [] removes them',
+		'items' => RoomZones::CeilingZoneSchema,
 		'default' => null,
 	];
 
@@ -114,6 +129,13 @@ final readonly class RoomTools
 	 * @param int|null $skirtingMaterialId material of the skirting (default white)
 	 * @param int|null $soffitMaterialId the underside and edge of the room's slab where it overhangs the floor below (an oriel, a
 	 *   balcony), from list_materials (default the project's façade material)
+	 * @param list<array{polygon: list<list<int>>, materialId: int}>|null $floorZones another floor material over part of the floor (a tiled
+	 *   zone in a wooden floor): each zone's polygon [[x, y], …] in mm (3–64 corners, all inside the room or on its outline) and
+	 *   its materialId from list_materials, laid on the room's tile grid; at most 20, not overlapping; replaces all zones, [] removes them
+	 * @param list<array{polygon: list<list<int>>, height: int, materialId?: int|null}>|null $ceilingZones dropped ceilings (a bulkhead
+	 *   over a kitchen run) under a flat ceiling: each zone's polygon as for floorZones, the height of its underside in mm above
+	 *   the room's floor (1000 to the ceiling height − 50) and its materialId (null: the room's ceiling material); at most 20;
+	 *   replaces all zones, [] removes them
 	 */
 	#[McpTool(name: 'add_room', description: 'Add a room (floor area) to a floor.')]
 	public function addRoom(
@@ -141,6 +163,10 @@ final readonly class RoomTools
 		?int $skirtingHeight = null,
 		?int $skirtingMaterialId = null,
 		?int $soffitMaterialId = null,
+		#[Schema(definition: self::FloorZonesSchema)]
+		?array $floorZones = null,
+		#[Schema(definition: self::CeilingZonesSchema)]
+		?array $ceilingZones = null,
 	): EditResultDto {
 		return $this->editor->create(
 			$this->context->user(),
@@ -168,6 +194,8 @@ final readonly class RoomTools
 				'skirtingHeight' => $skirtingHeight,
 				'skirtingMaterialId' => $skirtingMaterialId,
 				'soffitMaterialId' => $soffitMaterialId,
+				'floorZones' => $floorZones,
+				'ceilingZones' => $ceilingZones,
 			]),
 		);
 	}
@@ -191,6 +219,13 @@ final readonly class RoomTools
 	 * @param int|null $skirtingMaterialId material of the skirting (default white)
 	 * @param int|null $soffitMaterialId the underside and edge of the room's slab where it overhangs the floor below (an oriel, a
 	 *   balcony), from list_materials (default the project's façade material)
+	 * @param list<array{polygon: list<list<int>>, materialId: int}>|null $floorZones another floor material over part of the floor (a tiled
+	 *   zone in a wooden floor): each zone's polygon [[x, y], …] in mm (3–64 corners, all inside the room or on its outline) and
+	 *   its materialId from list_materials, laid on the room's tile grid; at most 20, not overlapping; replaces all zones, [] removes them
+	 * @param list<array{polygon: list<list<int>>, height: int, materialId?: int|null}>|null $ceilingZones dropped ceilings (a bulkhead
+	 *   over a kitchen run) under a flat ceiling: each zone's polygon as for floorZones, the height of its underside in mm above
+	 *   the room's floor (1000 to the ceiling height − 50) and its materialId (null: the room's ceiling material); at most 20;
+	 *   replaces all zones, [] removes them
 	 * @param list<string>|null $clear fields to set to none: "ceilingHeight" (open air), "floorMaterialId", "tileOriginX", "tileOriginY", "ceilingMaterialId", "vaultSpacing" (a flat ceiling again), "beamMaterialId", "skirtingHeight", "skirtingMaterialId", "soffitMaterialId"
 	 */
 	#[McpTool(name: 'update_room', description: 'Change a room. Only the given fields change.')]
@@ -220,6 +255,10 @@ final readonly class RoomTools
 		?int $skirtingHeight = null,
 		?int $skirtingMaterialId = null,
 		?int $soffitMaterialId = null,
+		#[Schema(definition: self::FloorZonesSchema)]
+		?array $floorZones = null,
+		#[Schema(definition: self::CeilingZonesSchema)]
+		?array $ceilingZones = null,
 		?array $clear = null,
 	): EditResultDto {
 		return $this->editor->update(
@@ -249,6 +288,8 @@ final readonly class RoomTools
 				'skirtingHeight' => $skirtingHeight,
 				'skirtingMaterialId' => $skirtingMaterialId,
 				'soffitMaterialId' => $soffitMaterialId,
+				'floorZones' => $floorZones,
+				'ceilingZones' => $ceilingZones,
 			], $clear, self::Clearable),
 		);
 	}

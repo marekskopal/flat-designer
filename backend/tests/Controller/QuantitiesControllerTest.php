@@ -188,6 +188,27 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(10.0, $lines['Ceiling:-']['area'], 0.01);
 	}
 
+	/**
+	 * A 1 × 2 m floor zone in oak counts in oak and comes off the floor tiles; a 600 × 3000 mm dropped ceiling 300 mm
+	 * deep counts its soffit and sides in its material, the room's ceiling staying whole.
+	 */
+	public function testFloorAndCeilingZonesCountInTheirMaterials(): void
+	{
+		$oak = self::material('kitchen-oak');
+		$paint = self::material('wall-paint-white');
+		$this->buildRoom(null, [
+			'floorZones' => [['polygon' => [[0, 0], [1000, 0], [1000, 2000], [0, 2000]], 'materialId' => $oak->id]],
+			'ceilingZones' => [['polygon' => [[0, 0], [600, 0], [600, 3000], [0, 3000]], 'height' => 2200, 'materialId' => $paint->id]],
+		]);
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(10.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
+		self::assertEqualsWithDelta(2.0, $lines['Floor:' . $oak->id]['area'], 0.01);
+		self::assertEqualsWithDelta(12.0, $lines['Ceiling:-']['area'], 0.01);
+		// 1.8 m² of soffit and 7.2 m × 0.3 m of sides.
+		self::assertEqualsWithDelta(1.8 + 2.16, $lines['Ceiling:' . $paint->id]['area'], 0.01);
+	}
+
 	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
 
 	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */

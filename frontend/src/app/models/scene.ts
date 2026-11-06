@@ -113,6 +113,20 @@ export interface WallFinish {
     top: number;
 }
 
+/** Another floor material over part of a room's floor (`RoomZones`): its outline in plan mm, inside the room's. */
+export interface FloorZone {
+    polygon: PlanPoint[];
+    materialId: number;
+}
+
+/** A dropped ceiling over part of a room (a bulkhead): its outline in plan mm and its soffit `height` mm above the room's floor. */
+export interface CeilingZone {
+    polygon: PlanPoint[];
+    height: number;
+    /** Null: the room's ceiling material. */
+    materialId: number | null;
+}
+
 /** The land the building stands on (`PlotDto`): its boundary in plan mm and the ground inside it. */
 export interface Plot {
     id: number;
@@ -380,6 +394,10 @@ export interface Room {
     skirtingMaterialId?: number | null;
     /** The underside and edge of the room's slab where it overhangs the floor below; null: the façade material. */
     soffitMaterialId?: number | null;
+    /** Other floor materials over parts of the floor, on the room's tile grid. Missing in older versions: none. */
+    floorZones?: FloorZone[];
+    /** Dropped ceilings over parts of the room, only under a flat ceiling. Missing in older versions: none. */
+    ceilingZones?: CeilingZone[];
 }
 
 /**

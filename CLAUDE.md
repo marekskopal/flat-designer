@@ -588,6 +588,15 @@ The current format is the text in `FurnitureTools::Format`.
 - Where rooms meet without a wall and their ceilings differ in height, `ceilingSteps()` closes the gap with an
   upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
   beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
+- Room zones (I-167, `RoomZones`, REST and MCP `add_room` / `update_room` only, no inspector field): `floorZones`
+  (`{polygon, materialId}`) lay another floor material over part of the floor (a tiled zone in a wooden floor),
+  `ceilingZones` (`{polygon, height, materialId}`, null: the ceiling's) hang a dropped ceiling down to `height` (1000 to
+  the ceiling height − 50, over the room's floor; flat ceilings only) over part of it (a bulkhead over a kitchen run);
+  at most 20 each, 3–64 corners inside the room's outline or within 1 mm of it, taken not to overlap. `buildFloor()`
+  adds a `floor-zone` mesh 1 mm over the floor on the room's tile grid (not on a draped terrain), `buildCeiling()` a
+  `ceiling-zone` box from `height` up to the ceiling (hidden with the ceilings, not lowered under roofs).
+  Quantities count a floor zone in its material, off the floor's, and a ceiling zone's soffit and sides as `Ceiling`.
+  The plan PDF, elevations and sections do not draw them.
 
 ## Site and sun (I-39)
 

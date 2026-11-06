@@ -81,7 +81,9 @@ final readonly class IzbikServer
 		revealLining lines its reveal with the façade. Doors and windows take frameMaterialId, leafMaterialId and
 		outsideFrameMaterialId (timber-aluminium), a frame set in from the outer face (inset) and boarded leaves
 		(leafStyle Boarded); a garage (room type Garage) gets a GarageDoor (garageDoorStyle), and lift-and-slide
-		glazing is a SlidingDoor with fixedPanes.
+		glazing is a SlidingDoor with fixedPanes. A room's floorZones lay another floor material over part of it (a
+		tiled zone in a wooden floor) and its ceilingZones hang a dropped ceiling over part of it (a bulkhead over a
+		kitchen run).
 
 		Files on a disk you can reach from a shell (a plan, a poster, a .glb model) are uploaded with
 		request_file_upload / request_model_upload, which return a one-time URL to PUT the file to (curl);

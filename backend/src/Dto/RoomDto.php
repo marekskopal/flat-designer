@@ -8,12 +8,16 @@ use Izbik\Model\Entity\Enum\RoomTypeEnum;
 use Izbik\Model\Entity\Room;
 use Izbik\Service\Editor\Geometry\PlanMath;
 use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Json\RoomZonesDecoder;
 
 final readonly class RoomDto
 {
 	/**
 	 * @param list<array{int, int}> $polygon
 	 * @param list<WallFinishDto> $wallFinishes
+	 * @param list<array{polygon: list<array{int, int}>, materialId: int}> $floorZones another floor material over part of the floor
+	 * @param list<array{polygon: list<array{int, int}>, height: int, materialId: int|null}> $ceilingZones dropped ceilings over part of the
+	 *   room, `height` mm above its floor
 	 */
 	public function __construct(
 		public int $id,
@@ -40,6 +44,8 @@ final readonly class RoomDto
 		public ?int $skirtingHeight,
 		public ?int $skirtingMaterialId,
 		public ?int $soffitMaterialId = null,
+		public array $floorZones = [],
+		public array $ceilingZones = [],
 	) {
 	}
 
@@ -76,6 +82,8 @@ final readonly class RoomDto
 			skirtingHeight: $room->skirtingHeight,
 			skirtingMaterialId: $room->skirtingMaterial?->id,
 			soffitMaterialId: $room->soffitMaterial?->id,
+			floorZones: $room->floorZones === null ? [] : RoomZonesDecoder::floorZones($room->floorZones),
+			ceilingZones: $room->ceilingZones === null ? [] : RoomZonesDecoder::ceilingZones($room->ceilingZones),
 		);
 	}
 }

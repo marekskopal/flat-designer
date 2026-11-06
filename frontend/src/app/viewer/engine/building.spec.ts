@@ -281,6 +281,36 @@ describe('buildFloor', () => {
         expect(triangles(parts.floor)).toBe(2);
     });
 
+    it('lays a floor zone in its material a millimetre over the floor, picking the room', () => {
+        const zoned: Room = {...room(), floorZones: [{polygon: [[0, 0], [1000, 0], [1000, 1000], [0, 1000]], materialId: 2}]};
+        const floor = buildFloor(zoned, materials);
+        const zone = floor.getObjectByName('floor-zone') as THREE.Mesh;
+        const box = new THREE.Box3().setFromObject(zone);
+
+        expect(zone.material).toBe(materials.get(2));
+        // The floor mesh lies 2 mm over the room's floor, the zone 1 mm over it.
+        expect(Math.round(box.min.y * 1000)).toBe(3);
+        expect(Math.round(box.max.y * 1000)).toBe(3);
+        expect([box.min.x, box.max.x, -box.max.z, -box.min.z].map((v) => Math.round(v * 1000) + 0)).toEqual([0, 1000, 0, 1000]);
+        expect(selectionOf(zone)).toEqual({kind: 'room', id: 1});
+        expect(buildFloor(room(), materials).getObjectByName('floor-zone')).toBeUndefined();
+    });
+
+    it('hangs a ceiling zone from the ceiling down to its height, hidden with the ceiling', () => {
+        const polygon: PlanPoint[] = [[0, 400], [2000, 400], [2000, 1000], [0, 1000]];
+        const zoned: Room = {...room(), floorElevation: 100, ceilingZones: [{polygon, height: 2300, materialId: null}]};
+        const parts = buildRoom(zoned, [], materials);
+        const zone = parts.ceiling?.getObjectByName('ceiling-zone') as THREE.Mesh;
+        parts.ceiling?.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(zone);
+
+        // From the soffit at 2300 up to the ceiling at 2600, both over the room's floor at 100.
+        expect([box.min.y, box.max.y].map((y) => Math.round(y * 1000))).toEqual([2400, 2700]);
+        expect([box.min.x, box.max.x, -box.max.z, -box.min.z].map((v) => Math.round(v * 1000) + 0)).toEqual([0, 2000, 400, 1000]);
+        expect(zone.material).toBe((parts.ceiling?.children[0] as THREE.Mesh).material);
+        expect(buildRoom(room(), [], materials).ceiling?.getObjectByName('ceiling-zone')).toBeUndefined();
+    });
+
     it('lifts a raised floor, its ceiling with it, and closes the step with an edge down to the floor level', () => {
         const deck = {...room(), floorElevation: 450};
         const parts = buildRoom(deck, [], materials);

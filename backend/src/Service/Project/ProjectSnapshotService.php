@@ -339,6 +339,8 @@ final readonly class ProjectSnapshotService
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
 			// Snapshots taken before façades have none: the façade material.
 			$room->soffitMaterial = $materials[$data->nullableInt('soffitMaterialId') ?? 0] ?? null;
+			$room->floorZones = SnapshotRoomZones::floor($data, $materials);
+			$room->ceilingZones = SnapshotRoomZones::ceiling($data, $materials);
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
 			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
 			$room->vaultRise = $data->nullableInt('vaultRise') ?? 130;

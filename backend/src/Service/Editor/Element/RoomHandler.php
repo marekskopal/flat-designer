@@ -18,7 +18,8 @@ use Izbik\Service\Editor\PolygonValidator;
 use const JSON_THROW_ON_ERROR;
 
 /**
- * Rooms: floor outline, ceiling height, floor material, wall finishes, ceiling and skirting (`RoomCeiling`). Items keep their link to a
+ * Rooms: floor outline, ceiling height, floor material, wall finishes, ceiling and skirting (`RoomCeiling`), floor and ceiling zones
+ * (`RoomZones`). Items keep their link to a
  * deleted room (hidden in the scene) so undo restores both.
  */
 final readonly class RoomHandler implements ElementHandler
@@ -35,6 +36,7 @@ final readonly class RoomHandler implements ElementHandler
 		private RoomCeiling $ceiling,
 		private WallFinishBands $wallFinishBands,
 		private MaterialRepository $materialRepository,
+		private RoomZones $zones,
 	) {
 	}
 
@@ -60,6 +62,8 @@ final readonly class RoomHandler implements ElementHandler
 			'floorElevation',
 			...array_keys(RoomCeiling::Defaults),
 			'soffitMaterialId',
+			'floorZones',
+			'ceilingZones',
 		];
 	}
 
@@ -90,7 +94,7 @@ final readonly class RoomHandler implements ElementHandler
 			'tileOriginY' => null,
 			'floorAngle' => 0,
 			'floorElevation' => 0,
-		] + RoomCeiling::Defaults + ['soffitMaterialId' => null];
+		] + RoomCeiling::Defaults + ['soffitMaterialId' => null, 'floorZones' => [], 'ceilingZones' => []];
 	}
 
 	public function find(Floor $floor, int $id): ?Room
@@ -120,12 +124,14 @@ final readonly class RoomHandler implements ElementHandler
 		$soffitMaterialId = $fields->nullableId('soffitMaterialId');
 		$this->materialResolver->resolve($soffitMaterialId);
 		$ceilingHeight = $fields->nullableInt('ceilingHeight', 1000, State::MaxSize);
+		$polygon = PolygonValidator::validate($fields->raw('polygon'), State::CoordinateLimit);
+		$ceiling = $this->ceiling->fields($ceilingHeight, $fields);
 
 		return [
 			'code' => $fields->string('code', 32),
 			'name' => $fields->string('name', 255),
 			'type' => $fields->enum('type', RoomTypeEnum::class)->value,
-			'polygon' => PolygonValidator::validate($fields->raw('polygon'), State::CoordinateLimit),
+			'polygon' => $polygon,
 			'ceilingHeight' => $ceilingHeight,
 			'floorMaterialId' => $floorMaterialId,
 			'wallFinishes' => $this->wallFinishBands->parse($fields->raw('wallFinishes') ?? [], 'wallFinishes'),
@@ -135,7 +141,12 @@ final readonly class RoomHandler implements ElementHandler
 			'floorAngle' => ((self::floorAngle($fields) % 180) + 180) % 180,
 			// Missing in older change states: the floor's level.
 			'floorElevation' => $fields->raw('floorElevation') === null ? 0 : self::floorElevation($fields),
-		] + $this->ceiling->fields($ceilingHeight, $fields) + ['soffitMaterialId' => $soffitMaterialId];
+		] + $ceiling + [
+			'soffitMaterialId' => $soffitMaterialId,
+			// Missing in older change states: none.
+			'floorZones' => $this->zones->floorZones($fields->raw('floorZones'), $polygon),
+			'ceilingZones' => $this->zones->ceilingZones($fields->raw('ceilingZones'), $polygon, $ceilingHeight, $ceiling['vaultSpacing']),
+		];
 	}
 
 	public function create(Floor $floor, array $state): Room
@@ -193,6 +204,8 @@ final readonly class RoomHandler implements ElementHandler
 		$room->floorElevation = self::floorElevation($fields);
 		$this->ceiling->apply($room, $fields);
 		$room->soffitMaterial = $this->materialResolver->resolve($fields->nullableId('soffitMaterialId'));
+		$room->floorZones = RoomZones::encode($fields->raw('floorZones'));
+		$room->ceilingZones = RoomZones::encode($fields->raw('ceilingZones'));
 		$this->roomRepository->persist($room);
 	}
 
