@@ -1,0 +1,123 @@
+{
+ "name": "Kitchen tap",
+ "description": "Kitchen mixer tap on the worktop: a gooseneck, straight or pull-out spout reaching forward (+z) from a round base at the back, a lever at the side; in the metal slot's finish.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňská baterie",
+    "description": "Kuchyňská baterie na pracovní desce: husí krk, rovný nebo vytahovací výtok mířící dopředu z kulaté patky vzadu, páčka na boku; v povrchu kovového slotu.",
+    "parameters": {
+     "style": "Výtok"
+    },
+    "options": {
+     "style": {
+      "gooseneck": "husí krk",
+      "straight": "rovný",
+      "pullOut": "vytahovací sprška"
+     }
+    },
+    "slots": {
+     "metal": "Povrch"
+    },
+    "parts": {
+     "Base": "Patka",
+     "Column": "Tělo",
+     "Spout arm": "Rameno výtoku",
+     "Spout": "Výtok",
+     "Lever": "Páčka"
+    }
+   }
+  },
+  "size": {
+   "width": 60,
+   "depth": 260,
+   "height": 400
+  },
+  "parameters": [
+   {
+    "key": "style",
+    "label": "Spout",
+    "type": "select",
+    "options": [
+     "gooseneck",
+     "straight",
+     "pullOut"
+    ],
+    "default": "gooseneck"
+   }
+  ],
+  "derived": {
+   "armY": "style == 'straight' ? round(H * 0.55) : H - 30",
+   "drop": "style == 'straight' ? 30 : 70",
+   "head": "style == 'pullOut' ? 32 : 22"
+  },
+  "materialSlots": [
+   {
+    "key": "metal",
+    "label": "Finish",
+    "default": "chrome"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Base",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": 30,
+    "d": "W",
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Column",
+    "x": "W / 2 - 13",
+    "y": 30,
+    "z": "W / 2 - 13",
+    "w": 26,
+    "h": "armY - 30 + 24",
+    "d": 26,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Spout arm",
+    "axis": "z",
+    "x": "W / 2 - 12",
+    "y": "armY",
+    "z": "W / 2",
+    "w": 24,
+    "h": 24,
+    "d": "D - W / 2 - 12",
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Spout",
+    "x": "W / 2 - head / 2",
+    "y": "armY - drop",
+    "z": "D - head - 2",
+    "w": "head",
+    "h": "drop + 4",
+    "d": "head",
+    "material": "metal",
+    "radius": 3
+   },
+   {
+    "type": "block",
+    "name": "Lever",
+    "x": "W / 2 + 10",
+    "y": "min(armY - 50, 120)",
+    "z": "W / 2 - 6",
+    "w": 45,
+    "h": 10,
+    "d": 12,
+    "material": "metal"
+   }
+  ]
+ }
+}

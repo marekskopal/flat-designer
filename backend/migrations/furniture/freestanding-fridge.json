@@ -1,0 +1,171 @@
+{
+ "name": "Freestanding fridge",
+ "description": "Freestanding fridge: modern (a fridge door over a freezer door), retro (a rounded body, the same doors) or American (two full-height doors side by side); the doors open.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Volně stojící lednice",
+    "description": "Volně stojící lednice: moderní (dvířka lednice nad dvířky mrazáku), retro (zaoblené tělo, stejná dvířka) nebo americká (dvoje dvířka na celou výšku vedle sebe); dvířka se otevírají.",
+    "parameters": {
+     "style": "Provedení"
+    },
+    "options": {
+     "style": {
+      "modern": "moderní",
+      "retro": "retro",
+      "american": "americká"
+     }
+    },
+    "slots": {
+     "body": "Tělo",
+     "handles": "Úchytky"
+    },
+    "parts": {
+     "Body": "Tělo",
+     "Freezer door": "Dvířka mrazáku",
+     "Fridge door": "Dvířka lednice",
+     "Left door": "Levá dvířka",
+     "Right door": "Pravá dvířka"
+    }
+   }
+  },
+  "size": {
+   "width": 700,
+   "depth": 700,
+   "height": 1850
+  },
+  "parameters": [
+   {
+    "key": "style",
+    "label": "Style",
+    "type": "select",
+    "options": [
+     "modern",
+     "retro",
+     "american"
+    ],
+    "default": "modern"
+   }
+  ],
+  "derived": {
+   "inset": "style == 'retro' ? 25 : 0"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Body",
+    "default": "appliance-white"
+   },
+   {
+    "key": "handles",
+    "label": "Handles",
+    "default": "steel-stainless"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Body",
+    "when": "style != 'retro'",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D - 40",
+    "material": "body"
+   },
+   {
+    "type": "cushion",
+    "name": "Body",
+    "when": "style == 'retro'",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D - 30",
+    "material": "body",
+    "radius": 70
+   },
+   {
+    "type": "front",
+    "name": "Freezer door",
+    "when": "style != 'american'",
+    "x": "inset",
+    "y": "inset",
+    "z": "D - 40",
+    "w": "W - 2 * inset",
+    "h": "round(H * 0.33) - 3",
+    "d": 40,
+    "material": "body",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "right",
+    "handleMaterial": "handles",
+    "handleLength": {
+     "expr": "round(min(round(H * 0.33) - 3, 1000) * 0.55)"
+    }
+   },
+   {
+    "type": "front",
+    "name": "Fridge door",
+    "when": "style != 'american'",
+    "x": "inset",
+    "y": "round(H * 0.33)",
+    "z": "D - 40",
+    "w": "W - 2 * inset",
+    "h": "H - round(H * 0.33) - inset",
+    "d": 40,
+    "material": "body",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "right",
+    "handleMaterial": "handles",
+    "handleLength": {
+     "expr": "round(min(H - round(H * 0.33) - inset, 1000) * 0.55)"
+    }
+   },
+   {
+    "type": "front",
+    "name": "Left door",
+    "when": "style == 'american'",
+    "x": 0,
+    "y": 0,
+    "z": "D - 40",
+    "w": "W / 2 - 2",
+    "h": "H",
+    "d": 40,
+    "material": "body",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "right",
+    "handleMaterial": "handles",
+    "handleLength": {
+     "expr": "round(min(H, 1000) * 0.55)"
+    }
+   },
+   {
+    "type": "front",
+    "name": "Right door",
+    "when": "style == 'american'",
+    "x": "W / 2 + 2",
+    "y": 0,
+    "z": "D - 40",
+    "w": "W / 2 - 2",
+    "h": "H",
+    "d": 40,
+    "material": "body",
+    "kind": "door",
+    "handle": "vertical",
+    "handleSide": "left",
+    "handleMaterial": "handles",
+    "handleLength": {
+     "expr": "round(min(H, 1000) * 0.55)"
+    }
+   }
+  ]
+ }
+}
