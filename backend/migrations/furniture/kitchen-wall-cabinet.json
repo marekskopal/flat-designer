@@ -1,13 +1,13 @@
 {
  "name": "Kitchen wall cabinet",
- "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts.",
+ "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts. shelfLight lights the inside from under its top and shelves (a display cabinet with glass fronts).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Kuchyňská horní skříňka",
-    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel.",
+    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel. shelfLight osvětlí vnitřek zpod víka a polic (vitrína s prosklenými čely).",
     "parameters": {
      "fronts": "Čela odspodu",
      "fronts.type": "Typ",
@@ -25,7 +25,8 @@
      "fronts.style": "Styl",
      "handleLength": "Délka úchytky (0: podle čela)",
      "frontStyle": "Styl čel",
-     "frame": "Šířka rámu čel (0: podle stylu)"
+     "frame": "Šířka rámu čel (0: podle stylu)",
+     "shelfLight": "LED pod víkem a policemi"
     },
     "options": {
      "fronts.type": {
@@ -93,7 +94,8 @@
      "Drawer back": "Záda zásuvky",
      "Drawer inner front": "Vnitřní čelo zásuvky",
      "Appliance": "Spotřebič",
-     "Shelf": "Police"
+     "Shelf": "Police",
+     "Shelf light": "Osvětlení police"
     }
    }
   },
@@ -237,6 +239,12 @@
     "label": "Soft close",
     "type": "bool",
     "default": true
+   },
+   {
+    "key": "shelfLight",
+    "label": "LED under the top and shelves",
+    "type": "bool",
+    "default": false
    },
    {
     "key": "blindLeft",
@@ -571,8 +579,38 @@
       "edges": [
        "front"
       ]
+     },
+     {
+      "type": "led",
+      "name": "Shelf light",
+      "when": "(f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift') && shelfLight",
+      "repeat": {
+       "count": "floor(AH / 400)",
+       "as": "s"
+      },
+      "x": "t - blindLeft",
+      "y": "round((s + 1) * AH / (floor(AH / 400) + 1)) - round(t / 2) - 6",
+      "z": -40,
+      "w": "W - 2 * t",
+      "h": 6,
+      "d": 10,
+      "material": "carcass",
+      "color": "#ffd9a0"
      }
     ]
+   },
+   {
+    "type": "led",
+    "name": "Shelf light",
+    "when": "shelfLight",
+    "x": "t",
+    "y": "H - t - 6",
+    "z": "carcassD - 40",
+    "w": "W - 2 * t",
+    "h": 6,
+    "d": 10,
+    "material": "carcass",
+    "color": "#ffd9a0"
    }
   ]
  }

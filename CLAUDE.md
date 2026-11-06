@@ -414,6 +414,11 @@ The current format is the text in `FurnitureTools::Format`.
   group tagged `frontLink`, posed by `setFrontPose()` (`poseHingeLinks()`) and hidden while closed; a butt one's
   barrel and leaves, half on the door, half on the carcass. Without a side there, only the door's half is drawn. The
   integrated soft-close damper is not drawn. `AddFurnitureHinges` gives the bin store and garden shed butt hinges.
+- Kitchen cabinet options (I-135, `AddKitchenCabinetOptions`): the base cabinet's `sinkUnit` (no top, no shelves),
+  the tall cabinet's `interior` drawers (internal drawers behind its doors, a larder), `plinthFinish` own (the plinth in
+  the `plinth` slot, by a `material` expression), the wall cabinet's `shelfLight` and the open shelf's `light` (`led`
+  parts under the shelves). End panels, fillers, cornices and bridging boxes are the Panel and the cabinets at any size;
+  an L-corner is a blind-corner base beside the next one.
 - Kitchen worktops (I-134, `SeedKitchenWorktops`): the island worktop (its box from the floor, the top `thickness` at
   its height, `leftEnd` / `rightEnd` square or waterfall, the ends turning down to the floor in the same material), the
   L-shaped worktop (a run `runDepth` along the back and a return `returnWidth` on `returnSide`, two pieces in the cut
