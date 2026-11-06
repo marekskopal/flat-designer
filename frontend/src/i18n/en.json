@@ -1218,7 +1218,8 @@
             "Garden": "Garden",
             "Path": "Path",
             "Driveway": "Driveway",
-            "Garage": "Garage"
+            "Garage": "Garage",
+            "Kitchen": "Kitchen"
         },
         "wallType": {
             "Exterior": "Exterior",

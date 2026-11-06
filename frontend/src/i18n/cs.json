@@ -1218,7 +1218,8 @@
             "Garden": "Zahrada",
             "Path": "Cesta",
             "Driveway": "Příjezdová cesta",
-            "Garage": "Garáž"
+            "Garage": "Garáž",
+            "Kitchen": "Kuchyně"
         },
         "wallType": {
             "Exterior": "Obvodová",

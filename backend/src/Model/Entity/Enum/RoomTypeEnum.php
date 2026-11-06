@@ -16,6 +16,7 @@ enum RoomTypeEnum: string
 	case Path = 'Path';
 	case Driveway = 'Driveway';
 	case Garage = 'Garage';
+	case Kitchen = 'Kitchen';
 
 	/** Open-air rooms, summed apart from the indoor floor area in the room schedule. */
 	public function isOutdoor(): bool

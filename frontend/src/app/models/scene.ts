@@ -30,7 +30,7 @@ export type MaterialPattern =
     | 'Encaustic'
     /** Rounded flutes `tileWidth` apart running up the surface (along v), whatever its grain. */
     | 'Fluted';
-export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
+export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage' | 'Kitchen';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
 export const OutdoorRoomTypes: readonly RoomType[] = ['Terrace', 'Garden', 'Path', 'Driveway'];

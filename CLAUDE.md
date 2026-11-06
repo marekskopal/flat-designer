@@ -1001,7 +1001,7 @@ The current format is the text in `FurnitureTools::Format`.
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
   gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) and garages (`isAncillary()`)
-  are totalled separately. Only
+  are totalled separately; kitchens (`Kitchen`, I-131) are ordinary indoor rooms. Only
   PHP computes it, except under roofs (`RoomUnderRoof`, twinned for the PDF's schedule; see Roofs).
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose

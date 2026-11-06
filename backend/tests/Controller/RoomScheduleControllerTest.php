@@ -63,6 +63,21 @@ final class RoomScheduleControllerTest extends EditorTestCase
 		self::assertSame([true, false], [$floors[0]['rooms'][0]['ancillary'], $floors[0]['rooms'][0]['outdoor']]);
 	}
 
+	public function testCountsKitchensInTheLivingArea(): void
+	{
+		$this->create('rooms', ['code' => 'R1', 'name' => 'Hall', 'polygon' => [[0, 0], [2000, 0], [2000, 2000], [0, 2000]]]);
+		$kitchen = $this->create(
+			'rooms',
+			['code' => 'K1', 'name' => 'Kitchen', 'type' => 'Kitchen', 'polygon' => [[2000, 0], [5000, 0], [5000, 4000], [2000, 4000]]],
+		);
+		// A kitchen gets no default floor: kitchens are finished in anything from tiles to oak.
+		self::assertSame(['Kitchen', null], [$kitchen['type'], $kitchen['floorMaterialId']]);
+
+		$schedule = $this->schedule(false);
+		self::assertEquals(['rooms' => 2, 'area' => 16.0, 'perimeter' => 22.0], $schedule['indoor']);
+		self::assertEquals(['rooms' => 0, 'area' => 0.0, 'perimeter' => 0.0], $schedule['ancillary']);
+	}
+
 	public function testAVoidIsListedAndTakenOffTheRoomsItCuts(): void
 	{
 		$this->create(
