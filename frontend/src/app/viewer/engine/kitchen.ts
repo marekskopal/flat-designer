@@ -60,6 +60,7 @@ export function buildHandle(
     materials: MaterialLibrary,
     handleMaterial?: THREE.Material,
     handleLength?: number,
+    position: HandlePosition = 'auto',
 ): THREE.Mesh {
     const material = handleMaterial ?? defaultHandleMaterial(materials);
     const z = faceZ + HandleStandoff - HandleSection;
@@ -67,7 +68,8 @@ export function buildHandle(
     if (orientation === 'horizontal') {
         const length =
             handleLength === undefined ? THREE.MathUtils.clamp(front.width * 0.45, 120, 480) : Math.min(handleLength, Math.max(40, front.width - 20));
-        const y = handleNearTop(front, itemElevation) ? front.bottom + front.height - 45 : front.bottom + 45;
+        const nearTop = position === 'top' || (position !== 'bottom' && handleNearTop(front, itemElevation));
+        const y = nearTop ? front.bottom + front.height - 45 : front.bottom + 45;
         const left = front.left + (front.width - length) / 2;
         return boxAt(material, left * MM, (y - HandleSection / 2) * MM, z * MM, length * MM, HandleSection * MM, HandleSection * MM);
     }
@@ -86,6 +88,26 @@ export function buildHandle(
 /** The handle kinds a front may have (`PartTypeEnum::Handles`); `push` and `none` draw nothing. */
 export type FrontHandle = 'horizontal' | 'vertical' | 'knob' | 'edge' | 'gola' | 'push' | 'none';
 
+/**
+ * Where a front's handle goes (`PartTypeEnum::HandlePositions`): `auto` by the front's height (near the top within reach,
+ * else the bottom; on a tall door from below reach height to well above it, at reach height on its handle edge), `top`
+ * or `bottom` on that edge whatever the height (the pull at a split between two doors), `side` at reach height on the
+ * handle edge.
+ */
+export type HandlePosition = 'auto' | 'top' | 'bottom' | 'side';
+
+/** A front's handle position option, `auto` when missing or unknown. */
+export function handlePositionOf(value: unknown): HandlePosition {
+    return value === 'top' || value === 'bottom' || value === 'side' ? value : 'auto';
+}
+
+/** What `buildFrontHandle()` takes besides the kind and the front: the handle's material, its length, its position. */
+export interface FrontHandleOptions {
+    material?: THREE.Material;
+    length?: number;
+    position?: HandlePosition;
+}
+
 /** The black of a handle without a material of its own. */
 export function defaultHandleMaterial(materials: MaterialLibrary): THREE.Material {
     return materials.plain('#161616', 0.35, 0.6);
@@ -98,10 +120,11 @@ function handleNearTop(front: Omit<FrontBox, 'z'>, itemElevation: number): boole
 
 /**
  * The handle of a front (mm, item-local; `faceZ` its outer face), or null for push-to-open and none: bars as
- * `buildHandle()`, a knob (`KnobDiameter`) at a door's handle edge or a drawer's middle, near the top or bottom as the
- * bars; an edge pull (`EdgePull`) on the top edge (the bottom one out of reach); a gola channel, a dark band
- * `GolaHeight` high along the top (or bottom) of the face. On a tall door reaching from below reach height to well
- * above it the knob and the edge pull stand at reach height on its handle edge and the gola channel runs up that edge.
+ * `buildHandle()`, a knob (`KnobDiameter`) at a door's handle edge or a drawer's middle, an edge pull (`EdgePull`) on an
+ * edge, a gola channel (`GolaHeight`) along an edge, in the handle material or, without one, a dark shadow band. The
+ * position (`HandlePosition`) says which edge: by default near the top within reach, else the bottom, and on a tall door
+ * reaching from below reach height to well above it at reach height on its handle edge (the knob and the edge pull) or
+ * up that edge (the gola channel). An edge pull placed on the top or bottom on purpose sits at a door's handle side.
  */
 export function buildFrontHandle(
     kind: FrontHandle,
@@ -111,23 +134,23 @@ export function buildFrontHandle(
     edge: 'left' | 'right',
     drawer: boolean,
     materials: MaterialLibrary,
-    handleMaterial?: THREE.Material,
-    handleLength?: number,
+    options: FrontHandleOptions = {},
 ): THREE.Object3D | null {
-    const material = handleMaterial ?? defaultHandleMaterial(materials);
-    const nearTop = handleNearTop(front, itemElevation);
+    const material = options.material ?? defaultHandleMaterial(materials);
+    const handleLength = options.length;
+    const position = options.position ?? 'auto';
     const top = front.bottom + front.height;
-    // A tall door reaching from below reach height to well above it: its handle stands at reach height on its handle edge.
-    const tall = !drawer && !nearTop && itemElevation + front.bottom < HandleReachHeight;
+    const place = handlePlace(front, itemElevation, drawer, position);
     const atReach = (length: number): number =>
         THREE.MathUtils.clamp(HandleReachHeight - itemElevation, front.bottom + length / 2 + 20, top - length / 2 - 20);
     switch (kind) {
         case 'horizontal':
         case 'vertical':
-            return buildHandle(kind, front, faceZ, itemElevation, edge, materials, material, handleLength);
+            return buildHandle(kind, front, faceZ, itemElevation, edge, materials, material, handleLength, position);
         case 'knob': {
             const x = drawer ? front.left + front.width / 2 : edge === 'right' ? front.left + front.width - 45 : front.left + 45;
-            const y = drawer && front.height < 300 ? front.bottom + front.height / 2 : nearTop ? top - 60 : tall ? atReach(0) : front.bottom + 60;
+            const middle = drawer && front.height < 300 && position === 'auto';
+            const y = middle ? front.bottom + front.height / 2 : place === 'side' ? atReach(0) : place === 'top' ? top - 60 : front.bottom + 60;
             const geometry = new THREE.CylinderGeometry((KnobDiameter / 2) * MM, (KnobDiameter / 2 - 4) * MM, KnobDepth * MM, 24);
             const knob = new THREE.Mesh(geometry, material);
             knob.rotation.x = Math.PI / 2;
@@ -136,7 +159,7 @@ export function buildFrontHandle(
             return knob;
         }
         case 'edge': {
-            if (tall) {
+            if (place === 'side') {
                 // A profile over the handle edge, at reach height.
                 const length = handleLength ?? THREE.MathUtils.clamp(front.height * 0.3, 150, 600);
                 const x = edge === 'right' ? front.left + front.width - EdgePull.face : front.left - EdgePull.lip;
@@ -145,26 +168,50 @@ export function buildFrontHandle(
                 return boxAt(material, x * MM, y * MM, (faceZ - EdgePull.depth) * MM, across * MM, length * MM, depth * MM);
             }
             const length = Math.min(handleLength ?? THREE.MathUtils.clamp(front.width * 0.5, 150, 600), front.width - 20);
-            const left = front.left + (front.width - length) / 2;
+            // Centred, or at a door's handle side when the edge was chosen.
+            const toSide = position !== 'auto' && !drawer;
+            const left = !toSide
+                ? front.left + (front.width - length) / 2
+                : edge === 'right'
+                  ? front.left + front.width - length - EdgePullInset
+                  : front.left + EdgePullInset;
             // A profile over the edge: on the face, a lip over the edge and a little beyond it.
-            const y = nearTop ? top - EdgePull.face : front.bottom - EdgePull.lip;
+            const y = place === 'top' ? top - EdgePull.face : front.bottom - EdgePull.lip;
             const [height, depth] = [EdgePull.face + EdgePull.lip, EdgePull.depth + EdgePull.proud];
             return boxAt(material, left * MM, y * MM, (faceZ - EdgePull.depth) * MM, length * MM, height * MM, depth * MM);
         }
         case 'gola': {
-            const shadow = materials.plain('#0b0b0c', 0.6, 0.2);
-            if (tall) {
+            const channel = options.material ?? materials.plain('#0b0b0c', 0.6, 0.2);
+            if (place === 'side') {
                 // A vertical channel along the handle edge, the full height of the door.
                 const x = edge === 'right' ? front.left + front.width - GolaHeight : front.left;
-                return boxAt(shadow, x * MM, front.bottom * MM, faceZ * MM, GolaHeight * MM, front.height * MM, 0.6 * MM, false);
+                return boxAt(channel, x * MM, front.bottom * MM, faceZ * MM, GolaHeight * MM, front.height * MM, 0.6 * MM, false);
             }
-            const y = nearTop ? top - GolaHeight : front.bottom;
-            return boxAt(shadow, front.left * MM, y * MM, faceZ * MM, front.width * MM, GolaHeight * MM, 0.6 * MM, false);
+            const y = place === 'top' ? top - GolaHeight : front.bottom;
+            return boxAt(channel, front.left * MM, y * MM, faceZ * MM, front.width * MM, GolaHeight * MM, 0.6 * MM, false);
         }
         default:
             return null;
     }
 }
+
+/**
+ * Which edge a knob, edge pull or gola channel goes to: the position given, else (`auto`) at reach height on the handle
+ * edge for a tall door reaching from below reach height to well above it, near the top within reach, else the bottom.
+ */
+function handlePlace(front: Omit<FrontBox, 'z'>, itemElevation: number, drawer: boolean, position: HandlePosition): 'top' | 'bottom' | 'side' {
+    if (position !== 'auto') {
+        return position;
+    }
+    const nearTop = handleNearTop(front, itemElevation);
+    if (!drawer && !nearTop && itemElevation + front.bottom < HandleReachHeight) {
+        return 'side';
+    }
+    return nearTop ? 'top' : 'bottom';
+}
+
+/** How far (mm) an edge pull placed on purpose stays in from a door's handle edge. */
+const EdgePullInset = 40;
 
 /** A knob's diameter and how far it stands out (mm). */
 const KnobDiameter = 32;

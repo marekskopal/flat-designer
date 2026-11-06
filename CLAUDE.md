@@ -447,6 +447,13 @@ The current format is the text in `FurnitureTools::Format`.
   list cuts a glass front, or a shaker one with its own frame material, as stiles, rails and a pane or recessed panel
   (`FramedFront`). The kitchen cabinets take `frontStyle` (and per front `style`), `frame`, `handleLength` and the slots
   `frames` and `handles`.
+- Handle positions (I-162, `AddHandlePositions`, `down()` writes back `furniture/before-handle-positions`): a front's
+  `handlePosition` (`PartTypeEnum::HandlePositions`, TS `HandlePosition`; the kitchen cabinets' `fronts[].handlePosition`)
+  is `auto` (as before: near the top within reach, else the bottom; on a tall door from below reach height to well above
+  it, at reach height on its handle edge), `top` / `bottom` (that edge whatever the height: the pull at the split of two
+  doors; an edge pull then sits `EdgePullInset` in from a door's handle edge) or `side` (at reach height on the handle
+  edge). A gola channel is drawn in the handle material when the item gives one (`FrontHandleOptions.material`), else as
+  the dark shadow band.
 - Seeds (`AddOpenableFrontsMigration`, `down()` writes back `furniture/before-openable-fronts`): the kitchen cabinets,
   sideboard, bedside table and vanity have drawers with boxes, shelves behind doors and a `softClose` parameter; the wall
   and tall cabinets' fronts may be `liftUp`, `bifold` or `parallelLift`.

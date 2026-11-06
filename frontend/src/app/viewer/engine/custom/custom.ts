@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 import {ceilingHeightAt} from '../ceilings';
-import {buildAppliance, buildFrontHandle, FrontHandle} from '../kitchen';
+import {buildAppliance, buildFrontHandle, FrontHandle, handlePositionOf} from '../kitchen';
 import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
@@ -539,7 +539,8 @@ function buildFront(
     const front = {left: part.x, width: part.w, bottom: part.y, height: part.h};
     const length = typeof part.props['handleLength'] === 'number' && part.props['handleLength'] > 0 ? part.props['handleLength'] : undefined;
     const handleMaterial = optional(part.props['handleMaterial'], 'horizontal');
-    const mesh = buildFrontHandle(handle, front, part.z + part.d, item.z, edge, drawer, materials, handleMaterial, length);
+    const position = handlePositionOf(part.props['handlePosition']);
+    const mesh = buildFrontHandle(handle, front, part.z + part.d, item.z, edge, drawer, materials, {material: handleMaterial, length, position});
     if (mesh !== null) {
         group.add(mesh);
     }

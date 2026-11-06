@@ -26,7 +26,8 @@
      "handleLength": "Délka úchytky (0: podle čela)",
      "frontStyle": "Styl čel",
      "frame": "Šířka rámu čel (0: podle stylu)",
-     "shelfLight": "LED pod víkem a policemi"
+     "shelfLight": "LED pod víkem a policemi",
+     "fronts.handlePosition": "Poloha úchytky"
     },
     "options": {
      "fronts.type": {
@@ -73,6 +74,12 @@
       "fluted": "drážkované",
       "glass": "prosklené",
       "reeded": "s rýhovaným sklem"
+     },
+     "fronts.handlePosition": {
+      "auto": "automaticky",
+      "top": "nahoře",
+      "bottom": "dole",
+      "side": "na boku ve výšce ruky"
      }
     },
     "slots": {
@@ -155,6 +162,18 @@
        "gola",
        "push",
        "none"
+      ],
+      "optional": true
+     },
+     {
+      "key": "handlePosition",
+      "label": "Handle position",
+      "type": "select",
+      "options": [
+       "auto",
+       "top",
+       "bottom",
+       "side"
       ],
       "optional": true
      },
@@ -432,6 +451,9 @@
       "handleMaterial": "handles",
       "handleLength": {
        "expr": "handleLength"
+      },
+      "handlePosition": {
+       "expr": "f.handlePosition ?? 'auto'"
       }
      },
      {
@@ -482,6 +504,9 @@
         "handleMaterial": "handles",
         "handleLength": {
          "expr": "handleLength"
+        },
+        "handlePosition": {
+         "expr": "f.handlePosition ?? 'auto'"
         }
        },
        {

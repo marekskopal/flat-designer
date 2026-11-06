@@ -88,6 +88,12 @@ enum PartTypeEnum: string
 	 */
 	public const array Handles = ['horizontal', 'vertical', 'knob', 'edge', 'gola', 'push', 'none'];
 
+	/**
+	 * Where a front's handle goes: by its height (`auto`), on its top or bottom edge whatever the height (the pull at the
+	 * split of two doors), or at reach height on its handle edge (`side`). The viewer reads it (`HandlePosition`).
+	 */
+	public const array HandlePositions = ['auto', 'top', 'bottom', 'side'];
+
 	private const array Sides = ['left', 'right', 'bottom', 'top', 'back', 'front'];
 
 	/**
@@ -250,6 +256,7 @@ enum PartTypeEnum: string
 				'handleSide' => ['left', 'right'],
 				'handleMaterial' => 'slot',
 				'handleLength' => 'number',
+				'handlePosition' => self::HandlePositions,
 				'grain' => self::Grain,
 				'edges' => 'sides',
 			] + self::Motion + self::Pose,
