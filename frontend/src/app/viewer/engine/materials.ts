@@ -149,7 +149,7 @@ export class MaterialLibrary {
             material.map = this.texture(dto, lay);
         }
         // Laid tiles and slabs go on the room's tile grid (`alignTiles`); bricks keep the UVs of their surface.
-        if ((dto.pattern === 'Tiles' || dto.pattern === 'Terrazzo' || dto.pattern === 'Herringbone') && tileLayout(dto) !== null) {
+        if (GridPatterns.includes(dto.pattern) && tileLayout(dto) !== null) {
             this.tiles.add(material);
         }
         if (dto.code.startsWith('led')) {
@@ -271,6 +271,20 @@ export class MaterialLibrary {
 /** Resolution of composed plank/tile canvases. */
 const LayoutMmPerPixel = 2;
 
+/** Patterns laid in pieces on the room's tile grid (`alignTiles`); the others keep the UVs of their surface. */
+const GridPatterns: readonly MaterialDto['pattern'][] = ['Tiles', 'Terrazzo', 'Herringbone', 'Marble', 'Chevron', 'Zellige', 'Encaustic'];
+
+/** Brick-bond materials smoother than this are glazed tiles (metro), with a thin light grout. */
+const GlazedRoughness = 0.3;
+
+/** Longest side (px) of a pattern's canvas; a larger patch is drawn at a coarser resolution. */
+const MaxCanvasSide = 2048;
+
+/** Resolution (mm per px) for a patch of `width` × `height` mm: `fine`, or coarser where the canvas would exceed `MaxCanvasSide`. */
+function patchResolution(width: number, height: number, fine: number): number {
+    return Math.max(fine, Math.max(width, height) / MaxCanvasSide);
+}
+
 interface ImageLayout {
     /** Physical size (mm) of the patch the canvas represents; it tiles seamlessly. */
     width: number;
@@ -345,7 +359,7 @@ function tileLayout(dto: MaterialDto): ImageLayout | null {
         return {
             width: 4 * tileWidth,
             height: 8 * tileHeight,
-            draw: (ctx, _image, rng): void => drawBricks(ctx, rng, tileWidth, tileHeight, dto.color),
+            draw: (ctx, _image, rng): void => drawBricks(ctx, rng, tileWidth, tileHeight, dto.color, dto.roughness < GlazedRoughness),
         };
     }
     if (dto.pattern === 'BeaverTail') {
@@ -364,6 +378,61 @@ function tileLayout(dto: MaterialDto): ImageLayout | null {
             height: 2 * length,
             mmPerPixel: 1,
             draw: (ctx, _image, rng): void => drawHerringbone(ctx, rng, length, tileHeight, dto.color),
+        };
+    }
+    if (dto.pattern === 'Marble') {
+        // A slab of 1.5 m or more is a patch of its own; smaller tiles 2 × 2, each cut from its own slab.
+        const count = Math.max(tileWidth, tileHeight) >= 1500 ? 1 : 2;
+        const width = count * tileWidth;
+        const height = count * tileHeight;
+        const mmPerPixel = patchResolution(width, height, LayoutMmPerPixel);
+        return {
+            width,
+            height,
+            mmPerPixel,
+            draw: (ctx, _image, rng): void => drawMarble(ctx, rng, tileWidth / mmPerPixel, tileHeight / mmPerPixel, dto.color, accentOf(dto)),
+        };
+    }
+    if (dto.pattern === 'Chevron') {
+        // Two halves of the zigzag across, at least 1.2 m of planks up, so the shades do not repeat too soon.
+        const rows = Math.max(6, Math.ceil(1200 / (tileHeight * Math.SQRT2)));
+        const width = 2 * tileWidth * Math.SQRT1_2;
+        const height = rows * tileHeight * Math.SQRT2;
+        const mmPerPixel = patchResolution(width, height, tileHeight < 120 ? 1 : LayoutMmPerPixel);
+        return {
+            width,
+            height,
+            mmPerPixel,
+            draw: (ctx, _image, rng): void => drawChevron(ctx, rng, tileWidth / mmPerPixel, tileHeight / mmPerPixel, rows, dto.color),
+        };
+    }
+    if (dto.pattern === 'Zellige') {
+        // 6 × 6 tiles, so the shades do not repeat too soon.
+        const mmPerPixel = patchResolution(6 * tileWidth, 6 * tileHeight, Math.min(tileWidth, tileHeight) <= 150 ? 1 : LayoutMmPerPixel);
+        return {
+            width: 6 * tileWidth,
+            height: 6 * tileHeight,
+            mmPerPixel,
+            draw: (ctx, _image, rng): void => drawZellige(ctx, rng, tileWidth / mmPerPixel, tileHeight / mmPerPixel, dto.color),
+        };
+    }
+    if (dto.pattern === 'Encaustic') {
+        const mmPerPixel = patchResolution(2 * tileWidth, 2 * tileHeight, 1);
+        return {
+            width: 2 * tileWidth,
+            height: 2 * tileHeight,
+            mmPerPixel,
+            draw: (ctx, _image, rng): void => drawEncaustic(ctx, rng, tileWidth / mmPerPixel, tileHeight / mmPerPixel, dto.color, accentOf(dto)),
+        };
+    }
+    if (dto.pattern === 'Fluted') {
+        // 8 flutes across; they run along the canvas height, the same all the way.
+        const mmPerPixel = patchResolution(8 * tileWidth, 8 * tileWidth, 1);
+        return {
+            width: 8 * tileWidth,
+            height: 8 * tileWidth,
+            mmPerPixel,
+            draw: (ctx): void => drawFluted(ctx, tileWidth / mmPerPixel, dto.color),
         };
     }
     if (dto.pattern === 'Tiles') {
@@ -643,16 +712,25 @@ function drawTerrazzo(ctx: CanvasRenderingContext2D, rng: () => number, slabWidt
 
 /**
  * Bricks in stretcher bond with recessed joints, each brick its own shade (`vary()`, so a red stays red when lightened)
- * and a little speckle. The joint is 7 % of the course, 5–10 mm: mortar for bricks, sand for pavers.
+ * and a little speckle. The joint is 7 % of the course, 5–10 mm: mortar for bricks, sand for pavers; glazed tiles in
+ * the same bond (metro tiles) get a 2 mm light grey grout.
  */
-function drawBricks(ctx: CanvasRenderingContext2D, rng: () => number, brickLength: number, brickHeight: number, color: string): void {
+function drawBricks(
+    ctx: CanvasRenderingContext2D,
+    rng: () => number,
+    brickLength: number,
+    brickHeight: number,
+    color: string,
+    glazed: boolean,
+): void {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
     const length = brickLength / LayoutMmPerPixel;
     const course = brickHeight / LayoutMmPerPixel;
-    const joint = Math.max(1, Math.round(Math.min(10, Math.max(5, brickHeight * 0.07)) / LayoutMmPerPixel));
+    const jointMm = glazed ? 2 : Math.min(10, Math.max(5, brickHeight * 0.07));
+    const joint = Math.max(1, Math.round(jointMm / LayoutMmPerPixel));
     const base = new THREE.Color(color);
-    ctx.fillStyle = '#c9bba5';
+    ctx.fillStyle = glazed ? '#d6d3cc' : '#c9bba5';
     ctx.fillRect(0, 0, width, height);
     const courses = Math.round(height / course);
     const bricks = Math.round(width / length);
@@ -709,6 +787,295 @@ function drawFormwork(ctx: CanvasRenderingContext2D, rng: () => number, pieceLen
             ctx.fillRect(x, y, 1, rise);
             ctx.globalAlpha = 1;
         }
+    }
+}
+
+/** A pattern's second colour: the material's `accent`, else a shade well apart from its base (darker on a light one). */
+function accentOf(dto: MaterialDto): string {
+    if (dto.accent != null) {
+        return dto.accent;
+    }
+    const base = new THREE.Color(dto.color);
+    return `#${vary(base, lightness(base) > 0.35 ? -0.4 : 0.45).getHexString()}`;
+}
+
+/** sRGB lightness (0–1) of a colour, as the eye judges a #rrggbb; `THREE.Color` holds it linear. */
+function lightness(color: THREE.Color): number {
+    return color.getHSL({h: 0, s: 0, l: 0}, THREE.SRGBColorSpace).l;
+}
+
+/**
+ * Veined stone: slabs (or tiles) `w` × `h` px, each a cloudy ground with a few wandering main veins in `accent`, each
+ * with a soft halo and thin branches, and hairline veins between; the veins of a slab keep one general direction.
+ * A slab's veins stay within it (tiles are cut from different slabs), with a faint joint round it.
+ */
+function drawMarble(ctx: CanvasRenderingContext2D, rng: () => number, w: number, h: number, color: string, accent: string): void {
+    const base = new THREE.Color(color);
+    const vein = new THREE.Color(accent);
+    const columns = Math.round(ctx.canvas.width / w);
+    const rows = Math.round(ctx.canvas.height / h);
+    const veinPath = (x: number, y: number, angle: number, length: number, step: number, wander: number): [number, number][] => {
+        const points: [number, number][] = [[x, y]];
+        for (let travelled = 0; travelled < length; travelled += step) {
+            angle += (rng() - 0.5) * wander;
+            x += Math.cos(angle) * step;
+            y += Math.sin(angle) * step;
+            points.push([x, y]);
+        }
+        return points;
+    };
+    const stroke = (points: [number, number][], width: number, alpha: number, tone: THREE.Color): void => {
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = `#${tone.getHexString()}`;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        points.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+        ctx.stroke();
+    };
+    const size = Math.max(w, h);
+    for (let column = 0; column < columns; column++) {
+        for (let row = 0; row < rows; row++) {
+            const [x0, y0] = [column * w, row * h];
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x0, y0, w, h);
+            ctx.clip();
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = `#${vary(base, (rng() - 0.5) * 0.03).getHexString()}`;
+            ctx.fillRect(x0, y0, w, h);
+            // Clouds in the ground.
+            for (let i = 0; i < 24; i++) {
+                ctx.globalAlpha = 0.07;
+                ctx.fillStyle = `#${vary(base, (rng() - 0.5) * 0.08).getHexString()}`;
+                ctx.beginPath();
+                const [rx, ry] = [size * (0.05 + rng() * 0.2), size * (0.03 + rng() * 0.1)];
+                ctx.ellipse(x0 + rng() * w, y0 + rng() * h, rx, ry, rng() * Math.PI, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            const direction = rng() * Math.PI;
+            const step = size / 80;
+            // Hairlines first, then the main veins with their halo and branches over them.
+            for (let i = 0; i < 14; i++) {
+                const points = veinPath(x0 + rng() * w, y0 + rng() * h, direction + (rng() - 0.5) * 1.2, size * (0.1 + rng() * 0.3), step, 0.7);
+                stroke(points, Math.max(0.6, size / 2000), 0.18, vein);
+            }
+            const veins = 2 + Math.floor(rng() * 3);
+            for (let i = 0; i < veins; i++) {
+                // Start outside the slab, so the vein crosses it.
+                const angle = direction + (rng() - 0.5) * 0.6;
+                const sx = x0 + w / 2 - Math.cos(angle) * size * 0.75 + (rng() - 0.5) * w;
+                const sy = y0 + h / 2 - Math.sin(angle) * size * 0.75 + (rng() - 0.5) * h;
+                const points = veinPath(sx, sy, angle, size * 1.6, step, 0.45);
+                const width = Math.max(1, size / (250 + rng() * 350));
+                stroke(points, width * 5, 0.06, vein);
+                stroke(points, width, 0.5 + rng() * 0.3, vein);
+                for (let b = 0; b < 3; b++) {
+                    const [bx, by] = points[Math.floor(rng() * points.length)];
+                    const branch = veinPath(bx, by, angle + (rng() < 0.5 ? -1 : 1) * (0.4 + rng() * 0.6), size * (0.08 + rng() * 0.25), step, 0.6);
+                    stroke(branch, width * 0.45, 0.35, vein);
+                }
+            }
+            ctx.restore();
+        }
+    }
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = `#${shade(base, -0.5).getHexString()}`;
+    for (let column = 0; column < columns; column++) {
+        ctx.fillRect(column * w, 0, 1, ctx.canvas.height);
+    }
+    for (let row = 0; row < rows; row++) {
+        ctx.fillRect(0, row * h, ctx.canvas.width, 1);
+    }
+    ctx.globalAlpha = 1;
+}
+
+/**
+ * Chevron parquet: planks `length` × `width` px at 45°, their ends cut along the canvas height, so the two halves meet
+ * in a zigzag down the middle and at the sides. Each plank its own shade with a little grain; `rows` planks up each half
+ * before the shades repeat, the plank crossing the edge drawn alike at both ends.
+ */
+function drawChevron(ctx: CanvasRenderingContext2D, rng: () => number, length: number, width: number, rows: number, color: string): void {
+    const half = length * Math.SQRT1_2;
+    const pitch = width * Math.SQRT2;
+    const base = new THREE.Color(color);
+    const joint = `#${shade(base, -0.5).getHexString()}`;
+    // The patch is rarely a whole number of pixels: stretch it over the rounded canvas, so no unpainted seam repeats.
+    ctx.save();
+    ctx.scale(ctx.canvas.width / (2 * half), ctx.canvas.height / (rows * pitch));
+    const tones = [0, 1].map(() => Array.from({length: rows}, () => ({tone: shade(base, (rng() - 0.5) * 0.16), seed: Math.floor(rng() * 2 ** 31)})));
+    const reach = Math.ceil(half / pitch) + 1;
+    for (const side of [0, 1]) {
+        for (let k = -reach; k <= rows + 1; k++) {
+            const plank = tones[side][((k % rows) + rows) % rows];
+            const y = k * pitch;
+            // The left half rises to the middle, the right half falls from it.
+            const corners: [number, number][] =
+                side === 0
+                    ? [[0, y], [half, y + half], [half, y + half + pitch], [0, y + pitch]]
+                    : [[half, y + half], [2 * half, y], [2 * half, y + pitch], [half, y + half + pitch]];
+            ctx.save();
+            ctx.beginPath();
+            corners.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+            ctx.closePath();
+            ctx.fillStyle = `#${plank.tone.getHexString()}`;
+            ctx.fill();
+            ctx.clip();
+            // Grain along the plank.
+            const grain = seededRandom(plank.seed);
+            ctx.strokeStyle = `#${shade(plank.tone, -0.25).getHexString()}`;
+            ctx.lineWidth = 1;
+            for (let g = 0; g < 7; g++) {
+                const offset = y + grain() * pitch;
+                ctx.globalAlpha = 0.1 + grain() * 0.12;
+                ctx.beginPath();
+                if (side === 0) {
+                    ctx.moveTo(0, offset);
+                    ctx.lineTo(half, offset + half);
+                } else {
+                    ctx.moveTo(half, offset + half);
+                    ctx.lineTo(2 * half, offset);
+                }
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 0.55;
+            ctx.strokeStyle = joint;
+            ctx.beginPath();
+            corners.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+}
+
+/**
+ * Zellige: handmade glazed tiles `w` × `h` px with narrow light joints, each its own shade, its
+ * corners a little off square, the glaze pooling darker at its edges and catching a gloss near one corner.
+ */
+function drawZellige(ctx: CanvasRenderingContext2D, rng: () => number, w: number, h: number, color: string): void {
+    const base = new THREE.Color(color);
+    const columns = Math.round(ctx.canvas.width / w);
+    const rows = Math.round(ctx.canvas.height / h);
+    // A light cementitious grout, whatever the glaze.
+    ctx.fillStyle = '#d8d2c6';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const joint = Math.max(1, Math.min(w, h) * 0.02);
+    const wobble = Math.min(w, h) * 0.02;
+    for (let column = 0; column < columns; column++) {
+        for (let row = 0; row < rows; row++) {
+            const tone = vary(base, (rng() - 0.5) * 0.14);
+            const [x0, y0, x1, y1] = [column * w + joint / 2, row * h + joint / 2, (column + 1) * w - joint / 2, (row + 1) * h - joint / 2];
+            const jitter = (): number => (rng() - 0.5) * wobble;
+            const corners: [number, number][] = [
+                [x0 + jitter(), y0 + jitter()],
+                [x1 + jitter(), y0 + jitter()],
+                [x1 + jitter(), y1 + jitter()],
+                [x0 + jitter(), y1 + jitter()],
+            ];
+            ctx.save();
+            ctx.beginPath();
+            corners.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+            ctx.closePath();
+            ctx.fillStyle = `#${tone.getHexString()}`;
+            ctx.fill();
+            ctx.clip();
+            const glaze = ctx.createRadialGradient(x0 + w * 0.35, y0 + h * 0.35, 0, x0 + w / 2, y0 + h / 2, Math.max(w, h) * 0.75);
+            glaze.addColorStop(0, `#${vary(tone, 0.04).getHexString()}`);
+            glaze.addColorStop(0.6, `#${tone.getHexString()}`);
+            glaze.addColorStop(1, `#${vary(tone, -0.1).getHexString()}`);
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = glaze;
+            ctx.fillRect(x0 - wobble, y0 - wobble, w + 2 * wobble, h + 2 * wobble);
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+    }
+}
+
+/**
+ * Encaustic cement tiles `w` × `h` px: the ground in its own slight shade, quarter circles at the corners
+ * (whole circles where four tiles meet), a diamond with a ring round it in the middle and dots at the edges, all in
+ * `accent`, with a thin grey joint.
+ */
+function drawEncaustic(ctx: CanvasRenderingContext2D, rng: () => number, w: number, h: number, color: string, accent: string): void {
+    const base = new THREE.Color(color);
+    const motif = new THREE.Color(accent);
+    const s = Math.min(w, h);
+    for (let column = 0; column < 2; column++) {
+        for (let row = 0; row < 2; row++) {
+            const [x0, y0] = [column * w, row * h];
+            const [cx, cy] = [x0 + w / 2, y0 + h / 2];
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x0, y0, w, h);
+            ctx.clip();
+            ctx.fillStyle = `#${vary(base, (rng() - 0.5) * 0.04).getHexString()}`;
+            ctx.fillRect(x0, y0, w, h);
+            ctx.fillStyle = `#${vary(motif, (rng() - 0.5) * 0.04).getHexString()}`;
+            ctx.strokeStyle = ctx.fillStyle;
+            for (const [px, py] of [[x0, y0], [x0 + w, y0], [x0, y0 + h], [x0 + w, y0 + h]]) {
+                ctx.beginPath();
+                ctx.arc(px, py, s * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - s * 0.26);
+            ctx.lineTo(cx + s * 0.26, cy);
+            ctx.lineTo(cx, cy + s * 0.26);
+            ctx.lineTo(cx - s * 0.26, cy);
+            ctx.closePath();
+            ctx.fill();
+            ctx.lineWidth = s * 0.03;
+            ctx.beginPath();
+            ctx.arc(cx, cy, s * 0.36, 0, Math.PI * 2);
+            ctx.stroke();
+            for (const [px, py] of [[cx, y0], [x0 + w, cy], [cx, y0 + h], [x0, cy]]) {
+                ctx.beginPath();
+                ctx.arc(px, py, s * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            // The ground shows through a little, as on a worn cement tile.
+            ctx.globalAlpha = 0.25;
+            for (let k = 0; k < (w * h) / 60; k++) {
+                ctx.fillStyle = `#${vary(base, (rng() - 0.5) * 0.1).getHexString()}`;
+                ctx.fillRect(x0 + rng() * w, y0 + rng() * h, 1, 1);
+            }
+            ctx.globalAlpha = 1;
+            ctx.restore();
+        }
+    }
+    ctx.fillStyle = `#${shade(base, -0.35).getHexString()}`;
+    for (let i = 0; i < 2; i++) {
+        ctx.fillRect(i * w, 0, 1, ctx.canvas.height);
+        ctx.fillRect(0, i * h, ctx.canvas.width, 1);
+    }
+}
+
+/**
+ * Flutes `pitch` px apart across the canvas, running along its height: each a rounded groove lit from the left, a light
+ * ridge where two meet.
+ */
+function drawFluted(ctx: CanvasRenderingContext2D, pitch: number, color: string): void {
+    const base = new THREE.Color(color);
+    const flutes = Math.round(ctx.canvas.width / pitch);
+    for (let i = 0; i < flutes; i++) {
+        const x = i * pitch;
+        const light = ctx.createLinearGradient(x, 0, x + pitch, 0);
+        light.addColorStop(0, `#${vary(base, 0.08).getHexString()}`);
+        light.addColorStop(0.12, `#${base.getHexString()}`);
+        light.addColorStop(0.55, `#${vary(base, -0.12).getHexString()}`);
+        light.addColorStop(0.88, `#${vary(base, -0.03).getHexString()}`);
+        light.addColorStop(1, `#${vary(base, 0.1).getHexString()}`);
+        ctx.fillStyle = light;
+        ctx.fillRect(x, 0, pitch, ctx.canvas.height);
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = `#${vary(base, -0.3).getHexString()}`;
+        ctx.fillRect(x, 0, 1, ctx.canvas.height);
+        ctx.globalAlpha = 1;
     }
 }
 

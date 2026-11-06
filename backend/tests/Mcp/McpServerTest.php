@@ -944,6 +944,7 @@ final class McpServerTest extends IntegrationTestCase
 			[['roughness' => 2], 'Field "roughness" must be between 0 and 1.'],
 			[['code' => 'Oak Veneer'], 'Field "code" must be kebab-case'],
 			[['code' => 'oak-tiles', 'tileWidth' => 300], 'Fields "tileWidth" and "tileHeight" go together.'],
+			[['accent' => 'grey'], 'Field "accent" must be #rrggbb, e.g. "#8f9196".'],
 		] as [$change, $error]) {
 			$message = $admin->call('add_material', [...$oak, 'code' => 'oak-2', ...$change], $isError);
 			self::assertTrue($isError);
@@ -995,6 +996,20 @@ final class McpServerTest extends IntegrationTestCase
 		$cleared = $admin->call('update_material', ['materialId' => $added['id'], 'clear' => ['tileWidth', 'tileHeight']]);
 		self::assertIsArray($cleared);
 		self::assertSame([null, null], [$cleared['tileWidth'], $cleared['tileHeight']]);
+
+		// A veined stone keeps its accent (the veins) through other changes, until cleared.
+		$marble = $admin->call(
+			'add_material',
+			['code' => 'marble-test', 'name' => 'Marble', 'pattern' => 'Marble', 'color' => '#F1EFEA', 'tileWidth' => 3200, 'tileHeight' => 1600, 'accent' => '#8F9196'],
+		);
+		self::assertIsArray($marble);
+		self::assertSame(['Marble', '#8f9196'], [$marble['pattern'], $marble['accent']]);
+		$renamed = $admin->call('update_material', ['materialId' => $marble['id'], 'name' => 'Marble, white']);
+		self::assertIsArray($renamed);
+		self::assertSame('#8f9196', $renamed['accent']);
+		$plain = $admin->call('update_material', ['materialId' => $marble['id'], 'clear' => ['accent']]);
+		self::assertIsArray($plain);
+		self::assertNull($plain['accent']);
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void

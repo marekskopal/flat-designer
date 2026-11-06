@@ -30,9 +30,14 @@ final readonly class MaterialTools
 		'BeaverTail',
 		'Stone',
 		'Formwork',
+		'Marble',
+		'Chevron',
+		'Zellige',
+		'Encaustic',
+		'Fluted',
 	];
 
-	private const array Clearable = ['tileWidth', 'tileHeight'];
+	private const array Clearable = ['tileWidth', 'tileHeight', 'accent'];
 
 	public function __construct(
 		private ToolContext $context,
@@ -57,12 +62,13 @@ final readonly class MaterialTools
 	/**
 	 * @param string $code unique kebab-case code, permanent (furniture definitions refer to it), e.g. "oak-veneer"
 	 * @param string $name e.g. "Oak veneer, natural"
-	 * @param string $pattern how the surface is drawn: Plain, Wood (grain), Planks, Tiles, Glass, Grass, Gravel, Terrazzo (stone chips; slab joints with a tile size), Brick (stretcher bond, tileWidth × tileHeight per brick), Herringbone (tileWidth × tileHeight tiles at 45°, length a whole multiple of the width), BeaverTail (round-ended roof tiles tileWidth × tileHeight in half-bond rows), Stone (random coursed dry-stone walling, stones about tileWidth long in courses about tileHeight high), Formwork (cast concrete showing its formwork panels or boards, tileWidth along the wall by tileHeight up it); Planks with a tile size are tileWidth wide and tileHeight long, running along floors and lying horizontally on walls
+	 * @param string $pattern how the surface is drawn: Plain, Wood (grain), Planks, Tiles, Glass, Grass, Gravel, Terrazzo (stone chips; slab joints with a tile size), Brick (stretcher bond, tileWidth × tileHeight per brick), Herringbone (tileWidth × tileHeight tiles at 45°, length a whole multiple of the width), BeaverTail (round-ended roof tiles tileWidth × tileHeight in half-bond rows), Stone (random coursed dry-stone walling, stones about tileWidth long in courses about tileHeight high), Formwork (cast concrete showing its formwork panels or boards, tileWidth along the wall by tileHeight up it), Marble (veined stone, slabs or tiles tileWidth × tileHeight, the veins in accent), Chevron (parquet planks tileWidth long and tileHeight wide, ends cut at 45°), Zellige (handmade glazed tiles, each its own shade), Encaustic (cement tiles with a motif in accent), Fluted (rounded flutes tileWidth apart running up the surface; give tileHeight equal to it); Planks with a tile size are tileWidth wide and tileHeight long, running along floors and lying horizontally on walls
 	 * @param string $color base colour #rrggbb
 	 * @param float $roughness 0 (mirror) to 1 (matt)
 	 * @param float $metalness 0 (dielectric) to 1 (metal)
 	 * @param int|null $tileWidth Planks/Tiles: one plank or tile, mm (with tileHeight)
 	 * @param int|null $tileHeight Planks/Tiles: one plank or tile, mm (with tileWidth)
+	 * @param string|null $accent second colour #rrggbb: the veins of Marble, the motif of Encaustic (default: a shade of color)
 	 * @return array<string, mixed>
 	 */
 	#[McpTool(
@@ -80,6 +86,7 @@ final readonly class MaterialTools
 		float $metalness = 0.0,
 		?int $tileWidth = null,
 		?int $tileHeight = null,
+		?string $accent = null,
 	): array {
 		return self::toArray($this->materialService->create($this->context->user(), new MaterialInputDto(
 			code: $code,
@@ -90,18 +97,20 @@ final readonly class MaterialTools
 			metalness: $metalness,
 			tileWidth: $tileWidth,
 			tileHeight: $tileHeight,
+			accent: $accent,
 		)));
 	}
 
 	/**
 	 * @param string|null $name new name
-	 * @param string|null $pattern Plain, Wood, Planks, Tiles, Glass, Grass, Gravel, Terrazzo, Brick, Herringbone, BeaverTail, Stone or Formwork
+	 * @param string|null $pattern Plain, Wood, Planks, Tiles, Glass, Grass, Gravel, Terrazzo, Brick, Herringbone, BeaverTail, Stone, Formwork, Marble, Chevron, Zellige, Encaustic or Fluted
 	 * @param string|null $color #rrggbb
 	 * @param float|null $roughness 0–1
 	 * @param float|null $metalness 0–1
 	 * @param int|null $tileWidth mm (with tileHeight)
 	 * @param int|null $tileHeight mm (with tileWidth)
-	 * @param list<string>|null $clear fields to set to none: "tileWidth", "tileHeight" (both together)
+	 * @param string|null $accent second colour #rrggbb (Marble veins, Encaustic motif)
+	 * @param list<string>|null $clear fields to set to none: "tileWidth", "tileHeight" (both together), "accent"
 	 * @return array<string, mixed>
 	 */
 	#[McpTool(
@@ -119,6 +128,7 @@ final readonly class MaterialTools
 		?float $metalness = null,
 		?int $tileWidth = null,
 		?int $tileHeight = null,
+		?string $accent = null,
 		?array $clear = null,
 	): array {
 		$material = $this->materialRepository->findById($materialId)
@@ -141,6 +151,7 @@ final readonly class MaterialTools
 			metalness: $metalness ?? $material->metalness,
 			tileWidth: $cleared('tileWidth') ? null : $tileWidth ?? $material->tileWidth,
 			tileHeight: $cleared('tileHeight') ? null : $tileHeight ?? $material->tileHeight,
+			accent: $cleared('accent') ? null : $accent ?? $material->accent,
 		)));
 	}
 
@@ -158,6 +169,7 @@ final readonly class MaterialTools
 			'textured' => $material->texture !== null,
 			'tileWidth' => $material->tileWidth,
 			'tileHeight' => $material->tileHeight,
+			'accent' => $material->accent,
 		];
 	}
 }

@@ -27,6 +27,10 @@ final readonly class Costing
 		MaterialPatternEnum::Terrazzo,
 		MaterialPatternEnum::Brick,
 		MaterialPatternEnum::BeaverTail,
+		MaterialPatternEnum::Marble,
+		MaterialPatternEnum::Chevron,
+		MaterialPatternEnum::Zellige,
+		MaterialPatternEnum::Encaustic,
 	];
 
 	/** The share of a beaver-tail tile's length a row shows (double-lap tiling; `materials.ts` draws the rows so). */

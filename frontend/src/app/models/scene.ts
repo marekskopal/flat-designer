@@ -19,7 +19,17 @@ export type MaterialPattern =
     /** Random coursed dry-stone walling: stones about `tileWidth` long in courses about `tileHeight` high. */
     | 'Stone'
     /** Cast concrete showing its formwork panels or boards, `tileWidth` along the wall by `tileHeight` up it. */
-    | 'Formwork';
+    | 'Formwork'
+    /** Veined stone in slabs or tiles `tileWidth` × `tileHeight`, the veins in `accent`. */
+    | 'Marble'
+    /** Planks `tileWidth` long and `tileHeight` wide, their ends cut at 45° and meeting in a zigzag along v. */
+    | 'Chevron'
+    /** Handmade glazed tiles `tileWidth` × `tileHeight`, each its own shade, with uneven edges. */
+    | 'Zellige'
+    /** Cement tiles `tileWidth` × `tileHeight` with a motif in `accent`, forming rosettes where four meet. */
+    | 'Encaustic'
+    /** Rounded flutes `tileWidth` apart running up the surface (along v), whatever its grain. */
+    | 'Fluted';
 export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
@@ -92,6 +102,8 @@ export interface Material {
     /** Real size (mm) of one plank or tile: width across, height along the plank / up the wall. */
     tileWidth: number | null;
     tileHeight: number | null;
+    /** Second colour of a pattern (#rrggbb): the veins of `Marble`, the motif of `Encaustic`; null derives one. */
+    accent?: string | null;
 }
 
 /** Horizontal band of tiling (or other finish) around a room's walls, mm above the floor. */

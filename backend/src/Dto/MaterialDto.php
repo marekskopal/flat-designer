@@ -20,6 +20,7 @@ final readonly class MaterialDto
 		public ?string $texture,
 		public ?int $tileWidth,
 		public ?int $tileHeight,
+		public ?string $accent = null,
 	) {
 	}
 
@@ -36,6 +37,7 @@ final readonly class MaterialDto
 			texture: $material->texture,
 			tileWidth: $material->tileWidth,
 			tileHeight: $material->tileHeight,
+			accent: $material->accent,
 		);
 	}
 }

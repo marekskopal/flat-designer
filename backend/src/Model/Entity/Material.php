@@ -16,7 +16,7 @@ use MarekSkopal\ORM\Enum\Type;
  * PBR surface description. `pattern` selects how the viewer lays the surface out (planks, tiles, wood
  * grain…). `texture` is an optional image of one plank or tile (path under the frontend's assets/); the
  * viewer composes the floor or wall from it at `tileWidth` × `tileHeight` mm. Without a texture the
- * pattern is drawn procedurally from `color`. Global: admins add and change them (`MaterialService`); the code is
+ * pattern is drawn procedurally from `color` (and `accent`, a second colour some patterns use). Global: admins add and change them (`MaterialService`); the code is
  * permanent, furniture definitions refer to it.
  */
 #[Entity(repositoryClass: MaterialRepository::class)]
@@ -43,6 +43,9 @@ class Material extends AEntity
 		public ?int $tileHeight,
 		#[ManyToOne(entityClass: User::class, nullable: true)]
 		public ?User $createdBy = null,
+		/** Second colour of a pattern (#rrggbb): the veins of `Marble`, the motif of `Encaustic`; null derives one. */
+		#[Column(type: Type::String, size: 7, nullable: true)]
+		public ?string $accent = null,
 	) {
 	}
 }

@@ -480,6 +480,14 @@ The current format is the text in `FurnitureTools::Format`.
   concrete showing its panels (with tie holes) or boards (`drawFormwork()`: `tile_width` along the wall, `tile_height` up
   it); both keep their surface's UVs and are not counted in pieces. Bricks vary in sRGB lightness (`vary()`) with joints
   7 % of the course (5–10 mm), so pavers and facing bricks alike look right. The demo house's materials are listed in `docs/demo-house.md`.
+- Kitchen patterns (I-132, `SeedKitchenMaterials`): a material's optional `accent` (#rrggbb, MCP `add_material` /
+  `update_material`, null derives a shade, `accentOf()`) is a pattern's second colour. `Marble` is veined stone
+  (`drawMarble()`: slabs of 1.5 m or more a patch each, smaller tiles 2 × 2, wandering veins in `accent` kept within each
+  slab), `Chevron` parquet (`tileWidth` long, `tileHeight` wide, ends cut at 45°, the zigzag along v), `Zellige`
+  handmade glazed tiles, `Encaustic` cement tiles with a rosette motif in `accent`; all four go on the room's tile grid
+  (`GridPatterns`), are counted in pieces and, but chevron, draw their joints in the elevations (`JointGridPatterns`).
+  `Fluted` is a panel of rounded flutes `tileWidth` apart running up the surface whatever its grain (keeps its UVs, not
+  in pieces, flutes drawn in the elevations). Metro tiles are `Brick` (light ones get a light grout), strip tiles `Tiles`.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one

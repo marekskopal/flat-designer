@@ -259,6 +259,7 @@
     "Field \"code\" must be kebab-case (lower-case letters, digits, hyphens), at most %d characters, e.g. \"oak-veneer\".": "Pole „code“ musí být kebab-case (malá písmena, číslice, pomlčky), nejvýš %d znaků, např. „oak-veneer“.",
     "Field \"name\" must be 1 to %d characters.": "Pole „name“ musí mít 1 až %d znaků.",
     "Field \"color\" must be #rrggbb, e.g. \"#f2f1ed\".": "Pole „color“ musí být #rrggbb, např. „#f2f1ed“.",
+    "Field \"accent\" must be #rrggbb, e.g. \"#8f9196\".": "Pole „accent“ musí být #rrggbb, např. „#8f9196“.",
     "Field \"%s\" must be between 0 and 1.": "Pole „%s“ musí být mezi 0 a 1.",
     "Fields \"tileWidth\" and \"tileHeight\" go together.": "Pole „tileWidth“ a „tileHeight“ patří k sobě.",
     "Fields \"tileWidth\" and \"tileHeight\" must be positive (mm).": "Pole „tileWidth“ a „tileHeight“ musí být kladná (mm).",

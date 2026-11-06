@@ -18,6 +18,7 @@ final readonly class MaterialInputDto
 		public float $metalness,
 		public ?int $tileWidth,
 		public ?int $tileHeight,
+		public ?string $accent = null,
 	) {
 	}
 }

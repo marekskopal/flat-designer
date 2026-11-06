@@ -78,6 +78,10 @@ const MinFace = 200;
 const AgainstWall = 60;
 /** Tile joints closer than this on paper (mm) are left out: the band reads as a fill. */
 const MinJointPitch = 1.2;
+
+/** Patterns whose joints are a grid of `tileWidth` × `tileHeight` on the room's tile grid (formwork on the wall's own). */
+const JointGridPatterns: readonly Material['pattern'][] = ['Tiles', 'Terrazzo', 'Formwork', 'Marble', 'Zellige', 'Encaustic'];
+
 /** At most this many tiles of a herringbone are drawn in one piece of a band. */
 const MaxPatternTiles = 4000;
 
@@ -461,7 +465,7 @@ function faceSvg(face: ElevationFace, at: Vec2, context: FaceContext): string {
                 continue;
             }
             // Bricks and formwork keep the wall's own UVs (from its start), tiles lie on the room's grid.
-            const ownUvs = material.pattern === 'Brick' || material.pattern === 'Formwork';
+            const ownUvs = material.pattern === 'Brick' || material.pattern === 'Formwork' || material.pattern === 'Fluted';
             const phase = ownUvs && face.curve === undefined ? -face.length : gridPhase;
             const bandGaps = face.gaps.flatMap((gap) => clipGap(gap, band.bottom, band.top, segment));
             for (const piece of wallPieces(segment.to - segment.from, band.top - band.bottom, bandGaps)) {
@@ -550,11 +554,10 @@ function bandPieceSvg(
     }
     const joint: Style = {stroke: JointColor, width: 0.08};
     const joints: string[] = [];
-    if (material.pattern === 'Tiles' || material.pattern === 'Terrazzo' || material.pattern === 'Formwork') {
+    const verticals = (): string[] => gridLines(x0, x1, w, phase).map((x) => line(toPaper(x, z0), toPaper(x, z1), joint));
+    if (JointGridPatterns.includes(material.pattern)) {
         if (w / s >= MinJointPitch && h / s >= MinJointPitch) {
-            for (const x of gridLines(x0, x1, w, phase)) {
-                joints.push(line(toPaper(x, z0), toPaper(x, z1), joint));
-            }
+            joints.push(...verticals());
             for (const z of gridLines(z0, z1, h, 0)) {
                 joints.push(line(toPaper(x0, z), toPaper(x1, z), joint));
             }
@@ -580,6 +583,11 @@ function bandPieceSvg(
             for (const z of gridLines(z0, z1, w, 0)) {
                 joints.push(line(toPaper(x0, z), toPaper(x1, z), joint));
             }
+        }
+    } else if (material.pattern === 'Fluted') {
+        // Flutes run up the wall, `tileWidth` apart.
+        if (w / s >= MinJointPitch) {
+            joints.push(...verticals());
         }
     } else if (material.pattern === 'Herringbone') {
         const tiles = herringboneShapes(x0, x1, z0, z1, phase, herringboneLength(w, h), h, s);
