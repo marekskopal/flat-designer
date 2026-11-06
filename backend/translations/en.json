@@ -32,6 +32,7 @@
         "glassMaterial": "Glass"
     },
     "schedules": {
+        "ledStrip": "LED strip",
         "notInRoom": "Not in a room"
     }
 }

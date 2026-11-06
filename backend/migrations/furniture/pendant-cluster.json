@@ -1,0 +1,283 @@
+{
+ "name": "Pendant cluster",
+ "description": "Several pendants hanging from one canopy: a linear bar along the width or a round disc (canopy round, the drops in a circle), drops shades every other one hanging stagger higher, each a globe, a dome, a drum, a flat disc, a cone or a teardrop in glass, or an open wire cage in the canopy's material, round a small glowing bulb on a straight cable. The item's elevation is the bottom of the lowest shade, its height reaches the ceiling; the electrical schedule counts the drops.",
+ "definition": {
+  "format": 1,
+  "category": "light",
+  "schedule": {
+   "count": "drops",
+   "values": [
+    "lumens",
+    "kelvin"
+   ]
+  },
+  "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Závěsný klastr svítidel",
+    "description": "Několik závěsných svítidel z jednoho baldachýnu: lineární lišta po šířce nebo kulatý disk (canopy round, světla v kruhu), drops stínidel, každé druhé zavěšené o stagger výš, každé koule, kopule, válec, plochý disk, kužel nebo kapka ze skla, nebo otevřená drátěná klec v materiálu baldachýnu, kolem malé svítící žárovky na rovném kabelu. Výška osazení prvku je spodek nejnižšího stínidla, jeho výška sahá ke stropu; elektroschéma počítá světla.",
+    "parameters": {
+     "drops": "Počet světel",
+     "canopy": "Baldachýn",
+     "shape": "Tvar stínidel",
+     "shadeSize": "Průměr stínidla",
+     "stagger": "Přesazení výšky",
+     "lumens": "Světelný tok jednoho světla",
+     "kelvin": "Teplota chromatičnosti"
+    },
+    "options": {
+     "canopy": {
+      "linear": "lineární lišta",
+      "round": "kulatý disk"
+     },
+     "shape": {
+      "globe": "koule",
+      "dome": "kopule",
+      "drum": "válec",
+      "disc": "disk",
+      "cone": "kužel",
+      "teardrop": "kapka",
+      "wire": "drátěná klec"
+     }
+    },
+    "slots": {
+     "shade": "Stínidla",
+     "canopy": "Baldachýn a objímky",
+     "cable": "Kabely"
+    },
+    "parts": {
+     "Canopy": "Baldachýn",
+     "Shade": "Stínidlo",
+     "Bulb": "Žárovka",
+     "Holder": "Objímka",
+     "Cable": "Kabel"
+    }
+   }
+  },
+  "size": {
+   "width": 900,
+   "depth": 200,
+   "height": 1200
+  },
+  "parameters": [
+   {
+    "key": "drops",
+    "label": "Drops",
+    "type": "int",
+    "default": 3,
+    "min": 2,
+    "max": 6
+   },
+   {
+    "key": "canopy",
+    "label": "Canopy",
+    "type": "select",
+    "options": [
+     "linear",
+     "round"
+    ],
+    "default": "linear"
+   },
+   {
+    "key": "shape",
+    "label": "Shade shape",
+    "type": "select",
+    "options": [
+     "globe",
+     "dome",
+     "drum",
+     "disc",
+     "cone",
+     "teardrop",
+     "wire"
+    ],
+    "default": "globe"
+   },
+   {
+    "key": "shadeSize",
+    "label": "Shade diameter",
+    "type": "int",
+    "default": 180,
+    "min": 80,
+    "max": 600,
+    "unit": "mm"
+   },
+   {
+    "key": "stagger",
+    "label": "Height stagger",
+    "type": "int",
+    "default": 150,
+    "min": 0,
+    "max": 800,
+    "unit": "mm"
+   },
+   {
+    "key": "lumens",
+    "label": "Light output per drop",
+    "type": "int",
+    "default": 300,
+    "min": 0,
+    "max": 3000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 2200,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   }
+  ],
+  "derived": {
+   "o": "min(W, D)",
+   "s": "max(min(shadeSize, canopy == 'round' ? round(o / 2) : D), 40)",
+   "sh": "shape == 'globe' ? s : shape == 'dome' ? round(s * 0.6) : shape == 'disc' ? round(s * 0.15) : shape == 'cone' ? round(s * 0.7) : shape == 'teardrop' ? round(s * 1.3) : shape == 'wire' ? round(s * 0.9) : round(s * 0.55)",
+   "pitch": "W / drops",
+   "R": "max((o - s) / 2, 0)",
+   "ch": "canopy == 'round' ? 30 : 40",
+   "cw": "canopy == 'round' ? min(o, round(2 * R + 100)) : W",
+   "cd": "canopy == 'round' ? min(o, round(2 * R + 100)) : min(D, 80)",
+   "holder": 50
+  },
+  "materialSlots": [
+   {
+    "key": "shade",
+    "label": "Shades",
+    "default": "glass-smoked"
+   },
+   {
+    "key": "canopy",
+    "label": "Canopy and holders",
+    "default": "metal-black-matt"
+   },
+   {
+    "key": "cable",
+    "label": "Cables",
+    "default": "cable-fabric-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Canopy",
+    "when": "canopy == 'linear'",
+    "x": 0,
+    "y": "H - ch",
+    "z": "(D - cd) / 2",
+    "w": "W",
+    "h": "ch",
+    "d": "cd",
+    "material": "canopy"
+   },
+   {
+    "type": "cylinder",
+    "name": "Canopy",
+    "when": "canopy == 'round'",
+    "x": "(W - cw) / 2",
+    "y": "H - ch",
+    "z": "(D - cd) / 2",
+    "w": "cw",
+    "h": "ch",
+    "d": "cd",
+    "material": "canopy",
+    "radius": 4
+   },
+   {
+    "type": "cushion",
+    "name": "Shade",
+    "when": "shape == 'globe'",
+    "repeat": {
+     "count": "drops"
+    },
+    "x": "(canopy == 'round' ? W / 2 + R * cos(i * 360 / drops) : (i + 0.5) * pitch) - s / 2",
+    "y": "(i % 2 == 1 ? stagger : 0)",
+    "z": "(canopy == 'round' ? D / 2 + R * sin(i * 360 / drops) : D / 2) - s / 2",
+    "w": "s",
+    "h": "sh",
+    "d": "s",
+    "material": "shade",
+    "radius": {
+     "expr": "s / 2"
+    }
+   },
+   {
+    "type": "cylinder",
+    "name": "Shade",
+    "when": "shape != 'globe'",
+    "repeat": {
+     "count": "drops"
+    },
+    "x": "(canopy == 'round' ? W / 2 + R * cos(i * 360 / drops) : (i + 0.5) * pitch) - s / 2",
+    "y": "(i % 2 == 1 ? stagger : 0)",
+    "z": "(canopy == 'round' ? D / 2 + R * sin(i * 360 / drops) : D / 2) - s / 2",
+    "w": "s",
+    "h": "sh",
+    "d": "s",
+    "material": {
+     "expr": "shape == 'wire' ? 'canopy' : 'shade'"
+    },
+    "radius": {
+     "expr": "shape == 'dome' ? round(min(sh, s / 2) * 0.9) : shape == 'disc' ? round(min(sh, s) * 0.4) : shape == 'drum' ? 6 : 0"
+    },
+    "profile": {
+     "expr": "shape == 'cone' ? 'cone' : shape == 'teardrop' ? 'teardrop' : 'straight'"
+    },
+    "wire": {
+     "expr": "shape == 'wire' ? 8 : 0"
+    }
+   },
+   {
+    "type": "light",
+    "name": "Bulb",
+    "repeat": {
+     "count": "drops"
+    },
+    "x": "(canopy == 'round' ? W / 2 + R * cos(i * 360 / drops) : (i + 0.5) * pitch) - 25",
+    "y": "(i % 2 == 1 ? stagger : 0) + round(sh / 2) - 25",
+    "z": "(canopy == 'round' ? D / 2 + R * sin(i * 360 / drops) : D / 2) - 25",
+    "w": 50,
+    "h": 50,
+    "d": 50,
+    "kind": "point",
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "bulb": "sphere"
+   },
+   {
+    "type": "cylinder",
+    "name": "Holder",
+    "repeat": {
+     "count": "drops"
+    },
+    "x": "(canopy == 'round' ? W / 2 + R * cos(i * 360 / drops) : (i + 0.5) * pitch) - 20",
+    "y": "(i % 2 == 1 ? stagger : 0) + sh - 4",
+    "z": "(canopy == 'round' ? D / 2 + R * sin(i * 360 / drops) : D / 2) - 20",
+    "w": 40,
+    "h": "holder",
+    "d": 40,
+    "material": "canopy"
+   },
+   {
+    "type": "cable",
+    "name": "Cable",
+    "repeat": {
+     "count": "drops"
+    },
+    "x": "(canopy == 'round' ? W / 2 + R * cos(i * 360 / drops) : (i + 0.5) * pitch) - 3",
+    "y": "(i % 2 == 1 ? stagger : 0) + sh - 4 + holder",
+    "z": "(canopy == 'round' ? D / 2 + R * sin(i * 360 / drops) : D / 2) - 3",
+    "w": 6,
+    "h": "max(H - ch - (i % 2 == 1 ? stagger : 0) - sh + 4 - holder, 1)",
+    "d": 6,
+    "ceiling": false,
+    "material": "cable"
+   }
+  ]
+ }
+}

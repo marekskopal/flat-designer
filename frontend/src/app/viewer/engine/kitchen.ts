@@ -1,7 +1,7 @@
 import {Item} from '@app/models/scene';
 import * as THREE from 'three';
 
-import {markFixtureLight} from './lights';
+import {ledFacingOf, ledLight} from './lights';
 import {GrainDirection, MaterialLibrary} from './materials';
 import {boxAt} from './meshes';
 import {MM} from './plan-geometry';
@@ -424,7 +424,10 @@ function hobRingsTexture(glassColor: string): THREE.CanvasTexture {
     return hobTexture;
 }
 
-/** Under-cabinet LED: a glowing strip plus a downward rect light that washes the backsplash and worktop. */
+/**
+ * LED strip: a glowing strip plus a rect light shining `params.facing` down (under a cabinet, washing the backsplash and
+ * worktop), up (a cove on top of a cabinet or bulkhead, washing the ceiling) or out of its front.
+ */
 function buildLedStrip(item: Item, materials: MaterialLibrary): THREE.Group {
     const group = new THREE.Group();
     const w = item.width * MM;
@@ -434,9 +437,12 @@ function buildLedStrip(item: Item, materials: MaterialLibrary): THREE.Group {
 
     const color = typeof item.params['color'] === 'string' ? item.params['color'] : '#ffd2a0';
     const intensity = typeof item.params['intensity'] === 'number' ? item.params['intensity'] : 5;
-    const light = new THREE.RectAreaLight(color, intensity, w, 0.06);
-    light.rotation.x = -Math.PI / 2;
-    markFixtureLight(light, intensity);
-    group.add(light);
+    // The light is 60 mm across its strip, as before, whichever way it faces.
+    const facing = ledFacingOf(item.params['facing']);
+    const across = 0.06;
+    const box = facing === 'out'
+        ? {x: -w / 2, y: (item.height * MM - across) / 2, z: -d / 2, w, h: across, d}
+        : {x: -w / 2, y: 0, z: -across / 2, w, h: item.height * MM, d: across};
+    group.add(ledLight(color, intensity, facing, box));
     return group;
 }

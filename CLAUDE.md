@@ -922,6 +922,15 @@ The current format is the text in `FurnitureTools::Format`.
   `gangs` and a data socket's int `ports` (`DefinitionSchedule::Defaults`, TS `scheduleCount()`). The furniture editor sets both above the JSON (`ScheduleSettingsComponent`), the library shows the
   category; `AddElectricalScheduleSettings` gave the seeds theirs and tagged copies their `count`.
 
+- Pendant clusters, shade shapes and cove LEDs (I-168, `AddPendantClusters`): a `cylinder` part's `profile` (`cone`
+  narrowing to `topRatio` of its radius at the top, `teardrop` a round bottom tapering to a neck) and `wire` (an open
+  cage of that many meridians and three rings, `cageGeometry()`) give the glass pendant its cone, teardrop and wire
+  shades; the global Pendant cluster hangs `drops` of them (staggered by `stagger`) on straight cables (`ceiling`
+  false) from a linear or round canopy, its schedule counting the drops. An `led` part's `facing` and a `LedStrip`'s
+  `params.facing` (down, up as a cove, out; `ledLight()` in `lights.ts`, `StructureParamsValidator`) turn its area
+  light. LED strips are lights a switch may control (`SwitchControls::isLight()`, `electricalPoints()`), listed in the
+  electrical schedule as lights of definition 0 (`schedules.ledStrip`).
+
 ## Render quality
 
 - `ViewerEngine.setQuality('fast' | 'presentation')`: fast (the default) renders straight to the canvas. Presentation

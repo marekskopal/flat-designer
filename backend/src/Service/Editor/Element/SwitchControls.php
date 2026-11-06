@@ -14,7 +14,8 @@ use Izbik\Service\Furniture\DefinitionCategoryEnum;
 use Izbik\Service\Json\JsonDecoder;
 
 /**
- * A switch item's `controls`: the light items of the same floor it controls (a light listed by two switches is two-way
+ * A switch item's `controls`: the light items (lights by their definition's category, and LED strips) of the same
+ * floor it controls (a light listed by two switches is two-way
  * switching, by more intermediate). Lights on other floors cannot be linked. Only the ids added against the current
  * state are checked, so a light deleted since (still listed, skipped where the links are read) does not block moving,
  * renaming or undoing the switch. An item that stops being a switch drops the list (undoing that brings it back).
@@ -65,7 +66,7 @@ final readonly class SwitchControls
 			}
 			if (!self::isLight($light)) {
 				throw EditException::invalid(
-					sprintf('Item %d is not a light (a Custom item whose definition has the category "light").', $id),
+					sprintf('Item %d is not a light (a Custom item whose definition has the category "light", or an LED strip).', $id),
 				);
 			}
 		}
@@ -97,9 +98,11 @@ final readonly class SwitchControls
 		return $ids;
 	}
 
+	/** A light a switch may control: a Custom item whose definition has the category "light", or an LED strip. */
 	public static function isLight(Item $item): bool
 	{
-		return $item->kind === ItemKindEnum::Custom && self::category($item->definition) === DefinitionCategoryEnum::Light;
+		return $item->kind === ItemKindEnum::LedStrip
+			|| $item->kind === ItemKindEnum::Custom && self::category($item->definition) === DefinitionCategoryEnum::Light;
 	}
 
 	private static function category(?FurnitureDefinition $definition): ?DefinitionCategoryEnum

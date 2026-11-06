@@ -32,6 +32,7 @@
         "glassMaterial": "Sklo"
     },
     "schedules": {
+        "ledStrip": "LED pásek",
         "notInRoom": "Mimo místnosti"
     }
 }

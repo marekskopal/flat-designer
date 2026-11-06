@@ -64,7 +64,7 @@ final readonly class ItemTools
 	 * @param int|null $modelId for kind "Model": the 3D model of a bought product (list_models); the size and name default to
 	 *     the model's
 	 * @param list<int>|null $controls for a switch (a Custom item whose definition has the category "switch"): the ids of the
-	 *     light items (category "light") it controls, replacing the list; lights on the same floor only (a switch cannot
+	 *     light items (category "light", or LedStrip items) it controls, replacing the list; lights on the same floor only (a switch cannot
 	 *     control lights on another floor). Two switches listing the same light are two-way switching, more intermediate
 	 */
 	#[McpTool(name: 'add_item', description: 'Add an item to a floor. Unspecified size and elevation come from the kind\'s defaults.')]
@@ -134,7 +134,7 @@ final readonly class ItemTools
 	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId",
 	 *     "definitionId" (with a kind other than Custom), "modelId" (with a kind other than Model), "controls" (a switch's lights)
 	 * @param list<int>|null $controls for a switch (a Custom item whose definition has the category "switch"): the ids of the
-	 *     light items (category "light") it controls, replacing the list; lights on the same floor only (a switch cannot
+	 *     light items (category "light", or LedStrip items) it controls, replacing the list; lights on the same floor only (a switch cannot
 	 *     control lights on another floor). Two switches listing the same light are two-way switching, more intermediate
 	 */
 	#[McpTool(

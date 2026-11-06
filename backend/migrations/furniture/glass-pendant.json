@@ -1,6 +1,6 @@
 {
  "name": "Pendant with a glass shade",
- "description": "Pendant with a glass shade on a fabric cable (the holder in its material, or its own with holderMaterial own): a globe, a dome, a drum or a flat disc (shadeHeight sets its height apart from its width) round a small glowing bulb; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
+ "description": "Pendant with a glass shade on a fabric cable (the holder in its material, or its own with holderMaterial own): a globe, a dome, a drum, a flat disc, a cone or a teardrop (shadeHeight sets its height apart from its width) round a small glowing bulb, or an open wire cage in the holder's material; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
  "definition": {
   "format": 1,
   "category": "light",
@@ -14,7 +14,7 @@
   "translations": {
    "cs": {
     "name": "Závěsné svítidlo se skleněným stínidlem",
-    "description": "Závěsné svítidlo se skleněným stínidlem na textilním kabelu: koule, kopule, válec nebo plochý disk (shadeHeight určuje jeho výšku nezávisle na šířce) kolem malé svítící žárovky; kabel stoupá k háčku nad ním a vede po path k baldachýnu jako u svítidla s holou žárovkou. Výška osazení prvku je spodek stínidla.",
+    "description": "Závěsné svítidlo se skleněným stínidlem na textilním kabelu: koule, kopule, válec, plochý disk, kužel nebo kapka (shadeHeight určuje jeho výšku nezávisle na šířce) kolem malé svítící žárovky, nebo otevřená drátěná klec v materiálu objímky; kabel stoupá k háčku nad ním a vede po path k baldachýnu jako u svítidla s holou žárovkou. Výška osazení prvku je spodek stínidla.",
     "parameters": {
      "path": "Trasa kabelu",
      "path.x": "x",
@@ -32,7 +32,10 @@
       "globe": "koule",
       "dome": "kopule",
       "drum": "válec",
-      "disc": "disk"
+      "disc": "disk",
+      "cone": "kužel",
+      "teardrop": "kapka",
+      "wire": "drátěná klec"
      },
      "holderMaterial": {
       "cable": "jako kabel",
@@ -42,7 +45,7 @@
     "slots": {
      "shade": "Stínidlo",
      "cable": "Kabel a objímka",
-     "holder": "Objímka (vlastní materiál)"
+     "holder": "Objímka (vlastní materiál) a drátěná klec"
     },
     "parts": {
      "Shade": "Stínidlo",
@@ -98,7 +101,10 @@
      "globe",
      "dome",
      "drum",
-     "disc"
+     "disc",
+     "cone",
+     "teardrop",
+     "wire"
     ],
     "default": "globe"
    },
@@ -148,7 +154,7 @@
   ],
   "derived": {
    "s": "min(W, D)",
-   "sh": "shadeHeight > 0 ? shadeHeight : shape == 'globe' ? s : shape == 'dome' ? round(s * 0.6) : shape == 'disc' ? round(s * 0.15) : round(s * 0.55)",
+   "sh": "shadeHeight > 0 ? shadeHeight : shape == 'globe' ? s : shape == 'dome' ? round(s * 0.6) : shape == 'disc' ? round(s * 0.15) : shape == 'cone' ? round(s * 0.7) : shape == 'teardrop' ? round(s * 1.3) : shape == 'wire' ? round(s * 0.9) : round(s * 0.55)",
    "holder": 60
   },
   "materialSlots": [
@@ -164,7 +170,7 @@
    },
    {
     "key": "holder",
-    "label": "Holder (holderMaterial own)",
+    "label": "Holder (holderMaterial own) and wire cage",
     "default": "metal-black-matt"
    }
   ],
@@ -194,9 +200,17 @@
     "w": "s",
     "h": "sh",
     "d": "s",
-    "material": "shade",
+    "material": {
+     "expr": "shape == 'wire' ? 'holder' : 'shade'"
+    },
     "radius": {
-     "expr": "shape == 'dome' ? round(min(sh, s / 2) * 0.9) : shape == 'disc' ? round(min(sh, s) * 0.4) : 6"
+     "expr": "shape == 'dome' ? round(min(sh, s / 2) * 0.9) : shape == 'disc' ? round(min(sh, s) * 0.4) : shape == 'drum' ? 6 : 0"
+    },
+    "profile": {
+     "expr": "shape == 'cone' ? 'cone' : shape == 'teardrop' ? 'teardrop' : 'straight'"
+    },
+    "wire": {
+     "expr": "shape == 'wire' ? 8 : 0"
     }
    },
    {

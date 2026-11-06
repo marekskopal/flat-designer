@@ -208,6 +208,41 @@ final class SwitchLinksTest extends EditorTestCase
 		self::assertSame([$idle], array_column(self::list($lighting['unlinked']), 'itemId'));
 	}
 
+	public function testASwitchControlsAnLedStripListedAsALight(): void
+	{
+		$switch = $this->point($this->switch, 0, 0, 'Switch');
+		$strip = self::id(
+			$this->create('items', ['kind' => 'LedStrip', 'name' => 'Cove', 'x' => 1000, 'y' => 1000, 'params' => ['facing' => 'up']]),
+		);
+		$unswitched = self::id($this->create('items', ['kind' => 'LedStrip', 'name' => 'Plinth', 'x' => 2000, 'y' => 1000]));
+
+		$response = $this->edit('PATCH', 'items', $switch, ['controls' => [$strip]]);
+		self::assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+		self::assertSame([$strip], $this->item($switch)['controls']);
+
+		$lighting = $this->lighting();
+		$circuits = self::list($lighting['circuits']);
+		self::assertCount(1, $circuits);
+		self::assertIsArray($circuits[0]);
+		self::assertSame([$strip], array_column(self::list($circuits[0]['lights']), 'itemId'));
+		self::assertSame([$unswitched], array_column(self::list($lighting['unswitched']), 'itemId'));
+		// The schedule lists both strips as lights in one row.
+		$floor = self::list($this->jsonBody($this->request('GET', $this->schedulePath(), authenticatedAs: $this->user))['floors'])[0];
+		self::assertIsArray($floor);
+		$rooms = self::list($floor['rooms']);
+		self::assertIsArray($rooms[0]);
+		$rows = self::list($rooms[0]['rows']);
+		self::assertIsArray($rows[0]);
+		self::assertSame(
+			['light', 0, 'LED strip', 2],
+			[$rows[0]['category'], $rows[0]['definitionId'], $rows[0]['name'], $rows[0]['units']],
+		);
+
+		// A facing the viewer does not draw is refused.
+		$bad = $this->edit('PATCH', 'items', $strip, ['params' => ['facing' => 'sideways']]);
+		self::assertSame(422, $bad->getStatusCode(), (string) $bad->getBody());
+	}
+
 	public function testARestoreLinksTheRestoredLights(): void
 	{
 		$switch = $this->point($this->switch, 0, 0, 'Switch');
@@ -259,18 +294,22 @@ final class SwitchLinksTest extends EditorTestCase
 	/** @return array<string, mixed> the floor's `lighting` */
 	private function lighting(): array
 	{
-		$path = str_replace(
-			['{projectId:number}', '{floorId:number}'],
-			[(string) $this->project->id, (string) $this->floor->id],
-			Routes::ProjectFloorElectricalSchedule->value,
-		);
-		$floors = self::list($this->jsonBody($this->request('GET', $path, authenticatedAs: $this->user))['floors']);
+		$floors = self::list($this->jsonBody($this->request('GET', $this->schedulePath(), authenticatedAs: $this->user))['floors']);
 		self::assertIsArray($floors[0]);
 		self::assertIsArray($floors[0]['lighting']);
 		/** @var array<string, mixed> $lighting */
 		$lighting = $floors[0]['lighting'];
 
 		return $lighting;
+	}
+
+	private function schedulePath(): string
+	{
+		return str_replace(
+			['{projectId:number}', '{floorId:number}'],
+			[(string) $this->project->id, (string) $this->floor->id],
+			Routes::ProjectFloorElectricalSchedule->value,
+		);
 	}
 
 	/** @return list<mixed> */

@@ -193,6 +193,66 @@ describe('new part types and options', () => {
         expect(bounds(clamped).toArray().map((v) => Math.round(v * 1000))).toEqual([600, 150, 400]);
     });
 
+    it('narrows a cone shade to its top ratio and tapers a teardrop from a round bottom to its neck', () => {
+        const extent = (mesh: THREE.Mesh, near: (y: number) => boolean): number => {
+            const position = mesh.geometry.getAttribute('position');
+            let widest = 0;
+            for (let i = 0; i < position.count; i++) {
+                if (near(position.getY(i))) {
+                    widest = Math.max(widest, Math.hypot(position.getX(i), position.getZ(i)));
+                }
+            }
+            return Math.round(widest * 1000);
+        };
+        const shade = {type: 'cylinder', x: 0, y: 0, z: 0, w: 400, h: 300, d: 400};
+        const [cone] = meshes(build(body([{...shade, profile: 'cone', topRatio: 0.25}])));
+        // The top (+y, 150 mm over the centre) is a quarter of the 200 mm radius, the bottom the whole of it.
+        expect(extent(cone, (y) => y > 0.149)).toBe(50);
+        expect(extent(cone, (y) => y < -0.149)).toBe(200);
+        const [drop] = meshes(build(body([{...shade, h: 600, profile: 'teardrop'}])));
+        drop.geometry.computeBoundingBox();
+        expect(drop.geometry.boundingBox!.getSize(new THREE.Vector3()).toArray().map((v) => Math.round(v * 1000))).toEqual([400, 600, 400]);
+        // Its bottom point is on the axis, its widest 200 mm up (a round bottom), its neck the default 0.15.
+        expect(extent(drop, (y) => y < -0.299)).toBe(0);
+        expect(extent(drop, (y) => Math.abs(y + 0.1) < 0.001)).toBe(200);
+        expect(extent(drop, (y) => y > 0.299)).toBe(30);
+    });
+
+    it('draws a wire shade as an open cage of thin wires within its box', () => {
+        const shade = {type: 'cylinder', x: 0, y: 0, z: 0, w: 400, h: 300, d: 400};
+        const [solid] = meshes(build(body([shade])));
+        const [cage] = meshes(build(body([{...shade, wire: 6}])));
+        cage.geometry.computeBoundingBox();
+        const size = cage.geometry.boundingBox!.getSize(new THREE.Vector3()).toArray().map((v) => Math.round(v * 1000));
+        // The rings' and wires' thickness (3 mm) round the shade's outline.
+        expect(size).toEqual([403, 303, 403]);
+        expect(cage.geometry.getAttribute('position').count).toBeGreaterThan(solid.geometry.getAttribute('position').count * 4);
+        // The middle of the cage is empty: no vertex near the axis.
+        const position = cage.geometry.getAttribute('position');
+        let nearest = Infinity;
+        for (let i = 0; i < position.count; i++) {
+            nearest = Math.min(nearest, Math.hypot(position.getX(i), position.getZ(i)));
+        }
+        expect(nearest).toBeGreaterThan(0.19);
+    });
+
+    it('turns an LED part\'s light down, up or out of its front', () => {
+        const strip = {type: 'led', x: 0, y: 700, z: 300, w: 600, h: 10, d: 20};
+        const shining = (facing?: string): number[] => {
+            const lights: THREE.RectAreaLight[] = [];
+            build(body([{...strip, ...(facing === undefined ? {} : {facing})}])).traverse((o) => o instanceof THREE.RectAreaLight && lights.push(o));
+            expect(lights).toHaveLength(1);
+            lights[0].updateMatrixWorld(true);
+            // A rect area light shines along its local −z.
+            const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(lights[0].getWorldQuaternion(new THREE.Quaternion()));
+            return direction.toArray().map((v) => Math.round(v) + 0);
+        };
+        expect(shining()).toEqual([0, -1, 0]);
+        expect(shining('down')).toEqual([0, -1, 0]);
+        expect(shining('up')).toEqual([0, 1, 0]);
+        expect(shining('out')).toEqual([0, 0, 1]);
+    });
+
     it('darkens a shaded board and narrows a board to its back width', () => {
         const slots = [{key: 'carcass', default: 'kitchen-oak'}];
         const plinth = {type: 'board', x: 0, y: 0, z: 0, w: 600, h: 100, d: 400, material: 'carcass', shade: 0.5};

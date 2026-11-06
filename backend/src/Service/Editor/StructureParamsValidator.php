@@ -6,11 +6,12 @@ namespace Izbik\Service\Editor;
 
 use Izbik\Model\Entity\Enum\ItemKindEnum;
 use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Furniture\PartTypeEnum;
 
 /**
  * The `params` of a column or chimney (see ItemKindCatalog and the viewer's structure builder): `shape` must be one the
- * viewer draws; a chimney's `aboveRoof` (mm over the highest roof it passes) and `cap` (a metal cap on its top). Other
- * keys are kept as they are.
+ * viewer draws; a chimney's `aboveRoof` (mm over the highest roof it passes) and `cap` (a metal cap on its top). An LED
+ * strip's `facing` is one the viewer turns its light to. Other keys are kept as they are.
  */
 final readonly class StructureParamsValidator
 {
@@ -22,6 +23,13 @@ final readonly class StructureParamsValidator
 	/** @param array<string, mixed> $params */
 	public static function validate(ItemKindEnum $kind, array $params): void
 	{
+		if ($kind === ItemKindEnum::LedStrip) {
+			if (array_key_exists('facing', $params) && !in_array($params['facing'], PartTypeEnum::LedFacings, true)) {
+				throw EditException::invalid('LedStrip "facing" must be "down", "up" or "out".');
+			}
+
+			return;
+		}
 		if ($kind !== ItemKindEnum::Column && $kind !== ItemKindEnum::Chimney) {
 			return;
 		}

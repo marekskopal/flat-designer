@@ -30,8 +30,8 @@ use const JSON_THROW_ON_ERROR;
 
 /**
  * Electrical schedule of a project or a floor (working copy, shown variants only): the Custom items whose definition has
- * a `category`, per room — the item's `roomId`, otherwise the room whose outline holds its footprint centre — grouped
- * by definition, parameter values and elevation, with the counts per category. The definition's `schedule` settings
+ * a `category`, and the LED strips as lights (definition 0), per room — the item's `roomId`, otherwise the room whose
+ * outline holds its footprint centre — grouped by definition, parameter values and elevation, with the counts per category. The definition's `schedule` settings
  * (`DefinitionSchedule`) say which values count and which parameter multiplies an item. `lighting` links the switches
  * with the lights they control (`LightingCircuits`).
  */
@@ -79,15 +79,13 @@ final readonly class ElectricalScheduleService
 		$lights = [];
 		/** @var array<int, int> $roomOfItem the switches' and lights' rooms by item id (0 outside every room) */
 		$roomOfItem = [];
+		$ledStrip = $this->translator->translate('schedules.ledStrip', $locale);
 		foreach ($scene->items as $item) {
-			$definitionId = $item->definitionId ?? 0;
-			$definition = $definitions[$definitionId] ?? null;
-			if ($item->kind !== ItemKindEnum::Custom || isset($hidden[$item->id]) || $definition === null) {
+			$point = isset($hidden[$item->id]) ? null : self::point($item, $definitions, $ledStrip);
+			if ($point === null) {
 				continue;
 			}
-			[$name, $body, $category, $schedule] = $definition;
-			$given = self::given($item);
-			$values = self::values($body, $given, $schedule);
+			[$category, $definitionId, $name, $values, $units] = $point;
 			$roomId = self::roomOf($item, $outlines);
 			if ($category === DefinitionCategoryEnum::Switch) {
 				$switches[] = $item;
@@ -98,7 +96,6 @@ final readonly class ElectricalScheduleService
 			}
 			$key = sprintf('%s|%d|%d|%s', $category->value, $definitionId, $item->z, json_encode($values, JSON_THROW_ON_ERROR));
 			$row = $rows[$roomId][$key] ?? null;
-			$units = $schedule->units($body, $given);
 			$rows[$roomId][$key] = new ElectricalRowDto(
 				category: $category,
 				definitionId: $definitionId,
@@ -128,6 +125,30 @@ final readonly class ElectricalScheduleService
 			totals: ElectricalTotalsDto::sum(array_map(static fn (RoomElectricalDto $r): ElectricalTotalsDto => $r->totals, $schedule)),
 			lighting: LightingCircuits::of($switches, $lights, $rooms, $roomOfItem),
 		);
+	}
+
+	/**
+	 * What a shown item counts as: a Custom item by its definition's category, an LED strip (`$ledStrip` its name) as a
+	 * light of definition 0; null for anything else.
+	 *
+	 * @param array<int, array{string, array<mixed>, DefinitionCategoryEnum, DefinitionSchedule}> $definitions
+	 * @return array{DefinitionCategoryEnum, int, string, array<string, int|bool|string>, int}|null category, definition id,
+	 *     name, values, units
+	 */
+	private static function point(ItemDto $item, array $definitions, string $ledStrip): ?array
+	{
+		if ($item->kind === ItemKindEnum::LedStrip) {
+			return [DefinitionCategoryEnum::Light, 0, $ledStrip, [], 1];
+		}
+		$definitionId = $item->definitionId ?? 0;
+		$definition = $definitions[$definitionId] ?? null;
+		if ($item->kind !== ItemKindEnum::Custom || $definition === null) {
+			return null;
+		}
+		[$name, $body, $category, $schedule] = $definition;
+		$given = self::given($item);
+
+		return [$category, $definitionId, $name, self::values($body, $given, $schedule), $schedule->units($body, $given)];
 	}
 
 	/**

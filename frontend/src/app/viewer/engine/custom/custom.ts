@@ -2,10 +2,11 @@ import {MaterialSlot} from '@app/models/furniture';
 import {Item, Room, SceneDefinition} from '@app/models/scene';
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import {ceilingHeightAt} from '../ceilings';
 import {applianceFinishOf, applianceKindOf, buildAppliance, buildFrontHandle, FrontHandle, handlePositionOf} from '../kitchen';
-import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
+import {bulbMaterial, createFixtureLight, FixtureKind, ledFacingOf, ledLight, markBulb} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
 import {coverUvs, PictureLibrary} from '../pictures';
@@ -549,25 +550,105 @@ function buildFront(
 
 /**
  * Round rod or leg along `axis` (default y), as thick as the box's smaller side across it; `radius` rounds the
- * edges of its ends (a pouf, a vessel basin), at most half its length or thickness.
+ * edges of its ends (a pouf, a vessel basin), at most half its length or thickness. A lamp shade's `profile` makes it a
+ * cone or a teardrop, and `wire` an open cage of that many meridian wires (`cylinderGeometry()`).
  */
 function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     const axis = part.props['axis'] === 'x' || part.props['axis'] === 'z' ? part.props['axis'] : 'y';
     const across = {x: [part.h, part.d], y: [part.w, part.d], z: [part.w, part.h]}[axis];
     const length = {x: part.w, y: part.h, z: part.d}[axis];
     const radius = Math.min(across[0], across[1]) / 2;
-    const rounding = typeof part.props['radius'] === 'number' ? Math.max(0, Math.min(part.props['radius'], radius, length / 2) - 0.5) : 0;
-    const geometry =
-        rounding > 0
-            ? roundedCylinder(radius, length, rounding)
-            : new THREE.CylinderGeometry(radius * MM, radius * MM, length * MM, CylinderSegments);
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(cylinderGeometry(part.props, radius, length), material);
     if (axis === 'x') {
         mesh.rotation.z = Math.PI / 2;
     } else if (axis === 'z') {
         mesh.rotation.x = Math.PI / 2;
     }
     return centredInBox(mesh, part);
+}
+
+/** A cylinder part's outline along its axis: straight, a cone (a frustum) or a teardrop. */
+export type CylinderProfile = 'straight' | 'cone' | 'teardrop';
+
+/** The top's radius as a share of the bottom's (a teardrop's neck) when the part gives no `topRatio`. */
+const DefaultTopRatio: Record<CylinderProfile, number> = {straight: 1, cone: 0.3, teardrop: 0.15};
+
+/** A cage shade's wires: mm thick, and at most this many meridians. */
+const CageWire = 3;
+const MaxCageWires = 24;
+
+/** The upright geometry of a cylinder part `radius` × `length` (mm) round its centre, by its options. */
+function cylinderGeometry(props: Record<string, unknown>, radius: number, length: number): THREE.BufferGeometry {
+    const profile: CylinderProfile = props['profile'] === 'cone' || props['profile'] === 'teardrop' ? props['profile'] : 'straight';
+    const topRatio = typeof props['topRatio'] === 'number' ? Math.max(0, Math.min(1, props['topRatio'])) : DefaultTopRatio[profile];
+    const wires = typeof props['wire'] === 'number' ? Math.min(Math.round(props['wire']), MaxCageWires) : 0;
+    if (wires > 0) {
+        return cageGeometry(shadeOutline(profile, radius, length, topRatio), wires);
+    }
+    if (profile === 'cone') {
+        return new THREE.CylinderGeometry(radius * topRatio * MM, radius * MM, length * MM, CylinderSegments);
+    }
+    if (profile === 'teardrop') {
+        const outline = shadeOutline(profile, radius, length, topRatio);
+        return new THREE.LatheGeometry([...outline, new THREE.Vector2(0, length / 2)].map((p) => p.multiplyScalar(MM)), CylinderSegments);
+    }
+    const rounding = typeof props['radius'] === 'number' ? Math.max(0, Math.min(props['radius'], radius, length / 2) - 0.5) : 0;
+    return rounding > 0
+        ? roundedCylinder(radius, length, rounding)
+        : new THREE.CylinderGeometry(radius * MM, radius * MM, length * MM, CylinderSegments);
+}
+
+/**
+ * A shade's outline from its bottom to its top (mm, (radius, height) round its centre): a straight or conical side
+ * narrowing to `topRatio` of the radius, or a teardrop: a rounded bottom up to its widest, then a smooth taper to a
+ * neck of `topRatio`.
+ */
+export function shadeOutline(profile: CylinderProfile, radius: number, length: number, topRatio: number): THREE.Vector2[] {
+    const half = length / 2;
+    const top = radius * (profile === 'straight' ? 1 : topRatio);
+    if (profile !== 'teardrop') {
+        return Array.from({length: 9}, (_, k) => new THREE.Vector2(radius + ((top - radius) * k) / 8, -half + (length * k) / 8));
+    }
+    const rise = Math.min(radius, half);
+    const widest = -half + rise;
+    const outline: THREE.Vector2[] = [];
+    for (let k = 0; k <= 8; k++) {
+        const angle = -Math.PI / 2 + (k / 8) * (Math.PI / 2);
+        outline.push(new THREE.Vector2(radius * Math.cos(angle), widest + rise * Math.sin(angle)));
+    }
+    for (let k = 1; k <= 12; k++) {
+        const u = k / 12;
+        outline.push(new THREE.Vector2(top + ((radius - top) * (1 + Math.cos(Math.PI * u))) / 2, widest + u * (half - widest)));
+    }
+    return outline;
+}
+
+/**
+ * An open wire cage along `outline` (mm): `wires` meridians and rings at its bottom, its widest (the middle of a
+ * straight or conical one) and its top, leaving out a ring that would shrink to a point; one geometry, metres.
+ */
+function cageGeometry(outline: THREE.Vector2[], wires: number): THREE.BufferGeometry {
+    const wire = (CageWire / 2) * MM;
+    const pieces: THREE.BufferGeometry[] = [];
+    for (let k = 0; k < wires; k++) {
+        const angle = (k / wires) * Math.PI * 2;
+        const path = outline.map((p) => new THREE.Vector3(p.x * Math.cos(angle) * MM, p.y * MM, p.x * Math.sin(angle) * MM));
+        pieces.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), outline.length * 2, wire, 4, false));
+    }
+    let widest = outline.reduce((best, p, i) => (p.x > outline[best].x + 0.5 ? i : best), 0);
+    if (widest === 0 || widest === outline.length - 1) {
+        widest = Math.floor(outline.length / 2);
+    }
+    for (const p of [outline[0], outline[widest], outline[outline.length - 1]]) {
+        if (p.x < 5) {
+            continue;
+        }
+        const ring = new THREE.TorusGeometry(p.x * MM, wire, 4, CylinderSegments);
+        ring.rotateX(Math.PI / 2);
+        ring.translate(0, p.y * MM, 0);
+        pieces.push(ring);
+    }
+    return mergeGeometries(pieces) ?? new THREE.BufferGeometry();
 }
 
 /** An upright cylinder `length` long round its centre whose end edges are rounded by `rounding` (all mm): a lathed profile. */
@@ -623,17 +704,14 @@ function buildTaperedLeg(part: ResolvedPart, item: Item, material: THREE.Materia
     return mesh;
 }
 
-/** Glowing strip in the slot material with a light of `color` shining down. */
+/** Glowing strip in the slot material with a light of `color` shining `facing` down (the default), up or out of its front. */
 function buildLed(part: ResolvedPart, material: THREE.Material): THREE.Group {
     const group = new THREE.Group();
-    group.add(boxAt(material, part.x * MM, part.y * MM, part.z * MM, part.w * MM, part.h * MM, part.d * MM, false));
+    const strip = {x: part.x * MM, y: part.y * MM, z: part.z * MM, w: part.w * MM, h: part.h * MM, d: part.d * MM};
+    group.add(boxAt(material, strip.x, strip.y, strip.z, strip.w, strip.h, strip.d, false));
     const color = typeof part.props['color'] === 'string' ? part.props['color'] : '#ffd2a0';
     const intensity = typeof part.props['intensity'] === 'number' ? part.props['intensity'] : 5;
-    const light = new THREE.RectAreaLight(color, intensity, part.w * MM, Math.max(part.d * MM, 0.02));
-    light.rotation.x = -Math.PI / 2;
-    markFixtureLight(light, intensity);
-    light.position.set((part.x + part.w / 2) * MM, part.y * MM, (part.z + part.d / 2) * MM);
-    group.add(light);
+    group.add(ledLight(color, intensity, ledFacingOf(part.props['facing']), strip));
     return group;
 }
 

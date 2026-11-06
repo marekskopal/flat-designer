@@ -94,6 +94,17 @@ describe('electrical points', () => {
         expect(electricalPoints({items: [item(1, 1)]} as unknown as Scene)).toEqual([]);
     });
 
+    it('counts an LED strip as a light a switch may control, at its centre', () => {
+        const strip = item(5, 0, {kind: 'LedStrip' as Item['kind'], definitionId: null, z: 2300, rotation: 90});
+        const hidden = item(6, 0, {kind: 'LedStrip' as Item['kind'], definitionId: null, groupId: 10});
+        const switched = item(4, 4, {controls: [5, 6]});
+        const points = electricalPoints(scene([strip, hidden, switched]));
+        expect(points.map((p) => [p.itemId, p.category, p.units])).toEqual([[5, 'light', 1], [4, 'switch', 1]]);
+        expect(points[0].at).toEqual({x: 1000, y: 2000});
+        expect(switchLinks(points)).toEqual([{switchId: 4, lightIds: [5]}]);
+        expect(hasElectricalPoints({items: [strip]} as unknown as Scene)).toBe(true);
+    });
+
     it('tells whether the floor shows any point, as the points do', () => {
         const cases = [[], [item(1, 3)], [item(2, 1, {kind: 'Model' as Item['kind']})], [item(3, 1, {groupId: 10})], [item(1, 3), item(4, 2)]];
         for (const items of cases) {

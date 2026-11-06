@@ -29,12 +29,17 @@ enum PartTypeEnum: string
 	 * the cut list counts it among the other parts.
 	 */
 	case Block = 'block';
-	/** Rod or round leg along `axis` (default y), its diameter the box's smaller side across; `radius` rounds its ends' edges. */
+	/**
+	 * Rod or round leg along `axis` (default y), its diameter the box's smaller side across; `radius` rounds its ends'
+	 * edges. A lamp shade's `profile` (`Profiles`): `cone` narrows to `topRatio` (0–1, default 0.3) of its radius at
+	 * the top (the end towards +axis), `teardrop` rounds its bottom and tapers to a neck of `topRatio` (default 0.15);
+	 * `wire` > 0 draws it as an open cage of that many meridian wires and a few rings instead of a solid.
+	 */
 	case Cylinder = 'cylinder';
 	/** Leg narrowing from the box's width / depth at the top to `bottomSize` mm at the floor. */
 	case TaperedLeg = 'taperedLeg';
 	case Glass = 'glass';
-	/** LED strip giving light of `color` (#rrggbb). */
+	/** LED strip giving light of `color` (#rrggbb), shining `facing` down (the default), up (a cove) or out of its front (+z). */
 	case Led = 'led';
 	/** A built-in oven or microwave front (black glass, window, steel handle); bought, so not in the cut list's boards. */
 	case Appliance = 'appliance';
@@ -93,6 +98,12 @@ enum PartTypeEnum: string
 	 * split of two doors), or at reach height on its handle edge (`side`). The viewer reads it (`HandlePosition`).
 	 */
 	public const array HandlePositions = ['auto', 'top', 'bottom', 'side'];
+
+	/** A cylinder's outline: straight, a cone (a frustum) or a teardrop. */
+	public const array Profiles = ['straight', 'cone', 'teardrop'];
+
+	/** Which way an LED part shines: down, up or out of its front. */
+	public const array LedFacings = ['down', 'up', 'out'];
 
 	/** A built-in appliance front: an oven, a microwave, a steam oven, a coffee machine (`buildAppliance()`). */
 	public const array Appliances = ['oven', 'microwave', 'steam', 'coffee'];
@@ -266,11 +277,17 @@ enum PartTypeEnum: string
 				'grain' => self::Grain,
 				'edges' => 'sides',
 			] + self::Motion + self::Pose,
-			self::Cylinder => ['axis' => ['x', 'y', 'z'], 'radius' => 'number'] + self::Pose,
+			self::Cylinder => [
+				'axis' => ['x', 'y', 'z'],
+				'radius' => 'number',
+				'profile' => self::Profiles,
+				'topRatio' => 'fraction',
+				'wire' => 'number',
+			] + self::Pose,
 			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Pose,
 			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Pose,
 			self::Glass => self::Pose,
-			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Pose,
+			self::Led => ['color' => 'color', 'intensity' => 'number', 'facing' => self::LedFacings] + self::Pose,
 			self::Appliance => ['kind' => self::Appliances, 'finish' => self::ApplianceFinishes] + self::Pose,
 			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Pose,
 			self::Cushion => ['radius' => 'number'] + self::Pose,
