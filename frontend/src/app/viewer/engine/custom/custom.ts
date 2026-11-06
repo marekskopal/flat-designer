@@ -12,7 +12,7 @@ import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {FloorRoofs} from '../under-roof';
 import {evaluateDefinition, ResolvedPart} from './definition';
-import {buildFrontBody, frontStyleOf} from './front-styles';
+import {buildFrontBody, frontStyleOf, glassMaterial} from './front-styles';
 import {FrontBox, FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, leafDoors, pivotPoint} from './fronts';
 import {buildFrontHinges} from './hinges';
 import {taperedLeg} from './legs';
@@ -503,14 +503,6 @@ function pivoted(object: THREE.Object3D, pivot: THREE.Vector3): THREE.Group {
     object.position.sub(group.position);
     group.add(object);
     return group;
-}
-
-/**
- * Clear glass; one per mesh, disposed with it (not one of the library's materials). Transparent rather than transmissive:
- * a transmissive material in view makes three.js render the whole scene a second time every frame.
- */
-function glassMaterial(): THREE.Material {
-    return new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transparent: true, opacity: 0.15, depthWrite: false});
 }
 
 function box(part: ResolvedPart, material: THREE.Material): THREE.Mesh {

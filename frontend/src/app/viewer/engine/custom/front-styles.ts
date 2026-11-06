@@ -108,10 +108,18 @@ export function buildFrontBody(
 
 /**
  * Glass of a front: clear and see-through, or reeded (frosted, letting less through). One per front, disposed with its
- * meshes (not one of the library's materials); transparent rather than transmissive, as `glassMaterial()` in custom.ts.
+ * meshes (not one of the library's materials), transparent rather than transmissive (`glassMaterial()`).
  */
 function paneMaterial(reeded: boolean): THREE.Material {
     return reeded
         ? new THREE.MeshPhysicalMaterial({color: '#e8eeed', roughness: 0.45, transparent: true, opacity: 0.55, depthWrite: false})
-        : new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transparent: true, opacity: 0.15, depthWrite: false});
+        : glassMaterial();
+}
+
+/**
+ * Clear glass; one per mesh, disposed with it (not one of the library's materials). Transparent rather than transmissive:
+ * a transmissive material in view makes three.js render the whole scene a second time every frame.
+ */
+export function glassMaterial(): THREE.Material {
+    return new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transparent: true, opacity: 0.15, depthWrite: false});
 }

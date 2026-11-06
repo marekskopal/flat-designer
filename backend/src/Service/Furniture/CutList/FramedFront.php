@@ -38,7 +38,7 @@ final readonly class FramedFront
 	 */
 	public static function cut(ResolvedPart $part, array $params, array $slots, callable $label): array
 	{
-		if ($part->type !== 'front') {
+		if (!self::framed($part)) {
 			return [$part];
 		}
 		$names = [];
@@ -48,6 +48,17 @@ final readonly class FramedFront
 		$frameSlot = $part->props['frameMaterial'] ?? null;
 
 		return self::pieces($part, is_string($frameSlot) && self::slotFilled($frameSlot, $params, $slots), $names);
+	}
+
+	/**
+	 * Whether the part is a front that may be cut as a frame: of a framed style, and not folding (a bi-fold flap is cut as
+	 * its two panels, `FoldingFront`).
+	 */
+	private static function framed(ResolvedPart $part): bool
+	{
+		return $part->type === 'front'
+			&& in_array($part->props['style'] ?? 'flat', ['shaker', 'glass', 'reeded'], true)
+			&& ($part->props['opens'] ?? null) !== 'fold';
 	}
 
 	/** The frame width (mm) of a front of `$style`, `$frame` given (0 or null: the style's own), held to leave the middle. */
@@ -67,7 +78,7 @@ final readonly class FramedFront
 	{
 		$style = $part->props['style'] ?? 'flat';
 		$glazed = $style === 'glass' || $style === 'reeded';
-		if ($part->type !== 'front' || !($glazed || $style === 'shaker' && $ownFrame)) {
+		if (!self::framed($part) || !($glazed || $style === 'shaker' && $ownFrame)) {
 			return [$part];
 		}
 		$frame = $part->props['frame'] ?? null;

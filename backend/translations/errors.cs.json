@@ -392,5 +392,7 @@
     "The worktop's \"overhang\" must be a whole number of mm, 0 or more.": "„overhang“ pracovní desky musí být celý počet mm, 0 nebo více.",
     "Unknown unit field(s): %s.": "Neznámá pole prvku: %s.",
     "Every unit of a cabinet run needs its \"width\" (mm).": "Každý prvek řady skříněk potřebuje „width“ (mm).",
-    "Unit sizes must be whole numbers of mm above 0.": "Rozměry prvků musí být celé počty mm větší než 0."
+    "Unit sizes must be whole numbers of mm above 0.": "Rozměry prvků musí být celé počty mm větší než 0.",
+    "A cabinet run starts at an offset of 0 or more along the wall.": "Řada skříněk začíná ve vzdálenosti 0 nebo více podél stěny.",
+    "A worktop needs units standing on the floor (z 0) under it.": "Pracovní deska potřebuje pod sebou prvky stojící na podlaze (z 0)."
 }

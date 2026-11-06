@@ -14,17 +14,23 @@ use Izbik\Service\Editor\BatchWriter;
 use Izbik\Service\Editor\Element\ElementHandler;
 use Izbik\Service\Editor\ElementHandlers;
 use Izbik\Service\Editor\Exception\EditException;
+use Izbik\Service\Editor\Geometry\WallLine;
 
 /**
  * A run of units (cabinets, appliances, any items) laid along one face of a straight wall as one change (one revision,
- * one undo step, a `ChangeBatch`): from `offset` mm along the wall from its start, each unit `gapBefore` after the one
- * before it, its back on the wall's `side` face and its front turned away from the wall; optionally a worktop over the
- * units standing on the floor (`z` 0), `overhang` deeper than the deepest of them and on the highest; all in a new
- * group. The caller has checked access to the floor's project.
+ * one undo step, a `ChangeBatch`), each unit's back on the wall's `side` face and its front turned away from the wall.
+ * Units standing on the floor (`z` 0) follow one another from `offset` mm along the wall from its start, those above
+ * it (wall cabinets) do the same in a row of their own from the same `offset`; `gapBefore` leaves space before a unit
+ * in its row. A worktop, if asked for, covers each stretch of counter-height units (`CounterHeight` at most) between
+ * taller ones, `overhang` deeper than the deepest of them and on the highest. All go into a new group. The caller has
+ * checked access to the floor's project.
  */
 final readonly class CabinetRun
 {
 	public const int MaxUnits = 40;
+
+	/** Floor-standing units at most this high (mm) are under the worktop; taller ones (larders, fridges) break it. */
+	public const int CounterHeight = 1000;
 
 	/** Fields a unit may give besides its placement. */
 	public const array UnitFields = ['kind', 'definitionId', 'modelId', 'name', 'width', 'depth', 'height', 'z', 'materialId', 'params', 'gapBefore'];
@@ -65,12 +71,7 @@ final readonly class CabinetRun
 		?int $roomId = null,
 		?int $baseRevision = null,
 	): EditResultDto {
-		if ($side !== 'Left' && $side !== 'Right') {
-			throw EditException::invalid('Field "side" must be "Left" or "Right".');
-		}
-		if ($units === [] || count($units) > self::MaxUnits) {
-			throw EditException::invalid(sprintf('A cabinet run needs 1 to %d units.', self::MaxUnits));
-		}
+		self::check($side, $offset, $units);
 
 		return $this->writer->transaction(
 			function () use ($user, $floor, $wallId, $side, $offset, $units, $worktop, $groupName, $roomId, $baseRevision): EditResultDto {
@@ -79,12 +80,12 @@ final readonly class CabinetRun
 				if ($wall->sagitta !== 0) {
 					throw EditException::invalid('A cabinet run needs a straight wall.');
 				}
-				$frame = self::frame($wall, $side);
+				$face = new RunFace(WallLine::fromWall($wall), $side === 'Left' ? 1 : -1, $wall->thickness / 2);
 
 				// Every unit is placed and validated before the revision is bumped, so a bad one changes nothing.
-				[$states, $base] = $this->placeUnits($floor, $frame, $offset, $units, $roomId);
-				if ($worktop !== null && $base !== null) {
-					$states[] = $this->items->normalize($floor, $this->worktop($floor, $worktop, $frame, $base, $roomId), null);
+				[$states, $stretches] = $this->placeUnits($floor, $face, $offset, $units, $roomId);
+				if ($worktop !== null) {
+					$states = [...$states, ...$this->worktops($floor, $worktop, $face, $stretches, $roomId)];
 				}
 
 				$group = $this->groups->normalize($floor, ['name' => $groupName], null);
@@ -103,19 +104,53 @@ final readonly class CabinetRun
 		);
 	}
 
-	/**
-	 * The units' normalised states placed along the face, and the span, depth and height of those standing on the floor
-	 * (null when none does).
-	 *
-	 * @param array{x: float, y: float, dx: float, dy: float, nx: float, ny: float, face: float, length: int} $frame
-	 * @param list<array<string, mixed>> $units
-	 * @return array{list<array<string, mixed>>, array{from: int, to: int, depth: int, height: int}|null}
-	 */
-	private function placeUnits(Floor $floor, array $frame, int $offset, array $units, ?int $roomId): array
+	/** @param list<array<string, mixed>> $units */
+	private static function check(string $side, int $offset, array $units): void
 	{
-		$along = $offset;
+		if ($side !== 'Left' && $side !== 'Right') {
+			throw EditException::invalid('Field "side" must be "Left" or "Right".');
+		}
+		if ($units === [] || count($units) > self::MaxUnits) {
+			throw EditException::invalid(sprintf('A cabinet run needs 1 to %d units.', self::MaxUnits));
+		}
+		if ($offset < 0) {
+			throw EditException::invalid('A cabinet run starts at an offset of 0 or more along the wall.');
+		}
+	}
+
+	/**
+	 * The normalised worktops over the stretches; refused when there is none to lay them on.
+	 *
+	 * @param array<string, mixed> $worktop
+	 * @param list<array{from: int, to: int, depth: int, height: int}> $stretches
+	 * @return list<array<string, mixed>>
+	 */
+	private function worktops(Floor $floor, array $worktop, RunFace $face, array $stretches, ?int $roomId): array
+	{
+		if ($stretches === []) {
+			throw EditException::invalid('A worktop needs units standing on the floor (z 0) under it.');
+		}
+
+		return array_map(
+			fn (array $stretch): array => $this->items->normalize($floor, $this->worktop($floor, $worktop, $face, $stretch, $roomId), null),
+			$stretches,
+		);
+	}
+
+	/**
+	 * The units' normalised states placed along the face, and the stretches of counter-height floor units (span, depth and
+	 * height of each) a worktop covers.
+	 *
+	 * @param list<array<string, mixed>> $units
+	 * @return array{list<array<string, mixed>>, list<array{from: int, to: int, depth: int, height: int}>}
+	 */
+	private function placeUnits(Floor $floor, RunFace $face, int $offset, array $units, ?int $roomId): array
+	{
+		// One cursor along the wall for the floor row, one for the row above it.
+		$along = ['floor' => $offset, 'upper' => $offset];
 		$states = [];
-		$base = null;
+		$stretches = [];
+		$stretch = null;
 		foreach ($units as $unit) {
 			$fields = self::unitFields($unit);
 			$gap = $fields['gapBefore'] ?? 0;
@@ -123,87 +158,57 @@ final readonly class CabinetRun
 			if (!is_int($gap) || $gap < 0) {
 				throw EditException::invalid('A unit\'s "gapBefore" must be a whole number of mm, 0 or more.');
 			}
-			$along += $gap;
 			$fields += ['kind' => 'Custom', 'roomId' => $roomId];
 			$fields += $this->items->defaults($floor, $fields);
 			$width = self::mm($fields['width'] ?? null);
 			$depth = self::mm($fields['depth'] ?? null);
-			$states[] = $this->items->normalize($floor, self::placed($fields, $frame, $along, $width, $depth), null);
-			if (($fields['z'] ?? 0) === 0) {
-				$base = [
-					'from' => min($base['from'] ?? $along, $along),
-					'to' => $along + $width,
-					'depth' => max($base['depth'] ?? 0, $depth),
-					'height' => max($base['height'] ?? 0, self::mm($fields['height'] ?? null)),
-				];
+			$height = self::mm($fields['height'] ?? null);
+			$row = ($fields['z'] ?? 0) === 0 ? 'floor' : 'upper';
+			$start = $along[$row] + $gap;
+			$states[] = $this->items->normalize($floor, $face->place($fields, $start, $width, $depth), null);
+			$along[$row] = $start + $width;
+			if ($row !== 'floor') {
+				continue;
 			}
-			$along += $width;
+			if ($height > self::CounterHeight) {
+				// A tall unit ends the stretch under the worktop.
+				$stretches = self::closed($stretches, $stretch);
+				$stretch = null;
+				continue;
+			}
+			$stretch = [
+				'from' => $stretch['from'] ?? $start,
+				'to' => $start + $width,
+				'depth' => max($stretch['depth'] ?? 0, $depth),
+				'height' => max($stretch['height'] ?? 0, $height),
+			];
 		}
-		if ($along > $frame['length']) {
-			throw EditException::invalid(sprintf('The run ends %d mm along the wall, which is %d mm long.', $along, $frame['length']));
+		$end = max($along['floor'], $along['upper']);
+		if ($end > $face->length()) {
+			throw EditException::invalid(sprintf('The run ends %d mm along the wall, which is %d mm long.', $end, $face->length()));
 		}
 
-		return [$states, $base];
+		return [$states, self::closed($stretches, $stretch)];
 	}
 
 	/**
-	 * The wall's face on `side`: its start point, the unit vector along the wall, the unit normal out of the face into
-	 * the room, the face's offset from the centre line and the wall's length, all in mm.
-	 *
-	 * @return array{x: float, y: float, dx: float, dy: float, nx: float, ny: float, face: float, length: int}
+	 * @param list<array{from: int, to: int, depth: int, height: int}> $stretches
+	 * @param array{from: int, to: int, depth: int, height: int}|null $stretch
+	 * @return list<array{from: int, to: int, depth: int, height: int}>
 	 */
-	private static function frame(Wall $wall, string $side): array
+	private static function closed(array $stretches, ?array $stretch): array
 	{
-		$length = hypot($wall->endX - $wall->startX, $wall->endY - $wall->startY);
-		if ($length < 1) {
-			throw EditException::invalid('A cabinet run needs a wall of some length.');
-		}
-		$dx = ($wall->endX - $wall->startX) / $length;
-		$dy = ($wall->endY - $wall->startY) / $length;
-		$sign = $side === 'Left' ? 1 : -1;
-
-		return [
-			'x' => $wall->startX,
-			'y' => $wall->startY,
-			'dx' => $dx,
-			'dy' => $dy,
-			'nx' => -$dy * $sign,
-			'ny' => $dx * $sign,
-			'face' => $wall->thickness / 2,
-			'length' => (int) floor($length),
-		];
+		return $stretch === null ? $stretches : [...$stretches, $stretch];
 	}
 
 	/**
-	 * The fields with the item placed: its back on the face, `along` mm from the wall start to its start, its front
-	 * (local −y at rotation 0, turned counter-clockwise) facing away from the wall.
-	 *
-	 * @param array<string, mixed> $fields
-	 * @param array{x: float, y: float, dx: float, dy: float, nx: float, ny: float, face: float, length: int} $frame
-	 * @return array<string, mixed>
-	 */
-	private static function placed(array $fields, array $frame, int $along, int $width, int $depth): array
-	{
-		$centreAlong = $along + $width / 2;
-		$out = $frame['face'] + $depth / 2;
-		$rotation = (int) round(rad2deg(atan2($frame['nx'], -$frame['ny'])));
-
-		return [
-			'x' => (int) round($frame['x'] + $frame['dx'] * $centreAlong + $frame['nx'] * $out),
-			'y' => (int) round($frame['y'] + $frame['dy'] * $centreAlong + $frame['ny'] * $out),
-			'rotation' => ($rotation % 360 + 360) % 360,
-		] + $fields;
-	}
-
-	/**
-	 * The worktop over the run's floor-standing units, in the global Worktop definition unless the run names one.
+	 * The worktop over a stretch of counter-height units, in the global Worktop definition unless the run names one.
 	 *
 	 * @param array<string, mixed> $worktop
-	 * @param array{x: float, y: float, dx: float, dy: float, nx: float, ny: float, face: float, length: int} $frame
-	 * @param array{from: int, to: int, depth: int, height: int} $base
+	 * @param array{from: int, to: int, depth: int, height: int} $stretch
 	 * @return array<string, mixed>
 	 */
-	private function worktop(Floor $floor, array $worktop, array $frame, array $base, ?int $roomId): array
+	private function worktop(Floor $floor, array $worktop, RunFace $face, array $stretch, ?int $roomId): array
 	{
 		$unknown = array_diff(array_keys($worktop), self::WorktopFields);
 		if ($unknown !== []) {
@@ -218,22 +223,22 @@ final readonly class CabinetRun
 		if (!is_int($overhang) || $overhang < 0) {
 			throw EditException::invalid('The worktop\'s "overhang" must be a whole number of mm, 0 or more.');
 		}
-		$fields = [
+		$width = $stretch['to'] - $stretch['from'];
+		$depth = $stretch['depth'] + $overhang;
+		$fields = array_filter([
 			'kind' => 'Custom',
 			'definitionId' => $definitionId,
 			'name' => $worktop['name'] ?? null,
-			'width' => $base['to'] - $base['from'],
-			'depth' => $base['depth'] + $overhang,
+			'width' => $width,
+			'depth' => $depth,
 			'height' => $thickness,
-			'z' => $base['height'],
+			'z' => $stretch['height'],
 			'materialId' => $worktop['materialId'] ?? null,
 			'params' => $worktop['params'] ?? [],
-			'roomId' => $roomId,
-		];
-		$fields = array_filter($fields, static fn (mixed $value): bool => $value !== null) + ['roomId' => $roomId];
+		], static fn (mixed $value): bool => $value !== null) + ['roomId' => $roomId];
 		$fields += $this->items->defaults($floor, $fields);
 
-		return self::placed($fields, $frame, $base['from'], $base['to'] - $base['from'], $base['depth'] + $overhang);
+		return $face->place($fields, $stretch['from'], $width, $depth);
 	}
 
 	/**

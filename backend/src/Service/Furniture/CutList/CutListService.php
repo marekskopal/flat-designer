@@ -126,9 +126,9 @@ final readonly class CutListService
 
 		$slots = is_array($definition['materialSlots'] ?? null) ? array_values($definition['materialSlots']) : [];
 		$noMaterial = $this->translator->translate('cutList.noMaterial', $locale);
+		$label = fn (string $piece): string => $this->translator->translate('cutList.' . $piece, $locale);
 		foreach ($parts as $part) {
 			$part = self::named($part, DefinitionTranslations::partName($definition, $part->name, $locale));
-			$label = fn (string $piece): string => $this->translator->translate('cutList.' . $piece, $locale);
 			foreach (FramedFront::cut($part, $params, $slots, $label) as $piece) {
 				$material = self::partMaterial($piece, $item, $params, $slots, $byCode, $all);
 				// A front's glass pane has no slot: it is listed as glass.

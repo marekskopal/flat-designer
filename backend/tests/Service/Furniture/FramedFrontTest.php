@@ -43,6 +43,12 @@ final class FramedFrontTest extends TestCase
 		self::assertSame([476, 580, 13], [$pieces[4]->w, $pieces[4]->h, $pieces[4]->d]);
 	}
 
+	public function testLeavesAFoldingFrontToItsTwoPanels(): void
+	{
+		$front = self::front(['style' => 'glass', 'opens' => 'fold']);
+		self::assertSame([$front], FramedFront::cut($front, [], [], static fn (string $piece): string => $piece));
+	}
+
 	public function testHoldsTheFrameToLeaveTheMiddleAndKeepsFlatFrontsWhole(): void
 	{
 		self::assertSame(40, FramedFront::width('shaker', null, 100, 700));

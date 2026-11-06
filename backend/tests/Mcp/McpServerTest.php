@@ -529,6 +529,39 @@ final class McpServerTest extends IntegrationTestCase
 		], $isError);
 		self::assertTrue($isError);
 		self::assertSame('The run ends 3100 mm along the wall, which is 3000 mm long.', $message);
+
+		// A tall unit breaks the worktop into two; a wall cabinet starts its own row at the offset, above the base units.
+		FurnitureSeeds::insert(Fixture::service(DatabaseInterface::class)->getPdo(), ['kitchen-tall-cabinet.json']);
+		$tallId = Fixture::service(FurnitureDefinitionRepository::class)->findGlobalByName('Kitchen tall cabinet')?->id;
+		self::assertIsInt($tallId);
+		$run = $this->client->call('add_cabinet_run', $ids + [
+			'wallId' => $wall['element']['id'],
+			'side' => 'Left',
+			'offset' => 0,
+			'units' => [$unit(600), ['definitionId' => $tallId, 'width' => 600, 'height' => 2100], $unit(600), ['definitionId' => $base, 'width' => 600, 'z' => 1450]],
+			'worktop' => [],
+		]);
+		self::assertIsArray($run);
+		self::assertIsList($run['batch']);
+		$placed = [];
+		foreach ($run['batch'] as $entry) {
+			self::assertIsArray($entry);
+			$element = $entry['element'];
+			self::assertIsArray($element);
+			if (isset($element['kind'])) {
+				$placed[] = [$element['x'], $element['z'], $element['width']];
+			}
+		}
+		// The Left face is the north one: units north of the wall, facing north; the wall cabinet over the first base unit.
+		self::assertSame([[300, 0, 600], [900, 0, 600], [1500, 0, 600], [300, 1450, 600], [300, 860, 600], [1500, 860, 600]], $placed);
+
+		$message = $this->client->call(
+			'add_cabinet_run',
+			$ids + ['wallId' => $wall['element']['id'], 'side' => 'Left', 'offset' => -100, 'units' => [$unit(600)]],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertSame('A cabinet run starts at an offset of 0 or more along the wall.', $message);
 	}
 
 	public function testVariantsHideTheItemsOfTheOtherVariants(): void

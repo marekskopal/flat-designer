@@ -36,7 +36,7 @@ final readonly class CabinetRunTools
 
 	private const array WorktopSchema = [
 		'type' => ['object', 'null'],
-		'description' => 'a worktop over the units standing on the floor (z 0): from the first to the last of them, on the highest',
+		'description' => 'a worktop over each stretch of counter-height units on the floor (z 0, at most 1000 mm high), on the highest of them',
 		'properties' => [
 			'definitionId' => ['type' => 'integer', 'description' => 'default the global Worktop definition'],
 			'name' => ['type' => 'string'],
@@ -64,8 +64,9 @@ final readonly class CabinetRunTools
 		name: 'add_cabinet_run',
 		description: 'Lay a run of units (base, wall or tall cabinets, appliances, any items) along one face of a straight wall as '
 			. 'one change (one undo step, listed in `batch`): each unit\'s back on the face, its front turned away from the wall, '
-			. 'one after another from `offset`; wall cabinets in the same call with their own `z` (or call again for the upper '
-			. 'row with the same offset); optionally a worktop over the floor-standing units. All go into a new group. Corners: '
+			. 'one after another from `offset`. Units with a `z` above 0 (wall cabinets) form a second row of their own, also from '
+			. '`offset`: give them `gapBefore` to skip over tall units below. A worktop, if given, covers each stretch of '
+			. 'counter-height floor units (tall ones, over 1000 mm, break it). All go into a new group. Corners: '
 			. 'two runs on the two walls, the first ending (or the second starting) where the other run\'s depth leaves room, '
 			. 'or a blind-corner unit.',
 	)]

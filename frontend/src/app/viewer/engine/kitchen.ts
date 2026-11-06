@@ -100,7 +100,8 @@ function handleNearTop(front: Omit<FrontBox, 'z'>, itemElevation: number): boole
  * The handle of a front (mm, item-local; `faceZ` its outer face), or null for push-to-open and none: bars as
  * `buildHandle()`, a knob (`KnobDiameter`) at a door's handle edge or a drawer's middle, near the top or bottom as the
  * bars; an edge pull (`EdgePull`) on the top edge (the bottom one out of reach); a gola channel, a dark band
- * `GolaHeight` high along the top (or bottom) of the face.
+ * `GolaHeight` high along the top (or bottom) of the face. On a tall door reaching from below reach height to well
+ * above it the knob and the edge pull stand at reach height on its handle edge and the gola channel runs up that edge.
  */
 export function buildFrontHandle(
     kind: FrontHandle,
@@ -116,13 +117,17 @@ export function buildFrontHandle(
     const material = handleMaterial ?? defaultHandleMaterial(materials);
     const nearTop = handleNearTop(front, itemElevation);
     const top = front.bottom + front.height;
+    // A tall door reaching from below reach height to well above it: its handle stands at reach height on its handle edge.
+    const tall = !drawer && !nearTop && itemElevation + front.bottom < HandleReachHeight;
+    const atReach = (length: number): number =>
+        THREE.MathUtils.clamp(HandleReachHeight - itemElevation, front.bottom + length / 2 + 20, top - length / 2 - 20);
     switch (kind) {
         case 'horizontal':
         case 'vertical':
             return buildHandle(kind, front, faceZ, itemElevation, edge, materials, material, handleLength);
         case 'knob': {
             const x = drawer ? front.left + front.width / 2 : edge === 'right' ? front.left + front.width - 45 : front.left + 45;
-            const y = drawer && front.height < 300 ? front.bottom + front.height / 2 : nearTop ? top - 60 : front.bottom + 60;
+            const y = drawer && front.height < 300 ? front.bottom + front.height / 2 : nearTop ? top - 60 : tall ? atReach(0) : front.bottom + 60;
             const geometry = new THREE.CylinderGeometry((KnobDiameter / 2) * MM, (KnobDiameter / 2 - 4) * MM, KnobDepth * MM, 24);
             const knob = new THREE.Mesh(geometry, material);
             knob.rotation.x = Math.PI / 2;
@@ -131,6 +136,14 @@ export function buildFrontHandle(
             return knob;
         }
         case 'edge': {
+            if (tall) {
+                // A profile over the handle edge, at reach height.
+                const length = handleLength ?? THREE.MathUtils.clamp(front.height * 0.3, 150, 600);
+                const x = edge === 'right' ? front.left + front.width - EdgePull.face : front.left - EdgePull.lip;
+                const [across, depth] = [EdgePull.face + EdgePull.lip, EdgePull.depth + EdgePull.proud];
+                const y = atReach(length) - length / 2;
+                return boxAt(material, x * MM, y * MM, (faceZ - EdgePull.depth) * MM, across * MM, length * MM, depth * MM);
+            }
             const length = Math.min(handleLength ?? THREE.MathUtils.clamp(front.width * 0.5, 150, 600), front.width - 20);
             const left = front.left + (front.width - length) / 2;
             // A profile over the edge: on the face, a lip over the edge and a little beyond it.
@@ -139,8 +152,13 @@ export function buildFrontHandle(
             return boxAt(material, left * MM, y * MM, (faceZ - EdgePull.depth) * MM, length * MM, height * MM, depth * MM);
         }
         case 'gola': {
-            const y = nearTop ? top - GolaHeight : front.bottom;
             const shadow = materials.plain('#0b0b0c', 0.6, 0.2);
+            if (tall) {
+                // A vertical channel along the handle edge, the full height of the door.
+                const x = edge === 'right' ? front.left + front.width - GolaHeight : front.left;
+                return boxAt(shadow, x * MM, front.bottom * MM, faceZ * MM, GolaHeight * MM, front.height * MM, 0.6 * MM, false);
+            }
+            const y = nearTop ? top - GolaHeight : front.bottom;
             return boxAt(shadow, front.left * MM, y * MM, faceZ * MM, front.width * MM, GolaHeight * MM, 0.6 * MM, false);
         }
         default:
