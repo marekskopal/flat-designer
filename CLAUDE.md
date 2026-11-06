@@ -1251,6 +1251,11 @@ The current format is the text in `FurnitureTools::Format`.
   that the agent PUTs the file to with curl. `PUT /api/uploads/{token}` is open in `AuthorizationMiddleware` (the
   token authorizes it), stores the file through `ProjectFileProvider` / `ModelAssetProvider` as the ticket's user and
   works once for 15 minutes; a rejected file releases the ticket. `delete_project_file` / `delete_model` remove them.
+- `add_cabinet_run` (I-139, `Service/Editor/Drawing/CabinetRun`) lays units along one face of a straight wall as one
+  `ChangeBatch`: each unit's back on the face (`side` of the wall, `offset` from its start, `gapBefore` between units),
+  its front turned away (rotation from the face's normal), an optional worktop over the floor-standing ones (the global
+  Worktop definition unless named, `overhang` past the deepest, on the highest), all in a new group; the run must end
+  within the wall's length.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
 ## Example projects

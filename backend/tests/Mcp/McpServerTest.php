@@ -100,6 +100,7 @@ final class McpServerTest extends IntegrationTestCase
 		$names = array_column($tools, 'name');
 		sort($names);
 		self::assertSame([
+			'add_cabinet_run',
 			'add_comment',
 			'add_floor',
 			'add_item',
@@ -477,6 +478,57 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($floor);
 		self::assertSame([], $floor['rooms']);
 		self::assertSame([], $floor['walls']);
+	}
+
+	public function testLaysACabinetRunAlongAWallFace(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$wall = $this->client->call(
+			'add_wall',
+			$ids + ['startX' => 0, 'startY' => 3000, 'endX' => 3000, 'endY' => 3000, 'thickness' => 200],
+		);
+		self::assertIsArray($wall);
+		self::assertIsArray($wall['element']);
+		FurnitureSeeds::insert(Fixture::service(DatabaseInterface::class)->getPdo(), ['kitchen-base-cabinet.json', 'worktop.json']);
+		$base = Fixture::service(FurnitureDefinitionRepository::class)->findGlobalByName('Kitchen base cabinet')?->id;
+		self::assertIsInt($base);
+		$unit = static fn (int $width, int $gap = 0): array => ['definitionId' => $base, 'width' => $width, 'gapBefore' => $gap];
+
+		// The wall runs west to east; its Right face is the south one, at y = 2900: the units stand south of it, facing south.
+		$run = $this->client->call('add_cabinet_run', $ids + [
+			'wallId' => $wall['element']['id'],
+			'side' => 'Right',
+			'offset' => 100,
+			'units' => [$unit(600), $unit(400), $unit(800, 50)],
+			'worktop' => ['overhang' => 30],
+			'groupName' => 'Back run',
+		]);
+		self::assertIsArray($run);
+		self::assertIsList($run['batch']);
+		self::assertCount(5, $run['batch']);
+		$placed = [];
+		foreach ($run['batch'] as $entry) {
+			self::assertIsArray($entry);
+			$element = $entry['element'];
+			self::assertIsArray($element);
+			if (isset($element['kind'])) {
+				$placed[] = [$element['x'], $element['y'], $element['rotation'], $element['z'], $element['width'], $element['depth']];
+			}
+		}
+		self::assertSame(
+			[[400, 2610, 0, 0, 600, 580], [900, 2610, 0, 0, 400, 580], [1550, 2610, 0, 0, 800, 580], [1025, 2595, 0, 860, 1850, 610]],
+			$placed,
+		);
+
+		$isError = false;
+		$message = $this->client->call('add_cabinet_run', $ids + [
+			'wallId' => $wall['element']['id'],
+			'side' => 'Left',
+			'offset' => 2500,
+			'units' => [$unit(600)],
+		], $isError);
+		self::assertTrue($isError);
+		self::assertSame('The run ends 3100 mm along the wall, which is 3000 mm long.', $message);
 	}
 
 	public function testVariantsHideTheItemsOfTheOtherVariants(): void

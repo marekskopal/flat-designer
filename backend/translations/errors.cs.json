@@ -380,5 +380,17 @@
     "The currency and waste were left at the defaults: %s": "Měna a prořez zůstaly výchozí: %s",
     "A %s %d mm wide in wall %d was left out: %s": "%s široké %d mm ve stěně %d bylo vynecháno: %s",
     "Furniture definition \"%s\" was left out of the project's furniture: %s (an item using it keeps it as it was).": "Nábytek „%s“ byl z nábytku projektu vynechán: %s (prvek, který ho používá, si ho ponechá, jak byl).",
-    "%d risers make each %.0f mm high over the %d mm rise; a riser must be %d–%d mm (null counts them).": "Při %d stupních by byl každý vysoký %.0f mm na převýšení %d mm; stupeň musí být %d–%d mm (null je spočítá)."
+    "%d risers make each %.0f mm high over the %d mm rise; a riser must be %d–%d mm (null counts them).": "Při %d stupních by byl každý vysoký %.0f mm na převýšení %d mm; stupeň musí být %d–%d mm (null je spočítá).",
+    "Field \"side\" must be \"Left\" or \"Right\".": "Pole „side“ musí být „Left“ nebo „Right“.",
+    "A cabinet run needs 1 to %d units.": "Řada skříněk potřebuje 1 až %d prvků.",
+    "A cabinet run needs a straight wall.": "Řada skříněk potřebuje rovnou stěnu.",
+    "A cabinet run needs a wall of some length.": "Řada skříněk potřebuje stěnu nenulové délky.",
+    "A unit's \"gapBefore\" must be a whole number of mm, 0 or more.": "„gapBefore“ prvku musí být celý počet mm, 0 nebo více.",
+    "The run ends %d mm along the wall, which is %d mm long.": "Řada končí %d mm podél stěny, která je dlouhá %d mm.",
+    "Unknown worktop field(s): %s.": "Neznámá pole pracovní desky: %s.",
+    "No worktop definition: give the worktop a definitionId.": "Chybí popis pracovní desky: zadejte jí definitionId.",
+    "The worktop's \"overhang\" must be a whole number of mm, 0 or more.": "„overhang“ pracovní desky musí být celý počet mm, 0 nebo více.",
+    "Unknown unit field(s): %s.": "Neznámá pole prvku: %s.",
+    "Every unit of a cabinet run needs its \"width\" (mm).": "Každý prvek řady skříněk potřebuje „width“ (mm).",
+    "Unit sizes must be whole numbers of mm above 0.": "Rozměry prvků musí být celé počty mm větší než 0."
 }
