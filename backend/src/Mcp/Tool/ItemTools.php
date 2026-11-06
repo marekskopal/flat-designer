@@ -19,7 +19,8 @@ final readonly class ItemTools
 	/** A JSON object (PHP arrays would otherwise be advertised as JSON arrays). */
 	private const array ParamsSchema = [
 		'type' => ['object', 'null'],
-		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params); '
+		'description' => 'kind-specific options as a JSON object, see list_item_kinds (update_item replaces all params: to change one '
+			. 'value, send the item\'s params from get_floor with that value changed); '
 			. 'the listed properties are those of Custom',
 		'properties' => [
 			'values' => [
@@ -128,7 +129,7 @@ final readonly class ItemTools
 	 * @param int|null $groupId group to move the item into (from get_floor)
 	 * @param array<string, mixed>|null $params replaces all params of the item
 	 * @param int|null $definitionId another furniture definition of a Custom item (send params {} with it, the old values
-	 *     belong to the old one)
+	 *     belong to the old one; the item keeps its size unless width, depth and height are sent too)
 	 * @param int|null $modelId another 3D model of a Model item (list_models)
 	 * @param list<string>|null $clear fields to set to none: "roomId", "groupId" (take it out of its group), "materialId",
 	 *     "definitionId" (with a kind other than Custom), "modelId" (with a kind other than Model), "controls" (a switch's lights)

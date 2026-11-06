@@ -45,6 +45,8 @@ final readonly class FurnitureTools
 		. 'image file of its project, see list_project_files, or null)}; "derived": {name: '
 		. 'expression} evaluated in order; "materialSlots": list of {key, label?, default?: material code from list_materials} '
 		. '(an item fills them with params.materials; the first slot, and a slot without a default, take the item material); '
+		. 'sides a parameter names "left" / "right" (an L worktop\'s returnSide, an island worktop\'s leftEnd / rightEnd, a '
+		. 'handleSide) are seen from the item\'s front: left is its local x = 0, whatever the item\'s rotation; '
 		. '"parts": list of {type, '
 		. 'name?, material?: slot key (or {"expr": …} giving one per copy), when?: boolean expression, repeat?: {count: expression, '
 		. 'as?: index name (default i)} or '
@@ -131,20 +133,23 @@ final readonly class FurnitureTools
 	/**
 	 * @param int|null $projectId with a project: what its items may use (global, the project's own, the project owner's
 	 *     library); without: global ones and your library
+	 * @param string|null $catalogue only the definitions filed under it (kitchen, storage, seating, tables, bedroom, bathroom,
+	 *     lighting, electrical, decor, building, outdoor, roof); null: all
 	 * @return list<array<string, mixed>>
 	 */
 	#[McpTool(
 		name: 'list_furniture_definitions',
-		description: 'List furniture definitions (for Custom items) with their scope, default size and parameters; '
+		description: 'List furniture definitions (for Custom items) with their scope, catalogue, default size, parameters and '
+			. 'material slots (the keys params.materials fills, with their default material codes); '
 			. 'get_furniture_definition shows the parts.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
-	public function listFurnitureDefinitions(?int $projectId = null): array
+	public function listFurnitureDefinitions(?int $projectId = null, ?string $catalogue = null): array
 	{
 		$user = $this->context->user();
 		$project = $projectId === null ? null : $this->context->project($projectId);
 
-		return array_map(static function (FurnitureDefinition $definition): array {
+		$listed = array_map(static function (FurnitureDefinition $definition): array {
 			$body = JsonDecoder::decodeObject($definition->definition);
 
 			return [
@@ -154,11 +159,33 @@ final readonly class FurnitureTools
 				'scope' => $definition->scope()->value,
 				'userName' => $definition->user?->name,
 				'projectId' => $definition->project?->id,
+				'catalogue' => is_string($body['catalogue'] ?? null) ? $body['catalogue'] : null,
 				'size' => $body['size'] ?? null,
 				'parameters' => $body['parameters'] ?? [],
+				'materialSlots' => self::slots($body['materialSlots'] ?? null),
 				'updatedAt' => $definition->updatedAt->format(DATE_ATOM),
 			];
 		}, $this->definitionProvider->listVisible($user, $project));
+
+		return $catalogue === null
+			? $listed
+			: array_values(array_filter($listed, static fn (array $row): bool => $row['catalogue'] === $catalogue));
+	}
+
+	/** @return list<array{key: mixed, default: mixed}> a definition's material slots: key and default material code */
+	private static function slots(mixed $slots): array
+	{
+		if (!is_array($slots)) {
+			return [];
+		}
+
+		$listed = [];
+		foreach ($slots as $slot) {
+			$slot = is_array($slot) ? $slot : [];
+			$listed[] = ['key' => $slot['key'] ?? null, 'default' => $slot['default'] ?? null];
+		}
+
+		return $listed;
 	}
 
 	#[McpTool(

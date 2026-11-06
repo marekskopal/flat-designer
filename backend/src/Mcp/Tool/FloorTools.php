@@ -24,7 +24,11 @@ final readonly class FloorTools
 	) {
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * @param int|null $roomId only this room: its outline, the walls round it, its items (and those in no room inside
+	 *     it), their groups, definitions and models; null: the whole floor
+	 * @return array<string, mixed>
+	 */
 	#[McpTool(
 		name: 'get_floor',
 		description: 'Everything on one floor: rooms (polygon outline, area m², ceiling height, floor material, wall finishes), '
@@ -36,25 +40,26 @@ final readonly class FloorTools
 			. 'plan image under the top view, see set_floor_underlay) and models (the 3D models of the Model items, see list_models) and stairs (from this floor '
 			. 'up, climbing stairRise mm, see add_stair) and stairsBelow (the floor below\'s, cutting their voids through this one) and '
 			. 'roofs (over this floor, with their windows, see add_roof). '
-			. 'All in mm. Material ids refer to list_materials.',
+			. 'All in mm. Material ids refer to list_materials. A big floor may not fit one answer: give roomId for one room.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
-	public function getFloor(int $projectId, int $floorId): array
+	public function getFloor(int $projectId, int $floorId, ?int $roomId = null): array
 	{
 		$scene = $this->sceneProvider->getScene($this->context->floor($projectId, $floorId));
+		$part = $roomId === null ? RoomPart::whole($scene) : RoomPart::of($scene, $roomId);
 
 		return [
 			'floor' => $scene->floor,
 			'revision' => $scene->revision,
-			'rooms' => $scene->rooms,
-			'walls' => $scene->walls,
-			'items' => $scene->items,
-			'groups' => $scene->groups,
+			'rooms' => $part->rooms,
+			'walls' => $part->walls,
+			'items' => $part->items,
+			'groups' => $part->groups,
 			'variantSets' => $scene->variantSets,
 			'hiddenItemIds' => $scene->hiddenItemIds(),
-			'definitions' => $scene->definitions,
+			'definitions' => $part->definitions,
 			'underlay' => $scene->underlay,
-			'models' => $scene->models,
+			'models' => $part->models,
 			'stairs' => $scene->stairs,
 			'stairRise' => $scene->stairRise,
 			'stairsBelow' => $scene->stairsBelow,

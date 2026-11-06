@@ -45,7 +45,7 @@ final readonly class ItemDto
 
 	public static function fromEntity(Item $item): self
 	{
-		$params = $item->params === null ? [] : JsonDecoder::decodeObject($item->params);
+		$params = $item->params === null ? [] : self::withoutEmptyMaps(JsonDecoder::decodeObject($item->params));
 
 		return new self(
 			id: $item->id,
@@ -70,6 +70,25 @@ final readonly class ItemDto
 			onRoof: $item->onRoof,
 			controls: self::controls($item->controls),
 		);
+	}
+
+	/**
+	 * A Custom item's params without an empty `values` or `materials`: decoded as PHP arrays, an empty JSON object would
+	 * come back as `[]` (a list); a missing one means the same, the definition's defaults.
+	 *
+	 * @param array<TKey, mixed> $params
+	 * @return array<TKey, mixed>
+	 * @template TKey of array-key
+	 */
+	public static function withoutEmptyMaps(array $params): array
+	{
+		foreach (['values', 'materials'] as $key) {
+			if (array_key_exists($key, $params) && $params[$key] === []) {
+				unset($params[$key]);
+			}
+		}
+
+		return $params;
 	}
 
 	/** @return list<int> the ids of a stored `controls` list */

@@ -1257,6 +1257,11 @@ The current format is the text in `FurnitureTools::Format`.
   their own from the same `offset` (`gapBefore` before a unit in its row); an optional worktop covers each stretch of
   counter-height floor units (`CounterHeight`, taller ones break it; the global Worktop definition unless named,
   `overhang` past the deepest, on the highest), all in a new group; both rows must end within the wall's length.
+- Big floors (I-161): `get_floor` takes `roomId` (`Mcp/Tool/RoomPart`: the room, the walls whose centre line comes within
+  their thickness of its outline box, its items and the roomless ones in that box, their groups, definitions and
+  models); `list_furniture_definitions` gives each definition's `catalogue` and `materialSlots` (key, default) and filters
+  by `catalogue`. An empty `values` / `materials` in an item's params is dropped (`ItemDto::withoutEmptyMaps()`, on write
+  and read), as a decoded empty JSON object would come back as `[]`.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
 ## Example projects
