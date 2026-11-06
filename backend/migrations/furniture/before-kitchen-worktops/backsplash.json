@@ -1,0 +1,48 @@
+{
+ "name": "Backsplash",
+ "description": "Wall panel between worktop and wall cabinets, cut to the item.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Zástěna",
+    "description": "Obklad stěny mezi pracovní deskou a horními skříňkami, přiříznutý na rozměr prvku.",
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Slab": "Deska"
+    }
+   }
+  },
+  "size": {
+   "width": 1200,
+   "depth": 16,
+   "height": 550
+  },
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Slab",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   }
+  ]
+ }
+}

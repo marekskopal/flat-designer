@@ -15,6 +15,7 @@ use Migrations\SeedFlat50FurnitureDefinitionsMigration;
 use Migrations\SeedFurnitureCatalogueMigration;
 use Migrations\SeedFurnitureDefinitionsMigration;
 use Migrations\SeedHallStandFittingDefinitionsMigration;
+use Migrations\SeedKitchenWorktopsMigration;
 use Migrations\SeedLightingCatalogueMigration;
 use Migrations\SeedRoofAccessoriesMigration;
 use Migrations\SeedTrapezoidWardrobeMigration;
@@ -49,6 +50,7 @@ final class FurnitureSeedTest extends IntegrationTestCase
 			...SeedRoofAccessoriesMigration::Files,
 			...SeedDemoHouseFurnitureMigration::Files,
 			...SeedTrapezoidWardrobeMigration::Files,
+			...SeedKitchenWorktopsMigration::Files,
 		];
 		sort($listed);
 		self::assertSame(array_unique($listed), $listed, 'A file is listed by more than one migration.');

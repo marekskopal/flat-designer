@@ -12,7 +12,19 @@
      "top": "Materiál"
     },
     "parts": {
-     "Slab": "Deska"
+     "Slab": "Deska",
+     "Rounded end": "Zaoblený konec"
+    },
+    "parameters": {
+     "roundEnd": "Zaoblený konec"
+    },
+    "options": {
+     "roundEnd": {
+      "none": "žádný",
+      "left": "vlevo",
+      "right": "vpravo",
+      "both": "oba"
+     }
     }
    }
   },
@@ -31,10 +43,10 @@
    {
     "type": "board",
     "name": "Slab",
-    "x": 0,
+    "x": "rl",
     "y": 0,
     "z": 0,
-    "w": "W",
+    "w": "W - rl - rr",
     "h": "H",
     "d": "D",
     "material": "top",
@@ -42,7 +54,49 @@
     "edges": [
      "front"
     ]
+   },
+   {
+    "type": "cylinder",
+    "name": "Rounded end",
+    "when": "rl > 0",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "D",
+    "h": "H",
+    "d": "D",
+    "material": "top"
+   },
+   {
+    "type": "cylinder",
+    "name": "Rounded end",
+    "when": "rr > 0",
+    "x": "W - D",
+    "y": 0,
+    "z": 0,
+    "w": "D",
+    "h": "H",
+    "d": "D",
+    "material": "top"
    }
-  ]
+  ],
+  "parameters": [
+   {
+    "key": "roundEnd",
+    "label": "Rounded end",
+    "type": "select",
+    "options": [
+     "none",
+     "left",
+     "right",
+     "both"
+    ],
+    "default": "none"
+   }
+  ],
+  "derived": {
+   "rl": "roundEnd == 'left' || roundEnd == 'both' ? D / 2 : 0",
+   "rr": "roundEnd == 'right' || roundEnd == 'both' ? D / 2 : 0"
+  }
  }
 }

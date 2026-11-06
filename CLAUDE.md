@@ -414,6 +414,11 @@ The current format is the text in `FurnitureTools::Format`.
   group tagged `frontLink`, posed by `setFrontPose()` (`poseHingeLinks()`) and hidden while closed; a butt one's
   barrel and leaves, half on the door, half on the carcass. Without a side there, only the door's half is drawn. The
   integrated soft-close damper is not drawn. `AddFurnitureHinges` gives the bin store and garden shed butt hinges.
+- Kitchen worktops (I-134, `SeedKitchenWorktops`): the island worktop (its box from the floor, the top `thickness` at
+  its height, `leftEnd` / `rightEnd` square or waterfall, the ends turning down to the floor in the same material), the
+  L-shaped worktop (a run `runDepth` along the back and a return `returnWidth` on `returnSide`, two pieces in the cut
+  list), the worktop's `roundEnd` (a half-cylinder of its depth, the rest of the slab shortened) and the backsplash's
+  `ledge` (standing out in front of its box). Sink and hob cut-outs and stepped splashbacks are not drawn yet.
 - Front styles and handles (I-133, `AddKitchenFrontStyles`): a `front`'s `style` (`PartTypeEnum::FrontStyles`: flat,
   shaker, fluted, glass, reeded) and `handle` (`Handles`: horizontal and vertical bars with `handleLength`, knob, edge
   pull, gola channel, push, none) are drawn by `buildFrontBody()` (`custom/front-styles.ts`) and `buildFrontHandle()`
