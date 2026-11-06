@@ -94,6 +94,12 @@ enum PartTypeEnum: string
 	 */
 	public const array HandlePositions = ['auto', 'top', 'bottom', 'side'];
 
+	/** A built-in appliance front: an oven, a microwave, a steam oven, a coffee machine (`buildAppliance()`). */
+	public const array Appliances = ['oven', 'microwave', 'steam', 'coffee'];
+
+	/** An appliance front's finish: black or white glass, stainless steel, or retro (cream with chrome). */
+	public const array ApplianceFinishes = ['black', 'white', 'steel', 'retro'];
+
 	private const array Sides = ['left', 'right', 'bottom', 'top', 'back', 'front'];
 
 	/**
@@ -265,7 +271,7 @@ enum PartTypeEnum: string
 			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Pose,
 			self::Glass => self::Pose,
 			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Pose,
-			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Pose,
+			self::Appliance => ['kind' => self::Appliances, 'finish' => self::ApplianceFinishes] + self::Pose,
 			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Pose,
 			self::Cushion => ['radius' => 'number'] + self::Pose,
 			self::Picture => ['image' => 'image'] + self::Pose,

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 import {ceilingHeightAt} from '../ceilings';
-import {buildAppliance, buildFrontHandle, FrontHandle, handlePositionOf} from '../kitchen';
+import {applianceFinishOf, applianceKindOf, buildAppliance, buildFrontHandle, FrontHandle, handlePositionOf} from '../kitchen';
 import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
@@ -267,7 +267,7 @@ function buildPart(
     switch (part.type) {
         case 'appliance': {
             const front = {left: part.x, bottom: part.y, width: part.w, height: part.h, z: part.z};
-            return buildAppliance(part.props['kind'] === 'microwave' ? 'microwave' : 'oven', front, materials, part.d);
+            return buildAppliance(applianceKindOf(part.props['kind']), front, materials, part.d, applianceFinishOf(part.props['finish']));
         }
         case 'slidingDoor': {
             const slot = part.props['profile'];

@@ -442,7 +442,7 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 			'tilt beyond 90°' => [['parts', 1, 'tilt'], 120, 'parts[1].tilt: Must be degrees from -90 to 90.'],
 			'turn beyond 90° once evaluated' => [['parts', 1, 'turn'], ['expr' => 'atan2(1, -1)'], 'parts[1].turn: Must be degrees from -90 to 90.'],
 			'turn pivot not a number' => [['parts', 1, 'turnX'], 'W', 'parts[1].turnX: Must be a number (mm).'],
-			'an appliance not an oven or microwave' => [['parts', 3, 'kind'], 'fridge', 'parts[3].kind: Must be one of "oven", "microwave".'],
+			'an appliance of an unknown kind' => [['parts', 3, 'kind'], 'fridge', 'parts[3].kind: Must be one of "oven", "microwave", "steam", "coffee".'],
 			'mirror not a boolean once evaluated' => [['parts', 2, 'mirror'], ['expr' => 'i'], 'parts[2].mirror: Must be true or false.'],
 		];
 		foreach ($bad as $case => [$keys, $value, $message]) {

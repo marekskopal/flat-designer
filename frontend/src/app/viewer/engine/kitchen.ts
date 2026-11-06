@@ -223,61 +223,111 @@ const EdgePull = {face: 22, lip: 3, depth: 8, proud: 6};
 /** The height (mm) of a gola channel's shadow band. */
 const GolaHeight = 28;
 
+/** A built-in appliance front's kind (`PartTypeEnum::Appliances`). */
+export type ApplianceKind = 'oven' | 'microwave' | 'steam' | 'coffee';
+
+/** An appliance front's finish (`PartTypeEnum::ApplianceFinishes`). */
+export type ApplianceFinish = 'black' | 'white' | 'steel' | 'retro';
+
+/** An appliance part's `kind` option, an oven when missing or unknown. */
+export function applianceKindOf(value: unknown): ApplianceKind {
+    return value === 'microwave' || value === 'steam' || value === 'coffee' ? value : 'oven';
+}
+
+/** An appliance part's `finish` option, black glass when missing or unknown. */
+export function applianceFinishOf(value: unknown): ApplianceFinish {
+    return value === 'white' || value === 'steel' || value === 'retro' ? value : 'black';
+}
+
+/** The face, window and trim (handle, knobs, spouts) materials of an appliance finish. */
+function applianceLook(finish: ApplianceFinish, materials: MaterialLibrary): {face: THREE.Material; window: THREE.Material; trim: THREE.Material} {
+    switch (finish) {
+        case 'white':
+            return {
+                face: materials.plain('#f1f1ee', 0.12),
+                window: materials.plain('#16171a', 0.05, 0.5),
+                trim: materials.plain('#c9c9c9', 0.25, 1),
+            };
+        case 'steel':
+            return {
+                face: materials.plain('#b7b8b8', 0.35, 1),
+                window: materials.plain('#09090a', 0.05, 0.5),
+                trim: materials.plain('#d8d8d8', 0.2, 1),
+            };
+        case 'retro':
+            return {
+                face: materials.plain('#e8dec6', 0.4),
+                window: materials.plain('#141414', 0.05, 0.5),
+                trim: materials.plain('#e2e2e2', 0.12, 1),
+            };
+        default:
+            return {
+                face: materials.byCode('appliance-black-glass'),
+                window: materials.plain('#050506', 0.05, 0.5),
+                trim: materials.plain('#9a9a9a', 0.25, 1),
+            };
+    }
+}
+
 /**
- * Built-in oven or microwave: black glass front with a darker window and a steel bar handle (mm, item-local; the
- * front `thickness` deep from its back face `front.z`).
+ * Built-in appliance front (mm, item-local; the front `thickness` deep from its back face `front.z`) in its finish: an
+ * oven (window, bar handle under a strip of control knobs), a steam oven (the same with a display between two knobs), a
+ * microwave (a window beside the controls) or a coffee machine (a display strip over a recess with the spouts and a drip
+ * tray).
  */
 export function buildAppliance(
-    type: 'oven' | 'microwave',
+    type: ApplianceKind,
     front: FrontBox,
     materials: MaterialLibrary,
     thickness: number = FrontThickness,
+    finish: ApplianceFinish = 'black',
 ): THREE.Group {
     const group = new THREE.Group();
-    const glass = materials.byCode('appliance-black-glass');
-    const windowMaterial = materials.plain('#050506', 0.05, 0.5);
-    const steel = materials.plain('#9a9a9a', 0.25, 1);
+    const look = applianceLook(finish, materials);
     const mm = (v: number): number => v * MM;
     const faceZ = front.z + thickness;
+    const flat = (material: THREE.Material, x: number, y: number, w: number, h: number, d = 2, z = faceZ): void => {
+        group.add(boxAt(material, mm(x), mm(y), mm(z), mm(w), mm(h), mm(d)));
+    };
+    const knob = (x: number, y: number, radius: number): void => {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(mm(radius), mm(radius), mm(14), 24), look.trim);
+        mesh.rotation.x = Math.PI / 2;
+        mesh.position.set(mm(x), mm(y), mm(faceZ + 7));
+        group.add(mesh);
+    };
 
-    group.add(boxAt(glass, mm(front.left), mm(front.bottom), mm(front.z), mm(front.width), mm(front.height), mm(thickness)));
+    group.add(boxAt(look.face, mm(front.left), mm(front.bottom), mm(front.z), mm(front.width), mm(front.height), mm(thickness)));
+    const top = front.bottom + front.height;
 
-    if (type === 'oven') {
+    if (type === 'oven' || type === 'steam') {
         const controls = 90;
         const margin = 60;
-        group.add(
-            boxAt(
-                windowMaterial,
-                mm(front.left + margin),
-                mm(front.bottom + margin),
-                mm(faceZ),
-                mm(front.width - 2 * margin),
-                mm(front.height - controls - 2 * margin),
-                mm(2),
-            ),
-        );
-        const handleY = front.bottom + front.height - controls - 30;
-        group.add(boxAt(steel, mm(front.left + 60), mm(handleY), mm(faceZ + 20), mm(front.width - 120), mm(14), mm(14)));
-        // Control knobs in the top strip.
-        for (const x of [0.18, 0.3, 0.7, 0.82]) {
-            const knob = new THREE.Mesh(new THREE.CylinderGeometry(mm(16), mm(16), mm(14), 24), steel);
-            knob.rotation.x = Math.PI / 2;
-            knob.position.set(mm(front.left + front.width * x), mm(front.bottom + front.height - controls / 2), mm(faceZ + 7));
-            group.add(knob);
+        flat(look.window, front.left + margin, front.bottom + margin, front.width - 2 * margin, front.height - controls - 2 * margin);
+        const handleY = top - controls - 30;
+        flat(look.trim, front.left + 60, handleY, front.width - 120, 14, 14, faceZ + 20);
+        // Control knobs in the top strip (larger on a retro front); a steam oven has a display between two of them.
+        const radius = finish === 'retro' ? 20 : 16;
+        const knobs = type === 'steam' ? [0.2, 0.8] : [0.18, 0.3, 0.7, 0.82];
+        for (const x of knobs) {
+            knob(front.left + front.width * x, top - controls / 2, radius);
         }
+        if (type === 'steam') {
+            flat(look.window, front.left + front.width / 2 - 70, top - controls / 2 - 15, 140, 30);
+        }
+    } else if (type === 'coffee') {
+        // A display strip over a recess with the spouts and a drip tray.
+        const margin = 40;
+        const recessW = Math.min(front.width * 0.45, 260);
+        const recessH = Math.min(front.height * 0.55, 260);
+        const recessLeft = front.left + (front.width - recessW) / 2;
+        flat(look.window, front.left + front.width / 2 - 80, top - 70, 160, 34);
+        flat(look.window, recessLeft, front.bottom + margin, recessW, recessH, 2, faceZ - 1);
+        flat(look.trim, recessLeft + recessW / 2 - 40, front.bottom + margin + recessH - 40, 80, 30, 40, faceZ - 20);
+        flat(look.trim, recessLeft, front.bottom + margin, recessW, 12, 60, faceZ - 30);
+        knob(front.left + front.width * 0.18, top - 55, 14);
     } else {
         const margin = 40;
-        group.add(
-            boxAt(
-                windowMaterial,
-                mm(front.left + margin),
-                mm(front.bottom + margin),
-                mm(faceZ),
-                mm(front.width * 0.68),
-                mm(front.height - 2 * margin),
-                mm(2),
-            ),
-        );
+        flat(look.window, front.left + margin, front.bottom + margin, front.width * 0.68, front.height - 2 * margin);
     }
 
     return group;

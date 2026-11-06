@@ -1,13 +1,13 @@
 {
  "name": "Kitchen tall cabinet",
- "description": "Tall cabinet or appliance column on a plinth: fronts stacked from the bottom (doors with shelves behind them, drawers with their boxes, lift-up, bi-fold and parallel lift flaps), with oven and microwave fronts. softClose damps the closing of the fronts. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge). interior drawers fits a larder with internal drawers behind its doors; plinthFinish own puts the plinth in its own material.",
+ "description": "Tall cabinet or appliance column on a plinth: fronts stacked from the bottom (doors with shelves behind them, drawers with their boxes, lift-up, bi-fold and parallel lift flaps), with oven and microwave fronts. softClose damps the closing of the fronts. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge). interior drawers fits a larder with internal drawers behind its doors; plinthFinish own puts the plinth in its own material. Appliance fronts are an oven, a microwave, a steam oven or a coffee machine, in applianceFinish (black or white glass, steel, retro).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Kuchyňská vysoká skříň",
-    "description": "Vysoká skříň nebo vestavná sestava pro spotřebiče na soklu: čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, výklop nahoru, lomený výklop a paralelní zdvih), s čely trouby a mikrovlnné trouby. softClose tlumí dovírání čel. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici). interior drawers vybaví spíž vnitřními zásuvkami za dvířky; plinthFinish own dá soklu vlastní materiál.",
+    "description": "Vysoká skříň nebo vestavná sestava pro spotřebiče na soklu: čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, výklop nahoru, lomený výklop a paralelní zdvih), s čely trouby a mikrovlnné trouby. softClose tlumí dovírání čel. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici). interior drawers vybaví spíž vnitřními zásuvkami za dvířky; plinthFinish own dá soklu vlastní materiál. Čela spotřebičů jsou trouba, mikrovlnná trouba, parní trouba nebo vestavný kávovar v provedení applianceFinish (černé nebo bílé sklo, nerez, retro).",
     "parameters": {
      "fronts": "Čela odspodu",
      "fronts.type": "Typ",
@@ -31,7 +31,8 @@
      "frame": "Šířka rámu čel (0: podle stylu)",
      "plinthFinish": "Povrch soklu",
      "interior": "Vnitřek za dvířky",
-     "fronts.handlePosition": "Poloha úchytky"
+     "fronts.handlePosition": "Poloha úchytky",
+     "applianceFinish": "Provedení spotřebičů"
     },
     "options": {
      "fronts.type": {
@@ -41,7 +42,9 @@
       "bifold": "lomený výklop",
       "parallelLift": "paralelní zdvih",
       "oven": "trouba",
-      "microwave": "mikrovlnná trouba"
+      "microwave": "mikrovlnná trouba",
+      "steam": "parní trouba",
+      "coffee": "vestavný kávovar"
      },
      "fronts.handle": {
       "horizontal": "vodorovná",
@@ -92,6 +95,12 @@
       "top": "nahoře",
       "bottom": "dole",
       "side": "na boku ve výšce ruky"
+     },
+     "applianceFinish": {
+      "black": "černé sklo",
+      "white": "bílé sklo",
+      "steel": "nerez",
+      "retro": "retro (krémová, chrom)"
      }
     },
     "slots": {
@@ -148,7 +157,9 @@
        "bifold",
        "parallelLift",
        "oven",
-       "microwave"
+       "microwave",
+       "steam",
+       "coffee"
       ],
       "default": "door"
      },
@@ -363,6 +374,18 @@
     "min": 0,
     "max": 150,
     "unit": "mm"
+   },
+   {
+    "key": "applianceFinish",
+    "label": "Appliance finish",
+    "type": "select",
+    "options": [
+     "black",
+     "white",
+     "steel",
+     "retro"
+    ],
+    "default": "black"
    }
   ],
   "derived": {
@@ -521,7 +544,7 @@
      {
       "type": "front",
       "name": "Front",
-      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave' && f.type != 'steam' && f.type != 'coffee'",
       "repeat": {
        "count": "(f.type == 'door' ? f.count : 1)",
        "as": "k"
@@ -685,7 +708,7 @@
      {
       "type": "appliance",
       "name": "Appliance",
-      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "when": "f.type == 'oven' || f.type == 'microwave' || f.type == 'steam' || f.type == 'coffee'",
       "x": "gap / 2",
       "y": "gap / 2",
       "z": 0,
@@ -694,6 +717,9 @@
       "d": "AD",
       "kind": {
        "expr": "f.type"
+      },
+      "finish": {
+       "expr": "applianceFinish"
       }
      },
      {

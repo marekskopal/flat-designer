@@ -1,13 +1,13 @@
 {
  "name": "Kitchen wall cabinet",
- "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts. shelfLight lights the inside from under its top and shelves (a display cabinet with glass fronts).",
+ "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts. shelfLight lights the inside from under its top and shelves (a display cabinet with glass fronts). Appliance fronts are an oven, a microwave, a steam oven or a coffee machine, in applianceFinish (black or white glass, steel, retro).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Kuchyňská horní skříňka",
-    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel. shelfLight osvětlí vnitřek zpod víka a polic (vitrína s prosklenými čely).",
+    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel. shelfLight osvětlí vnitřek zpod víka a polic (vitrína s prosklenými čely). Čela spotřebičů jsou trouba, mikrovlnná trouba, parní trouba nebo vestavný kávovar v provedení applianceFinish (černé nebo bílé sklo, nerez, retro).",
     "parameters": {
      "fronts": "Čela odspodu",
      "fronts.type": "Typ",
@@ -27,7 +27,8 @@
      "frontStyle": "Styl čel",
      "frame": "Šířka rámu čel (0: podle stylu)",
      "shelfLight": "LED pod víkem a policemi",
-     "fronts.handlePosition": "Poloha úchytky"
+     "fronts.handlePosition": "Poloha úchytky",
+     "applianceFinish": "Provedení spotřebičů"
     },
     "options": {
      "fronts.type": {
@@ -37,7 +38,9 @@
       "bifold": "lomený výklop",
       "parallelLift": "paralelní zdvih",
       "oven": "trouba",
-      "microwave": "mikrovlnná trouba"
+      "microwave": "mikrovlnná trouba",
+      "steam": "parní trouba",
+      "coffee": "vestavný kávovar"
      },
      "fronts.handle": {
       "horizontal": "vodorovná",
@@ -80,6 +83,12 @@
       "top": "nahoře",
       "bottom": "dole",
       "side": "na boku ve výšce ruky"
+     },
+     "applianceFinish": {
+      "black": "černé sklo",
+      "white": "bílé sklo",
+      "steel": "nerez",
+      "retro": "retro (krémová, chrom)"
      }
     },
     "slots": {
@@ -130,7 +139,9 @@
        "bifold",
        "parallelLift",
        "oven",
-       "microwave"
+       "microwave",
+       "steam",
+       "coffee"
       ],
       "default": "door"
      },
@@ -307,6 +318,18 @@
     "min": 0,
     "max": 10,
     "unit": "mm"
+   },
+   {
+    "key": "applianceFinish",
+    "label": "Appliance finish",
+    "type": "select",
+    "options": [
+     "black",
+     "white",
+     "steel",
+     "retro"
+    ],
+    "default": "black"
    }
   ],
   "derived": {
@@ -410,7 +433,7 @@
      {
       "type": "front",
       "name": "Front",
-      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave' && f.type != 'steam' && f.type != 'coffee'",
       "repeat": {
        "count": "(f.type == 'door' ? f.count : 1)",
        "as": "k"
@@ -574,7 +597,7 @@
      {
       "type": "appliance",
       "name": "Appliance",
-      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "when": "f.type == 'oven' || f.type == 'microwave' || f.type == 'steam' || f.type == 'coffee'",
       "x": "gap / 2",
       "y": "gap / 2",
       "z": 0,
@@ -583,6 +606,9 @@
       "d": "AD",
       "kind": {
        "expr": "f.type"
+      },
+      "finish": {
+       "expr": "applianceFinish"
       }
      },
      {

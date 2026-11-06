@@ -428,6 +428,12 @@ The current format is the text in `FurnitureTools::Format`.
   worktop (z = its top; cut-outs are not drawn), a freestanding fridge (modern, retro rounded, American), a coffee
   machine, a range cooker (glazed oven doors, fixed) and a wine cooler. Built-in ovens and microwaves stay the cabinets'
   `appliance` fronts; an integrated dishwasher is a cabinet door.
+- Appliances round two (I-163, `AddKitchenAppliancesRound2`, `down()` writes back `furniture/before-appliances-2`): an
+  `appliance` part's `kind` (`PartTypeEnum::Appliances`: oven, microwave, steam, coffee) and `finish`
+  (`ApplianceFinishes`: black glass, white glass, steel, retro cream with chrome), drawn by `buildAppliance()`
+  (`applianceLook()`); the kitchen cabinets' fronts take the types `steam` / `coffee` and the cabinet `applianceFinish`.
+  The sink's `drainerSide` (right, left, back: behind the bowls), the hood's `round` style (a cylinder up to 400 mm on a
+  rod up to the item's top) and the chimney hood's `canopy` (stepped, or a pyramid of ten thin steps).
 - Kitchen cabinet options (I-135, `AddKitchenCabinetOptions`): the base cabinet's `sinkUnit` (no top, no shelves),
   the tall cabinet's `interior` drawers (internal drawers behind its doors, a larder), `plinthFinish` own (the plinth in
   the `plinth` slot, by a `material` expression), the wall cabinet's `shelfLight` and the open shelf's `light` (`led`

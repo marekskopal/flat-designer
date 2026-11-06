@@ -1,23 +1,29 @@
 {
  "name": "Kitchen sink",
- "description": "Sink in the worktop (z = the worktop's top): inset with a rim on the worktop, undermount under it (only the bowls show), or a farmhouse sink with an apron in front reaching down H - 6 mm below the top; one or two bowls, an inset sink optionally with a ribbed drainer. Add a tap beside it.",
+ "description": "Sink in the worktop (z = the worktop's top): inset with a rim on the worktop, undermount under it (only the bowls show), or a farmhouse sink with an apron in front reaching down H - 6 mm below the top; one or two bowls, an inset sink optionally with a ribbed drainer on its right or left or behind the bowls (drainerSide). Add a tap beside it.",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Kuchyňský dřez",
-    "description": "Dřez v pracovní desce (z = horní plocha desky): vkládaný s okrajem na desce, podstavný pod ní (vidět jsou jen vany), nebo farmářský se zástěrou vpředu sahající H − 6 mm pod desku; jedna nebo dvě vany, vkládaný případně s žebrovanou odkapávací plochou. Baterii přidejte vedle.",
+    "description": "Dřez v pracovní desce (z = horní plocha desky): vkládaný s okrajem na desce, podstavný pod ní (vidět jsou jen vany), nebo farmářský se zástěrou vpředu sahající H − 6 mm pod desku; jedna nebo dvě vany, vkládaný případně s žebrovanou odkapávací plochou vpravo, vlevo nebo za vanami (drainerSide). Baterii přidejte vedle.",
     "parameters": {
      "style": "Montáž",
      "bowls": "Vany",
-     "drainer": "Odkapávací plocha (vkládaný)"
+     "drainer": "Odkapávací plocha (vkládaný)",
+     "drainerSide": "Strana odkapávače"
     },
     "options": {
      "style": {
       "inset": "vkládaný",
       "undermount": "podstavný",
       "farmhouse": "farmářský"
+     },
+     "drainerSide": {
+      "right": "vpravo",
+      "left": "vlevo",
+      "back": "za dřezem"
      }
     },
     "slots": {
@@ -61,12 +67,26 @@
     "label": "Drainer (inset)",
     "type": "bool",
     "default": false
+   },
+   {
+    "key": "drainerSide",
+    "label": "Drainer side",
+    "type": "select",
+    "options": [
+     "right",
+     "left",
+     "back"
+    ],
+    "default": "right"
    }
   ],
   "derived": {
    "top": "style == 'farmhouse' ? H : min(H, 6)",
    "margin": "style == 'inset' ? 40 : 12",
-   "bowlW": "((drainer && style == 'inset' ? W * 0.55 : W) - 2 * margin - (bowls - 1) * 30) / bowls"
+   "side": "drainer && style == 'inset' ? (drainerSide == 'left' ? 1 : drainerSide == 'back' ? 2 : 0) : -1",
+   "bowlW": "((side == 0 || side == 1 ? W * 0.55 : W) - 2 * margin - (bowls - 1) * 30) / bowls",
+   "bowlX": "side == 1 ? W * 0.45 : 0",
+   "bowlZ": "side == 2 ? round(D * 0.38) : margin"
   },
   "materialSlots": [
    {
@@ -106,28 +126,28 @@
     "repeat": {
      "count": "bowls"
     },
-    "x": "margin + i * (bowlW + 30)",
+    "x": "bowlX + margin + i * (bowlW + 30)",
     "y": "top",
-    "z": "margin",
+    "z": "bowlZ",
     "w": "bowlW",
     "h": 1,
-    "d": "D - 2 * margin",
+    "d": "D - margin - bowlZ",
     "material": "body",
     "shade": 0.45
    },
    {
     "type": "block",
     "name": "Drainer rib",
-    "when": "drainer && style == 'inset'",
+    "when": "side >= 0",
     "repeat": {
      "count": 8
     },
-    "x": "W * 0.55 + i * (W * 0.45 - 60) / 7",
+    "x": "side == 2 ? 60 + i * (W - 126) / 7 : side == 1 ? W * 0.45 - 6 - i * (W * 0.45 - 60) / 7 : W * 0.55 + i * (W * 0.45 - 60) / 7",
     "y": "top",
-    "z": 70,
+    "z": "side == 2 ? 50 : 70",
     "w": 6,
     "h": 1,
-    "d": "D - 140",
+    "d": "side == 2 ? round(D * 0.38) - 90 : D - 140",
     "material": "body",
     "shade": 0.8
    }

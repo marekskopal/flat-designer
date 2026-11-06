@@ -1,0 +1,136 @@
+{
+ "name": "Kitchen sink",
+ "description": "Sink in the worktop (z = the worktop's top): inset with a rim on the worktop, undermount under it (only the bowls show), or a farmhouse sink with an apron in front reaching down H - 6 mm below the top; one or two bowls, an inset sink optionally with a ribbed drainer. Add a tap beside it.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňský dřez",
+    "description": "Dřez v pracovní desce (z = horní plocha desky): vkládaný s okrajem na desce, podstavný pod ní (vidět jsou jen vany), nebo farmářský se zástěrou vpředu sahající H − 6 mm pod desku; jedna nebo dvě vany, vkládaný případně s žebrovanou odkapávací plochou. Baterii přidejte vedle.",
+    "parameters": {
+     "style": "Montáž",
+     "bowls": "Vany",
+     "drainer": "Odkapávací plocha (vkládaný)"
+    },
+    "options": {
+     "style": {
+      "inset": "vkládaný",
+      "undermount": "podstavný",
+      "farmhouse": "farmářský"
+     }
+    },
+    "slots": {
+     "body": "Dřez"
+    },
+    "parts": {
+     "Rim": "Okraj",
+     "Apron": "Zástěra",
+     "Bowl": "Vana",
+     "Drainer rib": "Žebro odkapávací plochy"
+    }
+   }
+  },
+  "size": {
+   "width": 800,
+   "depth": 500,
+   "height": 6
+  },
+  "parameters": [
+   {
+    "key": "style",
+    "label": "Mounting",
+    "type": "select",
+    "options": [
+     "inset",
+     "undermount",
+     "farmhouse"
+    ],
+    "default": "inset"
+   },
+   {
+    "key": "bowls",
+    "label": "Bowls",
+    "type": "int",
+    "default": 1,
+    "min": 1,
+    "max": 2
+   },
+   {
+    "key": "drainer",
+    "label": "Drainer (inset)",
+    "type": "bool",
+    "default": false
+   }
+  ],
+  "derived": {
+   "top": "style == 'farmhouse' ? H : min(H, 6)",
+   "margin": "style == 'inset' ? 40 : 12",
+   "bowlW": "((drainer && style == 'inset' ? W * 0.55 : W) - 2 * margin - (bowls - 1) * 30) / bowls"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Sink",
+    "default": "steel-stainless"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Rim",
+    "when": "style == 'inset'",
+    "x": 0,
+    "y": "top - 4",
+    "z": 0,
+    "w": "W",
+    "h": 4,
+    "d": "D",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Apron",
+    "when": "style == 'farmhouse'",
+    "x": 0,
+    "y": 0,
+    "z": "D - 25",
+    "w": "W",
+    "h": "top",
+    "d": 25,
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Bowl",
+    "repeat": {
+     "count": "bowls"
+    },
+    "x": "margin + i * (bowlW + 30)",
+    "y": "top",
+    "z": "margin",
+    "w": "bowlW",
+    "h": 1,
+    "d": "D - 2 * margin",
+    "material": "body",
+    "shade": 0.45
+   },
+   {
+    "type": "block",
+    "name": "Drainer rib",
+    "when": "drainer && style == 'inset'",
+    "repeat": {
+     "count": 8
+    },
+    "x": "W * 0.55 + i * (W * 0.45 - 60) / 7",
+    "y": "top",
+    "z": 70,
+    "w": 6,
+    "h": 1,
+    "d": "D - 140",
+    "material": "body",
+    "shade": 0.8
+   }
+  ]
+ }
+}
