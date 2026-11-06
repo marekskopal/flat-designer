@@ -546,6 +546,10 @@ The current format is the text in `FurnitureTools::Format`.
   (`GridPatterns`), are counted in pieces and, but chevron, draw their joints in the elevations (`JointGridPatterns`).
   `Fluted` is a panel of rounded flutes `tileWidth` apart running up the surface whatever its grain (keeps its UVs, not
   in pieces, flutes drawn in the elevations). Metro tiles are `Brick` (light ones get a light grout), strip tiles `Tiles`.
+  Round two (I-166, `SeedKitchenMaterialsRound2`): oak stained in lacquer colours (`wood-stained-*`, `Wood`: fronts with
+  a grain), painted brick, more strip and metro tiles, plain compact worktops, smoky grey glass, upholstery colours,
+  walnut and black fluted panels; `panel-fluted-oak` takes `wood-oak-light`'s colour. A patchwork of several encaustic
+  designs and bevelled tiles still need patterns of their own.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
