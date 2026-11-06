@@ -24,7 +24,11 @@
      "t": "Deska korpusu",
      "ft": "Tloušťka čela",
      "gap": "Spára kolem čel",
-     "recess": "Odsazení soklu"
+     "recess": "Odsazení soklu",
+     "fronts.style": "Styl",
+     "handleLength": "Délka úchytky (0: podle čela)",
+     "frontStyle": "Styl čel",
+     "frame": "Šířka rámu čel (0: podle stylu)"
     },
     "options": {
      "fronts.type": {
@@ -39,22 +43,46 @@
      "fronts.handle": {
       "horizontal": "vodorovná",
       "vertical": "svislá",
-      "none": "žádná"
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
      },
      "handle": {
       "horizontal": "vodorovná",
       "vertical": "svislá",
-      "none": "žádná"
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
      },
      "handleSide": {
       "right": "vpravo",
       "left": "vlevo"
+     },
+     "frontStyle": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "fronts.style": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
      }
     },
     "slots": {
      "carcass": "Korpus",
      "fronts": "Čela",
-     "grille": "Mřížka soklu"
+     "grille": "Mřížka soklu",
+     "handles": "Úchytky",
+     "frames": "Rámy čel"
     },
     "parts": {
      "Side": "Bok",
@@ -127,7 +155,24 @@
       "options": [
        "horizontal",
        "vertical",
+       "knob",
+       "edge",
+       "gola",
+       "push",
        "none"
+      ],
+      "optional": true
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+       "flat",
+       "shaker",
+       "fluted",
+       "glass",
+       "reeded"
       ],
       "optional": true
      }
@@ -160,6 +205,10 @@
     "options": [
      "horizontal",
      "vertical",
+     "knob",
+     "edge",
+     "gola",
+     "push",
      "none"
     ],
     "default": "horizontal"
@@ -173,6 +222,37 @@
      "left"
     ],
     "default": "right"
+   },
+   {
+    "key": "handleLength",
+    "label": "Handle length (0: by the front)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "frontStyle",
+    "label": "Front style",
+    "type": "select",
+    "options": [
+     "flat",
+     "shaker",
+     "fluted",
+     "glass",
+     "reeded"
+    ],
+    "default": "flat"
+   },
+   {
+    "key": "frame",
+    "label": "Front frame width (0: by the style)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
    },
    {
     "key": "softClose",
@@ -253,6 +333,14 @@
     "key": "grille",
     "label": "Plinth grille",
     "default": "aluminium-brushed"
+   },
+   {
+    "key": "frames",
+    "label": "Front frames"
+   },
+   {
+    "key": "handles",
+    "label": "Handles"
    }
   ],
   "parts": [
@@ -405,6 +493,17 @@
       },
       "softClose": {
        "expr": "softClose"
+      },
+      "style": {
+       "expr": "f.style ?? frontStyle"
+      },
+      "frame": {
+       "expr": "frame"
+      },
+      "frameMaterial": "frames",
+      "handleMaterial": "handles",
+      "handleLength": {
+       "expr": "handleLength"
       }
      },
      {
@@ -444,6 +543,17 @@
         "kind": "drawer",
         "handle": {
          "expr": "f.handle ?? handle"
+        },
+        "style": {
+         "expr": "f.style ?? frontStyle"
+        },
+        "frame": {
+         "expr": "frame"
+        },
+        "frameMaterial": "frames",
+        "handleMaterial": "handles",
+        "handleLength": {
+         "expr": "handleLength"
         }
        },
        {

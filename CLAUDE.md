@@ -414,6 +414,15 @@ The current format is the text in `FurnitureTools::Format`.
   group tagged `frontLink`, posed by `setFrontPose()` (`poseHingeLinks()`) and hidden while closed; a butt one's
   barrel and leaves, half on the door, half on the carcass. Without a side there, only the door's half is drawn. The
   integrated soft-close damper is not drawn. `AddFurnitureHinges` gives the bin store and garden shed butt hinges.
+- Front styles and handles (I-133, `AddKitchenFrontStyles`): a `front`'s `style` (`PartTypeEnum::FrontStyles`: flat,
+  shaker, fluted, glass, reeded) and `handle` (`Handles`: horizontal and vertical bars with `handleLength`, knob, edge
+  pull, gola channel, push, none) are drawn by `buildFrontBody()` (`custom/front-styles.ts`) and `buildFrontHandle()`
+  (`kitchen.ts`); the evaluators only pass them on. The frame is `frame` mm (0: the style's own, `frontFrame()` /
+  `FramedFront::width()` twins) in the `frameMaterial` slot, the handle in the `handleMaterial` slot; such a slot the item
+  does not fill and without a default keeps the front's material or the black handle (the parity test pins it). The cut
+  list cuts a glass front, or a shaker one with its own frame material, as stiles, rails and a pane or recessed panel
+  (`FramedFront`). The kitchen cabinets take `frontStyle` (and per front `style`), `frame`, `handleLength` and the slots
+  `frames` and `handles`.
 - Seeds (`AddOpenableFrontsMigration`, `down()` writes back `furniture/before-openable-fronts`): the kitchen cabinets,
   sideboard, bedside table and vanity have drawers with boxes, shelves behind doors and a `softClose` parameter; the wall
   and tall cabinets' fronts may be `liftUp`, `bifold` or `parallelLift`.

@@ -58,19 +58,22 @@ export function buildHandle(
     itemElevation: number,
     edge: 'left' | 'right',
     materials: MaterialLibrary,
+    handleMaterial?: THREE.Material,
+    handleLength?: number,
 ): THREE.Mesh {
-    const material = materials.plain('#161616', 0.35, 0.6);
+    const material = handleMaterial ?? defaultHandleMaterial(materials);
     const z = faceZ + HandleStandoff - HandleSection;
 
     if (orientation === 'horizontal') {
-        const length = THREE.MathUtils.clamp(front.width * 0.45, 120, 480);
-        const nearTop = itemElevation + front.bottom + front.height <= HandleReachHeight + 400;
-        const y = nearTop ? front.bottom + front.height - 45 : front.bottom + 45;
+        const length =
+            handleLength === undefined ? THREE.MathUtils.clamp(front.width * 0.45, 120, 480) : Math.min(handleLength, Math.max(40, front.width - 20));
+        const y = handleNearTop(front, itemElevation) ? front.bottom + front.height - 45 : front.bottom + 45;
         const left = front.left + (front.width - length) / 2;
         return boxAt(material, left * MM, (y - HandleSection / 2) * MM, z * MM, length * MM, HandleSection * MM, HandleSection * MM);
     }
 
-    const length = THREE.MathUtils.clamp(front.height * 0.35, 150, 500);
+    const length =
+        handleLength === undefined ? THREE.MathUtils.clamp(front.height * 0.35, 150, 500) : Math.min(handleLength, Math.max(40, front.height - 160));
     const x = edge === 'right' ? front.left + front.width - 45 : front.left + 45;
     const centre = THREE.MathUtils.clamp(
         HandleReachHeight - itemElevation,
@@ -79,6 +82,81 @@ export function buildHandle(
     );
     return boxAt(material, (x - HandleSection / 2) * MM, (centre - length / 2) * MM, z * MM, HandleSection * MM, length * MM, HandleSection * MM);
 }
+
+/** The handle kinds a front may have (`PartTypeEnum::Handles`); `push` and `none` draw nothing. */
+export type FrontHandle = 'horizontal' | 'vertical' | 'knob' | 'edge' | 'gola' | 'push' | 'none';
+
+/** The black of a handle without a material of its own. */
+export function defaultHandleMaterial(materials: MaterialLibrary): THREE.Material {
+    return materials.plain('#161616', 0.35, 0.6);
+}
+
+/** Whether a front's top edge is within reach (`HandleReachHeight` + 400): its handle goes near the top, else the bottom. */
+function handleNearTop(front: Omit<FrontBox, 'z'>, itemElevation: number): boolean {
+    return itemElevation + front.bottom + front.height <= HandleReachHeight + 400;
+}
+
+/**
+ * The handle of a front (mm, item-local; `faceZ` its outer face), or null for push-to-open and none: bars as
+ * `buildHandle()`, a knob (`KnobDiameter`) at a door's handle edge or a drawer's middle, near the top or bottom as the
+ * bars; an edge pull (`EdgePull`) on the top edge (the bottom one out of reach); a gola channel, a dark band
+ * `GolaHeight` high along the top (or bottom) of the face.
+ */
+export function buildFrontHandle(
+    kind: FrontHandle,
+    front: Omit<FrontBox, 'z'>,
+    faceZ: number,
+    itemElevation: number,
+    edge: 'left' | 'right',
+    drawer: boolean,
+    materials: MaterialLibrary,
+    handleMaterial?: THREE.Material,
+    handleLength?: number,
+): THREE.Object3D | null {
+    const material = handleMaterial ?? defaultHandleMaterial(materials);
+    const nearTop = handleNearTop(front, itemElevation);
+    const top = front.bottom + front.height;
+    switch (kind) {
+        case 'horizontal':
+        case 'vertical':
+            return buildHandle(kind, front, faceZ, itemElevation, edge, materials, material, handleLength);
+        case 'knob': {
+            const x = drawer ? front.left + front.width / 2 : edge === 'right' ? front.left + front.width - 45 : front.left + 45;
+            const y = drawer && front.height < 300 ? front.bottom + front.height / 2 : nearTop ? top - 60 : front.bottom + 60;
+            const geometry = new THREE.CylinderGeometry((KnobDiameter / 2) * MM, (KnobDiameter / 2 - 4) * MM, KnobDepth * MM, 24);
+            const knob = new THREE.Mesh(geometry, material);
+            knob.rotation.x = Math.PI / 2;
+            knob.position.set(x * MM, y * MM, (faceZ + KnobDepth / 2) * MM);
+            knob.castShadow = true;
+            return knob;
+        }
+        case 'edge': {
+            const length = Math.min(handleLength ?? THREE.MathUtils.clamp(front.width * 0.5, 150, 600), front.width - 20);
+            const left = front.left + (front.width - length) / 2;
+            // A profile over the edge: on the face, a lip over the edge and a little beyond it.
+            const y = nearTop ? top - EdgePull.face : front.bottom - EdgePull.lip;
+            const [height, depth] = [EdgePull.face + EdgePull.lip, EdgePull.depth + EdgePull.proud];
+            return boxAt(material, left * MM, y * MM, (faceZ - EdgePull.depth) * MM, length * MM, height * MM, depth * MM);
+        }
+        case 'gola': {
+            const y = nearTop ? top - GolaHeight : front.bottom;
+            const shadow = materials.plain('#0b0b0c', 0.6, 0.2);
+            return boxAt(shadow, front.left * MM, y * MM, faceZ * MM, front.width * MM, GolaHeight * MM, 0.6 * MM, false);
+        }
+        default:
+            return null;
+    }
+}
+
+/** A knob's diameter and how far it stands out (mm). */
+const KnobDiameter = 32;
+const KnobDepth = 26;
+
+/** An edge pull's profile (mm): down the face, over the edge, into the front's thickness and out in front of it. */
+const EdgePull = {face: 22, lip: 3, depth: 8, proud: 6};
+
+/** The height (mm) of a gola channel's shadow band. */
+const GolaHeight = 28;
 
 /**
  * Built-in oven or microwave: black glass front with a darker window and a steel bar handle (mm, item-local; the

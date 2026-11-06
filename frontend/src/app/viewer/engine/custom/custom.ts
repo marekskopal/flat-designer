@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
 import {ceilingHeightAt} from '../ceilings';
-import {buildAppliance, buildHandle} from '../kitchen';
+import {buildAppliance, buildFrontHandle, FrontHandle} from '../kitchen';
 import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
@@ -12,6 +12,7 @@ import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {FloorRoofs} from '../under-roof';
 import {evaluateDefinition, ResolvedPart} from './definition';
+import {buildFrontBody, frontStyleOf} from './front-styles';
 import {FrontBox, FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, leafDoors, pivotPoint} from './fronts';
 import {buildFrontHinges} from './hinges';
 import {taperedLeg} from './legs';
@@ -82,21 +83,27 @@ export function buildCustomItemBody(
         const fronts = new Map<string, THREE.Group>();
         const doors = leafDoors(parts);
         let ordinal = 0;
+        const chosen = (item.params['materials'] ?? {}) as Record<string, unknown>;
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
+            // A frame or handle slot the item does not fill and without a default leaves the front's own look.
+            const optional: OptionalMaterial = (slot, grain) =>
+                typeof slot === 'string' && (typeof chosen[slot] === 'number' || slots.some((s) => s.key === slot && typeof s.default === 'string'))
+                    ? material(grain, slot)
+                    : undefined;
             const spec = frontSpec(part, ordinal, doors);
             if (spec !== null && part.props['leaf'] === undefined) {
                 ordinal++;
             }
             if (spec?.motion === 'fold') {
-                const [upper, lower] = foldingFront(part, spec, item, material(grainOf(part)), materials);
+                const [upper, lower] = foldingFront(part, spec, item, material(grainOf(part)), materials, optional);
                 const front = frontGroup(fronts, spec, group, item);
                 addToPivot(front, 'upper', named(posed(upper, part), part), spec);
                 addToPivot(front, 'lower', named(posed(lower, part), part), spec);
                 continue;
             }
-            const mesh = named(posed(buildPart(part, item, material, materials, pictures, room, roofs), part), part);
+            const mesh = named(posed(buildPart(part, item, material, materials, pictures, room, roofs, optional), part), part);
             if (spec !== null) {
                 addToPivot(frontGroup(fronts, spec, group, item), 'main', mesh, spec);
                 continue;
@@ -237,11 +244,12 @@ function foldingFront(
     item: Item,
     material: THREE.Material,
     materials: MaterialLibrary,
+    optional: OptionalMaterial,
 ): [THREE.Object3D, THREE.Object3D] {
     const [upper, lower] = spec.fold ?? [part.h, 0];
     const upperPart = {...part, y: part.y + part.h - upper, h: upper, props: {...part.props, handle: 'none'}};
     const lowerPart = {...part, h: lower, props: {...part.props, handle: part.props['handle'] ?? 'horizontal'}};
-    return [buildFront(upperPart, item, material, materials), buildFront(lowerPart, item, material, materials)];
+    return [buildFront(upperPart, item, material, materials, optional), buildFront(lowerPart, item, material, materials, optional)];
 }
 
 /** One part as a mesh (or a group, for a front with its handle) in the parts' frame, metres. */
@@ -253,6 +261,7 @@ function buildPart(
     pictures: PictureLibrary | null,
     room: Room | undefined,
     roofs: FloorRoofs,
+    optional: OptionalMaterial = () => undefined,
 ): THREE.Object3D {
     const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
     switch (part.type) {
@@ -271,7 +280,7 @@ function buildPart(
         case 'block':
             return box(part, shaded(material(grain), part.props['shade'], materials));
         case 'front':
-            return buildFront(part, item, material(grain), materials);
+            return buildFront(part, item, material(grain), materials, optional);
         case 'cylinder':
             return buildCylinder(part, material('vertical'));
         case 'cushion':
@@ -508,16 +517,39 @@ function box(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     return boxAt(material, part.x * MM, part.y * MM, part.z * MM, part.w * MM, part.h * MM, part.d * MM);
 }
 
-/** Door or drawer leaf (the part's box) with a bar handle: vertical on doors, horizontal on drawers by default. */
-function buildFront(part: ResolvedPart, item: Item, material: THREE.Material, materials: MaterialLibrary): THREE.Group {
+/** The material of a front's optional slot (`frameMaterial`, `handleMaterial`), or undefined to keep its own look. */
+type OptionalMaterial = (slot: unknown, grain: GrainDirection) => THREE.Material | undefined;
+
+/** The handle kinds of a front's `handle` option. */
+const FrontHandles: readonly FrontHandle[] = ['horizontal', 'vertical', 'knob', 'edge', 'gola', 'push', 'none'];
+
+/**
+ * Door or drawer leaf (the part's box) in its `style` (`buildFrontBody()`) with its handle (`buildFrontHandle()`): a bar,
+ * vertical on doors and horizontal on drawers by default, in the `handleMaterial` slot's material or black.
+ */
+function buildFront(
+    part: ResolvedPart,
+    item: Item,
+    material: THREE.Material,
+    materials: MaterialLibrary,
+    optional: OptionalMaterial = () => undefined,
+): THREE.Group {
     const group = new THREE.Group();
-    group.add(box(part, material));
+    const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
+    const frameMaterial = optional(part.props['frameMaterial'], grain) ?? material;
+    for (const mesh of buildFrontBody(part, frontStyleOf(part.props), part.props['frame'], material, frameMaterial)) {
+        group.add(mesh);
+    }
     const drawer = part.props['kind'] === 'drawer';
-    const handle = part.props['handle'] ?? (drawer ? 'horizontal' : 'vertical');
-    if (handle === 'horizontal' || handle === 'vertical') {
-        const edge = part.props['handleSide'] === 'left' ? 'left' : 'right';
-        const front = {left: part.x, width: part.w, bottom: part.y, height: part.h};
-        group.add(buildHandle(handle, front, part.z + part.d, item.z, edge, materials));
+    const wanted = part.props['handle'] ?? (drawer ? 'horizontal' : 'vertical');
+    const handle = FrontHandles.includes(wanted as FrontHandle) ? (wanted as FrontHandle) : 'none';
+    const edge = part.props['handleSide'] === 'left' ? 'left' : 'right';
+    const front = {left: part.x, width: part.w, bottom: part.y, height: part.h};
+    const length = typeof part.props['handleLength'] === 'number' && part.props['handleLength'] > 0 ? part.props['handleLength'] : undefined;
+    const handleMaterial = optional(part.props['handleMaterial'], 'horizontal');
+    const mesh = buildFrontHandle(handle, front, part.z + part.d, item.z, edge, drawer, materials, handleMaterial, length);
+    if (mesh !== null) {
+        group.add(mesh);
     }
     return group;
 }

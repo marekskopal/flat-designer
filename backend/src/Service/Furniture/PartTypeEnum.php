@@ -18,7 +18,11 @@ enum PartTypeEnum: string
 	 * sides, or only the left / right edge), e.g. a chair seat.
 	 */
 	case Board = 'board';
-	/** Door or drawer leaf with a handle, as on the kitchen cabinets; it opens as its `Motion` options say. */
+	/**
+	 * Door or drawer leaf with a handle, as on the kitchen cabinets; it opens as its `Motion` options say. Its `style`
+	 * (`FrontStyles`) and `handle` (`Handles`) set its look; a `frameMaterial` or `handleMaterial` slot the item does not
+	 * fill and that has no default keeps the front's own material or the black handle.
+	 */
 	case Front = 'front';
 	/**
 	 * A solid box not cut from sheet material: stone, concrete, cast or solid metal, a solid timber bar, fabric;
@@ -71,6 +75,18 @@ enum PartTypeEnum: string
 	case Assembly = 'assembly';
 
 	private const array Grain = ['vertical', 'horizontal'];
+
+	/**
+	 * A front's look: a plain slab; a frame round a recessed panel; flutes on its face; a frame round clear glass or
+	 * reeded glass. The frame is `frame` mm wide (0 or none: the style's own) in the `frameMaterial` slot's material.
+	 */
+	public const array FrontStyles = ['flat', 'shaker', 'fluted', 'glass', 'reeded'];
+
+	/**
+	 * A front's handle: a bar across or along it (`handleLength` mm, none: by the front), a knob, an edge pull on its top
+	 * (or, out of reach, bottom) edge, a gola channel, push-to-open or none; in the `handleMaterial` slot's material.
+	 */
+	public const array Handles = ['horizontal', 'vertical', 'knob', 'edge', 'gola', 'push', 'none'];
 
 	private const array Sides = ['left', 'right', 'bottom', 'top', 'back', 'front'];
 
@@ -227,8 +243,13 @@ enum PartTypeEnum: string
 			] + self::Pose,
 			self::Front => [
 				'kind' => ['door', 'drawer'],
-				'handle' => ['horizontal', 'vertical', 'none'],
+				'style' => self::FrontStyles,
+				'frame' => 'number',
+				'frameMaterial' => 'slot',
+				'handle' => self::Handles,
 				'handleSide' => ['left', 'right'],
+				'handleMaterial' => 'slot',
+				'handleLength' => 'number',
 				'grain' => self::Grain,
 				'edges' => 'sides',
 			] + self::Motion + self::Pose,

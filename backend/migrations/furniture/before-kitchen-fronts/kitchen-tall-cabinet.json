@@ -1,0 +1,549 @@
+{
+ "name": "Kitchen tall cabinet",
+ "description": "Tall cabinet or appliance column on a plinth: fronts stacked from the bottom (doors with shelves behind them, drawers with their boxes, lift-up, bi-fold and parallel lift flaps), with oven and microwave fronts. softClose damps the closing of the fronts. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge).",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňská vysoká skříň",
+    "description": "Vysoká skříň nebo vestavná sestava pro spotřebiče na soklu: čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, výklop nahoru, lomený výklop a paralelní zdvih), s čely trouby a mikrovlnné trouby. softClose tlumí dovírání čel. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici).",
+    "parameters": {
+     "fronts": "Čela odspodu",
+     "fronts.type": "Typ",
+     "fronts.height": "Výška",
+     "fronts.count": "Křídla",
+     "fronts.handle": "Úchytka",
+     "plinth": "Sokl",
+     "plinthVent": "Větrací mřížka v soklu",
+     "handle": "Úchytka",
+     "handleSide": "Strana úchytky jednokřídlých dvířek",
+     "softClose": "Tlumené dovírání",
+     "blindLeft": "Slepá část vlevo (roh)",
+     "blindRight": "Slepá část vpravo (roh)",
+     "t": "Deska korpusu",
+     "ft": "Tloušťka čela",
+     "gap": "Spára kolem čel",
+     "recess": "Odsazení soklu"
+    },
+    "options": {
+     "fronts.type": {
+      "door": "dvířka",
+      "drawer": "zásuvka",
+      "liftUp": "výklop nahoru",
+      "bifold": "lomený výklop",
+      "parallelLift": "paralelní zdvih",
+      "oven": "trouba",
+      "microwave": "mikrovlnná trouba"
+     },
+     "fronts.handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná"
+     },
+     "handleSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Čela",
+     "grille": "Mřížka soklu"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Bottom": "Dno",
+     "Top": "Víko",
+     "Back": "Záda",
+     "Plinth": "Sokl",
+     "Plinth grille": "Mřížka soklu",
+     "Plinth grille slat": "Lamela mřížky soklu",
+     "Front slot": "Pole čela",
+     "Front": "Čelo",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Appliance": "Spotřebič",
+     "Shelf": "Police"
+    }
+   }
+  },
+  "size": {
+   "width": 600,
+   "depth": 600,
+   "height": 2200
+  },
+  "parameters": [
+   {
+    "key": "fronts",
+    "label": "Fronts, from the bottom",
+    "type": "list",
+    "minItems": 1,
+    "maxItems": 8,
+    "fields": [
+     {
+      "key": "type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+       "door",
+       "drawer",
+       "liftUp",
+       "bifold",
+       "parallelLift",
+       "oven",
+       "microwave"
+      ],
+      "default": "door"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "int",
+      "min": 1,
+      "optional": true,
+      "unit": "mm"
+     },
+     {
+      "key": "count",
+      "label": "Leaves",
+      "type": "int",
+      "default": 1,
+      "min": 1,
+      "max": 4
+     },
+     {
+      "key": "handle",
+      "label": "Handle",
+      "type": "select",
+      "options": [
+       "horizontal",
+       "vertical",
+       "none"
+      ],
+      "optional": true
+     }
+    ],
+    "default": [
+     {
+      "type": "door"
+     }
+    ]
+   },
+   {
+    "key": "plinth",
+    "label": "Plinth",
+    "type": "int",
+    "default": 100,
+    "min": 0,
+    "max": 300,
+    "unit": "mm"
+   },
+   {
+    "key": "plinthVent",
+    "label": "Ventilation grille in the plinth",
+    "type": "bool",
+    "default": false
+   },
+   {
+    "key": "handle",
+    "label": "Handle",
+    "type": "select",
+    "options": [
+     "horizontal",
+     "vertical",
+     "none"
+    ],
+    "default": "horizontal"
+   },
+   {
+    "key": "handleSide",
+    "label": "Handle side of a single door",
+    "type": "select",
+    "options": [
+     "right",
+     "left"
+    ],
+    "default": "right"
+   },
+   {
+    "key": "softClose",
+    "label": "Soft close",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "blindLeft",
+    "label": "Blind left (corner)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "unit": "mm"
+   },
+   {
+    "key": "blindRight",
+    "label": "Blind right (corner)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "unit": "mm"
+   },
+   {
+    "key": "t",
+    "label": "Carcass board",
+    "type": "int",
+    "default": 18,
+    "min": 12,
+    "max": 30,
+    "unit": "mm"
+   },
+   {
+    "key": "ft",
+    "label": "Front thickness",
+    "type": "int",
+    "default": 19,
+    "min": 12,
+    "max": 40,
+    "unit": "mm"
+   },
+   {
+    "key": "gap",
+    "label": "Gap around fronts",
+    "type": "int",
+    "default": 3,
+    "min": 0,
+    "max": 10,
+    "unit": "mm"
+   },
+   {
+    "key": "recess",
+    "label": "Plinth recess",
+    "type": "int",
+    "default": 50,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "heights": "share(field(fronts, 'height'), H - plinth)",
+   "starts": "offsets(heights)",
+   "carcassD": "D - ft",
+   "slats": "clamp(floor((W - 80) / 10), 1, 100)",
+   "runner": "t + 13 - gap / 2"
+  },
+  "materialSlots": [
+   {
+    "key": "carcass",
+    "label": "Carcass"
+   },
+   {
+    "key": "fronts",
+    "label": "Fronts"
+   },
+   {
+    "key": "grille",
+    "label": "Plinth grille",
+    "default": "aluminium-brushed"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": "plinth",
+    "z": 0,
+    "w": "t",
+    "h": "H - plinth",
+    "d": "carcassD",
+    "material": "carcass",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Bottom",
+    "x": "t",
+    "y": "plinth",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": "t",
+    "y": "H - t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "t",
+    "y": "plinth + t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "H - plinth - 2*t",
+    "d": 4,
+    "material": "carcass"
+   },
+   {
+    "type": "board",
+    "name": "Plinth",
+    "when": "plinth > 0",
+    "x": 2,
+    "y": 0,
+    "z": 0,
+    "w": "W - 4",
+    "h": "plinth",
+    "d": "carcassD - recess",
+    "material": "carcass",
+    "grain": "horizontal",
+    "shade": 0.3
+   },
+   {
+    "type": "block",
+    "name": "Plinth grille",
+    "when": "plinth > 40 && plinthVent",
+    "x": 40,
+    "y": 15,
+    "z": "carcassD - recess",
+    "w": "W - 80",
+    "h": "plinth - 30",
+    "d": 2,
+    "material": "carcass",
+    "grain": "horizontal",
+    "shade": 0.85
+   },
+   {
+    "type": "block",
+    "name": "Plinth grille slat",
+    "when": "plinth > 40 && plinthVent",
+    "repeat": {
+     "count": "slats"
+    },
+    "x": "42 + round(i * (W - 88) / slats)",
+    "y": 15,
+    "z": "carcassD - recess + 2",
+    "w": 4,
+    "h": "plinth - 30",
+    "d": 3,
+    "material": "grille",
+    "grain": "vertical"
+   },
+   {
+    "type": "assembly",
+    "name": "Front slot",
+    "repeat": {
+     "over": "fronts",
+     "as": "f"
+    },
+    "x": "blindLeft",
+    "y": "plinth + starts[f_index]",
+    "z": "carcassD",
+    "w": "W - blindLeft - blindRight",
+    "h": "heights[f_index]",
+    "d": "ft",
+    "parts": [
+     {
+      "type": "front",
+      "name": "Front",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
+      "repeat": {
+       "count": "(f.type == 'door' ? f.count : 1)",
+       "as": "k"
+      },
+      "x": "k * AW / (f.type == 'door' ? f.count : 1) + gap / 2",
+      "y": "gap / 2",
+      "z": 0,
+      "w": "AW / (f.type == 'door' ? f.count : 1) - gap",
+      "h": "AH - gap",
+      "d": "AD",
+      "material": "fronts",
+      "edges": [
+       "left",
+       "right",
+       "bottom",
+       "top"
+      ],
+      "kind": "door",
+      "handle": {
+       "expr": "f.handle ?? handle"
+      },
+      "handleSide": {
+       "expr": "(f.type == 'door' ? f.count : 1) == 2 ? (k == 0 ? 'right' : 'left') : handleSide"
+      },
+      "opens": {
+       "expr": "f.type == 'liftUp' ? 'lift' : f.type == 'bifold' ? 'fold' : f.type == 'parallelLift' ? 'parallel' : 'swing'"
+      },
+      "softClose": {
+       "expr": "softClose"
+      }
+     },
+     {
+      "type": "assembly",
+      "name": "Drawer",
+      "when": "f.type == 'drawer'",
+      "x": "gap / 2",
+      "y": "gap / 2",
+      "z": "30 - carcassD",
+      "w": "AW - gap",
+      "h": "AH - gap",
+      "d": "carcassD - 30 + AD",
+      "opens": "slide",
+      "travel": {
+       "expr": "max(carcassD - 90, 50)"
+      },
+      "softClose": {
+       "expr": "softClose"
+      },
+      "parts": [
+       {
+        "type": "front",
+        "name": "Front",
+        "x": 0,
+        "y": 0,
+        "z": "AD - ft",
+        "w": "AW",
+        "h": "AH",
+        "d": "ft",
+        "material": "fronts",
+        "edges": [
+         "left",
+         "right",
+         "bottom",
+         "top"
+        ],
+        "kind": "drawer",
+        "handle": {
+         "expr": "f.handle ?? handle"
+        }
+       },
+       {
+        "type": "board",
+        "name": "Drawer side",
+        "repeat": {
+         "count": 2,
+         "as": "s"
+        },
+        "x": "s == 0 ? runner : AW - runner - 16",
+        "y": 30,
+        "z": 10,
+        "w": 16,
+        "h": "max(AH - 70, 30)",
+        "d": "AD - ft - 10",
+        "material": "carcass",
+        "edges": [
+         "top"
+        ]
+       },
+       {
+        "type": "board",
+        "name": "Drawer bottom",
+        "x": "runner + 16",
+        "y": 30,
+        "z": 10,
+        "w": "AW - 2 * runner - 32",
+        "h": 8,
+        "d": "AD - ft - 10",
+        "material": "carcass",
+        "grain": "horizontal"
+       },
+       {
+        "type": "board",
+        "name": "Drawer back",
+        "x": "runner + 16",
+        "y": 38,
+        "z": 10,
+        "w": "AW - 2 * runner - 32",
+        "h": "max(AH - 78, 22)",
+        "d": 16,
+        "material": "carcass",
+        "grain": "horizontal",
+        "edges": [
+         "top"
+        ]
+       },
+       {
+        "type": "board",
+        "name": "Drawer inner front",
+        "x": "runner + 16",
+        "y": 38,
+        "z": "AD - ft - 16",
+        "w": "AW - 2 * runner - 32",
+        "h": "max(AH - 78, 22)",
+        "d": 16,
+        "material": "carcass",
+        "grain": "horizontal",
+        "edges": [
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "type": "appliance",
+      "name": "Appliance",
+      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "x": "gap / 2",
+      "y": "gap / 2",
+      "z": 0,
+      "w": "AW - gap",
+      "h": "AH - gap",
+      "d": "AD",
+      "kind": {
+       "expr": "f.type"
+      }
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "when": "f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift'",
+      "repeat": {
+       "count": "floor(AH / 400)",
+       "as": "s"
+      },
+      "x": "t - blindLeft",
+      "y": "round((s + 1) * AH / (floor(AH / 400) + 1)) - round(t / 2)",
+      "z": "20 - carcassD",
+      "w": "W - 2 * t",
+      "h": "t",
+      "d": "carcassD - 40",
+      "material": "carcass",
+      "grain": "horizontal",
+      "edges": [
+       "front"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

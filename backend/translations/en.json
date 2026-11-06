@@ -24,7 +24,12 @@
     },
     "cutList": {
         "definitionGone": "The furniture definition is gone.",
-        "noMaterial": "No material"
+        "noMaterial": "No material",
+        "stile": "stile",
+        "rail": "rail",
+        "panel": "panel",
+        "glass": "glass",
+        "glassMaterial": "Glass"
     },
     "schedules": {
         "notInRoom": "Not in a room"
