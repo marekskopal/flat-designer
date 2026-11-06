@@ -31,9 +31,9 @@ use const JSON_THROW_ON_ERROR;
 /**
  * Electrical schedule of a project or a floor (working copy, shown variants only): the Custom items whose definition has
  * a `category`, and the LED strips as lights (definition 0), per room — the item's `roomId`, otherwise the room whose
- * outline holds its footprint centre — grouped by definition, parameter values and elevation, with the counts per category. The definition's `schedule` settings
- * (`DefinitionSchedule`) say which values count and which parameter multiplies an item. `lighting` links the switches
- * with the lights they control (`LightingCircuits`).
+ * outline holds its footprint centre — grouped by definition, parameter values and elevation, with the counts per
+ * category. The definition's `schedule` settings (`DefinitionSchedule`) say which values count and which parameter
+ * multiplies an item. `lighting` links the switches with the lights they control (`LightingCircuits`).
  */
 final readonly class ElectricalScheduleService
 {
