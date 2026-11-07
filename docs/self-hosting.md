@@ -24,7 +24,7 @@ A small server is enough: 2 CPU cores, 2 GB of memory and disk for the uploads. 
 Requirements: Docker with Compose, `make`, `openssl` and `git`.
 
 ```sh
-git clone --branch v0.3.0 https://github.com/marekskopal/izbik.git
+git clone --branch v0.4.0 https://github.com/marekskopal/izbik.git
 cd izbik
 make env        # creates .env with random secrets and passwords
 ```

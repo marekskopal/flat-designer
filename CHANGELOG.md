@@ -6,6 +6,31 @@ versions follow [semantic versioning](https://semver.org). Upgrading is describe
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-07
+
+### Added
+
+- A modern kitchen catalogue: handle positions on fronts (edge pulls and bars at the top, bottom or side), steam oven
+  and coffee machine fronts with black, white, steel or retro finishes, a sink's drainer side, round range hoods and
+  stepped or pyramid canopies, waterfall ends on the straight and L-shaped worktops, and sinks and hobs cutting their
+  holes in the worktop under them (sinks with real basins).
+- Seating and lighting: a shell chair, chairs and tables with seats and legs in their own materials, oval tables and
+  pedestal bases, bar stool options, pendant clusters, cone, teardrop, disc and wire-cage shades, and LED strips shining
+  up as a cove or out, which switches can control and the electrical schedule counts.
+- 20 materials: stained oak lacquers, painted brick, strip and long metro tiles, compact worktops, smoky glass,
+  upholstery colours and fluted panels.
+- Room zones: another floor material over part of a room, and dropped ceilings (a bulkhead over a kitchen run) over
+  part of its ceiling, over REST and MCP (`add_room` / `update_room`), counted in the quantities.
+- Wall finish bands on a stretch of a wall face (`from` / `to` along the wall: a splashback behind one room's run of a
+  shared wall), and window reveals lined on the room's side with the band there.
+- MCP: `get_floor` for one room (`roomId`) of a big floor; `list_furniture_definitions` gives each definition's
+  catalogue and material slots and filters by catalogue.
+
+### Changed
+
+- The kitchen cabinets, worktops, sink, hob, hood, pendants, bar stool and dining furniture seeds gained options; their
+  existing items look as before.
+
 ## [0.3.0] - 2026-11-05
 
 ### Added
@@ -71,7 +96,8 @@ The first public beta, for running on a server of your own.
 - `make env` gives a new `.env` random database and MinIO passwords.
 - `BACKEND_CORS_ALLOWED_ORIGIN` defaults to empty (no cross-origin calls). Clear `*` in an existing `.env`.
 
-[Unreleased]: https://github.com/marekskopal/izbik/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/marekskopal/izbik/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/marekskopal/izbik/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/marekskopal/izbik/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/marekskopal/izbik/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/marekskopal/izbik/releases/tag/v0.1.0
