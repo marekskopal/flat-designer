@@ -617,7 +617,8 @@ function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly Pl
     const underRoofs = profile === null && roofs.length > 0 ? ceilingUnderRoofs(room, material, voids, roofs) : null;
     group.add(underRoofs ?? ceilingSurface(room, profile, material, voids));
     if (profile === null) {
-        for (const zone of room.ceilingZones ?? []) {
+        // A zone the ceiling no longer takes (lowered since it was set) is left out.
+        for (const zone of (room.ceilingZones ?? []).filter((z) => z.height < (room.ceilingHeight ?? 0))) {
             group.add(buildCeilingZone(zone, room.ceilingHeight ?? 0, zone.materialId === null ? material : materials.get(zone.materialId)));
         }
         return group;
@@ -845,6 +846,8 @@ export function buildWall(
 
 /** How thick a lined reveal's boards are, mm. */
 const RevealBoard = 20;
+/** How much thicker the room's side's boards are, mm, so they cover a façade lining running the whole reveal. */
+const InnerRevealCover = 2;
 
 /**
  * The boards lining an opening's reveal (`revealLining`): its jambs, its head and a window's sill across the
@@ -863,11 +866,10 @@ function revealLining(opening: Opening, wall: Wall, materials: MaterialLibrary, 
     const [x0, x1] = [opening.offset * MM, (opening.offset + opening.width) * MM];
     const [y0, y1] = [opening.sillHeight * MM, (opening.sillHeight + opening.height) * MM];
     const board = RevealBoard * MM;
-    // Across the wall from the inner face (on `side`; the left face is −z) to the façade band on the outer one; with the
-    // room's side lined too (`innerReveals()`), from the frame.
-    const inner = opening.innerRevealLining === true ? innerRevealDepth(opening, wall.thickness) : 0;
-    const z = (-wall.thickness / 2 - (outer === 'Left' ? FacadeLining : 0) + (outer === 'Right' ? inner : 0)) * MM;
-    const depth = (wall.thickness + FacadeLining - inner) * MM;
+    // Across the wall from the inner face (on `side`; the left face is −z) to the façade band on the outer one. A room's
+    // side lined too (`innerReveals()`) covers it there.
+    const z = (-wall.thickness / 2 - (outer === 'Left' ? FacadeLining : 0)) * MM;
+    const depth = (wall.thickness + FacadeLining) * MM;
     const group = new THREE.Group();
     group.name = 'reveal-lining';
     group.add(
@@ -1245,7 +1247,8 @@ function innerReveals(
                 continue;
             }
             const material = materials.upright(band.materialId);
-            const board = RevealBoard * MM;
+            // A little thicker than a façade's lining of the reveal (`revealLining()`), which runs on under them.
+            const board = (RevealBoard + InnerRevealCover) * MM;
             // From inside the wall at the frame out to the finish's front.
             const [z, d] = [-depth * MM, (depth + LiningThickness) * MM];
             const [u0, u1, v0, v1] = [x0 * MM, x1 * MM, sill * MM, head * MM];

@@ -90,7 +90,7 @@ final readonly class SnapshotReader
 		$value = $this->data[$key] ?? null;
 
 		try {
-			return $value === null ? [] : RoomZonesDecoder::floorZones(json_encode($value, JSON_THROW_ON_ERROR));
+			return $value === null ? [] : RoomZonesDecoder::floorZonesOf($value);
 		} catch (RuntimeException $e) {
 			throw $this->invalid($key, 'a list of floor zones', $e);
 		}
@@ -106,7 +106,7 @@ final readonly class SnapshotReader
 		$value = $this->data[$key] ?? null;
 
 		try {
-			return $value === null ? [] : RoomZonesDecoder::ceilingZones(json_encode($value, JSON_THROW_ON_ERROR));
+			return $value === null ? [] : RoomZonesDecoder::ceilingZonesOf($value);
 		} catch (RuntimeException $e) {
 			throw $this->invalid($key, 'a list of ceiling zones', $e);
 		}

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Izbik\Service\Editor\Element;
 
+use Izbik\Model\Entity\Wall;
 use Izbik\Service\Editor\Exception\EditException;
 use Izbik\Service\Editor\FieldReader;
+use Izbik\Service\Editor\Geometry\WallLine;
 use const JSON_THROW_ON_ERROR;
 
 /**
@@ -72,28 +74,48 @@ final readonly class WallFinishBands
 	}
 
 	/**
-	 * A face's bands on a wall turned round: their stretches measured from the new start, along a wall `length` long.
+	 * A wall's face bands after its line changed to `$line`, unless the request sets them (undo, redo): turned round
+	 * (`$reversed`), its faces swap, so the bands stay on the same side of the plan, and their stretches' ends are
+	 * projected onto the new line, so they stay where they were on the plan as the openings do (counted from the other
+	 * end of a wall turned round, an open start becoming an open end).
 	 *
-	 * @param list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null $bands
-	 * @return list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null
+	 * @param list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null $left
+	 * @param list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null $right
+	 * @return array{list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null, list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null}
 	 */
-	public static function turned(?array $bands, int $length): ?array
+	public static function followWall(Wall $wall, ?array $left, ?array $right, WallLine $line, bool $reversed): array
 	{
-		if ($bands === null) {
-			return null;
+		if (self::encodeFace($left) !== $wall->leftFinishes || self::encodeFace($right) !== $wall->rightFinishes) {
+			return [$left, $right];
+		}
+		$old = WallLine::fromWall($wall);
+		$move = static fn (?array $bands): ?array => $bands === null
+			? null
+			: array_map(static fn (array $band): array => self::movedBand($band, $old, $line, $reversed), $bands);
+
+		return $reversed ? [$move($right), $move($left)] : [$move($left), $move($right)];
+	}
+
+	/**
+	 * @param array{materialId: int, bottom: int, top: int, from?: int, to?: int} $band
+	 * @return array{materialId: int, bottom: int, top: int, from?: int, to?: int}
+	 */
+	private static function movedBand(array $band, WallLine $old, WallLine $new, bool $reversed): array
+	{
+		$at = static fn (int $end): int => max((int) round($new->along($old->point($end, 0.0))), 0);
+		[$from, $to] = [isset($band['from']) ? $at($band['from']) : null, isset($band['to']) ? $at($band['to']) : null];
+		if ($reversed) {
+			[$from, $to] = [$to, $from];
+		}
+		$moved = ['materialId' => $band['materialId'], 'bottom' => $band['bottom'], 'top' => $band['top']];
+		if ($from !== null) {
+			$moved['from'] = $from;
+		}
+		if ($to !== null) {
+			$moved['to'] = max($to, ($from ?? 0) + 1);
 		}
 
-		return array_map(static function (array $band) use ($length): array {
-			$turned = ['materialId' => $band['materialId'], 'bottom' => $band['bottom'], 'top' => $band['top']];
-			if (isset($band['to'])) {
-				$turned['from'] = max($length - $band['to'], 0);
-			}
-			if (isset($band['from'])) {
-				$turned['to'] = max($length - $band['from'], 1);
-			}
-
-			return $turned;
-		}, $bands);
+		return $moved;
 	}
 
 	/**

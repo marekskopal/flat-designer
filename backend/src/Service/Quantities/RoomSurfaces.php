@@ -53,7 +53,7 @@ final class RoomSurfaces
 		$surfaces = new self();
 		$points = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room->polygon);
 		$area = abs(PlanMath::signedArea($points));
-		$zoned = $surfaces->addFloorZones($room);
+		$zoned = $surfaces->addFloorZones($room, $voids);
 		if ($room->floorMaterialId !== null) {
 			$surfaces->add(
 				QuantitySurfaceEnum::Floor,
@@ -134,13 +134,17 @@ final class RoomSurfaces
 	}
 
 	/**
-	 * The floor zones in their materials (taken not to overlap); returns their area, which the floor material leaves.
+	 * The floor zones in their materials (taken not to overlap), less the voids; returns their area, which the floor
+	 * material leaves.
+	 *
+	 * @param list<FloorVoidDto> $voids
 	 */
-	private function addFloorZones(RoomDto $room): float
+	private function addFloorZones(RoomDto $room, array $voids): float
 	{
 		$total = 0.0;
 		foreach ($room->floorZones as $zone) {
-			$area = abs(PlanMath::signedArea(self::points($zone['polygon'])));
+			// The voids are cut out of a zone as out of the floor (`VoidArea`), so the floor takes off the rest.
+			$area = max(0.0, abs(PlanMath::signedArea(self::points($zone['polygon']))) - VoidArea::of($zone['polygon'], $voids));
 			$this->add(QuantitySurfaceEnum::Floor, $zone['materialId'], $area);
 			$total += $area;
 		}
@@ -149,17 +153,21 @@ final class RoomSurfaces
 	}
 
 	/**
-	 * The dropped ceilings: each zone's soffit and its sides up to the ceiling, in its material (else the ceiling's). The
-	 * room's ceiling above them stays counted.
+	 * The dropped ceilings: each zone's soffit and its sides up to the ceiling (not those against the room's walls), in
+	 * its material (else the ceiling's). The room's ceiling above them stays counted.
 	 */
 	private function addCeilingZones(RoomDto $room): void
 	{
-		if ($room->ceilingHeight === null) {
+		if ($room->ceilingHeight === null || $room->vaultSpacing !== null) {
 			return;
 		}
 		foreach ($room->ceilingZones as $zone) {
+			// A zone the ceiling no longer takes (lowered since) is not drawn.
+			if ($zone['height'] >= $room->ceilingHeight) {
+				continue;
+			}
 			$points = self::points($zone['polygon']);
-			$sides = PlanMath::perimeter($points) * max(0, $room->ceilingHeight - $zone['height']);
+			$sides = RoomZoneSides::exposed($points, self::points($room->polygon)) * ($room->ceilingHeight - $zone['height']);
 			$this->add(
 				QuantitySurfaceEnum::Ceiling,
 				$zone['materialId'] ?? $room->ceilingMaterialId,

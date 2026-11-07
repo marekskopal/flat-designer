@@ -143,10 +143,28 @@ final readonly class RoomHandler implements ElementHandler
 			'floorElevation' => $fields->raw('floorElevation') === null ? 0 : self::floorElevation($fields),
 		] + $ceiling + [
 			'soffitMaterialId' => $soffitMaterialId,
-			// Missing in older change states: none.
-			'floorZones' => $this->zones->floorZones($fields->raw('floorZones'), $polygon),
-			'ceilingZones' => $this->zones->ceilingZones($fields->raw('ceilingZones'), $polygon, $ceilingHeight, $ceiling['vaultSpacing']),
-		];
+		] + $this->zones($fields, $polygon, $ceilingHeight, $ceiling['vaultSpacing'], $current === null ? null : self::cast($current));
+	}
+
+	/**
+	 * The zones (missing in older change states: none), placed in the room only when set anew: a room reshaped, lowered
+	 * or vaulted since keeps the ones it has.
+	 *
+	 * @param list<array{int, int}> $polygon
+	 * @return array{floorZones: list<array{polygon: list<array{int, int}>, materialId: int}>, ceilingZones: list<array{polygon: list<array{int, int}>, height: int, materialId: int|null}>}
+	 */
+	private function zones(FieldReader $fields, array $polygon, ?int $ceilingHeight, ?int $vaultSpacing, ?Room $current): array
+	{
+		$floor = $this->zones->floorZones($fields->raw('floorZones'), $polygon, placed: false);
+		if (RoomZones::encode($floor) !== $current?->floorZones) {
+			$floor = $this->zones->floorZones($fields->raw('floorZones'), $polygon);
+		}
+		$ceiling = $this->zones->ceilingZones($fields->raw('ceilingZones'), $polygon, $ceilingHeight, $vaultSpacing, placed: false);
+		if (RoomZones::encode($ceiling) !== $current?->ceilingZones) {
+			$ceiling = $this->zones->ceilingZones($fields->raw('ceilingZones'), $polygon, $ceilingHeight, $vaultSpacing);
+		}
+
+		return ['floorZones' => $floor, 'ceilingZones' => $ceiling];
 	}
 
 	public function create(Floor $floor, array $state): Room

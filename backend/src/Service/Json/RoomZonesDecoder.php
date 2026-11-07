@@ -12,8 +12,18 @@ final readonly class RoomZonesDecoder
 	/** @return list<array{polygon: list<array{int, int}>, materialId: int}> */
 	public static function floorZones(string $json): array
 	{
+		return self::floorZonesOf(JsonDecoder::decode($json));
+	}
+
+	/**
+	 * Floor zones already decoded (a snapshot's).
+	 *
+	 * @return list<array{polygon: list<array{int, int}>, materialId: int}>
+	 */
+	public static function floorZonesOf(mixed $data): array
+	{
 		$zones = [];
-		foreach (self::zones($json) as $zone) {
+		foreach (self::zones($data) as $zone) {
 			if (!is_int($zone['materialId'] ?? null)) {
 				throw new RuntimeException('Floor zone needs an integer materialId.');
 			}
@@ -26,8 +36,18 @@ final readonly class RoomZonesDecoder
 	/** @return list<array{polygon: list<array{int, int}>, height: int, materialId: int|null}> */
 	public static function ceilingZones(string $json): array
 	{
+		return self::ceilingZonesOf(JsonDecoder::decode($json));
+	}
+
+	/**
+	 * Ceiling zones already decoded (a snapshot's).
+	 *
+	 * @return list<array{polygon: list<array{int, int}>, height: int, materialId: int|null}>
+	 */
+	public static function ceilingZonesOf(mixed $data): array
+	{
 		$zones = [];
-		foreach (self::zones($json) as $zone) {
+		foreach (self::zones($data) as $zone) {
 			$materialId = $zone['materialId'] ?? null;
 			if (!is_int($zone['height'] ?? null) || $materialId !== null && !is_int($materialId)) {
 				throw new RuntimeException('Ceiling zone needs an integer height and materialId or null.');
@@ -42,9 +62,8 @@ final readonly class RoomZonesDecoder
 	}
 
 	/** @return list<array<mixed>> */
-	private static function zones(string $json): array
+	private static function zones(mixed $data): array
 	{
-		$data = JsonDecoder::decode($json);
 		if (!is_array($data) || !array_is_list($data)) {
 			throw new RuntimeException('Expected a JSON list of zones.');
 		}

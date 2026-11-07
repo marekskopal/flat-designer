@@ -575,7 +575,7 @@ The current format is the text in `FurnitureTools::Format`.
   and side covers which stretch of a room edge; `buildWallFinishes()` and `RoomSurfaces` use them.
 - Band stretches (I-170): a face's own band may line only a stretch of it, `from` / `to` mm along the wall's centre line
   from its start (either may be missing; a room's bands may not have them; turning the wall round counts them from the
-  other end, `WallFinishBands::turned()`). Where none of a face's bands lies and it has none without a stretch, the
+  other end, `WallFinishBands::moved()`). Where none of a face's bands lies and it has none without a stretch, the
   room's bands line it (a façade: its default); inside a stretch only the face's own bands do. The twins are
   `FaceBands` (`Service/Editor/Geometry`) and `faceBandStretches()` / `faceBandsAt()` (`viewer/engine/face-bands.ts`),
   kept identical by `backend/tests/fixtures/face-bands.json`. **Always change both twins and add a fixture case in the
@@ -583,8 +583,12 @@ The current format is the text in `FurnitureTools::Format`.
   `RoomFace::stretches()` (room quantities, mapping the edge onto the wall's centre line) and `FacadeSurfaces` (per
   strip) follow them. An opening's `innerRevealLining` lines the room's side of its reveal (jambs, head, a window's
   sill) from the face on `side` back to the frame (`innerRevealDepth()`) with the band lining the edge there
-  (`innerReveals()` in `buildWallFinishes()`, straight walls only; not in the quantities or sheets); a `revealLining`
-  then stops at the frame.
+  (`innerReveals()` in `buildWallFinishes()`, straight walls only; not in the quantities or sheets), its boards
+  `InnerRevealCover` thicker than a `revealLining`'s, which still runs through the whole reveal under them. Moving or
+  turning a wall projects the stretches' ends onto its new line (`WallFinishBands::moved()`), unless the request sets
+  the bands. Room zones are placed (in the outline, under a flat ceiling) only when set anew: a room changed since
+  keeps them, and the viewer and quantities leave out a ceiling zone its ceiling no longer takes; a ceiling zone's
+  sides against the walls are not counted (`RoomZoneSides`), nor a floor zone's part over a void.
 - Façades (I-88): a wall face outside every indoor room is a façade (`FacadeSpans::of()` / `facadeSpans()` in
   `ceilings.ts`, twins kept identical by the `facades` cases of `wall-spans.json`: each face's mitred extent less the
   stretches indoor room edges run along; open-air rooms, a garden by the house, cover none). It draws its own

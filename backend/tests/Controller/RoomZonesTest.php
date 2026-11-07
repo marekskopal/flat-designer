@@ -82,8 +82,15 @@ final class RoomZonesTest extends EditorTestCase
 			$this->edit('PATCH', 'rooms', self::id($room), ['ceilingZones' => [$zone], 'ceilingHeight' => null])->getStatusCode(),
 		);
 		self::assertSame(200, $this->edit('PATCH', 'rooms', self::id($room), ['ceilingZones' => [$zone]])->getStatusCode());
-		// A ceiling lowered under a zone's soffit is refused while the zone is there.
-		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['ceilingHeight' => 2320])->getStatusCode());
+		// Zones are placed when set anew: the room may be lowered under a zone's soffit or reshaped past a zone since,
+		// keeping its zones (the viewer and the quantities leave out a ceiling zone its ceiling no longer takes).
+		self::assertSame(200, $this->edit('PATCH', 'rooms', self::id($room), ['ceilingHeight' => 2320])->getStatusCode());
+		$small = [[500, 500], [4000, 500], [4000, 3000], [500, 3000]];
+		self::assertSame(200, $this->edit('PATCH', 'rooms', self::id($room), ['polygon' => $small])->getStatusCode());
+		self::assertSame([[[...$zone, 'materialId' => null]]], array_column($this->sceneList('rooms'), 'ceilingZones'));
+		// Set anew, they are placed again.
+		$moved = [['polygon' => [[0, 0], [900, 0], [900, 1000], [0, 1000]], 'height' => 2200]];
+		self::assertSame(422, $this->edit('PATCH', 'rooms', self::id($room), ['ceilingZones' => $moved])->getStatusCode());
 	}
 
 	private static function materialId(string $code): int

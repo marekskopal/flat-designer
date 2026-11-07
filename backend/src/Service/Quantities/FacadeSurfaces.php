@@ -84,9 +84,7 @@ final readonly class FacadeSurfaces
 		$top = new WallTop($line, $wall->height, $wall->upToRoof, $roofs, $wall->heightEnd);
 		$bottom = new WallBottom($line, $wall->baseStart, $wall->baseEnd, $wall->onGround ? $ground : null);
 		$own = $wall->finishesOn($side);
-		$bands = $own ?? [];
 		$floorStanding = !$wall->onGround && $wall->baseStart === 0 && $wall->baseEnd === 0;
-		$plinth = $floorStanding ? min([0.0, ...array_map(static fn (WallFinishDto $band): float => (float) $band->bottom, $bands)]) : null;
 		$openings = array_values(array_filter(
 			$wall->openings,
 			static fn (OpeningDto $o): bool => $o->type !== OpeningTypeEnum::Niche || ($o->side ?? OpeningSideEnum::Left) === $side,
@@ -97,9 +95,13 @@ final readonly class FacadeSurfaces
 			for ($x = $from; $x < $to; $x += self::Step) {
 				$width = min(self::Step, $to - $x);
 				$middle = $x + $width / 2;
-				$low = $plinth ?? $bottom->at($middle);
-				$high = $top->at($middle);
 				$lining = FaceBands::at($own, $middle);
+				// On the floor, the lowest band lining the strip reaches below its level (a plinth); the default façade
+				// starts on it.
+				$low = $floorStanding
+					? min([0.0, ...array_map(static fn (WallFinishDto $band): float => (float) $band->bottom, $lining ?? [])])
+					: $bottom->at($middle);
+				$high = $top->at($middle);
 				foreach (self::heights($lining ?? [], $openings, $middle, $low, $high) as [$materialId, $height]) {
 					$amounts[] = [$materialId, $width * $height, $lining === null];
 				}

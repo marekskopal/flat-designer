@@ -190,7 +190,8 @@ final class QuantitiesControllerTest extends EditorTestCase
 
 	/**
 	 * A 1 × 2 m floor zone in oak counts in oak and comes off the floor tiles; a 600 × 3000 mm dropped ceiling 300 mm
-	 * deep counts its soffit and sides in its material, the room's ceiling staying whole.
+	 * deep along the west wall counts its soffit and its one side out in the room in its material, the room's ceiling
+	 * staying whole.
 	 */
 	public function testFloorAndCeilingZonesCountInTheirMaterials(): void
 	{
@@ -205,13 +206,22 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(10.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
 		self::assertEqualsWithDelta(2.0, $lines['Floor:' . $oak->id]['area'], 0.01);
 		self::assertEqualsWithDelta(12.0, $lines['Ceiling:-']['area'], 0.01);
-		// 1.8 m² of soffit and 7.2 m × 0.3 m of sides.
-		self::assertEqualsWithDelta(1.8 + 2.16, $lines['Ceiling:' . $paint->id]['area'], 0.01);
+		// 1.8 m² of soffit and 3 m × 0.3 m of side: the other three lie against the walls.
+		self::assertEqualsWithDelta(1.8 + 0.9, $lines['Ceiling:' . $paint->id]['area'], 0.01);
 	}
 
-	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+	/** A floor zone over a void counts only where there is floor, as the viewer draws it. */
+	public function testAFloorZoneOverAVoidCountsWithoutIt(): void
+	{
+		$oak = self::material('kitchen-oak');
+		$this->buildRoom(null, ['floorZones' => [['polygon' => [[0, 0], [1000, 0], [1000, 2000], [0, 2000]], 'materialId' => $oak->id]]]);
+		$this->create('voids', ['polygon' => [[0, 0], [1000, 0], [1000, 1000], [0, 1000]]]);
 
-	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(1.0, $lines['Floor:' . $oak->id]['area'], 0.01);
+		// 12 m² less the void and the zone's metre left.
+		self::assertEqualsWithDelta(10.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
+	}
 
 	/**
 	 * An attic under a 45° gable from 1 m at its eaves (over the room's long edges): the ceiling slopes within 1.5 m of

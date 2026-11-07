@@ -59,35 +59,42 @@ final readonly class RoomZones
 	}
 
 	/**
-	 * Checked floor zones; missing (older states) is none.
+	 * Checked floor zones; missing (older states) is none. Their corners are checked against the room's `outline` only
+	 * when `$placed` (zones set anew), so a room reshaped since keeps them.
 	 *
 	 * @param list<array{int, int}> $outline the room's
 	 * @return list<FloorZone>
 	 */
-	public function floorZones(mixed $zones, array $outline): array
+	public function floorZones(mixed $zones, array $outline, bool $placed = true): array
 	{
 		$normalized = [];
 		foreach (self::list($zones, 'floorZones') as $zone) {
 			$fields = new FieldReader($zone);
 			$materialId = $fields->nullableId('materialId') ?? throw EditException::invalid('Every floor zone needs a materialId.');
 			$this->materialResolver->resolve($materialId);
-			$normalized[] = ['polygon' => self::polygon($fields->raw('polygon'), $outline), 'materialId' => $materialId];
+			$normalized[] = ['polygon' => self::polygon($fields->raw('polygon'), $placed ? $outline : null), 'materialId' => $materialId];
 		}
 
 		return $normalized;
 	}
 
 	/**
-	 * Checked ceiling zones; missing (older states) is none. They need a flat ceiling.
+	 * Checked ceiling zones; missing (older states) is none. Set anew (`$placed`), they need a flat ceiling over them
+	 * and to lie in the room's outline; a room changed since keeps them (the viewer and the quantities leave out one its
+	 * ceiling no longer takes).
 	 *
 	 * @param list<array{int, int}> $outline the room's
 	 * @return list<CeilingZone>
 	 */
-	public function ceilingZones(mixed $zones, array $outline, ?int $ceilingHeight, ?int $vaultSpacing): array
+	public function ceilingZones(mixed $zones, array $outline, ?int $ceilingHeight, ?int $vaultSpacing, bool $placed = true): array
 	{
 		$list = self::list($zones, 'ceilingZones');
 		if ($list === []) {
 			return [];
+		}
+		if (!$placed) {
+			$ceilingHeight = State::MaxSize + self::MinDrop;
+			$vaultSpacing = null;
 		}
 		if ($ceilingHeight === null) {
 			throw EditException::invalid('An open-air room has no ceiling to hang a ceiling zone from.');
@@ -102,7 +109,7 @@ final readonly class RoomZones
 			$materialId = $fields->nullableId('materialId');
 			$this->materialResolver->resolve($materialId);
 			$normalized[] = [
-				'polygon' => self::polygon($fields->raw('polygon'), $outline),
+				'polygon' => self::polygon($fields->raw('polygon'), $placed ? $outline : null),
 				'height' => $fields->int('height', self::MinHeight, $ceilingHeight - self::MinDrop),
 				'materialId' => $materialId,
 			];
@@ -140,15 +147,18 @@ final readonly class RoomZones
 	}
 
 	/**
-	 * @param list<array{int, int}> $outline
+	 * @param list<array{int, int}>|null $outline the room's to lie in; null: not checked
 	 * @return list<array{int, int}>
 	 */
-	private static function polygon(mixed $polygon, array $outline): array
+	private static function polygon(mixed $polygon, ?array $outline): array
 	{
 		if (!is_array($polygon) || count($polygon) < 3 || count($polygon) > self::MaxPoints) {
 			throw EditException::invalid(sprintf('The polygon of a zone must be a list of 3 to %d [x, y] points.', self::MaxPoints));
 		}
 		$points = PolygonValidator::validate($polygon, State::CoordinateLimit);
+		if ($outline === null) {
+			return $points;
+		}
 		$room = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $outline);
 		foreach ($points as [$x, $y]) {
 			if (!self::inside($room, [(float) $x, (float) $y])) {

@@ -145,12 +145,8 @@ final readonly class WallHandler implements ElementHandler
 		// Turning the wall round turns its faces round: unless the request sets the bands (undo, redo), they stay
 		// on the same side of the plan, as the openings do; so do its curve, its sloping top and its base unless the
 		// request sets them.
-		$turnedFaces = false;
-		if ($currentWall !== null && self::reverses($currentWall, $normalized)) {
-			if (self::keepsFaces($currentWall, $normalized)) {
-				[$normalized['leftFinishes'], $normalized['rightFinishes']] = [$normalized['rightFinishes'], $normalized['leftFinishes']];
-				$turnedFaces = true;
-			}
+		$reversed = $currentWall !== null && self::reverses($currentWall, $normalized);
+		if ($currentWall !== null && $reversed) {
 			$normalized['sagitta'] = WallCurve::turnedRound($currentWall->sagitta, $normalized['sagitta']);
 			[$normalized['height'], $normalized['heightEnd'], $normalized['baseStart'], $normalized['baseEnd']] = WallBase::turnedRound(
 				$currentWall,
@@ -164,10 +160,14 @@ final readonly class WallHandler implements ElementHandler
 			throw EditException::invalid(sprintf('A wall must be at least %d mm long.', self::MinLength));
 		}
 		WallCurve::check($line);
-		if ($turnedFaces) {
-			// The bands' stretches count from the other end now.
-			$normalized['leftFinishes'] = WallFinishBands::turned($normalized['leftFinishes'], $length);
-			$normalized['rightFinishes'] = WallFinishBands::turned($normalized['rightFinishes'], $length);
+		if ($currentWall !== null) {
+			[$normalized['leftFinishes'], $normalized['rightFinishes']] = WallFinishBands::followWall(
+				$currentWall,
+				$normalized['leftFinishes'],
+				$normalized['rightFinishes'],
+				$line,
+				$reversed,
+			);
 		}
 		$this->wallBase->checkOverGround($normalized, $line, $floor->id, $currentWall);
 
@@ -292,13 +292,6 @@ final readonly class WallHandler implements ElementHandler
 		$dy = $wall->endY - $wall->startY;
 
 		return $dx * ($next['endX'] - $next['startX']) + $dy * ($next['endY'] - $next['startY']) < 0;
-	}
-
-	/** @param array{leftFinishes: mixed, rightFinishes: mixed, ...} $next */
-	private static function keepsFaces(Wall $wall, array $next): bool
-	{
-		return WallFinishBands::encodeFace($next['leftFinishes']) === $wall->leftFinishes
-			&& WallFinishBands::encodeFace($next['rightFinishes']) === $wall->rightFinishes;
 	}
 
 	/**

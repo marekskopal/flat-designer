@@ -49,9 +49,17 @@ export function worktopCutters(items: readonly Item[], definitions: DefinitionLi
     return cutters;
 }
 
-/** The cutters of a scene: its shown sinks and hobs (`worktopCutters()`). */
+/** The cutters of each scene object worked out so far: a scene patch compares the previous scene's with the new one's. */
+const cuttersOfScene = new WeakMap<Scene, WorktopCutter[]>();
+
+/** The cutters of a scene: its shown sinks and hobs (`worktopCutters()`), once per scene object. */
 export function sceneCutters(scene: Scene): WorktopCutter[] {
-    return worktopCutters(scene.items, new Map((scene.definitions ?? []).map((d) => [d.id, d])), hiddenItemIds(scene));
+    let cutters = cuttersOfScene.get(scene);
+    if (cutters === undefined) {
+        cutters = worktopCutters(scene.items, new Map((scene.definitions ?? []).map((d) => [d.id, d])), hiddenItemIds(scene));
+        cuttersOfScene.set(scene, cutters);
+    }
+    return cutters;
 }
 
 /** Whether an item is a worktop taking the cut-outs (`cutout: worktop`). */
@@ -60,8 +68,26 @@ export function isCutWorktop(item: Item, definitions: DefinitionLibrary): boolea
     return definition !== undefined && cutoutRoleOf(definition.definition) === 'worktop';
 }
 
-/** The holes a sink or hob cuts, as rectangles in its parts' frame (mm, x along the width, z towards the front). */
+/**
+ * The holes of each item object with the definition they were worked out from: unchanged items keep their objects
+ * across scene patches, so an undermount sink's definition is evaluated again only when it or its definition changed.
+ */
+const holesOfItem = new WeakMap<Item, {definition: unknown; holes: Pair[][]}>();
+
+/** The holes a sink or hob cuts (`itemHoles()`), worked out once per item object and definition. */
 function cutterHoles(item: Item, definitions: DefinitionLibrary): Pair[][] {
+    const definition = item.definitionId === null ? undefined : definitions.get(item.definitionId)?.definition;
+    const known = holesOfItem.get(item);
+    if (known !== undefined && known.definition === definition) {
+        return known.holes;
+    }
+    const holes = itemHoles(item, definitions);
+    holesOfItem.set(item, {definition, holes});
+    return holes;
+}
+
+/** The holes a sink or hob cuts, as rectangles in its parts' frame (mm, x along the width, z towards the front). */
+function itemHoles(item: Item, definitions: DefinitionLibrary): Pair[][] {
     if (item.kind === 'Sink') {
         return [inset(footprint(item), SinkRim)];
     }

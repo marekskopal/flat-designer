@@ -693,6 +693,11 @@ final class ElementControllerTest extends EditorTestCase
 		);
 		self::assertSame(200, $this->undo()->getStatusCode());
 		self::assertSame([$band], $this->sceneList('walls')[0]['leftFinishes']);
+
+		// Moving the start keeps the stretch where it is on the plan, as the openings.
+		$moved = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => -500]));
+		self::assertIsArray($moved['element']);
+		self::assertSame([[...$band, 'from' => 1500, 'to' => 3000]], $moved['element']['leftFinishes']);
 	}
 
 	public function testSiteWallsSlopeAndStandOnABaseOrTheGround(): void

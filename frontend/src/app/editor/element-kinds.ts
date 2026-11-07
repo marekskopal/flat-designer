@@ -79,8 +79,11 @@ export function findElement(scene: Scene, kind: ElementKind, id: number): Record
     }
 }
 
-/** What an item counts as in the electrical schedule: its definition's `category`, null for none. */
+/** What an item counts as in the electrical schedule: its definition's `category` (an LED strip is a light), null for none. */
 export function itemCategory(scene: Scene, item: Pick<Item, 'kind' | 'definitionId'>): ElectricalCategory | null {
+    if (item.kind === 'LedStrip') {
+        return 'light';
+    }
     if (item.kind !== 'Custom' || item.definitionId === null) {
         return null;
     }
