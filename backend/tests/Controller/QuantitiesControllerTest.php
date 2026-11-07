@@ -305,6 +305,26 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(4 * 0.4, $lines['Wall:' . $paint->id]['area'], 0.001);
 	}
 
+	public function testAWallFaceBandOnAStretchLeavesTheRestToTheRoom(): void
+	{
+		$terrazzo = self::material('terrazzo-white');
+		$wallTiles = self::material('tile-wall-beige');
+		$paint = self::material('wall-paint-white');
+		// 2100–3100 mm along the south wall (from x −100): 2000–3000 along the room's edge, clear of the door.
+		$this->buildRoom(
+			$paint,
+			[],
+			['leftFinishes' => [['materialId' => $terrazzo->id, 'bottom' => 0, 'top' => 2100, 'from' => 2100, 'to' => 3100]]],
+		);
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(1.0 * 2.1, $lines['WallFinish:' . $terrazzo->id]['area'], 0.001);
+		// The other 10 m and the south edge's other 3 m up to 1.2 m, without the window's bottom 0.3 m and the door's 0.9 × 1.2.
+		self::assertEqualsWithDelta(12 - 0.3 + 3 * 1.2 - 0.9 * 1.2, $lines['WallFinish:' . $wallTiles->id]['area'], 0.001);
+		// Paint above the terrazzo and above the room's band elsewhere on the south edge, less the door's 0.9 × 0.8.
+		self::assertEqualsWithDelta(1.0 * 0.4 + 3 * 1.3 - 0.9 * 0.8, $lines['Wall:' . $paint->id]['area'], 0.001);
+	}
+
 	public function testAWallFaceWithAnEmptyFinishIsPainted(): void
 	{
 		$paint = self::material('wall-paint-white');
@@ -368,6 +388,31 @@ final class QuantitiesControllerTest extends EditorTestCase
 		// and west faces, which are interior walls: no render anywhere.
 		self::assertEqualsWithDelta(4.4 * 2.6 - 1.8 + (4.4 + 3.4) * 2.6, $lines['-']['area'], 0.01);
 		self::assertArrayNotHasKey($render->id, $lines);
+	}
+
+	public function testAFacadeBandOnAStretchLeavesTheRestToTheProjectsFacade(): void
+	{
+		$render = self::material('wall-paint-white');
+		$terrazzo = self::material('terrazzo-white');
+		// A plinth on the first metre along the south wall's outer face only; the door is 500–1400 along it.
+		$this->buildRoom(null, [], [
+			'type' => 'Exterior',
+			'rightFinishes' => [['materialId' => $terrazzo->id, 'bottom' => 0, 'top' => 600, 'from' => 0, 'to' => 1000]],
+		]);
+		$this->project->exteriorMaterial = $render;
+		Fixture::service(ProjectRepository::class)->persist($this->project);
+
+		$lines = [];
+		foreach (self::rows(self::rows($this->quantities()['facades'])[0]['lines']) as $line) {
+			$materialId = $line['materialId'];
+			$lines[is_int($materialId) ? $materialId : '-'] = $line;
+		}
+		// The plinth, less the door's 0.5 × 0.6 in it.
+		self::assertEqualsWithDelta(1.0 * 0.6 - 0.5 * 0.6, $lines[$terrazzo->id]['area'], 0.01);
+		// The render on the rest of the 4.4 m face, less the door's other 0.4 × 2.0.
+		self::assertEqualsWithDelta(3.4 * 2.6 - 0.4 * 2.0, $lines[$render->id]['area'], 0.01);
+		// Above the plinth the wall's own look (the band's stretch is the face's own), and the three interior walls'.
+		self::assertEqualsWithDelta(1.0 * 2.0 - 0.5 * 1.4 + (4.4 + 3.4 + 3.4) * 2.6 - 1.2, $lines['-']['area'], 0.01);
 	}
 
 	public function testAnExteriorWallTakesTheProjectsFacade(): void

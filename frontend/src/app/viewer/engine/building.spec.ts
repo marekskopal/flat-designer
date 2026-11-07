@@ -174,6 +174,42 @@ describe('buildWallFinishes', () => {
         expect(pieces(buildWallFinishes(room, [south(null)], materials), 'herringbone')).toHaveLength(4);
     });
 
+    it('lines only the stretch of a face its own band names, and the rest with the room\'s', () => {
+        // The wall starts 50 mm west of the room's corner: 550–1550 along it is 500–1500 along the edge.
+        const group = buildWallFinishes(room, [south([{materialId: 2, bottom: 0, top: 2100, from: 550, to: 1550}])], materials);
+        const terrazzo = pieces(group, 'terrazzo');
+        const box = new THREE.Box3();
+        terrazzo.forEach((mesh) => box.expandByObject(mesh));
+        expect([Math.round(box.min.x * 1000), Math.round(box.max.x * 1000), Math.round(box.max.y * 1000)]).toEqual([500, 1500, 2100]);
+        const herringbone = new THREE.Box3();
+        pieces(group, 'herringbone').forEach((mesh) => herringbone.expandByObject(mesh));
+        // The room's band still runs round all four edges, the south one either side of the stretch.
+        expect([Math.round(herringbone.min.x * 1000) + 0, Math.round(herringbone.max.x * 1000)]).toEqual([0, 2000]);
+    });
+
+    it('lines the room\'s side of a window\'s reveal back to its frame with the band there', () => {
+        // A 300 mm wall with its face on the room's edge; an 80 mm frame in the middle leaves a 110 mm reveal.
+        const window: Opening = {...niche, id: 9, type: 'Window', offset: 800, width: 600, height: 1200, sillHeight: 900, side: 'Left'};
+        const thick = (opening: Opening): Wall => ({
+            ...south([{materialId: 2, bottom: 0, top: 2100}]),
+            startY: -150,
+            endY: -150,
+            thickness: 300,
+            openings: [opening],
+        });
+        const reach = (opening: Opening): number[] => {
+            const box = new THREE.Box3();
+            pieces(buildWallFinishes(room, [thick(opening)], materials), 'terrazzo').forEach((mesh) => box.expandByObject(mesh));
+            // Plan y is the scene's −z: into the wall is +z.
+            return [Math.round(box.max.z * 1000)];
+        };
+
+        expect(reach(window)).toEqual([0]);
+        expect(reach({...window, innerRevealLining: true})).toEqual([110]);
+        // On the other face (the room's side not the window's `side`), nothing.
+        expect(reach({...window, side: 'Right', innerRevealLining: true})).toEqual([0]);
+    });
+
     it('lays a curved face\'s bands along its arc, across the pieces of the outline', () => {
         // The south wall bows 300 mm out of the room; the room's outline follows its face in pieces.
         const curved: Wall = {...south([{materialId: 2, bottom: 0, top: 2100}]), sagitta: -300};

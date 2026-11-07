@@ -78,7 +78,8 @@ final readonly class IzbikServer
 		A wall face outside every room is a façade: its own leftFinishes / rightFinishes run along it (render,
 		cladding, a plinth starting below the floor); exterior walls nobody set take the project's exteriorMaterialId
 		(update_project). A room's soffitMaterialId clads its slab where it overhangs the floor below; an opening's
-		revealLining lines its reveal with the façade. Doors and windows take frameMaterialId, leafMaterialId and
+		revealLining lines its reveal with the façade, innerRevealLining the room's side of it with the room's band (a
+		splashback into a window's reveal); a face's band with from / to lines one stretch of the wall only. Doors and windows take frameMaterialId, leafMaterialId and
 		outsideFrameMaterialId (timber-aluminium), a frame set in from the outer face (inset) and boarded leaves
 		(leafStyle Boarded); a garage (room type Garage) gets a GarageDoor (garageDoorStyle), and lift-and-slide
 		glazing is a SlidingDoor with fixedPanes. A room's floorZones lay another floor material over part of it (a

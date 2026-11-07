@@ -35,6 +35,7 @@ final class OpeningDefaults
 		'shuttersClosed' => false,
 		'depth' => null,
 		'revealLining' => false,
+		'innerRevealLining' => false,
 		'frameMaterialId' => null,
 		'outsideFrameMaterialId' => null,
 		'leafMaterialId' => null,

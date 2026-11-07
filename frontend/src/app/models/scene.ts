@@ -111,6 +111,10 @@ export interface WallFinish {
     materialId: number;
     bottom: number;
     top: number;
+    /** A wall face's band only: mm along the wall's centre line from its start where it begins (missing: the face's start). */
+    from?: number;
+    /** A wall face's band only: where it ends (missing: the face's end). */
+    to?: number;
 }
 
 /** Another floor material over part of a room's floor (`RoomZones`): its outline in plan mm, inside the room's. */
@@ -454,6 +458,8 @@ export interface Opening {
     shuttersClosed?: boolean;
     /** The reveal (jambs and head across the wall) is lined with the outer face's band; missing: bare. */
     revealLining?: boolean;
+    /** Lines the room's side of the reveal, from the face on `side` to the frame, with the band there (missing: false). */
+    innerRevealLining?: boolean;
     /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
     depth?: number | null;
     /**

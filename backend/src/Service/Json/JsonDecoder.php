@@ -55,7 +55,7 @@ final class JsonDecoder
 		return $points;
 	}
 
-	/** @return list<array{materialId: int, bottom: int, top: int}> */
+	/** @return list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}> */
 	public static function decodeWallFinishes(string $json): array
 	{
 		$data = self::decode($json);
@@ -74,10 +74,32 @@ final class JsonDecoder
 			if (!is_int($materialId) || !is_int($bottom) || !is_int($top) || $top <= $bottom) {
 				throw new RuntimeException('Wall finish needs integer materialId, bottom and top (top > bottom).');
 			}
-			$bands[] = ['materialId' => $materialId, 'bottom' => $bottom, 'top' => $top];
+			$bands[] = ['materialId' => $materialId, 'bottom' => $bottom, 'top' => $top, ...self::decodeStretch($band)];
 		}
 
 		return $bands;
+	}
+
+	/**
+	 * A wall finish's `from` / `to` along its wall, those given.
+	 *
+	 * @param array<mixed> $band
+	 * @return array{from?: int, to?: int}
+	 */
+	private static function decodeStretch(array $band): array
+	{
+		$stretch = [];
+		foreach (['from', 'to'] as $key) {
+			$end = $band[$key] ?? null;
+			if ($end !== null && !is_int($end)) {
+				throw new RuntimeException('Wall finish from / to must be integers.');
+			}
+			if ($end !== null) {
+				$stretch[$key] = $end;
+			}
+		}
+
+		return $stretch;
 	}
 
 	/** @return list<array{edge: string, along: int}> */

@@ -21,7 +21,10 @@ final readonly class WallTools
 		'type' => ['array', 'null'],
 		'description' => 'wall finish bands on this face, mm above the floor, replacing the bands of the room the face borders; '
 			. '[] leaves the face bare (paint only). On a façade (a face outside every room: render, cladding) they run along '
-			. 'the whole face, and may start below the floor (a plinth over the slab\'s edge)',
+			. 'the whole face, and may start below the floor (a plinth over the slab\'s edge). A band with from / to (mm along '
+			. 'the wall\'s centre line from its start, as opening offsets) lines only that stretch: one room\'s stretch of a '
+			. 'wall running along several rooms (a splashback behind one kitchen); where no band of a face lies and it has '
+			. 'none without from / to, the room\'s bands (a façade\'s default) line it',
 		'items' => WallFinishBands::BandSchema,
 		'default' => null,
 	];

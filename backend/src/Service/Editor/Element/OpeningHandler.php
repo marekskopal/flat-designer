@@ -90,6 +90,7 @@ final readonly class OpeningHandler implements ElementHandler
 			'shuttersClosed',
 			'depth',
 			'revealLining',
+			'innerRevealLining',
 			'frameMaterialId',
 			'outsideFrameMaterialId',
 			'leafMaterialId',
@@ -208,7 +209,9 @@ final readonly class OpeningHandler implements ElementHandler
 				: ($fields->nullableEnum('frameStyle', DoorFrameStyleEnum::class) ?? DoorFrameStyleEnum::Lining)->value,
 			'depth' => $depth,
 			// Missing in older change states: a bare reveal. A niche has none.
-			'revealLining' => $type !== OpeningTypeEnum::Niche && $fields->bool('revealLining'),
+			'revealLining' => self::lined($type, $fields, 'revealLining'),
+			// Missing in older change states too.
+			'innerRevealLining' => self::lined($type, $fields, 'innerRevealLining'),
 			'inset' => OpeningClearances::inset(
 				$type,
 				$look['fixedPanes'],
@@ -362,6 +365,7 @@ final readonly class OpeningHandler implements ElementHandler
 		$opening->shuttersClosed = $fields->bool('shuttersClosed');
 		$opening->depth = $fields->nullableInt('depth', 1, State::MaxSize);
 		$opening->revealLining = $fields->bool('revealLining');
+		$opening->innerRevealLining = $fields->bool('innerRevealLining');
 		$opening->frameMaterial = $this->materialResolver->resolve($fields->nullableId('frameMaterialId'));
 		$opening->outsideFrameMaterial = $this->materialResolver->resolve($fields->nullableId('outsideFrameMaterialId'));
 		$opening->leafMaterial = $this->materialResolver->resolve($fields->nullableId('leafMaterialId'));
@@ -387,5 +391,11 @@ final readonly class OpeningHandler implements ElementHandler
 		assert($element instanceof Opening);
 
 		return $element;
+	}
+
+	/** Whether a reveal is lined (`revealLining`, `innerRevealLining`); a niche has none. */
+	private static function lined(OpeningTypeEnum $type, FieldReader $fields, string $field): bool
+	{
+		return $type !== OpeningTypeEnum::Niche && $fields->bool($field);
 	}
 }

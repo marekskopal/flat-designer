@@ -249,7 +249,10 @@ final class Fixture
 			height: 2600,
 			material: $material,
 		));
-		$wall->leftFinishes = $material === null ? null : '[{"materialId":' . $material->id . ',"bottom":0,"top":2100}]';
+		$wall->leftFinishes = $material === null
+			? null
+			: '[{"materialId":' . $material->id . ',"bottom":0,"top":2100},{"materialId":' . $material->id
+			. ',"bottom":2100,"top":2400,"from":500,"to":1500}]';
 		$wall->rightFinishes = '[]';
 		$wall->upToRoof = true;
 		self::service(WallRepository::class)->persist($wall);
@@ -289,6 +292,7 @@ final class Fixture
 		));
 		$frenchWindow->walkable = true;
 		$frenchWindow->revealLining = true;
+		$frenchWindow->innerRevealLining = true;
 		$frenchWindow->outsideFrameMaterial = $material;
 		self::service(OpeningRepository::class)->persist($frenchWindow);
 

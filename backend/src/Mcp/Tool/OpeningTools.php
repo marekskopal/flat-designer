@@ -64,6 +64,9 @@ final readonly class OpeningTools
 	 * @param bool|null $shuttersClosed window with shutters: closed across the window (default false: folded back against the wall)
 	 * @param bool|null $revealLining true: the reveal (jambs and head across the wall) is lined with the outer face's band, as a
 	 *   clad façade's window box (default false)
+	 * @param bool|null $innerRevealLining true: the room's side of the reveal (from the face on `side` to the frame: jambs, head
+	 *   and a window's sill) is lined with the finish band there (the face's own, else the room's wallFinishes), e.g. a
+	 *   tiled splashback running into a window's reveal (default false)
 	 * @param int|null $depth niche: mm into the wall from its `side` face, leaving at least 30 mm of wall behind it (default half the wall thickness)
 	 */
 	#[McpTool(
@@ -98,6 +101,7 @@ final readonly class OpeningTools
 		?bool $shuttersClosed = null,
 		?int $depth = null,
 		?bool $revealLining = null,
+		?bool $innerRevealLining = null,
 		?string $boardDirection = null,
 		?string $garageDoorStyle = null,
 		?int $fixedPanes = null,
@@ -136,6 +140,7 @@ final readonly class OpeningTools
 				'shuttersClosed' => $shuttersClosed,
 				'depth' => $depth,
 				'revealLining' => $revealLining,
+				'innerRevealLining' => $innerRevealLining,
 				'boardDirection' => $boardDirection,
 				'garageDoorStyle' => $garageDoorStyle,
 				'fixedPanes' => $fixedPanes,
@@ -175,6 +180,9 @@ final readonly class OpeningTools
 	 * @param bool|null $shuttersClosed window with shutters: closed (true) or folded back (false)
 	 * @param bool|null $revealLining true: the reveal (jambs and head across the wall) is lined with the outer face's band, as a
 	 *   clad façade's window box (default false)
+	 * @param bool|null $innerRevealLining true: the room's side of the reveal (from the face on `side` to the frame: jambs, head
+	 *   and a window's sill) is lined with the finish band there (the face's own, else the room's wallFinishes), e.g. a
+	 *   tiled splashback running into a window's reveal (default false)
 	 * @param int|null $depth niche: mm into the wall from its `side` face (leaving at least 30 mm behind it)
 	 * @param list<string>|null $clear fields to set to none: "leafWidth", "hinge", "side", "handle" (the type's default handle), "sillBoard", "panelHeight", "shutters", "shutterMaterialId", "frameMaterialId", "outsideFrameMaterialId", "leafMaterialId", "inset"
 	 */
@@ -210,6 +218,7 @@ final readonly class OpeningTools
 		?bool $shuttersClosed = null,
 		?int $depth = null,
 		?bool $revealLining = null,
+		?bool $innerRevealLining = null,
 		?string $boardDirection = null,
 		?string $garageDoorStyle = null,
 		?int $fixedPanes = null,
@@ -249,6 +258,7 @@ final readonly class OpeningTools
 				'shuttersClosed' => $shuttersClosed,
 				'depth' => $depth,
 				'revealLining' => $revealLining,
+				'innerRevealLining' => $innerRevealLining,
 				'boardDirection' => $boardDirection,
 				'garageDoorStyle' => $garageDoorStyle,
 				'fixedPanes' => $fixedPanes,

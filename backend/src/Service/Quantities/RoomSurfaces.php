@@ -208,55 +208,14 @@ final class RoomSurfaces
 	 */
 	private function addFace(RoomDto $room, array $face, ?float $wallTop, ?RoofCover $cover, array $a, array $b): void
 	{
-		if ($cover === null) {
-			$this->addWallFace($room, $face, $wallTop);
-			return;
-		}
-		foreach (RoomFaceUnderRoof::amounts($room, $face, $wallTop, $cover, $a, $b) as [$surface, $materialId, $amount]) {
-			$this->add($surface, $materialId, $amount);
-		}
-	}
-
-	/** @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face */
-	private function addWallFace(RoomDto $room, array $face, ?float $wallTop): void
-	{
-		$top = $wallTop === null ? (float) $face['wall']->height : min((float) $face['wall']->height, $wallTop);
-		$bands = [];
-		foreach ($face['wall']->finishesOn($face['side']) ?? $room->wallFinishes as $band) {
-			$bottom = max((float) $band->bottom, 0.0);
-			$bandTop = min((float) $band->top, $top);
-			if ($bandTop <= $bottom) {
-				continue;
-			}
-
-			$this->add(QuantitySurfaceEnum::WallFinish, $band->materialId, self::faceArea($face, $bottom, $bandTop));
-			$bands[] = [$bottom, $bandTop];
-		}
-		if ($wallTop === null) {
-			return;
-		}
-
-		foreach (Spans::uncovered($top, $bands) as [$bottom, $paintTop]) {
-			$this->add(QuantitySurfaceEnum::Wall, $face['wall']->materialId, self::faceArea($face, $bottom, $paintTop));
-		}
-	}
-
-	/**
-	 * Area of the face between two heights, without its openings.
-	 *
-	 * @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face
-	 */
-	private static function faceArea(array $face, float $bottom, float $top): float
-	{
-		$area = ($face['to'] - $face['from']) * ($top - $bottom);
-		foreach ($face['gaps'] as $gap) {
-			$height = min((float) $gap['top'], $top) - max((float) $gap['bottom'], $bottom);
-			if ($height > 0) {
-				$area -= ($gap['to'] - $gap['from']) * $height;
+		foreach (RoomFace::stretches($room, $face, $a, $b) as [$stretch, $bands]) {
+			$amounts = $cover === null
+				? RoomFace::amounts($stretch, $bands, $wallTop)
+				: RoomFaceUnderRoof::amounts($room, $stretch, $wallTop, $cover, $a, $b, $bands);
+			foreach ($amounts as [$surface, $materialId, $amount]) {
+				$this->add($surface, $materialId, $amount);
 			}
 		}
-
-		return max($area, 0.0);
 	}
 
 	private function add(QuantitySurfaceEnum $surface, ?int $materialId, float $amount): void

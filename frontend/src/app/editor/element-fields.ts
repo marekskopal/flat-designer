@@ -451,6 +451,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         },
         {key: 'walkable', label: 'fields.walkable', type: 'bool', when: (element) => element['type'] === 'Window'},
         {key: 'revealLining', label: 'fields.revealLining', type: 'bool', when: (element) => element['type'] !== 'Niche'},
+        {key: 'innerRevealLining', label: 'fields.innerRevealLining', type: 'bool', when: (element) => element['type'] !== 'Niche'},
     ],
     plot: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},

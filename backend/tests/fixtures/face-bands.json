@@ -1,0 +1,49 @@
+{
+	"description": "Cases for the wall face band twins: FaceBands::stretches() (PHP) and faceBandStretches() (TS, viewer/engine/face-bands.ts). bands are a face's own finish bands (null: none of its own; from / to mm along the wall's centre line), from / to the stretch of the wall asked about. Expected stretches give the indices of the bands lining each (null: none of the face's own: the room's or the façade's default).",
+	"cases": [
+		{"name": "no own bands", "bands": null, "from": 0, "to": 4000, "stretches": [{"from": 0, "to": 4000, "bands": null}]},
+		{"name": "a bare face", "bands": [], "from": 0, "to": 4000, "stretches": [{"from": 0, "to": 4000, "bands": []}]},
+		{
+			"name": "bands along the whole face",
+			"bands": [{"materialId": 1, "bottom": 0, "top": 2100}, {"materialId": 2, "bottom": 2100, "top": 2600}],
+			"from": 500, "to": 4000,
+			"stretches": [{"from": 500, "to": 4000, "bands": [0, 1]}]
+		},
+		{
+			"name": "one room's stretch of a shared wall",
+			"bands": [{"materialId": 1, "bottom": 900, "top": 1500, "from": 1200, "to": 3000}],
+			"from": 0, "to": 6000,
+			"stretches": [{"from": 0, "to": 1200, "bands": null}, {"from": 1200, "to": 3000, "bands": [0]}, {"from": 3000, "to": 6000, "bands": null}]
+		},
+		{
+			"name": "an open end and the stretch asked about inside it",
+			"bands": [{"materialId": 1, "bottom": 0, "top": 1000, "to": 2500}],
+			"from": 1000, "to": 4000,
+			"stretches": [{"from": 1000, "to": 2500, "bands": [0]}, {"from": 2500, "to": 4000, "bands": null}]
+		},
+		{
+			"name": "stretched bands over a whole one",
+			"bands": [{"materialId": 1, "bottom": 0, "top": 2600}, {"materialId": 2, "bottom": 900, "top": 1500, "from": 1000, "to": 2000}, {"materialId": 3, "bottom": 900, "top": 1500, "from": 1800, "to": 3000}],
+			"from": 0, "to": 4000,
+			"stretches": [
+				{"from": 0, "to": 1000, "bands": [0]},
+				{"from": 1000, "to": 1800, "bands": [0, 1]},
+				{"from": 1800, "to": 2000, "bands": [0, 1, 2]},
+				{"from": 2000, "to": 3000, "bands": [0, 2]},
+				{"from": 3000, "to": 4000, "bands": [0]}
+			]
+		},
+		{
+			"name": "touching stretches of the same band list stay apart",
+			"bands": [{"materialId": 1, "bottom": 0, "top": 900, "from": 0, "to": 1000}, {"materialId": 1, "bottom": 0, "top": 900, "from": 1000, "to": 2000}],
+			"from": 0, "to": 3000,
+			"stretches": [{"from": 0, "to": 1000, "bands": [0]}, {"from": 1000, "to": 2000, "bands": [1]}, {"from": 2000, "to": 3000, "bands": null}]
+		},
+		{
+			"name": "a stretch outside the wall asked about",
+			"bands": [{"materialId": 1, "bottom": 0, "top": 900, "from": 5000, "to": 6000}],
+			"from": 0, "to": 3000,
+			"stretches": [{"from": 0, "to": 3000, "bands": null}]
+		}
+	]
+}

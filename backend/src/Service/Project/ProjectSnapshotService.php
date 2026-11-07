@@ -425,6 +425,7 @@ final readonly class ProjectSnapshotService
 				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
 				// Snapshots taken before façades: a bare reveal.
 				$restored->revealLining = $opening->raw('revealLining') === true;
+				$restored->innerRevealLining = $opening->raw('innerRevealLining') === true;
 				// And before niches.
 				$restored->depth = $opening->nullableInt('depth');
 				// And before opening materials, garage doors, fixed panes and insets.

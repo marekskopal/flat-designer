@@ -2,6 +2,7 @@ import {isOutdoorRoom, Opening, Room, Scene, Wall, WallFinish} from '@app/models
 import * as THREE from 'three';
 
 import {FacadeRoom, facadeSpans} from './ceilings';
+import {faceBandsAt, faceBandStretches} from './face-bands';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {curvedPrismAt} from './meshes';
@@ -34,8 +35,8 @@ export function buildFacades(
     const exterior = scene.exteriorMaterialId ?? null;
     const rooms = scene.rooms.map((r: Room): FacadeRoom => ({polygon: r.polygon, outdoor: isOutdoorRoom(r)}));
     for (const face of facadeSpans(scene.walls, rooms)) {
-        const bands = facadeBands(face.wall, face.side, exterior);
-        if (bands.length === 0) {
+        const stretches = face.spans.flatMap(([from, to]) => facadeStretches(face.wall, face.side, exterior, from, to));
+        if (stretches.every((stretch) => stretch.bands.length === 0)) {
             continue;
         }
         const frame = wallFrame(face.wall);
@@ -48,7 +49,7 @@ export function buildFacades(
         const facade = new THREE.Group();
         facade.name = `facade:${face.wall.name}`;
         facade.userData = {wallId: face.wall.id};
-        for (const [from, to] of face.spans) {
+        for (const {from, to, bands} of stretches) {
             for (const band of bands) {
                 const material = materials.upright(band.materialId);
                 const gaps = openings.flatMap((o) => gapIn(o, from, to, band));
@@ -70,16 +71,34 @@ export function buildFacades(
 }
 
 /**
- * A façade face's bands: its own, else on an exterior wall without a material of its own the project's façade
- * (`exterior`) over the whole face; none otherwise (the wall's material shows, or with `[]` the bare wall).
+ * A façade face's bands at `along` (mm along the wall's centre line): its own lining it there (`faceBandsAt()`), else
+ * on an exterior wall without a material of its own the project's façade (`exterior`) over the whole height; none
+ * otherwise (the wall's material shows, or with `[]` the bare wall).
  */
-export function facadeBands(wall: Wall, side: 'Left' | 'Right', exterior: number | null): WallFinish[] {
-    // Walls from before own bands (an older version's snapshot, a share link of one) have none: as null.
-    const own = (side === 'Left' ? wall.leftFinishes : wall.rightFinishes) ?? null;
-    if (own !== null && own.length > 0) {
-        return own;
-    }
-    if (own === null && wall.type === 'Exterior' && wall.materialId === null && exterior !== null) {
+export function facadeBandsAt(wall: Wall, side: 'Left' | 'Right', exterior: number | null, along: number): WallFinish[] {
+    return faceBandsAt(ownBands(wall, side), along) ?? defaultFacade(wall, exterior);
+}
+
+/** A stretch of a façade face (mm along the wall) and the bands lining it. */
+export interface FacadeStretch {
+    from: number;
+    to: number;
+    bands: WallFinish[];
+}
+
+/** A façade face's stretches `from`–`to` along the wall with the bands lining each, as `facadeBandsAt()` gives them. */
+export function facadeStretches(wall: Wall, side: 'Left' | 'Right', exterior: number | null, from: number, to: number): FacadeStretch[] {
+    return faceBandStretches(ownBands(wall, side), from, to).map((stretch) => ({...stretch, bands: stretch.bands ?? defaultFacade(wall, exterior)}));
+}
+
+/** A face's own bands; walls from before them (an older version's snapshot, a share link of one) have none: as null. */
+function ownBands(wall: Wall, side: 'Left' | 'Right'): WallFinish[] | null {
+    return (side === 'Left' ? wall.leftFinishes : wall.rightFinishes) ?? null;
+}
+
+/** The project's façade on an exterior wall without a material of its own, where a face has no bands of its own. */
+function defaultFacade(wall: Wall, exterior: number | null): WallFinish[] {
+    if (wall.type === 'Exterior' && wall.materialId === null && exterior !== null) {
         const grounded = wall.onGround === true || (wall.baseStart ?? 0) !== 0 || (wall.baseEnd ?? 0) !== 0;
         return [{materialId: exterior, bottom: grounded ? -Whole : 0, top: Whole}];
     }

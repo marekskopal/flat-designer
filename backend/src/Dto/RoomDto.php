@@ -65,7 +65,7 @@ final readonly class RoomDto
 			ceilingHeight: $room->ceilingHeight,
 			floorMaterialId: $room->floorMaterial?->id,
 			wallFinishes: $room->wallFinishes === null ? [] : array_map(
-				fn (array $band): WallFinishDto => new WallFinishDto($band['materialId'], $band['bottom'], $band['top']),
+				WallFinishDto::fromArray(...),
 				JsonDecoder::decodeWallFinishes($room->wallFinishes),
 			),
 			tileOriginX: $room->tileOriginX,

@@ -1,10 +1,10 @@
 import {levelText} from '@app/core/level-text';
-import {isOutdoorRoom, Material, Opening, PlanPoint, Plot, Railing, Room, Scene, Stair, Wall, WallFinish} from '@app/models/scene';
+import {isOutdoorRoom, Material, Opening, PlanPoint, Plot, Railing, Room, Scene, Stair, Wall} from '@app/models/scene';
 import polygonClipping, {MultiPolygon, Polygon, Ring} from 'polygon-clipping';
 
 import {isSiteWall} from './building';
 import {chimneyOutline, chimneyTop, isChimney} from './chimneys';
-import {facadeBands} from './facades';
+import {FacadeStretch, facadeStretches} from './facades';
 import {
     alongWall,
     DoorFrameWidth,
@@ -252,8 +252,9 @@ class ViewCollector {
             this.site = isSiteWall(wall);
             const faces = wallFaces(wall, joints.get(wall.id));
             for (const side of ['Left', 'Right'] as const) {
-                const bands = facadeBands(wall, side, scene.exteriorMaterialId ?? null);
-                const face = {side, points: side === 'Left' ? faces.left : faces.right, bands};
+                const stretches = (from: number, to: number): FacadeStretch[] =>
+                    facadeStretches(wall, side, scene.exteriorMaterialId ?? null, from, to);
+                const face = {side, points: side === 'Left' ? faces.left : faces.right, stretches};
                 this.wallFace(wall, face, {roofs, plots: scene.plots ?? [], e, colours, indoor});
             }
         }
@@ -393,7 +394,7 @@ class ViewCollector {
      */
     private wallFace(
         wall: Wall,
-        {side, points, bands}: {side: 'Left' | 'Right'; points: readonly Vec2[]; bands: readonly WallFinish[]},
+        {side, points, stretches}: {side: 'Left' | 'Right'; points: readonly Vec2[]; stretches: (from: number, to: number) => FacadeStretch[]},
         {roofs, plots, e, colours, indoor}: FloorContext,
     ): void {
         const frame = wallFrame(wall);
@@ -421,18 +422,24 @@ class ViewCollector {
             const middle = lerp(a, b, 0.5);
             const probe = {x: middle.x + (outward.x / length) * 20, y: middle.y + (outward.y / length) * 20};
             const facade = length > 0 && !indoor.some((polygon) => pointInPolygon(probe, polygon));
-            for (const band of facade ? bands : []) {
-                const piece = clipView(outline, e + band.bottom, e + band.top);
-                if (piece.length >= 3) {
-                    const fill = lighten(colours.get(band.materialId) ?? PlainWall);
-                    shapes.push({points: piece, closed: true, style: {fill, stroke: Muted, width: Thin}});
-                }
-            }
-            if (facade && bands.length > 0) {
-                shapes.push({points: outline, closed: true, style: {stroke: Line, width: Medium}});
-            }
             const across = side === 'Left' ? wall.thickness / 2 : -wall.thickness / 2;
             const [from, to] = [alongWall(frame, along[0]), alongWall(frame, along[along.length - 1])].sort((x, y) => x - y);
+            // The bands, each on the stretch of the face it lines.
+            const lined = facade ? stretches(from, to) : [];
+            for (const stretch of lined) {
+                const [u0, u1] = [stretch.from, stretch.to].map((w) => this.u(pointOnWall(frame, w, across))).sort((x, y) => x - y);
+                const part = lined.length === 1 ? outline : clipView(outline, u0, u1, 'u');
+                for (const band of stretch.bands) {
+                    const piece = clipView(part, e + band.bottom, e + band.top);
+                    if (piece.length >= 3) {
+                        const fill = lighten(colours.get(band.materialId) ?? PlainWall);
+                        shapes.push({points: piece, closed: true, style: {fill, stroke: Muted, width: Thin}});
+                    }
+                }
+            }
+            if (lined.some((stretch) => stretch.bands.length > 0)) {
+                shapes.push({points: outline, closed: true, style: {stroke: Line, width: Medium}});
+            }
             for (const opening of wall.openings) {
                 if (opening.type === 'Niche' && opening.side !== side) {
                     continue;
@@ -649,8 +656,8 @@ function rectangle(u0: number, u1: number, v0: number, v1: number, style: Style)
     return {points: [p(u0, v0), p(u1, v0), p(u1, v1), p(u0, v1)], closed: true, style};
 }
 
-/** The part of a view polygon between two levels (Sutherland–Hodgman twice). */
-function clipView(points: readonly ViewPoint[], low: number, high: number): ViewPoint[] {
+/** The part of a view polygon between two levels (`v`), or two places across the paper (`u`) (Sutherland–Hodgman twice). */
+function clipView(points: readonly ViewPoint[], low: number, high: number, axis: 'u' | 'v' = 'v'): ViewPoint[] {
     const clip = (input: readonly ViewPoint[], keep: (q: ViewPoint) => number): ViewPoint[] => {
         const out: ViewPoint[] = [];
         input.forEach((a, i) => {
@@ -666,7 +673,7 @@ function clipView(points: readonly ViewPoint[], low: number, high: number): View
         });
         return out;
     };
-    return clip(clip(points, (q) => q.v - low), (q) => high - q.v);
+    return clip(clip(points, (q) => q[axis] - low), (q) => high - q[axis]);
 }
 
 /**

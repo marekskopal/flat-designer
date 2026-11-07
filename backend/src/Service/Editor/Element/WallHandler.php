@@ -145,9 +145,11 @@ final readonly class WallHandler implements ElementHandler
 		// Turning the wall round turns its faces round: unless the request sets the bands (undo, redo), they stay
 		// on the same side of the plan, as the openings do; so do its curve, its sloping top and its base unless the
 		// request sets them.
+		$turnedFaces = false;
 		if ($currentWall !== null && self::reverses($currentWall, $normalized)) {
 			if (self::keepsFaces($currentWall, $normalized)) {
 				[$normalized['leftFinishes'], $normalized['rightFinishes']] = [$normalized['rightFinishes'], $normalized['leftFinishes']];
+				$turnedFaces = true;
 			}
 			$normalized['sagitta'] = WallCurve::turnedRound($currentWall->sagitta, $normalized['sagitta']);
 			[$normalized['height'], $normalized['heightEnd'], $normalized['baseStart'], $normalized['baseEnd']] = WallBase::turnedRound(
@@ -162,6 +164,11 @@ final readonly class WallHandler implements ElementHandler
 			throw EditException::invalid(sprintf('A wall must be at least %d mm long.', self::MinLength));
 		}
 		WallCurve::check($line);
+		if ($turnedFaces) {
+			// The bands' stretches count from the other end now.
+			$normalized['leftFinishes'] = WallFinishBands::turned($normalized['leftFinishes'], $length);
+			$normalized['rightFinishes'] = WallFinishBands::turned($normalized['rightFinishes'], $length);
+		}
 		$this->wallBase->checkOverGround($normalized, $line, $floor->id, $currentWall);
 
 		$normalized['openingOffsets'] = $currentWall === null ? [] : self::offsetList(
@@ -271,11 +278,11 @@ final readonly class WallHandler implements ElementHandler
 	/**
 	 * A face's own bands; null leaves the face to its room's, [] keeps it bare.
 	 *
-	 * @return list<array{materialId: int, bottom: int, top: int}>|null
+	 * @return list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}>|null
 	 */
 	private function faceFinishes(mixed $bands, string $field): ?array
 	{
-		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field, WallBase::Limit);
+		return $bands === null ? null : $this->wallFinishBands->parse($bands, $field, WallBase::Limit, face: true);
 	}
 
 	/** @param array{startX: int, startY: int, endX: int, endY: int, ...} $next */
