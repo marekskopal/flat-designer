@@ -450,7 +450,16 @@ The current format is the text in `FurnitureTools::Format`.
   its height, `leftEnd` / `rightEnd` square or waterfall, the ends turning down to the floor in the same material), the
   L-shaped worktop (a run `runDepth` along the back and a return `returnWidth` on `returnSide`, two pieces in the cut
   list), the worktop's `roundEnd` (a half-cylinder of its depth, the rest of the slab shortened) and the backsplash's
-  `ledge` (standing out in front of its box). Sink and hob cut-outs and stepped splashbacks are not drawn yet.
+  `ledge` (standing out in front of its box). Stepped splashbacks are not drawn yet.
+- Sink and hob cut-outs (I-169, `viewer/engine/custom/cutouts.ts`, TS only): a definition's `cutout` (`worktop`, `sink`,
+  `hob`; checked by `DefinitionValidator`, not read by the evaluators) marks the three worktops and the sink and hob
+  (`AddWorktopCutouts`). The shown sinks and hobs of the floor (`sceneCutters()`, the old `Sink` / `Hob` kinds too) whose
+  bottom lies within `TopTolerance` (15 mm) of a worktop's top cut their holes in plan out of its highest flat boards
+  (`boardCutouts()`, `polygon-clipping`; `cutBoard()` extrudes the rest with box-like UVs): a hob its footprint less
+  `HobRim`, an inset sink less `SinkRim`, an undermount one its `Bowl` parts less `UndermountReveal`, a farmhouse one
+  none. The sink's bowls sink 180 mm into the hole (an inset sink's rim a frame round them). `ItemAssets.cutters`
+  carries them; `applyChanges()` rebuilds the worktops when the cutters change (a sink moved, a variant switched). The
+  plans, elevations and the cut list do not show the cut-outs.
 - Worktop waterfall ends (I-165, `AddWorktopWaterfallEnds`, `down()` writes back `furniture/before-worktop-ends`): the
   straight worktop's `waterfall` (left, right, both; not over a `roundEnd`) and the L-shaped worktop's `waterfall`
   (the run's free end, the return's free end, both) turn down `drop` mm below the item (parts below its box; default

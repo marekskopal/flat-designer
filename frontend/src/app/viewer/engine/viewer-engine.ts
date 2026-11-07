@@ -47,6 +47,7 @@ import {buildingLevels, floorAt, floorColliders, otherFloors, WalkFloor, walkFlo
 import {buildChimneysBelow, chimneyStretches, isChimney, sceneChimneys} from './chimneys';
 import {CommentPin, CommentPins, CommentPoint, commentPointOf} from './comments';
 import {changedDefinitionIds, definitionLibrary} from './custom/custom';
+import {isCutWorktop, sceneCutters} from './custom/cutouts';
 import {frontObjects, frontOf, frontSpecOf, FrontStates} from './custom/fronts';
 import {alignDimensionLabels, buildDimensions, roomDimensions} from './dimensions';
 import {leafObjects, LeafStates} from './doors';
@@ -884,6 +885,8 @@ export class ViewerEngine {
         const changedItems = new Set(items.changed.map((i) => i.id));
         const definitions = definitionLibrary(scene.definitions);
         const changedDefinitions = changedDefinitionIds(definitionLibrary(previous.definitions), definitions);
+        // Worktops have the holes of the shown sinks and hobs on them.
+        const cuttersChanged = !sameJson(sceneCutters(previous), sceneCutters(scene));
         const rebuiltItems = scene.items.filter(
             (i) =>
                 changedItems.has(i.id) ||
@@ -894,7 +897,8 @@ export class ViewerEngine {
                 (i.kind === 'Custom' && i.roomId !== null && roofTouchedRooms.has(i.roomId)) ||
                 (plotsChanged && standsOnGround(i)) ||
                 (isChimney(i) && (roofsChanged || stackChanged)) ||
-                (i.onRoof === true && roofsChanged),
+                (i.onRoof === true && roofsChanged) ||
+                (cuttersChanged && isCutWorktop(i, definitions)),
         );
         for (const id of [...items.removed, ...rebuiltItems.map((i) => i.id)]) {
             const object = this.items.get(id);
@@ -1219,6 +1223,7 @@ export class ViewerEngine {
             roofs: scene.roofs ?? [],
             plots: scene.plots ?? [],
             chimneys: chimneyStretches(scene),
+            cutters: sceneCutters(scene),
         };
     }
 

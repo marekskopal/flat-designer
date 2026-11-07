@@ -92,6 +92,11 @@ export interface FurnitureDefinitionBody {
     category?: ElectricalCategory;
     /** What the electrical schedule counts and lists (with a category); the evaluators do not read it. */
     schedule?: DefinitionScheduleSettings;
+    /**
+     * Sink and hob cut-outs: `worktop` has the holes of the sinks and hobs on its top cut out of its top boards, `sink` and
+     * `hob` cut them; the evaluators do not read it.
+     */
+    cutout?: 'worktop' | 'sink' | 'hob';
     /** Its texts in other languages (it is English itself); the evaluators do not read it (`DefinitionTranslations`). */
     translations?: Partial<Record<string, DefinitionTranslation>>;
     /** Size of a new item (mm). */

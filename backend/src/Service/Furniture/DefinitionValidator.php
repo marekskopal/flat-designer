@@ -19,7 +19,22 @@ final readonly class DefinitionValidator
 	/** What the `definition` TEXT column holds. */
 	public const int MaxBytes = 65535;
 
-	private const array Keys = ['format', 'catalogue', 'category', 'schedule', 'translations', 'size', 'parameters', 'derived', 'materialSlots', 'parts'];
+	private const array Keys = [
+		'format',
+		'catalogue',
+		'cutout',
+		'category',
+		'schedule',
+		'translations',
+		'size',
+		'parameters',
+		'derived',
+		'materialSlots',
+		'parts',
+	];
+
+	/** The `cutout` roles: a worktop taking the holes of the sinks and hobs on it, or a sink or hob cutting them (the viewer's). */
+	private const array CutoutRoles = ['worktop', 'sink', 'hob'];
 
 	private const array ParameterKeys = ['key', 'label', 'type', 'default'];
 
@@ -52,6 +67,7 @@ final readonly class DefinitionValidator
 		}
 		self::checkKeys($definition, self::Keys, '');
 		self::checkCatalogue($definition['catalogue'] ?? null);
+		self::checkCutout($definition['cutout'] ?? null);
 		self::checkCategory($definition['category'] ?? null);
 		[$width, $depth, $height] = self::size($definition['size'] ?? null);
 
@@ -114,6 +130,13 @@ final readonly class DefinitionValidator
 				'catalogue',
 				sprintf('Must be one of %s.', implode(', ', DefinitionCatalogueEnum::values())),
 			);
+		}
+	}
+
+	private static function checkCutout(mixed $cutout): void
+	{
+		if ($cutout !== null && !in_array($cutout, self::CutoutRoles, true)) {
+			throw DefinitionException::invalid('cutout', sprintf('Must be one of %s.', implode(', ', self::CutoutRoles)));
 		}
 	}
 

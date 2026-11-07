@@ -1,0 +1,255 @@
+{
+ "name": "Hob",
+ "description": "Hob set into the worktop (z = the worktop's top): black glass with four induction zones, a gas hob with burners under cast-iron grates, or an induction hob with a downdraft vent strip down its middle; any width.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Varná deska",
+    "description": "Varná deska zapuštěná do pracovní desky (z = horní plocha desky): černé sklo se čtyřmi indukčními zónami, plynová s hořáky pod litinovými rošty, nebo indukční s odsáváním uprostřed; libovolná šířka.",
+    "parameters": {
+     "style": "Druh"
+    },
+    "options": {
+     "style": {
+      "induction": "indukční",
+      "gas": "plynová",
+      "downdraft": "indukční s odsáváním"
+     }
+    },
+    "slots": {
+     "glass": "Sklo",
+     "marks": "Značky zón",
+     "metal": "Hořáky a rošty"
+    },
+    "parts": {
+     "Glass": "Sklo",
+     "Zone": "Zóna",
+     "Burner": "Hořák",
+     "Grate bar": "Příčka roštu",
+     "Vent": "Odsávání"
+    }
+   }
+  },
+  "size": {
+   "width": 600,
+   "depth": 520,
+   "height": 6
+  },
+  "parameters": [
+   {
+    "key": "style",
+    "label": "Kind",
+    "type": "select",
+    "options": [
+     "induction",
+     "gas",
+     "downdraft"
+    ],
+    "default": "induction"
+   }
+  ],
+  "derived": {
+   "zone": "round(min(W / 2, D / 2) * 0.62)"
+  },
+  "materialSlots": [
+   {
+    "key": "glass",
+    "label": "Glass",
+    "default": "appliance-black-glass"
+   },
+   {
+    "key": "marks",
+    "label": "Zone marks",
+    "default": "aluminium-brushed"
+   },
+   {
+    "key": "metal",
+    "label": "Burners and grates",
+    "default": "metal-black-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Glass",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "min(H, 6)",
+    "d": "D",
+    "material": "glass"
+   },
+   {
+    "type": "cylinder",
+    "name": "Zone",
+    "when": "style != 'gas'",
+    "x": "round(W * 0.27) - zone / 2",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.3) - zone / 2",
+    "w": "zone",
+    "h": 1,
+    "d": "zone",
+    "material": "marks"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "when": "style == 'gas'",
+    "x": "round(W * 0.27) - 40",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.3) - 40",
+    "w": 80,
+    "h": 22,
+    "d": 80,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Zone",
+    "when": "style != 'gas'",
+    "x": "round(W * 0.73) - zone / 2",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.3) - zone / 2",
+    "w": "zone",
+    "h": 1,
+    "d": "zone",
+    "material": "marks"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "when": "style == 'gas'",
+    "x": "round(W * 0.73) - 40",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.3) - 40",
+    "w": 80,
+    "h": 22,
+    "d": 80,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Zone",
+    "when": "style != 'gas'",
+    "x": "round(W * 0.27) - zone / 2",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.7) - zone / 2",
+    "w": "zone",
+    "h": 1,
+    "d": "zone",
+    "material": "marks"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "when": "style == 'gas'",
+    "x": "round(W * 0.27) - 40",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.7) - 40",
+    "w": 80,
+    "h": 22,
+    "d": 80,
+    "material": "metal"
+   },
+   {
+    "type": "cylinder",
+    "name": "Zone",
+    "when": "style != 'gas'",
+    "x": "round(W * 0.73) - zone / 2",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.7) - zone / 2",
+    "w": "zone",
+    "h": 1,
+    "d": "zone",
+    "material": "marks"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "when": "style == 'gas'",
+    "x": "round(W * 0.73) - 40",
+    "y": "min(H, 6)",
+    "z": "round(D * 0.7) - 40",
+    "w": 80,
+    "h": 22,
+    "d": 80,
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Grate bar",
+    "when": "style == 'gas'",
+    "x": 0,
+    "y": "min(H, 6) + 22",
+    "z": "round(D * 0.3) - 6",
+    "w": "W",
+    "h": 12,
+    "d": 12,
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Grate bar",
+    "when": "style == 'gas'",
+    "x": 0,
+    "y": "min(H, 6) + 22",
+    "z": "round(D * 0.7) - 6",
+    "w": "W",
+    "h": 12,
+    "d": 12,
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Grate bar",
+    "when": "style == 'gas'",
+    "x": "0",
+    "y": "min(H, 6) + 22",
+    "z": 0,
+    "w": 12,
+    "h": 12,
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Grate bar",
+    "when": "style == 'gas'",
+    "x": "W / 2 - 6",
+    "y": "min(H, 6) + 22",
+    "z": 0,
+    "w": 12,
+    "h": 12,
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Grate bar",
+    "when": "style == 'gas'",
+    "x": "W - 12",
+    "y": "min(H, 6) + 22",
+    "z": 0,
+    "w": 12,
+    "h": 12,
+    "d": "D",
+    "material": "metal"
+   },
+   {
+    "type": "block",
+    "name": "Vent",
+    "when": "style == 'downdraft'",
+    "x": "W / 2 - 45",
+    "y": "min(H, 6)",
+    "z": 30,
+    "w": 90,
+    "h": 2,
+    "d": "D - 60",
+    "material": "metal"
+   }
+  ]
+ }
+}

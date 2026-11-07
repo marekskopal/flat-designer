@@ -1,5 +1,6 @@
 import {MaterialSlot} from '@app/models/furniture';
 import {Item, Room, SceneDefinition} from '@app/models/scene';
+import {MultiPolygon, Pair} from 'polygon-clipping';
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -12,6 +13,7 @@ import {boxAt, prismAt} from '../meshes';
 import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {FloorRoofs} from '../under-roof';
+import {boardCutouts, cutoutRoleOf, WorktopCutter} from './cutouts';
 import {evaluateDefinition, ResolvedPart} from './definition';
 import {buildFrontBody, frontStyleOf, glassMaterial} from './front-styles';
 import {FrontBox, FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, leafDoors, pivotPoint} from './fronts';
@@ -58,7 +60,8 @@ const PictureFaceOffset = 0.5;
  * and depth. When the definition is missing or does not evaluate at the item's size, a translucent red box of the item
  * size stands in, with the reason in `userData.definitionError`. `picture` parts show their image from `pictures` (plain
  * while it loads, or without a library); `cable` parts run on the ceiling of the item's `room`, sloping under the floor's
- * `roofs`. Null for other kinds.
+ * `roofs`. A worktop (`cutout: worktop`) has the holes of the floor's sinks and hobs on it (`cutters`) cut out of its
+ * top boards. Null for other kinds.
  */
 export function buildCustomItemBody(
     item: Item,
@@ -67,6 +70,7 @@ export function buildCustomItemBody(
     pictures: PictureLibrary | null = null,
     room?: Room,
     roofs: FloorRoofs = [],
+    cutters: readonly WorktopCutter[] = [],
 ): THREE.Group | null {
     if (item.kind !== 'Custom') {
         return null;
@@ -85,6 +89,7 @@ export function buildCustomItemBody(
         const doors = leafDoors(parts);
         let ordinal = 0;
         const chosen = (item.params['materials'] ?? {}) as Record<string, unknown>;
+        const cuts = cutoutRoleOf(definition.definition) === 'worktop' ? boardCutouts(item, parts, cutters) : new Map<ResolvedPart, MultiPolygon>();
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
@@ -104,7 +109,12 @@ export function buildCustomItemBody(
                 addToPivot(front, 'lower', named(posed(lower, part), part), spec);
                 continue;
             }
-            const mesh = named(posed(buildPart(part, item, material, materials, pictures, room, roofs, optional), part), part);
+            const cut = cuts.get(part);
+            const body =
+                cut === undefined
+                    ? buildPart(part, item, material, materials, pictures, room, roofs, optional)
+                    : cutBoard(part, cut, shaded(material(grainOf(part)), part.props['shade'], materials));
+            const mesh = named(posed(body, part), part);
             if (spec !== null) {
                 addToPivot(frontGroup(fronts, spec, group, item), 'main', mesh, spec);
                 continue;
@@ -301,6 +311,54 @@ function buildPart(
         default:
             return box(part, material(grain));
     }
+}
+
+/**
+ * A board lying flat with holes: its outline less the holes (`cut`, mm in the parts' frame, x and z) extruded down from
+ * its top through its thickness. UVs in metres as `worldUvBox()` lays them on a box of the part's size (the faces by
+ * their normal), so the material's grain and pattern run as on an uncut board.
+ */
+export function cutBoard(part: ResolvedPart, cut: MultiPolygon, material: THREE.Material): THREE.Mesh {
+    const ring = (points: readonly Pair[]): THREE.Vector2[] => {
+        const open = points.length > 1 && points[0][0] === points[points.length - 1][0] && points[0][1] === points[points.length - 1][1];
+        return (open ? points.slice(0, -1) : points).map(([x, z]) => new THREE.Vector2(x * MM, z * MM));
+    };
+    const shapes = cut.map(([outer, ...holes]) => {
+        const shape = new THREE.Shape(ring(outer));
+        shape.holes = holes.map((hole) => new THREE.Path(ring(hole)));
+        return shape;
+    });
+    const geometry = new THREE.ExtrudeGeometry(shapes, {depth: part.h * MM, bevelEnabled: false});
+    // The shape's y becomes z (towards the front), the extrusion runs down from the top.
+    geometry.rotateX(Math.PI / 2);
+    geometry.translate(0, (part.y + part.h) * MM, 0);
+    geometry.clearGroups();
+    boxUvs(geometry, part);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+/** UVs (metres) of a geometry within a part's box by each vertex's normal, as `worldUvBox()` gives a box's faces. */
+function boxUvs(geometry: THREE.BufferGeometry, part: ResolvedPart): void {
+    const [x0, x1] = [part.x * MM, (part.x + part.w) * MM];
+    const [y0, z0, z1] = [part.y * MM, part.z * MM, (part.z + part.d) * MM];
+    const position = geometry.getAttribute('position');
+    const normal = geometry.getAttribute('normal');
+    const uvs: number[] = [];
+    for (let i = 0; i < position.count; i++) {
+        const [x, y, z] = [position.getX(i), position.getY(i), position.getZ(i)];
+        const [nx, ny, nz] = [normal.getX(i), normal.getY(i), normal.getZ(i)];
+        if (Math.abs(ny) >= Math.abs(nx) && Math.abs(ny) >= Math.abs(nz)) {
+            uvs.push(x - x0, ny > 0 ? z1 - z : z - z0);
+        } else if (Math.abs(nz) >= Math.abs(nx)) {
+            uvs.push(nz > 0 ? x - x0 : x1 - x, y - y0);
+        } else {
+            uvs.push(nx > 0 ? z1 - z : z - z0, y - y0);
+        }
+    }
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
 }
 
 /** A board, narrowing towards the back to `backWidth` (on both sides, or only the `taper` side) when it has one. */

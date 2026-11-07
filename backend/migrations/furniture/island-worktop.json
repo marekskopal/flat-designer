@@ -4,6 +4,7 @@
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "cutout": "worktop",
   "translations": {
    "cs": {
     "name": "Pracovní deska ostrůvku s přetaženými boky",

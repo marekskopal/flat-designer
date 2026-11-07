@@ -1,13 +1,14 @@
 {
  "name": "Kitchen sink",
- "description": "Sink in the worktop (z = the worktop's top): inset with a rim on the worktop, undermount under it (only the bowls show), or a farmhouse sink with an apron in front reaching down H - 6 mm below the top; one or two bowls, an inset sink optionally with a ribbed drainer on its right or left or behind the bowls (drainerSide). Add a tap beside it.",
+ "description": "Sink in the worktop (z = the worktop's top): inset with a rim on the worktop, undermount under it (only the bowls show), or a farmhouse sink with an apron in front reaching down H - 6 mm below the top; one or two bowls (an inset or undermount sink's sunk 180 mm into the worktop's cut-out), an inset sink optionally with a ribbed drainer on its right or left or behind the bowls (drainerSide). Add a tap beside it.",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
+  "cutout": "sink",
   "translations": {
    "cs": {
     "name": "Kuchyňský dřez",
-    "description": "Dřez v pracovní desce (z = horní plocha desky): vkládaný s okrajem na desce, podstavný pod ní (vidět jsou jen vany), nebo farmářský se zástěrou vpředu sahající H − 6 mm pod desku; jedna nebo dvě vany, vkládaný případně s žebrovanou odkapávací plochou vpravo, vlevo nebo za vanami (drainerSide). Baterii přidejte vedle.",
+    "description": "Dřez v pracovní desce (z = horní plocha desky): vkládaný s okrajem na desce, podstavný pod ní (vidět jsou jen vany), nebo farmářský se zástěrou vpředu sahající H − 6 mm pod desku; jedna nebo dvě vany (u vkládaného a podstavného zapuštěné 180 mm do výřezu v desce), vkládaný případně s žebrovanou odkapávací plochou vpravo, vlevo nebo za vanami (drainerSide). Baterii přidejte vedle.",
     "parameters": {
      "style": "Montáž",
      "bowls": "Vany",
@@ -33,7 +34,8 @@
      "Rim": "Okraj",
      "Apron": "Zástěra",
      "Bowl": "Vana",
-     "Drainer rib": "Žebro odkapávací plochy"
+     "Drainer rib": "Žebro odkapávací plochy",
+     "Bowl side": "Stěna vany"
     }
    }
   },
@@ -86,7 +88,12 @@
    "side": "drainer && style == 'inset' ? (drainerSide == 'left' ? 1 : drainerSide == 'back' ? 2 : 0) : -1",
    "bowlW": "((side == 0 || side == 1 ? W * 0.55 : W) - 2 * margin - (bowls - 1) * 30) / bowls",
    "bowlX": "side == 1 ? W * 0.45 : 0",
-   "bowlZ": "side == 2 ? round(D * 0.38) : margin"
+   "bowlZ": "side == 2 ? round(D * 0.38) : margin",
+   "basin": "style == 'farmhouse' ? 0 : 180",
+   "lip": "style == 'inset' ? top - 4 : -2",
+   "bx0": "bowlX + margin",
+   "bx1": "bowlX + margin + bowls * bowlW + (bowls - 1) * 30",
+   "bz1": "D - margin"
   },
   "materialSlots": [
    {
@@ -105,7 +112,55 @@
     "z": 0,
     "w": "W",
     "h": 4,
-    "d": "D",
+    "d": "bowlZ",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Rim",
+    "when": "style == 'inset'",
+    "x": 0,
+    "y": "top - 4",
+    "z": "bz1",
+    "w": "W",
+    "h": 4,
+    "d": "margin",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Rim",
+    "when": "style == 'inset'",
+    "x": 0,
+    "y": "top - 4",
+    "z": "bowlZ",
+    "w": "bx0",
+    "h": 4,
+    "d": "bz1 - bowlZ",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Rim",
+    "when": "style == 'inset'",
+    "x": "bx1",
+    "y": "top - 4",
+    "z": "bowlZ",
+    "w": "W - bx1",
+    "h": 4,
+    "d": "bz1 - bowlZ",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Rim",
+    "when": "style == 'inset' && bowls == 2",
+    "x": "bx0 + bowlW",
+    "y": "top - 4",
+    "z": "bowlZ",
+    "w": 30,
+    "h": 4,
+    "d": "bz1 - bowlZ",
     "material": "body"
    },
    {
@@ -127,13 +182,77 @@
      "count": "bowls"
     },
     "x": "bowlX + margin + i * (bowlW + 30)",
-    "y": "top",
+    "y": "basin > 0 ? -basin : top",
     "z": "bowlZ",
     "w": "bowlW",
     "h": 1,
-    "d": "D - margin - bowlZ",
+    "d": "bz1 - bowlZ",
     "material": "body",
     "shade": 0.45
+   },
+   {
+    "type": "block",
+    "name": "Bowl side",
+    "when": "basin > 0",
+    "repeat": {
+     "count": "bowls"
+    },
+    "x": "bx0 + i * (bowlW + 30)",
+    "y": "1 - basin",
+    "z": "bowlZ",
+    "w": 1,
+    "h": "basin - 1 + lip",
+    "d": "bz1 - bowlZ",
+    "material": "body",
+    "shade": 0.25
+   },
+   {
+    "type": "block",
+    "name": "Bowl side",
+    "when": "basin > 0",
+    "repeat": {
+     "count": "bowls"
+    },
+    "x": "bx0 + i * (bowlW + 30) + bowlW - 1",
+    "y": "1 - basin",
+    "z": "bowlZ",
+    "w": 1,
+    "h": "basin - 1 + lip",
+    "d": "bz1 - bowlZ",
+    "material": "body",
+    "shade": 0.25
+   },
+   {
+    "type": "block",
+    "name": "Bowl side",
+    "when": "basin > 0",
+    "repeat": {
+     "count": "bowls"
+    },
+    "x": "bx0 + i * (bowlW + 30) + 1",
+    "y": "1 - basin",
+    "z": "bowlZ",
+    "w": "bowlW - 2",
+    "h": "basin - 1 + lip",
+    "d": 1,
+    "material": "body",
+    "shade": 0.25
+   },
+   {
+    "type": "block",
+    "name": "Bowl side",
+    "when": "basin > 0",
+    "repeat": {
+     "count": "bowls"
+    },
+    "x": "bx0 + i * (bowlW + 30) + 1",
+    "y": "1 - basin",
+    "z": "bz1 - 1",
+    "w": "bowlW - 2",
+    "h": "basin - 1 + lip",
+    "d": 1,
+    "material": "body",
+    "shade": 0.25
    },
    {
     "type": "block",
