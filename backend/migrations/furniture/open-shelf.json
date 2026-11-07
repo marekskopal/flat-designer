@@ -11,7 +11,8 @@
     "parameters": {
      "t": "Tloušťka desek",
      "shelves": "Police",
-     "back": "Zadní stěna"
+     "back": "Zadní stěna",
+     "light": "LED pod policemi"
     },
     "slots": {
      "carcass": "Desky",
@@ -20,7 +21,8 @@
     "parts": {
      "Side": "Bok",
      "Shelf": "Police",
-     "Back": "Záda"
+     "Back": "Záda",
+     "Shelf light": "Osvětlení police"
     }
    }
   },
@@ -52,6 +54,12 @@
     "label": "Back panel",
     "type": "bool",
     "default": true
+   },
+   {
+    "key": "light",
+    "label": "LED under the shelves",
+    "type": "bool",
+    "default": false
    }
   ],
   "derived": {
@@ -117,6 +125,23 @@
     "h": "H",
     "d": "backT",
     "material": "back"
+   },
+   {
+    "type": "led",
+    "name": "Shelf light",
+    "when": "light",
+    "repeat": {
+     "count": "shelves - 1",
+     "as": "s"
+    },
+    "x": "t",
+    "y": "(s + 1) * pitch - 6",
+    "z": "D - 30",
+    "w": "W - 2*t",
+    "h": 6,
+    "d": 10,
+    "material": "carcass",
+    "color": "#ffd9a0"
    }
   ]
  }

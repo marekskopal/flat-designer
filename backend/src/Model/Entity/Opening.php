@@ -102,6 +102,10 @@ class Opening extends AEntity
 	#[Column(type: Type::Boolean)]
 	public bool $revealLining = false;
 
+	/** The room's side of the reveal (from the face on `side` to the frame) is lined with the room's finish band there. */
+	#[Column(type: Type::Boolean)]
+	public bool $innerRevealLining = false;
+
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $frameMaterial = null;
 

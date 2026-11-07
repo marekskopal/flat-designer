@@ -59,6 +59,20 @@ class Room extends AEntity
 	#[ManyToOne(entityClass: Material::class, nullable: true)]
 	public ?Material $soffitMaterial = null;
 
+	/**
+	 * Another floor material over part of the floor, JSON `[{polygon, materialId}]` (`RoomZones`); null: none. Drawn over
+	 * the floor on the room's tile grid.
+	 */
+	#[Column(type: Type::Text, nullable: true)]
+	public ?string $floorZones = null;
+
+	/**
+	 * Dropped ceilings over part of the room, JSON `[{polygon, height, materialId}]` (`RoomZones`; height mm above the
+	 * room's floor, material null: the ceiling's); null: none. Only under a flat ceiling.
+	 */
+	#[Column(type: Type::Text, nullable: true)]
+	public ?string $ceilingZones = null;
+
 	#[Column(type: Type::Int, nullable: true)]
 	public ?int $vaultSpacing = null;
 

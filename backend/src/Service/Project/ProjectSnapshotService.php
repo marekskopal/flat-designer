@@ -339,6 +339,8 @@ final readonly class ProjectSnapshotService
 			$room->ceilingMaterial = $materials[$data->nullableInt('ceilingMaterialId') ?? 0] ?? null;
 			// Snapshots taken before façades have none: the façade material.
 			$room->soffitMaterial = $materials[$data->nullableInt('soffitMaterialId') ?? 0] ?? null;
+			$room->floorZones = SnapshotRoomZones::floor($data, $materials);
+			$room->ceilingZones = SnapshotRoomZones::ceiling($data, $materials);
 			$room->vaultSpacing = $data->nullableInt('vaultSpacing');
 			$room->vaultAngle = $data->nullableInt('vaultAngle') ?? 0;
 			$room->vaultRise = $data->nullableInt('vaultRise') ?? 130;
@@ -423,6 +425,7 @@ final readonly class ProjectSnapshotService
 				$restored->shuttersClosed = $opening->raw('shuttersClosed') === true;
 				// Snapshots taken before façades: a bare reveal.
 				$restored->revealLining = $opening->raw('revealLining') === true;
+				$restored->innerRevealLining = $opening->raw('innerRevealLining') === true;
 				// And before niches.
 				$restored->depth = $opening->nullableInt('depth');
 				// And before opening materials, garage doors, fixed panes and insets.

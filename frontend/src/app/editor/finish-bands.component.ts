@@ -12,7 +12,8 @@ type FaceMode = 'room' | 'own' | 'bare';
 
 /**
  * Finish bands (`{materialId, bottom, top}`, mm above the floor) as rows: a room's `wallFinishes`, or a wall face's own
- * (`nullable`): null takes the room's, `[]` leaves the face bare. Every change sends the whole list; the backend checks
+ * (`nullable`): null takes the room's, `[]` leaves the face bare; a face's band may run along a stretch of the wall only
+ * (`from` / `to`, mm from its start). Every change sends the whole list; the backend checks
  * it (`WallFinishBands`).
  */
 @Component({
@@ -76,10 +77,36 @@ type FaceMode = 'room' | 'own' | 'bare';
                                     (change)="setHeight(i, 'top', $event)"
                                 />
                             </label>
+                            @if (nullable()) {
+                                <label class="band__height">
+                                    <span>{{ 'inspector.bands.alongFrom' | translate }}</span>
+                                    <input
+                                        class="input"
+                                        type="number"
+                                        step="10"
+                                        min="0"
+                                        [value]="band.from ?? ''"
+                                        [disabled]="disabled()"
+                                        (change)="setStretch(i, 'from', $event)"
+                                    />
+                                </label>
+                                <label class="band__height">
+                                    <span>{{ 'inspector.bands.alongTo' | translate }}</span>
+                                    <input
+                                        class="input"
+                                        type="number"
+                                        step="10"
+                                        min="0"
+                                        [value]="band.to ?? ''"
+                                        [disabled]="disabled()"
+                                        (change)="setStretch(i, 'to', $event)"
+                                    />
+                                </label>
+                            }
                         </div>
                     }
                 </div>
-                <p class="hint">{{ 'inspector.bands.unitHint' | translate }}</p>
+                <p class="hint">{{ (nullable() ? 'inspector.bands.alongHint' : 'inspector.bands.unitHint') | translate }}</p>
             } @else {
                 <p class="hint">{{ 'inspector.bands.none' | translate }}</p>
             }
@@ -234,6 +261,20 @@ export class FinishBandsComponent {
             return;
         }
         this.bandsChange.emit(this.list().map((band, i) => (i === index ? {...band, [edge]: value} : band)));
+    }
+
+    /** Where a face's band runs along the wall (mm from its start); an empty field leaves that end at the face's. */
+    protected setStretch(index: number, end: 'from' | 'to', event: Event): void {
+        const field = event.target as HTMLInputElement;
+        const value = Number(field.value);
+        const band = this.list()[index];
+        if (field.value.trim() !== '' && (!Number.isInteger(value) || value < 0)) {
+            field.value = String(band[end] ?? '');
+            return;
+        }
+        const {[end]: _, ...rest} = band;
+        const changed: WallFinish = field.value.trim() === '' ? rest : {...rest, [end]: value};
+        this.bandsChange.emit(this.list().map((b, i) => (i === index ? changed : b)));
     }
 
     /** A band over the last one (from the floor for the first), in the last band's material or the catalogue's first. */

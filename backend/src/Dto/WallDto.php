@@ -85,7 +85,7 @@ final readonly class WallDto
 	private static function finishes(?string $json): ?array
 	{
 		return $json === null ? null : array_map(
-			fn (array $band): WallFinishDto => new WallFinishDto($band['materialId'], $band['bottom'], $band['top']),
+			WallFinishDto::fromArray(...),
 			JsonDecoder::decodeWallFinishes($json),
 		);
 	}

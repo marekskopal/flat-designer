@@ -1,0 +1,229 @@
+{
+ "name": "Range cooker",
+ "description": "Freestanding range cooker: a gas hob of six burners on a black top, a knob panel and one or two ovens with glazed doors on a plinth.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Sporák",
+    "description": "Volně stojící sporák: plynová deska se šesti hořáky na černé desce, panel s knoflíky a jedna nebo dvě trouby s prosklenými dvířky na soklu.",
+    "parameters": {
+     "ovens": "Trouby"
+    },
+    "slots": {
+     "body": "Tělo",
+     "details": "Deska a vnitřek",
+     "handles": "Úchytky, knoflíky, hořáky"
+    },
+    "parts": {
+     "Body": "Tělo",
+     "Plinth": "Sokl",
+     "Hob top": "Varná plocha",
+     "Control panel": "Ovládací panel",
+     "Knob": "Knoflík",
+     "Oven door": "Dvířka trouby",
+     "Oven interior": "Vnitřek trouby",
+     "Burner": "Hořák"
+    }
+   }
+  },
+  "size": {
+   "width": 900,
+   "depth": 600,
+   "height": 900
+  },
+  "parameters": [
+   {
+    "key": "ovens",
+    "label": "Ovens",
+    "type": "int",
+    "default": 2,
+    "min": 1,
+    "max": 2
+   }
+  ],
+  "derived": {
+   "knobs": "6"
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Body",
+    "default": "lacquer-anthracite-matt"
+   },
+   {
+    "key": "details",
+    "label": "Top and interior",
+    "default": "matt-black"
+   },
+   {
+    "key": "handles",
+    "label": "Handles, knobs, burners",
+    "default": "steel-stainless"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Body",
+    "x": 0,
+    "y": 100,
+    "z": 0,
+    "w": "W",
+    "h": "H - 100 - 40",
+    "d": "D - 30",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Plinth",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": 100,
+    "d": "D - 60",
+    "material": "body",
+    "shade": 0.3
+   },
+   {
+    "type": "block",
+    "name": "Hob top",
+    "x": 0,
+    "y": "H - 40",
+    "z": 0,
+    "w": "W",
+    "h": 40,
+    "d": "D",
+    "material": "details"
+   },
+   {
+    "type": "block",
+    "name": "Control panel",
+    "x": 0,
+    "y": "H - 150",
+    "z": "D - 30",
+    "w": "W",
+    "h": 110,
+    "d": 30,
+    "material": "body"
+   },
+   {
+    "type": "cylinder",
+    "name": "Knob",
+    "axis": "z",
+    "repeat": {
+     "count": "knobs"
+    },
+    "x": "60 + i * (W - 120) / (knobs - 1) - 15",
+    "y": "H - 110",
+    "z": "D",
+    "w": 30,
+    "h": 30,
+    "d": 20,
+    "material": "handles"
+   },
+   {
+    "type": "front",
+    "name": "Oven door",
+    "repeat": {
+     "count": "ovens"
+    },
+    "x": "i * W / ovens + 3",
+    "y": 140,
+    "z": "D - 30",
+    "w": "W / ovens - 6",
+    "h": "H - 140 - 155",
+    "d": 30,
+    "material": "body",
+    "kind": "door",
+    "opens": "none",
+    "style": "glass",
+    "frame": 70,
+    "handle": "horizontal",
+    "handleMaterial": "handles"
+   },
+   {
+    "type": "block",
+    "name": "Oven interior",
+    "repeat": {
+     "count": "ovens"
+    },
+    "x": "i * W / ovens + 40",
+    "y": 180,
+    "z": "D - 60",
+    "w": "W / ovens - 80",
+    "h": "H - 140 - 235",
+    "d": 2,
+    "material": "details"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "x": "round(W * 0.2) - 40",
+    "y": "H",
+    "z": "round(D * 0.3) - 40",
+    "w": 80,
+    "h": 20,
+    "d": 80,
+    "material": "handles"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "x": "round(W * 0.5) - 40",
+    "y": "H",
+    "z": "round(D * 0.3) - 40",
+    "w": 80,
+    "h": 20,
+    "d": 80,
+    "material": "handles"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "x": "round(W * 0.8) - 40",
+    "y": "H",
+    "z": "round(D * 0.3) - 40",
+    "w": 80,
+    "h": 20,
+    "d": 80,
+    "material": "handles"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "x": "round(W * 0.2) - 40",
+    "y": "H",
+    "z": "round(D * 0.7) - 40",
+    "w": 80,
+    "h": 20,
+    "d": 80,
+    "material": "handles"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "x": "round(W * 0.5) - 40",
+    "y": "H",
+    "z": "round(D * 0.7) - 40",
+    "w": 80,
+    "h": 20,
+    "d": 80,
+    "material": "handles"
+   },
+   {
+    "type": "cylinder",
+    "name": "Burner",
+    "x": "round(W * 0.8) - 40",
+    "y": "H",
+    "z": "round(D * 0.7) - 40",
+    "w": 80,
+    "h": 20,
+    "d": 80,
+    "material": "handles"
+   }
+  ]
+ }
+}

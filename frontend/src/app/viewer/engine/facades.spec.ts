@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
 import {buildSlab, buildWall} from './building';
-import {buildFacades, facadeBands} from './facades';
+import {buildFacades, facadeBandsAt} from './facades';
 import {MaterialLibrary} from './materials';
 import {MM} from './plan-geometry';
 import {selectionOf} from './selection';
@@ -132,16 +132,16 @@ describe('buildFacades', () => {
     });
 
     it('gives the exterior walls nobody set the project\'s façade, and nothing else', () => {
-        expect(facadeBands(box()[0], 'Right', 1)).toEqual([{materialId: 1, bottom: 0, top: 100000}]);
-        expect(facadeBands(box()[0], 'Right', null)).toEqual([]);
-        expect(facadeBands({...box()[0], materialId: 2}, 'Right', 1)).toEqual([]);
-        expect(facadeBands({...box()[0], rightFinishes: []}, 'Right', 1)).toEqual([]);
-        expect(facadeBands({...box()[0], type: 'Interior'}, 'Right', 1)).toEqual([]);
+        expect(facadeBandsAt(box()[0], 'Right', 1, 0)).toEqual([{materialId: 1, bottom: 0, top: 100000}]);
+        expect(facadeBandsAt(box()[0], 'Right', null, 0)).toEqual([]);
+        expect(facadeBandsAt({...box()[0], materialId: 2}, 'Right', 1, 0)).toEqual([]);
+        expect(facadeBandsAt({...box()[0], rightFinishes: []}, 'Right', 1, 0)).toEqual([]);
+        expect(facadeBandsAt({...box()[0], type: 'Interior'}, 'Right', 1, 0)).toEqual([]);
         // A wall from a snapshot older than the bands has no field at all: as null, not a crash.
         const older = {...box()[0]} as Partial<ReturnType<typeof box>[0]>;
         delete older.leftFinishes;
         delete older.rightFinishes;
-        expect(facadeBands(older as ReturnType<typeof box>[0], 'Right', 1)).toEqual([{materialId: 1, bottom: 0, top: 100000}]);
+        expect(facadeBandsAt(older as ReturnType<typeof box>[0], 'Right', 1, 0)).toEqual([{materialId: 1, bottom: 0, top: 100000}]);
         const group = buildFacades({walls: box(), rooms: [room], exteriorMaterialId: 1}, materials);
         expect(meshesOf(group, 'render').length).toBeGreaterThan(0);
     });

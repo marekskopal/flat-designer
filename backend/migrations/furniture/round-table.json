@@ -1,21 +1,27 @@
 {
  "name": "Round table",
- "description": "Round side, coffee or dining table: a round top on a pedestal with a foot disc, or on four legs.",
+ "description": "Round or oval side, coffee or dining table: a round top, or an oval one (rounded ends, when wider than deep), on a pedestal pedestal mm thick with a foot disc (a fluted drum in a fluted material), or on four legs.",
  "definition": {
   "format": 1,
   "catalogue": "tables",
   "translations": {
    "cs": {
     "name": "Kulatý stůl",
-    "description": "Kulatý odkládací, konferenční nebo jídelní stůl: kulatá deska na centrální noze s patkou, nebo na čtyřech nohách.",
+    "description": "Kulatý nebo oválný odkládací, konferenční či jídelní stůl: kulatá deska, nebo oválná (zaoblené konce, je-li širší než hlubší), na centrální noze tlusté pedestal mm s patkou (v drážkovaném materiálu drážkovaný válec), nebo na čtyřech nohách.",
     "parameters": {
      "base": "Podnož",
-     "top": "Tloušťka desky"
+     "top": "Tloušťka desky",
+     "shape": "Tvar desky",
+     "pedestal": "Šířka centrální nohy"
     },
     "options": {
      "base": {
       "pedestal": "centrální noha",
       "legs": "čtyři nohy"
+     },
+     "shape": {
+      "round": "kulatá",
+      "oval": "oválná"
      }
     },
     "slots": {
@@ -26,7 +32,8 @@
      "Top": "Deska",
      "Pedestal": "Centrální noha",
      "Foot disc": "Patka",
-     "Leg": "Noha"
+     "Leg": "Noha",
+     "Top end": "Konec desky"
     }
    }
   },
@@ -36,6 +43,16 @@
    "height": 500
   },
   "parameters": [
+   {
+    "key": "shape",
+    "label": "Top shape",
+    "type": "select",
+    "default": "round",
+    "options": [
+     "round",
+     "oval"
+    ]
+   },
    {
     "key": "base",
     "label": "Base",
@@ -54,10 +71,20 @@
     "min": 12,
     "max": 60,
     "unit": "mm"
+   },
+   {
+    "key": "pedestal",
+    "label": "Pedestal width",
+    "type": "int",
+    "default": 50,
+    "min": 30,
+    "max": 600,
+    "unit": "mm"
    }
   ],
   "derived": {
-   "foot": "min(W, D) * 0.55"
+   "foot": "max(min(W, D) * 0.55, pedestal + 60)",
+   "oval": "shape == 'oval' && W > D"
   },
   "materialSlots": [
    {
@@ -81,18 +108,46 @@
     "w": "W",
     "h": "top",
     "d": "D",
+    "material": "top",
+    "when": "!oval"
+   },
+   {
+    "type": "block",
+    "name": "Top",
+    "when": "oval",
+    "x": "D / 2",
+    "y": "H - top",
+    "z": 0,
+    "w": "W - D",
+    "h": "top",
+    "d": "D",
+    "material": "top"
+   },
+   {
+    "type": "cylinder",
+    "name": "Top end",
+    "when": "oval",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - D)",
+    "y": "H - top",
+    "z": 0,
+    "w": "D",
+    "h": "top",
+    "d": "D",
     "material": "top"
    },
    {
     "type": "cylinder",
     "name": "Pedestal",
     "when": "base == 'pedestal'",
-    "x": "W / 2 - 25",
+    "x": "W / 2 - pedestal / 2",
     "y": 15,
-    "z": "D / 2 - 25",
-    "w": 50,
+    "z": "D / 2 - pedestal / 2",
+    "w": "pedestal",
     "h": "H - top - 15",
-    "d": 50,
+    "d": "pedestal",
     "material": "base"
    },
    {

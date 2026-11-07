@@ -1,13 +1,13 @@
 {
  "name": "Kitchen wall cabinet",
- "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts.",
+ "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts. shelfLight lights the inside from under its top and shelves (a display cabinet with glass fronts). Appliance fronts are an oven, a microwave, a steam oven or a coffee machine, in applianceFinish (black or white glass, steel, retro).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Kuchyňská horní skříňka",
-    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel.",
+    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel. shelfLight osvětlí vnitřek zpod víka a polic (vitrína s prosklenými čely). Čela spotřebičů jsou trouba, mikrovlnná trouba, parní trouba nebo vestavný kávovar v provedení applianceFinish (černé nebo bílé sklo, nerez, retro).",
     "parameters": {
      "fronts": "Čela odspodu",
      "fronts.type": "Typ",
@@ -21,7 +21,14 @@
      "blindRight": "Slepá část vpravo (roh)",
      "t": "Deska korpusu",
      "ft": "Tloušťka čela",
-     "gap": "Spára kolem čel"
+     "gap": "Spára kolem čel",
+     "fronts.style": "Styl",
+     "handleLength": "Délka úchytky (0: podle čela)",
+     "frontStyle": "Styl čel",
+     "frame": "Šířka rámu čel (0: podle stylu)",
+     "shelfLight": "LED pod víkem a policemi",
+     "fronts.handlePosition": "Poloha úchytky",
+     "applianceFinish": "Provedení spotřebičů"
     },
     "options": {
      "fronts.type": {
@@ -31,26 +38,64 @@
       "bifold": "lomený výklop",
       "parallelLift": "paralelní zdvih",
       "oven": "trouba",
-      "microwave": "mikrovlnná trouba"
+      "microwave": "mikrovlnná trouba",
+      "steam": "parní trouba",
+      "coffee": "vestavný kávovar"
      },
      "fronts.handle": {
       "horizontal": "vodorovná",
       "vertical": "svislá",
-      "none": "žádná"
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
      },
      "handle": {
       "horizontal": "vodorovná",
       "vertical": "svislá",
-      "none": "žádná"
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
      },
      "handleSide": {
       "right": "vpravo",
       "left": "vlevo"
+     },
+     "frontStyle": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "fronts.style": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "fronts.handlePosition": {
+      "auto": "automaticky",
+      "top": "nahoře",
+      "bottom": "dole",
+      "side": "na boku ve výšce ruky"
+     },
+     "applianceFinish": {
+      "black": "černé sklo",
+      "white": "bílé sklo",
+      "steel": "nerez",
+      "retro": "retro (krémová, chrom)"
      }
     },
     "slots": {
      "carcass": "Korpus",
-     "fronts": "Čela"
+     "fronts": "Čela",
+     "handles": "Úchytky",
+     "frames": "Rámy čel"
     },
     "parts": {
      "Side": "Bok",
@@ -65,7 +110,8 @@
      "Drawer back": "Záda zásuvky",
      "Drawer inner front": "Vnitřní čelo zásuvky",
      "Appliance": "Spotřebič",
-     "Shelf": "Police"
+     "Shelf": "Police",
+     "Shelf light": "Osvětlení police"
     }
    }
   },
@@ -93,7 +139,9 @@
        "bifold",
        "parallelLift",
        "oven",
-       "microwave"
+       "microwave",
+       "steam",
+       "coffee"
       ],
       "default": "door"
      },
@@ -120,7 +168,36 @@
       "options": [
        "horizontal",
        "vertical",
+       "knob",
+       "edge",
+       "gola",
+       "push",
        "none"
+      ],
+      "optional": true
+     },
+     {
+      "key": "handlePosition",
+      "label": "Handle position",
+      "type": "select",
+      "options": [
+       "auto",
+       "top",
+       "bottom",
+       "side"
+      ],
+      "optional": true
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+       "flat",
+       "shaker",
+       "fluted",
+       "glass",
+       "reeded"
       ],
       "optional": true
      }
@@ -138,6 +215,10 @@
     "options": [
      "horizontal",
      "vertical",
+     "knob",
+     "edge",
+     "gola",
+     "push",
      "none"
     ],
     "default": "none"
@@ -153,10 +234,47 @@
     "default": "right"
    },
    {
+    "key": "handleLength",
+    "label": "Handle length (0: by the front)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "frontStyle",
+    "label": "Front style",
+    "type": "select",
+    "options": [
+     "flat",
+     "shaker",
+     "fluted",
+     "glass",
+     "reeded"
+    ],
+    "default": "flat"
+   },
+   {
+    "key": "frame",
+    "label": "Front frame width (0: by the style)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
+   },
+   {
     "key": "softClose",
     "label": "Soft close",
     "type": "bool",
     "default": true
+   },
+   {
+    "key": "shelfLight",
+    "label": "LED under the top and shelves",
+    "type": "bool",
+    "default": false
    },
    {
     "key": "blindLeft",
@@ -200,6 +318,18 @@
     "min": 0,
     "max": 10,
     "unit": "mm"
+   },
+   {
+    "key": "applianceFinish",
+    "label": "Appliance finish",
+    "type": "select",
+    "options": [
+     "black",
+     "white",
+     "steel",
+     "retro"
+    ],
+    "default": "black"
    }
   ],
   "derived": {
@@ -217,6 +347,14 @@
    {
     "key": "fronts",
     "label": "Fronts"
+   },
+   {
+    "key": "frames",
+    "label": "Front frames"
+   },
+   {
+    "key": "handles",
+    "label": "Handles"
    }
   ],
   "parts": [
@@ -295,7 +433,7 @@
      {
       "type": "front",
       "name": "Front",
-      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave' && f.type != 'steam' && f.type != 'coffee'",
       "repeat": {
        "count": "(f.type == 'door' ? f.count : 1)",
        "as": "k"
@@ -325,6 +463,20 @@
       },
       "softClose": {
        "expr": "softClose"
+      },
+      "style": {
+       "expr": "f.style ?? frontStyle"
+      },
+      "frame": {
+       "expr": "frame"
+      },
+      "frameMaterial": "frames",
+      "handleMaterial": "handles",
+      "handleLength": {
+       "expr": "handleLength"
+      },
+      "handlePosition": {
+       "expr": "f.handlePosition ?? 'auto'"
       }
      },
      {
@@ -364,6 +516,20 @@
         "kind": "drawer",
         "handle": {
          "expr": "f.handle ?? handle"
+        },
+        "style": {
+         "expr": "f.style ?? frontStyle"
+        },
+        "frame": {
+         "expr": "frame"
+        },
+        "frameMaterial": "frames",
+        "handleMaterial": "handles",
+        "handleLength": {
+         "expr": "handleLength"
+        },
+        "handlePosition": {
+         "expr": "f.handlePosition ?? 'auto'"
         }
        },
        {
@@ -431,7 +597,7 @@
      {
       "type": "appliance",
       "name": "Appliance",
-      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "when": "f.type == 'oven' || f.type == 'microwave' || f.type == 'steam' || f.type == 'coffee'",
       "x": "gap / 2",
       "y": "gap / 2",
       "z": 0,
@@ -440,6 +606,9 @@
       "d": "AD",
       "kind": {
        "expr": "f.type"
+      },
+      "finish": {
+       "expr": "applianceFinish"
       }
      },
      {
@@ -461,8 +630,38 @@
       "edges": [
        "front"
       ]
+     },
+     {
+      "type": "led",
+      "name": "Shelf light",
+      "when": "(f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift') && shelfLight",
+      "repeat": {
+       "count": "floor(AH / 400)",
+       "as": "s"
+      },
+      "x": "t - blindLeft",
+      "y": "round((s + 1) * AH / (floor(AH / 400) + 1)) - round(t / 2) - 6",
+      "z": -40,
+      "w": "W - 2 * t",
+      "h": 6,
+      "d": 10,
+      "material": "carcass",
+      "color": "#ffd9a0"
      }
     ]
+   },
+   {
+    "type": "led",
+    "name": "Shelf light",
+    "when": "shelfLight",
+    "x": "t",
+    "y": "H - t - 6",
+    "z": "carcassD - 40",
+    "w": "W - 2 * t",
+    "h": 6,
+    "d": 10,
+    "material": "carcass",
+    "color": "#ffd9a0"
    }
   ]
  }

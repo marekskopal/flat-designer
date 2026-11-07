@@ -1,0 +1,198 @@
+{
+ "name": "Range hood",
+ "description": "Cooker hood above the hob: a wall chimney hood (a canopy and a chimney up to the item's top), a box (an island or ceiling hood: the whole box) a round hood (a cylinder up to 400 mm high on a rod up to the item's top, over an island) or an integrated hood (only its front strip under a wall cabinet), lit underneath; the chimney hood's canopy is stepped or a pyramid.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Digestoř",
+    "description": "Digestoř nad varnou deskou: komínová ke stěně (stříška a komín až k horní hraně prvku), box (ostrůvková nebo stropní: celý prvek) kulatá (válec do 400 mm na táhle až k horní hraně prvku, nad ostrůvkem) nebo vestavná (jen čelní lišta pod horní skříňkou), osvětlená zespodu; stříška komínové digestoře je stupňovitá nebo jehlan.",
+    "parameters": {
+     "style": "Provedení",
+     "canopy": "Stříška komínové digestoře"
+    },
+    "options": {
+     "style": {
+      "chimney": "komínová",
+      "box": "box (ostrůvková, stropní)",
+      "integrated": "vestavná",
+      "round": "kulatá (stropní, ostrůvková)"
+     },
+     "canopy": {
+      "stepped": "stupňovitá",
+      "pyramid": "jehlan"
+     }
+    },
+    "slots": {
+     "body": "Tělo"
+    },
+    "parts": {
+     "Canopy": "Stříška",
+     "Canopy top": "Horní část stříšky",
+     "Chimney": "Komín",
+     "Body": "Tělo",
+     "Front strip": "Čelní lišta",
+     "Light": "Osvětlení",
+     "Canopy slope": "Šikmá stříška",
+     "Round body": "Kulaté tělo",
+     "Rod": "Táhlo"
+    }
+   }
+  },
+  "size": {
+   "width": 900,
+   "depth": 500,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "style",
+    "label": "Style",
+    "type": "select",
+    "options": [
+     "chimney",
+     "box",
+     "integrated",
+     "round"
+    ],
+    "default": "chimney"
+   },
+   {
+    "key": "canopy",
+    "label": "Chimney canopy",
+    "type": "select",
+    "options": [
+     "stepped",
+     "pyramid"
+    ],
+    "default": "stepped"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Body",
+    "default": "steel-stainless"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Canopy",
+    "when": "style == 'chimney'",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": 60,
+    "d": "D",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Canopy top",
+    "when": "style == 'chimney' && canopy != 'pyramid'",
+    "x": "round(W * 0.1)",
+    "y": 60,
+    "z": 0,
+    "w": "round(W * 0.8)",
+    "h": 100,
+    "d": "round(D * 0.8)",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Canopy slope",
+    "when": "style == 'chimney' && canopy == 'pyramid'",
+    "repeat": {
+     "count": 10
+    },
+    "x": "round(i * (W - 300) / 20)",
+    "y": "60 + i * 26",
+    "z": 0,
+    "w": "round(W - i * (W - 300) / 10)",
+    "h": 26,
+    "d": "round(D - i * (D - min(250, D)) / 10)",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Chimney",
+    "when": "style == 'chimney' && H > neck + 40",
+    "x": "W / 2 - 150",
+    "y": "neck",
+    "z": 0,
+    "w": 300,
+    "h": "H - neck",
+    "d": "min(250, D)",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Body",
+    "when": "style == 'box'",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D",
+    "material": "body"
+   },
+   {
+    "type": "cylinder",
+    "name": "Round body",
+    "when": "style == 'round'",
+    "x": "(W - dia) / 2",
+    "y": 0,
+    "z": "(D - dia) / 2",
+    "w": "dia",
+    "h": "body",
+    "d": "dia",
+    "material": "body"
+   },
+   {
+    "type": "cylinder",
+    "name": "Rod",
+    "when": "style == 'round' && H > body + 20",
+    "x": "W / 2 - 15",
+    "y": "body",
+    "z": "D / 2 - 15",
+    "w": 30,
+    "h": "H - body",
+    "d": 30,
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Front strip",
+    "when": "style == 'integrated'",
+    "x": 0,
+    "y": 0,
+    "z": "D - 20",
+    "w": "W",
+    "h": "min(H, 30)",
+    "d": 20,
+    "material": "body"
+   },
+   {
+    "type": "led",
+    "name": "Light",
+    "x": "round(W * 0.2)",
+    "y": 1,
+    "z": "style == 'integrated' ? D - 60 : round(D * 0.4)",
+    "w": "round(W * 0.6)",
+    "h": 2,
+    "d": 20,
+    "material": "body",
+    "color": "#fff1dc"
+   }
+  ],
+  "derived": {
+   "dia": "min(W, D)",
+   "body": "min(H, 400)",
+   "neck": "canopy == 'pyramid' ? 320 : 160"
+  }
+ }
+}

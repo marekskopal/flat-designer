@@ -1,7 +1,10 @@
+import {Item} from '@app/models/scene';
 import * as THREE from 'three';
 import {describe, expect, it} from 'vitest';
 
+import {buildKitchenItemBody} from './kitchen';
 import {applyFixtureLights, createFixtureLight, kelvinToColor, LumenScale, MaxFixtureShadows} from './lights';
+import {MaterialLibrary} from './materials';
 
 describe('kelvinToColor', () => {
     it('is warm at 2200 K, near white at 6500 K', () => {
@@ -40,5 +43,48 @@ describe('applyFixtureLights', () => {
 
         applyFixtureLights(root, false);
         expect(lights.every((l) => l.intensity === 0 && !l.castShadow && !l.visible)).toBe(true);
+    });
+});
+
+describe('LED strips', () => {
+    const strip = (params: Record<string, unknown>): Item =>
+        ({
+            id: 1,
+            roomId: null,
+            groupId: null,
+            kind: 'LedStrip',
+            definitionId: null,
+            name: 'LED',
+            x: 0,
+            y: 0,
+            z: 2200,
+            width: 1200,
+            depth: 20,
+            height: 8,
+            rotation: 0,
+            materialId: null,
+            params,
+        }) as Item;
+    /** Where the strip's light sits (mm, item frame) and the way it shines (a rect area light shines along its local −z). */
+    const light = (params: Record<string, unknown>): {at: number[]; shines: number[]} => {
+        const body = buildKitchenItemBody(strip(params), new MaterialLibrary([], 1)) as THREE.Group;
+        const lights: THREE.RectAreaLight[] = [];
+        body.traverse((o) => o instanceof THREE.RectAreaLight && lights.push(o));
+        expect(lights).toHaveLength(1);
+        body.updateMatrixWorld(true);
+        const shines = new THREE.Vector3(0, 0, -1).applyQuaternion(lights[0].getWorldQuaternion(new THREE.Quaternion()));
+        return {
+            at: lights[0].position.toArray().map((v) => Math.round(v * 1000) + 0),
+            shines: shines.toArray().map((v) => Math.round(v) + 0),
+        };
+    };
+
+    it('shines down from its bottom by default, as under a cabinet', () => {
+        expect(light({})).toEqual({at: [0, 0, 0], shines: [0, -1, 0]});
+    });
+
+    it('shines up from its top as a cove light, or out of its front', () => {
+        expect(light({facing: 'up'})).toEqual({at: [0, 8, 0], shines: [0, 1, 0]});
+        expect(light({facing: 'out'})).toEqual({at: [0, 4, 10], shines: [0, 0, 1]});
     });
 });

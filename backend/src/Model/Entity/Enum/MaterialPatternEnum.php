@@ -25,4 +25,14 @@ enum MaterialPatternEnum: string
 	 * their joints; not laid in pieces.
 	 */
 	case Formwork = 'Formwork';
+	/** Veined stone in slabs or tiles `tileWidth` × `tileHeight`, the veins in the material's `accent`; laid in pieces. */
+	case Marble = 'Marble';
+	/** Parquet planks `tileWidth` long and `tileHeight` wide, their ends cut at 45° to meet in a zigzag; laid in pieces. */
+	case Chevron = 'Chevron';
+	/** Handmade glazed tiles `tileWidth` × `tileHeight`, each its own shade, with uneven edges; laid in pieces. */
+	case Zellige = 'Zellige';
+	/** Cement tiles `tileWidth` × `tileHeight` with a motif in the material's `accent`; laid in pieces. */
+	case Encaustic = 'Encaustic';
+	/** A panel of rounded flutes `tileWidth` apart running up it, whatever its grain; `tileHeight` is not read; not laid in pieces. */
+	case Fluted = 'Fluted';
 }

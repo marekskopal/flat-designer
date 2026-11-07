@@ -72,6 +72,26 @@ final readonly class ItemDto
 		);
 	}
 
+	/**
+	 * A Custom item's params without an empty `values` or `materials`, as the editor stores them: decoded as PHP arrays,
+	 * an empty JSON object would come back as `[]` (a list); a missing one means the same, the definition's defaults.
+	 * Applied on write only, so items stored before keep their logged states (undo compares them).
+	 *
+	 * @param array<TKey, mixed> $params
+	 * @return array<TKey, mixed>
+	 * @template TKey of array-key
+	 */
+	public static function withoutEmptyMaps(array $params): array
+	{
+		foreach (['values', 'materials'] as $key) {
+			if (array_key_exists($key, $params) && $params[$key] === []) {
+				unset($params[$key]);
+			}
+		}
+
+		return $params;
+	}
+
 	/** @return list<int> the ids of a stored `controls` list */
 	public static function controls(?string $json): array
 	{

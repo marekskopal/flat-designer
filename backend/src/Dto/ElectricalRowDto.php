@@ -11,7 +11,7 @@ use stdClass;
  * Points of one room alike: the same definition with the same parameter values (the int, bool and select ones its
  * `schedule.values` lists, all of them without; defaults filled in) at the same elevation `z` (mm, the item's bottom
  * edge). `units` sums the parameter its `schedule.count` names (a socket's gangs, a data socket's ports), 1 per item
- * without.
+ * without. LED strips are lights of definition 0, one unit each.
  */
 final readonly class ElectricalRowDto
 {

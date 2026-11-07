@@ -188,9 +188,40 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(10.0, $lines['Ceiling:-']['area'], 0.01);
 	}
 
-	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+	/**
+	 * A 1 × 2 m floor zone in oak counts in oak and comes off the floor tiles; a 600 × 3000 mm dropped ceiling 300 mm
+	 * deep along the west wall counts its soffit and its one side out in the room in its material, the room's ceiling
+	 * staying whole.
+	 */
+	public function testFloorAndCeilingZonesCountInTheirMaterials(): void
+	{
+		$oak = self::material('kitchen-oak');
+		$paint = self::material('wall-paint-white');
+		$this->buildRoom(null, [
+			'floorZones' => [['polygon' => [[0, 0], [1000, 0], [1000, 2000], [0, 2000]], 'materialId' => $oak->id]],
+			'ceilingZones' => [['polygon' => [[0, 0], [600, 0], [600, 3000], [0, 3000]], 'height' => 2200, 'materialId' => $paint->id]],
+		]);
 
-	/** The room of the first test, with terrazzo up to 2.1 m on the south wall's face in place of the wall tiles. */
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(10.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
+		self::assertEqualsWithDelta(2.0, $lines['Floor:' . $oak->id]['area'], 0.01);
+		self::assertEqualsWithDelta(12.0, $lines['Ceiling:-']['area'], 0.01);
+		// 1.8 m² of soffit and 3 m × 0.3 m of side: the other three lie against the walls.
+		self::assertEqualsWithDelta(1.8 + 0.9, $lines['Ceiling:' . $paint->id]['area'], 0.01);
+	}
+
+	/** A floor zone over a void counts only where there is floor, as the viewer draws it. */
+	public function testAFloorZoneOverAVoidCountsWithoutIt(): void
+	{
+		$oak = self::material('kitchen-oak');
+		$this->buildRoom(null, ['floorZones' => [['polygon' => [[0, 0], [1000, 0], [1000, 2000], [0, 2000]], 'materialId' => $oak->id]]]);
+		$this->create('voids', ['polygon' => [[0, 0], [1000, 0], [1000, 1000], [0, 1000]]]);
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(1.0, $lines['Floor:' . $oak->id]['area'], 0.01);
+		// 12 m² less the void and the zone's metre left.
+		self::assertEqualsWithDelta(10.0, $lines['Floor:' . self::material('floor-tiles-taupe')->id]['area'], 0.01);
+	}
 
 	/**
 	 * An attic under a 45° gable from 1 m at its eaves (over the room's long edges): the ceiling slopes within 1.5 m of
@@ -284,6 +315,26 @@ final class QuantitiesControllerTest extends EditorTestCase
 		self::assertEqualsWithDelta(4 * 0.4, $lines['Wall:' . $paint->id]['area'], 0.001);
 	}
 
+	public function testAWallFaceBandOnAStretchLeavesTheRestToTheRoom(): void
+	{
+		$terrazzo = self::material('terrazzo-white');
+		$wallTiles = self::material('tile-wall-beige');
+		$paint = self::material('wall-paint-white');
+		// 2100–3100 mm along the south wall (from x −100): 2000–3000 along the room's edge, clear of the door.
+		$this->buildRoom(
+			$paint,
+			[],
+			['leftFinishes' => [['materialId' => $terrazzo->id, 'bottom' => 0, 'top' => 2100, 'from' => 2100, 'to' => 3100]]],
+		);
+
+		$lines = $this->lines();
+		self::assertEqualsWithDelta(1.0 * 2.1, $lines['WallFinish:' . $terrazzo->id]['area'], 0.001);
+		// The other 10 m and the south edge's other 3 m up to 1.2 m, without the window's bottom 0.3 m and the door's 0.9 × 1.2.
+		self::assertEqualsWithDelta(12 - 0.3 + 3 * 1.2 - 0.9 * 1.2, $lines['WallFinish:' . $wallTiles->id]['area'], 0.001);
+		// Paint above the terrazzo and above the room's band elsewhere on the south edge, less the door's 0.9 × 0.8.
+		self::assertEqualsWithDelta(1.0 * 0.4 + 3 * 1.3 - 0.9 * 0.8, $lines['Wall:' . $paint->id]['area'], 0.001);
+	}
+
 	public function testAWallFaceWithAnEmptyFinishIsPainted(): void
 	{
 		$paint = self::material('wall-paint-white');
@@ -347,6 +398,31 @@ final class QuantitiesControllerTest extends EditorTestCase
 		// and west faces, which are interior walls: no render anywhere.
 		self::assertEqualsWithDelta(4.4 * 2.6 - 1.8 + (4.4 + 3.4) * 2.6, $lines['-']['area'], 0.01);
 		self::assertArrayNotHasKey($render->id, $lines);
+	}
+
+	public function testAFacadeBandOnAStretchLeavesTheRestToTheProjectsFacade(): void
+	{
+		$render = self::material('wall-paint-white');
+		$terrazzo = self::material('terrazzo-white');
+		// A plinth on the first metre along the south wall's outer face only; the door is 500–1400 along it.
+		$this->buildRoom(null, [], [
+			'type' => 'Exterior',
+			'rightFinishes' => [['materialId' => $terrazzo->id, 'bottom' => 0, 'top' => 600, 'from' => 0, 'to' => 1000]],
+		]);
+		$this->project->exteriorMaterial = $render;
+		Fixture::service(ProjectRepository::class)->persist($this->project);
+
+		$lines = [];
+		foreach (self::rows(self::rows($this->quantities()['facades'])[0]['lines']) as $line) {
+			$materialId = $line['materialId'];
+			$lines[is_int($materialId) ? $materialId : '-'] = $line;
+		}
+		// The plinth, less the door's 0.5 × 0.6 in it.
+		self::assertEqualsWithDelta(1.0 * 0.6 - 0.5 * 0.6, $lines[$terrazzo->id]['area'], 0.01);
+		// The render on the rest of the 4.4 m face, less the door's other 0.4 × 2.0.
+		self::assertEqualsWithDelta(3.4 * 2.6 - 0.4 * 2.0, $lines[$render->id]['area'], 0.01);
+		// Above the plinth the wall's own look (the band's stretch is the face's own), and the three interior walls'.
+		self::assertEqualsWithDelta(1.0 * 2.0 - 0.5 * 1.4 + (4.4 + 3.4 + 3.4) * 2.6 - 1.2, $lines['-']['area'], 0.01);
 	}
 
 	public function testAnExteriorWallTakesTheProjectsFacade(): void

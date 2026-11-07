@@ -96,6 +96,42 @@ export function markFixtureLight(light: THREE.Light, intensity: number): void {
     light.visible = false;
 }
 
+/** Which way an LED strip or `led` part shines: down (under a cabinet), up (a cove washing the ceiling) or out of its front (+z). */
+export type LedFacing = 'down' | 'up' | 'out';
+
+export function ledFacingOf(value: unknown): LedFacing {
+    return value === 'up' || value === 'out' ? value : 'down';
+}
+
+/**
+ * An LED strip's area light on the face of its box (metres, the box's min corner and size) it shines from: the bottom,
+ * the top or the front. A `RectAreaLight` shines along its local −z, so it is turned to face that way; tagged as a
+ * fixture, off until the lights are switched on.
+ */
+export function ledLight(
+    color: string,
+    intensity: number,
+    facing: LedFacing,
+    box: {x: number; y: number; z: number; w: number; h: number; d: number},
+): THREE.RectAreaLight {
+    const across = facing === 'out' ? box.h : box.d;
+    const light = new THREE.RectAreaLight(color, intensity, box.w, Math.max(across, 0.02));
+    const cx = box.x + box.w / 2;
+    const cz = box.z + box.d / 2;
+    if (facing === 'up') {
+        light.rotation.x = Math.PI / 2;
+        light.position.set(cx, box.y + box.h, cz);
+    } else if (facing === 'out') {
+        light.rotation.y = Math.PI;
+        light.position.set(cx, box.y + box.h / 2, box.z + box.d);
+    } else {
+        light.rotation.x = -Math.PI / 2;
+        light.position.set(cx, box.y, cz);
+    }
+    markFixtureLight(light, intensity);
+    return light;
+}
+
 /** A glowing bulb's material in the light's colour; dark until the lights are switched on. */
 export function bulbMaterial(kelvin: number): THREE.MeshStandardMaterial {
     return new THREE.MeshStandardMaterial({color: '#f4f1ea', emissive: balanced(kelvin), emissiveIntensity: 0, roughness: 0.25});

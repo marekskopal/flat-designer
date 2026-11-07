@@ -1,19 +1,21 @@
 {
  "name": "Dining chair",
- "description": "Solid wood chair: a seat of two boards narrowing to the back, legs tapered on the inside, aprons, and a back of two posts and two rails leaning back by the rake (5°; s5 / c5 are its sine and cosine, as expressions have no trigonometry — change all three together).",
+ "description": "Solid wood chair: a seat of two boards narrowing to the back, legs tapered on the inside, aprons, and a back of two posts and two rails leaning back by the rake (5°; s5 / c5 are its sine and cosine, as expressions have no trigonometry — change all three together). The seat and the legs may take materials of their own (an upholstered seat, metal legs).",
  "definition": {
   "format": 1,
   "catalogue": "seating",
   "translations": {
    "cs": {
     "name": "Jídelní židle",
-    "description": "Židle z masivu: sedák ze dvou desek zužující se dozadu, nohy zkosené na vnitřní straně, lubová lišta a opěradlo ze dvou sloupků a dvou příček skloněné dozadu o sklon (5°; s5 / c5 jsou jeho sinus a kosinus, protože výrazy nemají goniometrické funkce – měňte všechny tři společně).",
+    "description": "Židle z masivu: sedák ze dvou desek zužující se dozadu, nohy zkosené na vnitřní straně, lubová lišta a opěradlo ze dvou sloupků a dvou příček skloněné dozadu o sklon (5°; s5 / c5 jsou jeho sinus a kosinus, protože výrazy nemají goniometrické funkce – měňte všechny tři společně). Sedák a nohy mohou mít vlastní materiál (čalouněný sedák, kovové nohy).",
     "parameters": {
      "seatHeight": "Výška sedáku",
      "backWidth": "Šířka sedáku vzadu"
     },
     "slots": {
-     "wood": "Dřevo"
+     "wood": "Dřevo",
+     "seat": "Sedák",
+     "legs": "Nohy"
     },
     "parts": {
      "Seat": "Sedák",
@@ -73,6 +75,14 @@
    {
     "key": "wood",
     "label": "Wood"
+   },
+   {
+    "key": "seat",
+    "label": "Seat"
+   },
+   {
+    "key": "legs",
+    "label": "Legs"
    }
   ],
   "parts": [
@@ -89,7 +99,7 @@
     "w": "W / 2 - 0.5",
     "h": 25,
     "d": "D - pz",
-    "material": "wood",
+    "material": "seat",
     "backWidth": {
      "expr": "round(halfPost - 0.5)"
     },
@@ -110,7 +120,7 @@
     "w": 36,
     "h": "us",
     "d": 36,
-    "material": "wood",
+    "material": "legs",
     "bottomSize": 26
    },
    {
@@ -126,7 +136,7 @@
     "w": 36,
     "h": "us",
     "d": 30,
-    "material": "wood",
+    "material": "legs",
     "bottomSize": 26
    },
    {

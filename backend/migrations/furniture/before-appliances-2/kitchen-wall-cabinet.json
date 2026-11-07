@@ -1,0 +1,642 @@
+{
+ "name": "Kitchen wall cabinet",
+ "description": "Wall cabinet hung on the wall (the item elevation is its bottom edge): carcass boards and fronts: doors with shelves behind them, drawers with their boxes, or a lift-up, bi-fold or parallel lift flap. softClose damps the closing of the fronts. shelfLight lights the inside from under its top and shelves (a display cabinet with glass fronts).",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kuchyňská horní skříňka",
+    "description": "Horní skříňka zavěšená na stěně (výška osazení je její spodní hrana): desky korpusu a čela: dvířka s policemi za nimi, zásuvky s těly, nebo výklop nahoru, lomený výklop či paralelní zdvih. softClose tlumí dovírání čel. shelfLight osvětlí vnitřek zpod víka a polic (vitrína s prosklenými čely).",
+    "parameters": {
+     "fronts": "Čela odspodu",
+     "fronts.type": "Typ",
+     "fronts.height": "Výška",
+     "fronts.count": "Křídla",
+     "fronts.handle": "Úchytka",
+     "handle": "Úchytka",
+     "handleSide": "Strana úchytky jednokřídlých dvířek",
+     "softClose": "Tlumené dovírání",
+     "blindLeft": "Slepá část vlevo (roh)",
+     "blindRight": "Slepá část vpravo (roh)",
+     "t": "Deska korpusu",
+     "ft": "Tloušťka čela",
+     "gap": "Spára kolem čel",
+     "fronts.style": "Styl",
+     "handleLength": "Délka úchytky (0: podle čela)",
+     "frontStyle": "Styl čel",
+     "frame": "Šířka rámu čel (0: podle stylu)",
+     "shelfLight": "LED pod víkem a policemi",
+     "fronts.handlePosition": "Poloha úchytky"
+    },
+    "options": {
+     "fronts.type": {
+      "door": "dvířka",
+      "drawer": "zásuvka",
+      "liftUp": "výklop nahoru",
+      "bifold": "lomený výklop",
+      "parallelLift": "paralelní zdvih",
+      "oven": "trouba",
+      "microwave": "mikrovlnná trouba"
+     },
+     "fronts.handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
+     },
+     "handle": {
+      "horizontal": "vodorovná",
+      "vertical": "svislá",
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
+     },
+     "handleSide": {
+      "right": "vpravo",
+      "left": "vlevo"
+     },
+     "frontStyle": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "fronts.style": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "fronts.handlePosition": {
+      "auto": "automaticky",
+      "top": "nahoře",
+      "bottom": "dole",
+      "side": "na boku ve výšce ruky"
+     }
+    },
+    "slots": {
+     "carcass": "Korpus",
+     "fronts": "Čela",
+     "handles": "Úchytky",
+     "frames": "Rámy čel"
+    },
+    "parts": {
+     "Side": "Bok",
+     "Bottom": "Dno",
+     "Top": "Víko",
+     "Back": "Záda",
+     "Front slot": "Pole čela",
+     "Front": "Čelo",
+     "Drawer": "Zásuvka",
+     "Drawer side": "Bok zásuvky",
+     "Drawer bottom": "Dno zásuvky",
+     "Drawer back": "Záda zásuvky",
+     "Drawer inner front": "Vnitřní čelo zásuvky",
+     "Appliance": "Spotřebič",
+     "Shelf": "Police",
+     "Shelf light": "Osvětlení police"
+    }
+   }
+  },
+  "size": {
+   "width": 600,
+   "depth": 350,
+   "height": 720
+  },
+  "parameters": [
+   {
+    "key": "fronts",
+    "label": "Fronts, from the bottom",
+    "type": "list",
+    "minItems": 1,
+    "maxItems": 8,
+    "fields": [
+     {
+      "key": "type",
+      "label": "Type",
+      "type": "select",
+      "options": [
+       "door",
+       "drawer",
+       "liftUp",
+       "bifold",
+       "parallelLift",
+       "oven",
+       "microwave"
+      ],
+      "default": "door"
+     },
+     {
+      "key": "height",
+      "label": "Height",
+      "type": "int",
+      "min": 1,
+      "optional": true,
+      "unit": "mm"
+     },
+     {
+      "key": "count",
+      "label": "Leaves",
+      "type": "int",
+      "default": 1,
+      "min": 1,
+      "max": 4
+     },
+     {
+      "key": "handle",
+      "label": "Handle",
+      "type": "select",
+      "options": [
+       "horizontal",
+       "vertical",
+       "knob",
+       "edge",
+       "gola",
+       "push",
+       "none"
+      ],
+      "optional": true
+     },
+     {
+      "key": "handlePosition",
+      "label": "Handle position",
+      "type": "select",
+      "options": [
+       "auto",
+       "top",
+       "bottom",
+       "side"
+      ],
+      "optional": true
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+       "flat",
+       "shaker",
+       "fluted",
+       "glass",
+       "reeded"
+      ],
+      "optional": true
+     }
+    ],
+    "default": [
+     {
+      "type": "door"
+     }
+    ]
+   },
+   {
+    "key": "handle",
+    "label": "Handle",
+    "type": "select",
+    "options": [
+     "horizontal",
+     "vertical",
+     "knob",
+     "edge",
+     "gola",
+     "push",
+     "none"
+    ],
+    "default": "none"
+   },
+   {
+    "key": "handleSide",
+    "label": "Handle side of a single door",
+    "type": "select",
+    "options": [
+     "right",
+     "left"
+    ],
+    "default": "right"
+   },
+   {
+    "key": "handleLength",
+    "label": "Handle length (0: by the front)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "frontStyle",
+    "label": "Front style",
+    "type": "select",
+    "options": [
+     "flat",
+     "shaker",
+     "fluted",
+     "glass",
+     "reeded"
+    ],
+    "default": "flat"
+   },
+   {
+    "key": "frame",
+    "label": "Front frame width (0: by the style)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
+   },
+   {
+    "key": "softClose",
+    "label": "Soft close",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "shelfLight",
+    "label": "LED under the top and shelves",
+    "type": "bool",
+    "default": false
+   },
+   {
+    "key": "blindLeft",
+    "label": "Blind left (corner)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "unit": "mm"
+   },
+   {
+    "key": "blindRight",
+    "label": "Blind right (corner)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "unit": "mm"
+   },
+   {
+    "key": "t",
+    "label": "Carcass board",
+    "type": "int",
+    "default": 18,
+    "min": 12,
+    "max": 30,
+    "unit": "mm"
+   },
+   {
+    "key": "ft",
+    "label": "Front thickness",
+    "type": "int",
+    "default": 19,
+    "min": 12,
+    "max": 40,
+    "unit": "mm"
+   },
+   {
+    "key": "gap",
+    "label": "Gap around fronts",
+    "type": "int",
+    "default": 3,
+    "min": 0,
+    "max": 10,
+    "unit": "mm"
+   }
+  ],
+  "derived": {
+   "plinth": "0",
+   "heights": "share(field(fronts, 'height'), H - plinth)",
+   "starts": "offsets(heights)",
+   "carcassD": "D - ft",
+   "runner": "t + 13 - gap / 2"
+  },
+  "materialSlots": [
+   {
+    "key": "carcass",
+    "label": "Carcass"
+   },
+   {
+    "key": "fronts",
+    "label": "Fronts"
+   },
+   {
+    "key": "frames",
+    "label": "Front frames"
+   },
+   {
+    "key": "handles",
+    "label": "Handles"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Side",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i * (W - t)",
+    "y": "plinth",
+    "z": 0,
+    "w": "t",
+    "h": "H - plinth",
+    "d": "carcassD",
+    "material": "carcass",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Bottom",
+    "x": "t",
+    "y": "plinth",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Top",
+    "x": "t",
+    "y": "H - t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "t",
+    "d": "carcassD",
+    "material": "carcass",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Back",
+    "x": "t",
+    "y": "plinth + t",
+    "z": 0,
+    "w": "W - 2*t",
+    "h": "H - plinth - 2*t",
+    "d": 4,
+    "material": "carcass"
+   },
+   {
+    "type": "assembly",
+    "name": "Front slot",
+    "repeat": {
+     "over": "fronts",
+     "as": "f"
+    },
+    "x": "blindLeft",
+    "y": "plinth + starts[f_index]",
+    "z": "carcassD",
+    "w": "W - blindLeft - blindRight",
+    "h": "heights[f_index]",
+    "d": "ft",
+    "parts": [
+     {
+      "type": "front",
+      "name": "Front",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
+      "repeat": {
+       "count": "(f.type == 'door' ? f.count : 1)",
+       "as": "k"
+      },
+      "x": "k * AW / (f.type == 'door' ? f.count : 1) + gap / 2",
+      "y": "gap / 2",
+      "z": 0,
+      "w": "AW / (f.type == 'door' ? f.count : 1) - gap",
+      "h": "AH - gap",
+      "d": "AD",
+      "material": "fronts",
+      "edges": [
+       "left",
+       "right",
+       "bottom",
+       "top"
+      ],
+      "kind": "door",
+      "handle": {
+       "expr": "f.handle ?? handle"
+      },
+      "handleSide": {
+       "expr": "(f.type == 'door' ? f.count : 1) == 2 ? (k == 0 ? 'right' : 'left') : handleSide"
+      },
+      "opens": {
+       "expr": "f.type == 'liftUp' ? 'lift' : f.type == 'bifold' ? 'fold' : f.type == 'parallelLift' ? 'parallel' : 'swing'"
+      },
+      "softClose": {
+       "expr": "softClose"
+      },
+      "style": {
+       "expr": "f.style ?? frontStyle"
+      },
+      "frame": {
+       "expr": "frame"
+      },
+      "frameMaterial": "frames",
+      "handleMaterial": "handles",
+      "handleLength": {
+       "expr": "handleLength"
+      },
+      "handlePosition": {
+       "expr": "f.handlePosition ?? 'auto'"
+      }
+     },
+     {
+      "type": "assembly",
+      "name": "Drawer",
+      "when": "f.type == 'drawer'",
+      "x": "gap / 2",
+      "y": "gap / 2",
+      "z": "30 - carcassD",
+      "w": "AW - gap",
+      "h": "AH - gap",
+      "d": "carcassD - 30 + AD",
+      "opens": "slide",
+      "travel": {
+       "expr": "max(carcassD - 90, 50)"
+      },
+      "softClose": {
+       "expr": "softClose"
+      },
+      "parts": [
+       {
+        "type": "front",
+        "name": "Front",
+        "x": 0,
+        "y": 0,
+        "z": "AD - ft",
+        "w": "AW",
+        "h": "AH",
+        "d": "ft",
+        "material": "fronts",
+        "edges": [
+         "left",
+         "right",
+         "bottom",
+         "top"
+        ],
+        "kind": "drawer",
+        "handle": {
+         "expr": "f.handle ?? handle"
+        },
+        "style": {
+         "expr": "f.style ?? frontStyle"
+        },
+        "frame": {
+         "expr": "frame"
+        },
+        "frameMaterial": "frames",
+        "handleMaterial": "handles",
+        "handleLength": {
+         "expr": "handleLength"
+        },
+        "handlePosition": {
+         "expr": "f.handlePosition ?? 'auto'"
+        }
+       },
+       {
+        "type": "board",
+        "name": "Drawer side",
+        "repeat": {
+         "count": 2,
+         "as": "s"
+        },
+        "x": "s == 0 ? runner : AW - runner - 16",
+        "y": 30,
+        "z": 10,
+        "w": 16,
+        "h": "max(AH - 70, 30)",
+        "d": "AD - ft - 10",
+        "material": "carcass",
+        "edges": [
+         "top"
+        ]
+       },
+       {
+        "type": "board",
+        "name": "Drawer bottom",
+        "x": "runner + 16",
+        "y": 30,
+        "z": 10,
+        "w": "AW - 2 * runner - 32",
+        "h": 8,
+        "d": "AD - ft - 10",
+        "material": "carcass",
+        "grain": "horizontal"
+       },
+       {
+        "type": "board",
+        "name": "Drawer back",
+        "x": "runner + 16",
+        "y": 38,
+        "z": 10,
+        "w": "AW - 2 * runner - 32",
+        "h": "max(AH - 78, 22)",
+        "d": 16,
+        "material": "carcass",
+        "grain": "horizontal",
+        "edges": [
+         "top"
+        ]
+       },
+       {
+        "type": "board",
+        "name": "Drawer inner front",
+        "x": "runner + 16",
+        "y": 38,
+        "z": "AD - ft - 16",
+        "w": "AW - 2 * runner - 32",
+        "h": "max(AH - 78, 22)",
+        "d": 16,
+        "material": "carcass",
+        "grain": "horizontal",
+        "edges": [
+         "top"
+        ]
+       }
+      ]
+     },
+     {
+      "type": "appliance",
+      "name": "Appliance",
+      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "x": "gap / 2",
+      "y": "gap / 2",
+      "z": 0,
+      "w": "AW - gap",
+      "h": "AH - gap",
+      "d": "AD",
+      "kind": {
+       "expr": "f.type"
+      }
+     },
+     {
+      "type": "board",
+      "name": "Shelf",
+      "when": "f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift'",
+      "repeat": {
+       "count": "floor(AH / 400)",
+       "as": "s"
+      },
+      "x": "t - blindLeft",
+      "y": "round((s + 1) * AH / (floor(AH / 400) + 1)) - round(t / 2)",
+      "z": "20 - carcassD",
+      "w": "W - 2 * t",
+      "h": "t",
+      "d": "carcassD - 40",
+      "material": "carcass",
+      "grain": "horizontal",
+      "edges": [
+       "front"
+      ]
+     },
+     {
+      "type": "led",
+      "name": "Shelf light",
+      "when": "(f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift') && shelfLight",
+      "repeat": {
+       "count": "floor(AH / 400)",
+       "as": "s"
+      },
+      "x": "t - blindLeft",
+      "y": "round((s + 1) * AH / (floor(AH / 400) + 1)) - round(t / 2) - 6",
+      "z": -40,
+      "w": "W - 2 * t",
+      "h": 6,
+      "d": 10,
+      "material": "carcass",
+      "color": "#ffd9a0"
+     }
+    ]
+   },
+   {
+    "type": "led",
+    "name": "Shelf light",
+    "when": "shelfLight",
+    "x": "t",
+    "y": "H - t - 6",
+    "z": "carcassD - 40",
+    "w": "W - 2 * t",
+    "h": 6,
+    "d": 10,
+    "material": "carcass",
+    "color": "#ffd9a0"
+   }
+  ]
+ }
+}

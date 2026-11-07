@@ -3,6 +3,7 @@ import * as THREE from 'three';
 
 import {ChimneyStretch} from './chimneys';
 import {buildCustomItemBody, DefinitionLibrary} from './custom/custom';
+import {WorktopCutter} from './custom/cutouts';
 import {buildKitchenItemBody} from './kitchen';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
@@ -31,6 +32,8 @@ export interface ItemAssets {
     plots?: readonly Plot[];
     /** The stretch of each of the floor's chimneys it draws (`chimneyStretches()`); null not drawn. */
     chimneys?: ReadonlyMap<number, ChimneyStretch | null>;
+    /** The floor's shown sinks and hobs (`worktopCutters()`), cut out of the worktops under them. */
+    cutters?: readonly WorktopCutter[];
 }
 
 const NoAssets: ItemAssets = {models: new Map(), modelLibrary: null, pictures: null};
@@ -122,7 +125,7 @@ export function buildItemParts(
     assets: ItemAssets = NoAssets,
 ): THREE.Object3D {
     const object =
-        buildCustomItemBody(item, materials, definitions, assets.pictures, room, assets.roofs) ??
+        buildCustomItemBody(item, materials, definitions, assets.pictures, room, assets.roofs, assets.cutters) ??
         buildModelItemBody(item, assets.models, assets.modelLibrary) ??
         buildKitchenItemBody(item, materials) ??
         buildSanitaryItemBody(item, materials) ??
@@ -137,7 +140,8 @@ export function buildItemParts(
         layOnRoof(object, item, assets.roofs ?? []);
     }
     object.userData = {...object.userData, itemId: item.id};
-    alignTiles(object, tileGrid(room), materials);
+    // Upright tile rows from the item's own bottom (on a roof, where `layOnRoof()` put it).
+    alignTiles(object, tileGrid(room), materials, object.position.y / MM);
     object.traverse((o) => {
         if (o instanceof THREE.Mesh) {
             // A glowing bulb would block its own light.

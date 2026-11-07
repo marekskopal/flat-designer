@@ -1,0 +1,99 @@
+{
+ "name": "Coffee machine",
+ "description": "Espresso machine on the worktop: a body, a drip tray at the front foot, a group head under the front lip and a cup warmer on top.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Kávovar",
+    "description": "Pákový kávovar na pracovní desce: tělo, odkapávací miska vpředu dole, hlava pod přední hranou a ohřívač šálků nahoře.",
+    "slots": {
+     "body": "Tělo",
+     "details": "Detaily"
+    },
+    "parts": {
+     "Body": "Tělo",
+     "Front lip": "Přední hrana",
+     "Group head": "Hlava",
+     "Drip tray": "Odkapávací miska",
+     "Cup warmer": "Ohřívač šálků"
+    }
+   }
+  },
+  "size": {
+   "width": 320,
+   "depth": 420,
+   "height": 400
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Body",
+    "default": "steel-stainless"
+   },
+   {
+    "key": "details",
+    "label": "Details",
+    "default": "matt-black"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Body",
+    "x": 0,
+    "y": 30,
+    "z": 0,
+    "w": "W",
+    "h": "H - 30",
+    "d": "D - 140",
+    "material": "body"
+   },
+   {
+    "type": "block",
+    "name": "Front lip",
+    "x": 0,
+    "y": "H - 110",
+    "z": "D - 140",
+    "w": "W",
+    "h": 110,
+    "d": 110,
+    "material": "body"
+   },
+   {
+    "type": "cylinder",
+    "name": "Group head",
+    "x": "W / 2 - 35",
+    "y": "H - 160",
+    "z": "D - 120",
+    "w": 70,
+    "h": 50,
+    "d": 70,
+    "material": "details"
+   },
+   {
+    "type": "block",
+    "name": "Drip tray",
+    "x": 20,
+    "y": 0,
+    "z": "D - 150",
+    "w": "W - 40",
+    "h": 30,
+    "d": 150,
+    "material": "details"
+   },
+   {
+    "type": "block",
+    "name": "Cup warmer",
+    "x": 15,
+    "y": "H",
+    "z": 15,
+    "w": "W - 30",
+    "h": 2,
+    "d": "D - 60",
+    "material": "details"
+   }
+  ]
+ }
+}

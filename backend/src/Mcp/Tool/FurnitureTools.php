@@ -10,7 +10,9 @@ use Izbik\Dto\FurnitureDefinitionInputDto;
 use Izbik\Dto\FurnitureValidationDto;
 use Izbik\Model\Entity\Enum\FurnitureScopeEnum;
 use Izbik\Model\Entity\FurnitureDefinition;
+use Izbik\Service\Editor\Exception\EditException;
 use Izbik\Service\Furniture\CutList\CutListService;
+use Izbik\Service\Furniture\DefinitionCatalogueEnum;
 use Izbik\Service\Furniture\DefinitionEvaluator;
 use Izbik\Service\Furniture\DefinitionException;
 use Izbik\Service\Furniture\DefinitionValidator;
@@ -32,7 +34,10 @@ final readonly class FurnitureTools
 	public const string Format = 'A furniture definition, JSON format 1. Lengths are mm; the parts\' frame has its origin at the item\'s '
 		. 'left-bottom-back corner: x along the width (0..W), y up (0..H), z towards the front (0..D). '
 		. 'Keys: "format": 1; "catalogue"?: "kitchen" | "storage" | "seating" | "tables" | "bedroom" | "bathroom" | "lighting" | '
-		. '"electrical" | "decor" | "building" | "outdoor" | "roof" (where the editor\'s Add library files it; none: Other); "category"?: "light" | "socket" | "switch" | "data" | "plumbing" (what get_electrical_schedule '
+		. '"electrical" | "decor" | "building" | "outdoor" | "roof" (where the editor\'s Add library files it; none: Other); "cutout"?: '
+		. '"worktop" (the sinks and hobs whose bottom lies at its top are cut out of its highest flat boards in the viewer) | "sink" '
+		. '| "hob" (cuts its hole there: a hob its footprint less 10 mm, an inset sink less 20 mm, an undermount sink its "Bowl" parts '
+		. 'less 3 mm, a farmhouse sink none, by its "style" parameter); "category"?: "light" | "socket" | "switch" | "data" | "plumbing" (what get_electrical_schedule '
 		. 'counts its items as); "schedule"?: {count?: key of an int parameter multiplying the item, e.g. a socket\'s gangs or a data '
 		. 'socket\'s ports; values?: [keys of the int/bool/select parameters the schedule lists, all without]} (with a category); '
 		. '"translations"?: {"cs": {name?, description?, parameters?: {parameter key, or list.field: label}, options?: {select '
@@ -45,6 +50,8 @@ final readonly class FurnitureTools
 		. 'image file of its project, see list_project_files, or null)}; "derived": {name: '
 		. 'expression} evaluated in order; "materialSlots": list of {key, label?, default?: material code from list_materials} '
 		. '(an item fills them with params.materials; the first slot, and a slot without a default, take the item material); '
+		. 'sides a parameter names "left" / "right" (an L worktop\'s returnSide, an island worktop\'s leftEnd / rightEnd, a '
+		. 'handleSide) are seen from the item\'s front: left is its local x = 0, whatever the item\'s rotation; '
 		. '"parts": list of {type, '
 		. 'name?, material?: slot key (or {"expr": …} giving one per copy), when?: boolean expression, repeat?: {count: expression, '
 		. 'as?: index name (default i)} or '
@@ -54,7 +61,16 @@ final readonly class FurnitureTools
 		. 'Part types and their options: "board" (grain: "vertical" | "horizontal", edges: list of sides "left", "right", '
 		. '"bottom", "top", "back", "front" that get edge banding, shade: 0–1 darker (0.3 for a plinth), backWidth: mm at the '
 		. 'back with taper: "both" | "left" | "right", e.g. a chair seat or the top of a wardrobe with a slanted end); "front" (a door or drawer leaf with a bar handle: kind: '
-		. '"door" | "drawer", handle: "horizontal" | "vertical" | "none", handleSide: "left" | "right", grain, edges; '
+		. '"door" | "drawer", style: "flat" (default) | "shaker" (a frame round a recessed panel) | "fluted" | "glass" (a frame round '
+		. 'clear glass) | "reeded" (a frame round reeded glass), frame: frame width mm (0: the style\'s own, 70 shaker, 40 glass), '
+		. 'frameMaterial: material slot of the frame (unfilled and without a default: the front\'s), handle: "horizontal" | '
+		. '"vertical" (bars, handleLength mm, 0: by the front) | "knob" | "edge" (an edge pull on the top edge, the bottom one '
+		. 'out of reach) | "gola" (a handleless channel) | "push" (push-to-open) | "none", handleSide: "left" | "right", '
+		. 'handlePosition: "auto" (default: near the top within reach, else the bottom; a tall door from below reach height '
+		. 'to well above it at reach height on its handle edge) | "top" | "bottom" (that edge whatever the height, e.g. the '
+		. 'pull at the split of two doors; an edge pull then sits at a door\'s handle side) | "side" (at reach height on the '
+		. 'handle edge), handleMaterial: material slot of the handle (unfilled and without a default: black; also the gola '
+		. 'channel\'s colour), grain, edges; '
 		. 'it opens in the viewer by opens: "swing" (default for a door: on its hinge edge "left" | "right", default the side '
 		. 'away from handleSide; hingeType "concealed" (default: cup hinges, which carry the door forward and in as it opens, '
 		. 'angle default 110, at most 155 for a wide-angle hinge) | "butt" (a plain hinge on the edge, angle default 105, at '
@@ -62,9 +78,14 @@ final readonly class FurnitureTools
 		. 'of its depth into the item) | "lift" (a flap turning up about its top edge, angle default 100) | "fold" (a bi-fold '
 		. 'flap folding foldAt mm below its top, default and at most half way; the cut list lists its two panels) | "parallel" '
 		. '(a flap rising travel mm upright, default its height + 10) | "none" (fixed); softClose: true damps its closing); "block" (a solid box not cut from sheet: stone, concrete, metal, a solid timber bar, fabric; grain, shade; the cut list counts it among the other parts); "cylinder" (rod '
-		. 'or round leg along axis: "x" | "y" | "z", default y; diameter = the box\'s smaller side across; radius mm rounds the edges of its ends, e.g. a pouf); "taperedLeg" '
-		. '(narrows to bottomSize mm at the floor); "glass"; "led" (color "#rrggbb", intensity); "appliance" (built-in oven or '
-		. 'microwave front: kind: "oven" | "microwave"); "slidingDoor" (a framed leaf: profile: material slot of the frame, '
+		. 'or round leg along axis: "x" | "y" | "z", default y; diameter = the box\'s smaller side across; radius mm rounds the edges of its ends, e.g. a pouf; '
+		. 'a lamp shade\'s profile: "straight" (default) | "cone" (narrowing to topRatio 0–1 of its radius at the top, default 0.3) | '
+		. '"teardrop" (a rounded bottom tapering to a neck of topRatio, default 0.15); wire: n > 0 draws it as an open cage of n '
+		. 'meridian wires and a few rings); "taperedLeg" '
+		. '(narrows to bottomSize mm at the floor); "glass"; "led" (color "#rrggbb", intensity, facing: "down" (default) | "up" '
+		. '(a cove light washing the ceiling) | "out" (out of its front)); "appliance" (a built-in '
+		. 'appliance front: kind: "oven" | "microwave" | "steam" (a steam oven) | "coffee" (a coffee machine), finish: "black" '
+		. '(default) | "white" (glass) | "steel" | "retro" (cream with chrome)); "slidingDoor" (a framed leaf: profile: material slot of the frame, '
 		. 'default aluminium, mirror: true for a mirror infill, profileWidth mm; place each leaf on its track yourself); '
 		. '"cushion" (upholstery: seat or back cushion, mattress, duvet, pillow; its edges rounded by radius mm, default 40, 0 square, '
 		. 'drawn with at most half its smallest side); "picture" (a print, poster or photo: the box with the image file given by '
@@ -126,20 +147,27 @@ final readonly class FurnitureTools
 	/**
 	 * @param int|null $projectId with a project: what its items may use (global, the project's own, the project owner's
 	 *     library); without: global ones and your library
+	 * @param string|null $catalogue only the definitions filed under it in the Add library (kitchen, storage, seating,
+	 *     tables, bedroom, bathroom, lighting, electrical, decor, building, outdoor, roof; one without a catalogue but with
+	 *     an electrical category goes under lighting or electrical); null: all
 	 * @return list<array<string, mixed>>
 	 */
 	#[McpTool(
 		name: 'list_furniture_definitions',
-		description: 'List furniture definitions (for Custom items) with their scope, default size and parameters; '
+		description: 'List furniture definitions (for Custom items) with their scope, catalogue, default size, parameters and '
+			. 'material slots (the keys params.materials fills, with their default material codes); '
 			. 'get_furniture_definition shows the parts.',
 		annotations: new ToolAnnotations(readOnlyHint: true),
 	)]
-	public function listFurnitureDefinitions(?int $projectId = null): array
+	public function listFurnitureDefinitions(?int $projectId = null, ?string $catalogue = null): array
 	{
 		$user = $this->context->user();
 		$project = $projectId === null ? null : $this->context->project($projectId);
+		if ($catalogue !== null && DefinitionCatalogueEnum::tryFrom($catalogue) === null) {
+			throw EditException::invalid(sprintf('Unknown catalogue "%s".', $catalogue));
+		}
 
-		return array_map(static function (FurnitureDefinition $definition): array {
+		$listed = array_map(static function (FurnitureDefinition $definition): array {
 			$body = JsonDecoder::decodeObject($definition->definition);
 
 			return [
@@ -149,11 +177,51 @@ final readonly class FurnitureTools
 				'scope' => $definition->scope()->value,
 				'userName' => $definition->user?->name,
 				'projectId' => $definition->project?->id,
+				'catalogue' => self::catalogue($body),
 				'size' => $body['size'] ?? null,
 				'parameters' => $body['parameters'] ?? [],
+				'materialSlots' => self::slots($body['materialSlots'] ?? null),
 				'updatedAt' => $definition->updatedAt->format(DATE_ATOM),
 			];
 		}, $this->definitionProvider->listVisible($user, $project));
+
+		return $catalogue === null
+			? $listed
+			: array_values(array_filter($listed, static fn (array $row): bool => $row['catalogue'] === $catalogue));
+	}
+
+	/**
+	 * Where the Add library files a definition: its `catalogue`, else by its electrical category (lights under lighting,
+	 * the rest under electrical), else none (Other).
+	 *
+	 * @param array<mixed> $body
+	 */
+	private static function catalogue(array $body): ?string
+	{
+		if (is_string($body['catalogue'] ?? null)) {
+			return $body['catalogue'];
+		}
+		if (!is_string($body['category'] ?? null)) {
+			return null;
+		}
+
+		return $body['category'] === 'light' ? DefinitionCatalogueEnum::Lighting->value : DefinitionCatalogueEnum::Electrical->value;
+	}
+
+	/** @return list<array{key: mixed, default: mixed}> a definition's material slots: key and default material code */
+	private static function slots(mixed $slots): array
+	{
+		if (!is_array($slots)) {
+			return [];
+		}
+
+		$listed = [];
+		foreach ($slots as $slot) {
+			$slot = is_array($slot) ? $slot : [];
+			$listed[] = ['key' => $slot['key'] ?? null, 'default' => $slot['default'] ?? null];
+		}
+
+		return $listed;
 	}
 
 	#[McpTool(

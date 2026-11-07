@@ -20,13 +20,14 @@ use const M_PI;
 /**
  * The surfaces of one room as the viewer draws them, in mm² (or mm for skirting), per surface and material:
  *
- * - the floor in the floor material, less the floor's voids;
+ * - the floor in the floor material, less the floor's voids and its floor zones, which count in their own materials;
  * - wall finish bands along the wall faces on the room's edges (`WallFaceSpans`), up to the wall's top, without openings:
  *   the face's own bands (`WallDto::finishesOn()`) or else the room's;
  * - the rest of those wall faces up to the ceiling in the wall's material (paint), without bands and openings; open-air
  *   rooms have no ceiling and paint none (their walls are façades);
  * - the ceiling, on a vault its arched surface, and the beams' underside and sides; a flat one less the voids of the floor
  *   above, a sloped one scaled by the share of the floor they leave;
+ * - a dropped ceiling (a ceiling zone): its soffit and sides as ceiling, in its material or the ceiling's;
  * - skirting along the walls, except doorways.
  *
  * Wall faces outside every room (the façade) are not counted. A wall between two rooms counts once for each. Under the
@@ -52,8 +53,13 @@ final class RoomSurfaces
 		$surfaces = new self();
 		$points = array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $room->polygon);
 		$area = abs(PlanMath::signedArea($points));
+		$zoned = $surfaces->addFloorZones($room, $voids);
 		if ($room->floorMaterialId !== null) {
-			$surfaces->add(QuantitySurfaceEnum::Floor, $room->floorMaterialId, max(0.0, $area - VoidArea::of($room->polygon, $voids)));
+			$surfaces->add(
+				QuantitySurfaceEnum::Floor,
+				$room->floorMaterialId,
+				max(0.0, $area - VoidArea::of($room->polygon, $voids) - $zoned),
+			);
 		}
 		// Under the roofs: the ceiling along the slope, and the cover to follow it along the walls.
 		$under = $roofs === null
@@ -62,6 +68,7 @@ final class RoomSurfaces
 		// The voids of the floor above come off a flat ceiling; a sloped one is scaled by the share of the floor they leave.
 		$aboveLeft = $room->vaultSpacing === null && $area > 0 ? max(0.0, $area - VoidArea::of($room->polygon, $voidsAbove)) / $area : 1.0;
 		$surfaces->addCeiling($room, $aboveLeft * ($under->ceilingArea ?? $area));
+		$surfaces->addCeilingZones($room);
 		$cover = $under === null ? null : $roofs;
 
 		$wallTop = self::wallTop($room);
@@ -127,6 +134,58 @@ final class RoomSurfaces
 	}
 
 	/**
+	 * The floor zones in their materials (taken not to overlap), less the voids; returns their area, which the floor
+	 * material leaves.
+	 *
+	 * @param list<FloorVoidDto> $voids
+	 */
+	private function addFloorZones(RoomDto $room, array $voids): float
+	{
+		$total = 0.0;
+		foreach ($room->floorZones as $zone) {
+			// The voids are cut out of a zone as out of the floor (`VoidArea`), so the floor takes off the rest.
+			$area = max(0.0, abs(PlanMath::signedArea(self::points($zone['polygon']))) - VoidArea::of($zone['polygon'], $voids));
+			$this->add(QuantitySurfaceEnum::Floor, $zone['materialId'], $area);
+			$total += $area;
+		}
+
+		return $total;
+	}
+
+	/**
+	 * The dropped ceilings: each zone's soffit and its sides up to the ceiling (not those against the room's walls), in
+	 * its material (else the ceiling's). The room's ceiling above them stays counted.
+	 */
+	private function addCeilingZones(RoomDto $room): void
+	{
+		if ($room->ceilingHeight === null || $room->vaultSpacing !== null) {
+			return;
+		}
+		foreach ($room->ceilingZones as $zone) {
+			// A zone the ceiling no longer takes (lowered since) is not drawn.
+			if ($zone['height'] >= $room->ceilingHeight) {
+				continue;
+			}
+			$points = self::points($zone['polygon']);
+			$sides = RoomZoneSides::exposed($points, self::points($room->polygon)) * ($room->ceilingHeight - $zone['height']);
+			$this->add(
+				QuantitySurfaceEnum::Ceiling,
+				$zone['materialId'] ?? $room->ceilingMaterialId,
+				abs(PlanMath::signedArea($points)) + $sides,
+			);
+		}
+	}
+
+	/**
+	 * @param list<array{int, int}> $polygon
+	 * @return list<array{float, float}>
+	 */
+	private static function points(array $polygon): array
+	{
+		return array_map(static fn (array $p): array => [(float) $p[0], (float) $p[1]], $polygon);
+	}
+
+	/**
 	 * Skirting along the faces, except their doorways: the same as `WallFaceSpans::skirting()`, from the faces at hand.
 	 *
 	 * @param list<array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>}> $faces
@@ -157,55 +216,14 @@ final class RoomSurfaces
 	 */
 	private function addFace(RoomDto $room, array $face, ?float $wallTop, ?RoofCover $cover, array $a, array $b): void
 	{
-		if ($cover === null) {
-			$this->addWallFace($room, $face, $wallTop);
-			return;
-		}
-		foreach (RoomFaceUnderRoof::amounts($room, $face, $wallTop, $cover, $a, $b) as [$surface, $materialId, $amount]) {
-			$this->add($surface, $materialId, $amount);
-		}
-	}
-
-	/** @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face */
-	private function addWallFace(RoomDto $room, array $face, ?float $wallTop): void
-	{
-		$top = $wallTop === null ? (float) $face['wall']->height : min((float) $face['wall']->height, $wallTop);
-		$bands = [];
-		foreach ($face['wall']->finishesOn($face['side']) ?? $room->wallFinishes as $band) {
-			$bottom = max((float) $band->bottom, 0.0);
-			$bandTop = min((float) $band->top, $top);
-			if ($bandTop <= $bottom) {
-				continue;
-			}
-
-			$this->add(QuantitySurfaceEnum::WallFinish, $band->materialId, self::faceArea($face, $bottom, $bandTop));
-			$bands[] = [$bottom, $bandTop];
-		}
-		if ($wallTop === null) {
-			return;
-		}
-
-		foreach (Spans::uncovered($top, $bands) as [$bottom, $paintTop]) {
-			$this->add(QuantitySurfaceEnum::Wall, $face['wall']->materialId, self::faceArea($face, $bottom, $paintTop));
-		}
-	}
-
-	/**
-	 * Area of the face between two heights, without its openings.
-	 *
-	 * @param array{wall: WallDto, side: OpeningSideEnum, from: float, to: float, gaps: list<array{from: float, to: float, bottom: int, top: int, niche: bool}>} $face
-	 */
-	private static function faceArea(array $face, float $bottom, float $top): float
-	{
-		$area = ($face['to'] - $face['from']) * ($top - $bottom);
-		foreach ($face['gaps'] as $gap) {
-			$height = min((float) $gap['top'], $top) - max((float) $gap['bottom'], $bottom);
-			if ($height > 0) {
-				$area -= ($gap['to'] - $gap['from']) * $height;
+		foreach (RoomFace::stretches($room, $face, $a, $b) as [$stretch, $bands]) {
+			$amounts = $cover === null
+				? RoomFace::amounts($stretch, $bands, $wallTop)
+				: RoomFaceUnderRoof::amounts($room, $stretch, $wallTop, $cover, $a, $b, $bands);
+			foreach ($amounts as [$surface, $materialId, $amount]) {
+				$this->add($surface, $materialId, $amount);
 			}
 		}
-
-		return max($area, 0.0);
 	}
 
 	private function add(QuantitySurfaceEnum $surface, ?int $materialId, float $amount): void

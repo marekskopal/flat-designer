@@ -1,18 +1,22 @@
 {
  "name": "Backsplash",
- "description": "Wall panel between worktop and wall cabinets, cut to the item.",
+ "description": "Wall panel between worktop and wall cabinets, cut to the item. A ledge (ledge mm deep) along its top edge stands out in front of it.",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Zástěna",
-    "description": "Obklad stěny mezi pracovní deskou a horními skříňkami, přiříznutý na rozměr prvku.",
+    "description": "Obklad stěny mezi pracovní deskou a horními skříňkami, přiříznutý na rozměr prvku. Polička (ledge mm hluboká) podél horní hrany vystupuje před ni.",
     "slots": {
      "top": "Materiál"
     },
     "parts": {
-     "Slab": "Deska"
+     "Slab": "Deska",
+     "Ledge": "Polička"
+    },
+    "parameters": {
+     "ledge": "Hloubka poličky (0: žádná)"
     }
    }
   },
@@ -42,6 +46,35 @@
     "edges": [
      "front"
     ]
+   },
+   {
+    "type": "board",
+    "name": "Ledge",
+    "when": "ledge > 0",
+    "x": 0,
+    "y": "H - 20",
+    "z": "D",
+    "w": "W",
+    "h": 20,
+    "d": "ledge",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "left",
+     "right"
+    ]
+   }
+  ],
+  "parameters": [
+   {
+    "key": "ledge",
+    "label": "Ledge depth (0: none)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 250,
+    "unit": "mm"
    }
   ]
  }

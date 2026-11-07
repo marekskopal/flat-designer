@@ -24,9 +24,15 @@
     },
     "cutList": {
         "definitionGone": "Popis nábytku už neexistuje.",
-        "noMaterial": "Bez materiálu"
+        "noMaterial": "Bez materiálu",
+        "stile": "vlys",
+        "rail": "příčka",
+        "panel": "výplň",
+        "glass": "sklo",
+        "glassMaterial": "Sklo"
     },
     "schedules": {
+        "ledStrip": "LED pásek",
         "notInRoom": "Mimo místnosti"
     }
 }

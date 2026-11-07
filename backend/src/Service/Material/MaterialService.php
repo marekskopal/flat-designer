@@ -49,6 +49,7 @@ final readonly class MaterialService
 			tileWidth: $tileWidth,
 			tileHeight: $tileHeight,
 			createdBy: $author,
+			accent: self::accent($input->accent),
 		);
 		$material->createdAt = new DateTimeImmutable();
 		$material->updatedAt = $material->createdAt;
@@ -71,6 +72,7 @@ final readonly class MaterialService
 		$material->roughness = self::unit('roughness', $input->roughness);
 		$material->metalness = self::unit('metalness', $input->metalness);
 		[$material->tileWidth, $material->tileHeight] = self::tileSize($input->tileWidth, $input->tileHeight);
+		$material->accent = self::accent($input->accent);
 		$material->updatedAt = new DateTimeImmutable();
 		$this->materialRepository->persist($material);
 		$this->updatePublisher->markMaterialChanged($material->id);
@@ -122,6 +124,18 @@ final readonly class MaterialService
 		}
 
 		return strtolower($color);
+	}
+
+	private static function accent(?string $accent): ?string
+	{
+		if ($accent === null) {
+			return null;
+		}
+		if (preg_match('/^#[0-9a-fA-F]{6}$/', $accent) !== 1) {
+			throw new MaterialException('Field "accent" must be #rrggbb, e.g. "#8f9196".');
+		}
+
+		return strtolower($accent);
 	}
 
 	private static function unit(string $field, float $value): float

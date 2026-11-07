@@ -1,13 +1,13 @@
 {
  "name": "Kitchen tall cabinet",
- "description": "Tall cabinet or appliance column on a plinth: fronts stacked from the bottom (doors with shelves behind them, drawers with their boxes, lift-up, bi-fold and parallel lift flaps), with oven and microwave fronts. softClose damps the closing of the fronts. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge).",
+ "description": "Tall cabinet or appliance column on a plinth: fronts stacked from the bottom (doors with shelves behind them, drawers with their boxes, lift-up, bi-fold and parallel lift flaps), with oven and microwave fronts. softClose damps the closing of the fronts. plinthVent puts a ventilation grille in the plinth (under an oven or a fridge). interior drawers fits a larder with internal drawers behind its doors; plinthFinish own puts the plinth in its own material. Appliance fronts are an oven, a microwave, a steam oven or a coffee machine, in applianceFinish (black or white glass, steel, retro).",
  "definition": {
   "format": 1,
   "catalogue": "kitchen",
   "translations": {
    "cs": {
     "name": "Kuchyňská vysoká skříň",
-    "description": "Vysoká skříň nebo vestavná sestava pro spotřebiče na soklu: čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, výklop nahoru, lomený výklop a paralelní zdvih), s čely trouby a mikrovlnné trouby. softClose tlumí dovírání čel. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici).",
+    "description": "Vysoká skříň nebo vestavná sestava pro spotřebiče na soklu: čela skládaná odspodu (dvířka s policemi za nimi, zásuvky s těly, výklop nahoru, lomený výklop a paralelní zdvih), s čely trouby a mikrovlnné trouby. softClose tlumí dovírání čel. plinthVent vloží do soklu větrací mřížku (pod troubu nebo lednici). interior drawers vybaví spíž vnitřními zásuvkami za dvířky; plinthFinish own dá soklu vlastní materiál. Čela spotřebičů jsou trouba, mikrovlnná trouba, parní trouba nebo vestavný kávovar v provedení applianceFinish (černé nebo bílé sklo, nerez, retro).",
     "parameters": {
      "fronts": "Čela odspodu",
      "fronts.type": "Typ",
@@ -24,7 +24,15 @@
      "t": "Deska korpusu",
      "ft": "Tloušťka čela",
      "gap": "Spára kolem čel",
-     "recess": "Odsazení soklu"
+     "recess": "Odsazení soklu",
+     "fronts.style": "Styl",
+     "handleLength": "Délka úchytky (0: podle čela)",
+     "frontStyle": "Styl čel",
+     "frame": "Šířka rámu čel (0: podle stylu)",
+     "plinthFinish": "Povrch soklu",
+     "interior": "Vnitřek za dvířky",
+     "fronts.handlePosition": "Poloha úchytky",
+     "applianceFinish": "Provedení spotřebičů"
     },
     "options": {
      "fronts.type": {
@@ -34,27 +42,74 @@
       "bifold": "lomený výklop",
       "parallelLift": "paralelní zdvih",
       "oven": "trouba",
-      "microwave": "mikrovlnná trouba"
+      "microwave": "mikrovlnná trouba",
+      "steam": "parní trouba",
+      "coffee": "vestavný kávovar"
      },
      "fronts.handle": {
       "horizontal": "vodorovná",
       "vertical": "svislá",
-      "none": "žádná"
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
      },
      "handle": {
       "horizontal": "vodorovná",
       "vertical": "svislá",
-      "none": "žádná"
+      "none": "žádná",
+      "knob": "knoflík",
+      "edge": "lišta na hraně",
+      "gola": "gola profil",
+      "push": "tip-on (bez úchytky)"
      },
      "handleSide": {
       "right": "vpravo",
       "left": "vlevo"
+     },
+     "frontStyle": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "fronts.style": {
+      "flat": "hladké",
+      "shaker": "rámové (shaker)",
+      "fluted": "drážkované",
+      "glass": "prosklené",
+      "reeded": "s rýhovaným sklem"
+     },
+     "plinthFinish": {
+      "carcass": "jako korpus",
+      "own": "vlastní materiál"
+     },
+     "interior": {
+      "shelves": "police",
+      "drawers": "vnitřní zásuvky"
+     },
+     "fronts.handlePosition": {
+      "auto": "automaticky",
+      "top": "nahoře",
+      "bottom": "dole",
+      "side": "na boku ve výšce ruky"
+     },
+     "applianceFinish": {
+      "black": "černé sklo",
+      "white": "bílé sklo",
+      "steel": "nerez",
+      "retro": "retro (krémová, chrom)"
      }
     },
     "slots": {
      "carcass": "Korpus",
      "fronts": "Čela",
-     "grille": "Mřížka soklu"
+     "grille": "Mřížka soklu",
+     "handles": "Úchytky",
+     "frames": "Rámy čel",
+     "plinth": "Sokl"
     },
     "parts": {
      "Side": "Bok",
@@ -72,7 +127,9 @@
      "Drawer back": "Záda zásuvky",
      "Drawer inner front": "Vnitřní čelo zásuvky",
      "Appliance": "Spotřebič",
-     "Shelf": "Police"
+     "Shelf": "Police",
+     "Internal drawer front": "Čelo vnitřní zásuvky",
+     "Internal drawer bottom": "Dno vnitřní zásuvky"
     }
    }
   },
@@ -100,7 +157,9 @@
        "bifold",
        "parallelLift",
        "oven",
-       "microwave"
+       "microwave",
+       "steam",
+       "coffee"
       ],
       "default": "door"
      },
@@ -127,7 +186,36 @@
       "options": [
        "horizontal",
        "vertical",
+       "knob",
+       "edge",
+       "gola",
+       "push",
        "none"
+      ],
+      "optional": true
+     },
+     {
+      "key": "handlePosition",
+      "label": "Handle position",
+      "type": "select",
+      "options": [
+       "auto",
+       "top",
+       "bottom",
+       "side"
+      ],
+      "optional": true
+     },
+     {
+      "key": "style",
+      "label": "Style",
+      "type": "select",
+      "options": [
+       "flat",
+       "shaker",
+       "fluted",
+       "glass",
+       "reeded"
       ],
       "optional": true
      }
@@ -154,12 +242,36 @@
     "default": false
    },
    {
+    "key": "plinthFinish",
+    "label": "Plinth finish",
+    "type": "select",
+    "options": [
+     "carcass",
+     "own"
+    ],
+    "default": "carcass"
+   },
+   {
+    "key": "interior",
+    "label": "Interior behind doors",
+    "type": "select",
+    "options": [
+     "shelves",
+     "drawers"
+    ],
+    "default": "shelves"
+   },
+   {
     "key": "handle",
     "label": "Handle",
     "type": "select",
     "options": [
      "horizontal",
      "vertical",
+     "knob",
+     "edge",
+     "gola",
+     "push",
      "none"
     ],
     "default": "horizontal"
@@ -173,6 +285,37 @@
      "left"
     ],
     "default": "right"
+   },
+   {
+    "key": "handleLength",
+    "label": "Handle length (0: by the front)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "frontStyle",
+    "label": "Front style",
+    "type": "select",
+    "options": [
+     "flat",
+     "shaker",
+     "fluted",
+     "glass",
+     "reeded"
+    ],
+    "default": "flat"
+   },
+   {
+    "key": "frame",
+    "label": "Front frame width (0: by the style)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 150,
+    "unit": "mm"
    },
    {
     "key": "softClose",
@@ -231,6 +374,18 @@
     "min": 0,
     "max": 150,
     "unit": "mm"
+   },
+   {
+    "key": "applianceFinish",
+    "label": "Appliance finish",
+    "type": "select",
+    "options": [
+     "black",
+     "white",
+     "steel",
+     "retro"
+    ],
+    "default": "black"
    }
   ],
   "derived": {
@@ -253,6 +408,18 @@
     "key": "grille",
     "label": "Plinth grille",
     "default": "aluminium-brushed"
+   },
+   {
+    "key": "frames",
+    "label": "Front frames"
+   },
+   {
+    "key": "handles",
+    "label": "Handles"
+   },
+   {
+    "key": "plinth",
+    "label": "Plinth"
    }
   ],
   "parts": [
@@ -324,7 +491,9 @@
     "w": "W - 4",
     "h": "plinth",
     "d": "carcassD - recess",
-    "material": "carcass",
+    "material": {
+     "expr": "plinthFinish == 'own' ? 'plinth' : 'carcass'"
+    },
     "grain": "horizontal",
     "shade": 0.3
    },
@@ -375,7 +544,7 @@
      {
       "type": "front",
       "name": "Front",
-      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave'",
+      "when": "f.type != 'drawer' && f.type != 'oven' && f.type != 'microwave' && f.type != 'steam' && f.type != 'coffee'",
       "repeat": {
        "count": "(f.type == 'door' ? f.count : 1)",
        "as": "k"
@@ -405,6 +574,20 @@
       },
       "softClose": {
        "expr": "softClose"
+      },
+      "style": {
+       "expr": "f.style ?? frontStyle"
+      },
+      "frame": {
+       "expr": "frame"
+      },
+      "frameMaterial": "frames",
+      "handleMaterial": "handles",
+      "handleLength": {
+       "expr": "handleLength"
+      },
+      "handlePosition": {
+       "expr": "f.handlePosition ?? 'auto'"
       }
      },
      {
@@ -444,6 +627,20 @@
         "kind": "drawer",
         "handle": {
          "expr": "f.handle ?? handle"
+        },
+        "style": {
+         "expr": "f.style ?? frontStyle"
+        },
+        "frame": {
+         "expr": "frame"
+        },
+        "frameMaterial": "frames",
+        "handleMaterial": "handles",
+        "handleLength": {
+         "expr": "handleLength"
+        },
+        "handlePosition": {
+         "expr": "f.handlePosition ?? 'auto'"
         }
        },
        {
@@ -511,7 +708,7 @@
      {
       "type": "appliance",
       "name": "Appliance",
-      "when": "f.type == 'oven' || f.type == 'microwave'",
+      "when": "f.type == 'oven' || f.type == 'microwave' || f.type == 'steam' || f.type == 'coffee'",
       "x": "gap / 2",
       "y": "gap / 2",
       "z": 0,
@@ -520,12 +717,15 @@
       "d": "AD",
       "kind": {
        "expr": "f.type"
+      },
+      "finish": {
+       "expr": "applianceFinish"
       }
      },
      {
       "type": "board",
       "name": "Shelf",
-      "when": "f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift'",
+      "when": "(f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift') && interior == 'shelves'",
       "repeat": {
        "count": "floor(AH / 400)",
        "as": "s"
@@ -541,6 +741,43 @@
       "edges": [
        "front"
       ]
+     },
+     {
+      "type": "board",
+      "name": "Internal drawer front",
+      "when": "(f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift') && interior == 'drawers'",
+      "repeat": {
+       "count": "max(floor(AH / 320), 1)",
+       "as": "s"
+      },
+      "x": "t - blindLeft + 8",
+      "y": "round(s * AH / max(floor(AH / 320), 1)) + 40",
+      "z": -36,
+      "w": "W - 2 * t - 16",
+      "h": 180,
+      "d": 16,
+      "material": "carcass",
+      "grain": "horizontal",
+      "edges": [
+       "top"
+      ]
+     },
+     {
+      "type": "board",
+      "name": "Internal drawer bottom",
+      "when": "(f.type == 'door' || f.type == 'liftUp' || f.type == 'bifold' || f.type == 'parallelLift') && interior == 'drawers'",
+      "repeat": {
+       "count": "max(floor(AH / 320), 1)",
+       "as": "s"
+      },
+      "x": "t - blindLeft + 8",
+      "y": "round(s * AH / max(floor(AH / 320), 1)) + 40",
+      "z": "20 - carcassD",
+      "w": "W - 2 * t - 16",
+      "h": 12,
+      "d": "carcassD - 56",
+      "material": "carcass",
+      "grain": "horizontal"
      }
     ]
    }

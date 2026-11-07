@@ -9,12 +9,13 @@ use Izbik\Model\Repository\MaterialRepository;
 /**
  * The materials of a snapshot from another instance, matched by code (from the snapshot's `materials`): every
  * `materialId` / `…MaterialId` and a Custom item's slot materials take this instance's id, none where it has no such
- * material, and a finish band or slot without one is dropped. The definitions name theirs by code and are left as they
- * are.
+ * material, and a finish band, floor zone or slot without one is dropped (a ceiling zone keeps its own, null: the
+ * ceiling's). The definitions name theirs by code and are left as they are.
  */
 final readonly class SnapshotMaterials
 {
-	private const array FinishKeys = ['wallFinishes', 'leftFinishes', 'rightFinishes'];
+	/** Lists whose entries without a material are dropped: finish bands and floor zones. */
+	private const array FinishKeys = ['wallFinishes', 'leftFinishes', 'rightFinishes', 'floorZones'];
 
 	public function __construct(private MaterialRepository $materialRepository)
 	{

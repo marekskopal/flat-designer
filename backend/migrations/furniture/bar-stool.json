@@ -1,0 +1,233 @@
+{
+ "name": "Bar stool",
+ "description": "Counter or bar stool: a round seat seatHeight high on four legs joined by a footrest ring (footrest 0: none), optionally with a low back; the backrest is in the seat's material and the footrest in the frame's, or in materials of their own (backrestMaterial / footrestMaterial own).",
+ "definition": {
+  "format": 1,
+  "catalogue": "seating",
+  "translations": {
+   "cs": {
+    "name": "Barová židle",
+    "description": "Barová židle k pultu nebo baru: kulatý sedák ve výšce seatHeight na čtyřech nohách spojených opěrkou na nohy (footrest 0: bez ní), případně s nízkým opěradlem; opěradlo je v materiálu sedáku a opěrka v materiálu rámu, nebo ve vlastních (backrestMaterial / footrestMaterial own).",
+    "parameters": {
+     "seatHeight": "Výška sedáku",
+     "back": "Opěradlo",
+     "footrest": "Výška opěrky na nohy (0: bez opěrky)",
+     "backrestMaterial": "Materiál opěradla",
+     "footrestMaterial": "Materiál opěrky na nohy"
+    },
+    "slots": {
+     "frame": "Rám",
+     "seat": "Sedák",
+     "backrest": "Opěradlo (vlastní materiál)",
+     "ring": "Opěrka na nohy (vlastní materiál)"
+    },
+    "parts": {
+     "Seat": "Sedák",
+     "Leg": "Noha",
+     "Footrest": "Opěrka na nohy",
+     "Back post": "Sloupek opěradla",
+     "Backrest": "Opěradlo"
+    },
+    "options": {
+     "backrestMaterial": {
+      "seat": "jako sedák",
+      "own": "vlastní"
+     },
+     "footrestMaterial": {
+      "frame": "jako rám",
+      "own": "vlastní"
+     }
+    }
+   }
+  },
+  "size": {
+   "width": 420,
+   "depth": 420,
+   "height": 950
+  },
+  "parameters": [
+   {
+    "key": "seatHeight",
+    "label": "Seat height",
+    "type": "int",
+    "default": 650,
+    "min": 450,
+    "max": 850,
+    "unit": "mm"
+   },
+   {
+    "key": "back",
+    "label": "Back",
+    "type": "bool",
+    "default": true
+   },
+   {
+    "key": "footrest",
+    "label": "Footrest height (0: none)",
+    "type": "int",
+    "default": 300,
+    "min": 0,
+    "max": 500,
+    "unit": "mm"
+   },
+   {
+    "key": "backrestMaterial",
+    "label": "Backrest material",
+    "type": "select",
+    "default": "seat",
+    "options": [
+     "seat",
+     "own"
+    ]
+   },
+   {
+    "key": "footrestMaterial",
+    "label": "Footrest material",
+    "type": "select",
+    "default": "frame",
+    "options": [
+     "frame",
+     "own"
+    ]
+   }
+  ],
+  "derived": {
+   "leg": "round(min(W, D) * 0.1)"
+  },
+  "materialSlots": [
+   {
+    "key": "frame",
+    "label": "Frame",
+    "default": "metal-black-matt"
+   },
+   {
+    "key": "seat",
+    "label": "Seat",
+    "default": "oak-solid"
+   },
+   {
+    "key": "backrest",
+    "label": "Backrest (backrestMaterial own)",
+    "default": "oak-solid"
+   },
+   {
+    "key": "ring",
+    "label": "Footrest (footrestMaterial own)",
+    "default": "metal-black-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cylinder",
+    "name": "Seat",
+    "x": 0,
+    "y": "seatHeight - 40",
+    "z": 0,
+    "w": "W",
+    "h": 40,
+    "d": "D",
+    "material": "seat",
+    "radius": 12
+   },
+   {
+    "type": "cylinder",
+    "name": "Leg",
+    "repeat": {
+     "count": 4
+    },
+    "x": "i % 2 == 0 ? 50 : W - 50 - 24",
+    "y": 0,
+    "z": "i < 2 ? 50 : D - 50 - 24",
+    "w": 24,
+    "h": "seatHeight - 40",
+    "d": 24,
+    "material": "frame"
+   },
+   {
+    "type": "block",
+    "name": "Footrest",
+    "x": 50,
+    "y": "footrest",
+    "z": "D - 50 - 18",
+    "w": "W - 100",
+    "h": 14,
+    "d": 18,
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
+    "when": "footrest > 0"
+   },
+   {
+    "type": "block",
+    "name": "Footrest",
+    "x": 50,
+    "y": "footrest",
+    "z": 50,
+    "w": "W - 100",
+    "h": 14,
+    "d": 18,
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
+    "when": "footrest > 0"
+   },
+   {
+    "type": "block",
+    "name": "Footrest",
+    "x": 50,
+    "y": "footrest",
+    "z": 68,
+    "w": 18,
+    "h": 14,
+    "d": "D - 136",
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
+    "when": "footrest > 0"
+   },
+   {
+    "type": "block",
+    "name": "Footrest",
+    "x": "W - 68",
+    "y": "footrest",
+    "z": 68,
+    "w": 18,
+    "h": 14,
+    "d": "D - 136",
+    "material": {
+     "expr": "footrestMaterial == 'own' ? 'ring' : 'frame'"
+    },
+    "when": "footrest > 0"
+   },
+   {
+    "type": "cylinder",
+    "name": "Back post",
+    "when": "back && H > seatHeight + 120",
+    "repeat": {
+     "count": 2
+    },
+    "x": "i == 0 ? 70 : W - 70 - 18",
+    "y": "seatHeight",
+    "z": 40,
+    "w": 18,
+    "h": "H - seatHeight - 20",
+    "d": 18,
+    "material": "frame"
+   },
+   {
+    "type": "block",
+    "name": "Backrest",
+    "when": "back && H > seatHeight + 120",
+    "x": 50,
+    "y": "H - 130",
+    "z": 30,
+    "w": "W - 100",
+    "h": 110,
+    "d": 22,
+    "material": {
+     "expr": "backrestMaterial == 'own' ? 'backrest' : 'seat'"
+    }
+   }
+  ]
+ }
+}

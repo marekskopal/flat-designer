@@ -655,6 +655,51 @@ final class ElementControllerTest extends EditorTestCase
 		self::assertSame([[$band], []], [$this->sceneList('walls')[0]['leftFinishes'], $this->sceneList('walls')[0]['rightFinishes']]);
 	}
 
+	public function testAWallFaceBandMayLineAStretchOfIt(): void
+	{
+		$tiles = Fixture::service(MaterialRepository::class)->findByCode('tile-wall-beige');
+		self::assertNotNull($tiles);
+		$band = ['materialId' => $tiles->id, 'bottom' => 900, 'top' => 1500, 'from' => 1000, 'to' => 2500];
+
+		$wall = $this->create('walls', ['startX' => 0, 'startY' => 0, 'endX' => 4000, 'endY' => 0]);
+		$changed = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['leftFinishes' => [$band]]));
+		self::assertIsArray($changed['element']);
+		self::assertSame([$band], $changed['element']['leftFinishes']);
+
+		foreach ([
+			['leftFinishes' => [[...$band, 'to' => 800]]],
+			['leftFinishes' => [[...$band, 'from' => -5]]],
+		] as $body) {
+			self::assertSame(
+				422,
+				$this->edit('PATCH', 'walls', self::id($wall), $body)->getStatusCode(),
+				json_encode($body, JSON_THROW_ON_ERROR),
+			);
+		}
+		// A room's bands line all its walls.
+		self::assertSame(422, $this->edit('POST', 'rooms', body: [
+			'name' => 'Kitchen',
+			'polygon' => [[0, 0], [4000, 0], [4000, 3000], [0, 3000]],
+			'wallFinishes' => [$band],
+		])->getStatusCode());
+
+		// Turned round, the band stays on the same side of the plan and on the same stretch of it, counted from the
+		// other end now.
+		$turned = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => 4000, 'endX' => 0]));
+		self::assertIsArray($turned['element']);
+		self::assertSame(
+			[null, [[...$band, 'from' => 1500, 'to' => 3000]]],
+			[$turned['element']['leftFinishes'], $turned['element']['rightFinishes']],
+		);
+		self::assertSame(200, $this->undo()->getStatusCode());
+		self::assertSame([$band], $this->sceneList('walls')[0]['leftFinishes']);
+
+		// Moving the start keeps the stretch where it is on the plan, as the openings.
+		$moved = $this->jsonBody($this->edit('PATCH', 'walls', self::id($wall), ['startX' => -500]));
+		self::assertIsArray($moved['element']);
+		self::assertSame([[...$band, 'from' => 1500, 'to' => 3000]], $moved['element']['leftFinishes']);
+	}
+
 	public function testSiteWallsSlopeAndStandOnABaseOrTheGround(): void
 	{
 		// A garden wall down a drive: 2000 mm high at its start, 800 at its end, from −600 to −1200 below the floor.

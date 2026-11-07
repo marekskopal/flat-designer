@@ -361,7 +361,7 @@ final readonly class ItemHandler implements ElementHandler
 			$object[(string) $key] = $value;
 		}
 
-		return $object;
+		return ItemDto::withoutEmptyMaps($object);
 	}
 
 	private static function cast(AEntity $element): Item

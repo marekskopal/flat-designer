@@ -34,11 +34,20 @@ final readonly class RoomFaceUnderRoof
 	 * @param ?float $wallTop the room's paint top (its ceiling, a vault's mean), null without a ceiling
 	 * @param array{float, float} $a
 	 * @param array{float, float} $b
+	 * @param list<WallFinishDto>|null $bands lining the face (null: the face's own, else the room's)
 	 * @return list<Amount> mm²
 	 */
-	public static function amounts(RoomDto $room, array $face, ?float $wallTop, RoofCover $cover, array $a, array $b): array
+	public static function amounts(
+		RoomDto $room,
+		array $face,
+		?float $wallTop,
+		RoofCover $cover,
+		array $a,
+		array $b,
+		?array $bands = null,
+	): array
 	{
-		$bands = $face['wall']->finishesOn($face['side']) ?? $room->wallFinishes;
+		$bands ??= $face['wall']->finishesOn($face['side']) ?? $room->wallFinishes;
 		$levels = [0.0, (float) $face['wall']->height];
 		if ($wallTop !== null) {
 			$levels[] = $wallTop;

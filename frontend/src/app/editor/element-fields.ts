@@ -162,7 +162,7 @@ const ItemKinds = [
     'Fixture', 'Fence', 'Column', 'Beam', 'Chimney', 'Custom', 'Model',
 ] as const;
 
-const RoomTypes = ['Living', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway', 'Garage'] as const;
+const RoomTypes = ['Living', 'Kitchen', 'Bedroom', 'Bathroom', 'Toilet', 'Hallway', 'Terrace', 'Garden', 'Path', 'Driveway', 'Garage'] as const;
 
 /**
  * A wall face by the compass direction it faces, e.g. "North face" for the left face of a wall running east (at its
@@ -451,6 +451,7 @@ export const ElementFields: Record<ElementKind, readonly FieldDef[]> = {
         },
         {key: 'walkable', label: 'fields.walkable', type: 'bool', when: (element) => element['type'] === 'Window'},
         {key: 'revealLining', label: 'fields.revealLining', type: 'bool', when: (element) => element['type'] !== 'Niche'},
+        {key: 'innerRevealLining', label: 'fields.innerRevealLining', type: 'bool', when: (element) => element['type'] !== 'Niche'},
     ],
     plot: [
         {section: 'fields.sections.general', key: 'name', label: 'common.name', type: 'text'},

@@ -1,7 +1,7 @@
 import {levelText} from '@app/core/level-text';
 import {ElectricalCategory, ElectricalSymbols} from '@app/models/electrical-schedule';
 import {FurnitureDefinitionBody} from '@app/models/furniture';
-import {Scene} from '@app/models/scene';
+import {Item, Scene} from '@app/models/scene';
 import * as THREE from 'three';
 import {CSS2DObject} from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
@@ -9,9 +9,9 @@ import {MM, Vec2} from './plan-geometry';
 import {hiddenItemIds} from './variants';
 
 /**
- * The electrical plan: the points of the Custom items whose definition has a `category`, drawn as symbols over
- * the plan by the viewer (`buildElectrical()`) and the electrical plan PDF from the same paths. A symbol is drawn in a
- * unit frame: the point at the origin, +y away from the wall (out of the item's front), about one unit across.
+ * The electrical plan: the points of the Custom items whose definition has a `category` (and the LED strips, as
+ * lights), drawn as symbols over the plan by the viewer (`buildElectrical()`) and the electrical plan PDF from the same
+ * paths. A symbol is drawn in a unit frame: the point at the origin, +y away from the wall (out of the item's front), about one unit across.
  */
 export interface ElectricalPoint {
     itemId: number;
@@ -60,6 +60,10 @@ export function electricalPoints(scene: Scene): ElectricalPoint[] {
     const hidden = hiddenItemIds(scene);
     const points: ElectricalPoint[] = [];
     for (const item of scene.items) {
+        if (item.kind === 'LedStrip' && !hidden.has(item.id)) {
+            points.push(ledStripPoint(item));
+            continue;
+        }
         const definition = item.kind === 'Custom' && item.definitionId !== null ? definitions.get(item.definitionId) : undefined;
         const category = definition?.category;
         if (definition === undefined || category === undefined || hidden.has(item.id)) {
@@ -88,16 +92,30 @@ export function electricalPoints(scene: Scene): ElectricalPoint[] {
     return points;
 }
 
+/** An LED strip is a light (a switch may control it) at its centre, one unit. */
+function ledStripPoint(item: Item): ElectricalPoint {
+    const angle = (item.rotation * Math.PI) / 180;
+    return {
+        itemId: item.id,
+        category: 'light',
+        at: {x: item.x, y: item.y},
+        out: {x: Math.sin(angle), y: -Math.cos(angle)},
+        z: item.z,
+        units: 1,
+        values: {},
+        controls: [],
+    };
+}
+
 /**
  * Whether the floor shows any electrical point (the Display toggle and the export offer the plan then): as
  * `electricalPoints(scene).length > 0`, but stopping at the first one without building the points.
  */
 export function hasElectricalPoints(scene: Scene): boolean {
     const definitions = categorized(scene);
-    if (definitions.size === 0) {
-        return false;
-    }
-    const used = scene.items.filter((item) => item.kind === 'Custom' && item.definitionId !== null && definitions.has(item.definitionId));
+    const used = scene.items.filter(
+        (item) => item.kind === 'LedStrip' || (item.kind === 'Custom' && item.definitionId !== null && definitions.has(item.definitionId)),
+    );
     if (used.length === 0) {
         return false;
     }

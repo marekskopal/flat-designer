@@ -100,6 +100,7 @@ final class McpServerTest extends IntegrationTestCase
 		$names = array_column($tools, 'name');
 		sort($names);
 		self::assertSame([
+			'add_cabinet_run',
 			'add_comment',
 			'add_floor',
 			'add_item',
@@ -379,6 +380,45 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertSame([[], null], [$cleared['element']['leftFinishes'], $cleared['element']['rightFinishes']]);
 	}
 
+	public function testRoomsTakeFloorAndCeilingZones(): void
+	{
+		$floor = Fixture::firstFloor($this->project);
+		$outline = [[0, 0], [4000, 0], [4000, 3000], [0, 3000]];
+		$floorZone = ['polygon' => [[0, 0], [1000, 0], [1000, 2000], [0, 2000]], 'materialId' => 1];
+		$added = $this->client->call('add_room', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'name' => 'Kitchen',
+			'polygon' => $outline,
+			'floorZones' => [$floorZone],
+		]);
+		self::assertIsArray($added);
+		self::assertIsArray($added['element']);
+		self::assertSame([[$floorZone], []], [$added['element']['floorZones'], $added['element']['ceilingZones']]);
+
+		$ceilingZone = ['polygon' => [[0, 2400], [4000, 2400], [4000, 3000], [0, 3000]], 'height' => 2300, 'materialId' => null];
+		$updated = $this->client->call('update_room', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'roomId' => $added['element']['id'],
+			'floorZones' => [],
+			'ceilingZones' => [['polygon' => $ceilingZone['polygon'], 'height' => 2300]],
+		]);
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['element']);
+		self::assertSame([[], [$ceilingZone]], [$updated['element']['floorZones'], $updated['element']['ceilingZones']]);
+
+		// A corner outside the room is refused.
+		$isError = false;
+		$this->client->call('update_room', [
+			'projectId' => $this->project->id,
+			'floorId' => $floor->id,
+			'roomId' => $added['element']['id'],
+			'floorZones' => [['polygon' => [[0, 0], [5000, 0], [5000, 1000]], 'materialId' => 1]],
+		], $isError);
+		self::assertTrue($isError);
+	}
+
 	public function testGroupsMoveTheirItemsAsOneUndoStep(): void
 	{
 		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
@@ -477,6 +517,90 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsArray($floor);
 		self::assertSame([], $floor['rooms']);
 		self::assertSame([], $floor['walls']);
+	}
+
+	public function testLaysACabinetRunAlongAWallFace(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$wall = $this->client->call(
+			'add_wall',
+			$ids + ['startX' => 0, 'startY' => 3000, 'endX' => 3000, 'endY' => 3000, 'thickness' => 200],
+		);
+		self::assertIsArray($wall);
+		self::assertIsArray($wall['element']);
+		FurnitureSeeds::insert(Fixture::service(DatabaseInterface::class)->getPdo(), ['kitchen-base-cabinet.json', 'worktop.json']);
+		$base = Fixture::service(FurnitureDefinitionRepository::class)->findGlobalByName('Kitchen base cabinet')?->id;
+		self::assertIsInt($base);
+		$unit = static fn (int $width, int $gap = 0): array => ['definitionId' => $base, 'width' => $width, 'gapBefore' => $gap];
+
+		// The wall runs west to east; its Right face is the south one, at y = 2900: the units stand south of it, facing south.
+		$run = $this->client->call('add_cabinet_run', $ids + [
+			'wallId' => $wall['element']['id'],
+			'side' => 'Right',
+			'offset' => 100,
+			'units' => [$unit(600), $unit(400), $unit(800, 50)],
+			'worktop' => ['overhang' => 30],
+			'groupName' => 'Back run',
+		]);
+		self::assertIsArray($run);
+		self::assertIsList($run['batch']);
+		self::assertCount(5, $run['batch']);
+		$placed = [];
+		foreach ($run['batch'] as $entry) {
+			self::assertIsArray($entry);
+			$element = $entry['element'];
+			self::assertIsArray($element);
+			if (isset($element['kind'])) {
+				$placed[] = [$element['x'], $element['y'], $element['rotation'], $element['z'], $element['width'], $element['depth']];
+			}
+		}
+		self::assertSame(
+			[[400, 2610, 0, 0, 600, 580], [900, 2610, 0, 0, 400, 580], [1550, 2610, 0, 0, 800, 580], [1025, 2595, 0, 860, 1850, 610]],
+			$placed,
+		);
+
+		$isError = false;
+		$message = $this->client->call('add_cabinet_run', $ids + [
+			'wallId' => $wall['element']['id'],
+			'side' => 'Left',
+			'offset' => 2500,
+			'units' => [$unit(600)],
+		], $isError);
+		self::assertTrue($isError);
+		self::assertSame('The run ends 3100 mm along the wall, which is 3000 mm long.', $message);
+
+		// A tall unit breaks the worktop into two; a wall cabinet starts its own row at the offset, above the base units.
+		FurnitureSeeds::insert(Fixture::service(DatabaseInterface::class)->getPdo(), ['kitchen-tall-cabinet.json']);
+		$tallId = Fixture::service(FurnitureDefinitionRepository::class)->findGlobalByName('Kitchen tall cabinet')?->id;
+		self::assertIsInt($tallId);
+		$run = $this->client->call('add_cabinet_run', $ids + [
+			'wallId' => $wall['element']['id'],
+			'side' => 'Left',
+			'offset' => 0,
+			'units' => [$unit(600), ['definitionId' => $tallId, 'width' => 600, 'height' => 2100], $unit(600), ['definitionId' => $base, 'width' => 600, 'z' => 1450]],
+			'worktop' => [],
+		]);
+		self::assertIsArray($run);
+		self::assertIsList($run['batch']);
+		$placed = [];
+		foreach ($run['batch'] as $entry) {
+			self::assertIsArray($entry);
+			$element = $entry['element'];
+			self::assertIsArray($element);
+			if (isset($element['kind'])) {
+				$placed[] = [$element['x'], $element['z'], $element['width']];
+			}
+		}
+		// The Left face is the north one: units north of the wall, facing north; the wall cabinet over the first base unit.
+		self::assertSame([[300, 0, 600], [900, 0, 600], [1500, 0, 600], [300, 1450, 600], [300, 860, 600], [1500, 860, 600]], $placed);
+
+		$message = $this->client->call(
+			'add_cabinet_run',
+			$ids + ['wallId' => $wall['element']['id'], 'side' => 'Left', 'offset' => -100, 'units' => [$unit(600)]],
+			$isError,
+		);
+		self::assertTrue($isError);
+		self::assertSame('A cabinet run starts at an offset of 0 or more along the wall.', $message);
 	}
 
 	public function testVariantsHideTheItemsOfTheOtherVariants(): void
@@ -851,6 +975,12 @@ final class McpServerTest extends IntegrationTestCase
 		self::assertIsList($listed);
 		self::assertIsArray($listed[0]);
 		self::assertSame(['Low shelf', ['width' => 600, 'depth' => 300, 'height' => 900]], [$listed[0]['name'], $listed[0]['size']]);
+		self::assertSame([['key' => 'carcass', 'default' => 'kitchen-oak']], $listed[0]['materialSlots']);
+		self::assertNull($listed[0]['catalogue']);
+		self::assertSame([], $this->client->call('list_furniture_definitions', ['projectId' => $projectId, 'catalogue' => 'kitchen']));
+		$isError = false;
+		$this->client->call('list_furniture_definitions', ['catalogue' => 'kitchens'], $isError);
+		self::assertTrue($isError);
 
 		$added = $this->client->call(
 			'add_item',
@@ -944,6 +1074,7 @@ final class McpServerTest extends IntegrationTestCase
 			[['roughness' => 2], 'Field "roughness" must be between 0 and 1.'],
 			[['code' => 'Oak Veneer'], 'Field "code" must be kebab-case'],
 			[['code' => 'oak-tiles', 'tileWidth' => 300], 'Fields "tileWidth" and "tileHeight" go together.'],
+			[['accent' => 'grey'], 'Field "accent" must be #rrggbb, e.g. "#8f9196".'],
 		] as [$change, $error]) {
 			$message = $admin->call('add_material', [...$oak, 'code' => 'oak-2', ...$change], $isError);
 			self::assertTrue($isError);
@@ -995,6 +1126,20 @@ final class McpServerTest extends IntegrationTestCase
 		$cleared = $admin->call('update_material', ['materialId' => $added['id'], 'clear' => ['tileWidth', 'tileHeight']]);
 		self::assertIsArray($cleared);
 		self::assertSame([null, null], [$cleared['tileWidth'], $cleared['tileHeight']]);
+
+		// A veined stone keeps its accent (the veins) through other changes, until cleared.
+		$marble = $admin->call(
+			'add_material',
+			['code' => 'marble-test', 'name' => 'Marble', 'pattern' => 'Marble', 'color' => '#F1EFEA', 'tileWidth' => 3200, 'tileHeight' => 1600, 'accent' => '#8F9196'],
+		);
+		self::assertIsArray($marble);
+		self::assertSame(['Marble', '#8f9196'], [$marble['pattern'], $marble['accent']]);
+		$renamed = $admin->call('update_material', ['materialId' => $marble['id'], 'name' => 'Marble, white']);
+		self::assertIsArray($renamed);
+		self::assertSame('#8f9196', $renamed['accent']);
+		$plain = $admin->call('update_material', ['materialId' => $marble['id'], 'clear' => ['accent']]);
+		self::assertIsArray($plain);
+		self::assertNull($plain['accent']);
 	}
 
 	public function testRequestsOfOneSessionWaitForEachOther(): void
@@ -1069,6 +1214,61 @@ final class McpServerTest extends IntegrationTestCase
 			$isError,
 		);
 		self::assertFalse($isError, is_string($updated) ? $updated : '');
+
+		// An empty `values` or `materials` is left out rather than stored as a list.
+		$updated = $this->client->call(
+			'update_item',
+			[
+				'projectId' => $this->project->id,
+				'floorId' => $floorId,
+				'itemId' => $box['element']['id'],
+				'params' => ['values' => new stdClass(), 'materials' => new stdClass(), 'shape' => 'rect'],
+			],
+			$isError,
+		);
+		self::assertFalse($isError, is_string($updated) ? $updated : '');
+		self::assertIsArray($updated);
+		self::assertIsArray($updated['element']);
+		self::assertSame(['shape' => 'rect'], $updated['element']['params']);
+	}
+
+	public function testReadsTheFloorOfOneRoom(): void
+	{
+		$ids = ['projectId' => $this->project->id, 'floorId' => Fixture::firstFloor($this->project)->id];
+		$this->client->call('add_walls', $ids + ['points' => [[-50, -50], [4050, -50], [4050, 3050], [-50, 3050]], 'closed' => true]);
+		$this->client->call('add_walls', $ids + ['points' => [[20000, 0], [24000, 0]]]);
+		$room = $this->client->call('detect_room', $ids + ['x' => 2000, 'y' => 1500, 'name' => 'Kitchen']);
+		self::assertIsArray($room);
+		self::assertIsArray($room['element']);
+		$roomId = $room['element']['id'];
+		$inside = $this->client->call('add_item', $ids + ['kind' => 'Box', 'x' => 1000, 'y' => 1000, 'roomId' => $roomId]);
+		$loose = $this->client->call('add_item', $ids + ['kind' => 'Box', 'x' => 3000, 'y' => 2000]);
+		$this->client->call('add_item', $ids + ['kind' => 'Box', 'x' => 22000, 'y' => 1000]);
+		self::assertIsArray($inside);
+		self::assertIsArray($inside['element']);
+		self::assertIsArray($loose);
+		self::assertIsArray($loose['element']);
+
+		$whole = $this->client->call('get_floor', $ids);
+		self::assertIsArray($whole);
+		self::assertIsList($whole['items']);
+		self::assertIsList($whole['walls']);
+		self::assertCount(3, $whole['items']);
+		self::assertCount(5, $whole['walls']);
+
+		// The room, its four walls, its item and the item in no room standing in it.
+		$part = $this->client->call('get_floor', $ids + ['roomId' => $roomId]);
+		self::assertIsArray($part);
+		self::assertIsList($part['rooms']);
+		self::assertIsList($part['walls']);
+		self::assertIsList($part['items']);
+		self::assertSame([$roomId], array_column($part['rooms'], 'id'));
+		self::assertCount(4, $part['walls']);
+		self::assertSame([$inside['element']['id'], $loose['element']['id']], array_column($part['items'], 'id'));
+
+		$isError = false;
+		$this->client->call('get_floor', $ids + ['roomId' => 999999], $isError);
+		self::assertTrue($isError);
 	}
 
 	public function testReadsAPlanAndCalibratesTheUnderlay(): void

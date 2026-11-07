@@ -1,0 +1,136 @@
+{
+ "name": "Island worktop with waterfall ends",
+ "description": "Worktop of an island or peninsula whose ends may turn down to the floor in the same material (waterfall ends); the item's box reaches the floor, the top lies at its height.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "cutout": "worktop",
+  "translations": {
+   "cs": {
+    "name": "Pracovní deska ostrůvku s přetaženými boky",
+    "description": "Pracovní deska ostrůvku nebo poloostrůvku, jejíž konce mohou ve stejném materiálu sahat až k podlaze (přetažené boky); prvek sahá od podlahy, deska leží v jeho výšce.",
+    "parameters": {
+     "thickness": "Tloušťka desky",
+     "leftEnd": "Levý konec",
+     "rightEnd": "Pravý konec"
+    },
+    "options": {
+     "leftEnd": {
+      "square": "rovný",
+      "waterfall": "přetažený k podlaze"
+     },
+     "rightEnd": {
+      "square": "rovný",
+      "waterfall": "přetažený k podlaze"
+     }
+    },
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Top": "Deska",
+     "Left end": "Levý bok",
+     "Right end": "Pravý bok"
+    }
+   }
+  },
+  "size": {
+   "width": 2400,
+   "depth": 1000,
+   "height": 910
+  },
+  "parameters": [
+   {
+    "key": "thickness",
+    "label": "Top thickness",
+    "type": "int",
+    "default": 30,
+    "min": 12,
+    "max": 80,
+    "unit": "mm"
+   },
+   {
+    "key": "leftEnd",
+    "label": "Left end",
+    "type": "select",
+    "options": [
+     "square",
+     "waterfall"
+    ],
+    "default": "waterfall"
+   },
+   {
+    "key": "rightEnd",
+    "label": "Right end",
+    "type": "select",
+    "options": [
+     "square",
+     "waterfall"
+    ],
+    "default": "waterfall"
+   }
+  ],
+  "derived": {
+   "left": "leftEnd == 'waterfall' ? thickness : 0",
+   "right": "rightEnd == 'waterfall' ? thickness : 0"
+  },
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Top",
+    "x": "left",
+    "y": "H - thickness",
+    "z": 0,
+    "w": "W - left - right",
+    "h": "thickness",
+    "d": "D",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front",
+     "back"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Left end",
+    "when": "left > 0",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "thickness",
+    "h": "H",
+    "d": "D",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front",
+     "back"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Right end",
+    "when": "right > 0",
+    "x": "W - thickness",
+    "y": 0,
+    "z": 0,
+    "w": "thickness",
+    "h": "H",
+    "d": "D",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front",
+     "back"
+    ]
+   }
+  ]
+ }
+}

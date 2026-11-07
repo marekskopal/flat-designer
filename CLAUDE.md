@@ -414,6 +414,74 @@ The current format is the text in `FurnitureTools::Format`.
   group tagged `frontLink`, posed by `setFrontPose()` (`poseHingeLinks()`) and hidden while closed; a butt one's
   barrel and leaves, half on the door, half on the carcass. Without a side there, only the door's half is drawn. The
   integrated soft-close damper is not drawn. `AddFurnitureHinges` gives the bin store and garden shed butt hinges.
+- Slatted panels (I-138, `SeedSlattedPanel`): slats `slat` wide `gap` apart across the item, on a felt backing behind
+  them (`mount` wall) or above them (`mount` ceiling, the item laid flat under the ceiling), or without one as a screen.
+  Bulkheads over cabinet runs are `Beam` or `Box` items.
+- Kitchen lighting and seating (I-137, `SeedKitchenLightingAndSeating`): a pendant with a glass shade (globe as a
+  round `cushion`, dome or drum as a `cylinder`, a glowing bulb inside, the bare-bulb pendant's cable), a track light
+  (spots as `light` parts of kind spot, the schedule counting `spots`) and a bar stool (`seatHeight`, `back`,
+  footrest). Plinth and cove LEDs are `LedStrip` items, a fluted pedestal table the round table in a fluted material.
+  Light glass draws at a fixed low opacity, so a smoked shade reads only faintly tinted.
+- Seating and lighting round two (I-164, `AddSeatingAndLightingRound2`, `down()` writes back `furniture/before-seating-2`
+  and deletes the shell chair): the bar stool's `footrest` 0 leaves it out, `backrestMaterial` / `footrestMaterial` own
+  put the backrest and footrest in the slots `backrest` and `ring` (default: the seat's and the frame's, as before);
+  the dining chair's `seat` / `legs` and the dining table's `legs` slots (no default: the item material, as before); the
+  round table's `shape` oval (a block and two round ends, when wider than deep) and `pedestal` width; the glass pendant's
+  `disc` shade, `shadeHeight` (0: by the shape) and `holderMaterial` own (the `holder` slot; default: the cable's); a new upholstered `Shell chair` (legs, sled, swivel).
+  Several drops from one canopy, cone / teardrop / wire shades and a cove (upward) LED strip still need new part types.
+- Kitchen appliances (I-136, `SeedKitchenAppliances`): definitions built of the existing part types, no branded
+  models: a mixer tap (gooseneck, straight, pull-out), a range hood (chimney, box, integrated strip), a hob (induction,
+  gas with grates, downdraft vent) and a sink (inset, undermount, farmhouse apron; 1–2 bowls, drainer) laid on the
+  worktop (z = its top; cut-outs are not drawn), a freestanding fridge (modern, retro rounded, American), a coffee
+  machine, a range cooker (glazed oven doors, fixed) and a wine cooler. Built-in ovens and microwaves stay the cabinets'
+  `appliance` fronts; an integrated dishwasher is a cabinet door.
+- Appliances round two (I-163, `AddKitchenAppliancesRound2`, `down()` writes back `furniture/before-appliances-2`): an
+  `appliance` part's `kind` (`PartTypeEnum::Appliances`: oven, microwave, steam, coffee) and `finish`
+  (`ApplianceFinishes`: black glass, white glass, steel, retro cream with chrome), drawn by `buildAppliance()`
+  (`applianceLook()`); the kitchen cabinets' fronts take the types `steam` / `coffee` and the cabinet `applianceFinish`.
+  The sink's `drainerSide` (right, left, back: behind the bowls), the hood's `round` style (a cylinder up to 400 mm on a
+  rod up to the item's top) and the chimney hood's `canopy` (stepped, or a pyramid of ten thin steps).
+- Kitchen cabinet options (I-135, `AddKitchenCabinetOptions`): the base cabinet's `sinkUnit` (no top, no shelves),
+  the tall cabinet's `interior` drawers (internal drawers behind its doors, a larder), `plinthFinish` own (the plinth in
+  the `plinth` slot, by a `material` expression), the wall cabinet's `shelfLight` and the open shelf's `light` (`led`
+  parts under the shelves). End panels, fillers, cornices and bridging boxes are the Panel and the cabinets at any size;
+  an L-corner is a blind-corner base beside the next one.
+- Kitchen worktops (I-134, `SeedKitchenWorktops`): the island worktop (its box from the floor, the top `thickness` at
+  its height, `leftEnd` / `rightEnd` square or waterfall, the ends turning down to the floor in the same material), the
+  L-shaped worktop (a run `runDepth` along the back and a return `returnWidth` on `returnSide`, two pieces in the cut
+  list), the worktop's `roundEnd` (a half-cylinder of its depth, the rest of the slab shortened) and the backsplash's
+  `ledge` (standing out in front of its box). Stepped splashbacks are not drawn yet.
+- Sink and hob cut-outs (I-169, `viewer/engine/custom/cutouts.ts`, TS only): a definition's `cutout` (`worktop`, `sink`,
+  `hob`; checked by `DefinitionValidator`, not read by the evaluators) marks the three worktops and the sink and hob
+  (`AddWorktopCutouts`). The shown sinks and hobs of the floor (`sceneCutters()`, the old `Sink` / `Hob` kinds too) whose
+  bottom lies within `TopTolerance` (15 mm) of a worktop's top cut their holes in plan out of its highest flat boards
+  (`boardCutouts()`, `polygon-clipping`; `cutBoard()` extrudes the rest with box-like UVs): a hob its footprint less
+  `HobRim`, an inset sink less `SinkRim`, an undermount one its `Bowl` parts less `UndermountReveal`, a farmhouse one
+  none. The sink's bowls sink 180 mm into the hole (an inset sink's rim a frame round them). `ItemAssets.cutters`
+  carries them; `applyChanges()` rebuilds the worktops when the cutters change (a sink moved, a variant switched). The
+  plans, elevations and the cut list do not show the cut-outs.
+- Worktop waterfall ends (I-165, `AddWorktopWaterfallEnds`, `down()` writes back `furniture/before-worktop-ends`): the
+  straight worktop's `waterfall` (left, right, both; not over a `roundEnd`) and the L-shaped worktop's `waterfall`
+  (the run's free end, the return's free end, both) turn down `drop` mm below the item (parts below its box; default
+  872, a base cabinet's height) in the same material. Tiled items count their upright rows from their own bottom
+  (`alignTiles()`'s `base`), so a splashback starts with a whole tile; the room's floor and wall bands count from the
+  floor.
+- Front styles and handles (I-133, `AddKitchenFrontStyles`): a `front`'s `style` (`PartTypeEnum::FrontStyles`: flat,
+  shaker, fluted, glass, reeded) and `handle` (`Handles`: horizontal and vertical bars with `handleLength`, knob, edge
+  pull, gola channel, push, none) are drawn by `buildFrontBody()` (`custom/front-styles.ts`) and `buildFrontHandle()`
+  (`kitchen.ts`); the evaluators only pass them on. The frame is `frame` mm (0: the style's own, `frontFrame()` /
+  `FramedFront::width()` twins) in the `frameMaterial` slot, the handle in the `handleMaterial` slot; such a slot the item
+  does not fill and without a default keeps the front's material or the black handle (the parity test pins it). The cut
+  list cuts a glass front, or a shaker one with its own frame material, as stiles, rails and a pane or recessed panel
+  (`FramedFront`). The kitchen cabinets take `frontStyle` (and per front `style`), `frame`, `handleLength` and the slots
+  `frames` and `handles`.
+- Handle positions (I-162, `AddHandlePositions`, `down()` writes back `furniture/before-handle-positions`): a front's
+  `handlePosition` (`PartTypeEnum::HandlePositions`, TS `HandlePosition`; the kitchen cabinets' `fronts[].handlePosition`)
+  is `auto` (as before: near the top within reach, else the bottom; on a tall door from below reach height to well above
+  it, at reach height on its handle edge), `top` / `bottom` (that edge whatever the height: the pull at the split of two
+  doors; an edge pull then sits `EdgePullInset` in from a door's handle edge; a vertical bar at that end) or `side` (at
+  reach height on the handle edge; a drawer's knob too). A gola channel is drawn in the handle material when the item gives one (`FrontHandleOptions.material`), else as
+  the dark shadow band.
 - Seeds (`AddOpenableFrontsMigration`, `down()` writes back `furniture/before-openable-fronts`): the kitchen cabinets,
   sideboard, bedside table and vanity have drawers with boxes, shelves behind doors and a `softClose` parameter; the wall
   and tall cabinets' fronts may be `liftUp`, `bifold` or `parallelLift`.
@@ -480,10 +548,23 @@ The current format is the text in `FurnitureTools::Format`.
   concrete showing its panels (with tie holes) or boards (`drawFormwork()`: `tile_width` along the wall, `tile_height` up
   it); both keep their surface's UVs and are not counted in pieces. Bricks vary in sRGB lightness (`vary()`) with joints
   7 % of the course (5–10 mm), so pavers and facing bricks alike look right. The demo house's materials are listed in `docs/demo-house.md`.
+- Kitchen patterns (I-132, `SeedKitchenMaterials`): a material's optional `accent` (#rrggbb, MCP `add_material` /
+  `update_material`, null derives a shade, `accentOf()`) is a pattern's second colour. `Marble` is veined stone
+  (`drawMarble()`: slabs of 1.5 m or more a patch each, smaller tiles 2 × 2, wandering veins in `accent` kept within each
+  slab), `Chevron` parquet (`tileWidth` long, `tileHeight` wide, ends cut at 45°, the zigzag along v), `Zellige`
+  handmade glazed tiles, `Encaustic` cement tiles with a rosette motif in `accent`; all four go on the room's tile grid
+  (`GridPatterns`), are counted in pieces and, but chevron, draw their joints in the elevations (`JointGridPatterns`).
+  `Fluted` is a panel of rounded flutes `tileWidth` apart running up the surface whatever its grain (keeps its UVs, not
+  in pieces, flutes drawn in the elevations). Metro tiles are `Brick` (light ones get a light grout), strip tiles `Tiles`.
+  Round two (I-166, `SeedKitchenMaterialsRound2`): oak stained in lacquer colours (`wood-stained-*`, `Wood`: fronts with
+  a grain), painted brick, more strip and metro tiles, plain compact worktops, smoky grey glass, upholstery colours,
+  walnut and black fluted panels; `panel-fluted-oak` takes `wood-oak-light`'s colour. A patchwork of several encaustic
+  designs and bevelled tiles still need patterns of their own.
 - Tile grid: a room's `tileOriginX/Y` (plan mm; null means the plan origin) is where the tile joints cross.
   `alignTiles()` (`viewer/engine/tiling.ts`) recomputes the UVs of every mesh with a `Tiles` material from its plan
   position. This way the floor, the wall bands (whose rows start at the floor) and the room's tiled items share one
-  grid. A room's `floorAngle` (0–179° counter-clockwise, 0 lays planks along plan y) turns the pattern of its level
+  grid. Tiled items count their upright rows from their own bottom (a splashback starts with a whole tile), so a raised
+  one does not share the wall bands' rows. A room's `floorAngle` (0–179° counter-clockwise, 0 lays planks along plan y) turns the pattern of its level
   faces (the floor, the tops of its tiled items) about the tile origin: `tileGrid()` carries it to `tileUv()`, and
   `buildFloor()` turns the UVs of the patterns `alignTiles()` does not lay (planks, wood) with `turnLevelUvs()`.
   Upright faces, the wall bands included, keep their own joints.
@@ -492,6 +573,22 @@ The current format is the text in `FurnitureTools::Format`.
   room's, `[]` leaves the face bare; validated by `WallFinishBands`; turning a wall round swaps them, so the bands stay
   on the same side of the plan). `faces()` / `wallFacesAlongEdge()` say which wall
   and side covers which stretch of a room edge; `buildWallFinishes()` and `RoomSurfaces` use them.
+- Band stretches (I-170): a face's own band may line only a stretch of it, `from` / `to` mm along the wall's centre line
+  from its start (either may be missing; a room's bands may not have them; turning the wall round counts them from the
+  other end, `WallFinishBands::moved()`). Where none of a face's bands lies and it has none without a stretch, the
+  room's bands line it (a façade: its default); inside a stretch only the face's own bands do. The twins are
+  `FaceBands` (`Service/Editor/Geometry`) and `faceBandStretches()` / `faceBandsAt()` (`viewer/engine/face-bands.ts`),
+  kept identical by `backend/tests/fixtures/face-bands.json`. **Always change both twins and add a fixture case in the
+  same change.** `finishSegments()` (so the elevations), `facadeStretches()` (façades and sections),
+  `RoomFace::stretches()` (room quantities, mapping the edge onto the wall's centre line) and `FacadeSurfaces` (per
+  strip) follow them. An opening's `innerRevealLining` lines the room's side of its reveal (jambs, head, a window's
+  sill) from the face on `side` back to the frame (`innerRevealDepth()`) with the band lining the edge there
+  (`innerReveals()` in `buildWallFinishes()`, straight walls only; not in the quantities or sheets), its boards
+  `InnerRevealCover` thicker than a `revealLining`'s, which still runs through the whole reveal under them. Moving or
+  turning a wall projects the stretches' ends onto its new line (`WallFinishBands::moved()`), unless the request sets
+  the bands. Room zones are placed (in the outline, under a flat ceiling) only when set anew: a room changed since
+  keeps them, and the viewer and quantities leave out a ceiling zone its ceiling no longer takes; a ceiling zone's
+  sides against the walls are not counted (`RoomZoneSides`), nor a floor zone's part over a void.
 - Façades (I-88): a wall face outside every indoor room is a façade (`FacadeSpans::of()` / `facadeSpans()` in
   `ceilings.ts`, twins kept identical by the `facades` cases of `wall-spans.json`: each face's mitred extent less the
   stretches indoor room edges run along; open-air rooms, a garden by the house, cover none). It draws its own
@@ -516,6 +613,15 @@ The current format is the text in `FurnitureTools::Format`.
 - Where rooms meet without a wall and their ceilings differ in height, `ceilingSteps()` closes the gap with an
   upright face from the lower ceiling to the higher one. An example is an open-plan corridor with a lower ceiling
   beside a vaulted living room. The faces are rebuilt whenever rooms or walls change.
+- Room zones (I-167, `RoomZones`, REST and MCP `add_room` / `update_room` only, no inspector field): `floorZones`
+  (`{polygon, materialId}`) lay another floor material over part of the floor (a tiled zone in a wooden floor),
+  `ceilingZones` (`{polygon, height, materialId}`, null: the ceiling's) hang a dropped ceiling down to `height` (1000 to
+  the ceiling height − 50, over the room's floor; flat ceilings only) over part of it (a bulkhead over a kitchen run);
+  at most 20 each, 3–64 corners inside the room's outline or within 1 mm of it, taken not to overlap. `buildFloor()`
+  adds a `floor-zone` mesh 1 mm over the floor on the room's tile grid (not on a draped terrain), `buildCeiling()` a
+  `ceiling-zone` box from `height` up to the ceiling (hidden with the ceilings, not lowered under roofs).
+  Quantities count a floor zone in its material, off the floor's, and a ceiling zone's soffit and sides as `Ceiling`.
+  The plan PDF, elevations and sections do not draw them.
 
 ## Site and sun (I-39)
 
@@ -841,6 +947,15 @@ The current format is the text in `FurnitureTools::Format`.
   `gangs` and a data socket's int `ports` (`DefinitionSchedule::Defaults`, TS `scheduleCount()`). The furniture editor sets both above the JSON (`ScheduleSettingsComponent`), the library shows the
   category; `AddElectricalScheduleSettings` gave the seeds theirs and tagged copies their `count`.
 
+- Pendant clusters, shade shapes and cove LEDs (I-168, `AddPendantClusters`): a `cylinder` part's `profile` (`cone`
+  narrowing to `topRatio` of its radius at the top, `teardrop` a round bottom tapering to a neck) and `wire` (an open
+  cage of that many meridians and three rings, `cageGeometry()`) give the glass pendant its cone, teardrop and wire
+  shades; the global Pendant cluster hangs `drops` of them (staggered by `stagger`) on straight cables (`ceiling`
+  false) from a linear or round canopy, its schedule counting the drops. An `led` part's `facing` and a `LedStrip`'s
+  `params.facing` (down, up as a cove, out; `ledLight()` in `lights.ts`, `StructureParamsValidator`) turn its area
+  light. LED strips are lights a switch may control (`SwitchControls::isLight()`, `electricalPoints()`), listed in the
+  electrical schedule as lights of definition 0 (`schedules.ledStrip`).
+
 ## Render quality
 
 - `ViewerEngine.setQuality('fast' | 'presentation')`: fast (the default) renders straight to the canvas. Presentation
@@ -993,7 +1108,7 @@ The current format is the text in `FurnitureTools::Format`.
   page's `RoomScheduleComponent`). It lists each room's net area and perimeter (`RoomDto`, computed with `PlanMath` from
   the outline on the inner wall faces), its clear height (`ceilingHeight`) and its volume. Open-air rooms (terraces,
   gardens, paths and driveways: `RoomTypeEnum::isOutdoor()`, in TS `isOutdoorRoom()`) and garages (`isAncillary()`)
-  are totalled separately. Only
+  are totalled separately; kitchens (`Kitchen`, I-131) are ordinary indoor rooms. Only
   PHP computes it, except under roofs (`RoomUnderRoof`, twinned for the PDF's schedule; see Roofs).
 - Electrical schedule: `Service/Schedule/ElectricalScheduleService` (REST `…/electrical-schedule`, MCP
   `get_electrical_schedule`, the project page's `ElectricalScheduleComponent`). It counts the shown Custom items whose
@@ -1210,6 +1325,19 @@ The current format is the text in `FurnitureTools::Format`.
   that the agent PUTs the file to with curl. `PUT /api/uploads/{token}` is open in `AuthorizationMiddleware` (the
   token authorizes it), stores the file through `ProjectFileProvider` / `ModelAssetProvider` as the ticket's user and
   works once for 15 minutes; a rejected file releases the ticket. `delete_project_file` / `delete_model` remove them.
+- `add_cabinet_run` (I-139, `Service/Editor/Drawing/CabinetRun`, placing through `RunFace` on `WallLine`) lays units
+  along one face of a straight wall as one `ChangeBatch`: each unit's back on the face (`side` of the wall), its front
+  turned away; floor units (`z` 0) follow one another from `offset`, units above them (wall cabinets) form a row of
+  their own from the same `offset` (`gapBefore` before a unit in its row); an optional worktop covers each stretch of
+  counter-height floor units (`CounterHeight`, taller ones break it; the global Worktop definition unless named,
+  `overhang` past the deepest, on the highest), all in a new group; both rows must end within the wall's length.
+- Big floors (I-161): `get_floor` takes `roomId` (`Mcp/Tool/RoomPart`: the room, the walls whose centre line comes within
+  their thickness of its outline box, its items and the roomless ones in its outline, their groups, definitions, models,
+  variant sets and hidden items; stairs, roofs and the other elements stay whole); `list_furniture_definitions` gives each definition's `catalogue` and `materialSlots` (key, default) and filters
+  by `catalogue` (as the Add library files them: a definition without one but with an electrical category under lighting
+  or electrical; an unknown catalogue is refused). An empty `values` / `materials` in an item's params is dropped
+  (`ItemDto::withoutEmptyMaps()`, on write only, so states logged before still match for undo), as a decoded empty JSON
+  object would come back as `[]`.
 - `tests/Mcp/McpServerTest` drives the server over JSON-RPC.
 
 ## Example projects

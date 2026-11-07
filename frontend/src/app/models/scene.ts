@@ -19,8 +19,18 @@ export type MaterialPattern =
     /** Random coursed dry-stone walling: stones about `tileWidth` long in courses about `tileHeight` high. */
     | 'Stone'
     /** Cast concrete showing its formwork panels or boards, `tileWidth` along the wall by `tileHeight` up it. */
-    | 'Formwork';
-export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage';
+    | 'Formwork'
+    /** Veined stone in slabs or tiles `tileWidth` × `tileHeight`, the veins in `accent`. */
+    | 'Marble'
+    /** Planks `tileWidth` long and `tileHeight` wide, their ends cut at 45° and meeting in a zigzag along v. */
+    | 'Chevron'
+    /** Handmade glazed tiles `tileWidth` × `tileHeight`, each its own shade, with uneven edges. */
+    | 'Zellige'
+    /** Cement tiles `tileWidth` × `tileHeight` with a motif in `accent`, forming rosettes where four meet. */
+    | 'Encaustic'
+    /** Rounded flutes `tileWidth` apart running up the surface (along v), whatever its grain. */
+    | 'Fluted';
+export type RoomType = 'Living' | 'Bedroom' | 'Bathroom' | 'Toilet' | 'Hallway' | 'Terrace' | 'Garden' | 'Path' | 'Driveway' | 'Garage' | 'Kitchen';
 
 /** Open-air room types (`RoomTypeEnum::isOutdoor()`): totalled apart from the indoor area. */
 export const OutdoorRoomTypes: readonly RoomType[] = ['Terrace', 'Garden', 'Path', 'Driveway'];
@@ -92,6 +102,8 @@ export interface Material {
     /** Real size (mm) of one plank or tile: width across, height along the plank / up the wall. */
     tileWidth: number | null;
     tileHeight: number | null;
+    /** Second colour of a pattern (#rrggbb): the veins of `Marble`, the motif of `Encaustic`; null derives one. */
+    accent?: string | null;
 }
 
 /** Horizontal band of tiling (or other finish) around a room's walls, mm above the floor. */
@@ -99,6 +111,24 @@ export interface WallFinish {
     materialId: number;
     bottom: number;
     top: number;
+    /** A wall face's band only: mm along the wall's centre line from its start where it begins (missing: the face's start). */
+    from?: number;
+    /** A wall face's band only: where it ends (missing: the face's end). */
+    to?: number;
+}
+
+/** Another floor material over part of a room's floor (`RoomZones`): its outline in plan mm, inside the room's. */
+export interface FloorZone {
+    polygon: PlanPoint[];
+    materialId: number;
+}
+
+/** A dropped ceiling over part of a room (a bulkhead): its outline in plan mm and its soffit `height` mm above the room's floor. */
+export interface CeilingZone {
+    polygon: PlanPoint[];
+    height: number;
+    /** Null: the room's ceiling material. */
+    materialId: number | null;
 }
 
 /** The land the building stands on (`PlotDto`): its boundary in plan mm and the ground inside it. */
@@ -368,6 +398,10 @@ export interface Room {
     skirtingMaterialId?: number | null;
     /** The underside and edge of the room's slab where it overhangs the floor below; null: the façade material. */
     soffitMaterialId?: number | null;
+    /** Other floor materials over parts of the floor, on the room's tile grid. Missing in older versions: none. */
+    floorZones?: FloorZone[];
+    /** Dropped ceilings over parts of the room, only under a flat ceiling. Missing in older versions: none. */
+    ceilingZones?: CeilingZone[];
 }
 
 /**
@@ -424,6 +458,8 @@ export interface Opening {
     shuttersClosed?: boolean;
     /** The reveal (jambs and head across the wall) is lined with the outer face's band; missing: bare. */
     revealLining?: boolean;
+    /** Lines the room's side of the reveal, from the face on `side` to the frame, with the band there (missing: false). */
+    innerRevealLining?: boolean;
     /** Niche: how deep it is cut into the `side` face (mm); null for other types. */
     depth?: number | null;
     /**

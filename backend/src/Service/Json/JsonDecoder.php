@@ -27,20 +27,7 @@ final class JsonDecoder
 	/** @return list<array{int, int}> */
 	public static function decodePolygon(string $json): array
 	{
-		$data = self::decode($json);
-		if (!is_array($data) || !array_is_list($data)) {
-			throw new RuntimeException('Expected a JSON list of points.');
-		}
-
-		$points = [];
-		foreach ($data as $point) {
-			if (!is_array($point) || count($point) !== 2 || !is_int($point[0] ?? null) || !is_int($point[1] ?? null)) {
-				throw new RuntimeException('Polygon point must be a pair of integers.');
-			}
-			$points[] = [$point[0], $point[1]];
-		}
-
-		return $points;
+		return self::points(self::decode($json));
 	}
 
 	/** @return list<array{int, int, int}> */
@@ -68,7 +55,7 @@ final class JsonDecoder
 		return $points;
 	}
 
-	/** @return list<array{materialId: int, bottom: int, top: int}> */
+	/** @return list<array{materialId: int, bottom: int, top: int, from?: int, to?: int}> */
 	public static function decodeWallFinishes(string $json): array
 	{
 		$data = self::decode($json);
@@ -87,10 +74,32 @@ final class JsonDecoder
 			if (!is_int($materialId) || !is_int($bottom) || !is_int($top) || $top <= $bottom) {
 				throw new RuntimeException('Wall finish needs integer materialId, bottom and top (top > bottom).');
 			}
-			$bands[] = ['materialId' => $materialId, 'bottom' => $bottom, 'top' => $top];
+			$bands[] = ['materialId' => $materialId, 'bottom' => $bottom, 'top' => $top, ...self::decodeStretch($band)];
 		}
 
 		return $bands;
+	}
+
+	/**
+	 * A wall finish's `from` / `to` along its wall, those given.
+	 *
+	 * @param array<mixed> $band
+	 * @return array{from?: int, to?: int}
+	 */
+	private static function decodeStretch(array $band): array
+	{
+		$stretch = [];
+		foreach (['from', 'to'] as $key) {
+			$end = $band[$key] ?? null;
+			if ($end !== null && !is_int($end)) {
+				throw new RuntimeException('Wall finish from / to must be integers.');
+			}
+			if ($end !== null) {
+				$stretch[$key] = $end;
+			}
+		}
+
+		return $stretch;
 	}
 
 	/** @return list<array{edge: string, along: int}> */
@@ -120,7 +129,29 @@ final class JsonDecoder
 		return is_array($data) ? array_values(array_filter($data, is_int(...))) : [];
 	}
 
-	private static function decode(string $json): mixed
+	/**
+	 * The points of a decoded polygon.
+	 *
+	 * @return list<array{int, int}>
+	 */
+	public static function points(mixed $data): array
+	{
+		if (!is_array($data) || !array_is_list($data)) {
+			throw new RuntimeException('Expected a JSON list of points.');
+		}
+
+		$points = [];
+		foreach ($data as $point) {
+			if (!is_array($point) || count($point) !== 2 || !is_int($point[0] ?? null) || !is_int($point[1] ?? null)) {
+				throw new RuntimeException('Polygon point must be a pair of integers.');
+			}
+			$points[] = [$point[0], $point[1]];
+		}
+
+		return $points;
+	}
+
+	public static function decode(string $json): mixed
 	{
 		try {
 			return json_decode($json, true, 512, JSON_THROW_ON_ERROR);

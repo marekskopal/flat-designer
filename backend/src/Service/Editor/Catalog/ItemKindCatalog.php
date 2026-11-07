@@ -19,7 +19,7 @@ final readonly class ItemKindCatalog
 	private const array Kinds = [
 		'Sink' => ['description' => 'Inset sink with tap; place it on the worktop (z = worktop top).', 'width' => 780, 'depth' => 480, 'height' => 320, 'z' => 898, 'params' => 'bowls: 1 or 2 (1.5-bowl).'],
 		'Hob' => ['description' => 'Induction hob set into the worktop.', 'width' => 590, 'depth' => 520, 'height' => 6, 'z' => 898, 'params' => 'none'],
-		'LedStrip' => ['description' => 'LED strip, e.g. under wall cabinets.', 'width' => 1000, 'depth' => 20, 'height' => 8, 'z' => 1440, 'params' => 'color: "#rrggbb" light colour; intensity: number (default 5).'],
+		'LedStrip' => ['description' => 'LED strip, e.g. under wall cabinets, or a cove light on top of them washing the ceiling (facing "up"); a switch may control it (controls).', 'width' => 1000, 'depth' => 20, 'height' => 8, 'z' => 1440, 'params' => 'color: "#rrggbb" light colour; intensity: number (default 5); facing: "down" (default) | "up" | "out" (out of its front).'],
 		'Box' => ['description' => 'Plain block in the item material (pre-wall, chimney, bench, …).', 'width' => 600, 'depth' => 600, 'height' => 600, 'z' => 0, 'params' => 'none'],
 		'Bathtub' => ['description' => 'Built-in bathtub with a front panel; drain at the +x end.', 'width' => 1700, 'depth' => 700, 'height' => 560, 'z' => 0, 'params' => 'panelMaterialId: material id of the front panel (e.g. wall tiles).'],
 		'Washbasin' => ['description' => 'Wall-hung washbasin with tap; z is its bottom.', 'width' => 600, 'depth' => 450, 'height' => 150, 'z' => 700, 'params' => 'bowl: "small" for a hand basin.'],

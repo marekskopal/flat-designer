@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Izbik\Service\Project;
 
 use Izbik\Service\Json\JsonDecoder;
+use Izbik\Service\Json\RoomZonesDecoder;
 use Izbik\Service\Project\Exception\InvalidSnapshotException;
 use RuntimeException;
 use Throwable;
@@ -77,6 +78,38 @@ final readonly class SnapshotReader
 		}
 
 		return $json;
+	}
+
+	/**
+	 * A room's floor zones (`RoomZones`); none when the snapshot has none.
+	 *
+	 * @return list<array{polygon: list<array{int, int}>, materialId: int}>
+	 */
+	public function floorZones(string $key): array
+	{
+		$value = $this->data[$key] ?? null;
+
+		try {
+			return $value === null ? [] : RoomZonesDecoder::floorZonesOf($value);
+		} catch (RuntimeException $e) {
+			throw $this->invalid($key, 'a list of floor zones', $e);
+		}
+	}
+
+	/**
+	 * A room's ceiling zones (`RoomZones`); none when the snapshot has none.
+	 *
+	 * @return list<array{polygon: list<array{int, int}>, height: int, materialId: int|null}>
+	 */
+	public function ceilingZones(string $key): array
+	{
+		$value = $this->data[$key] ?? null;
+
+		try {
+			return $value === null ? [] : RoomZonesDecoder::ceilingZonesOf($value);
+		} catch (RuntimeException $e) {
+			throw $this->invalid($key, 'a list of ceiling zones', $e);
+		}
 	}
 
 	public function object(string $key): self

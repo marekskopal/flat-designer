@@ -1,0 +1,105 @@
+{
+ "name": "L-shaped worktop",
+ "description": "Worktop of an L-shaped kitchen in two pieces: a run along the back of the item's box and a return along its left or right side.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Rohová pracovní deska (L)",
+    "description": "Pracovní deska kuchyně do L ze dvou dílů: běh podél zadní strany prvku a návrat podél jeho levé nebo pravé strany.",
+    "parameters": {
+     "runDepth": "Hloubka běhu",
+     "returnWidth": "Šířka návratu",
+     "returnSide": "Strana návratu"
+    },
+    "options": {
+     "returnSide": {
+      "left": "vlevo",
+      "right": "vpravo"
+     }
+    },
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Run": "Běh",
+     "Return": "Návrat"
+    }
+   }
+  },
+  "size": {
+   "width": 2400,
+   "depth": 1800,
+   "height": 38
+  },
+  "parameters": [
+   {
+    "key": "runDepth",
+    "label": "Run depth",
+    "type": "int",
+    "default": 620,
+    "min": 300,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "returnWidth",
+    "label": "Return width",
+    "type": "int",
+    "default": 620,
+    "min": 300,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "returnSide",
+    "label": "Return side",
+    "type": "select",
+    "options": [
+     "left",
+     "right"
+    ],
+    "default": "left"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Run",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "min(runDepth, D - 100)",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Return",
+    "x": "returnSide == 'left' ? 0 : W - min(returnWidth, W - 100)",
+    "y": 0,
+    "z": "min(runDepth, D - 100)",
+    "w": "min(returnWidth, W - 100)",
+    "h": "H",
+    "d": "D - min(runDepth, D - 100)",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
+   }
+  ]
+ }
+}

@@ -126,16 +126,27 @@ final readonly class CutListService
 
 		$slots = is_array($definition['materialSlots'] ?? null) ? array_values($definition['materialSlots']) : [];
 		$noMaterial = $this->translator->translate('cutList.noMaterial', $locale);
+		$label = fn (string $piece): string => $this->translator->translate('cutList.' . $piece, $locale);
 		foreach ($parts as $part) {
-			$material = self::partMaterial($part, $item, $params, $slots, $byCode, $all);
 			$part = self::named($part, DefinitionTranslations::partName($definition, $part->name, $locale));
-			if (in_array($part->type, self::BoardTypes, true)) {
-				foreach (FoldingFront::panels($part) as $panel) {
-					$list->addBoard($material?->id, $material->name ?? $noMaterial, $panel, $item->name);
-				}
-			} else {
-				$list->addOther($material?->id, $material->name ?? $noMaterial, $part, $item->name);
+			foreach (FramedFront::cut($part, $params, $slots, $label) as $piece) {
+				$material = self::partMaterial($piece, $item, $params, $slots, $byCode, $all);
+				// A front's glass pane has no slot: it is listed as glass.
+				$pane = $piece->type === 'glass' && $piece->material === null;
+				$name = $pane ? $label('glassMaterial') : $material->name ?? $noMaterial;
+				$this->addPiece($list, $piece, $pane ? null : $material?->id, $name, $item->name);
 			}
+		}
+	}
+
+	private function addPiece(CutListAccumulator $list, ResolvedPart $piece, ?int $materialId, string $material, string $itemName): void
+	{
+		if (!in_array($piece->type, self::BoardTypes, true)) {
+			$list->addOther($materialId, $material, $piece, $itemName);
+			return;
+		}
+		foreach (FoldingFront::panels($piece) as $panel) {
+			$list->addBoard($materialId, $material, $panel, $itemName);
 		}
 	}
 

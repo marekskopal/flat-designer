@@ -318,6 +318,43 @@ final class ProjectVersionControllerTest extends IntegrationTestCase
 		self::assertSame(0, $this->restoredRoom($user, $project->id)['floorAngle']);
 	}
 
+	public function testRestoreKeepsRoomZonesAndOlderSnapshotsHaveNone(): void
+	{
+		$user = Fixture::createUser();
+		$project = Fixture::createProject($user);
+		$floor = Fixture::firstFloor($project);
+		Fixture::furnishFloor($floor);
+		$rooms = Fixture::service(RoomRepository::class);
+		$room = $rooms->findByFloor($floor->id)[0];
+		$materialId = $room->floorMaterial->id ?? 1;
+		$floorZones = [['polygon' => [[0, 0], [500, 0], [500, 500]], 'materialId' => $materialId]];
+		$ceilingZones = [['polygon' => [[0, 0], [600, 0], [600, 600]], 'height' => 2200, 'materialId' => null]];
+		$room->floorZones = json_encode($floorZones, JSON_THROW_ON_ERROR);
+		$room->ceilingZones = json_encode($ceilingZones, JSON_THROW_ON_ERROR);
+		$rooms->persist($room);
+		$versionId = $this->saveVersion($user, $project->id);
+		$room->floorZones = null;
+		$room->ceilingZones = null;
+		$rooms->persist($room);
+
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		$restored = $this->restoredRoom($user, $project->id);
+		self::assertSame([$floorZones, $ceilingZones], [$restored['floorZones'], $restored['ceilingZones']]);
+
+		// Snapshots saved before rooms had zones.
+		$pdo = Fixture::service(DatabaseInterface::class)->getPdo();
+		foreach (['floorZones' => $floorZones, 'ceilingZones' => $ceilingZones] as $key => $zones) {
+			$pdo->exec(sprintf(
+				'UPDATE project_versions SET snapshot = REPLACE(snapshot, %s, \'\') WHERE id = %d',
+				(string) $pdo->quote(sprintf(',"%s":%s', $key, json_encode($zones, JSON_THROW_ON_ERROR))),
+				$versionId,
+			));
+		}
+		$this->request('POST', self::path(Routes::ProjectVersionRestore, $project->id, $versionId), [], $user);
+		$older = $this->restoredRoom($user, $project->id);
+		self::assertSame([[], []], [$older['floorZones'], $older['ceilingZones']]);
+	}
+
 	/** @return array<mixed> the first room of the project's first floor */
 	private function restoredRoom(User $user, int $projectId): array
 	{

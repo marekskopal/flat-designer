@@ -1,0 +1,97 @@
+{
+ "name": "Wine cooler",
+ "description": "Wine cooler under the worktop or tall: a dark body, a glass door in a frame and oak racks inside, lit from the top.",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "translations": {
+   "cs": {
+    "name": "Vinotéka",
+    "description": "Vinotéka pod pracovní desku nebo vysoká: tmavé tělo, prosklená dvířka v rámu a dubové rošty uvnitř, osvětlená shora.",
+    "slots": {
+     "body": "Tělo",
+     "racks": "Rošty"
+    },
+    "parts": {
+     "Body": "Tělo",
+     "Rack": "Rošt",
+     "Light": "Osvětlení",
+     "Glass door": "Prosklená dvířka"
+    }
+   }
+  },
+  "size": {
+   "width": 600,
+   "depth": 580,
+   "height": 860
+  },
+  "materialSlots": [
+   {
+    "key": "body",
+    "label": "Body",
+    "default": "matt-black"
+   },
+   {
+    "key": "racks",
+    "label": "Racks",
+    "default": "oak-solid"
+   }
+  ],
+  "parts": [
+   {
+    "type": "block",
+    "name": "Body",
+    "x": 0,
+    "y": 0,
+    "z": 0,
+    "w": "W",
+    "h": "H",
+    "d": "D - 20",
+    "material": "body"
+   },
+   {
+    "type": "board",
+    "name": "Rack",
+    "repeat": {
+     "count": "max(floor((H - 120) / 100), 1)"
+    },
+    "x": 30,
+    "y": "70 + i * 100",
+    "z": 30,
+    "w": "W - 60",
+    "h": 15,
+    "d": "D - 90",
+    "material": "racks",
+    "grain": "horizontal"
+   },
+   {
+    "type": "led",
+    "name": "Light",
+    "x": 40,
+    "y": "H - 30",
+    "z": "D - 80",
+    "w": "W - 80",
+    "h": 4,
+    "d": 10,
+    "material": "body",
+    "color": "#dfe9ff"
+   },
+   {
+    "type": "front",
+    "name": "Glass door",
+    "x": 0,
+    "y": 0,
+    "z": "D - 20",
+    "w": "W",
+    "h": "H",
+    "d": 20,
+    "material": "body",
+    "kind": "door",
+    "style": "glass",
+    "frame": 45,
+    "handle": "vertical",
+    "handleSide": "right"
+   }
+  ]
+ }
+}

@@ -9,14 +9,20 @@ use Izbik\Service\Furniture\FurnitureSeeds;
 use Izbik\Service\Json\JsonDecoder;
 use Izbik\Tests\Support\Fixture;
 use Izbik\Tests\Support\IntegrationTestCase;
+use Migrations\AddPendantClustersMigration;
+use Migrations\AddSeatingAndLightingRound2Migration;
 use Migrations\SeedDecorCatalogueMigration;
 use Migrations\SeedDemoHouseFurnitureMigration;
 use Migrations\SeedFlat50FurnitureDefinitionsMigration;
 use Migrations\SeedFurnitureCatalogueMigration;
 use Migrations\SeedFurnitureDefinitionsMigration;
 use Migrations\SeedHallStandFittingDefinitionsMigration;
+use Migrations\SeedKitchenAppliancesMigration;
+use Migrations\SeedKitchenLightingAndSeatingMigration;
+use Migrations\SeedKitchenWorktopsMigration;
 use Migrations\SeedLightingCatalogueMigration;
 use Migrations\SeedRoofAccessoriesMigration;
+use Migrations\SeedSlattedPanelMigration;
 use Migrations\SeedTrapezoidWardrobeMigration;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -49,6 +55,12 @@ final class FurnitureSeedTest extends IntegrationTestCase
 			...SeedRoofAccessoriesMigration::Files,
 			...SeedDemoHouseFurnitureMigration::Files,
 			...SeedTrapezoidWardrobeMigration::Files,
+			...SeedKitchenWorktopsMigration::Files,
+			...SeedKitchenAppliancesMigration::Files,
+			...SeedKitchenLightingAndSeatingMigration::Files,
+			...SeedSlattedPanelMigration::Files,
+			...AddSeatingAndLightingRound2Migration::Files,
+			...AddPendantClustersMigration::Files,
 		];
 		sort($listed);
 		self::assertSame(array_unique($listed), $listed, 'A file is listed by more than one migration.');

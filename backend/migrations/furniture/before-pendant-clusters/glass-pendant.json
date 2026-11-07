@@ -1,0 +1,256 @@
+{
+ "name": "Pendant with a glass shade",
+ "description": "Pendant with a glass shade on a fabric cable (the holder in its material, or its own with holderMaterial own): a globe, a dome, a drum or a flat disc (shadeHeight sets its height apart from its width) round a small glowing bulb; the cable rises to the hook above it and runs along path to the canopy, as the bare-bulb pendant's. The item's elevation is the bottom of the shade.",
+ "definition": {
+  "format": 1,
+  "category": "light",
+  "schedule": {
+   "values": [
+    "lumens",
+    "kelvin"
+   ]
+  },
+  "catalogue": "lighting",
+  "translations": {
+   "cs": {
+    "name": "Závěsné svítidlo se skleněným stínidlem",
+    "description": "Závěsné svítidlo se skleněným stínidlem na textilním kabelu: koule, kopule, válec nebo plochý disk (shadeHeight určuje jeho výšku nezávisle na šířce) kolem malé svítící žárovky; kabel stoupá k háčku nad ním a vede po path k baldachýnu jako u svítidla s holou žárovkou. Výška osazení prvku je spodek stínidla.",
+    "parameters": {
+     "path": "Trasa kabelu",
+     "path.x": "x",
+     "path.z": "z",
+     "sag": "Průvěs mezi body",
+     "shape": "Tvar stínidla",
+     "lumens": "Světelný tok",
+     "kelvin": "Teplota chromatičnosti",
+     "shadow": "Vrhá stíny",
+     "shadeHeight": "Výška stínidla (0: podle tvaru)",
+     "holderMaterial": "Materiál objímky"
+    },
+    "options": {
+     "shape": {
+      "globe": "koule",
+      "dome": "kopule",
+      "drum": "válec",
+      "disc": "disk"
+     },
+     "holderMaterial": {
+      "cable": "jako kabel",
+      "own": "vlastní"
+     }
+    },
+    "slots": {
+     "shade": "Stínidlo",
+     "cable": "Kabel a objímka",
+     "holder": "Objímka (vlastní materiál)"
+    },
+    "parts": {
+     "Shade": "Stínidlo",
+     "Bulb": "Žárovka",
+     "Holder": "Objímka",
+     "Cable": "Kabel"
+    }
+   }
+  },
+  "size": {
+   "width": 300,
+   "depth": 300,
+   "height": 1000
+  },
+  "parameters": [
+   {
+    "key": "path",
+    "label": "Cable path",
+    "type": "list",
+    "fields": [
+     {
+      "key": "x",
+      "label": "x",
+      "type": "int",
+      "default": 0,
+      "unit": "mm"
+     },
+     {
+      "key": "z",
+      "label": "z",
+      "type": "int",
+      "default": 0,
+      "unit": "mm"
+     }
+    ],
+    "default": [],
+    "maxItems": 8
+   },
+   {
+    "key": "sag",
+    "label": "Sag between points",
+    "type": "int",
+    "default": 60,
+    "min": 0,
+    "max": 400,
+    "unit": "mm"
+   },
+   {
+    "key": "shape",
+    "label": "Shade shape",
+    "type": "select",
+    "options": [
+     "globe",
+     "dome",
+     "drum",
+     "disc"
+    ],
+    "default": "globe"
+   },
+   {
+    "key": "shadeHeight",
+    "label": "Shade height (0: by the shape)",
+    "type": "int",
+    "default": 0,
+    "min": 0,
+    "max": 800,
+    "unit": "mm"
+   },
+   {
+    "key": "lumens",
+    "label": "Light output",
+    "type": "int",
+    "default": 400,
+    "min": 0,
+    "max": 5000,
+    "unit": "lm"
+   },
+   {
+    "key": "kelvin",
+    "label": "Colour temperature",
+    "type": "int",
+    "default": 2200,
+    "min": 1800,
+    "max": 6500,
+    "unit": "K"
+   },
+   {
+    "key": "shadow",
+    "label": "Casts shadows",
+    "type": "bool",
+    "default": false
+   },
+   {
+    "key": "holderMaterial",
+    "label": "Holder material",
+    "type": "select",
+    "default": "cable",
+    "options": [
+     "cable",
+     "own"
+    ]
+   }
+  ],
+  "derived": {
+   "s": "min(W, D)",
+   "sh": "shadeHeight > 0 ? shadeHeight : shape == 'globe' ? s : shape == 'dome' ? round(s * 0.6) : shape == 'disc' ? round(s * 0.15) : round(s * 0.55)",
+   "holder": 60
+  },
+  "materialSlots": [
+   {
+    "key": "shade",
+    "label": "Shade",
+    "default": "glass-smoked"
+   },
+   {
+    "key": "cable",
+    "label": "Cable and holder",
+    "default": "cable-fabric-black"
+   },
+   {
+    "key": "holder",
+    "label": "Holder (holderMaterial own)",
+    "default": "metal-black-matt"
+   }
+  ],
+  "parts": [
+   {
+    "type": "cushion",
+    "name": "Shade",
+    "when": "shape == 'globe'",
+    "x": "(W - s) / 2",
+    "y": 0,
+    "z": "(D - s) / 2",
+    "w": "s",
+    "h": "sh",
+    "d": "s",
+    "material": "shade",
+    "radius": {
+     "expr": "s / 2"
+    }
+   },
+   {
+    "type": "cylinder",
+    "name": "Shade",
+    "when": "shape != 'globe'",
+    "x": "(W - s) / 2",
+    "y": 0,
+    "z": "(D - s) / 2",
+    "w": "s",
+    "h": "sh",
+    "d": "s",
+    "material": "shade",
+    "radius": {
+     "expr": "shape == 'dome' ? round(min(sh, s / 2) * 0.9) : shape == 'disc' ? round(min(sh, s) * 0.4) : 6"
+    }
+   },
+   {
+    "type": "light",
+    "name": "Bulb",
+    "x": "W / 2 - 30",
+    "y": "round(sh / 2) - 30",
+    "z": "D / 2 - 30",
+    "w": 60,
+    "h": 60,
+    "d": 60,
+    "kind": "point",
+    "lumens": {
+     "expr": "lumens"
+    },
+    "kelvin": {
+     "expr": "kelvin"
+    },
+    "shadow": {
+     "expr": "shadow"
+    },
+    "bulb": "sphere"
+   },
+   {
+    "type": "cylinder",
+    "name": "Holder",
+    "x": "W / 2 - 22",
+    "y": "sh - 4",
+    "z": "D / 2 - 22",
+    "w": 44,
+    "h": "holder",
+    "d": 44,
+    "material": {
+     "expr": "holderMaterial == 'own' ? 'holder' : 'cable'"
+    }
+   },
+   {
+    "type": "cable",
+    "name": "Cable",
+    "x": "W / 2 - 3",
+    "y": "sh - 4 + holder",
+    "z": "D / 2 - 3",
+    "w": 6,
+    "h": "max(H - sh + 4 - holder, 1)",
+    "d": 6,
+    "path": {
+     "expr": "path"
+    },
+    "sag": {
+     "expr": "sag"
+    },
+    "rose": 90,
+    "material": "cable"
+   }
+  ]
+ }
+}

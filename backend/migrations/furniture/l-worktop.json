@@ -1,0 +1,174 @@
+{
+ "name": "L-shaped worktop",
+ "description": "Worktop of an L-shaped kitchen in two pieces: a run along the back of the item's box and a return along its left or right side. The run's free end (away from the return), the return's free end or both may turn down drop mm below the item (waterfall).",
+ "definition": {
+  "format": 1,
+  "catalogue": "kitchen",
+  "cutout": "worktop",
+  "translations": {
+   "cs": {
+    "name": "Rohová pracovní deska (L)",
+    "description": "Pracovní deska kuchyně do L ze dvou dílů: běh podél zadní strany prvku a návrat podél jeho levé nebo pravé strany. Volný konec hlavní části (dál od zalomení), konec zalomení nebo oba mohou přejít o drop mm pod prvek (vodopád).",
+    "parameters": {
+     "runDepth": "Hloubka běhu",
+     "returnWidth": "Šířka návratu",
+     "returnSide": "Strana návratu",
+     "waterfall": "Vodopádové konce",
+     "drop": "Přesah vodopádu pod desku"
+    },
+    "options": {
+     "returnSide": {
+      "left": "vlevo",
+      "right": "vpravo"
+     },
+     "waterfall": {
+      "none": "žádný",
+      "run": "na konci hlavní části",
+      "return": "na konci zalomení",
+      "both": "oba"
+     }
+    },
+    "slots": {
+     "top": "Materiál"
+    },
+    "parts": {
+     "Run": "Běh",
+     "Return": "Návrat",
+     "Waterfall end": "Vodopádový konec"
+    }
+   }
+  },
+  "size": {
+   "width": 2400,
+   "depth": 1800,
+   "height": 38
+  },
+  "parameters": [
+   {
+    "key": "runDepth",
+    "label": "Run depth",
+    "type": "int",
+    "default": 620,
+    "min": 300,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "returnWidth",
+    "label": "Return width",
+    "type": "int",
+    "default": 620,
+    "min": 300,
+    "max": 1200,
+    "unit": "mm"
+   },
+   {
+    "key": "returnSide",
+    "label": "Return side",
+    "type": "select",
+    "options": [
+     "left",
+     "right"
+    ],
+    "default": "left"
+   },
+   {
+    "key": "waterfall",
+    "label": "Waterfall ends",
+    "type": "select",
+    "default": "none",
+    "options": [
+     "none",
+     "run",
+     "return",
+     "both"
+    ]
+   },
+   {
+    "key": "drop",
+    "label": "Waterfall drop below the top",
+    "type": "int",
+    "default": 872,
+    "min": 100,
+    "max": 1200,
+    "unit": "mm"
+   }
+  ],
+  "materialSlots": [
+   {
+    "key": "top",
+    "label": "Material"
+   }
+  ],
+  "parts": [
+   {
+    "type": "board",
+    "name": "Run",
+    "x": "returnSide == 'left' ? 0 : wf",
+    "y": 0,
+    "z": 0,
+    "w": "W - wf",
+    "h": "H",
+    "d": "rd",
+    "material": "top",
+    "grain": "horizontal",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Return",
+    "x": "returnSide == 'left' ? 0 : W - rw",
+    "y": 0,
+    "z": "rd",
+    "w": "rw",
+    "h": "H",
+    "d": "D - rd - wb",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Waterfall end",
+    "when": "wf > 0",
+    "x": "returnSide == 'left' ? W - H : 0",
+    "y": "-drop",
+    "z": 0,
+    "w": "H",
+    "h": "drop + H",
+    "d": "rd",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
+   },
+   {
+    "type": "board",
+    "name": "Waterfall end",
+    "when": "wb > 0",
+    "x": "returnSide == 'left' ? 0 : W - rw",
+    "y": "-drop",
+    "z": "D - H",
+    "w": "rw",
+    "h": "drop + H",
+    "d": "H",
+    "material": "top",
+    "grain": "vertical",
+    "edges": [
+     "front"
+    ]
+   }
+  ],
+  "derived": {
+   "rd": "min(runDepth, D - 100)",
+   "wf": "waterfall == 'run' || waterfall == 'both' ? H : 0",
+   "wb": "waterfall == 'return' || waterfall == 'both' ? H : 0",
+   "rw": "min(returnWidth, W - 100)"
+  }
+ }
+}

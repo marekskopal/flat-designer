@@ -1,17 +1,21 @@
 import {MaterialSlot} from '@app/models/furniture';
 import {Item, Room, SceneDefinition} from '@app/models/scene';
+import {MultiPolygon, Pair} from 'polygon-clipping';
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 import {ceilingHeightAt} from '../ceilings';
-import {buildAppliance, buildHandle} from '../kitchen';
-import {bulbMaterial, createFixtureLight, FixtureKind, markBulb, markFixtureLight} from '../lights';
+import {applianceFinishOf, applianceKindOf, buildAppliance, buildFrontHandle, FrontHandle, handlePositionOf} from '../kitchen';
+import {bulbMaterial, createFixtureLight, FixtureKind, ledFacingOf, ledLight, markBulb} from '../lights';
 import {GrainDirection, MaterialLibrary} from '../materials';
 import {boxAt, prismAt} from '../meshes';
 import {coverUvs, PictureLibrary} from '../pictures';
 import {MM} from '../plan-geometry';
 import {FloorRoofs} from '../under-roof';
+import {boardCutouts, cutoutRoleOf, WorktopCutter} from './cutouts';
 import {evaluateDefinition, ResolvedPart} from './definition';
+import {buildFrontBody, frontStyleOf, glassMaterial} from './front-styles';
 import {FrontBox, FrontPivot, FrontPivotTag, FrontSpec, frontSpec, FrontTag, leafDoors, pivotPoint} from './fronts';
 import {buildFrontHinges} from './hinges';
 import {taperedLeg} from './legs';
@@ -56,7 +60,8 @@ const PictureFaceOffset = 0.5;
  * and depth. When the definition is missing or does not evaluate at the item's size, a translucent red box of the item
  * size stands in, with the reason in `userData.definitionError`. `picture` parts show their image from `pictures` (plain
  * while it loads, or without a library); `cable` parts run on the ceiling of the item's `room`, sloping under the floor's
- * `roofs`. Null for other kinds.
+ * `roofs`. A worktop (`cutout: worktop`) has the holes of the floor's sinks and hobs on it (`cutters`) cut out of its
+ * top boards. Null for other kinds.
  */
 export function buildCustomItemBody(
     item: Item,
@@ -65,6 +70,7 @@ export function buildCustomItemBody(
     pictures: PictureLibrary | null = null,
     room?: Room,
     roofs: FloorRoofs = [],
+    cutters: readonly WorktopCutter[] = [],
 ): THREE.Group | null {
     if (item.kind !== 'Custom') {
         return null;
@@ -82,21 +88,33 @@ export function buildCustomItemBody(
         const fronts = new Map<string, THREE.Group>();
         const doors = leafDoors(parts);
         let ordinal = 0;
+        const chosen = (item.params['materials'] ?? {}) as Record<string, unknown>;
+        const cuts = cutoutRoleOf(definition.definition) === 'worktop' ? boardCutouts(item, parts, cutters) : new Map<ResolvedPart, MultiPolygon>();
         for (const part of parts) {
             const material = (grain: GrainDirection, slot = part.material): THREE.Material =>
                 partMaterial({...part, material: slot}, item, slots, materials, grain);
+            // A frame or handle slot the item does not fill and without a default leaves the front's own look.
+            const optional: OptionalMaterial = (slot, grain) =>
+                typeof slot === 'string' && (typeof chosen[slot] === 'number' || slots.some((s) => s.key === slot && typeof s.default === 'string'))
+                    ? material(grain, slot)
+                    : undefined;
             const spec = frontSpec(part, ordinal, doors);
             if (spec !== null && part.props['leaf'] === undefined) {
                 ordinal++;
             }
             if (spec?.motion === 'fold') {
-                const [upper, lower] = foldingFront(part, spec, item, material(grainOf(part)), materials);
+                const [upper, lower] = foldingFront(part, spec, item, material(grainOf(part)), materials, optional);
                 const front = frontGroup(fronts, spec, group, item);
                 addToPivot(front, 'upper', named(posed(upper, part), part), spec);
                 addToPivot(front, 'lower', named(posed(lower, part), part), spec);
                 continue;
             }
-            const mesh = named(posed(buildPart(part, item, material, materials, pictures, room, roofs), part), part);
+            const cut = cuts.get(part);
+            const body =
+                cut === undefined
+                    ? buildPart(part, item, material, materials, pictures, room, roofs, optional)
+                    : cutBoard(part, cut, shaded(material(grainOf(part)), part.props['shade'], materials));
+            const mesh = named(posed(body, part), part);
             if (spec !== null) {
                 addToPivot(frontGroup(fronts, spec, group, item), 'main', mesh, spec);
                 continue;
@@ -237,11 +255,12 @@ function foldingFront(
     item: Item,
     material: THREE.Material,
     materials: MaterialLibrary,
+    optional: OptionalMaterial,
 ): [THREE.Object3D, THREE.Object3D] {
     const [upper, lower] = spec.fold ?? [part.h, 0];
     const upperPart = {...part, y: part.y + part.h - upper, h: upper, props: {...part.props, handle: 'none'}};
     const lowerPart = {...part, h: lower, props: {...part.props, handle: part.props['handle'] ?? 'horizontal'}};
-    return [buildFront(upperPart, item, material, materials), buildFront(lowerPart, item, material, materials)];
+    return [buildFront(upperPart, item, material, materials, optional), buildFront(lowerPart, item, material, materials, optional)];
 }
 
 /** One part as a mesh (or a group, for a front with its handle) in the parts' frame, metres. */
@@ -253,12 +272,13 @@ function buildPart(
     pictures: PictureLibrary | null,
     room: Room | undefined,
     roofs: FloorRoofs,
+    optional: OptionalMaterial = () => undefined,
 ): THREE.Object3D {
     const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
     switch (part.type) {
         case 'appliance': {
             const front = {left: part.x, bottom: part.y, width: part.w, height: part.h, z: part.z};
-            return buildAppliance(part.props['kind'] === 'microwave' ? 'microwave' : 'oven', front, materials, part.d);
+            return buildAppliance(applianceKindOf(part.props['kind']), front, materials, part.d, applianceFinishOf(part.props['finish']));
         }
         case 'slidingDoor': {
             const slot = part.props['profile'];
@@ -271,7 +291,7 @@ function buildPart(
         case 'block':
             return box(part, shaded(material(grain), part.props['shade'], materials));
         case 'front':
-            return buildFront(part, item, material(grain), materials);
+            return buildFront(part, item, material(grain), materials, optional);
         case 'cylinder':
             return buildCylinder(part, material('vertical'));
         case 'cushion':
@@ -291,6 +311,54 @@ function buildPart(
         default:
             return box(part, material(grain));
     }
+}
+
+/**
+ * A board lying flat with holes: its outline less the holes (`cut`, mm in the parts' frame, x and z) extruded down from
+ * its top through its thickness. UVs in metres as `worldUvBox()` lays them on a box of the part's size (the faces by
+ * their normal), so the material's grain and pattern run as on an uncut board.
+ */
+export function cutBoard(part: ResolvedPart, cut: MultiPolygon, material: THREE.Material): THREE.Mesh {
+    const ring = (points: readonly Pair[]): THREE.Vector2[] => {
+        const open = points.length > 1 && points[0][0] === points[points.length - 1][0] && points[0][1] === points[points.length - 1][1];
+        return (open ? points.slice(0, -1) : points).map(([x, z]) => new THREE.Vector2(x * MM, z * MM));
+    };
+    const shapes = cut.map(([outer, ...holes]) => {
+        const shape = new THREE.Shape(ring(outer));
+        shape.holes = holes.map((hole) => new THREE.Path(ring(hole)));
+        return shape;
+    });
+    const geometry = new THREE.ExtrudeGeometry(shapes, {depth: part.h * MM, bevelEnabled: false});
+    // The shape's y becomes z (towards the front), the extrusion runs down from the top.
+    geometry.rotateX(Math.PI / 2);
+    geometry.translate(0, (part.y + part.h) * MM, 0);
+    geometry.clearGroups();
+    boxUvs(geometry, part);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+}
+
+/** UVs (metres) of a geometry within a part's box by each vertex's normal, as `worldUvBox()` gives a box's faces. */
+function boxUvs(geometry: THREE.BufferGeometry, part: ResolvedPart): void {
+    const [x0, x1] = [part.x * MM, (part.x + part.w) * MM];
+    const [y0, z0, z1] = [part.y * MM, part.z * MM, (part.z + part.d) * MM];
+    const position = geometry.getAttribute('position');
+    const normal = geometry.getAttribute('normal');
+    const uvs: number[] = [];
+    for (let i = 0; i < position.count; i++) {
+        const [x, y, z] = [position.getX(i), position.getY(i), position.getZ(i)];
+        const [nx, ny, nz] = [normal.getX(i), normal.getY(i), normal.getZ(i)];
+        if (Math.abs(ny) >= Math.abs(nx) && Math.abs(ny) >= Math.abs(nz)) {
+            uvs.push(x - x0, ny > 0 ? z1 - z : z - z0);
+        } else if (Math.abs(nz) >= Math.abs(nx)) {
+            uvs.push(nz > 0 ? x - x0 : x1 - x, y - y0);
+        } else {
+            uvs.push(nx > 0 ? z1 - z : z - z0, y - y0);
+        }
+    }
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
 }
 
 /** A board, narrowing towards the back to `backWidth` (on both sides, or only the `taper` side) when it has one. */
@@ -496,53 +564,149 @@ function pivoted(object: THREE.Object3D, pivot: THREE.Vector3): THREE.Group {
     return group;
 }
 
-/**
- * Clear glass; one per mesh, disposed with it (not one of the library's materials). Transparent rather than transmissive:
- * a transmissive material in view makes three.js render the whole scene a second time every frame.
- */
-function glassMaterial(): THREE.Material {
-    return new THREE.MeshPhysicalMaterial({color: '#dfeff2', roughness: 0.05, transparent: true, opacity: 0.15, depthWrite: false});
-}
-
 function box(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     return boxAt(material, part.x * MM, part.y * MM, part.z * MM, part.w * MM, part.h * MM, part.d * MM);
 }
 
-/** Door or drawer leaf (the part's box) with a bar handle: vertical on doors, horizontal on drawers by default. */
-function buildFront(part: ResolvedPart, item: Item, material: THREE.Material, materials: MaterialLibrary): THREE.Group {
+/** The material of a front's optional slot (`frameMaterial`, `handleMaterial`), or undefined to keep its own look. */
+type OptionalMaterial = (slot: unknown, grain: GrainDirection) => THREE.Material | undefined;
+
+/** The handle kinds of a front's `handle` option. */
+const FrontHandles: readonly FrontHandle[] = ['horizontal', 'vertical', 'knob', 'edge', 'gola', 'push', 'none'];
+
+/**
+ * Door or drawer leaf (the part's box) in its `style` (`buildFrontBody()`) with its handle (`buildFrontHandle()`): a bar,
+ * vertical on doors and horizontal on drawers by default, in the `handleMaterial` slot's material or black.
+ */
+function buildFront(
+    part: ResolvedPart,
+    item: Item,
+    material: THREE.Material,
+    materials: MaterialLibrary,
+    optional: OptionalMaterial = () => undefined,
+): THREE.Group {
     const group = new THREE.Group();
-    group.add(box(part, material));
+    const grain: GrainDirection = part.props['grain'] === 'horizontal' ? 'horizontal' : 'vertical';
+    const frameMaterial = optional(part.props['frameMaterial'], grain) ?? material;
+    for (const mesh of buildFrontBody(part, frontStyleOf(part.props), part.props['frame'], material, frameMaterial)) {
+        group.add(mesh);
+    }
     const drawer = part.props['kind'] === 'drawer';
-    const handle = part.props['handle'] ?? (drawer ? 'horizontal' : 'vertical');
-    if (handle === 'horizontal' || handle === 'vertical') {
-        const edge = part.props['handleSide'] === 'left' ? 'left' : 'right';
-        const front = {left: part.x, width: part.w, bottom: part.y, height: part.h};
-        group.add(buildHandle(handle, front, part.z + part.d, item.z, edge, materials));
+    const wanted = part.props['handle'] ?? (drawer ? 'horizontal' : 'vertical');
+    const handle = FrontHandles.includes(wanted as FrontHandle) ? (wanted as FrontHandle) : 'none';
+    const edge = part.props['handleSide'] === 'left' ? 'left' : 'right';
+    const front = {left: part.x, width: part.w, bottom: part.y, height: part.h};
+    const length = typeof part.props['handleLength'] === 'number' && part.props['handleLength'] > 0 ? part.props['handleLength'] : undefined;
+    const handleMaterial = optional(part.props['handleMaterial'], 'horizontal');
+    const position = handlePositionOf(part.props['handlePosition']);
+    const mesh = buildFrontHandle(handle, front, part.z + part.d, item.z, edge, drawer, materials, {material: handleMaterial, length, position});
+    if (mesh !== null) {
+        group.add(mesh);
     }
     return group;
 }
 
 /**
  * Round rod or leg along `axis` (default y), as thick as the box's smaller side across it; `radius` rounds the
- * edges of its ends (a pouf, a vessel basin), at most half its length or thickness.
+ * edges of its ends (a pouf, a vessel basin), at most half its length or thickness. A lamp shade's `profile` makes it a
+ * cone or a teardrop, and `wire` an open cage of that many meridian wires (`cylinderGeometry()`).
  */
 function buildCylinder(part: ResolvedPart, material: THREE.Material): THREE.Mesh {
     const axis = part.props['axis'] === 'x' || part.props['axis'] === 'z' ? part.props['axis'] : 'y';
     const across = {x: [part.h, part.d], y: [part.w, part.d], z: [part.w, part.h]}[axis];
     const length = {x: part.w, y: part.h, z: part.d}[axis];
     const radius = Math.min(across[0], across[1]) / 2;
-    const rounding = typeof part.props['radius'] === 'number' ? Math.max(0, Math.min(part.props['radius'], radius, length / 2) - 0.5) : 0;
-    const geometry =
-        rounding > 0
-            ? roundedCylinder(radius, length, rounding)
-            : new THREE.CylinderGeometry(radius * MM, radius * MM, length * MM, CylinderSegments);
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(cylinderGeometry(part.props, radius, length), material);
     if (axis === 'x') {
         mesh.rotation.z = Math.PI / 2;
     } else if (axis === 'z') {
         mesh.rotation.x = Math.PI / 2;
     }
     return centredInBox(mesh, part);
+}
+
+/** A cylinder part's outline along its axis: straight, a cone (a frustum) or a teardrop. */
+export type CylinderProfile = 'straight' | 'cone' | 'teardrop';
+
+/** The top's radius as a share of the bottom's (a teardrop's neck) when the part gives no `topRatio`. */
+const DefaultTopRatio: Record<CylinderProfile, number> = {straight: 1, cone: 0.3, teardrop: 0.15};
+
+/** A cage shade's wires: mm thick, and at most this many meridians. */
+const CageWire = 3;
+const MaxCageWires = 24;
+
+/** The upright geometry of a cylinder part `radius` × `length` (mm) round its centre, by its options. */
+function cylinderGeometry(props: Record<string, unknown>, radius: number, length: number): THREE.BufferGeometry {
+    const profile: CylinderProfile = props['profile'] === 'cone' || props['profile'] === 'teardrop' ? props['profile'] : 'straight';
+    const topRatio = typeof props['topRatio'] === 'number' ? Math.max(0, Math.min(1, props['topRatio'])) : DefaultTopRatio[profile];
+    const wires = typeof props['wire'] === 'number' ? Math.min(Math.round(props['wire']), MaxCageWires) : 0;
+    if (wires > 0) {
+        return cageGeometry(shadeOutline(profile, radius, length, topRatio), wires);
+    }
+    if (profile === 'cone') {
+        return new THREE.CylinderGeometry(radius * topRatio * MM, radius * MM, length * MM, CylinderSegments);
+    }
+    if (profile === 'teardrop') {
+        const outline = shadeOutline(profile, radius, length, topRatio);
+        return new THREE.LatheGeometry([...outline, new THREE.Vector2(0, length / 2)].map((p) => p.multiplyScalar(MM)), CylinderSegments);
+    }
+    const rounding = typeof props['radius'] === 'number' ? Math.max(0, Math.min(props['radius'], radius, length / 2) - 0.5) : 0;
+    return rounding > 0
+        ? roundedCylinder(radius, length, rounding)
+        : new THREE.CylinderGeometry(radius * MM, radius * MM, length * MM, CylinderSegments);
+}
+
+/**
+ * A shade's outline from its bottom to its top (mm, (radius, height) round its centre): a straight or conical side
+ * narrowing to `topRatio` of the radius, or a teardrop: a rounded bottom up to its widest, then a smooth taper to a
+ * neck of `topRatio`.
+ */
+export function shadeOutline(profile: CylinderProfile, radius: number, length: number, topRatio: number): THREE.Vector2[] {
+    const half = length / 2;
+    const top = radius * (profile === 'straight' ? 1 : topRatio);
+    if (profile !== 'teardrop') {
+        return Array.from({length: 9}, (_, k) => new THREE.Vector2(radius + ((top - radius) * k) / 8, -half + (length * k) / 8));
+    }
+    const rise = Math.min(radius, half);
+    const widest = -half + rise;
+    const outline: THREE.Vector2[] = [];
+    for (let k = 0; k <= 8; k++) {
+        const angle = -Math.PI / 2 + (k / 8) * (Math.PI / 2);
+        outline.push(new THREE.Vector2(radius * Math.cos(angle), widest + rise * Math.sin(angle)));
+    }
+    for (let k = 1; k <= 12; k++) {
+        const u = k / 12;
+        outline.push(new THREE.Vector2(top + ((radius - top) * (1 + Math.cos(Math.PI * u))) / 2, widest + u * (half - widest)));
+    }
+    return outline;
+}
+
+/**
+ * An open wire cage along `outline` (mm): `wires` meridians and rings at its bottom, its widest (the middle of a
+ * straight or conical one) and its top, leaving out a ring that would shrink to a point; one geometry, metres.
+ */
+function cageGeometry(outline: THREE.Vector2[], wires: number): THREE.BufferGeometry {
+    const wire = (CageWire / 2) * MM;
+    const pieces: THREE.BufferGeometry[] = [];
+    for (let k = 0; k < wires; k++) {
+        const angle = (k / wires) * Math.PI * 2;
+        const path = outline.map((p) => new THREE.Vector3(p.x * Math.cos(angle) * MM, p.y * MM, p.x * Math.sin(angle) * MM));
+        pieces.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path), outline.length * 2, wire, 4, false));
+    }
+    let widest = outline.reduce((best, p, i) => (p.x > outline[best].x + 0.5 ? i : best), 0);
+    if (widest === 0 || widest === outline.length - 1) {
+        widest = Math.floor(outline.length / 2);
+    }
+    for (const p of [outline[0], outline[widest], outline[outline.length - 1]]) {
+        if (p.x < 5) {
+            continue;
+        }
+        const ring = new THREE.TorusGeometry(p.x * MM, wire, 4, CylinderSegments);
+        ring.rotateX(Math.PI / 2);
+        ring.translate(0, p.y * MM, 0);
+        pieces.push(ring);
+    }
+    return mergeGeometries(pieces) ?? new THREE.BufferGeometry();
 }
 
 /** An upright cylinder `length` long round its centre whose end edges are rounded by `rounding` (all mm): a lathed profile. */
@@ -598,17 +762,14 @@ function buildTaperedLeg(part: ResolvedPart, item: Item, material: THREE.Materia
     return mesh;
 }
 
-/** Glowing strip in the slot material with a light of `color` shining down. */
+/** Glowing strip in the slot material with a light of `color` shining `facing` down (the default), up or out of its front. */
 function buildLed(part: ResolvedPart, material: THREE.Material): THREE.Group {
     const group = new THREE.Group();
-    group.add(boxAt(material, part.x * MM, part.y * MM, part.z * MM, part.w * MM, part.h * MM, part.d * MM, false));
+    const strip = {x: part.x * MM, y: part.y * MM, z: part.z * MM, w: part.w * MM, h: part.h * MM, d: part.d * MM};
+    group.add(boxAt(material, strip.x, strip.y, strip.z, strip.w, strip.h, strip.d, false));
     const color = typeof part.props['color'] === 'string' ? part.props['color'] : '#ffd2a0';
     const intensity = typeof part.props['intensity'] === 'number' ? part.props['intensity'] : 5;
-    const light = new THREE.RectAreaLight(color, intensity, part.w * MM, Math.max(part.d * MM, 0.02));
-    light.rotation.x = -Math.PI / 2;
-    markFixtureLight(light, intensity);
-    light.position.set((part.x + part.w / 2) * MM, part.y * MM, (part.z + part.d / 2) * MM);
-    group.add(light);
+    group.add(ledLight(color, intensity, ledFacingOf(part.props['facing']), strip));
     return group;
 }
 

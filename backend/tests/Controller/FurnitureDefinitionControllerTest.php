@@ -189,6 +189,21 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 		yield 'a cylinder\'s rounding not a number' => [$definition, 'parts[1].radius: Must be a number, 0 or more.'];
 
 		$definition = self::Definition;
+		$definition['parts'][1] = ['type' => 'cylinder', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D', 'profile' => 'bell'];
+
+		yield 'an unknown shade profile' => [$definition, 'parts[1].profile: Must be one of "straight", "cone", "teardrop".'];
+
+		$definition = self::Definition;
+		$definition['parts'][1] = ['type' => 'cylinder', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 'H', 'd' => 'D', 'topRatio' => 2];
+
+		yield 'a cone\'s top ratio over 1' => [$definition, 'parts[1].topRatio: Must be a number from 0 to 1.'];
+
+		$definition = self::Definition;
+		$definition['parts'][1] = ['type' => 'led', 'x' => 0, 'y' => 0, 'z' => 0, 'w' => 'W', 'h' => 10, 'd' => 10, 'facing' => 'sideways'];
+
+		yield 'an unknown LED facing' => [$definition, 'parts[1].facing: Must be one of "down", "up", "out".'];
+
+		$definition = self::Definition;
 		$definition['materialSlots'][0]['default'] = 'unobtainium';
 
 		yield 'unknown material code' => [$definition, 'materialSlots[0].default: Must be the code of a material'];
@@ -442,7 +457,7 @@ final class FurnitureDefinitionControllerTest extends IntegrationTestCase
 			'tilt beyond 90°' => [['parts', 1, 'tilt'], 120, 'parts[1].tilt: Must be degrees from -90 to 90.'],
 			'turn beyond 90° once evaluated' => [['parts', 1, 'turn'], ['expr' => 'atan2(1, -1)'], 'parts[1].turn: Must be degrees from -90 to 90.'],
 			'turn pivot not a number' => [['parts', 1, 'turnX'], 'W', 'parts[1].turnX: Must be a number (mm).'],
-			'an appliance not an oven or microwave' => [['parts', 3, 'kind'], 'fridge', 'parts[3].kind: Must be one of "oven", "microwave".'],
+			'an appliance of an unknown kind' => [['parts', 3, 'kind'], 'fridge', 'parts[3].kind: Must be one of "oven", "microwave", "steam", "coffee".'],
 			'mirror not a boolean once evaluated' => [['parts', 2, 'mirror'], ['expr' => 'i'], 'parts[2].mirror: Must be true or false.'],
 		];
 		foreach ($bad as $case => [$keys, $value, $message]) {

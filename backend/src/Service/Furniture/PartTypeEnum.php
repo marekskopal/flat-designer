@@ -18,19 +18,28 @@ enum PartTypeEnum: string
 	 * sides, or only the left / right edge), e.g. a chair seat.
 	 */
 	case Board = 'board';
-	/** Door or drawer leaf with a handle, as on the kitchen cabinets; it opens as its `Motion` options say. */
+	/**
+	 * Door or drawer leaf with a handle, as on the kitchen cabinets; it opens as its `Motion` options say. Its `style`
+	 * (`FrontStyles`) and `handle` (`Handles`) set its look; a `frameMaterial` or `handleMaterial` slot the item does not
+	 * fill and that has no default keeps the front's own material or the black handle.
+	 */
 	case Front = 'front';
 	/**
 	 * A solid box not cut from sheet material: stone, concrete, cast or solid metal, a solid timber bar, fabric;
 	 * the cut list counts it among the other parts.
 	 */
 	case Block = 'block';
-	/** Rod or round leg along `axis` (default y), its diameter the box's smaller side across; `radius` rounds its ends' edges. */
+	/**
+	 * Rod or round leg along `axis` (default y), its diameter the box's smaller side across; `radius` rounds its ends'
+	 * edges. A lamp shade's `profile` (`Profiles`): `cone` narrows to `topRatio` (0–1, default 0.3) of its radius at
+	 * the top (the end towards +axis), `teardrop` rounds its bottom and tapers to a neck of `topRatio` (default 0.15);
+	 * `wire` > 0 draws it as an open cage of that many meridian wires and a few rings instead of a solid.
+	 */
 	case Cylinder = 'cylinder';
 	/** Leg narrowing from the box's width / depth at the top to `bottomSize` mm at the floor. */
 	case TaperedLeg = 'taperedLeg';
 	case Glass = 'glass';
-	/** LED strip giving light of `color` (#rrggbb). */
+	/** LED strip giving light of `color` (#rrggbb), shining `facing` down (the default), up (a cove) or out of its front (+z). */
 	case Led = 'led';
 	/** A built-in oven or microwave front (black glass, window, steel handle); bought, so not in the cut list's boards. */
 	case Appliance = 'appliance';
@@ -71,6 +80,36 @@ enum PartTypeEnum: string
 	case Assembly = 'assembly';
 
 	private const array Grain = ['vertical', 'horizontal'];
+
+	/**
+	 * A front's look: a plain slab; a frame round a recessed panel; flutes on its face; a frame round clear glass or
+	 * reeded glass. The frame is `frame` mm wide (0 or none: the style's own) in the `frameMaterial` slot's material.
+	 */
+	public const array FrontStyles = ['flat', 'shaker', 'fluted', 'glass', 'reeded'];
+
+	/**
+	 * A front's handle: a bar across or along it (`handleLength` mm, none: by the front), a knob, an edge pull on its top
+	 * (or, out of reach, bottom) edge, a gola channel, push-to-open or none; in the `handleMaterial` slot's material.
+	 */
+	public const array Handles = ['horizontal', 'vertical', 'knob', 'edge', 'gola', 'push', 'none'];
+
+	/**
+	 * Where a front's handle goes: by its height (`auto`), on its top or bottom edge whatever the height (the pull at the
+	 * split of two doors), or at reach height on its handle edge (`side`). The viewer reads it (`HandlePosition`).
+	 */
+	public const array HandlePositions = ['auto', 'top', 'bottom', 'side'];
+
+	/** A cylinder's outline: straight, a cone (a frustum) or a teardrop. */
+	public const array Profiles = ['straight', 'cone', 'teardrop'];
+
+	/** Which way an LED part shines: down, up or out of its front. */
+	public const array LedFacings = ['down', 'up', 'out'];
+
+	/** A built-in appliance front: an oven, a microwave, a steam oven, a coffee machine (`buildAppliance()`). */
+	public const array Appliances = ['oven', 'microwave', 'steam', 'coffee'];
+
+	/** An appliance front's finish: black or white glass, stainless steel, or retro (cream with chrome). */
+	public const array ApplianceFinishes = ['black', 'white', 'steel', 'retro'];
 
 	private const array Sides = ['left', 'right', 'bottom', 'top', 'back', 'front'];
 
@@ -227,17 +266,29 @@ enum PartTypeEnum: string
 			] + self::Pose,
 			self::Front => [
 				'kind' => ['door', 'drawer'],
-				'handle' => ['horizontal', 'vertical', 'none'],
+				'style' => self::FrontStyles,
+				'frame' => 'number',
+				'frameMaterial' => 'slot',
+				'handle' => self::Handles,
 				'handleSide' => ['left', 'right'],
+				'handleMaterial' => 'slot',
+				'handleLength' => 'number',
+				'handlePosition' => self::HandlePositions,
 				'grain' => self::Grain,
 				'edges' => 'sides',
 			] + self::Motion + self::Pose,
-			self::Cylinder => ['axis' => ['x', 'y', 'z'], 'radius' => 'number'] + self::Pose,
+			self::Cylinder => [
+				'axis' => ['x', 'y', 'z'],
+				'radius' => 'number',
+				'profile' => self::Profiles,
+				'topRatio' => 'fraction',
+				'wire' => 'number',
+			] + self::Pose,
 			self::TaperedLeg => ['bottomSize' => 'mm'] + self::Pose,
 			self::Block => ['grain' => self::Grain, 'shade' => 'fraction'] + self::Pose,
 			self::Glass => self::Pose,
-			self::Led => ['color' => 'color', 'intensity' => 'number'] + self::Pose,
-			self::Appliance => ['kind' => ['oven', 'microwave']] + self::Pose,
+			self::Led => ['color' => 'color', 'intensity' => 'number', 'facing' => self::LedFacings] + self::Pose,
+			self::Appliance => ['kind' => self::Appliances, 'finish' => self::ApplianceFinishes] + self::Pose,
 			self::SlidingDoor => ['profile' => 'slot', 'mirror' => 'bool', 'profileWidth' => 'mm'] + self::Pose,
 			self::Cushion => ['radius' => 'number'] + self::Pose,
 			self::Picture => ['image' => 'image'] + self::Pose,

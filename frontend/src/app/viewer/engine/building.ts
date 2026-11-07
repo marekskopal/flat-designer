@@ -1,4 +1,19 @@
-import {FloorVoid, isOutdoorRoom, Opening, PlanPoint, Plot, Railing, Roof, Room, Scene, SectionLine, Wall, WallFinish} from '@app/models/scene';
+import {
+    CeilingZone,
+    FloorVoid,
+    FloorZone,
+    isOutdoorRoom,
+    Opening,
+    PlanPoint,
+    Plot,
+    Railing,
+    Roof,
+    Room,
+    Scene,
+    SectionLine,
+    Wall,
+    WallFinish,
+} from '@app/models/scene';
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -17,7 +32,8 @@ import {
     wallFacesAlongEdge,
 } from './ceilings';
 import {buildChimneysBelow, chimneyOutline, sceneChimneys} from './chimneys';
-import {buildFacades, facadeBands,FacadeLining} from './facades';
+import {buildFacades, facadeBandsAt, FacadeLining} from './facades';
+import {FaceBandStretch, faceBandStretches, isRangedBand} from './face-bands';
 import {MaterialLibrary} from './materials';
 import {mergeStatic} from './merge';
 import {boxAt, curvedPrismAt, prismAt, worldUvBox} from './meshes';
@@ -66,6 +82,7 @@ import {
     SquareEnds,
     SteelReturn,
     SteelSheet,
+    TileGrid,
     tileGrid,
     Vec2,
     WallCorners,
@@ -437,8 +454,8 @@ export function buildSlab(
     return slab;
 }
 
-/** The room's outline less the voids, as one geometry in plan (x, y). */
-function roomSurface(room: Room, voids: readonly PlanPoint[][]): THREE.BufferGeometry {
+/** An outline (a room's, a floor zone's) less the voids, as one geometry in plan (x, y). */
+function roomSurface(room: Pick<Room, 'polygon'>, voids: readonly PlanPoint[][]): THREE.BufferGeometry {
     const pieces = cutVoids(room.polygon, voids).map((piece) => new THREE.ShapeGeometry(cutShape(piece)));
     if (pieces.length === 1) {
         return pieces[0];
@@ -484,6 +501,11 @@ export function buildFloor(
     floor.receiveShadow = true;
     floor.name = `floor:${room.code}`;
     floor.userData = {roomId: room.id};
+    if (draped === null) {
+        for (const zone of room.floorZones ?? []) {
+            floor.add(buildFloorZone(zone, voids, grid, materials));
+        }
+    }
     alignTiles(floor, grid, materials);
     if (draped === null) {
         // From the floor mesh, which sits `FloorLift` over the floor's elevation, down to the ground beside it.
@@ -497,6 +519,27 @@ export function buildFloor(
         }
     }
     return floor;
+}
+
+/** How far a floor zone lies over the room's floor mesh, mm, so the two do not z-fight. */
+const FloorZoneLift = 1;
+
+/**
+ * A floor zone: its outline less the `voids`, in its material, `FloorZoneLift` over the room's floor mesh (its parent).
+ * It lies on the room's tile grid: `alignTiles()` lays its tiles with the floor's, other patterns are turned here.
+ */
+function buildFloorZone(zone: FloorZone, voids: readonly PlanPoint[][], grid: TileGrid, materials: MaterialLibrary): THREE.Mesh {
+    const geometry = roomSurface(zone, voids);
+    geometry.rotateX(-Math.PI / 2);
+    const material = materials.get(zone.materialId);
+    if (!materials.isTile(material)) {
+        turnLevelUvs(geometry, grid);
+    }
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.y = FloorZoneLift * MM;
+    mesh.receiveShadow = true;
+    mesh.name = 'floor-zone';
+    return mesh;
 }
 
 /** The floor's edge is drawn in pieces at most this long (mm), so it follows a sloping ground. */
@@ -574,6 +617,10 @@ function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly Pl
     const underRoofs = profile === null && roofs.length > 0 ? ceilingUnderRoofs(room, material, voids, roofs) : null;
     group.add(underRoofs ?? ceilingSurface(room, profile, material, voids));
     if (profile === null) {
+        // A zone the ceiling no longer takes (lowered since it was set) is left out.
+        for (const zone of (room.ceilingZones ?? []).filter((z) => z.height < (room.ceilingHeight ?? 0))) {
+            group.add(buildCeilingZone(zone, room.ceilingHeight ?? 0, zone.materialId === null ? material : materials.get(zone.materialId)));
+        }
         return group;
     }
 
@@ -592,6 +639,22 @@ function buildCeiling(room: Room, materials: MaterialLibrary, voids: readonly Pl
         group.add(holder);
     }
     return group;
+}
+
+/**
+ * A dropped ceiling: the zone's outline extruded from its soffit at `height` up to the ceiling at `ceilingHeight` (both
+ * mm above the room's floor, where the ceiling group stands), so its underside and sides show.
+ */
+function buildCeilingZone(zone: CeilingZone, ceilingHeight: number, material: THREE.Material): THREE.Mesh {
+    const shape = new THREE.Shape(counterClockwise(zone.polygon).map(([x, y]) => new THREE.Vector2(x * MM, y * MM)));
+    const geometry = new THREE.ExtrudeGeometry(shape, {depth: Math.max(ceilingHeight - zone.height, 1) * MM, bevelEnabled: false});
+    geometry.rotateX(-Math.PI / 2);
+    geometry.translate(0, zone.height * MM, 0);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.name = 'ceiling-zone';
+    return mesh;
 }
 
 /** A part of a downward-facing surface: its outline in plan with holes, and the height (mm) over each of its points. */
@@ -783,15 +846,17 @@ export function buildWall(
 
 /** How thick a lined reveal's boards are, mm. */
 const RevealBoard = 20;
+/** How much thicker the room's side's boards are, mm, so they cover a façade lining running the whole reveal. */
+const InnerRevealCover = 2;
 
 /**
  * The boards lining an opening's reveal (`revealLining`): its jambs, its head and a window's sill across the
  * whole wall, in the band of the outer face (opposite `side`) at the opening's middle height, else that face's façade
- * (`facadeBands()`). Null when the face has none. In the wall's coordinates, as the opening's parts are.
+ * (`facadeBandsAt()`) there. Null when the face has none. In the wall's coordinates, as the opening's parts are.
  */
 function revealLining(opening: Opening, wall: Wall, materials: MaterialLibrary, exterior: number | null): THREE.Group | null {
     const outer = (opening.side ?? 'Left') === 'Left' ? 'Right' : 'Left';
-    const bands = facadeBands(wall, outer, exterior);
+    const bands = facadeBandsAt(wall, outer, exterior, opening.offset + opening.width / 2);
     const middle = opening.sillHeight + opening.height / 2;
     const band = bands.find((b) => b.bottom <= middle && middle <= b.top) ?? bands.at(-1);
     if (band === undefined) {
@@ -801,7 +866,8 @@ function revealLining(opening: Opening, wall: Wall, materials: MaterialLibrary, 
     const [x0, x1] = [opening.offset * MM, (opening.offset + opening.width) * MM];
     const [y0, y1] = [opening.sillHeight * MM, (opening.sillHeight + opening.height) * MM];
     const board = RevealBoard * MM;
-    // Across the wall from the inner face (on `side`; the left face is −z) to the façade band on the outer one.
+    // Across the wall from the inner face (on `side`; the left face is −z) to the façade band on the outer one. A room's
+    // side lined too (`innerReveals()`) covers it there.
     const z = (-wall.thickness / 2 - (outer === 'Left' ? FacadeLining : 0)) * MM;
     const depth = (wall.thickness + FacadeLining) * MM;
     const group = new THREE.Group();
@@ -1050,6 +1116,9 @@ export function buildWallFinishes(room: Room, walls: readonly Wall[], materials:
                 }
             }
         }
+        if (curved === undefined) {
+            innerReveals(faces, a, b, segments, elevation, materials).forEach((reveal) => edge.add(reveal));
+        }
         group.add(edge);
     });
 
@@ -1139,6 +1208,77 @@ function arcFaceUvs(geometry: THREE.BufferGeometry, offset: {x: number; y: numbe
     geometry.userData['ownUvs'] = true;
 }
 
+/**
+ * The boards lining the room's side of the reveals (`innerRevealLining`) of the openings on the faces along the room
+ * edge a → b whose `side` faces the room: the jambs, the head and a window's sill from the finish's front back into the
+ * wall up to the frame (`innerRevealDepth()`), in the band lining the edge there at the opening's middle height, else
+ * the one its sill lies in. In the edge's group (x along it, z into the room), heights above the room's floor at
+ * `elevation`. Straight walls only.
+ */
+function innerReveals(
+    faces: readonly EdgeFace[],
+    a: Vec2,
+    b: Vec2,
+    segments: readonly FinishSegment[],
+    elevation: number,
+    materials: MaterialLibrary,
+): THREE.Object3D[] {
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    const dir = {x: (b.x - a.x) / length, y: (b.y - a.y) / length};
+    const onEdge = (p: Vec2): number => (p.x - a.x) * dir.x + (p.y - a.y) * dir.y;
+    const reveals: THREE.Object3D[] = [];
+    for (const face of faces) {
+        const frame = wallFrame(face.wall);
+        for (const opening of face.wall.openings) {
+            const depth = innerRevealDepth(opening, face.wall.thickness);
+            if (opening.innerRevealLining !== true || (opening.side ?? 'Left') !== face.side || depth <= 0) {
+                continue;
+            }
+            const [x0, x1] = [opening.offset, opening.offset + opening.width].map((s) => onEdge(pointOnWall(frame, s, 0))).sort((x, y) => x - y);
+            const middle = (x0 + x1) / 2;
+            if (x0 < face.from - 1 || x1 > face.to + 1) {
+                continue;
+            }
+            const [sill, head] = [opening.sillHeight - elevation, opening.sillHeight + opening.height - elevation];
+            const bands = segments.find((segment) => segment.from <= middle && middle <= segment.to)?.bands ?? [];
+            const height = (sill + head) / 2;
+            const band = bands.find((x) => x.bottom <= height && height <= x.top) ?? bands.find((x) => x.bottom <= sill && sill <= x.top);
+            if (band === undefined) {
+                continue;
+            }
+            const material = materials.upright(band.materialId);
+            // A little thicker than a façade's lining of the reveal (`revealLining()`), which runs on under them.
+            const board = (RevealBoard + InnerRevealCover) * MM;
+            // From inside the wall at the frame out to the finish's front.
+            const [z, d] = [-depth * MM, (depth + LiningThickness) * MM];
+            const [u0, u1, v0, v1] = [x0 * MM, x1 * MM, sill * MM, head * MM];
+            const group = new THREE.Group();
+            group.name = 'inner-reveal';
+            group.add(
+                boxAt(material, u0, v0, z, board, v1 - v0, d),
+                boxAt(material, u1 - board, v0, z, board, v1 - v0, d),
+                boxAt(material, u0, v1 - board, z, u1 - u0, board, d),
+            );
+            if (opening.sillHeight > 0) {
+                group.add(boxAt(material, u0, v0, z, u1 - u0, board, d));
+            }
+            reveals.push(group);
+        }
+    }
+    return reveals;
+}
+
+/**
+ * How deep the room's side of an opening's reveal is (mm): from its face on `side` to the frame (`frameBand()`); 0 for a
+ * door whose lining spans the wall.
+ */
+export function innerRevealDepth(opening: Opening, thickness: number): number {
+    const band = frameBand(opening, thickness);
+    // + is towards the wall's normal, the left face.
+    const toward = (opening.side ?? 'Left') === 'Left' ? 1 : -1;
+    return Math.max(thickness / 2 - (toward * band.centre + band.depth / 2), 0);
+}
+
 /** A stretch of a room edge (mm from its start) and the finish bands lining it. */
 export interface FinishSegment {
     from: number;
@@ -1146,16 +1286,45 @@ export interface FinishSegment {
     bands: readonly WallFinish[];
 }
 
-/** The edge a → b in stretches: the wall faces with bands of their own, and the room's bands elsewhere. */
+/**
+ * The edge a → b in stretches: the wall faces with bands of their own (along the stretches they line,
+ * `faceBandStretches()`), and the room's bands elsewhere.
+ */
 export function finishSegments(room: Room, a: Vec2, b: Vec2, length: number, walls: readonly Wall[]): FinishSegment[] {
-    const own = wallFacesAlongEdge(a, b, walls).flatMap((face): FinishSegment[] => {
-        const bands = face.side === 'Left' ? face.wall.leftFinishes : face.wall.rightFinishes;
-        // Inside a room a face's bands start on its floor (a façade's plinth may reach below it).
-        const onFloor = bands?.filter((band) => band.top > 0).map((band) => ({...band, bottom: Math.max(band.bottom, 0)}));
-        return onFloor == null ? [] : [{from: face.from, to: face.to, bands: onFloor}];
-    });
+    const own = wallFacesAlongEdge(a, b, walls).flatMap((face): FinishSegment[] =>
+        faceStretchesOnEdge(face, a, b, length).flatMap(({from, to, bands}): FinishSegment[] => {
+            // Inside a room a face's bands start on its floor (a façade's plinth may reach below it).
+            const onFloor = bands?.filter((band) => band.top > 0).map((band) => ({...band, bottom: Math.max(band.bottom, 0)}));
+            return onFloor == null ? [] : [{from, to, bands: onFloor}];
+        }),
+    );
     const rest = subtractSpans([[0, length]], own.map((segment): [number, number] => [segment.from, segment.to]));
     return [...own, ...rest.map(([from, to]): FinishSegment => ({from, to, bands: room.wallFinishes}))].sort((x, y) => x.from - y.from);
+}
+
+/**
+ * A wall face on the room edge a → b in the stretches its own bands line (`faceBandStretches()`), mm along the edge:
+ * the face's stretch of the edge mapped onto the wall's centre line and back (linearly: the edge lies along a straight
+ * face, or along one piece of a curved one).
+ */
+function faceStretchesOnEdge(face: EdgeFace, a: Vec2, b: Vec2, length: number): FaceBandStretch[] {
+    const bands = face.side === 'Left' ? face.wall.leftFinishes : face.wall.rightFinishes;
+    if (bands == null || !bands.some(isRangedBand) || length === 0) {
+        return [{from: face.from, to: face.to, bands: bands ?? null}];
+    }
+    const frame = wallFrame(face.wall);
+    const along = (t: number): number => alongWall(frame, {x: a.x + ((b.x - a.x) * t) / length, y: a.y + ((b.y - a.y) * t) / length});
+    const [start, end] = [along(face.from), along(face.to)];
+    if (Math.abs(end - start) < 1e-6) {
+        return [{from: face.from, to: face.to, bands}];
+    }
+    const onEdge = (w: number): number => face.from + ((w - start) / (end - start)) * (face.to - face.from);
+    return faceBandStretches(bands, Math.min(start, end), Math.max(start, end))
+        .map((stretch) => {
+            const [from, to] = [onEdge(stretch.from), onEdge(stretch.to)].sort((x, y) => x - y);
+            return {from, to, bands: stretch.bands};
+        })
+        .sort((x, y) => x.from - y.from);
 }
 
 /** Whether a wall face has finish bands of its own, so the rooms along it draw their finishes. */

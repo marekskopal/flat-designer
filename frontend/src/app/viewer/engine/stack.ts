@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {buildBuilding} from './building';
 import {chimneyStretches} from './chimneys';
 import {definitionLibrary} from './custom/custom';
+import {sceneCutters} from './custom/cutouts';
 import {leafObjects, LeafStates} from './doors';
 import {buildItem, ItemAssets} from './items';
 import {MaterialLibrary} from './materials';
@@ -63,6 +64,15 @@ export function rebuildContextItems(
     const rooms = new Map(scene.rooms.map((room) => [room.id, room]));
     const definitions = definitionLibrary(scene.definitions);
     const hidden = hiddenItemIds(scene);
+    // Its pendants hang from its own roofs, its items on its own ground, its chimneys up its own storey, its worktops have
+    // its own sinks and hobs cut out, not the shown floor's.
+    const floorAssets: ItemAssets = {
+        ...assets,
+        roofs: scene.roofs ?? [],
+        plots: scene.plots ?? [],
+        chimneys: chimneyStretches(scene),
+        cutters: sceneCutters(scene),
+    };
     for (const item of scene.items) {
         if (!rebuild(item)) {
             continue;
@@ -71,8 +81,6 @@ export function rebuildContextItems(
         if (previous !== undefined) {
             dispose(previous);
         }
-        // Its pendants hang from its own roofs, its items on its own ground, its chimneys up its own storey, not the shown floor's.
-        const floorAssets = {...assets, roofs: scene.roofs ?? [], plots: scene.plots ?? [], chimneys: chimneyStretches(scene)};
         const object = buildItem(item, materials, rooms.get(item.roomId ?? 0), definitions, floorAssets);
         object.visible = !hidden.has(item.id);
         layer.items.set(item.id, object);
